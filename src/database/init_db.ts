@@ -1,5 +1,5 @@
 import { createConnection } from 'typeorm';
-import { Ecoverse, User, Challenge, Tag } from '../models';
+import { Ecoverse, User, Challenge, Tag, UserGroup } from '../models';
 
 export const init_db = async() => {
   const connection = await createConnection();
@@ -7,28 +7,33 @@ export const init_db = async() => {
   await connection.synchronize();
 
   // Tags
-  const java = new Tag();
-  java.name = 'Java';
+  const java = new Tag('Java');
   await java.save();
 
-  const graphql = new Tag();
-  graphql.name = 'GraphQL';
+  const graphql = new Tag('GraphQL');
   await graphql.save();
+
+  // User Groups
+  const ecoverseMember = new UserGroup("Shell");
+  await ecoverseMember.save();
+  const ecoverseMember2 = new UserGroup("BP");
+  await ecoverseMember2.save();
 
 
   // Challenges
   const energyWeb = new Challenge('Energy Web');
-  energyWeb.tag = java;
+  energyWeb.tags = new Array(java);
   await energyWeb.save();
 
   const cleanOceans = new Challenge('Clean Oceans');
-  cleanOceans.tag = graphql;
+  cleanOceans.tags = new Array(graphql);
   await cleanOceans.save();
 
 
   // Ecoverse
-  const odyssey = new Ecoverse();
-  odyssey.challenge = energyWeb;
+  const odyssey = new Ecoverse('Odyssey');
+  odyssey.challenges = new Array(energyWeb);
+  odyssey.members = new Array(ecoverseMember, ecoverseMember2);
   await odyssey.save();
 
   // Users

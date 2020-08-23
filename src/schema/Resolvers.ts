@@ -1,7 +1,10 @@
 import { Query, Resolver, Arg, Mutation, createUnionType } from 'type-graphql';
-import { Tag, User, Challenge, Ecoverse } from '../models';
+import { Tag, User, Challenge, Ecoverse, Agreement, DID, Context, Organisation, Project, UserGroup } from '../models';
 
-
+const EcoverseUnion = createUnionType({
+  name: 'EcoverseUnion',
+  types: () => [ Ecoverse, Organisation, UserGroup, Challenge ] as const,
+});
 
 @Resolver()
 export class Resolvers {
@@ -25,26 +28,52 @@ export class Resolvers {
     return await Ecoverse.find();
   }
 
-  /*
-  @Query(() => Pokemon)
-  async getPokemonPerName(@Arg('name') name: string): Promise<Pokemon | undefined> {
-    return await Pokemon.findOne({ where: { name } });
+  @Query(() => [ Agreement ])
+  async allAgreements(): Promise<Agreement[]> {
+    return await Agreement.find();
   }
 
-  @Query(() => [ PokemonAbilitiesUnion ])
-  async getPokemonAbilities(@Arg('name') name: string): Promise<Array<typeof PokemonAbilitiesUnion>> {
-    const pokemon: Pokemon = <Pokemon>await Pokemon.findOne({ where: { name } });
-    const pokemonAbilities = await PokemonAbilities.find({ where: { pokemon } });
-
-    return [ pokemon, ...pokemonAbilities ];
+  @Query(() => [ Context ])
+  async allContexts(): Promise<Context[]> {
+    return await Context.find();
   }
 
-  @Mutation(() => Pokemon)
-  async createPokemon(@Arg('name') name: string): Promise<Pokemon> {
-    const pokemon = Pokemon.create({ name });
-    await pokemon.save();
-
-    return pokemon;
+  @Query(() => [ DID ])
+  async allDIDs(): Promise<DID[]> {
+    return await DID.find();
   }
-  */
+
+  @Query(() => [ Organisation ])
+  async allOrganisations(): Promise<Organisation[]> {
+    return await Organisation.find();
+  }
+
+  @Query(() => [ Project ])
+  async allProjects(): Promise<Project[]> {
+    return await Project.find();
+  }
+
+  @Query(() => [ UserGroup ])
+  async allUserGroups(): Promise<UserGroup[]> {
+    return await UserGroup.find();
+  }
+
+  @Query(() => [ EcoverseUnion ])
+  async getEcoverseUnion(@Arg('name') name: string): Promise<Array<typeof EcoverseUnion>> {
+    const ecoverse: Ecoverse = <Ecoverse>await Ecoverse.findOne({ where: { name } });
+    const ecoverseMembers = await UserGroup.find({ where: { ecoverse } });
+    // const ecoverseChallenges = await Challenge.find({ where: { ecoverse } });
+    // const ecoversePartners = await Organisation.find({ where: { ecoverse } });
+    // , ...ecoverseMembers, ...ecoverseChallenges, ...ecoversePartners
+    return [ ecoverse, ...ecoverseMembers ];
+  }
+
+  // @Mutation(() => Pokemon)
+  // async createPokemon(@Arg('name') name: string): Promise<Pokemon> {
+  //   const pokemon = Pokemon.create({ name });
+  //   await pokemon.save();
+
+  //   return pokemon;
+  // }
+
 }
