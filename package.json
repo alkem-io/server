@@ -1,0 +1,24 @@
+{
+  "name": "apollots",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "dependencies": {
+    "apollo-server-express": "^2.16.1",
+    "express": "^4.17.1",
+    "graphql": "^15.3.0",
+    "reflect-metadata": "^0.1.13",
+    "sqlite3": "^5.0.0",
+    "ts-node-dev": "^1.0.0-pre.60",
+    "type-graphql": "^1.0.0",
+    "typeorm": "^0.2.25",
+    "typescript": "^4.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "ts-node-dev  src/server.ts"
+  },
+  "author": "",
+  "license": "ISC"
+}
