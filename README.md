@@ -4,6 +4,7 @@ Represents the core back-end server that manages the representation of the ecove
 ## Running the server
 To run the server in test mode:
 * Install dependencies via 'npm install'
+* Initialise the data in the server by running 'npm run test-db-reset'
 * Start the server by running 'npm run server'
 * Browse to http://localhost:4000/graphql to interact with the schema
 

@@ -1,6 +1,6 @@
 {
     "type": "sqlite",
-    "database": "./src/database/database.sqlite3",
+    "database": "./database/ecoverse.sqlite3",
     "entities": [
       "./src/models/index.ts"
     ]
