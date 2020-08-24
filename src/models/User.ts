@@ -31,8 +31,13 @@ export class User extends BaseEntity {
   @Column()
   email: string = '';
   
+  @Field(() => DID)
   @OneToOne(type => DID, did => did.user)
   DID!: DID;
+
+  @OneToOne(type => UserGroup, userGroup => userGroup.focalPoint)
+  @JoinColumn()
+  focalPoint!: UserGroup;
 
   @ManyToOne(
     type => Challenge,
@@ -52,6 +57,7 @@ export class User extends BaseEntity {
   )
   member!: Organisation;
 
+  @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.user,

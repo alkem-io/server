@@ -3,3 +3,5 @@ build
 npm-debug.log
 .env
 .DS_Store
+src/database/database.sqlite3
+dist

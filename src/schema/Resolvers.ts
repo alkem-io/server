@@ -61,11 +61,10 @@ export class Resolvers {
   @Query(() => [ EcoverseUnion ])
   async getEcoverseUnion(@Arg('name') name: string): Promise<Array<typeof EcoverseUnion>> {
     const ecoverse: Ecoverse = <Ecoverse>await Ecoverse.findOne({ where: { name } });
-    const ecoverseMembers = await UserGroup.find({ where: { ecoverse } });
-    // const ecoverseChallenges = await Challenge.find({ where: { ecoverse } });
-    // const ecoversePartners = await Organisation.find({ where: { ecoverse } });
-    // , ...ecoverseMembers, ...ecoverseChallenges, ...ecoversePartners
-    return [ ecoverse, ...ecoverseMembers ];
+    const ecoverseMembers = ecoverse.members;
+    const ecoverseChallenges = ecoverse.challenges;
+    const ecoversePartners = ecoverse.partners;
+    return [ ecoverse, ...ecoverseMembers, ...ecoverseChallenges, ...ecoversePartners ];
   }
 
   // @Mutation(() => Pokemon)

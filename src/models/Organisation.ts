@@ -15,12 +15,15 @@ export class Organisation extends BaseEntity {
   @Column()
   name: string = '';
   
+  @Field(() => DID)
   @OneToOne(type => DID, did => did.organisation)
   DID!: DID;
 
+  @Field(() => Ecoverse)
   @OneToOne(type => Ecoverse, ecoverse => ecoverse.ecoverseHost)
   ecoverseHost!: Ecoverse;
 
+  @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.organisation,
@@ -28,6 +31,7 @@ export class Organisation extends BaseEntity {
   )
   tags!: Tag[];
 
+  @Field(() => [User])
   @OneToMany(
     type => User,
     user => user.member,

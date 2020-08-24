@@ -14,6 +14,7 @@ export class Ecoverse extends BaseEntity {
   @Column()
   name: string = '';
 
+  @Field(() => [Challenge])
   @OneToMany(
     type => Challenge,
     challenge => challenge.ecoverse,
@@ -21,6 +22,7 @@ export class Ecoverse extends BaseEntity {
   )
   challenges!: Challenge[];
 
+  @Field(() => [Organisation])
   @OneToMany(
     type => Organisation,
     organisation => organisation.partners,
@@ -28,6 +30,7 @@ export class Ecoverse extends BaseEntity {
   )
   partners!: Organisation[];
 
+  @Field(() => [UserGroup])
   @OneToMany(
     type => UserGroup,
     userGroup => userGroup.ecoverseMember,
@@ -35,13 +38,16 @@ export class Ecoverse extends BaseEntity {
   )
   members!: UserGroup[];
 
+  @Field(() => DID)
   @OneToOne(type => DID, did => did.ecoverse)
   DID!: DID;
 
+  @Field(() => Organisation)
   @OneToOne(type => Organisation, organisation => organisation.ecoverseHost)
   @JoinColumn()
   ecoverseHost!: Organisation;
 
+  @Field(() => Context)
   @OneToOne(type => Context, context => context.ecoverse)
   context!: Context;
 

@@ -22,6 +22,7 @@ export class Project extends BaseEntity {
   @Column()
   lifecyclePhase: string = '';
 
+  @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.project,
@@ -29,9 +30,11 @@ export class Project extends BaseEntity {
   )
   tags!: Tag[];
   
+  @Field(() => DID)
   @OneToOne(type => DID, did => did.project)
   DID!: DID;
 
+  @Field(() => [Agreement])
   @OneToMany(
     type => Agreement,
     agreement => agreement.project,

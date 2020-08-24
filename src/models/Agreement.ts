@@ -17,6 +17,7 @@ export class Agreement extends BaseEntity {
   @Column()
   description: string = '';
 
+  @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.agreement,

@@ -21,12 +21,15 @@ export class Challenge extends BaseEntity {
   @Column()
   lifecyclePhase: string = '';
 
+  @Field(() => UserGroup)
   @OneToOne(type => UserGroup, userGroup => userGroup.challenge)
   challengeLeads!: UserGroup;
 
+  @Field(() => Context)
   @OneToOne(type => Context, context => context.ecoverse)
   context!: Context;
 
+  @Field(() => [UserGroup])
   @OneToMany(
     type => UserGroup,
     userGroup => userGroup.challenge,
@@ -34,6 +37,7 @@ export class Challenge extends BaseEntity {
   )
   groups!: UserGroup[];
 
+  @Field(() => [User])
   @OneToMany(
     type => User,
     users => users.challenge,
@@ -41,6 +45,7 @@ export class Challenge extends BaseEntity {
   )
   contributors!: User[];
 
+  @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.challenge,
@@ -48,6 +53,7 @@ export class Challenge extends BaseEntity {
   )
   tags!: Tag[];
 
+  @Field(() => [Project])
   @OneToMany(
     type => Project,
     project => project.challenge,
@@ -55,6 +61,7 @@ export class Challenge extends BaseEntity {
   )
   projects!: Project[];
   
+  @Field(() => DID)
   @OneToOne(type => DID, did => did.challenge)
   DID!: DID;
 

@@ -27,6 +27,7 @@ export class Context extends BaseEntity {
   @Column()
   referenceLinks: string = '';
 
+  @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.context,
@@ -34,10 +35,12 @@ export class Context extends BaseEntity {
   )
   tags!: Tag[];
 
+  @Field(() => Ecoverse)
   @OneToOne(type => Ecoverse, ecoverse => ecoverse.context)
   @JoinColumn()
   ecoverse!: Ecoverse;
 
+  @Field(() => Challenge)
   @OneToOne(type => Challenge, challenge => challenge.context)
   @JoinColumn()
   challenge!: Challenge;

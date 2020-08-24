@@ -15,10 +15,11 @@ export class UserGroup extends BaseEntity {
   @Column()
   name: string = '';
 
+  @Field(() => User)
   @OneToOne(type => User)
-  @JoinColumn()
   focalPoint!: User;
 
+  @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.userGroup,
@@ -26,6 +27,7 @@ export class UserGroup extends BaseEntity {
   )
   tags!: Tag[];
 
+  @Field(() => [User])
   @OneToMany(
     type => User,
     user => user.userGroup,
