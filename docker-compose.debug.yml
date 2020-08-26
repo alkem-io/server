@@ -1,0 +1,10 @@
+version: '3.4'
+
+services:
+  server.node:
+    image: server.node
+    build: .
+    ports:
+      - 4000:4000
+      - 9330:9330
+    command: ["npm", "--inspect=0.0.0.0:9330", "start"]
