@@ -18,25 +18,25 @@ export class Ecoverse extends BaseEntity {
   @OneToMany(
     type => Challenge,
     challenge => challenge.ecoverse,
-    { eager: true },
+    { eager: true, cascade: true },
   )
-  challenges!: Challenge[];
+  challenges?: Challenge[];
 
   @Field(() => [Organisation])
   @OneToMany(
     type => Organisation,
     organisation => organisation.partners,
-    { eager: true },
+    { eager: true, cascade: true },
   )
-  partners!: Organisation[];
+  partners?: Organisation[];
 
   @Field(() => [UserGroup])
   @OneToMany(
     type => UserGroup,
     userGroup => userGroup.ecoverseMember,
-    { eager: true },
+    { eager: true, cascade: true },
   )
-  members!: UserGroup[];
+  members?: UserGroup[];
 
   @Field(() => DID)
   @OneToOne(type => DID, did => did.ecoverse)
@@ -45,11 +45,11 @@ export class Ecoverse extends BaseEntity {
   @Field(() => Organisation)
   @OneToOne(type => Organisation, organisation => organisation.ecoverseHost)
   @JoinColumn()
-  ecoverseHost!: Organisation;
+  ecoverseHost?: Organisation;
 
   @Field(() => Context)
-  @OneToOne(type => Context, context => context.ecoverse)
-  context!: Context;
+  @OneToOne(type => Context, context => context.ecoverse, {cascade: true})
+  context?: Context;
 
   constructor(name: string) {
     super();

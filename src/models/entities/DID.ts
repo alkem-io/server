@@ -19,23 +19,23 @@ export class DID extends BaseEntity {
 
   @OneToOne(type => Ecoverse, ecoverse => ecoverse.DID)
   @JoinColumn()
-  ecoverse!: Ecoverse;
+  ecoverse?: Ecoverse;
 
   @OneToOne(type => Organisation, organisation => organisation.DID)
   @JoinColumn()
-  organisation!: Organisation;
+  organisation?: Organisation;
 
   @OneToOne(type => User, user => user.DID)
   @JoinColumn()
-  user!: User;
+  user?: User;
 
   @OneToOne(type => Challenge, challenge => challenge.DID)
   @JoinColumn()
-  challenge!: Challenge;
+  challenge?: Challenge;
 
   @OneToOne(type => Project, project => project.DID)
   @JoinColumn()
-  project!: Project;
+  project?: Project;
 
   constructor(DID: string, DDO: string) {
     super();

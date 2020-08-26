@@ -1,7 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany } from 'typeorm';
-import { DID, Tag, Challenge } from '.';
-import { Agreement } from './Agreement';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, OneToMany } from 'typeorm';
+import { DID, Tag, Challenge, Agreement } from '.';
 
 @Entity()
 @ObjectType()
@@ -28,7 +27,7 @@ export class Project extends BaseEntity {
     tag => tag.project,
     { eager: true },
   )
-  tags!: Tag[];
+  tags?: Tag[];
   
   @Field(() => DID)
   @OneToOne(type => DID, did => did.project)
@@ -40,14 +39,14 @@ export class Project extends BaseEntity {
     agreement => agreement.project,
     { eager: true },
   )
-  agreements!: Agreement[];
+  agreements?: Agreement[];
 
 
   @ManyToOne(
     type => Challenge,
     challenge => challenge.projects
   )
-  challenge!: Challenge;
+  challenge?: Challenge;
 
   constructor(name: string) {
     super();

@@ -17,43 +17,43 @@ export class Tag extends BaseEntity {
     type => Challenge,
     challenge => challenge.tags
   )
-  challenge!: Challenge;
+  challenge?: Challenge;
 
   @ManyToOne(
     type => Project,
     project => project.tags
   )
-  project!: Project;
+  project?: Project;
 
   @ManyToOne(
     type => Agreement,
     agreement => agreement.tags
   )
-  agreement!: Agreement;
+  agreement?: Agreement;
 
   @ManyToOne(
     type => Context,
     context => context.tags
   )
-  context!: Context;
+  context?: Context;
 
   @ManyToOne(
     type => Organisation,
     organisation => organisation.tags
   )
-  organisation!: Organisation;
+  organisation?: Organisation;
 
   @ManyToOne(
     type => User,
     user => user.tags
   )
-  user!: User;
+  user?: User;
 
   @ManyToOne(
     type => UserGroup,
     userGroup => userGroup.tags
   )
-  userGroup!: UserGroup;
+  userGroup?: UserGroup;
 
   constructor(name: string) {
     super();

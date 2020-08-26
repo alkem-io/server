@@ -33,17 +33,17 @@ export class Context extends BaseEntity {
     tag => tag.context,
     { eager: true },
   )
-  tags!: Tag[];
+  tags?: Tag[];
 
   @Field(() => Ecoverse)
   @OneToOne(type => Ecoverse, ecoverse => ecoverse.context)
   @JoinColumn()
-  ecoverse!: Ecoverse;
+  ecoverse?: Ecoverse;
 
   @Field(() => Challenge)
   @OneToOne(type => Challenge, challenge => challenge.context)
   @JoinColumn()
-  challenge!: Challenge;
+  challenge?: Challenge;
 
 
 }
