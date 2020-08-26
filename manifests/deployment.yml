@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ct-server-deployment
+  labels:
+    app: ct-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ct-server
+  template:
+    metadata:
+      labels:
+        app: ct-server
+    spec:
+      containers:
+      - name: ct-server
+        image: ctdev.azurecr.io/ct-server:latest
