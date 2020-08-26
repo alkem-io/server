@@ -4,7 +4,6 @@ import { User, Tag, Ecoverse, Challenge } from '.';
 
 
 @Entity()
-// @Index([ 'ecoverse', 'usergroup' ], { unique: true })
 @ObjectType()
 export class UserGroup extends BaseEntity {
   @Field(() => ID)
@@ -17,7 +16,7 @@ export class UserGroup extends BaseEntity {
 
   @Field(() => User)
   @OneToOne(type => User)
-  focalPoint!: User;
+  focalPoint?: User;
 
   @Field(() => [Tag])
   @OneToMany(
@@ -25,7 +24,7 @@ export class UserGroup extends BaseEntity {
     tag => tag.userGroup,
     { eager: true },
   )
-  tags!: Tag[];
+  tags?: Tag[];
 
   @Field(() => [User])
   @OneToMany(
@@ -33,29 +32,29 @@ export class UserGroup extends BaseEntity {
     user => user.userGroup,
     { eager: true },
   )
-  members!: User[];
+  members?: User[];
 
   @ManyToOne(
     type => Ecoverse,
     ecoverse => ecoverse.members
   )
-  ecoverse!: Ecoverse;
+  ecoverse?: Ecoverse;
 
   @ManyToOne(
     type => Challenge,
     challenge => challenge.groups
   )
-  challenge!: Challenge;
+  challenge?: Challenge;
 
   @ManyToOne(
     type => Ecoverse,
     ecoverse => ecoverse.members
   )
-  ecoverseMember!: Ecoverse;
+  ecoverseMember?: Ecoverse;
 
   @OneToOne(type => Challenge, challenge => challenge.challengeLeads)
   @JoinColumn()
-  userGroup!: UserGroup;
+  userGroup?: UserGroup;
 
   constructor(name: string) {
     super();

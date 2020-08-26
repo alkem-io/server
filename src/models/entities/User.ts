@@ -1,8 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Tag, DID, Challenge } from '.';
-import { UserGroup } from './UserGroup';
-import { Organisation } from './Organisation';
+import { Tag, DID, Challenge, UserGroup, Organisation } from '.';
 
 @Entity()
 @ObjectType()
@@ -37,25 +35,25 @@ export class User extends BaseEntity {
 
   @OneToOne(type => UserGroup, userGroup => userGroup.focalPoint)
   @JoinColumn()
-  focalPoint!: UserGroup;
+  focalPoint?: UserGroup;
 
   @ManyToOne(
     type => Challenge,
     challenge => challenge.contributors
   )
-  challenge!: Challenge;
+  challenge?: Challenge;
 
   @ManyToOne(
     type => UserGroup,
     userGroup => userGroup.members
   )
-  userGroup!: UserGroup;
+  userGroup?: UserGroup;
 
   @ManyToOne(
     type => Organisation,
     organisation => organisation.members
   )
-  member!: Organisation;
+  member?: Organisation;
 
   @Field(() => [Tag])
   @OneToMany(
@@ -63,7 +61,7 @@ export class User extends BaseEntity {
     tag => tag.user,
     { eager: true },
   )
-  tags!: Tag[];
+  tags?: Tag[];
 
   constructor(name: string) {
     super();

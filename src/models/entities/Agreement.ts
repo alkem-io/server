@@ -23,14 +23,14 @@ export class Agreement extends BaseEntity {
     tag => tag.agreement,
     { eager: true },
   )
-  tags!: Tag[];
+  tags?: Tag[];
 
 
   @ManyToOne(
     type => Project,
     project => project.agreements
   )
-  project!: Project;
+  project?: Project;
 
   constructor(name: string) {
     super();
