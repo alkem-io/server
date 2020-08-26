@@ -3,13 +3,22 @@ import { ApolloServer } from 'apollo-server-express';
 import express from 'express';
 import { buildSchema } from 'type-graphql';
 
-import { init_db } from './database/init_db';
 import { Resolvers } from './schema/Resolvers';
+import { createConnection } from 'typeorm';
+
 
 const main = async() => {
-  await init_db();
-  console.log('Database created.');
 
+  // Connect to the database
+  try {
+    const connection = await createConnection();
+    await connection.synchronize();
+    console.log('Database connection established.');
+  } catch (error) {
+    console.log('Unable to establish database connection: ' + error); 
+  }
+
+  // Build the schema
   const schema = await buildSchema({
     resolvers: [ Resolvers ],
   });

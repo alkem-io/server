@@ -1,10 +1,15 @@
 import { createConnection } from 'typeorm';
 import { Ecoverse, User, Challenge, Tag, UserGroup } from '../models';
 
-export const init_db = async() => {
+
+async function reset_db() {
+  console.log('Database: Starting the reset of the database... ');
   const connection = await createConnection();
+  
   await connection.dropDatabase();
   await connection.synchronize();
+
+  console.log('Database: dropped... ');
 
   // Tags
   const java = new Tag('Java');
@@ -43,5 +48,13 @@ export const init_db = async() => {
   const valentinTest = new User("ValentinY");
   await valentinTest.save();
 
+  
 
 };
+
+reset_db().then(()=>{
+  console.log('Database: reset complete...');
+  process.exit();
+}).catch(function(e){
+  throw e;
+});
