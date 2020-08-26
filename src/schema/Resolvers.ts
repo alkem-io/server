@@ -10,11 +10,6 @@ export class Resolvers {
     return await Tag.find();
   }
 
-  @Query(() => Tag )
-  async getTagById(@Arg('ID') id : number): Promise<Tag | undefined> {
-    return await Tag.findOne( { where: { id } } );
-  }
-
   @Query(() => [ User ])
   async allUsers(): Promise<User[]> {
     return await User.find();
