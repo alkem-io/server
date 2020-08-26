@@ -1,23 +1,28 @@
 {
-  "name": "apollots",
+  "name": "cherrytwist-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Cherrytwist back-end server that manages the representation of the ecoverse and all the entities stored wthin it",
   "main": "server.js",
   "dependencies": {
     "apollo-server-express": "^2.16.1",
+    "class-validator": "^0.12.2",
     "express": "^4.17.1",
     "graphql": "^15.3.0",
     "reflect-metadata": "^0.1.13",
     "sqlite3": "^5.0.0",
-    "ts-node-dev": "^1.0.0-pre.60",
+    "ts-node": "^9.0.0",
     "type-graphql": "^1.0.0",
     "typeorm": "^0.2.25",
     "typescript": "^4.0.2"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CherryTwist/Server.git"
+  },
   "devDependencies": {},
   "scripts": {
-    "test-db-reset": "ts-node-dev  src/test/db_reset.ts",
-    "server": "ts-node-dev  src/server.ts"
+    "start": "ts-node src/server.ts",
+    "test-db-reset": "ts-node src/test/db_reset.ts"
   },
   "author": "",
   "license": "ISC"
