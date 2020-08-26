@@ -10,9 +10,19 @@ export class Resolvers {
     return await Tag.find();
   }
 
+  @Query(() => Tag )
+  async getTagById(@Arg('ID') id : number): Promise<Tag | undefined> {
+    return await Tag.findOne( { where: { id } } );
+  }
+
   @Query(() => [ User ])
   async allUsers(): Promise<User[]> {
     return await User.find();
+  }
+
+  @Query(() => User )
+  async getUserById(@Arg('ID') id : number): Promise<User | undefined> {
+    return await User.findOne( { where: { id } } );
   }
 
   @Query(() => [ Challenge ])
@@ -20,6 +30,12 @@ export class Resolvers {
     return await Challenge.find();
   }
 
+  @Query(() => Challenge )
+  async getChallengeById(@Arg('ID') id : number): Promise<Challenge | undefined> {
+    return await Challenge.findOne( { where: { id } } );
+  }
+
+  //change to return single Ecoverse
   @Query(() => [ Ecoverse ])
   async allEcoverse(): Promise<Ecoverse[]> {
     return await Ecoverse.find();
