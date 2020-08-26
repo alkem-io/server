@@ -1,10 +1,8 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, Index, OneToMany } from 'typeorm';
-import { DID, Tag, User } from '.';
-import { Ecoverse } from './Ecoverse';
+import { DID, Tag, User, Ecoverse } from '.';
 
 @Entity()
-// @Index([ 'ecoverse', 'organisation' ], { unique: true })
 @ObjectType()
 export class Organisation extends BaseEntity {
   @Field(() => ID)
@@ -19,9 +17,9 @@ export class Organisation extends BaseEntity {
   @OneToOne(type => DID, did => did.organisation)
   DID!: DID;
 
-  @Field(() => Ecoverse)
   @OneToOne(type => Ecoverse, ecoverse => ecoverse.ecoverseHost)
-  ecoverseHost!: Ecoverse;
+  @JoinColumn()
+  ecoverseHost?: Ecoverse;
 
   @Field(() => [Tag])
   @OneToMany(
@@ -29,7 +27,7 @@ export class Organisation extends BaseEntity {
     tag => tag.organisation,
     { eager: true },
   )
-  tags!: Tag[];
+  tags?: Tag[];
 
   @Field(() => [User])
   @OneToMany(
@@ -37,13 +35,13 @@ export class Organisation extends BaseEntity {
     user => user.member,
     { eager: true },
   )
-  members!: User[];
+  members?: User[];
 
   @ManyToOne(
     type => Ecoverse,
     ecoverse => ecoverse.partners
   )
-  partners!: Ecoverse;
+  partners?: Ecoverse;
 
   constructor(name: string) {
     super();

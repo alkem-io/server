@@ -22,44 +22,44 @@ export class Challenge extends BaseEntity {
   lifecyclePhase: string = '';
 
   @Field(() => UserGroup)
-  @OneToOne(type => UserGroup, userGroup => userGroup.challenge)
+  @OneToOne(type => UserGroup, userGroup => userGroup.challenge, {cascade: true})
   challengeLeads!: UserGroup;
 
   @Field(() => Context)
-  @OneToOne(type => Context, context => context.ecoverse)
-  context!: Context;
+  @OneToOne(type => Context, context => context.ecoverse, {cascade: true})
+  context?: Context;
 
   @Field(() => [UserGroup])
   @OneToMany(
     type => UserGroup,
     userGroup => userGroup.challenge,
-    { eager: true },
+    { eager: true, cascade: true },
   )
-  groups!: UserGroup[];
+  groups?: UserGroup[];
 
   @Field(() => [User])
   @OneToMany(
     type => User,
     users => users.challenge,
-    { eager: true },
+    { eager: true, cascade: true },
   )
-  contributors!: User[];
+  contributors?: User[];
 
   @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.challenge,
-    { eager: true },
+    { eager: true, cascade: true, nullable: true },
   )
-  tags!: Tag[];
+  tags?: Tag[];
 
   @Field(() => [Project])
   @OneToMany(
     type => Project,
     project => project.challenge,
-    { eager: true },
+    { eager: true, cascade: true },
   )
-  projects!: Project[];
+  projects?: Project[];
   
   @Field(() => DID)
   @OneToOne(type => DID, did => did.challenge)
@@ -69,7 +69,7 @@ export class Challenge extends BaseEntity {
     type => Ecoverse,
     ecoverse => ecoverse.challenges
   )
-  ecoverse!: Ecoverse;
+  ecoverse?: Ecoverse;
 
   constructor(name: string) {
     super();
