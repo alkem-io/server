@@ -36,9 +36,15 @@ export class UserGroup extends BaseEntity {
 
   @ManyToOne(
     type => Ecoverse,
-    ecoverse => ecoverse.members
+    ecoverse => ecoverse.groups
   )
   ecoverse?: Ecoverse;
+
+  @OneToOne(
+    type => Ecoverse,
+    ecoverse => ecoverse.members
+  )
+  ecoverse2?: Ecoverse;
 
   @ManyToOne(
     type => Challenge,

@@ -1,5 +1,5 @@
 import { createConnection } from 'typeorm';
-import { Ecoverse, User, Challenge, Tag, UserGroup } from '../models';
+import { Ecoverse, User, Challenge, Tag, UserGroup, Context } from '../models';
 
 
 async function reset_db() {
@@ -11,44 +11,44 @@ async function reset_db() {
 
   console.log('Database: dropped... ');
 
+  // Create new Ecoverse
+  const ctverse = new Ecoverse("CherryTwist dogfood");
+
   // Tags
   const java = new Tag('Java');
-  await java.save();
-
   const graphql = new Tag('GraphQL');
-  await graphql.save();
+  ctverse.tags = [java, graphql];
+  
 
   // User Groups
-  const ecoverseMember = new UserGroup("Shell");
-  await ecoverseMember.save();
-  const ecoverseMember2 = new UserGroup("BP");
-  await ecoverseMember2.save();
-
+  const jedi = new UserGroup("Jedi");
+  const crew = new UserGroup("Crew");
+  ctverse.groups = [jedi, crew];
 
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.tags = new Array(java);
-  await energyWeb.save();
+  energyWeb.context = new Context();
+  energyWeb.context.description = "Balance the grid in a decentralised world";
 
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = new Array(graphql);
-  await cleanOceans.save();
+  cleanOceans.context = new Context();
+  cleanOceans.context.description = "Keep our Oceans clean and in balance!";
 
+  const cargoInsurance = new Challenge('Cargo Insurance');
+  cargoInsurance.tags = new Array(graphql, java);
+  cargoInsurance.context = new Context();
+  cargoInsurance.context.description = "In an interconnected world, how to manage risk along the chain?";
 
-  // Ecoverse
-  const odyssey = new Ecoverse('Odyssey');
-  odyssey.challenges = new Array(energyWeb);
-  odyssey.members = new Array(ecoverseMember, ecoverseMember2);
-  await odyssey.save();
+  ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
 
   // Users
-  const neilTest = new User("techSmyth");
-  await neilTest.save();
+  const john = new User("john");
+  const bob = new User("bob");
+  ctverse.members = [john, bob];
 
-  const valentinTest = new User("ValentinY");
-  await valentinTest.save();
-
-  
+  await ctverse.save();
 
 };
 

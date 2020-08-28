@@ -13,7 +13,6 @@ export class Organisation extends BaseEntity {
   @Column()
   name: string = '';
   
-  @Field(() => DID)
   @OneToOne(type => DID, did => did.organisation)
   DID!: DID;
 

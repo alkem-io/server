@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Tag, DID, Challenge, UserGroup, Organisation } from '.';
+import { Tag, DID, Challenge, UserGroup, Organisation, Ecoverse } from '.';
 
 @Entity()
 @ObjectType()
@@ -13,7 +13,6 @@ export class User extends BaseEntity {
   @Column()
   name: string = '';
 
-  @Field(() => String)
   @Column()
   account: string = '';
 
@@ -29,7 +28,6 @@ export class User extends BaseEntity {
   @Column()
   email: string = '';
   
-  @Field(() => DID)
   @OneToOne(type => DID, did => did.user)
   DID!: DID;
 
@@ -54,6 +52,12 @@ export class User extends BaseEntity {
     organisation => organisation.members
   )
   member?: Organisation;
+
+  @ManyToOne(
+    type => Ecoverse,
+    ecoverse => ecoverse.members
+  )
+  ecoverse?: Ecoverse;
 
   @Field(() => [Tag])
   @OneToMany(

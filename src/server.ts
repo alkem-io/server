@@ -5,6 +5,7 @@ import { buildSchema } from 'type-graphql';
 
 import { Resolvers } from './schema/Resolvers';
 import { createConnection } from 'typeorm';
+import { Ecoverse } from './models';
 
 
 const main = async() => {
@@ -13,7 +14,7 @@ const main = async() => {
   try {
     const connection = await createConnection();
     await connection.synchronize();
-    console.log('Database connection established.');
+    console.log('Database connection established and data loaded');
   } catch (error) {
     console.log('Unable to establish database connection: ' + error); 
   }

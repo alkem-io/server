@@ -5,93 +5,81 @@ import { BaseEntity } from 'typeorm';
 
 @Resolver()
 export class Resolvers {
-  @Query(() => [ Tag ])
-  async allTags(): Promise<Tag[]> {
-    return await Tag.find();
+
+  @Query(() => String)
+  async name(): Promise<String> {
+    // NOTE: need to be able to return THE host organisation
+    return "HelloEcoverse";
   }
 
-  @Query(() => [ User ])
-  async allUsers(): Promise<User[]> {
-    return await User.find();
+  @Query(() => Organisation)
+  async host(): Promise<Organisation> {
+    // NOTE: need to be able to return THE host organisation
+    const organisations = await Organisation.find();
+    return organisations[0];
   }
+
+  // Context related fields
+  @Query(() => Context )
+  async context(): Promise<Context> {
+    const contexts = await Context.find();
+    return contexts[0];
+  }
+
+  // Community related fields
 
   @Query(() => User )
-  async getUserById(@Arg('ID') id : number): Promise<User | undefined> {
+  async user(@Arg('ID') id : string): Promise<User | undefined> {
     return await User.findOne( { where: { id } } );
   }
 
-  @Query(() => [ Challenge ])
-  async allChallenges(): Promise<Challenge[]> {
-    return await Challenge.find();
+  @Query(() => [ User ])
+  async users(): Promise<User[]> {
+    return await User.find();
   }
 
-  @Query(() => Challenge )
-  async getChallengeById(@Arg('ID') id : number): Promise<Challenge | undefined> {
-    return await Challenge.findOne( { where: { id } } );
-  }
-
-  //change to return single Ecoverse
-  @Query(() => [ Ecoverse ])
-  async allEcoverse(): Promise<Ecoverse[]> {
-    return await Ecoverse.find();
-  }
-
-  @Query(() => [ Agreement ])
-  async allAgreements(): Promise<Agreement[]> {
-    return await Agreement.find();
-  }
-
-  @Query(() => [ Context ])
-  async allContexts(): Promise<Context[]> {
-    return await Context.find();
-  }
-
-  @Query(() => [ DID ])
-  async allDIDs(): Promise<DID[]> {
-    return await DID.find();
-  }
-
-  @Query(() => [ Organisation ])
-  async allOrganisations(): Promise<Organisation[]> {
-    return await Organisation.find();
-  }
-
-  @Query(() => [ Project ])
-  async allProjects(): Promise<Project[]> {
-    return await Project.find();
+  @Query(() => UserGroup )
+  async userGroup(@Arg('ID') id : string): Promise<UserGroup | undefined> {
+    return await UserGroup.findOne( { where: { id } } );
   }
 
   @Query(() => [ UserGroup ])
-  async allUserGroups(): Promise<UserGroup[]> {
+  async userGroups(): Promise<UserGroup[]> {
     return await UserGroup.find();
   }
 
-  @Mutation(() => Ecoverse)
-  async createEcoverse(
-    @Arg('ecoverseData') ecoverseData: EcoverseInput): Promise<Ecoverse> {
-    const ecoverse = Ecoverse.create(ecoverseData);
-    await ecoverse.save();
-
-    return ecoverse;
+  @Query(() => [ Organisation ])
+  async organisations(): Promise<Organisation[]> {
+    return await Organisation.find();
   }
 
-  @Mutation(() => Challenge)
-  async createChallenge(
-    @Arg('challengeData') challengeData: ChallengeInput): Promise<Challenge> {
-    const challenge = Challenge.create(challengeData);
-    await challenge.save();
+  // Challenges related fields
 
-    return challenge;
+  @Query(() => Challenge )
+  async challenge(@Arg('ID') id : string): Promise<Challenge | undefined> {
+    return await Challenge.findOne( { where: { id } } );
   }
 
-  @Mutation(() => Agreement)
-  async createAgreement(
-    @Arg('agreementData') agreementData: AgreementInput): Promise<Agreement> {
-    const agreement = Agreement.create(agreementData);
-    await agreement.save();
-
-    return agreement;
+  @Query(() => [ Challenge ])
+  async challenges(): Promise<Challenge[]> {
+    const challenges = await Challenge.find();
+    return challenges;
   }
+
+  // Misc
+
+  @Query(() => [ Tag ])
+  async tags(): Promise<Tag[]> {
+    return await Tag.find();
+  }
+
+
+
+
+
+  // The set of mutations to expose
+
+  // TBD - add in Host org mutation
 
   @Mutation(() => Context)
   async createContext(
@@ -100,33 +88,6 @@ export class Resolvers {
     await context.save();
 
     return context;
-  }
-
-  @Mutation(() => Organisation)
-  async createOrganisation(
-    @Arg('organisationData') organisationData: OrganisationInput): Promise<Organisation> {
-    const organisation = Organisation.create(organisationData);
-    await organisation.save();
-
-    return organisation;
-  }
-
-  @Mutation(() => Project)
-  async createProject(
-    @Arg('projectData') projectData: ProjectInput): Promise<Project> {
-    const project = Project.create(projectData);
-    await project.save();
-
-    return project;
-  }
-
-  @Mutation(() => Tag)
-  async createTag(
-    @Arg('tagData') tagData: TagInput): Promise<Tag> {
-    const tag = Tag.create(tagData);
-    await tag.save();
-
-    return tag;
   }
 
   @Mutation(() => User)
@@ -146,6 +107,35 @@ export class Resolvers {
 
     return userGroup;
   }
+
+  @Mutation(() => Organisation)
+  async createOrganisation(
+    @Arg('organisationData') organisationData: OrganisationInput): Promise<Organisation> {
+    const organisation = Organisation.create(organisationData);
+    await organisation.save();
+
+    return organisation;
+  }
+
+  @Mutation(() => Challenge)
+  async createChallenge(
+    @Arg('challengeData') challengeData: ChallengeInput): Promise<Challenge> {
+    const challenge = Challenge.create(challengeData);
+    await challenge.save();
+
+    return challenge;
+  }
+
+  @Mutation(() => Tag)
+  async createTag(
+    @Arg('tagData') tagData: TagInput): Promise<Tag> {
+    const tag = Tag.create(tagData);
+    await tag.save();
+
+    return tag;
+  }
+
+
 
   // @Mutation(() => DID)
   // async createDID(
