@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn} from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn, ManyToOne} from 'typeorm';
 import { Tag } from '.';
 import { Challenge } from './Challenge';
 import { Ecoverse } from './Ecoverse';
@@ -13,36 +13,29 @@ export class Context extends BaseEntity {
 
   @Field(() => String)
   @Column()
-  description: string = '';
+  description?: string = '';
 
   @Field(() => String)
   @Column()
-  vision: string = '';
+  vision?: string = '';
 
   @Field(() => String)
   @Column()
-  principles: string = '';
+  principles?: string = '';
 
   @Field(() => String)
   @Column()
-  referenceLinks: string = '';
+  refernceLinks?: string = '';
 
-  //@Field(() => [Tag])
-  @OneToMany(
-    type => Tag,
-    tag => tag.context,
-    { eager: true },
-  )
-  tags?: Tag[];
+  /* Need to make referenceLinks + others into string arrays or a full type
+  @Field(() => [String])
+  @Column("simple-array")
+  referenceLinks?: string[];*/
 
-  //@Field(() => Ecoverse)
   @OneToOne(type => Ecoverse, ecoverse => ecoverse.context)
-  @JoinColumn()
   ecoverse?: Ecoverse;
 
-  //@Field(() => Challenge)
   @OneToOne(type => Challenge, challenge => challenge.context)
-  @JoinColumn()
   challenge?: Challenge;
 
 

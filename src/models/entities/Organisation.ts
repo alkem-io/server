@@ -17,8 +17,13 @@ export class Organisation extends BaseEntity {
   DID!: DID;
 
   @OneToOne(type => Ecoverse, ecoverse => ecoverse.ecoverseHost)
-  @JoinColumn()
   ecoverseHost?: Ecoverse;
+
+  @ManyToOne(
+    type => Ecoverse,
+    ecoverse => ecoverse.partners
+  )
+  ecoverse?: Ecoverse;
 
   @Field(() => [Tag])
   @OneToMany(
@@ -35,12 +40,6 @@ export class Organisation extends BaseEntity {
     { eager: true },
   )
   members?: User[];
-
-  @ManyToOne(
-    type => Ecoverse,
-    ecoverse => ecoverse.partners
-  )
-  partners?: Ecoverse;
 
   constructor(name: string) {
     super();

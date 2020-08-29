@@ -40,12 +40,6 @@ export class UserGroup extends BaseEntity {
   )
   ecoverse?: Ecoverse;
 
-  @OneToOne(
-    type => Ecoverse,
-    ecoverse => ecoverse.members
-  )
-  ecoverse2?: Ecoverse;
-
   @ManyToOne(
     type => Challenge,
     challenge => challenge.groups
@@ -59,7 +53,6 @@ export class UserGroup extends BaseEntity {
   ecoverseMember?: Ecoverse;
 
   @OneToOne(type => Challenge, challenge => challenge.challengeLeads)
-  @JoinColumn()
   userGroup?: UserGroup;
 
   constructor(name: string) {

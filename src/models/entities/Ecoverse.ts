@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn, OneToOne, JoinColumn, OneToMany} from 'typeorm';
+import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn, OneToOne, JoinColumn, OneToMany, ManyToMany} from 'typeorm';
 import { User, UserGroup, Challenge, DID, Organisation, Context, Tag } from '.';
 
 
@@ -22,15 +22,17 @@ export class Ecoverse extends BaseEntity {
 
   @Field(() => Context)
   @OneToOne(type => Context, context => context.ecoverse, {cascade: true})
+  @JoinColumn()
   context?: Context;
 
   // The digital identity for the Ecoverse - critical for its trusted role
   @OneToOne(type => DID, did => did.ecoverse)
+  @JoinColumn()
   DID!: DID;
 
   // The community for the ecoverse
   @Field(() => [User])
-  @OneToOne(
+  @OneToMany(
     type => User,
     user => user.ecoverse,
     { eager: true, cascade: true },
@@ -48,7 +50,7 @@ export class Ecoverse extends BaseEntity {
   @Field(() => [Organisation])
   @OneToMany(
     type => Organisation,
-    organisation => organisation.partners,
+    organisation => organisation.ecoverse,
     { eager: true, cascade: true },
   )
   partners?: Organisation[];
