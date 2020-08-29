@@ -34,13 +34,16 @@ async function reset_db() {
   await crew.save();
   ctverse.groups = [jedi, crew];
 
+  ctverse.context = new Context();
+  ctverse.context.description = "A sample ecoverse to play with";
+  await ctverse.save();
+
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.tags = [java];
   energyWeb.context = new Context();
   energyWeb.context.description = "Balance the grid in a decentralised world";
-  energyWeb.context.challenge = energyWeb;
-  energyWeb.context.ecoverse = ctverse;
+  await energyWeb.save();
   
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = [graphql];
@@ -56,9 +59,7 @@ async function reset_db() {
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
   await ctverse.save();
 
-  ctverse.context = new Context();
-  ctverse.context.description = "A sample ecoverse to play with";
-  await ctverse.save();
+
 
 };
 
