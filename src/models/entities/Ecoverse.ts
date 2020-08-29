@@ -21,7 +21,7 @@ export class Ecoverse extends BaseEntity {
   ecoverseHost?: Organisation;
 
   @Field(() => Context, {nullable: true})
-  @OneToOne(type => Context, context => context.ecoverse, {cascade: true})
+  @OneToOne(type => Context, context => context.ecoverse, {eager: true, cascade: true})
   @JoinColumn()
   context?: Context;
 

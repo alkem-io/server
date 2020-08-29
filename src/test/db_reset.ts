@@ -13,19 +13,23 @@ async function reset_db() {
 
   // Create new Ecoverse
   const ctverse = new Ecoverse("CherryTwist dogfood");
-  await ctverse.save();
 
   // Tags
   const java = new Tag('Java');
   await java.save();
   const graphql = new Tag('GraphQL');
-  await graphql.save();
   ctverse.tags = [java, graphql];
   
+  // Users
+  const john = new User("john");
+  const bob = new User("bob");
+  await bob.save();
+  ctverse.members = [john, bob];
 
   // User Groups
   const jedi = new UserGroup("Jedi");
   await jedi.save();
+  jedi.members = [john, bob];
   const crew = new UserGroup("Crew");
   await crew.save();
   ctverse.groups = [jedi, crew];
@@ -37,14 +41,12 @@ async function reset_db() {
   energyWeb.context.description = "Balance the grid in a decentralised world";
   energyWeb.context.challenge = energyWeb;
   energyWeb.context.ecoverse = ctverse;
-  await energyWeb.save();
-
+  
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = [graphql];
   cleanOceans.context = new Context();
   cleanOceans.context.description = "Keep our Oceans clean and in balance!";
-  await energyWeb.save();
-
+  
   const cargoInsurance = new Challenge('Cargo Insurance');
   cargoInsurance.tags = [graphql, java];
   cargoInsurance.context = new Context();
@@ -54,13 +56,8 @@ async function reset_db() {
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
   await ctverse.save();
 
-  // Users
-  const john = new User("john");
-  await john.save()
-  const bob = new User("bob");
-  await bob.save();
-  ctverse.members = [john, bob];
-
+  ctverse.context = new Context();
+  ctverse.context.description = "A sample ecoverse to play with";
   await ctverse.save();
 
 };
