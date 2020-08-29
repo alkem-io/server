@@ -16,13 +16,14 @@ export class UserGroup extends BaseEntity {
 
   @Field(() => User)
   @OneToOne(type => User)
+  @JoinColumn()
   focalPoint?: User;
 
   @Field(() => [Tag])
   @OneToMany(
     type => Tag,
     tag => tag.userGroup,
-    { eager: true },
+    { eager: true, cascade: true },
   )
   tags?: Tag[];
 
@@ -30,7 +31,7 @@ export class UserGroup extends BaseEntity {
   @OneToMany(
     type => User,
     user => user.userGroup,
-    { eager: true },
+    { eager: true, cascade: true },
   )
   members?: User[];
 

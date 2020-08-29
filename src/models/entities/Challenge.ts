@@ -13,15 +13,15 @@ export class Challenge extends BaseEntity {
   @Column()
   name: string = '';
 
-  @Field(() => Context)
-  @OneToOne(type => Context, context => context.ecoverse, {cascade: true})
+  @Field(() => Context, {nullable: true})
+  @OneToOne(type => Context, context => context.ecoverse, { eager: true, cascade: true})
   @JoinColumn()
   context?: Context;
 
   // Community
 
   @Field(() => UserGroup)
-  @OneToOne(type => UserGroup, userGroup => userGroup.challenge, {cascade: true})
+  @OneToOne(type => UserGroup, userGroup => userGroup.challenge, {eager: true, cascade: true})
   @JoinColumn()
   challengeLeads!: UserGroup;
 
@@ -62,7 +62,10 @@ export class Challenge extends BaseEntity {
   )
   projects?: Project[];
   
-  @OneToOne(type => DID, did => did.challenge)
+  @OneToOne(
+    type => DID, 
+    did => did.challenge, 
+    {eager: true, cascade: true})
   @JoinColumn()
   DID!: DID;
 

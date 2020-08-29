@@ -5,10 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch via NPM",
+            "name": "CT DB Reset",
             "request": "launch",
             "runtimeArgs": [
                 "run", "test-db-reset"
+            ],
+            "runtimeExecutable": "npm",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "pwa-node"
+        },
+        {
+            "name": "CT Server",
+            "request": "launch",
+            "runtimeArgs": [
+                "start"
             ],
             "runtimeExecutable": "npm",
             "skipFiles": [

@@ -15,23 +15,23 @@ export class Ecoverse extends BaseEntity {
   @Column()
   name: string = '';
 
-  @Field(() => Organisation)
+  @Field(() => Organisation, {nullable: true})
   @OneToOne(type => Organisation, organisation => organisation.ecoverseHost)
   @JoinColumn()
   ecoverseHost?: Organisation;
 
-  @Field(() => Context)
+  @Field(() => Context, {nullable: true})
   @OneToOne(type => Context, context => context.ecoverse, {cascade: true})
   @JoinColumn()
   context?: Context;
 
   // The digital identity for the Ecoverse - critical for its trusted role
-  @OneToOne(type => DID, did => did.ecoverse)
+  @OneToOne(type => DID, did => did.ecoverse, {eager: true, cascade: true})
   @JoinColumn()
   DID!: DID;
 
   // The community for the ecoverse
-  @Field(() => [User])
+  @Field(() => [User], {nullable: true})
   @OneToMany(
     type => User,
     user => user.ecoverse,
@@ -39,7 +39,7 @@ export class Ecoverse extends BaseEntity {
   )
   members?: User[];
 
-  @Field(() => [UserGroup])
+  @Field(() => [UserGroup], {nullable: true})
   @OneToMany(
     type => UserGroup,
     userGroup => userGroup.ecoverseMember,
@@ -47,7 +47,7 @@ export class Ecoverse extends BaseEntity {
   )
   groups?: UserGroup[];
 
-  @Field(() => [Organisation])
+  @Field(() => [Organisation], {nullable: true})
   @OneToMany(
     type => Organisation,
     organisation => organisation.ecoverse,
@@ -56,7 +56,7 @@ export class Ecoverse extends BaseEntity {
   partners?: Organisation[];
 
   // The Challenges hosted by the Ecoverse
-  @Field(() => [Challenge])
+  @Field(() => [Challenge], {nullable: true})
   @OneToMany(
     type => Challenge,
     challenge => challenge.ecoverse,
@@ -64,11 +64,11 @@ export class Ecoverse extends BaseEntity {
   )
   challenges?: Challenge[];
 
-  @Field(() => [Tag])
+  @Field(() => [Tag], {nullable: true})
   @OneToMany(
     type => Tag,
     tag => tag.ecoverse,
-    { eager: true },
+    { eager: true, cascade: true },
   )
   tags?: Tag[];
 

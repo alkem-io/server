@@ -11,19 +11,19 @@ export class Context extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number | null = null;
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true})
   @Column()
   description?: string = '';
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true})
   @Column()
   vision?: string = '';
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true})
   @Column()
   principles?: string = '';
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true})
   @Column()
   refernceLinks?: string = '';
 
