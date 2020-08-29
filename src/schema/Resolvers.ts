@@ -9,7 +9,7 @@ export class Resolvers {
   @Query(() => String)
   async name(): Promise<String> {
     // NOTE: need to be able to return THE host organisation
-    return "HelloEcoverse";
+      return "HelloEcoverse";
   }
 
   @Query(() => Organisation)
@@ -62,8 +62,7 @@ export class Resolvers {
 
   @Query(() => [ Challenge ])
   async challenges(): Promise<Challenge[]> {
-    const challenges = await Challenge.find();
-    return challenges;
+    return await Challenge.find();
   }
 
   // Misc

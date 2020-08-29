@@ -18,7 +18,12 @@ async function reset_db() {
   const java = new Tag('Java');
   await java.save();
   const graphql = new Tag('GraphQL');
-  ctverse.tags = [java, graphql];
+  await graphql.save();
+  const nature = new Tag('Nature');
+  await nature.save();
+  const industry = new Tag('Industry');
+  await industry.save();
+  ctverse.tags = [java, graphql, industry, nature];
   
   // Users
   const john = new User("john");
@@ -40,24 +45,29 @@ async function reset_db() {
 
   // Challenges
   const energyWeb = new Challenge('Energy Web');
-  energyWeb.tags = [java];
+  energyWeb.tags = [java, graphql, industry];
   energyWeb.context = new Context();
   energyWeb.context.description = "Balance the grid in a decentralised world";
   await energyWeb.save();
   
   const cleanOceans = new Challenge('Clean Oceans');
-  cleanOceans.tags = [graphql];
+  cleanOceans.tags = [graphql, nature];
   cleanOceans.context = new Context();
   cleanOceans.context.description = "Keep our Oceans clean and in balance!";
+  await cleanOceans.save();
   
   const cargoInsurance = new Challenge('Cargo Insurance');
-  cargoInsurance.tags = [graphql, java];
+  cargoInsurance.tags = [graphql, java, industry];
   cargoInsurance.context = new Context();
   cargoInsurance.context.description = "In an interconnected world, how to manage risk along the chain?";
   await cargoInsurance.save();
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
   await ctverse.save();
+
+  const initialEcoverse = JSON.stringify(ctverse, null, 4);
+  console.log(initialEcoverse);
+
 
 
 
