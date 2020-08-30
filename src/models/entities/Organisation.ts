@@ -13,11 +13,9 @@ export class Organisation extends BaseEntity {
   @Column()
   name: string = '';
   
-  @OneToOne(type => DID, did => did.organisation)
+  @OneToOne(type => DID)
+  @JoinColumn()
   DID!: DID;
-
-  @OneToOne(type => Ecoverse, ecoverse => ecoverse.ecoverseHost)
-  ecoverseHost?: Ecoverse;
 
   @ManyToOne(
     type => Ecoverse,

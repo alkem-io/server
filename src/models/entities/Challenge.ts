@@ -14,7 +14,7 @@ export class Challenge extends BaseEntity {
   name: string = '';
 
   @Field(() => Context, {nullable: true})
-  @OneToOne(type => Context, context => context.ecoverse, { eager: true, cascade: true})
+  @OneToOne(type => Context,  { eager: true, cascade: true})
   @JoinColumn()
   context?: Context;
 
@@ -62,10 +62,7 @@ export class Challenge extends BaseEntity {
   )
   projects?: Project[];
   
-  @OneToOne(
-    type => DID, 
-    did => did.challenge, 
-    {eager: true, cascade: true})
+  @OneToOne(type => DID, {eager: true, cascade: true})
   @JoinColumn()
   DID!: DID;
 

@@ -16,17 +16,17 @@ export class Ecoverse extends BaseEntity {
   name: string = '';
 
   @Field(() => Organisation, {nullable: true})
-  @OneToOne(type => Organisation, organisation => organisation.ecoverseHost)
+  @OneToOne(type => Organisation, {eager: true, cascade: true})
   @JoinColumn()
   ecoverseHost?: Organisation;
 
   @Field(() => Context, {nullable: true})
-  @OneToOne(type => Context, context => context.ecoverse, {eager: true, cascade: true})
+  @OneToOne(type => Context, {eager: true, cascade: true})
   @JoinColumn()
   context?: Context;
 
   // The digital identity for the Ecoverse - critical for its trusted role
-  @OneToOne(type => DID, did => did.ecoverse, {eager: true, cascade: true})
+  @OneToOne(type => DID, {eager: true, cascade: true})
   @JoinColumn()
   DID!: DID;
 

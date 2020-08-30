@@ -23,7 +23,7 @@ export class Context extends BaseEntity {
   @Column()
   principles?: string = '';
 
-  @Field(() => String, {nullable: true})
+  @Field(() => String, {nullable: true, description: "A list of URLs that provide additional context."})
   @Column()
   refernceLinks?: string = '';
 
@@ -31,12 +31,6 @@ export class Context extends BaseEntity {
   @Field(() => [String])
   @Column("simple-array")
   referenceLinks?: string[];*/
-
-  @OneToOne(type => Ecoverse, ecoverse => ecoverse.context)
-  ecoverse?: Ecoverse;
-
-  @OneToOne(type => Challenge, challenge => challenge.context)
-  challenge?: Challenge;
 
 
 }

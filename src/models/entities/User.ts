@@ -28,12 +28,9 @@ export class User extends BaseEntity {
   @Column()
   email: string = '';
   
-  @OneToOne(type => DID, did => did.user)
-  DID!: DID;
-
-  @OneToOne(type => UserGroup, userGroup => userGroup.focalPoint)
+  @OneToOne(type => DID)
   @JoinColumn()
-  focalPoint?: UserGroup;
+  DID!: DID;
 
   @ManyToOne(
     type => Challenge,

@@ -29,9 +29,6 @@ export class Project extends BaseEntity {
   )
   tags?: Tag[];
   
-  @OneToOne(type => DID, did => did.project)
-  DID!: DID;
-
   @Field(() => [Agreement])
   @OneToMany(
     type => Agreement,
