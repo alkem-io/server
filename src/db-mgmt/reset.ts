@@ -1,4 +1,4 @@
-import { createConnection } from 'typeorm';
+import { createConnection, Connection } from 'typeorm';
 import { Ecoverse, User, Challenge, Tag, UserGroup, Context } from '../models';
 
 
@@ -10,6 +10,13 @@ async function reset_db() {
   await connection.synchronize();
 
   console.log('Database: dropped... ');
+
+  load_sample_data(connection);
+};
+
+/* Load in sample data into a synchronized database connection */
+async function load_sample_data(connection: Connection) {
+  console.log('Database: Loading sample data... ');
 
   // Create new Ecoverse
   const ctverse = new Ecoverse("CherryTwist dogfood");
@@ -66,10 +73,7 @@ async function reset_db() {
   await ctverse.save();
 
   const initialEcoverse = JSON.stringify(ctverse, null, 4);
-  console.log(initialEcoverse);
-
-
-
+  //console.log(initialEcoverse);
 
 };
 
