@@ -1,6 +1,9 @@
 # Server
 Represents the core back-end server that manages the representation of the ecoverse and all the entities stored wthin it. 
 
+Build Status:
+![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
+
 ## Running the server
 To run the server in test mode:
 * Install dependencies via 'npm install'
