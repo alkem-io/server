@@ -13,13 +13,15 @@ export class Organisation extends BaseEntity {
   @Column()
   name: string = '';
   
-  @Field(() => DID)
-  @OneToOne(type => DID, did => did.organisation)
+  @OneToOne(type => DID)
+  @JoinColumn()
   DID!: DID;
 
-  @OneToOne(type => Ecoverse, ecoverse => ecoverse.ecoverseHost)
-  @JoinColumn()
-  ecoverseHost?: Ecoverse;
+  @ManyToOne(
+    type => Ecoverse,
+    ecoverse => ecoverse.partners
+  )
+  ecoverse?: Ecoverse;
 
   @Field(() => [Tag])
   @OneToMany(
@@ -36,12 +38,6 @@ export class Organisation extends BaseEntity {
     { eager: true },
   )
   members?: User[];
-
-  @ManyToOne(
-    type => Ecoverse,
-    ecoverse => ecoverse.partners
-  )
-  partners?: Ecoverse;
 
   constructor(name: string) {
     super();

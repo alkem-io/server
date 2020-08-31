@@ -1,6 +1,6 @@
 import { InputType, Field } from 'type-graphql';
 import { MaxLength } from 'class-validator';
-import { TagInput, ChallengeInput, OrganisationInput, UserGroupInput, ContextInput } from '.';
+import { TagInput, ChallengeInput, OrganisationInput, UserGroupInput, ContextInput, UserInput } from '.';
 import { DeepPartial } from 'typeorm';
 import { Ecoverse } from '..';
 
@@ -17,8 +17,11 @@ export class EcoverseInput implements DeepPartial<Ecoverse>{
   @Field(() => [OrganisationInput], { nullable: true })
   partners?: OrganisationInput[];
 
+  @Field(() => [UserInput], { nullable: true })
+  members?: UserInput[];
+
   @Field(() => [UserGroupInput], { nullable: true })
-  members?: UserGroupInput[];
+  groups?: UserGroupInput[];
 
   @Field({ nullable: true })
   context?: ContextInput;

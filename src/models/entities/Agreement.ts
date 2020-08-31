@@ -17,15 +17,6 @@ export class Agreement extends BaseEntity {
   @Column()
   description: string = '';
 
-  @Field(() => [Tag])
-  @OneToMany(
-    type => Tag,
-    tag => tag.agreement,
-    { eager: true },
-  )
-  tags?: Tag[];
-
-
   @ManyToOne(
     type => Project,
     project => project.agreements

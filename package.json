@@ -22,7 +22,7 @@
   "devDependencies": {},
   "scripts": {
     "start": "ts-node src/server.ts",
-    "test-db-reset": "ts-node src/test/db_reset.ts"
+    "test-db-reset": "ts-node src/seed/db_reset.ts"
   },
   "author": "",
   "license": "ISC"

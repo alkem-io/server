@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-import { Challenge, Context, User, Organisation, Project, UserGroup, Agreement } from '.';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, ManyToMany } from 'typeorm';
+import { Challenge, Context, User, Organisation, Project, UserGroup, Agreement, Ecoverse } from '.';
 
 @Entity()
 @ObjectType()
@@ -26,22 +26,16 @@ export class Tag extends BaseEntity {
   project?: Project;
 
   @ManyToOne(
-    type => Agreement,
-    agreement => agreement.tags
-  )
-  agreement?: Agreement;
-
-  @ManyToOne(
-    type => Context,
-    context => context.tags
-  )
-  context?: Context;
-
-  @ManyToOne(
     type => Organisation,
     organisation => organisation.tags
   )
   organisation?: Organisation;
+
+  @ManyToOne(
+    type => Ecoverse,
+    ecoverse => ecoverse.tags
+  )
+  ecoverse?: Ecoverse;
 
   @ManyToOne(
     type => User,

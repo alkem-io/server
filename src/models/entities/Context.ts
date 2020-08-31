@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn} from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn, ManyToOne} from 'typeorm';
 import { Tag } from '.';
 import { Challenge } from './Challenge';
 import { Ecoverse } from './Ecoverse';
@@ -11,39 +11,26 @@ export class Context extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number | null = null;
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true})
   @Column()
-  description: string = '';
+  description?: string = '';
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true})
   @Column()
-  vision: string = '';
+  vision?: string = '';
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true})
   @Column()
-  principles: string = '';
+  principles?: string = '';
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true, description: "A list of URLs that provide additional context."})
   @Column()
-  referenceLinks: string = '';
+  refernceLinks?: string = '';
 
-  @Field(() => [Tag])
-  @OneToMany(
-    type => Tag,
-    tag => tag.context,
-    { eager: true },
-  )
-  tags?: Tag[];
-
-  @Field(() => Ecoverse)
-  @OneToOne(type => Ecoverse, ecoverse => ecoverse.context)
-  @JoinColumn()
-  ecoverse?: Ecoverse;
-
-  @Field(() => Challenge)
-  @OneToOne(type => Challenge, challenge => challenge.context)
-  @JoinColumn()
-  challenge?: Challenge;
+  /* Need to make referenceLinks + others into string arrays or a full type
+  @Field(() => [String])
+  @Column("simple-array")
+  referenceLinks?: string[];*/
 
 
 }
