@@ -22,7 +22,8 @@
   "devDependencies": {},
   "scripts": {
     "start": "ts-node src/server.ts",
-    "test-db-reset": "ts-node src/db-mgmt/reset.ts"
+    "test-db-reset": "ts-node src/db-mgmt/reset.ts",
+    "db-challenge": "ts-node src/db-mgmt/challenge.ts"
   },
   "author": "",
   "license": "ISC"

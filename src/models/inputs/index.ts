@@ -7,5 +7,6 @@ export * from './OrganisationInput';
 export * from './UserGroupInput';
 export * from './ProjectInput';
 export * from './TagInput';
+export * from './ReferenceInput';
 
 
