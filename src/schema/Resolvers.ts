@@ -19,7 +19,11 @@ export class Resolvers {
 
   @Query(() => String, {nullable: false, description: "The name for this ecoverse"})
   async name(): Promise<String> {
-      return this.ecoverse.name;
+    const ecoverses = await Ecoverse.find();
+    if (!ecoverses[0]) {
+      throw new ApolloError("Unable to identify the ecoverse entity");
+    }
+    return ecoverses[0].name;
   }
 
   @Query(() => Organisation, {nullable: false, description: "The host organisation for the ecoverse"})
