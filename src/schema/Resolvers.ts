@@ -1,18 +1,28 @@
 import { Query, Resolver, Arg, Mutation } from 'type-graphql';
 import { Tag, User, Challenge, Ecoverse, Agreement, DID, Context, Organisation, Project, UserGroup, EcoverseInput, ChallengeInput, AgreementInput, ContextInput, OrganisationInput, ProjectInput, TagInput, UserInput, UserGroupInput } from '../models';
 import { BaseEntity } from 'typeorm';
+import { ApolloError } from 'apollo-server-express';
 
 
 @Resolver()
 export class Resolvers {
 
-  @Query(() => String)
-  async name(): Promise<String> {
-    // NOTE: need to be able to return THE host organisation
-      return "HelloEcoverse";
+  // find the ecoverse instance
+  
+  async ecoverse(): Promise<Ecoverse> {
+    const ecoverses = await Ecoverse.find();
+    if (!ecoverses[0]) {
+      throw new ApolloError("Unable to identify the ecoverse entity");
+    }
+    return ecoverses[0];
   }
 
-  @Query(() => Organisation)
+  @Query(() => String, {nullable: false, description: "The name for this ecoverse"})
+  async name(): Promise<String> {
+      return this.ecoverse.name;
+  }
+
+  @Query(() => Organisation, {nullable: false, description: "The host organisation for the ecoverse"})
   async host(): Promise<Organisation> {
     // NOTE: need to be able to return THE host organisation
     const organisations = await Organisation.find();
@@ -20,7 +30,7 @@ export class Resolvers {
   }
 
   // Context related fields
-  @Query(() => Context )
+  @Query(() => Context, {nullable: false, description: "The shared understanding for this ecoverse"})
   async context(): Promise<Context> {
     const contexts = await Context.find();
     return contexts[0];
@@ -28,46 +38,46 @@ export class Resolvers {
 
   // Community related fields
 
-  @Query(() => User )
+  @Query(() => User, {nullable: false, description: "A particular user"} )
   async user(@Arg('ID') id : string): Promise<User | undefined> {
     return await User.findOne( { where: { id } } );
   }
 
-  @Query(() => [ User ])
+  @Query(() => [ User ], {nullable: false, description: "The set of users associated with this ecoverse"})
   async users(): Promise<User[]> {
     return await User.find();
   }
 
-  @Query(() => UserGroup )
+  @Query(() => UserGroup, {nullable: false, description: "A particualr user group"})
   async userGroup(@Arg('ID') id : string): Promise<UserGroup | undefined> {
     return await UserGroup.findOne( { where: { id } } );
   }
 
-  @Query(() => [ UserGroup ])
+  @Query(() => [UserGroup], {nullable: false, description: "All groups of users"})
   async userGroups(): Promise<UserGroup[]> {
     return await UserGroup.find();
   }
 
-  @Query(() => [ Organisation ])
+  @Query(() => [Organisation], {nullable: false, description: "All organisations"})
   async organisations(): Promise<Organisation[]> {
     return await Organisation.find();
   }
 
   // Challenges related fields
 
-  @Query(() => Challenge )
+  @Query(() => Challenge, {nullable: false, description: "A particular challenge"})
   async challenge(@Arg('ID') id : string): Promise<Challenge | undefined> {
     return await Challenge.findOne( { where: { id } } );
   }
 
-  @Query(() => [ Challenge ])
+  @Query(() => [ Challenge ], {nullable: false, description: "All challenges"})
   async challenges(): Promise<Challenge[]> {
     return await Challenge.find();
   }
 
   // Misc
 
-  @Query(() => [ Tag ])
+  @Query(() => [ Tag ], {nullable: false, description: "All tags associated with this Ecoverse"})
   async tags(): Promise<Tag[]> {
     return await Tag.find();
   }

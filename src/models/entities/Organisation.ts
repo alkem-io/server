@@ -9,7 +9,7 @@ export class Organisation extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number | null = null;
 
-  @Field(() => String)
+  @Field(() => String, {nullable: false, description: ""})
   @Column()
   name: string = '';
   
@@ -23,7 +23,7 @@ export class Organisation extends BaseEntity {
   )
   ecoverse?: Ecoverse;
 
-  @Field(() => [Tag])
+  @Field(() => [Tag], {nullable: true, description: "The set of tags applied to this organisation."})
   @OneToMany(
     type => Tag,
     tag => tag.organisation,
@@ -31,7 +31,7 @@ export class Organisation extends BaseEntity {
   )
   tags?: Tag[];
 
-  @Field(() => [User])
+  @Field(() => [User], {nullable: true, description: "The set of users that are associated with this organisation"})
   @OneToMany(
     type => User,
     user => user.member,
