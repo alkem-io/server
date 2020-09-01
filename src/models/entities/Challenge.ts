@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany, ManyToMany } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { DID, Tag, User, UserGroup, Context, Ecoverse, Project } from '.';
 
 @Entity()
@@ -7,21 +7,21 @@ import { DID, Tag, User, UserGroup, Context, Ecoverse, Project } from '.';
 export class Challenge extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   @Field(() => String)
   @Column()
   name: string = '';
 
-  @Field(() => Context, {nullable: true})
-  @OneToOne(type => Context,  { eager: true, cascade: true})
+  @Field(() => Context, { nullable: true })
+  @OneToOne(type => Context, { eager: true, cascade: true })
   @JoinColumn()
   context?: Context;
 
   // Community
 
   @Field(() => UserGroup)
-  @OneToOne(type => UserGroup, userGroup => userGroup.challenge, {eager: true, cascade: true})
+  @OneToOne(type => UserGroup, userGroup => userGroup.challenge, { eager: true, cascade: true })
   @JoinColumn()
   challengeLeads!: UserGroup;
 
@@ -47,12 +47,12 @@ export class Challenge extends BaseEntity {
   @Column()
   lifecyclePhase: string = '';
 
-  @Field(() => [Tag])
-  @OneToMany(
+  @Field(() => [Tag], { nullable: true })
+  @ManyToMany(
     type => Tag,
-    tag => tag.challenge,
-    { eager: true, cascade: true, nullable: true },
-  )
+    tag => tag.ecoverses,
+    { eager: true, cascade: true })
+  @JoinTable()
   tags?: Tag[];
 
   @OneToMany(
@@ -61,8 +61,8 @@ export class Challenge extends BaseEntity {
     { eager: true, cascade: true },
   )
   projects?: Project[];
-  
-  @OneToOne(type => DID, {eager: true, cascade: true})
+
+  @OneToOne(type => DID, { eager: true, cascade: true })
   @JoinColumn()
   DID!: DID;
 

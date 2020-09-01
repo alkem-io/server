@@ -1,13 +1,13 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, ManyToOne } from 'typeorm';
-import {  Tag, Project } from '.';
+import { Tag, Project } from '.';
 
 @Entity()
 @ObjectType()
 export class Agreement extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   @Field(() => String)
   @Column()

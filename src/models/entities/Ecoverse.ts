@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn, OneToOne, JoinColumn, OneToMany, ManyToMany} from 'typeorm';
+import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { User, UserGroup, Challenge, DID, Organisation, Context, Tag } from '.';
 
 
@@ -8,30 +8,30 @@ import { User, UserGroup, Challenge, DID, Organisation, Context, Tag } from '.';
 export class Ecoverse extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   // The context and host organisation
   @Field(() => String)
   @Column()
   name: string = '';
 
-  @Field(() => Organisation, {nullable: true})
-  @OneToOne(type => Organisation, {eager: true, cascade: true})
+  @Field(() => Organisation, { nullable: true })
+  @OneToOne(type => Organisation, { eager: true, cascade: true })
   @JoinColumn()
   ecoverseHost?: Organisation;
 
-  @Field(() => Context, {nullable: true})
-  @OneToOne(type => Context, {eager: true, cascade: true})
+  @Field(() => Context, { nullable: true })
+  @OneToOne(type => Context, { eager: true, cascade: true })
   @JoinColumn()
   context?: Context;
 
   // The digital identity for the Ecoverse - critical for its trusted role
-  @OneToOne(type => DID, {eager: true, cascade: true})
+  @OneToOne(type => DID, { eager: true, cascade: true })
   @JoinColumn()
   DID!: DID;
 
   // The community for the ecoverse
-  @Field(() => [User], {nullable: true})
+  @Field(() => [User], { nullable: true })
   @OneToMany(
     type => User,
     user => user.ecoverse,
@@ -39,7 +39,7 @@ export class Ecoverse extends BaseEntity {
   )
   members?: User[];
 
-  @Field(() => [UserGroup], {nullable: true})
+  @Field(() => [UserGroup], { nullable: true })
   @OneToMany(
     type => UserGroup,
     userGroup => userGroup.ecoverseMember,
@@ -47,7 +47,7 @@ export class Ecoverse extends BaseEntity {
   )
   groups?: UserGroup[];
 
-  @Field(() => [Organisation], {nullable: true})
+  @Field(() => [Organisation], { nullable: true })
   @OneToMany(
     type => Organisation,
     organisation => organisation.ecoverse,
@@ -56,7 +56,7 @@ export class Ecoverse extends BaseEntity {
   partners?: Organisation[];
 
   // The Challenges hosted by the Ecoverse
-  @Field(() => [Challenge], {nullable: true})
+  @Field(() => [Challenge], { nullable: true })
   @OneToMany(
     type => Challenge,
     challenge => challenge.ecoverse,
@@ -64,20 +64,18 @@ export class Ecoverse extends BaseEntity {
   )
   challenges?: Challenge[];
 
-  @Field(() => [Tag], {nullable: true})
-  @OneToMany(
+  @Field(() => [Tag], { nullable: true })
+  @ManyToMany(
     type => Tag,
-    tag => tag.ecoverse,
-    { eager: true, cascade: true },
-  )
+    tag => tag.ecoverses,
+    { eager: true, cascade: true })
+  @JoinTable()
   tags?: Tag[];
-
-
 
   // Functional methods for managing the Ecoverse
   constructor(name: string) {
     super();
     this.name = name;
   }
-  
+
 }
