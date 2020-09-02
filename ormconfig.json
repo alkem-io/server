@@ -1,7 +1,0 @@
-{
-    "type": "sqlite",
-    "database": "./database/ecoverse.sqlite3",
-    "entities": [
-      "./src/models/index.ts"
-    ]
-  }
