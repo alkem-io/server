@@ -1,6 +1,7 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { DID, Tag, User, UserGroup, Context, Ecoverse, Project } from '.';
+import { Organisation } from './Organisation';
 
 @Entity()
 @ObjectType()
@@ -20,10 +21,10 @@ export class Challenge extends BaseEntity {
 
   // Community
 
-  @Field(() => UserGroup)
-  @OneToOne(type => UserGroup, userGroup => userGroup.challenge, { eager: true, cascade: true })
-  @JoinColumn()
-  challengeLeads!: UserGroup;
+  @Field(() => [Organisation])
+  @ManyToMany(type => Organisation, organisation => organisation, { eager: true, cascade: true })
+  @JoinTable()
+  challengeLeads!: Organisation[];
 
 
   @Field(() => [UserGroup])

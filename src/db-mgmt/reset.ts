@@ -27,23 +27,22 @@ async function load_sample_data(connection: Connection) {
   const nature = new Tag('Nature');
   const industry = new Tag('Industry');
   ctverse.tags = [java, graphql, industry, nature];
-  
+
   // Users
   const john = new User("john");
   const bob = new User("bob");
   ctverse.members = [john, bob];
+  await connection.manager.save(ctverse);
 
   // User Groups
   const jedi = new UserGroup("Jedi");
-  await jedi.save();
   jedi.members = [john, bob];
   const crew = new UserGroup("Crew");
-  await crew.save();
   ctverse.groups = [jedi, crew];
 
+  // Context
   ctverse.context = new Context();
   ctverse.context.description = "A sample ecoverse to play with";
-  await connection.manager.save(ctverse);
 
   // Challenges
   const energyWeb = new Challenge('Energy Web');
@@ -65,10 +64,10 @@ async function load_sample_data(connection: Connection) {
   await cargoInsurance.save();
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
-  await ctverse.save();
+  await connection.manager.save(ctverse);
 
-  const initialEcoverse = JSON.stringify(ctverse, null, 4);
-  //console.log(initialEcoverse);
+  // const initialEcoverse = JSON.stringify(ctverse, null, 4);
+  // console.log(initialEcoverse);
 
 };
 

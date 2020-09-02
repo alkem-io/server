@@ -23,7 +23,6 @@ export class Organisation extends BaseEntity {
   )
   ecoverse?: Ecoverse;
 
-  
   @Field(() => [Tag], { nullable: true })
   @ManyToMany(
     type => Tag,
@@ -39,6 +38,8 @@ export class Organisation extends BaseEntity {
     { eager: true },
   )
   members?: User[];
+
+  // TODO Add relation to challange
 
   constructor(name: string) {
     super();

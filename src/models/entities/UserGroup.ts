@@ -2,7 +2,6 @@ import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, Index, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { User, Tag, Ecoverse, Challenge } from '.';
 
-
 @Entity()
 @ObjectType()
 export class UserGroup extends BaseEntity {
@@ -52,9 +51,6 @@ export class UserGroup extends BaseEntity {
     ecoverse => ecoverse.members
   )
   ecoverseMember?: Ecoverse;
-
-  @OneToOne(type => Challenge, challenge => challenge.challengeLeads)
-  userGroup?: UserGroup;
 
   constructor(name: string) {
     super();
