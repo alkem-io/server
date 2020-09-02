@@ -11,7 +11,7 @@ async function reset_db() {
 
   console.log('Database: dropped... ');
 
-  load_sample_data(connection);
+  await load_sample_data(connection);
 };
 
 /* Load in sample data into a synchronized database connection */
