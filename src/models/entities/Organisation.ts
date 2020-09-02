@@ -1,6 +1,7 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, Index, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { DID, Tag, User, Ecoverse } from '.';
+import { Challenge } from './Challenge';
 
 @Entity()
 @ObjectType()
@@ -9,7 +10,7 @@ export class Organisation extends BaseEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Field(() => String)
+  @Field(() => String, { nullable: false, description: "" })
   @Column()
   name: string = '';
 
@@ -23,7 +24,7 @@ export class Organisation extends BaseEntity {
   )
   ecoverse?: Ecoverse;
 
-  @Field(() => [Tag], { nullable: true })
+  @Field(() => [Tag], { nullable: true, description: "The set of tags applied to this organisation." })
   @ManyToMany(
     type => Tag,
     tag => tag.ecoverses,
@@ -31,7 +32,7 @@ export class Organisation extends BaseEntity {
   @JoinTable()
   tags?: Tag[];
 
-  @Field(() => [User])
+  @Field(() => [User], { nullable: true, description: "The set of users that are associated with this organisation" })
   @OneToMany(
     type => User,
     user => user.member,
@@ -39,7 +40,11 @@ export class Organisation extends BaseEntity {
   )
   members?: User[];
 
-  // TODO Add relation to challange
+  @ManyToMany(
+    type => Challenge,
+    challenge => challenge.challengeLeads,
+  )
+  challenges!: Challenge[];
 
   constructor(name: string) {
     super();
