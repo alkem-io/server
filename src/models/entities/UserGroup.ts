@@ -14,12 +14,12 @@ export class UserGroup extends BaseEntity {
   @Column()
   name: string = '';
 
-  @Field(() => User)
+  @Field(() => User, {nullable: true, description: "The focal point for this group"})
   @OneToOne(type => User)
   @JoinColumn()
   focalPoint?: User;
 
-  @Field(() => [Tag])
+  @Field(() => [Tag], {nullable: true, description: "The set of tags for this group e.g. Team, Nature etc."})
   @OneToMany(
     type => Tag,
     tag => tag.userGroup,
@@ -27,7 +27,7 @@ export class UserGroup extends BaseEntity {
   )
   tags?: Tag[];
 
-  @Field(() => [User])
+  @Field(() => [User], {nullable: true, description: "The set of users that are members of this group"})
   @OneToMany(
     type => User,
     user => user.userGroup,
