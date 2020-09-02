@@ -9,19 +9,19 @@ export class Project extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number | null = null;
 
-  @Field(() => String)
+  @Field(() => String, {nullable: false,  description: ""})
   @Column()
   name: string = '';
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true,  description: ""})
   @Column()
   description: string = '';
 
-  @Field(() => String)
+  @Field(() => String, {nullable: true,  description: "The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc"})
   @Column()
   lifecyclePhase: string = '';
 
-  @Field(() => [Tag])
+  @Field(() => [Tag], {nullable: true, description: "The set of tags for this Project"})
   @OneToMany(
     type => Tag,
     tag => tag.project,
@@ -29,7 +29,7 @@ export class Project extends BaseEntity {
   )
   tags?: Tag[];
   
-  @Field(() => [Agreement])
+  //@Field(() => [Agreement])
   @OneToMany(
     type => Agreement,
     agreement => agreement.project,

@@ -11,16 +11,16 @@ export class Ecoverse extends BaseEntity {
   id: number | null = null;
 
   // The context and host organisation
-  @Field(() => String)
+  @Field(() => String, {nullable: false, description: ""})
   @Column()
   name: string = '';
 
-  @Field(() => Organisation, {nullable: true})
+  @Field(() => Organisation, {nullable: true, description: "The organisation that hosts this Ecoverse instance"})
   @OneToOne(type => Organisation, {eager: true, cascade: true})
   @JoinColumn()
   ecoverseHost?: Organisation;
 
-  @Field(() => Context, {nullable: true})
+  @Field(() => Context, {nullable: true, description: "The shared understanding for the Ecoverse"})
   @OneToOne(type => Context, {eager: true, cascade: true})
   @JoinColumn()
   context?: Context;
@@ -30,8 +30,7 @@ export class Ecoverse extends BaseEntity {
   @JoinColumn()
   DID!: DID;
 
-  // The community for the ecoverse
-  @Field(() => [User], {nullable: true})
+  @Field(() => [User], {nullable: true, description: "The community for the ecoverse"})
   @OneToMany(
     type => User,
     user => user.ecoverse,
@@ -47,7 +46,7 @@ export class Ecoverse extends BaseEntity {
   )
   groups?: UserGroup[];
 
-  @Field(() => [Organisation], {nullable: true})
+  @Field(() => [Organisation], {nullable: true, description: "The set of partner organisations associated with this Ecoverse"})
   @OneToMany(
     type => Organisation,
     organisation => organisation.ecoverse,
@@ -55,8 +54,8 @@ export class Ecoverse extends BaseEntity {
   )
   partners?: Organisation[];
 
-  // The Challenges hosted by the Ecoverse
-  @Field(() => [Challenge], {nullable: true})
+  // 
+  @Field(() => [Challenge], {nullable: true, description: "The Challenges hosted by the Ecoverse"})
   @OneToMany(
     type => Challenge,
     challenge => challenge.ecoverse,
@@ -64,7 +63,7 @@ export class Ecoverse extends BaseEntity {
   )
   challenges?: Challenge[];
 
-  @Field(() => [Tag], {nullable: true})
+  @Field(() => [Tag], {nullable: true, description: "Set of restricted tags that are used within this ecoverse"})
   @OneToMany(
     type => Tag,
     tag => tag.ecoverse,

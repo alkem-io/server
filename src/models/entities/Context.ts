@@ -11,26 +11,21 @@ export class Context extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number | null = null;
 
-  @Field(() => String, {nullable: true})
+  @Field(() => String, {nullable: true, description: "A one line description"})
   @Column()
   description?: string = '';
 
-  @Field(() => String, {nullable: true})
+  @Field(() => String, {nullable: true, description: "The goal that is being pursued"})
   @Column()
   vision?: string = '';
 
-  @Field(() => String, {nullable: true})
+  @Field(() => String, {nullable: true, description: "The norms for contributors to follow"})
   @Column()
   principles?: string = '';
 
-  @Field(() => String, {nullable: true, description: "A list of URLs that provide additional context."})
+  @Field(() => String, {nullable: true, description: "A list of URLs to relevant information."})
   @Column()
-  refernceLinks?: string = '';
-
-  /* Need to make referenceLinks + others into string arrays or a full type
-  @Field(() => [String])
-  @Column("simple-array")
-  referenceLinks?: string[];*/
+  referenceLinks?: string = '';
 
 
 }
