@@ -31,17 +31,12 @@ export class Ecoverse extends BaseEntity {
   DID!: DID;
 
   @Field(() => [User], {nullable: true, description: "The community for the ecoverse"})
-  @OneToMany(
-    type => User,
-    user => user.ecoverse,
-    { eager: true, cascade: true },
-  )
   members?: User[];
 
   @Field(() => [UserGroup], { nullable: true })
   @OneToMany(
     type => UserGroup,
-    userGroup => userGroup.ecoverseMember,
+    userGroup => userGroup.ecoverse,
     { eager: true, cascade: true },
   )
   groups?: UserGroup[];

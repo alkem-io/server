@@ -40,11 +40,6 @@ export class Challenge extends BaseEntity {
   groups?: UserGroup[];
 
   @Field(() => [User], { nullable: true, description: "The community of users, including challenge leads, that are contributing." })
-  @OneToMany(
-    type => User,
-    users => users.challenge,
-    { eager: true, cascade: true },
-  )
   contributors?: User[];
 
   // Other

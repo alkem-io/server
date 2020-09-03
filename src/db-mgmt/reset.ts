@@ -38,47 +38,40 @@ async function load_sample_data(connection: Connection) {
   const john = new User("john");
   const bob = new User("bob");
   bob.tags = [java, graphql];
-  ctverse.members = [john, bob];
-
-  await connection.manager.save(ctverse);
 
   // User Groups
   const jedi = new UserGroup("Jedi");
   jedi.members = [john, bob];
+  jedi.focalPoint = john;
   const crew = new UserGroup("Crew");
   ctverse.groups = [jedi, crew];
 
   // Context
   ctverse.context = new Context();
   ctverse.context.description = "A sample ecoverse to play with";
-  
+  const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
+  const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
+  ctverse.context.references = [ref1, ref2];
+
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.tags = [java, graphql, industry];
   energyWeb.context = new Context();
   energyWeb.context.description = "Balance the grid in a decentralised world";
-  const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
-  const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
   energyWeb.context.references = [ref1, ref2];
-  await energyWeb.save();
 
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = [graphql, nature];
   cleanOceans.context = new Context();
   cleanOceans.context.description = "Keep our Oceans clean and in balance!";
-  await cleanOceans.save();
 
   const cargoInsurance = new Challenge('Cargo Insurance');
   cargoInsurance.tags = [graphql, java, industry];
   cargoInsurance.context = new Context();
   cargoInsurance.context.description = "In an interconnected world, how to manage risk along the chain?";
-  await cargoInsurance.save();
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
   await connection.manager.save(ctverse);
-
-  // Add in the challenge
-  //await populate_sample_challenge2(connection);
 
 };
 
@@ -87,4 +80,5 @@ reset_db().then(() => {
   process.exit();
 }).catch(function (e: Error) {
   console.error(e.message);
+  process.exit(1);
 });

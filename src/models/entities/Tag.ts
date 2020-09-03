@@ -50,8 +50,8 @@ export class Tag extends BaseEntity {
   userGroups?: UserGroup;
 
   @ManyToMany(
-    type => Ecoverse,
-    ecoverse => ecoverse.tags
+    type => Agreement,
+    agreement => agreement.tags
   )
   agreements?: Agreement[];
 

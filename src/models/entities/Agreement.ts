@@ -26,7 +26,7 @@ export class Agreement extends BaseEntity {
   @Field(() => [Tag], { nullable: true, description: "The set of tags for this Agreement e.g. Team, Nature etc." })
   @ManyToMany(
     type => Tag,
-    tag => tag.ecoverses,
+    tag => tag.agreements,
     { eager: true, cascade: true })
   @JoinTable()
   tags?: Tag[];

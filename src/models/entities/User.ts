@@ -32,34 +32,16 @@ export class User extends BaseEntity {
   @JoinColumn()
   DID!: DID;
 
-  @ManyToOne(
-    type => Challenge,
-    challenge => challenge.contributors
-  )
-  challenge?: Challenge;
-
-  @ManyToOne(
+  @ManyToMany(
     type => UserGroup,
     userGroup => userGroup.members
   )
   userGroup?: UserGroup;
 
-  @ManyToOne(
-    type => Organisation,
-    organisation => organisation.members
-  )
-  member?: Organisation;
-
-  @ManyToOne(
-    type => Ecoverse,
-    ecoverse => ecoverse.members
-  )
-  ecoverse?: Ecoverse;
-
   @Field(() => [Tag], { nullable: true })
   @ManyToMany(
     type => Tag,
-    tag => tag.ecoverses,
+    tag => tag.users,
     { eager: true, cascade: true })
   @JoinTable()
   tags?: Tag[];

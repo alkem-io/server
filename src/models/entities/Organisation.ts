@@ -33,11 +33,6 @@ export class Organisation extends BaseEntity {
   tags?: Tag[];
 
   @Field(() => [User], { nullable: true, description: "The set of users that are associated with this organisation" })
-  @OneToMany(
-    type => User,
-    user => user.member,
-    { eager: true },
-  )
   members?: User[];
 
   @ManyToMany(

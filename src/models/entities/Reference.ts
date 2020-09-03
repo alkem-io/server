@@ -7,7 +7,7 @@ import { Challenge, Context, User, Organisation, Project, UserGroup, Agreement, 
 export class Reference extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   @Field(() => String)
   @Column()

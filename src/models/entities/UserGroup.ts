@@ -13,14 +13,13 @@ export class UserGroup extends BaseEntity {
   @Column()
   name: string = '';
 
-  
-
   @Field(() => [User], {nullable: true, description: "The set of users that are members of this group"})
-  @OneToMany(
+  @ManyToMany(
     type => User,
     user => user.userGroup,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
+  @JoinTable()
   members?: User[];
 
   @Field(() => User, {nullable: true, description: "The focal point for this group"})
@@ -31,7 +30,7 @@ export class UserGroup extends BaseEntity {
   @Field(() => [Tag], { nullable: true, description: "The set of tags for this group e.g. Team, Nature etc." })
   @ManyToMany(
     type => Tag,
-    tag => tag.ecoverses,
+    tag => tag.userGroups,
     { eager: true, cascade: true })
   @JoinTable()
   tags?: Tag[];
@@ -47,12 +46,6 @@ export class UserGroup extends BaseEntity {
     challenge => challenge.groups
   )
   challenge?: Challenge;
-
-  @ManyToOne(
-    type => Ecoverse,
-    ecoverse => ecoverse.members
-  )
-  ecoverseMember?: Ecoverse;
 
   constructor(name: string) {
     super();
