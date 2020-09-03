@@ -36,7 +36,9 @@ async function load_sample_data(connection: Connection) {
   // Users
   const john = new User("john");
   const bob = new User("bob");
+  bob.tags = [java, graphql];
   ctverse.members = [john, bob];
+
   await connection.manager.save(ctverse);
 
   // User Groups
@@ -73,10 +75,6 @@ async function load_sample_data(connection: Connection) {
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
   await connection.manager.save(ctverse);
-
-  // const initialEcoverse = JSON.stringify(ctverse, null, 4);
-  // console.log(initialEcoverse);
-
 };
 
 reset_db().then(() => {
