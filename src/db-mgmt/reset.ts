@@ -1,16 +1,16 @@
 import { createConnection, Connection } from 'typeorm';
-import { Ecoverse, User, Challenge, Tag, UserGroup, Context } from '../models';
+import { Ecoverse, User, Challenge, Tag, UserGroup, Context, Reference } from '../models';
 import { ConnectionFactory } from '../connection-factory';
 
 
 async function reset_db() {
-  
+
   require('dotenv').config()
 
   console.log('Database: Starting the reset of the database... ');
   const connectionFactory = new ConnectionFactory();
   const connection = await connectionFactory.GetConnection();
-  
+
   await connection.dropDatabase();
   await connection.synchronize();
 
@@ -48,6 +48,9 @@ async function load_sample_data(connection: Connection) {
   // Context
   ctverse.context = new Context();
   ctverse.context.description = "A sample ecoverse to play with";
+  const reference = new Reference();
+  reference.name = "Reference 1";
+  ctverse.context.references = [reference];
 
   // Challenges
   const energyWeb = new Challenge('Energy Web');

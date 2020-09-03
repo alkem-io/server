@@ -1,13 +1,20 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn, ManyToOne } from 'typeorm';
-import { Reference } from './Reference';
+import { Tag } from '.';
+import { Challenge } from './Challenge';
+import { Ecoverse } from './Ecoverse';
+import { Context } from './Context';
 
 @Entity()
 @ObjectType()
-export class Context extends BaseEntity {
+export class Reference extends BaseEntity {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;
+
+    @Field(() => String, { nullable: true, description: "" })
+    @Column()
+    name?: string = '';
 
     @Field(() => String, { nullable: true, description: "A one line description" })
     @Column()
@@ -15,17 +22,13 @@ export class Context extends BaseEntity {
 
     @Field(() => String, { nullable: true, description: "The goal that is being pursued" })
     @Column()
-    vision?: string = '';
+    URI?: string = '';
 
-    @Field(() => String, { nullable: true, description: "The norms for contributors to follow" })
-    @Column()
-    principles?: string = '';
-
-    @Field(() => [Reference], { nullable: true, description: "A list of URLs to relevant information." })
-    @OneToMany(
-        type => Reference,
-        reference => reference.context,
-        { eager: true, cascade: true },
+    @ManyToOne(
+        type => Context,
+        context => context.references,
     )
-    references?: Reference[];
+    context?: Context;
+
+
 }
