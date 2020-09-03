@@ -7,7 +7,7 @@ Build Status:
 
 ## Running the server locally (not in a container)
 
-To run the server a working MySQL Server is required:
+**To run the server a working MySQL Server is required!**
 
 ### Configure the database connection
 
