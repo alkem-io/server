@@ -6,10 +6,11 @@
   "dependencies": {
     "apollo-server-express": "^2.16.1",
     "class-validator": "^0.12.2",
+    "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "graphql": "^15.3.0",
+    "mysql": "^2.18.1",
     "reflect-metadata": "^0.1.13",
-    "sqlite3": "^5.0.0",
     "ts-node": "^9.0.0",
     "type-graphql": "^1.0.0",
     "typeorm": "^0.2.25",
@@ -22,7 +23,8 @@
   "devDependencies": {},
   "scripts": {
     "start": "ts-node src/server.ts",
-    "test-db-reset": "ts-node src/db-mgmt/reset.ts"
+    "test-db-reset": "ts-node src/db-mgmt/reset.ts",
+    "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli"
   },
   "author": "",
   "license": "ISC"

@@ -11,6 +11,8 @@ import { ConnectionFactory } from './connection-factory';
 
 const main = async() => {
 
+  require('dotenv').config()
+
   // Connect to the database
   try {
     const connectionFactory = new ConnectionFactory();
