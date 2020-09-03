@@ -6,6 +6,7 @@ import { buildSchema } from 'type-graphql';
 import { Resolvers } from './schema/Resolvers';
 import { createConnection } from 'typeorm';
 import { Ecoverse } from './models';
+import { ConnectionFactory } from './connection-factory';
 
 
 const main = async() => {
@@ -14,25 +15,8 @@ const main = async() => {
 
   // Connect to the database
   try {
-    const connection = await createConnection(
-      {
-        "type": "mysql",
-        "host": process.env.DATABASE_HOST,
-        "port": 3306,
-        "username": "root",
-        "password": process.env.MYSQL_ROOT_PASSWORD,
-        "database": process.env.MYSQL_DATABASE,
-        "insecureAuth": true,
-        "synchronize": true,
-        "logging": true,
-          "entities": [
-            "./src/models/index.ts"
-          ],
-          "migrations":[
-            "src/migrations/**/*.ts"
-          ]
-      }
-    );
+    const connectionFactory = new ConnectionFactory();
+    const connection = await connectionFactory.GetConnection();
     await connection.synchronize();
     console.log('Database connection established and data loaded');
   } catch (error) {
