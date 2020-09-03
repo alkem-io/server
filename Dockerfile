@@ -15,7 +15,6 @@ RUN npm install
 
 # Bundle app source & config files for TypeORM & TypeScript
 COPY ./src ./src
-COPY ./ormconfig.json .
 COPY ./tsconfig.json .
 
 EXPOSE 4000
