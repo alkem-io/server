@@ -1,11 +1,16 @@
 import { createConnection, Connection } from 'typeorm';
 import { Ecoverse, User, Challenge, Tag, UserGroup, Context } from '../models';
+import { ConnectionFactory } from '../connection-factory';
 
 
 async function reset_db() {
-  console.log('Database: Starting the reset of the database... ');
-  const connection = await createConnection();
+  
+  require('dotenv').config()
 
+  console.log('Database: Starting the reset of the database... ');
+  const connectionFactory = new ConnectionFactory();
+  const connection = await connectionFactory.GetConnection();
+  
   await connection.dropDatabase();
   await connection.synchronize();
 

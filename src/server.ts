@@ -6,13 +6,15 @@ import { buildSchema } from 'type-graphql';
 import { Resolvers } from './schema/Resolvers';
 import { createConnection } from 'typeorm';
 import { Ecoverse } from './models';
+import { ConnectionFactory } from './connection-factory';
 
 
 const main = async() => {
 
   // Connect to the database
   try {
-    const connection = await createConnection();
+    const connectionFactory = new ConnectionFactory();
+    const connection = await connectionFactory.GetConnection();
     await connection.synchronize();
     console.log('Database connection established and data loaded');
   } catch (error) {
