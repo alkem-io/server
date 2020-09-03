@@ -1,34 +1,36 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn, ManyToOne } from 'typeorm';
-import { Tag } from '.';
-import { Challenge } from './Challenge';
-import { Ecoverse } from './Ecoverse';
-import { Context } from './Context';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, ManyToMany } from 'typeorm';
+import { Challenge, Context, User, Organisation, Project, UserGroup, Agreement, Ecoverse } from '.';
 
 @Entity()
 @ObjectType()
 export class Reference extends BaseEntity {
-    @Field(() => ID)
-    @PrimaryGeneratedColumn()
-    id!: number;
+  @Field(() => ID)
+  @PrimaryGeneratedColumn()
+  id: number | null = null;
 
-    @Field(() => String, { nullable: true, description: "" })
-    @Column()
-    name?: string = '';
+  @Field(() => String)
+  @Column()
+  name: string = '';
 
-    @Field(() => String, { nullable: true, description: "A one line description" })
-    @Column()
-    description?: string = '';
+  @Field(() => String)
+  @Column()
+  uri: string = '';
 
-    @Field(() => String, { nullable: true, description: "The goal that is being pursued" })
-    @Column()
-    URI?: string = '';
+  @Field(() => String)
+  @Column()
+  description: string = '';
 
-    @ManyToOne(
-        type => Context,
-        context => context.references,
-    )
-    context?: Context;
+  @ManyToOne(
+    type => Context,
+    context => context.references
+  )
+  context?: Context;
 
-
+  constructor(name: string, uri: string, description: string) {
+    super();
+    this.name = name;
+    this.uri = uri;
+    this.description = description;
+  }
 }

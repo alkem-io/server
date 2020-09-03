@@ -1,6 +1,7 @@
 import { createConnection, Connection } from 'typeorm';
 import { Ecoverse, User, Challenge, Tag, UserGroup, Context, Reference } from '../models';
 import { ConnectionFactory } from '../connection-factory';
+import { populate_sample_challenge2 } from './challenge';
 
 
 async function reset_db() {
@@ -50,15 +51,15 @@ async function load_sample_data(connection: Connection) {
   // Context
   ctverse.context = new Context();
   ctverse.context.description = "A sample ecoverse to play with";
-  const reference = new Reference();
-  reference.name = "Reference 1";
-  ctverse.context.references = [reference];
-
+  
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.tags = [java, graphql, industry];
   energyWeb.context = new Context();
   energyWeb.context.description = "Balance the grid in a decentralised world";
+  const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
+  const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
+  energyWeb.context.references = [ref1, ref2];
   await energyWeb.save();
 
   const cleanOceans = new Challenge('Clean Oceans');
@@ -75,6 +76,10 @@ async function load_sample_data(connection: Connection) {
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
   await connection.manager.save(ctverse);
+
+  // Add in the challenge
+  //await populate_sample_challenge2(connection);
+
 };
 
 reset_db().then(() => {
