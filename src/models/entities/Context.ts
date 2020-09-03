@@ -3,6 +3,7 @@ import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, OneToOne
 import { Tag } from '.';
 import { Challenge } from './Challenge';
 import { Ecoverse } from './Ecoverse';
+import { Reference } from './Reference';
 
 @Entity()
 @ObjectType()
@@ -18,14 +19,19 @@ export class Context extends BaseEntity {
   @Field(() => String, {nullable: true, description: "The goal that is being pursued"})
   @Column()
   vision?: string = '';
+  
+  @Field(() => [Reference], {nullable: true, description: "A list of URLs to relevant information."})
+  @OneToMany(
+    type => Reference,
+    reference => reference.context,
+    { eager: true, cascade: true },
+  )
+  references?: Reference[];
 
   @Field(() => String, {nullable: true, description: "The norms for contributors to follow"})
   @Column()
   principles?: string = '';
 
-  @Field(() => String, {nullable: true, description: "A list of URLs to relevant information."})
-  @Column()
-  referenceLinks?: string = '';
 
 
 }

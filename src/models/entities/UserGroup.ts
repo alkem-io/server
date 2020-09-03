@@ -14,6 +14,16 @@ export class UserGroup extends BaseEntity {
   @Column()
   name: string = '';
 
+  
+
+  @Field(() => [User], {nullable: true, description: "The set of users that are members of this group"})
+  @OneToMany(
+    type => User,
+    user => user.userGroup,
+    { eager: true, cascade: true },
+  )
+  members?: User[];
+
   @Field(() => User, {nullable: true, description: "The focal point for this group"})
   @OneToOne(type => User)
   @JoinColumn()
@@ -26,14 +36,6 @@ export class UserGroup extends BaseEntity {
     { eager: true, cascade: true },
   )
   tags?: Tag[];
-
-  @Field(() => [User], {nullable: true, description: "The set of users that are members of this group"})
-  @OneToMany(
-    type => User,
-    user => user.userGroup,
-    { eager: true, cascade: true },
-  )
-  members?: User[];
 
   @ManyToOne(
     type => Ecoverse,

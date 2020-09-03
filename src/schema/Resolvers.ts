@@ -1,5 +1,5 @@
 import { Query, Resolver, Arg, Mutation } from 'type-graphql';
-import { Tag, User, Challenge, Ecoverse, Agreement, DID, Context, Organisation, Project, UserGroup, EcoverseInput, ChallengeInput, AgreementInput, ContextInput, OrganisationInput, ProjectInput, TagInput, UserInput, UserGroupInput } from '../models';
+import { Tag, User, Challenge, Ecoverse, Agreement, DID, Context, Organisation, Project, UserGroup, EcoverseInput, ChallengeInput, AgreementInput, ContextInput, OrganisationInput, ProjectInput, ReferenceInput, TagInput, UserInput, UserGroupInput } from '../models';
 import { BaseEntity } from 'typeorm';
 import { ApolloError } from 'apollo-server-express';
 

@@ -1,5 +1,6 @@
 import { createConnection, Connection } from 'typeorm';
-import { Ecoverse, User, Challenge, Tag, UserGroup, Context } from '../models';
+import { Ecoverse, User, Challenge, Tag, UserGroup, Context, Reference } from '../models';
+import { populate_sample_challenge2 } from './challenge';
 
 
 async function reset_db() {
@@ -55,6 +56,9 @@ async function load_sample_data(connection: Connection) {
   energyWeb.tags = [java, graphql, industry];
   energyWeb.context = new Context();
   energyWeb.context.description = "Balance the grid in a decentralised world";
+  const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
+  const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
+  energyWeb.context.references = [ ref1, ref2];
   await energyWeb.save();
   
   const cleanOceans = new Challenge('Clean Oceans');
@@ -71,6 +75,9 @@ async function load_sample_data(connection: Connection) {
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
   await ctverse.save();
+
+  // Add in the challenge
+  //await populate_sample_challenge2(connection);
 
   const initialEcoverse = JSON.stringify(ctverse, null, 4);
   //console.log(initialEcoverse);

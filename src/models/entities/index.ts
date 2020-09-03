@@ -8,3 +8,4 @@ export * from './Organisation';
 export * from './Context';
 export * from './Project';
 export * from './Agreement';
+export * from './Reference';
