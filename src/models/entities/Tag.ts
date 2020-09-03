@@ -49,6 +49,12 @@ export class Tag extends BaseEntity {
   )
   userGroups?: UserGroup;
 
+  @ManyToMany(
+    type => Ecoverse,
+    ecoverse => ecoverse.tags
+  )
+  agreements?: Agreement[];
+
   constructor(name: string) {
     super();
     this.name = name;
