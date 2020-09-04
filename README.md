@@ -7,15 +7,18 @@ Build Status:
 
 ## Running the server locally (not in a container)
 
-To run the server a working MySQL Server is required:
+To run the server a working MySQL Server is required.
+For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
 
 ### Configure the database connection
 
 Add .env file in your root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST.
 
+Or copy `.env.sample` into `.env` and and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST.
+
 Example:
 
-```
+```bash
 DATABASE_HOST=localhost
 MYSQL_DATABASE=cherrytwist
 MYSQL_ROOT_PASSWORD=<strong password>
@@ -78,3 +81,29 @@ The technology stack is as follows:
 - docker-compose: for container orchestration
 
 Credit: the setup of this project is inspired by the following article: https://medium.com/swlh/graphql-orm-with-typescript-implementing-apollo-server-express-and-sqlite-5f16a92968d0
+
+### MySQL Server specific configuration for version 8
+
+MySQL version 8 by default use `caching_sha2_password` password validation plugin that is not supported by typeORM. The plugin must be changed to 'mysql_native_password'. It can be done per user or default for the server. 
+
+If the server is already up and running create new user:
+
+```sql
+CREATE USER 'nativeuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+```
+
+or alter existing one:
+
+```sql
+ALTER USER 'nativeuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+```
+
+For MySQL in docker:
+
+```bash
+docker run --name some-mysql \
+-p 3306:3306 \
+-e MYSQL_ROOT_PASSWORD=my-secret-pw \
+-d mysql \
+--default-authentication-plugin=mysql_native_password
+```
