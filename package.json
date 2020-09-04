@@ -24,6 +24,7 @@
     "typescript": "^4.0.2"
   },
   "devDependencies": {
+    "envalid": "^6.0.2",
     "nodemon": "^2.0.4"
   },
   "repository": {

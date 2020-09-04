@@ -7,11 +7,15 @@ import { Resolvers } from './schema/Resolvers';
 import { createConnection } from 'typeorm';
 import { Ecoverse } from './models';
 import { ConnectionFactory } from './connection-factory';
+import { ConfigurationValidator } from './validators/configuration';
 
 
 const main = async() => {
 
   require('dotenv').config()
+
+  const configurationValidator = new ConfigurationValidator();
+  configurationValidator.validate();
 
   // Connect to the database
   try {
