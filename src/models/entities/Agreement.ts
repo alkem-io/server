@@ -1,13 +1,13 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, ManyToOne } from 'typeorm';
-import {  Tag, Project } from '.';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, OneToMany, ManyToOne, ManyToMany, JoinTable } from 'typeorm';
+import { Tag, Project } from '.';
 
 @Entity()
 @ObjectType()
 export class Agreement extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   @Field(() => String)
   @Column()
@@ -22,6 +22,14 @@ export class Agreement extends BaseEntity {
     project => project.agreements
   )
   project?: Project;
+
+  @Field(() => [Tag], { nullable: true, description: "The set of tags for this Agreement e.g. Team, Nature etc." })
+  @ManyToMany(
+    type => Tag,
+    tag => tag.agreements,
+    { eager: true, cascade: true })
+  @JoinTable()
+  tags?: Tag[];
 
   constructor(name: string) {
     super();

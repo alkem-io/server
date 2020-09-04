@@ -7,47 +7,53 @@ import { Challenge, Context, User, Organisation, Project, UserGroup, Agreement, 
 export class Tag extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   @Field(() => String)
   @Column()
   name: string = '';
 
-  @ManyToOne(
+  @ManyToMany(
     type => Challenge,
     challenge => challenge.tags
   )
-  challenge?: Challenge;
+  challenges?: Challenge;
 
-  @ManyToOne(
+  @ManyToMany(
     type => Project,
     project => project.tags
   )
-  project?: Project;
+  projects?: Project;
 
-  @ManyToOne(
+  @ManyToMany(
     type => Organisation,
     organisation => organisation.tags
   )
-  organisation?: Organisation;
+  organisations?: Organisation;
 
-  @ManyToOne(
+  @ManyToMany(
     type => Ecoverse,
     ecoverse => ecoverse.tags
   )
-  ecoverse?: Ecoverse;
+  ecoverses?: Ecoverse[];
 
-  @ManyToOne(
+  @ManyToMany(
     type => User,
     user => user.tags
   )
-  user?: User;
+  users?: User;
 
-  @ManyToOne(
+  @ManyToMany(
     type => UserGroup,
     userGroup => userGroup.tags
   )
-  userGroup?: UserGroup;
+  userGroups?: UserGroup;
+
+  @ManyToMany(
+    type => Agreement,
+    agreement => agreement.tags
+  )
+  agreements?: Agreement[];
 
   constructor(name: string) {
     super();

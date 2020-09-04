@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { Tag, DID, Challenge, UserGroup, Organisation, Ecoverse } from '.';
 
 @Entity()
@@ -7,7 +7,7 @@ import { Tag, DID, Challenge, UserGroup, Organisation, Ecoverse } from '.';
 export class User extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   @Field(() => String)
   @Column()
@@ -27,41 +27,23 @@ export class User extends BaseEntity {
   @Field(() => String)
   @Column()
   email: string = '';
-  
+
   @OneToOne(type => DID)
   @JoinColumn()
   DID!: DID;
 
-  @ManyToOne(
-    type => Challenge,
-    challenge => challenge.contributors
-  )
-  challenge?: Challenge;
-
-  @ManyToOne(
+  @ManyToMany(
     type => UserGroup,
     userGroup => userGroup.members
   )
   userGroup?: UserGroup;
 
-  @ManyToOne(
-    type => Organisation,
-    organisation => organisation.members
-  )
-  member?: Organisation;
-
-  @ManyToOne(
-    type => Ecoverse,
-    ecoverse => ecoverse.members
-  )
-  ecoverse?: Ecoverse;
-
-  @Field(() => [Tag])
-  @OneToMany(
+  @Field(() => [Tag], { nullable: true })
+  @ManyToMany(
     type => Tag,
-    tag => tag.user,
-    { eager: true },
-  )
+    tag => tag.users,
+    { eager: true, cascade: true })
+  @JoinTable()
   tags?: Tag[];
 
   constructor(name: string) {

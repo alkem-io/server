@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn, OneToOne, JoinColumn, OneToMany, ManyToMany} from 'typeorm';
+import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { User, UserGroup, Challenge, DID, Organisation, Context, Tag } from '.';
 
 
@@ -8,7 +8,7 @@ import { User, UserGroup, Challenge, DID, Organisation, Context, Tag } from '.';
 export class Ecoverse extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   // The context and host organisation
   @Field(() => String, {nullable: false, description: ""})
@@ -26,22 +26,17 @@ export class Ecoverse extends BaseEntity {
   context?: Context;
 
   // The digital identity for the Ecoverse - critical for its trusted role
-  @OneToOne(type => DID, {eager: true, cascade: true})
+  @OneToOne(type => DID, { eager: true, cascade: true })
   @JoinColumn()
   DID!: DID;
 
   @Field(() => [User], {nullable: true, description: "The community for the ecoverse"})
-  @OneToMany(
-    type => User,
-    user => user.ecoverse,
-    { eager: true, cascade: true },
-  )
   members?: User[];
 
-  @Field(() => [UserGroup], {nullable: true})
+  @Field(() => [UserGroup], { nullable: true })
   @OneToMany(
     type => UserGroup,
-    userGroup => userGroup.ecoverseMember,
+    userGroup => userGroup.ecoverse,
     { eager: true, cascade: true },
   )
   groups?: UserGroup[];
@@ -64,19 +59,17 @@ export class Ecoverse extends BaseEntity {
   challenges?: Challenge[];
 
   @Field(() => [Tag], {nullable: true, description: "Set of restricted tags that are used within this ecoverse"})
-  @OneToMany(
+  @ManyToMany(
     type => Tag,
-    tag => tag.ecoverse,
-    { eager: true, cascade: true },
-  )
+    tag => tag.ecoverses,
+    { eager: true, cascade: true })
+  @JoinTable()
   tags?: Tag[];
-
-
 
   // Functional methods for managing the Ecoverse
   constructor(name: string) {
     super();
     this.name = name;
   }
-  
+
 }

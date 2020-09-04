@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, OneToMany } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { DID, Tag, Challenge, Agreement } from '.';
 
 @Entity()
@@ -7,7 +7,7 @@ import { DID, Tag, Challenge, Agreement } from '.';
 export class Project extends BaseEntity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
-  id: number | null = null;
+  id!: number;
 
   @Field(() => String, {nullable: false,  description: ""})
   @Column()
@@ -22,11 +22,11 @@ export class Project extends BaseEntity {
   lifecyclePhase: string = '';
 
   @Field(() => [Tag], {nullable: true, description: "The set of tags for this Project"})
-  @OneToMany(
+  @ManyToMany(
     type => Tag,
-    tag => tag.project,
-    { eager: true },
-  )
+    tag => tag.ecoverses,
+    { eager: true, cascade: true })
+  @JoinTable()
   tags?: Tag[];
   
   //@Field(() => [Agreement])
