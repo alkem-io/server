@@ -12,11 +12,11 @@ export class UserGroupInput{
   @Field({ nullable: true })
   focalPoint?: UserInput;
 
-  @Field( type => [UserInput], { nullable: true })
+  @Field( () => [UserInput], { nullable: true })
   @MaxLength(60)
   members?: UserInput[];
 
-  @Field( type => [TagInput], { nullable: true } )
+  @Field( () => [TagInput], { nullable: true } )
   tags!: TagInput[];
 
 }

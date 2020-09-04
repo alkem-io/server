@@ -1,18 +1,18 @@
-import { InputType, Field } from 'type-graphql';
-import { MaxLength, Length } from 'class-validator';
+import { MaxLength } from 'class-validator';
+import { Field, InputType } from 'type-graphql';
 import { TagInput, UserInput } from '.';
 
 @InputType()
-export class OrganisationInput{
+export class OrganisationInput {
 
-  @Field()
-  @MaxLength(30)
-  name! : string;
+    @Field()
+    @MaxLength(30)
+    name!: string;
 
-  @Field( type => [UserInput], { nullable: true })
-  members?: UserInput[];
+    @Field(() => [UserInput], { nullable: true })
+    members?: UserInput[];
 
-  @Field( type => [TagInput], { nullable: true } )
-  tags!: TagInput[];
+    @Field(() => [TagInput], { nullable: true })
+    tags!: TagInput[];
 
 }

@@ -26,7 +26,7 @@ export class EcoverseInput implements DeepPartial<Ecoverse>{
   @Field({ nullable: true })
   context?: ContextInput;
 
-  @Field( type => [TagInput], { nullable: true } )
+  @Field( () => [TagInput], { nullable: true } )
   tags!: TagInput[];
 
 }

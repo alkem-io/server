@@ -17,7 +17,7 @@ async function reset_db() {
   console.log('Database: dropped... ');
 
   await load_sample_data(connection);
-};
+}
 
 /* Load in sample data into a synchronized database connection */
 async function load_sample_data(connection: Connection) {
@@ -34,44 +34,44 @@ async function load_sample_data(connection: Connection) {
   ctverse.tags = [java, graphql, industry, nature];
 
   // Users
-  const john = new User("john");
-  const bob = new User("bob");
+  const john = new User('john');
+  const bob = new User('bob');
   bob.tags = [java, graphql];
 
   // User Groups
-  const jedi = new UserGroup("Jedi");
+  const jedi = new UserGroup('Jedi');
   jedi.members = [john, bob];
   jedi.focalPoint = john;
-  const crew = new UserGroup("Crew");
+  const crew = new UserGroup('Crew');
   ctverse.groups = [jedi, crew];
 
   // Context
   ctverse.context = new Context();
-  ctverse.context.description = "A sample ecoverse to play with";
+  ctverse.context.description = 'A sample ecoverse to play with';
   
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.tags = [java, graphql, industry];
   energyWeb.context = new Context();
-  energyWeb.context.description = "Balance the grid in a decentralised world";
-  const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
-  const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
+  energyWeb.context.description = 'Balance the grid in a decentralised world';
+  const ref1 = new Reference('video', 'http://localhost:8443/myVid', 'Video explainer for the challenge');
+  const ref2 = new Reference('EnergyWeb', 'https://www.energyweb.org/', 'Official site');
   energyWeb.context.references = [ref1, ref2];
 
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = [graphql, nature];
   cleanOceans.context = new Context();
-  cleanOceans.context.description = "Keep our Oceans clean and in balance!";
+  cleanOceans.context.description = 'Keep our Oceans clean and in balance!';
 
   const cargoInsurance = new Challenge('Cargo Insurance');
   cargoInsurance.tags = [graphql, java, industry];
   cargoInsurance.context = new Context();
-  cargoInsurance.context.description = "In an interconnected world, how to manage risk along the chain?";
+  cargoInsurance.context.description = 'In an interconnected world, how to manage risk along the chain?';
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
   await connection.manager.save(ctverse);
 
-};
+}
 
 reset_db().then(() => {
   console.log('Database: reset complete...');

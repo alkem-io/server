@@ -1,54 +1,54 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, Index, OneToMany, ManyToMany, JoinTable } from 'typeorm';
-import { User, Tag, Ecoverse, Challenge } from '.';
+import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Challenge, Ecoverse, Tag, User } from '.';
 
 @Entity()
 @ObjectType()
 export class UserGroup extends BaseEntity {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
+    @Field(() => ID)
+    @PrimaryGeneratedColumn()
+    id!: number;
 
-  @Field(() => String)
-  @Column()
-  name: string = '';
+    @Field(() => String)
+    @Column()
+    name: string;
 
-  @Field(() => [User], {nullable: true, description: "The set of users that are members of this group"})
-  @ManyToMany(
-    type => User,
-    user => user.userGroup,
-    { eager: true, cascade: true }
-  )
-  @JoinTable()
-  members?: User[];
+    @Field(() => [User], { nullable: true, description: 'The set of users that are members of this group' })
+    @ManyToMany(
+        () => User,
+        user => user.userGroup,
+        { eager: true, cascade: true }
+    )
+    @JoinTable()
+    members?: User[];
 
-  @Field(() => User, {nullable: true, description: "The focal point for this group"})
-  @OneToOne(type => User)
-  @JoinColumn()
-  focalPoint?: User;
+    @Field(() => User, { nullable: true, description: 'The focal point for this group' })
+    @OneToOne(() => User)
+    @JoinColumn()
+    focalPoint?: User;
 
-  @Field(() => [Tag], { nullable: true, description: "The set of tags for this group e.g. Team, Nature etc." })
-  @ManyToMany(
-    type => Tag,
-    tag => tag.userGroups,
-    { eager: true, cascade: true })
-  @JoinTable()
-  tags?: Tag[];
+    @Field(() => [Tag], { nullable: true, description: 'The set of tags for this group e.g. Team, Nature etc.' })
+    @ManyToMany(
+        () => Tag,
+        tag => tag.userGroups,
+        { eager: true, cascade: true })
+    @JoinTable()
+    tags?: Tag[];
 
-  @ManyToOne(
-    type => Ecoverse,
-    ecoverse => ecoverse.groups
-  )
-  ecoverse?: Ecoverse;
+    @ManyToOne(
+        () => Ecoverse,
+        ecoverse => ecoverse.groups
+    )
+    ecoverse?: Ecoverse;
 
-  @ManyToOne(
-    type => Challenge,
-    challenge => challenge.groups
-  )
-  challenge?: Challenge;
+    @ManyToOne(
+        () => Challenge,
+        challenge => challenge.groups
+    )
+    challenge?: Challenge;
 
-  constructor(name: string) {
-    super();
-    this.name = name;
-  }
+    constructor(name: string) {
+        super();
+        this.name = name;
+    }
 }

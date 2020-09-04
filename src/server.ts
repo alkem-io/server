@@ -1,14 +1,11 @@
-import 'reflect-metadata';
 import { ApolloServer } from 'apollo-server-express';
 import express from 'express';
+import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
-
-import { Resolvers } from './schema/Resolvers';
-import { createConnection } from 'typeorm';
-import { Ecoverse } from './models';
-import { ConnectionFactory } from './connection-factory';
-import { ConfigurationValidator } from './validators/configuration';
 import { LoadConfiguration } from './configuration-loader';
+import { ConnectionFactory } from './connection-factory';
+import { Resolvers } from './schema/Resolvers';
+
 
 const main = async () => {
 

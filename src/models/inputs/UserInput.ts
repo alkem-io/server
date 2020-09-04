@@ -25,7 +25,7 @@ export class UserInput{
   @MaxLength(120)
   email!: string;
 
-  @Field( type => [TagInput], { nullable: true } )
+  @Field( () => [TagInput], { nullable: true } )
   tags!: TagInput[];
 
 }

@@ -17,9 +17,9 @@ export class ProjectInput{
   @MaxLength(255)
   lifecyclePhase?: string;
 
-  @Field( type => [TagInput], { nullable: true } )
+  @Field( () => [TagInput], { nullable: true } )
   tags!: TagInput[];
 
-  @Field( type => [AgreementInput], { nullable: true })
+  @Field( () => [AgreementInput], { nullable: true })
   agreements?: AgreementInput[];
 }
