@@ -1,16 +1,16 @@
 import { createConnection, Connection } from 'typeorm';
 import { Ecoverse, User, Challenge, Tag, UserGroup, Context, Reference } from '../models';
 import { ConnectionFactory } from '../connection-factory';
-
+import { LoadConfiguration } from 'src/configuration-loader';
 
 async function reset_db() {
-  
-  require('dotenv').config()
+
+  LoadConfiguration();
 
   console.log('Database: Starting the reset of the database... ');
   const connectionFactory = new ConnectionFactory();
   const connection = await connectionFactory.GetConnection();
-  
+
   await connection.dropDatabase();
   await connection.synchronize();
 
@@ -48,16 +48,16 @@ async function load_sample_data(connection: Connection) {
   // Context
   ctverse.context = new Context();
   ctverse.context.description = "A sample ecoverse to play with";
-  const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
-  const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
-  ctverse.context.references = [ref1, ref2];
-
+  
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.tags = [java, graphql, industry];
   energyWeb.context = new Context();
   energyWeb.context.description = "Balance the grid in a decentralised world";
+  const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
+  const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
   energyWeb.context.references = [ref1, ref2];
+  await energyWeb.save();
 
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = [graphql, nature];
