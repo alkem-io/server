@@ -9,7 +9,8 @@
     "start": "nodemon -w src --ext ts --exec ts-node src/server.ts",
     "test-db-reset": "ts-node src/db-mgmt/reset.ts",
     "test-db-reset:dev": "nodemon -w src --ext ts --exec ts-node src/db-mgmt/reset.ts",
-    "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli"
+    "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli",
+    "lint": "eslint . --ext .ts"
   },
   "dependencies": {
     "apollo-server-express": "^2.16.1",
@@ -26,6 +27,9 @@
   },
   "devDependencies": {
     "envalid": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^4.0.1",
+    "@typescript-eslint/parser": "^4.0.1",
+    "eslint": "^7.8.1",
     "nodemon": "^2.0.4"
   },
   "repository": {
