@@ -1,16 +1,20 @@
 import { createConnection, Connection } from 'typeorm';
 import { Ecoverse, User, Challenge, Tag, UserGroup, Context, Reference } from '../models';
 import { ConnectionFactory } from '../connection-factory';
+import { ConfigurationValidator } from 'src/validators/configuration';
 
 
 async function reset_db() {
-  
+
   require('dotenv').config()
+
+  const configurationValidator = new ConfigurationValidator();
+  configurationValidator.validate();
 
   console.log('Database: Starting the reset of the database... ');
   const connectionFactory = new ConnectionFactory();
   const connection = await connectionFactory.GetConnection();
-  
+
   await connection.dropDatabase();
   await connection.synchronize();
 
@@ -36,7 +40,7 @@ async function load_sample_data(connection: Connection) {
   const industry = new Tag('Industry');
   await industry.save();
   ctverse.tags = [java, graphql, industry, nature];
-  
+
   // Users
   const john = new User("john");
   const bob = new User("bob");
@@ -62,15 +66,15 @@ async function load_sample_data(connection: Connection) {
   energyWeb.context.description = "Balance the grid in a decentralised world";
   const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
   const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
-  energyWeb.context.references = [ ref1, ref2];
+  energyWeb.context.references = [ref1, ref2];
   await energyWeb.save();
-  
+
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = [graphql, nature];
   cleanOceans.context = new Context();
   cleanOceans.context.description = "Keep our Oceans clean and in balance!";
   await cleanOceans.save();
-  
+
   const cargoInsurance = new Challenge('Cargo Insurance');
   cargoInsurance.tags = [graphql, java, industry];
   cargoInsurance.context = new Context();
@@ -88,9 +92,9 @@ async function load_sample_data(connection: Connection) {
 
 };
 
-reset_db().then(()=>{
+reset_db().then(() => {
   console.log('Database: reset complete...');
   process.exit();
-}).catch(function(e){
+}).catch(function (e) {
   throw e;
 });
