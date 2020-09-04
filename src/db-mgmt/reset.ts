@@ -1,7 +1,7 @@
-import { createConnection, Connection } from 'typeorm';
-import { Ecoverse, User, Challenge, Tag, UserGroup, Context, Reference } from '../models';
+import { Connection } from 'typeorm';
+import { LoadConfiguration } from '../configuration-loader';
 import { ConnectionFactory } from '../connection-factory';
-import { LoadConfiguration } from 'src/configuration-loader';
+import { Challenge, Context, Ecoverse, Reference, Tag, User, UserGroup } from '../models';
 
 async function reset_db() {
 
@@ -57,7 +57,6 @@ async function load_sample_data(connection: Connection) {
   const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
   const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
   energyWeb.context.references = [ref1, ref2];
-  await energyWeb.save();
 
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = [graphql, nature];
