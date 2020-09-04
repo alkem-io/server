@@ -57,7 +57,6 @@ async function load_sample_data(connection: Connection) {
   const ref1 = new Reference("video", "http://localhost:8443/myVid", "Video explainer for the challenge");
   const ref2 = new Reference("EnergyWeb", "https://www.energyweb.org/", "Official site");
   energyWeb.context.references = [ref1, ref2];
-  await energyWeb.save();
 
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.tags = [graphql, nature];
