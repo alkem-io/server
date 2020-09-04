@@ -12,7 +12,7 @@ For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
 
 ### Configure the database connection
 
-Default configuration is available.
+Default configuration is available. **DO NOT UPDATE `.env.default`**
 If you need to specify different configuration, add .env file in project root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST.
 
 Example:
