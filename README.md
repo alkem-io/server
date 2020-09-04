@@ -67,12 +67,13 @@ To run this project:
 1. Build the server image, pull mySQL image and start the containers
 
     ```bash
-    docker-compose --env-file .env.default up -d
+    docker-compose --env-file .env.default up -d --build
     ```
 
     if .env file has been added use:
+
     ```bash
-    docker-compose up -d
+    docker-compose up -d --build
     ```
 
 2. Populate database with initial data:
