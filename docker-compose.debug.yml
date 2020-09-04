@@ -10,9 +10,9 @@ services:
     networks:
       - ct
     environment:
-      - DATABASE_HOST=db
-      - MYSQL_ROOT_PASSWORD=toor
-      - MYSQL_DATABASE=cherrytwist
+      - DATABASE_HOST
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
     depends_on:
       - db
     restart: always
@@ -29,5 +29,5 @@ services:
     ports:
       - 3306:3306
     environment:
-      - MYSQL_ROOT_PASSWORD=toor
-      - MYSQL_DATABASE=cherrytwist
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE

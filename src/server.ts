@@ -7,11 +7,12 @@ import { Resolvers } from './schema/Resolvers';
 import { createConnection } from 'typeorm';
 import { Ecoverse } from './models';
 import { ConnectionFactory } from './connection-factory';
+import { ConfigurationValidator } from './validators/configuration';
+import { LoadConfiguration } from './configuration-loader';
 
+const main = async () => {
 
-const main = async() => {
-
-  require('dotenv').config()
+  LoadConfiguration();
 
   // Connect to the database
   try {
@@ -20,12 +21,12 @@ const main = async() => {
     await connection.synchronize();
     console.log('Database connection established and data loaded');
   } catch (error) {
-    console.log('Unable to establish database connection: ' + error); 
+    console.log('Unable to establish database connection: ' + error);
   }
 
   // Build the schema
   const schema = await buildSchema({
-    resolvers: [ Resolvers ],
+    resolvers: [Resolvers],
   });
 
   const apolloServer = new ApolloServer({ schema });
