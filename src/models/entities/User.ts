@@ -1,53 +1,53 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
-import { Tag, DID, Challenge, UserGroup, Organisation, Ecoverse } from '.';
+import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { DID, Tag, UserGroup } from '.';
 
 @Entity()
 @ObjectType()
 export class User extends BaseEntity {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
+    @Field(() => ID)
+    @PrimaryGeneratedColumn()
+    id!: number;
 
-  @Field(() => String)
-  @Column()
-  name: string = '';
+    @Field(() => String)
+    @Column()
+    name: string;
 
-  @Column()
-  account: string = '';
+    @Column(() => String)
+    account = '';
 
-  @Field(() => String)
-  @Column()
-  firstName: string = '';
+    @Field(() => String)
+    @Column(() => String)
+    firstName = '';
 
-  @Field(() => String)
-  @Column()
-  lastName: string = '';
+    @Field(() => String)
+    @Column(() => String)
+    lastName = '';
 
-  @Field(() => String)
-  @Column()
-  email: string = '';
+    @Field(() => String)
+    @Column(() => String)
+    email = '';
 
-  @OneToOne(type => DID)
-  @JoinColumn()
-  DID!: DID;
+    @OneToOne(() => DID)
+    @JoinColumn()
+    DID!: DID;
 
-  @ManyToMany(
-    type => UserGroup,
-    userGroup => userGroup.members
-  )
-  userGroup?: UserGroup;
+    @ManyToMany(
+        () => UserGroup,
+        userGroup => userGroup.members
+    )
+    userGroup?: UserGroup;
 
-  @Field(() => [Tag], { nullable: true })
-  @ManyToMany(
-    type => Tag,
-    tag => tag.users,
-    { eager: true, cascade: true })
-  @JoinTable()
-  tags?: Tag[];
+    @Field(() => [Tag], { nullable: true })
+    @ManyToMany(
+        () => Tag,
+        tag => tag.users,
+        { eager: true, cascade: true })
+    @JoinTable()
+    tags?: Tag[];
 
-  constructor(name: string) {
-    super();
-    this.name = name;
-  }
+    constructor(name: string) {
+        super();
+        this.name = name;
+    }
 }

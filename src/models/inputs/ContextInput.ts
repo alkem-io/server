@@ -1,30 +1,30 @@
-import { InputType, Field } from 'type-graphql';
-import { MaxLength, Length } from 'class-validator';
-import { TagInput, ReferenceInput } from '.';
+import { MaxLength } from 'class-validator';
+import { Field, InputType } from 'type-graphql';
+import { ReferenceInput, TagInput } from '.';
 
 @InputType()
-export class ContextInput{
+export class ContextInput {
 
-  @Field()
-  @MaxLength(30)
-  name! : string;
+    @Field()
+    @MaxLength(30)
+    name!: string;
 
-  @Field({ nullable: true })
-  @MaxLength(255)
-  description?: string;
+    @Field({ nullable: true })
+    @MaxLength(255)
+    description?: string;
 
-  @Field({ nullable: true })
-  @MaxLength(255)
-  vision?: string;
+    @Field({ nullable: true })
+    @MaxLength(255)
+    vision?: string;
 
-  @Field({ nullable: true })
-  @MaxLength(255)
-  principles?: string;
+    @Field({ nullable: true })
+    @MaxLength(255)
+    principles?: string;
 
-  @Field( type => [ReferenceInput], { nullable: true } )
-  referenceLinks!: ReferenceInput[];
+    @Field(() => [ReferenceInput], { nullable: true })
+    referenceLinks!: ReferenceInput[];
 
-  @Field( type => [TagInput], { nullable: true } )
-  tags!: TagInput[];
+    @Field(() => [TagInput], { nullable: true })
+    tags!: TagInput[];
 
 }
