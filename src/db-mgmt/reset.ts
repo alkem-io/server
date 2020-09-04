@@ -1,15 +1,11 @@
 import { createConnection, Connection } from 'typeorm';
 import { Ecoverse, User, Challenge, Tag, UserGroup, Context, Reference } from '../models';
 import { ConnectionFactory } from '../connection-factory';
-import { ConfigurationValidator } from 'src/validators/configuration';
-
+import { LoadConfiguration } from 'src/configuration-loader';
 
 async function reset_db() {
 
-  require('dotenv').config()
-
-  const configurationValidator = new ConfigurationValidator();
-  configurationValidator.validate();
+  LoadConfiguration();
 
   console.log('Database: Starting the reset of the database... ');
   const connectionFactory = new ConnectionFactory();
