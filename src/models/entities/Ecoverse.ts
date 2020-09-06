@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from 'type-graphql';
+import { Field, ID, ObjectType, Float } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Challenge, Context, DID, Organisation, Tag, User, UserGroup } from '.';
 
@@ -70,6 +70,28 @@ export class Ecoverse extends BaseEntity {
     constructor(name: string) {
         super();
         this.name = name;
+    }
+
+    private static instance: Ecoverse;
+
+    static async getInstance() : Promise<Ecoverse>
+    {
+        const ecoverseCount = await Ecoverse.count();
+        if(ecoverseCount < 1)
+        {
+            Ecoverse.instance = new Ecoverse('Empty Ecoverse');
+            await Ecoverse.instance.save();
+        }
+        else    
+        {
+            Ecoverse.instance = await Ecoverse.findOneOrFail();
+        }
+        
+        if(ecoverseCount > 1)
+            throw new Error('Ecoverse count can not be more than one!');
+
+
+        return Ecoverse.instance;
     }
 
 }
