@@ -8,20 +8,14 @@ export class Resolvers {
     // find the ecoverse instance
 
     async ecoverse(): Promise<Ecoverse> {
-        const ecoverses = await Ecoverse.find();
-        if (!ecoverses[0]) {
-            throw new ApolloError('Unable to identify the ecoverse entity');
-        }
-        return ecoverses[0];
+        const ecoverse = await Ecoverse.getInstance();
+        return ecoverse;
     }
 
     @Query(() => String, { nullable: false, description: 'The name for this ecoverse' })
     async name(): Promise<string> {
-        const ecoverses = await Ecoverse.find();
-        if (!ecoverses[0]) {
-            throw new ApolloError('Unable to identify the ecoverse entity');
-        }
-        return ecoverses[0].name;
+        const ecoverse = await Ecoverse.getInstance();
+        return ecoverse.name;
     }
 
     @Query(() => Organisation, { nullable: false, description: 'The host organisation for the ecoverse' })
