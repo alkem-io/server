@@ -37,7 +37,7 @@ export async function populate_sample_challenge2(connection: Connection): Promis
         challenge.context = new Context();
     }
 
-    challenge.context.description = 'How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?';
+    challenge.context.tagline = 'How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?';
     const ref1 = new Reference('video', 'http://localhost:8443/myVid', 'Video explainer for the challenge');
     const ref2 = new Reference('EnergyWeb', 'https://www.energyweb.org/', 'Official site');
     challenge.context.references = [ref1, ref2];

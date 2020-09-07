@@ -6,20 +6,28 @@ import { ReferenceInput, TagInput } from '.';
 export class ContextInput {
 
     @Field()
-    @MaxLength(30)
+    @MaxLength(50)
     name!: string;
 
     @Field({ nullable: true })
-    @MaxLength(255)
-    description?: string;
+    @MaxLength(4096)
+    background?: string;
 
     @Field({ nullable: true })
-    @MaxLength(255)
+    @MaxLength(1024)
     vision?: string;
 
     @Field({ nullable: true })
     @MaxLength(255)
-    principles?: string;
+    tagline?: string;
+
+    @Field({ nullable: true })
+    @MaxLength(1024)
+    who?: string;
+
+    @Field({ nullable: true })
+    @MaxLength(1024)
+    impact?: string;
 
     @Field(() => [ReferenceInput], { nullable: true })
     referenceLinks!: ReferenceInput[];
