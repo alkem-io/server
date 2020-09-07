@@ -14,12 +14,16 @@ services:
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
+      - WAIT_HOSTS
+      - WAIT_HOSTS_TIMEOUT
+      - WAIT_SLEEP_INTERVAL
+      - WAIT_HOST_CONNECT_TIMEOUT
     depends_on:
       - db
     restart: always
     ports:
       - 4000:4000
-    command: ["npm", "start"]
+    command: sh -c "/wait && npm start"
   db:
     container_name: ct_server_db
     image: mysql:8.0.11
