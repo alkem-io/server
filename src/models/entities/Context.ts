@@ -10,12 +10,24 @@ export class Context extends BaseEntity {
     id!: number;
 
     @Field(() => String, { nullable: true, description: 'A one line description' })
-    @Column()
-    description?: string = '';
+    @Column('varchar', { length: 250 })
+    tagline?: string = '';
+
+    @Field(() => String, { nullable: true, description: 'A detailed description of the current situation' })
+    @Column('varchar', { length: 2000 })
+    background?: string = '';
 
     @Field(() => String, { nullable: true, description: 'The goal that is being pursued' })
-    @Column()
+    @Column('varchar', { length: 2000 })
     vision?: string = '';
+
+    @Field(() => String, { nullable: true, description: 'What is the potential impact?' })
+    @Column('varchar', { length: 2000 })
+    impact?: string = '';
+
+    @Field(() => String, { nullable: true, description: 'Who should get involved in this challenge' })
+    @Column('varchar', { length: 2000 })
+    who?: string = '';
 
     @Field(() => [Reference], { nullable: true, description: 'A list of URLs to relevant information.' })
     @OneToMany(
@@ -25,8 +37,5 @@ export class Context extends BaseEntity {
     )
     references?: Reference[];
 
-    @Field(() => String, { nullable: true, description: 'The norms for contributors to follow' })
-    @Column()
-    principles?: string = '';
 
 }
