@@ -79,7 +79,7 @@ To run this project:
 2. Populate database with initial data:
 
     ```bash
-    docker exec server.node npm run test-db-reset
+    docker exec ct_server npm run test-db-reset
     ```
 
 ## Technology Stack
