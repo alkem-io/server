@@ -5,6 +5,7 @@ networks:
 
 services:
   server.node:
+    container_name: ct_server
     image: server.node
     build: .
     networks:
@@ -20,6 +21,7 @@ services:
       - 4000:4000
     command: ["npm", "start"]
   db:
+    container_name: ct_server_db
     image: mysql:8.0.11
     networks:
       - ct
