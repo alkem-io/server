@@ -82,6 +82,8 @@ To run this project:
     docker exec ct_server npm run test-db-reset
     ```
 
+Note: if this command fails, then there has been a race condition observed on windows whereby the db container is up but not yet ready to accept db connections so the server fails. In that case please restart the server container. 
+
 ## Technology Stack
 
 The technology stack is as follows:
