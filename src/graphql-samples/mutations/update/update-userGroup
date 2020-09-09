@@ -1,0 +1,35 @@
+mutation UpdateUserGroup($userGroupData: UpdateRootUserGroupInput!) {
+  updateUserGroup(userGroupData: $userGroupData) {
+    name,
+    members
+    {
+     id
+    }
+
+  }
+}
+
+
+query variables:
+{
+  "userGroupData": 
+  {
+    "id": 1,
+    "name": "X-Men",
+    "members": 
+    [
+      {
+        "name" : "Wolverine"
+      },
+    	{
+      	"name": "Sabertooth"
+      },
+      {
+        "name" : "Storm"
+      },
+    	{
+      	"name": "Professor X"
+  		}
+    ]
+  }
+}

@@ -1,6 +1,6 @@
-import { ApolloError } from 'apollo-server-express';
 import { Arg, Mutation, Query, Resolver } from 'type-graphql';
-import { Challenge, ChallengeInput, Context, ContextInput, Ecoverse, Organisation, OrganisationInput, Tag, TagInput, User, UserGroup, UserGroupInput, UserInput } from '../models';
+import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
+import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
 
 @Resolver()
 export class Resolvers {

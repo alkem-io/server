@@ -4,7 +4,7 @@ import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
 import { LoadConfiguration } from './configuration-loader';
 import { ConnectionFactory } from './connection-factory';
-import { Resolvers } from './schema/Resolvers';
+import { Resolvers, CreateMutations, UpdateMutations } from './schema';
 
 
 const main = async () => {
@@ -23,7 +23,7 @@ const main = async () => {
 
   // Build the schema
   const schema = await buildSchema({
-    resolvers: [Resolvers],
+    resolvers: [Resolvers, CreateMutations, UpdateMutations],
   });
 
   const apolloServer = new ApolloServer({ schema });
