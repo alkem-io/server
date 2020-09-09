@@ -1,0 +1,35 @@
+mutation UpdateUser($userData: UpdateRootUserInput!) {
+  updateUser(userData: $userData) {
+    name,
+  	tags
+      {
+        id,
+        name
+      }
+  }
+}
+
+
+query variables:
+{
+  "userData": 
+  {
+    "id": 4,
+    "name": "Gosho",
+    "tags": 
+    [
+      {
+        "id": 1,
+        "name": "Ruse"
+      },
+    	{
+        "id": 2,
+      	"name": "Anatema"
+      },
+      {
+        "id": 3,
+      	"name": "Varna"
+  		}
+    ]
+  }
+}
