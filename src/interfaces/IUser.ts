@@ -9,6 +9,5 @@ export interface IUser {
     lastName: string;
     email: string;
     DID: IDID;
-    tags: ITag[];
+    tags?: ITag[];
   }
-  

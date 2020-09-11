@@ -38,14 +38,19 @@ async function load_sample_data(connection: Connection) {
   // Users
   const john = new User('john');
   const bob = new User('bob');
+  const valentin = new User('Valentin');
+  const angel = new User('Angel');
   bob.tags = [java, graphql];
 
   // User Groups
+  const members = new UserGroup('members');
+  members.members = [angel, valentin];
+  members.focalPoint = angel;
   const jedi = new UserGroup('Jedi');
   jedi.members = [john, bob];
   jedi.focalPoint = john;
   const crew = new UserGroup('Crew');
-  ctverse.groups = [jedi, crew];
+  ctverse.groups = [jedi, crew, members];
 
   // Context
   ctverse.context = new Context();

@@ -15,7 +15,8 @@
       "emitDecoratorMetadata": true,
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,
-      "resolveJsonModule": true
+      "resolveJsonModule": true,
+      "suppressImplicitAnyIndexErrors": true
     },
     "exclude": ["./node_modules"],
     "include": ["./src/**/*.ts"]

@@ -1,10 +1,11 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Reference } from './Reference';
+import { IContext } from 'src/interfaces/IContext';
 
 @Entity()
 @ObjectType()
-export class Context extends BaseEntity {
+export class Context extends BaseEntity implements IContext {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;

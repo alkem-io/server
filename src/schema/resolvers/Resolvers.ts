@@ -1,21 +1,38 @@
 import { Arg, Mutation, Query, Resolver } from 'type-graphql';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
 import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
-
+import { Container, Inject } from 'typedi'
+import { IEcoverse } from 'src/interfaces/IEcoverse';
+import { EcoverseService } from '../../services/EcoverseService';
+import { IUser } from 'src/interfaces/IUser';
 @Resolver()
 export class Resolvers {
 
-    // find the ecoverse instance
+    // @Inject('EcoverseService')
+    // private ecoverseService : EcoverseService;
 
-    async ecoverse(): Promise<Ecoverse> {
-        const ecoverse = await Ecoverse.getInstance();
-        return ecoverse;
+    constructor(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        @Inject('EcoverseService') ecoverseService : EcoverseService
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    ){}
+
+
+    async ecoverse(): Promise<IEcoverse> {
+        const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        return await ecoverserService.getEcoverse();
     }
 
     @Query(() => String, { nullable: false, description: 'The name for this ecoverse' })
     async name(): Promise<string> {
-        const ecoverse = await Ecoverse.getInstance();
-        return ecoverse.name;
+        const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        return await ecoverserService.getName();
+    }
+
+    @Query(() => String, { nullable: false, description: 'The name for this ecoverse' })
+    async members(): Promise<IUser[]> {
+        const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        return await ecoverserService.getMembers();
     }
 
     @Query(() => Organisation, { nullable: false, description: 'The host organisation for the ecoverse' })

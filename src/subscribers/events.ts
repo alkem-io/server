@@ -7,5 +7,8 @@ export default {
         query: 'onQueryChallenge',
         create: 'onCreateChallenge',
         update: 'onUpdateChallenge'
+    },
+    logger: {
+        error: 'onError'
     }
   };

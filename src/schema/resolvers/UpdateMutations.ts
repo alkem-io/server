@@ -1,11 +1,10 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { UpdateRootUserInput, UpdateRootUserGroupInput, UpdateRootOrganisationInput, UpdateRootChallengeInput, UpdateEcoverseInput, UpdateRootContextInput } from '../inputs';
 import { Challenge, Organisation, User, UserGroup, Ecoverse, Context } from '../../models'
-import EcoverseService from 'src/services/ecoverse-service';
 
 @Resolver()
 export class UpdateMutations {
-  
+
     @Mutation(() => Ecoverse)
     async updateEcoverse(
         @Arg('ecoverseData') ecoverseData: UpdateEcoverseInput): Promise<Ecoverse>{
@@ -13,8 +12,8 @@ export class UpdateMutations {
             await Ecoverse.getInstance();
             const ecoverse = Ecoverse.create(ecoverseData);
             await ecoverse.save();
-            
-            throw new Error ("Entitiy not found!");
+
+            throw new Error ('Entitiy not found!');
 
     }
 
@@ -30,14 +29,14 @@ export class UpdateMutations {
 
             }
 
-            throw new Error ("Entitiy not found!");
+            throw new Error ('Entitiy not found!');
 
     }
 
     @Mutation(() => UserGroup)
     async updateUserGroup(
         @Arg('userGroupData') userGroupData: UpdateRootUserGroupInput): Promise<UserGroup> {
-        
+
             if( User.findOne( { where: { userGroupData } } ) )
             {
                 const userGroup = UserGroup.create(userGroupData);
@@ -47,7 +46,7 @@ export class UpdateMutations {
 
             }
 
-            throw new Error ("Entitiy not found!");
+            throw new Error ('Entitiy not found!');
 
     }
 
@@ -63,7 +62,7 @@ export class UpdateMutations {
 
             }
 
-            throw new Error ("Entitiy not found!");
+            throw new Error ('Entitiy not found!');
     }
 
     @Mutation(() => Challenge)
@@ -78,7 +77,7 @@ export class UpdateMutations {
 
             }
 
-            throw new Error ("Entitiy not found!");
+            throw new Error ('Entitiy not found!');
     }
 
     @Mutation(() => Context)
@@ -93,7 +92,7 @@ export class UpdateMutations {
 
             }
 
-            throw new Error ("Entitiy not found!");
+            throw new Error ('Entitiy not found!');
     }
 
 }

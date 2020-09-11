@@ -2,10 +2,11 @@ import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { DID, Tag, User, UserGroup, Context, Ecoverse, Project } from '.';
 import { Organisation } from './Organisation';
+import { IChallenge } from 'src/interfaces/IChallenge';
 
 @Entity()
 @ObjectType()
-export class Challenge extends BaseEntity {
+export class Challenge extends BaseEntity implements IChallenge {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;

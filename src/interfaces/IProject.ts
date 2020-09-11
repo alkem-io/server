@@ -6,6 +6,6 @@ export interface IProject {
     name: string;
     description: string;
     lifecyclePhase: string;
-    tags: ITag[];
-    agreements: IAgreement[];
+    tags?: ITag[];
+    agreements?: IAgreement[];
   }

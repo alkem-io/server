@@ -9,12 +9,12 @@ import { IContext } from './IContext';
 export interface IEcoverse {
     id: number;
     name: string;
-    ecoverseHost: IOrganisation;
-    context: IContext;
+    ecoverseHost?: IOrganisation;
+    context?: IContext;
     DID: IDID;
-    members: IUser[];
-    groups: IUserGroup[];
-    partners: IOrganisation[];
-    challenges: IChallenge[];
+    members?: IUser[];
+    groups?: IUserGroup[];
+    partners?: IOrganisation[];
+    challenges?: IChallenge[];
     tags?: ITag[];
   }

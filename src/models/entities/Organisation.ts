@@ -2,10 +2,11 @@ import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { DID, Ecoverse, Tag, User } from '.';
 import { Challenge } from './Challenge';
+import { IOrganisation } from 'src/interfaces/IOrganisation';
 
 @Entity()
 @ObjectType()
-export class Organisation extends BaseEntity {
+export class Organisation extends BaseEntity implements IOrganisation {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;

@@ -1,10 +1,11 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { DID, Tag, UserGroup } from '.';
+import { IUser } from 'src/interfaces/IUser';
 
 @Entity()
 @ObjectType()
-export class User extends BaseEntity {
+export class User extends BaseEntity implements IUser {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;

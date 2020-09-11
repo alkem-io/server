@@ -1,8 +1,9 @@
 import { ITag } from './ITag';
+import { IContext } from './IContext';
 
 export interface IChallenge {
     id: number;
     name: string;
-    description: string;
-    tags: ITag[];
+    context?: IContext;
+    tags?: ITag[];
   }
