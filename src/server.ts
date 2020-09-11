@@ -30,8 +30,8 @@ const main = async () => {
   const app = express();
   apolloServer.applyMiddleware({ app });
   app.listen(
-    4000,
-    () => console.log(`Server started on http://localhost:4000${apolloServer.graphqlPath}`),
+    process.env.GRAPHQL_ENDPOINT_PORT,
+    () => console.log(`Server started on http://localhost:${process.env.GRAPHQL_ENDPOINT_PORT}`),
   );
 };
 

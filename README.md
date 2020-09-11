@@ -50,7 +50,7 @@ npm run test-db-reset
 ### Start the server
 
 ```
-npm start
+npm run start-local
 ```
 
 Navigate to http://localhost:4000/graphql
