@@ -19,6 +19,7 @@
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "graphql": "^15.3.0",
+    "graphql-voyager": "^1.0.0-rc.31",
     "mysql": "^2.18.1",
     "reflect-metadata": "^0.1.13",
     "ts-node": "^9.0.0",
