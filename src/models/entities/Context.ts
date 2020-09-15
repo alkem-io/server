@@ -1,5 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Challenge } from './Challenge';
 import { Reference } from './Reference';
 
 @Entity()
@@ -28,6 +29,9 @@ export class Context extends BaseEntity {
     @Field(() => String, { nullable: true, description: 'Who should get involved in this challenge' })
     @Column('varchar', { length: 2000 })
     who?: string = '';
+
+    @OneToOne(() => Challenge, challenge => challenge.context)
+    context?: Context
 
     @Field(() => [Reference], { nullable: true, description: 'A list of URLs to relevant information.' })
     @OneToMany(
