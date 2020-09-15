@@ -19,6 +19,9 @@ spec:
       containers:
         - name: ct-server
           image: cherrytwist/server:0.1.2
+          envFrom:
+          - secretRef:
+              name: server-secret
           ports:
             - name: graphql
               containerPort: 4000
