@@ -29,9 +29,12 @@ const main = async () => {
   const apolloServer = new ApolloServer({ schema });
   const app = express();
   apolloServer.applyMiddleware({ app });
+
+  const GRAPHQL_ENDPOINT_PORT = process.env.GRAPHQL_ENDPOINT_PORT || 4000;
+
   app.listen(
-    4000,
-    () => console.log(`Server started on http://localhost:4000${apolloServer.graphqlPath}`),
+    GRAPHQL_ENDPOINT_PORT,
+    () => console.log(`Server started on http://localhost:${GRAPHQL_ENDPOINT_PORT}`),
   );
 };
 
