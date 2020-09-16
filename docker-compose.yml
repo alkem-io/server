@@ -18,6 +18,7 @@ services:
       - WAIT_HOSTS_TIMEOUT
       - WAIT_SLEEP_INTERVAL
       - WAIT_HOST_CONNECT_TIMEOUT
+      - GRAPHQL_ENDPOINT_PORT
     depends_on:
       - db
     restart: always
