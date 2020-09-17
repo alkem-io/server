@@ -1,9 +1,10 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { IDID } from 'src/interfaces/IDID';
 
 @Entity()
 @ObjectType()
-export class DID extends BaseEntity {
+export class DID extends BaseEntity implements IDID {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;

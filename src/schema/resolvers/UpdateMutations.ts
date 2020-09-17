@@ -23,13 +23,9 @@ export class UpdateMutations {
     if (User.findOne({ where: { userData } })) {
       const user = User.create(userData);
       await user.save();
-
       return user;
-
     }
-
     throw new Error('Entitiy not found!');
-
   }
 
   @Mutation(() => UserGroup)
@@ -41,11 +37,9 @@ export class UpdateMutations {
       await userGroup.save();
 
       return userGroup;
-
     }
 
     throw new Error('Entitiy not found!');
-
   }
 
   @Mutation(() => Organisation)

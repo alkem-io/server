@@ -1,10 +1,11 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Project, Tag } from '.';
+import { IAgreement } from 'src/interfaces/IAgreement';
 
 @Entity()
 @ObjectType()
-export class Agreement extends BaseEntity {
+export class Agreement extends BaseEntity implements IAgreement {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;
@@ -28,7 +29,7 @@ export class Agreement extends BaseEntity {
         () => Tag,
         tag => tag.agreements,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'agreement_tag' })
     tags?: Tag[];
 
     constructor(name: string) {

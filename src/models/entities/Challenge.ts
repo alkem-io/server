@@ -2,10 +2,11 @@ import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { DID, Tag, User, UserGroup, Context, Ecoverse, Project } from '.';
 import { Organisation } from './Organisation';
+import { IChallenge } from 'src/interfaces/IChallenge';
 
 @Entity()
 @ObjectType()
-export class Challenge extends BaseEntity {
+export class Challenge extends BaseEntity implements IChallenge {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;
@@ -22,8 +23,8 @@ export class Challenge extends BaseEntity {
     // Community
     @Field(() => [Organisation], { description: 'The leads for the challenge. The focal point for the user group is the primary challenge lead.' })
     @ManyToMany(() => Organisation, organisation => organisation.challenges, { eager: true, cascade: true })
-    @JoinTable()
-    challengeLeads!: Organisation[];
+    @JoinTable({ name: 'challenge_lead' })
+    challengeLeads?: Organisation[];
 
     // @Field(() => UserGroup, {nullable: true, description: "The leads for the challenge. The focal point for the user group is the primary challenge lead."})
     // @OneToOne(() => UserGroup, userGroup => userGroup.challenge, {eager: true, cascade: true})
@@ -52,7 +53,7 @@ export class Challenge extends BaseEntity {
         () => Tag,
         tag => tag.ecoverses,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'challenge_tag' })
     tags?: Tag[];
 
     @Field(() => [Project], { nullable: true, description: 'The set of projects within the context of this challenge' })
