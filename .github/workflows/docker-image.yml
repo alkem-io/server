@@ -24,8 +24,8 @@ jobs:
             username: ${{ secrets.REGISTRY_USERNAME }}
             password: ${{ secrets.REGISTRY_PASSWORD }}
         - run: |
-            docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest
-            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest
+            docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }} -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }}
+            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }}
 
         - uses: Azure/aks-set-context@v1
           with:
@@ -45,6 +45,6 @@ jobs:
             manifests: |
               manifests/deployment.yml
             images: |
-              ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest
+              ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }}
             imagepullsecrets: |
               ct-server-secret
