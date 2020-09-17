@@ -100,10 +100,10 @@ async function load_sample_data(connection: Connection) {
   //console.log(`Generated challenge ${balanceGridStr}`);
 
   //Organisations
-  ctverse.save();
+  await ctverse.save();
   const host = new Organisation('Odyssey');
   host.members = [angel, valentin, rutger, neil, rene, alex];
-  host.save();
+  await host.save();
   ctverse.ecoverseHost = host;
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance, balanceGrid];
