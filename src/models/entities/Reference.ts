@@ -19,7 +19,7 @@ export class Reference extends BaseEntity implements IReference {
     uri: string;
 
     @Field(() => String)
-    @Column()
+    @Column('varchar', { length: 300 })
     description: string;
 
     @ManyToOne(

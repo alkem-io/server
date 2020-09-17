@@ -13,7 +13,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
 
   // The context and host organisation
   @Field(() => String, { nullable: false, description: '' })
-  @Column()
+  @Column('varchar', { length: 100 })
   name: string;
 
   @Field(() => Organisation, { nullable: true, description: 'The organisation that hosts this Ecoverse instance' })

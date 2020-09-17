@@ -12,7 +12,7 @@ export class Challenge extends BaseEntity implements IChallenge {
     id!: number;
 
     @Field(() => String, { nullable: false, description: 'The name of the challenge' })
-    @Column()
+    @Column('varchar', { length: 100 })
     name: string;
 
     @Field(() => Context, { nullable: true, description: 'The shared understanding for the challenge' })
