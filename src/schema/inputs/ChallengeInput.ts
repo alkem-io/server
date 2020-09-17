@@ -6,7 +6,7 @@ import { ContextInput, TagInput, UpdateNestedTagInput, UpdateNestedContextInput,
 export class ChallengeInput {
 
     @Field({ nullable: true })
-    @MaxLength(30)
+    @MaxLength(100)
     name?: string;
 
     @Field({ nullable: true })
@@ -22,7 +22,7 @@ export class ChallengeInput {
 
     @Field(() => ContextInput, { nullable: true })
     context?: ContextInput;
-    
+
     @Field(() => [UserGroupInput], { nullable: true })
     groups?: UserGroupInput[];
 }
@@ -47,7 +47,7 @@ export class BaseUpdateChallengeInput {
 
   @Field(() => UpdateNestedContextInput, { nullable: true } )
   context?: UpdateNestedContextInput;
-  
+
   @Field(() => [UpdateNestedUserGroupInput], { nullable: true } )
   groups?: UpdateNestedUserGroupInput[];
 }
