@@ -45,6 +45,11 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
         organisation => organisation.ecoverses,
         { eager: true, cascade: true },
     )
+    @JoinTable({
+        name: 'ecoverse_partner',
+        joinColumns: [{ name: 'ecoverseId', referencedColumnName: 'id' }],
+        inverseJoinColumns: [{ name: 'organisationId', referencedColumnName: 'id' }],
+    })
     partners?: Organisation[];
 
     //
@@ -61,7 +66,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
         () => Tag,
         tag => tag.ecoverses,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'ecoverse_tag' })
     tags?: Tag[];
 
     // Functional methods for managing the Ecoverse
@@ -73,24 +78,25 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
 
     private static instance: Ecoverse;
 
-    static async getInstance() : Promise<Ecoverse>
-    {
-        const ecoverseCount = await Ecoverse.count();
-        if(ecoverseCount < 1)
-        {
-            Ecoverse.instance = new Ecoverse('Empty Ecoverse');
-            await Ecoverse.instance.save();
+    static async getInstance(): Promise<Ecoverse> {
+        try {
+            const ecoverseCount = await Ecoverse.count();
+            if (ecoverseCount < 1) {
+                Ecoverse.instance = new Ecoverse('Empty Ecoverse');
+                await Ecoverse.instance.save();
+            }
+            else {
+                const ecoverse = await Ecoverse.findOne();
+                Ecoverse.instance = ecoverse as Ecoverse;
+            }
+
+            if (ecoverseCount > 1)
+                throw new Error('Ecoverse count can not be more than one!');
+
         }
-        else
-        {
-            const ecoverse = await Ecoverse.findOne({ where: { id:1 } });
-            Ecoverse.instance = ecoverse as Ecoverse;
+        catch (e) {
+            console.log(e);
         }
-
-        if(ecoverseCount > 1)
-            throw new Error('Ecoverse count can not be more than one!');
-
-
         return Ecoverse.instance;
     }
 

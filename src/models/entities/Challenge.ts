@@ -23,7 +23,7 @@ export class Challenge extends BaseEntity implements IChallenge {
     // Community
     @Field(() => [Organisation], { description: 'The leads for the challenge. The focal point for the user group is the primary challenge lead.' })
     @ManyToMany(() => Organisation, organisation => organisation.challenges, { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'challenge_lead' })
     challengeLeads?: Organisation[];
 
     // @Field(() => UserGroup, {nullable: true, description: "The leads for the challenge. The focal point for the user group is the primary challenge lead."})
@@ -53,7 +53,7 @@ export class Challenge extends BaseEntity implements IChallenge {
         () => Tag,
         tag => tag.ecoverses,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'challenge_tag' })
     tags?: Tag[];
 
     @Field(() => [Project], { nullable: true, description: 'The set of projects within the context of this challenge' })

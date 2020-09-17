@@ -51,7 +51,7 @@ export class User extends BaseEntity implements IUser {
         () => Tag,
         tag => tag.users,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'user_tag' })
     tags?: Tag[];
 
     constructor(name: string) {

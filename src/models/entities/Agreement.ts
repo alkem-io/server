@@ -29,7 +29,7 @@ export class Agreement extends BaseEntity implements IAgreement {
         () => Tag,
         tag => tag.agreements,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'agreement_tag' })
     tags?: Tag[];
 
     constructor(name: string) {

@@ -1,7 +1,7 @@
-import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Challenge, Ecoverse, Tag, User } from '.';
 import { IUserGroup } from 'src/interfaces/IUserGroup';
+import { Field, ID, ObjectType } from 'type-graphql';
+import { BaseEntity, Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Challenge, Ecoverse, Tag, User } from '.';
 
 @Entity()
 @ObjectType()
@@ -20,7 +20,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
         user => user.userGroups,
         { eager: true, cascade: true }
     )
-    @JoinTable()
+    @JoinTable({ name: 'user_group_members' })
     members?: User[];
 
 
@@ -36,7 +36,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
         () => Tag,
         tag => tag.userGroups,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'user_group_tag' })
     tags?: Tag[];
 
     @ManyToOne(

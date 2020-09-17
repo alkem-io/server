@@ -27,14 +27,14 @@ export class Project extends BaseEntity implements IProject {
         () => Tag,
         tag => tag.ecoverses,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'project_tag' })
     tags?: Tag[];
 
     //@Field(() => [Agreement])
     @OneToMany(
         () => Agreement,
         agreement => agreement.project,
-        { eager: true },
+        { eager: true, cascade: true },
     )
     agreements?: Agreement[];
 

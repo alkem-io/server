@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { DID, Ecoverse, Tag, User } from '.';
 import { Challenge } from './Challenge';
 import { IOrganisation } from 'src/interfaces/IOrganisation';
@@ -19,6 +19,9 @@ export class Organisation extends BaseEntity implements IOrganisation {
     @JoinColumn()
     DID!: DID;
 
+    @OneToOne(() => Ecoverse, ecoverse => ecoverse.ecoverseHost)
+    hostedEcoverse?: Ecoverse;
+
     @ManyToMany(
         () => Ecoverse,
         ecoverse => ecoverse.partners
@@ -30,7 +33,7 @@ export class Organisation extends BaseEntity implements IOrganisation {
         () => Tag,
         tag => tag.ecoverses,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'organisation_tag' })
     tags?: Tag[];
 
     @Field(() => [User], { nullable: true, description: 'The set of users that are associated with this organisation' })
