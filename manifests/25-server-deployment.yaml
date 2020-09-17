@@ -18,8 +18,10 @@ spec:
     spec:
       containers:
         - name: ct-server
-          image: cherrytwist/server:0.1.2
+          image: ctdev.azurecr.io/ct-server:71719063d15910e5ad6e43c1083e1721b638787a
           envFrom:
+          - secretRef:
+              name: wait-hosts
           - secretRef:
               name: server-secret
           ports:
