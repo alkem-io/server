@@ -24,7 +24,7 @@ export class Challenge extends BaseEntity implements IChallenge {
     @Field(() => [Organisation], { description: 'The leads for the challenge. The focal point for the user group is the primary challenge lead.' })
     @ManyToMany(() => Organisation, organisation => organisation.challenges, { eager: true, cascade: true })
     @JoinTable()
-    challengeLeads!: Organisation[];
+    challengeLeads?: Organisation[];
 
     // @Field(() => UserGroup, {nullable: true, description: "The leads for the challenge. The focal point for the user group is the primary challenge lead."})
     // @OneToOne(() => UserGroup, userGroup => userGroup.challenge, {eager: true, cascade: true})

@@ -17,15 +17,18 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     @Field(() => [User], { nullable: true, description: 'The set of users that are members of this group' })
     @ManyToMany(
         () => User,
-        user => user.userGroup,
+        user => user.userGroups,
         { eager: true, cascade: true }
     )
     @JoinTable()
     members?: User[];
 
+
     @Field(() => User, { nullable: true, description: 'The focal point for this group' })
-    @OneToOne(() => User)
-    @JoinColumn()
+    @ManyToOne(
+        () => User,
+        user => user.focalPoints
+        )
     focalPoint?: User;
 
     @Field(() => [Tag], { nullable: true, description: 'The set of tags for this group e.g. Team, Nature etc.' })

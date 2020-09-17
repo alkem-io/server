@@ -1,10 +1,10 @@
 import { Service } from 'typedi';
 import { EventDispatcher, EventDispatcherInterface } from '../decorators/eventDispatcher';
 import events from '../subscribers/events';
-import { Ecoverse, UserGroup } from '../models';
+import { Ecoverse } from '../models';
 import { IEcoverse } from 'src/interfaces/IEcoverse';
-import { IUser } from 'src/interfaces/IUser';
-import { In, createQueryBuilder } from 'typeorm';
+import { IContext } from 'src/interfaces/IContext';
+import { IOrganisation } from 'src/interfaces/IOrganisation';
 import { IUserGroup } from 'src/interfaces/IUserGroup';
 
 @Service('EcoverseService')
@@ -39,29 +39,47 @@ export class EcoverseService {
     }
   }
 
-  public async getMembers(): Promise<IUser[]> {
+  public async getMembers(): Promise<IUserGroup> {
     try {
 
         const ecoverse = await Ecoverse.getInstance();
-        const membersGroup = ecoverse.groups?.find(x => x.name === 'members');
-        return membersGroup?.members as IUser[];
-        // const ecoverse = await createQueryBuilder('Ecoverse')
-        // .leftJoinAndSelect('user_group', 'user_group', 'user_group.ecoverseId = ecoverse.id')
-        // .where('user_group.name = :name', { name: 'members'} )
-        // .leftJoinAndSelect('user_group_members_user', 'members', 'user_group_members_user.userGroupId = user_group.id')
-        // .leftJoinAndSelect('user', 'user', 'user.id = user_group_members_user.userId')
-        // .getMany();
+        const membersGroup = ecoverse.groups?.find(_ => _.name === 'members');
 
-        // ecoverse.members = ecoverse?.groups?.find( { where: { name: 'members'} } )
-    //   const userGroup = await UserGroup.getRepository();
-    //   this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+        this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
-    //    const members = await userGroup.findOne({
-    //       where: { name: 'members'}
-    //     })
+        return membersGroup as IUserGroup;
+
 
     } catch (e) {
-        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getName()!!!', exception: e});
+        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e});
+      throw e;
+    }
+  }
+
+  public async getContext(): Promise<IContext> {
+    try {
+
+        const ecoverse = await Ecoverse.getInstance();
+        this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+
+        return ecoverse.context as IContext;
+
+    } catch (e) {
+        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e});
+      throw e;
+    }
+  }
+
+  public async getHost(): Promise<IOrganisation> {
+    try {
+
+        const ecoverse = await Ecoverse.getInstance();
+        this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+
+        return ecoverse.ecoverseHost as IOrganisation;
+
+    } catch (e) {
+        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getHost()!!!', exception: e});
       throw e;
     }
   }

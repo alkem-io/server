@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToOne, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { DID, Tag, UserGroup } from '.';
 import { IUser } from 'src/interfaces/IUser';
 
@@ -37,7 +37,14 @@ export class User extends BaseEntity implements IUser {
         () => UserGroup,
         userGroup => userGroup.members
     )
-    userGroup?: UserGroup;
+    userGroups?: UserGroup[];
+
+    @OneToMany(
+        () => UserGroup,
+        userGroup => userGroup.focalPoint,
+        { eager: false, cascade: true },
+    )
+    focalPoints?: UserGroup[];
 
     @Field(() => [Tag], { nullable: true })
     @ManyToMany(

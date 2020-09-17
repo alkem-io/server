@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Challenge, Context, DID, Organisation, Tag, User, UserGroup } from '.';
+import { Challenge, Context, DID, Organisation, Tag, UserGroup } from '.';
 import { IEcoverse } from 'src/interfaces/IEcoverse';
 
 
@@ -31,9 +31,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
     @JoinColumn()
     DID!: DID;
 
-    @Field(() => [User], { nullable: true, description: 'The community for the ecoverse' })
-    members?: User[];
-
     @Field(() => [UserGroup], { nullable: true })
     @OneToMany(
         () => UserGroup,
@@ -43,9 +40,9 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
     groups?: UserGroup[];
 
     @Field(() => [Organisation], { nullable: true, description: 'The set of partner organisations associated with this Ecoverse' })
-    @OneToMany(
+    @ManyToMany(
         () => Organisation,
-        organisation => organisation.ecoverse,
+        organisation => organisation.ecoverses,
         { eager: true, cascade: true },
     )
     partners?: Organisation[];
@@ -86,7 +83,8 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
         }
         else
         {
-            Ecoverse.instance = await Ecoverse.findOneOrFail();
+            const ecoverse = await Ecoverse.findOne({ where: { id:1 } });
+            Ecoverse.instance = ecoverse as Ecoverse;
         }
 
         if(ecoverseCount > 1)

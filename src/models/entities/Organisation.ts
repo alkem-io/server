@@ -19,11 +19,11 @@ export class Organisation extends BaseEntity implements IOrganisation {
     @JoinColumn()
     DID!: DID;
 
-    @ManyToOne(
+    @ManyToMany(
         () => Ecoverse,
         ecoverse => ecoverse.partners
     )
-    ecoverse?: Ecoverse;
+    ecoverses?: Ecoverse[];
 
     @Field(() => [Tag], { nullable: true, description: 'The set of tags applied to this organisation.' })
     @ManyToMany(
