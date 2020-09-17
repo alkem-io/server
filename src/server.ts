@@ -1,10 +1,11 @@
 import { ApolloServer } from 'apollo-server-express';
 import express from 'express';
+import { express as voyagerMiddleware } from 'graphql-voyager/middleware';
 import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
 import { LoadConfiguration } from './configuration-loader';
 import { ConnectionFactory } from './connection-factory';
-import { Resolvers, CreateMutations, UpdateMutations } from './schema';
+import { CreateMutations, Resolvers, UpdateMutations } from './schema';
 
 
 const main = async () => {
@@ -29,6 +30,13 @@ const main = async () => {
   const apolloServer = new ApolloServer({ schema });
   const app = express();
   apolloServer.applyMiddleware({ app });
+
+  const environment = process.env.NODE_ENV;
+  const isDevelopment = environment === 'development';
+
+  if (isDevelopment) {
+    app.use('/voyager', voyagerMiddleware({ endpointUrl: '/graphql' }));
+  }
 
   const GRAPHQL_ENDPOINT_PORT = process.env.GRAPHQL_ENDPOINT_PORT || 4000;
 
