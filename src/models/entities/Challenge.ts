@@ -78,6 +78,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
         super();
         this.name = name;
         this.context = new Context();
+        this.restrictedGroupNames = [RestrictedGroupNames.Members, RestrictedGroupNames.Admins];
     }
 
     // Helper method to ensure all members are initialised properly.
