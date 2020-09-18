@@ -13,7 +13,7 @@ For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
 ### Configure the database connection
 
 Default configuration is available. **DO NOT UPDATE `.env.default`**
-If you need to specify different configuration, add .env file in project root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST.
+If you need to specify different configuration, add .env file in project root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST, GRAPHQL_ENDPOINT_PORT.
 
 Example:
 
@@ -21,6 +21,7 @@ Example:
 DATABASE_HOST=localhost
 MYSQL_DATABASE=cherrytwist
 MYSQL_ROOT_PASSWORD=toor
+GRAPHQL_ENDPOINT_PORT=4000
 ```
 
 Optional variables:
@@ -53,14 +54,14 @@ npm run test-db-reset
 npm start
 ```
 
-Navigate to http://localhost:4000/graphql
+Navigate to http://localhost:4000/graphql (4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
 
 ## Setup instructions (docker-compose and docker)
 
 Prerequisites:
 
 - Docker and docker-compose installed on x86 architecture (so not an ARM-based architecture like Raspberry pi)
-- ports 80, 4000 and 3306 free on localhost
+- ports 80, 4000 (GRAPHQL_ENDPOINT_PORT) and 3306 free on localhost
 
 To run this project:
 

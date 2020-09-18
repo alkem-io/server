@@ -1,35 +1,62 @@
 import { Arg, Mutation, Query, Resolver } from 'type-graphql';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
-import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
-
+import { Challenge, Context, Organisation, Tag, User, UserGroup } from '../../models'
+import { Container, Inject } from 'typedi'
+import { IEcoverse } from 'src/interfaces/IEcoverse';
+import { EcoverseService } from '../../services/EcoverseService';
+import { IContext } from 'src/interfaces/IContext';
+import { IOrganisation } from 'src/interfaces/IOrganisation';
+import { IUserGroup } from 'src/interfaces/IUserGroup';
+import { ChallengeService } from '../../services/ChallengeService';
 @Resolver()
 export class Resolvers {
 
-    // find the ecoverse instance
+    // @Inject('EcoverseService')
+    // private ecoverseService : EcoverseService;
 
-    async ecoverse(): Promise<Ecoverse> {
-        const ecoverse = await Ecoverse.getInstance();
-        return ecoverse;
+    constructor(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        @Inject('EcoverseService') ecoverseService : EcoverseService,
+        @Inject('ChallengeService') challengeService : ChallengeService
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    ){}
+
+
+    async ecoverse(): Promise<IEcoverse> {
+        const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        return await ecoverserService.getEcoverse();
     }
 
     @Query(() => String, { nullable: false, description: 'The name for this ecoverse' })
     async name(): Promise<string> {
-        const ecoverse = await Ecoverse.getInstance();
-        return ecoverse.name;
+        const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        return await ecoverserService.getName();
+    }
+
+    @Query(() => [UserGroup], { nullable: false, description: 'The name for this ecoverse' })
+    async members(): Promise<IUserGroup> {
+        const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        return ecoverserService.getMembers();
+    }
+
+    @Query(() => [UserGroup], { nullable: false, description: 'The name for this ecoverse' })
+    async challengeMembers(@Arg('ID') id: number): Promise<IUserGroup> {
+        const challengeService = Container.get<ChallengeService>('EcoverseService');
+        return challengeService.getMembers(id);
     }
 
     @Query(() => Organisation, { nullable: false, description: 'The host organisation for the ecoverse' })
-    async host(): Promise<Organisation> {
+    async host(): Promise<IOrganisation> {
         // NOTE: need to be able to return THE host organisation
-        const organisations = await Organisation.find();
-        return organisations[0];
+        const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        return ecoverserService.getHost();
     }
 
     // Context related fields
     @Query(() => Context, { nullable: false, description: 'The shared understanding for this ecoverse' })
-    async context(): Promise<Context> {
-        const contexts = await Context.find();
-        return contexts[0];
+    async context(): Promise<IContext> {
+        const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        return ecoverserService.getContext();
     }
 
     // Community related fields
@@ -68,7 +95,7 @@ export class Resolvers {
 
     @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
     async challenges(): Promise<Challenge[]> {
-        return await Challenge.find();
+        return Challenge.find();
     }
 
     // Misc

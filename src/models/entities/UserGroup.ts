@@ -1,10 +1,11 @@
+import { IUserGroup } from 'src/interfaces/IUserGroup';
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Challenge, Ecoverse, Tag, User } from '.';
 
 @Entity()
 @ObjectType()
-export class UserGroup extends BaseEntity {
+export class UserGroup extends BaseEntity implements IUserGroup {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;
@@ -16,15 +17,18 @@ export class UserGroup extends BaseEntity {
     @Field(() => [User], { nullable: true, description: 'The set of users that are members of this group' })
     @ManyToMany(
         () => User,
-        user => user.userGroup,
+        user => user.userGroups,
         { eager: true, cascade: true }
     )
-    @JoinTable()
+    @JoinTable({ name: 'user_group_members' })
     members?: User[];
 
+
     @Field(() => User, { nullable: true, description: 'The focal point for this group' })
-    @OneToOne(() => User)
-    @JoinColumn()
+    @ManyToOne(
+        () => User,
+        user => user.focalPoints
+        )
     focalPoint?: User;
 
     @Field(() => [Tag], { nullable: true, description: 'The set of tags for this group e.g. Team, Nature etc.' })
@@ -32,7 +36,7 @@ export class UserGroup extends BaseEntity {
         () => Tag,
         tag => tag.userGroups,
         { eager: true, cascade: true })
-    @JoinTable()
+    @JoinTable({ name: 'user_group_tag' })
     tags?: Tag[];
 
     @ManyToOne(
