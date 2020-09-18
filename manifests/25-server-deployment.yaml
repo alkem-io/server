@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: ct-server
-          image: ctdev.azurecr.io/ct-server:71719063d15910e5ad6e43c1083e1721b638787a
+          image: ctdev.azurecr.io/ct-server:latest
           envFrom:
           - secretRef:
               name: wait-hosts
