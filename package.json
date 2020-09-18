@@ -12,8 +12,10 @@
     "start-local": "nodemon -w src --ext ts --exec ts-node -r dotenv/config src/server.ts",
     "test": "jest --coverage",
     "test:watch": "jest --coverage --watchAll",
-    "test-db-reset": "ts-node src/db-mgmt/reset.ts",
-    "test-db-reset:dev": "nodemon -w src --ext ts --exec ts-node src/db-mgmt/reset.ts",
+    "data-reset-db": "ts-node src/db-mgmt/reset-to-empty-db.ts",
+    "data-reset-ecoverse": "ts-node src/db-mgmt/reset-to-empty-ecoverse.ts",
+    "data-load-samples": "ts-node src/db-mgmt/load-sample-data.ts",
+    "data-reset:dev": "nodemon -w src --ext ts --exec ts-node src/db-mgmt/reset.ts",
     "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli"
   },
   "dependencies": {

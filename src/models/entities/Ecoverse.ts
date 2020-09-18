@@ -1,12 +1,14 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Challenge, Context, DID, Organisation, Tag, UserGroup } from '.';
+import { Challenge, Context, DID, Organisation, Tag, User, UserGroup, RestrictedGroupNames } from '.';
 import { IEcoverse } from 'src/interfaces/IEcoverse';
+import { IGroupable } from '../interfaces';
 
 
 @Entity()
 @ObjectType()
-export class Ecoverse extends BaseEntity implements IEcoverse {
+export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
+
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -19,12 +21,12 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
   @Field(() => Organisation, { nullable: true, description: 'The organisation that hosts this Ecoverse instance' })
   @OneToOne(() => Organisation, { eager: true, cascade: true })
   @JoinColumn()
-  ecoverseHost?: Organisation;
+  host: Organisation;
 
   @Field(() => Context, { nullable: true, description: 'The shared understanding for the Ecoverse' })
   @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
-  context?: Context;
+  context: Context;
 
   // The digital identity for the Ecoverse - critical for its trusted role
   @OneToOne(() => DID, { eager: true, cascade: true })
@@ -69,28 +71,83 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
   @JoinTable({ name: 'ecoverse_tag' })
   tags?: Tag[];
 
-  // Functional methods for managing the Ecoverse
-  constructor(name: string) {
-    super();
-    this.name = name;
+  // The restricted group names at the ecoverse level
+  @Column('simple-array')
+  restrictedGroupNames?: string[];
 
+  // Constructor
+  constructor() {
+    super();
+    this.name = '';
+    this.context = new Context();
+    this.host = new Organisation('Host');
+    Ecoverse.instance = this;
   }
 
+  // Functional methods for managing the Ecoverse
   private static instance: Ecoverse;
 
   static async getInstance(): Promise<Ecoverse> {
-    const ecoverseCount = await Ecoverse.count();
-    if (ecoverseCount < 1) {
-      Ecoverse.instance = new Ecoverse('Empty Ecoverse');
-      await Ecoverse.instance.save();
-    }
-    else {
-      Ecoverse.instance = await Ecoverse.findOneOrFail();
+    if (Ecoverse.instance) {
+      return Ecoverse.instance;
     }
 
-    if (ecoverseCount > 1)
-      throw new Error('Ecoverse count can not be more than one!');
+    // Instance has not been set, fix that by creating a new ecoverse if needed
+    const ecoverseCount = await Ecoverse.count();
+    if (ecoverseCount != 1) {
+      throw new Error('Must always be exactly one ecoverse');
+    }
+    Ecoverse.instance = await Ecoverse.findOneOrFail();
 
     return Ecoverse.instance;
+  }
+
+  // Populate an empty ecoverse
+  static async populateEmptyEcoverse(ecoverse: Ecoverse): Promise<Ecoverse> {
+    // Create new Ecoverse
+    ecoverse.initialiseMembers();
+    ecoverse.name = 'Empty ecoverse';
+    ecoverse.context.tagline = 'An empty ecoverse to be populated';
+    ecoverse.host.name = 'Default host organisation'
+
+    // Find the admin user and put that person in as member + admin
+    const adminUser = new User('admin');
+    const admins = UserGroup.getGroupByName(ecoverse, RestrictedGroupNames.Admins);
+    const members = UserGroup.getGroupByName(ecoverse, RestrictedGroupNames.Members);
+    admins.addUserToGroup(adminUser);
+    members.addUserToGroup(adminUser);
+
+    return ecoverse;
+  }
+
+
+  // Helper method to ensure all members that are arrays are initialised properly.
+  // Note: has to be a seprate call due to restrictions from ORM.
+  initialiseMembers(): Ecoverse {
+    if (!this.restrictedGroupNames) {
+      this.restrictedGroupNames = [RestrictedGroupNames.Members, RestrictedGroupNames.Admins];
+    }
+
+    if (!this.groups) {
+      this.groups = [];
+      for (const name of this.restrictedGroupNames) {
+        const group = new UserGroup(name);
+        this.groups.push(group);
+      }
+    }
+
+    if (!this.tags) {
+      this.tags = [];
+    }
+
+    if (!this.challenges) {
+      this.challenges = [];
+    }
+
+    if (!this.partners) {
+      this.partners = [];
+    }
+
+    return this;
   }
 }

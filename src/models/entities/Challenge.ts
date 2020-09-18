@@ -1,12 +1,13 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, OneToMany, ManyToMany, JoinTable } from 'typeorm';
-import { DID, Tag, User, UserGroup, Context, Ecoverse, Project } from '.';
+import { DID, Tag, User, UserGroup, Context, Ecoverse, Project, RestrictedGroupNames } from '.';
 import { Organisation } from './Organisation';
 import { IChallenge } from 'src/interfaces/IChallenge';
+import { IGroupable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class Challenge extends BaseEntity implements IChallenge {
+export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;
@@ -18,18 +19,13 @@ export class Challenge extends BaseEntity implements IChallenge {
     @Field(() => Context, { nullable: true, description: 'The shared understanding for the challenge' })
     @OneToOne(() => Context, { eager: true, cascade: true })
     @JoinColumn()
-    context?: Context;
+    context: Context;
 
     // Community
     @Field(() => [Organisation], { description: 'The leads for the challenge. The focal point for the user group is the primary challenge lead.' })
     @ManyToMany(() => Organisation, organisation => organisation.challenges, { eager: true, cascade: true })
     @JoinTable({ name: 'challenge_lead' })
     challengeLeads?: Organisation[];
-
-    // @Field(() => UserGroup, {nullable: true, description: "The leads for the challenge. The focal point for the user group is the primary challenge lead."})
-    // @OneToOne(() => UserGroup, userGroup => userGroup.challenge, {eager: true, cascade: true})
-    // @JoinColumn()
-    // challengeLeads!: UserGroup;
 
 
     @Field(() => [UserGroup], { nullable: true, description: 'Groups of users related to a challenge; each group also results in a role that is assigned to users in the group.' })
@@ -74,9 +70,40 @@ export class Challenge extends BaseEntity implements IChallenge {
     )
     ecoverse?: Ecoverse;
 
+    // The restricted group names at the challenge level
+    @Column('simple-array')
+    restrictedGroupNames?: string[];
+
     constructor(name: string) {
         super();
         this.name = name;
+        this.context = new Context();
     }
+
+    // Helper method to ensure all members are initialised properly.
+  // Note: has to be a seprate call due to restrictions from ORM.
+  initialiseMembers(): Challenge {
+    if (!this.restrictedGroupNames) {
+      this.restrictedGroupNames = [RestrictedGroupNames.Members, RestrictedGroupNames.Admins];
+    }
+
+    if (!this.groups) {
+      this.groups = [];
+      for (const name of this.restrictedGroupNames) {
+        const group = new UserGroup(name);
+        this.groups.push(group);
+      }
+    }
+
+    if (!this.tags) {
+      this.tags = [];
+    }
+
+    if (!this.projects) {
+      this.projects = [];
+    }
+
+    return this;
+  }
 
 }

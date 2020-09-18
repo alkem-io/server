@@ -76,7 +76,7 @@ export class EcoverseService {
         const ecoverse = await Ecoverse.getInstance();
         this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
-        return ecoverse.ecoverseHost as IOrganisation;
+        return ecoverse.host as IOrganisation;
 
     } catch (e) {
         this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getHost()!!!', exception: e});

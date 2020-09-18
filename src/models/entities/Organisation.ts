@@ -19,7 +19,7 @@ export class Organisation extends BaseEntity implements IOrganisation {
     @JoinColumn()
     DID!: DID;
 
-    @OneToOne(() => Ecoverse, ecoverse => ecoverse.ecoverseHost)
+    @OneToOne(() => Ecoverse, ecoverse => ecoverse.host)
     hostedEcoverse?: Ecoverse;
 
     @ManyToMany(
