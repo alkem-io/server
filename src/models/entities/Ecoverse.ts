@@ -75,13 +75,12 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @Column('simple-array')
   restrictedGroupNames?: string[];
 
-  // Constructor
+  // Create the ecoverse with enough defaults set/ members populated
   constructor() {
     super();
     this.name = '';
     this.context = new Context();
     this.host = new Organisation('Host');
-    Ecoverse.instance = this;
   }
 
   // Functional methods for managing the Ecoverse

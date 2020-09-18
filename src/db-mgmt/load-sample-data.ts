@@ -16,6 +16,7 @@ async function load_sample_data() {
   console.log('Loading sample data....');
   // Populate the Ecoverse beyond the defaults
   const ctverse = await Ecoverse.getInstance();
+  ctverse.initialiseMembers();
   ctverse.name = 'Cherrytwist dogfood';
   ctverse.context.tagline = 'Powering multi-stakeholder collaboration!';
 
