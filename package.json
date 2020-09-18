@@ -17,6 +17,8 @@
     "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli"
   },
   "dependencies": {
+    "@types/express": "^4.17.8",
+    "@types/passport-azure-ad": "^4.0.7",
     "apollo-server-express": "^2.16.1",
     "class-validator": "^0.12.2",
     "dotenv": "^8.2.0",
@@ -25,6 +27,8 @@
     "graphql": "^15.3.0",
     "graphql-voyager": "^1.0.0-rc.31",
     "mysql": "^2.18.1",
+    "passport": "^0.4.1",
+    "passport-azure-ad": "^4.3.0",
     "reflect-metadata": "^0.1.13",
     "ts-node": "^9.0.0",
     "type-graphql": "^1.0.0",
