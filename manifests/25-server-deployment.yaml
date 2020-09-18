@@ -1,0 +1,30 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: default
+  name: ct-server-deployment
+  labels:
+    app: ct-server
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ct-server
+  template:
+    metadata:
+      labels:
+        app: ct-server
+    spec:
+      containers:
+        - name: ct-server
+          image: ctdev.azurecr.io/ct-server:latest
+          envFrom:
+          - secretRef:
+              name: wait-hosts
+          - secretRef:
+              name: server-secret
+          ports:
+            - name: graphql
+              containerPort: 4000
+
