@@ -1,7 +1,7 @@
 import { Service } from 'typedi';
 import { EventDispatcher, EventDispatcherInterface } from '../decorators/eventDispatcher';
 import events from '../subscribers/events';
-import { Ecoverse } from '../models';
+import { Ecoverse, RestrictedGroupNames, UserGroup } from '../models';
 import { IEcoverse } from 'src/interfaces/IEcoverse';
 import { IContext } from 'src/interfaces/IContext';
 import { IOrganisation } from 'src/interfaces/IOrganisation';
@@ -43,7 +43,7 @@ export class EcoverseService {
     try {
 
         const ecoverse = await Ecoverse.getInstance();
-        const membersGroup = ecoverse.groups?.find(_ => _.name === 'members');
+        const membersGroup = UserGroup.getGroupByName(ecoverse, RestrictedGroupNames.Members);
 
         this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
@@ -55,6 +55,29 @@ export class EcoverseService {
       throw e;
     }
   }
+
+  public async getGroups(): Promise<IUserGroup[]> {
+    try {
+
+        const ecoverse = await Ecoverse.getInstance();
+
+        this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+        // Convert groups array into IGroups array
+        const groups: IUserGroup[] = [];
+        if (!ecoverse.groups) {
+          throw new Error('Unreachable');
+        }
+        for (const group of ecoverse.groups) {
+          groups.push(group);
+        }
+        return groups;
+    } catch (e) {
+        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e});
+      throw e;
+    }
+  }
+
+
 
   public async getContext(): Promise<IContext> {
     try {

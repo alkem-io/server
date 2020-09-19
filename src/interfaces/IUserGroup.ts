@@ -7,4 +7,6 @@ export interface IUserGroup {
     members?: IUser[];
     focalPoint?: IUser;
     tags?: ITag[];
+    //addUserToGroup(newUser: IUser): IUser;
+    //initialiseMembers(): IUserGroup;
   }

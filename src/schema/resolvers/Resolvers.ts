@@ -1,6 +1,6 @@
 import { Arg, Mutation, Query, Resolver } from 'type-graphql';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
-import { Challenge, Context, Organisation, Tag, User, UserGroup } from '../../models'
+import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
 import { Container, Inject } from 'typedi'
 import { IEcoverse } from 'src/interfaces/IEcoverse';
 import { EcoverseService } from '../../services/EcoverseService';
@@ -76,9 +76,15 @@ export class Resolvers {
         return await UserGroup.findOne({ where: { id } });
     }
 
-    @Query(() => [UserGroup], { nullable: false, description: 'All groups of users' })
+    @Query(() => [UserGroup], { nullable: false, description: 'All groups of users at the ecoverse level' })
     async userGroups(): Promise<UserGroup[]> {
-        return await UserGroup.find();
+        //const ecoverserService = Container.get<EcoverseService>('EcoverseService');
+        // TODO: replace with using service!!!
+        const ecoverse = await Ecoverse.getInstance();
+        if (!ecoverse.groups) {
+          throw new Error('not reachable');
+        }
+        return ecoverse.groups;
     }
 
     @Query(() => [Organisation], { nullable: false, description: 'All organisations' })
