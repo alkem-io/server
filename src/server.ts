@@ -8,11 +8,8 @@ import { LoadConfiguration } from './configuration-loader';
 import { ConnectionFactory } from './connection-factory';
 import { CreateMutations, Resolvers, UpdateMutations } from './schema';
 import 'passport-azure-ad';
-// import { bearerStrategy } from './authentication'
+import { bearerStrategy } from './authentication'
 import passport from 'passport';
-import { BearerStrategy, IProfile, ITokenPayload, OIDCStrategy, VerifyCallback } from 'passport-azure-ad';
-import { config, OIDCConfig } from './authentication';
-import { User } from './models';
 import session from 'express-session';
 
 const main = async () => {
@@ -32,58 +29,6 @@ const main = async () => {
   // Build the schema
   const schema = await buildSchema({
     resolvers: [Resolvers, CreateMutations, UpdateMutations],
-  });
-
-  // let options = {
-  //   // The URL of the metadata document for your app. We will put the keys for token validation from the URL found in the jwks_uri tag of the in the metadata.
-  //   identityMetadata: config.identityMetadata,
-  //   clientID: config.clientID,
-  //   validateIssuer: config.validateIssuer,
-  //   issuer: config.issuer,
-  //   passReqToCallback: config.passReqToCallback,
-  //   isB2C: config.isB2C,
-  //   policyName: config.policyName,
-  //   allowMultiAudiencesInToken: config.allowMultiAudiencesInToken,
-  //   audience: config.audience,
-  //   loggingLevel: config.loggingLevel,
-  // };
-
-  //   const bearerStrategy = new BearerStrategy(config,
-  //      (token: ITokenPayload, done: CallableFunction) => {
-  //         // Send user info using the second argument
-  //         done(null, {}, token);
-  //     }
-  // );
-
-  const bearerStrategy = new BearerStrategy(config,
-    async (token: ITokenPayload, done: CallableFunction) => {
-      try {
-
-        console.log('verifying the user');
-        console.log(token, 'was the token retreived');
-
-        if (!token.oid) throw 'token oid missing'
-
-        const knownUser = await User.findOne({ email: token.upn })
-        if (knownUser) return done(null, knownUser, token)
-
-        return done('User not found!');
-
-      } catch (error) {
-        console.error(`Failed adding the user to the request object: ${error}`);
-        done(`Failed adding the user to the request object: ${error}`);
-      }
-    });
-
-  const oidcStrategy = new OIDCStrategy(OIDCConfig, (iss: string, sub: string, profile: IProfile, jwtClaims: any, access_token: string, refresh_token: string, params: any, done: VerifyCallback) => {
-    console.log(iss);
-    console.log(sub);
-    console.log(profile);
-    console.log(jwtClaims);
-    console.log(access_token);
-    console.log(refresh_token);
-    console.log(params);
-    done(null, 'User');
   });
 
   const getUser = (req: Request, res: Response) =>
@@ -134,8 +79,7 @@ const main = async () => {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.use('oauth-bearer', bearerStrategy);
-  passport.use(oidcStrategy)
+  passport.use(bearerStrategy);
 
   //enable CORS
   app.use((req, res, next) => {
@@ -144,36 +88,36 @@ const main = async () => {
     next();
   });
 
-  app.get('/login', (req: Request, res: Response, next: NextFunction) => {
-    passport.authenticate('azuread-openidconnect',
-      { session: false },
-      function (err, user, info) {
-        if (err) { return next(err) }
-        console.info('Login was called in the Sample');
-        res.redirect('/graphql');
-      })(req, res, next);
-  });
+  // app.get('/login', (req: Request, res: Response, next: NextFunction) => {
+  //   passport.authenticate('azuread-openidconnect',
+  //     { session: false },
+  //     function (err, user, info) {
+  //       if (err) { return next(err) }
+  //       console.info('Login was called in the Sample');
+  //       res.redirect('/graphql');
+  //     })(req, res, next);
+  // });
 
 
-  function regenerateSessionAfterAuthentication(req: Request, res: Response, next: NextFunction) {
-    const passportInstance = req.session?.passport;
-    return req.session?.regenerate(function (err) {
-      if (err) {
-        return next(err);
-      }
-      if (req.session)
-        req.session.passport = passportInstance;
-      return req.session?.save(next);
-    });
-    next();
-  }
+  // function regenerateSessionAfterAuthentication(req: Request, res: Response, next: NextFunction) {
+  //   const passportInstance = req.session?.passport;
+  //   return req.session?.regenerate(function (err) {
+  //     if (err) {
+  //       return next(err);
+  //     }
+  //     if (req.session)
+  //       req.session.passport = passportInstance;
+  //     return req.session?.save(next);
+  //   });
+  //   next();
+  // }
 
-  app.post('/auth/openid/return',
-    passport.authenticate('azuread-openidconnect', { failureRedirect: '/' }),
-    regenerateSessionAfterAuthentication,
-    function (req, res) {
-      res.redirect('/');
-    });
+  // app.post('/auth/openid/return',
+  //   passport.authenticate('azuread-openidconnect', { failureRedirect: '/' }),
+  //   regenerateSessionAfterAuthentication,
+  //   function (req, res) {
+  //     res.redirect('/');
+  //   });
 
   apolloServer.applyMiddleware({ app, cors: false });
 

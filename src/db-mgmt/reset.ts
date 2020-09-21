@@ -39,6 +39,7 @@ async function load_sample_data(connection: Connection) {
   const john = new User('john');
   const bob = new User('bob');
   const valentin = new User('Valentin');
+  valentin.email = 'valentin_yanakiev@yahoo.co.uk';
   const angel = new User('Angel');
   const rene = new User('Rene');
   const rutger = new User('Rutger');
