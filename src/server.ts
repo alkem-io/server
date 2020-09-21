@@ -47,18 +47,26 @@ const main = async () => {
       })(req, res)
     })
 
-  const apolloServer = new ApolloServer(
-    {
-      schema,
-      context: async ({ res, req }) => {
-        const user = await getUser(req, res);
-        if (!user) throw new AuthenticationError('No user logged in!');
-        console.log('User found', user);
+  // Enable authentication or not.
+  const AUTHENTICATION_ENABLED = process.env.AUTHENTICATION_ENABLED || false;
+  console.log(`Authentication enabled: ${AUTHENTICATION_ENABLED}`)
+  let apolloServer: ApolloServer;
+  if (!AUTHENTICATION_ENABLED) {
+    apolloServer = new ApolloServer({ schema });
+  } else {
+    apolloServer = new ApolloServer(
+      {
+        schema,
+        context: async ({ res, req }) => {
+          const user = await getUser(req, res);
+          if (!user) throw new AuthenticationError('No user logged in!');
+          console.log('User found', user);
 
-        return user;
+          return user;
+        }
       }
-    }
-  );
+    );
+  }
   const app = express();
 
   app.use(passport.initialize());
