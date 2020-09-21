@@ -1,16 +1,13 @@
 import { Request } from 'express';
 import { BearerStrategy } from 'passport-azure-ad'
-import { User } from '../models'
-import { config } from './config'
+import { User } from '../../models'
+import { AADConnectionFactory } from './aad-connection-factory';
 import { IExtendedTokenPayload } from './IExtendedTokenPayload';
 
-export const bearerStrategy = new BearerStrategy( config,
+export const bearerStrategy = new BearerStrategy( AADConnectionFactory.GetOptions(),
   async (req: Request, token: IExtendedTokenPayload, done: CallableFunction) => {
-    try {
 
-      console.log(req);
-      console.log('verifying the user');
-      console.log(token, 'was the token retreived');
+    try {
 
       if (!token.oid) throw 'token oid missing'
       if (!token.email) throw 'token email missing'

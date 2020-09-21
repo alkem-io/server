@@ -1,5 +1,5 @@
 import { ApolloServer, AuthenticationError } from 'apollo-server-express';
-import express, { NextFunction } from 'express';
+import express from 'express';
 import { Request, Response } from 'express';
 import { express as voyagerMiddleware } from 'graphql-voyager/middleware';
 import 'reflect-metadata';
@@ -8,9 +8,10 @@ import { LoadConfiguration } from './configuration-loader';
 import { ConnectionFactory } from './connection-factory';
 import { CreateMutations, Resolvers, UpdateMutations } from './schema';
 import 'passport-azure-ad';
-import { bearerStrategy } from './authentication'
+import { bearerStrategy } from './security/authentication'
 import passport from 'passport';
 import session from 'express-session';
+import { cherrytwistAuthChecker } from './security';
 
 const main = async () => {
 
@@ -29,33 +30,17 @@ const main = async () => {
   // Build the schema
   const schema = await buildSchema({
     resolvers: [Resolvers, CreateMutations, UpdateMutations],
+    authChecker: cherrytwistAuthChecker,
   });
 
   const getUser = (req: Request, res: Response) =>
     new Promise((resolve, reject) => {
       console.log(req.headers['authorization']);
-      passport.authenticate('oauth-bearer', { session: false }, (err, user, info) => {
-        console.error(err);
+      passport.authenticate('oauth-bearer', { session: true }, (err, user, info) => {
+
+        console.log(err);
         console.log('User info: ', user);
         console.log('Validated claims: ', info);
-        console.log(Date.now());
-
-        // if(req.authInfo === undefined)
-        //   {
-        //     res.status(403).json({'error': 'Authentication info is undefined!'});
-        //   }
-        // else
-        // {
-        //   const authInfo = req.authInfo as Express.AuthInfo;
-
-        //   if ('scp' in authInfo && authInfo['scp'].split(' ').indexOf('GraphQL.Read') >= 0) {
-        //       // Service relies on the name claim.
-        //       res.status(200).json({'name': authInfo['name']});
-        //   } else {
-        //       console.log('Invalid Scope, 403');
-        //       res.status(403).json({'error': 'insufficient_scope'});
-        //   }
-        // }
 
         if (err) reject(err)
         resolve(user)
@@ -87,37 +72,6 @@ const main = async () => {
     res.header('Access-Control-Allow-Headers', 'Authorization, Origin, X-Requested-With, Content-Type, Accept');
     next();
   });
-
-  // app.get('/login', (req: Request, res: Response, next: NextFunction) => {
-  //   passport.authenticate('azuread-openidconnect',
-  //     { session: false },
-  //     function (err, user, info) {
-  //       if (err) { return next(err) }
-  //       console.info('Login was called in the Sample');
-  //       res.redirect('/graphql');
-  //     })(req, res, next);
-  // });
-
-
-  // function regenerateSessionAfterAuthentication(req: Request, res: Response, next: NextFunction) {
-  //   const passportInstance = req.session?.passport;
-  //   return req.session?.regenerate(function (err) {
-  //     if (err) {
-  //       return next(err);
-  //     }
-  //     if (req.session)
-  //       req.session.passport = passportInstance;
-  //     return req.session?.save(next);
-  //   });
-  //   next();
-  // }
-
-  // app.post('/auth/openid/return',
-  //   passport.authenticate('azuread-openidconnect', { failureRedirect: '/' }),
-  //   regenerateSessionAfterAuthentication,
-  //   function (req, res) {
-  //     res.redirect('/');
-  //   });
 
   apolloServer.applyMiddleware({ app, cors: false });
 
