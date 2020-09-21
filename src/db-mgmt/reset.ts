@@ -13,8 +13,8 @@ async function reset_db() {
   const connectionFactory = new ConnectionFactory();
   const connection = await connectionFactory.GetConnection();
 
-  await connection.dropDatabase();
-  await connection.synchronize();
+  // Synchronize with db drop.
+  await connection.synchronize(true);
 
   console.log('Database: dropped... ');
 
