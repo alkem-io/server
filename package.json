@@ -8,7 +8,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "start": "cross-env DEBUG=express:*&&nodemon -w src --ext ts --exec ts-node src/server.ts",
+    "start": "nodemon -w src --ext ts --exec ts-node src/server.ts",
     "start-local": "nodemon -w src --ext ts --exec ts-node -r dotenv/config src/server.ts",
     "test": "jest --coverage",
     "test:watch": "jest --coverage --watchAll",
