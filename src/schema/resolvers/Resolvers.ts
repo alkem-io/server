@@ -1,4 +1,4 @@
-import { Arg, Mutation, Query, Resolver } from 'type-graphql';
+import { Arg, Authorized, Mutation, Query, Resolver } from 'type-graphql';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
 import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
 import { Container, Inject } from 'typedi'
@@ -17,6 +17,7 @@ export class Resolvers {
     constructor(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         @Inject('EcoverseService') ecoverseService : EcoverseService,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         @Inject('ChallengeService') challengeService : ChallengeService
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     ){}
@@ -27,6 +28,7 @@ export class Resolvers {
         return await ecoverserService.getEcoverse();
     }
 
+    @Authorized()
     @Query(() => String, { nullable: false, description: 'The name for this ecoverse' })
     async name(): Promise<string> {
         const ecoverserService = Container.get<EcoverseService>('EcoverseService');
