@@ -13,8 +13,8 @@ async function reset_db() {
   const connectionFactory = new ConnectionFactory();
   const connection = await connectionFactory.GetConnection();
 
-  await connection.dropDatabase();
-  await connection.synchronize();
+  // Synchronize with db drop.
+  await connection.synchronize(true);
 
   console.log('Database: dropped... ');
 
@@ -39,6 +39,7 @@ async function load_sample_data(connection: Connection) {
   const john = new User('john');
   const bob = new User('bob');
   const valentin = new User('Valentin');
+  valentin.email = 'valentin_yanakiev@yahoo.co.uk';
   const angel = new User('Angel');
   const rene = new User('Rene');
   const rutger = new User('Rutger');
