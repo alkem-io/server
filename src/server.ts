@@ -42,7 +42,10 @@ const main = async () => {
     })
 
   // Enable authentication or not.
-  const AUTHENTICATION_ENABLED = process.env.AUTHENTICATION_ENABLED || true;
+  const AUTHENTICATION_ENABLED =
+    process.env.AUTHENTICATION_ENABLED === undefined ||
+    process.env.AUTHENTICATION_ENABLED.toLowerCase() === 'true';
+
   console.log(`Authentication enabled: ${AUTHENTICATION_ENABLED}`)
   let apolloServer: ApolloServer;
 
