@@ -4,8 +4,8 @@ import { User } from '../../models'
 import { AADConnectionFactory } from './aad-connection-factory';
 import { IExtendedTokenPayload } from './IExtendedTokenPayload';
 
-export const bearerStrategy = new BearerStrategy( AADConnectionFactory.GetOptions(),
-  async (req: Request, token: IExtendedTokenPayload, done: CallableFunction) => {
+export const bearerStrategy = new BearerStrategy(AADConnectionFactory.GetOptions(),
+  async (_req: Request, token: IExtendedTokenPayload, done: CallableFunction) => {
 
     try {
 
@@ -15,7 +15,7 @@ export const bearerStrategy = new BearerStrategy( AADConnectionFactory.GetOption
       const knownUser = await User.findOne({ email: token.email })
       if (knownUser) return done(null, knownUser, token)
 
-      return done('User not found!');
+      return done(new Error('User not found!'));
 
     } catch (error) {
       console.error(`Failed adding the user to the request object: ${error}`);
