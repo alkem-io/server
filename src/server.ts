@@ -35,22 +35,17 @@ const main = async () => {
 
   const getUser = (req: Request, res: Response) =>
     new Promise((resolve, reject) => {
-      console.log(req.headers['authorization']);
       passport.authenticate('oauth-bearer', { session: true }, (err, user, info) => {
-
-        console.log(err);
-        console.log('User info: ', user);
-        console.log('Validated claims: ', info);
-
         if (err) reject(err)
         resolve(user)
       })(req, res)
     })
 
   // Enable authentication or not.
-  const AUTHENTICATION_ENABLED = process.env.AUTHENTICATION_ENABLED || false;
+  const AUTHENTICATION_ENABLED = process.env.AUTHENTICATION_ENABLED || true;
   console.log(`Authentication enabled: ${AUTHENTICATION_ENABLED}`)
   let apolloServer: ApolloServer;
+
   if (!AUTHENTICATION_ENABLED) {
     apolloServer = new ApolloServer({ schema });
   } else {
@@ -74,14 +69,13 @@ const main = async () => {
 
   passport.use(bearerStrategy);
 
-  //enable CORS
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Authorization, Origin, X-Requested-With, Content-Type, Accept');
-    next();
+  apolloServer.applyMiddleware({
+    app, cors: {
+      origin: process.env.CORS_ORIGIN || '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      allowedHeaders: 'Authorization,Origin,X-Requested-With,Content-Type,Accept'
+    }
   });
-
-  apolloServer.applyMiddleware({ app, cors: false });
 
   const environment = process.env.NODE_ENV;
   const isDevelopment = environment === 'development';
@@ -89,11 +83,15 @@ const main = async () => {
   if (isDevelopment) {
     app.use('/voyager', voyagerMiddleware({ endpointUrl: '/graphql' }));
   }
-  const sess = {
+
+  const sessionConfig = {
     secret: 'keyboard cat',
-    cookie: {}
+    cookie: {},
+    resave: true,
+    saveUninitialized: true
   }
-  app.use(session(sess));
+
+  app.use(session(sessionConfig));
 
   const GRAPHQL_ENDPOINT_PORT = process.env.GRAPHQL_ENDPOINT_PORT || 4000;
 
