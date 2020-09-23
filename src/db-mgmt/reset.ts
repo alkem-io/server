@@ -38,6 +38,7 @@ async function load_sample_data(connection: Connection) {
   // Users
   const john = new User('john');
   const bob = new User('bob');
+  bob.email = 'admin@cherrytwist.org';
   const valentin = new User('Valentin');
   valentin.email = 'valentin_yanakiev@yahoo.co.uk';
   const angel = new User('Angel');

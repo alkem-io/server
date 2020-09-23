@@ -19,7 +19,7 @@ export const bearerStrategy = new BearerStrategy(AADConnectionFactory.GetOptions
 
     } catch (error) {
       console.error(`Failed adding the user to the request object: ${error}`);
-      done(`Failed adding the user to the request object: ${error}`);
+      done(new Error(`Failed adding the user to the request object: ${error}`));
     }
   }
 )
