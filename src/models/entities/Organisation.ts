@@ -1,12 +1,13 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { DID, Ecoverse, Tag, User } from '.';
+import { DID, Ecoverse, Tag, User, UserGroup, RestrictedGroupNames } from '.';
 import { Challenge } from './Challenge';
 import { IOrganisation } from 'src/interfaces/IOrganisation';
+import { IGroupable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class Organisation extends BaseEntity implements IOrganisation {
+export class Organisation extends BaseEntity implements IOrganisation, IGroupable {
     @Field(() => ID)
     @PrimaryGeneratedColumn()
     id!: number;
@@ -45,8 +46,21 @@ export class Organisation extends BaseEntity implements IOrganisation {
     )
     challenges!: Challenge[];
 
+    @Field(() => [UserGroup], { nullable: true, description: 'Groups of users related to a challenge; each group also results in a role that is assigned to users in the group.' })
+    @OneToMany(
+    () => UserGroup,
+    userGroup => userGroup.challenge,
+    { eager: true, cascade: true },
+  )
+    groups?: UserGroup[];
+
+     // The restricted group names at the organisation level
+    @Column('simple-array')
+    restrictedGroupNames?: string[];
+
     constructor(name: string) {
         super();
         this.name = name;
+        this.restrictedGroupNames = [RestrictedGroupNames.Members];
     }
 }

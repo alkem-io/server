@@ -1,9 +1,38 @@
-import { Arg, Mutation, Resolver } from 'type-graphql';
+import { Arg, Mutation, ID, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, User, UserGroup } from '../../models';
 import { UpdateEcoverseInput, UpdateRootChallengeInput, UpdateRootContextInput, UpdateRootOrganisationInput, UpdateRootUserGroupInput, UpdateRootUserInput } from '../inputs';
 
 @Resolver()
 export class UpdateMutations {
+
+  @Mutation(() => UserGroup)
+  async addUserToGroup(
+    @Arg('userID') userID: number,
+    @Arg('groupID') groupID: number
+    ): Promise<UserGroup> {
+
+      console.log(`Adding user (${userID}) to group (${groupID})`);
+      // Try to find the user + groups
+      const user = await User.findOne(userID);
+      if (!user) {
+        const msg = `Unable to find user with ID: ${userID}`;
+        console.log(msg);
+        throw new Error(msg);
+      }
+
+      const group = await UserGroup.findOne(groupID);
+      if (!group) {
+        const msg = `Unable to find gropu with ID: ${groupID}`;
+        console.log(msg);
+        throw new Error(msg);
+      }
+
+      // Have both user + group so do the add
+      group.addUserToGroup(user);
+      await group.save();
+
+      return group;
+  }
 
   @Mutation(() => Ecoverse)
   async updateEcoverse(

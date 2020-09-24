@@ -96,7 +96,8 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     if (ecoverseCount != 1) {
       throw new Error('Must always be exactly one ecoverse');
     }
-    Ecoverse.instance = await Ecoverse.findOneOrFail();
+    const ecoverse = await Ecoverse.find();
+    Ecoverse.instance = ecoverse[0];
 
     return Ecoverse.instance;
   }
