@@ -24,6 +24,8 @@ spec:
               name: wait-hosts
           - secretRef:
               name: server-secret
+          - secretRef:
+              name: aad-secret
           ports:
             - name: graphql
               containerPort: 4000
