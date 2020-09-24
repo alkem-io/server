@@ -42,10 +42,10 @@ ENABLE_ORM_LOGGING=true
 npm install
 ```
 
-### Initialise the database
+### Load the database with sample data if you wish
 
 ```bash
-npm run test-db-reset
+npm run data-load-samples
 ```
 
 ### Start the server
@@ -80,7 +80,7 @@ To run this project:
 2. Populate database with initial data:
 
     ```bash
-    docker exec ct_server npm run test-db-reset
+    docker exec ct_server npm run data-load-samples
     ```
 
 ## Technology Stack

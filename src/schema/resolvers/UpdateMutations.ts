@@ -66,7 +66,14 @@ export class UpdateMutations {
       //   challenge = await Challenge.update(challengeData);
       //   await challenge.save();
       if (result.affected) {
-        return await Challenge.findOne(challengeData.id) || new Challenge('');
+        const existingChallenge = await Challenge.findOne(challengeData.id);
+        if (existingChallenge) {
+          return existingChallenge;
+        }
+        // No existing challenge found, create + initialise a new one
+        const newChallenge = new Challenge('');
+        newChallenge.initialiseMembers();
+        return newChallenge;
       }
       // }
     }
