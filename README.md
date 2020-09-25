@@ -13,7 +13,7 @@ For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
 ### Configure the database connection
 
 Default configuration is available. **DO NOT UPDATE `.env.default`**
-If you need to specify different configuration, add .env file in project root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST, GRAPHQL_ENDPOINT_PORT.
+If you need to specify different configuration, add .env file in project root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST, GRAPHQL_ENDPOINT_PORT, AAD_TENANT, AAD_CLIENT.
 
 Example:
 
@@ -22,8 +22,11 @@ DATABASE_HOST=localhost
 MYSQL_DATABASE=cherrytwist
 MYSQL_ROOT_PASSWORD=toor
 GRAPHQL_ENDPOINT_PORT=4000
+AAD_TENANT=[tenant (directory) ID]
+AAD_CLIENT= [client (application) ID]
 ```
 
+Replace the content in [] with the guids from AAD - they can be retrieved from the Azure portal from the app registration page.
 Optional variables:
 
 - `MYSQL_DB_PORT` - specifies the MySQL port by default 3306.
