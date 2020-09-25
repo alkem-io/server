@@ -68,26 +68,6 @@ export class CreateMutations {
   }
 
   @Mutation(() => Organisation)
-  async createGroupOnOrganisation (
-    @Arg('organisationID') organisationID: number,
-    @Arg('groupName') groupName: string): Promise<Organisation> {
-
-    // First find the Challenge
-    console.log(`Adding userGroup (${groupName}) to organisation (${organisationID})`);
-    // Try to find the challenge
-    const organisation = await Organisation.findOne(organisationID);
-    if (!organisation) {
-      const msg = `Unable to find organisation with ID: ${organisationID}`;
-      console.log(msg);
-      throw new Error(msg);
-    }
-    UserGroup.addGroupWithName(organisation, groupName);
-    await organisation.save();
-
-    return organisation;
-  }
-
-  @Mutation(() => Organisation)
   async createOrganisation(
     @Arg('organisationData') organisationData: OrganisationInput): Promise<Organisation> {
     const organisation = Organisation.create(organisationData);
