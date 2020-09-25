@@ -9,11 +9,11 @@ export class AADConnectionFactory {
           clientID: process.env.AAD_CLIENT as string,
           validateIssuer: true,
           passReqToCallback: true,
-          issuer: 'https://sts.windows.net/' + process.env.AAD_TENANT,
-          audience: 'api://' + process.env.AAD_CLIENT,
+          issuer: 'https://login.microsoftonline.com/' + process.env.AAD_TENANT + '/v2.0',
+          audience: process.env.AAD_CLIENT,
           allowMultiAudiencesInToken: false,
           loggingLevel: 'info',
-          scope: ['GraphQL.Update', 'GraphQL.Create', 'GraphQL.Query'],
+          scope: ['Cherrytwist-GraphQL'],
           loggingNoPII: false
         } : defaultConfig;
 
