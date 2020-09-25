@@ -14,6 +14,7 @@ For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
 
 Default configuration is available. **DO NOT UPDATE `.env.default`**
 If you need to specify different configuration, add .env file in project root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST, GRAPHQL_ENDPOINT_PORT, AAD_TENANT, AAD_CLIENT.
+Note: Only AAD v2 endpoints and tokens are supported!
 
 Example:
 
@@ -97,6 +98,7 @@ The technology stack is as follows:
 - mySQL: for data persistance
 - docker: for containers
 - docker-compose: for container orchestration
+- passportjs for authentication
 
 Credit: the setup of this project is inspired by the following article: https://medium.com/swlh/graphql-orm-with-typescript-implementing-apollo-server-express-and-sqlite-5f16a92968d0
 
