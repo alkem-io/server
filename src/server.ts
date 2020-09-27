@@ -45,8 +45,8 @@ const main = async () => {
       console.log('.....complete.');
     }
     // Get the name
-    const ecoverse = await Ecoverse.getInstance();
-    console.log(`Loaded ecoverse with name: ${ecoverse.name}`);
+    //const ecoverse = await Ecoverse.getInstance();
+    //console.log(`Loaded ecoverse with name: ${ecoverse.name}`);
   } catch (error) {
     console.log('Unable to populate empty ecoverse: ' + error);
     exit();

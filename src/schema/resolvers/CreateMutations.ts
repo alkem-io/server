@@ -35,7 +35,7 @@ export class CreateMutations {
   }
 
   @Mutation(() => UserGroup)
-  async createGroup2(
+  async createGroupOnEcoverse(
     @Arg('groupName') groupName: string): Promise<UserGroup> {
 
     // First get the Ecoverse singleton
@@ -70,6 +70,17 @@ export class CreateMutations {
   @Mutation(() => Organisation)
   async createOrganisation(
     @Arg('organisationData') organisationData: OrganisationInput): Promise<Organisation> {
+    // Check if an org with the given name already exists
+    console.log(`Adding organisation (${organisationData.name}) to ecoverse`);
+    const organisations = await Organisation.find();
+    for (const organisation of organisations) {
+      if (organisation.name === organisationData.name) {
+        // Org already exists, just return. Option:merge?
+        return organisation;
+      }
+    }
+
+    // New organisation
     const organisation = Organisation.create(organisationData);
     await organisation.save();
 
@@ -79,8 +90,24 @@ export class CreateMutations {
   @Mutation(() => Challenge)
   async createChallenge(
     @Arg('challengeData') challengeData: ChallengeInput): Promise<Challenge> {
+
+    const ecoverse = await Ecoverse.getInstance();
+    if (!ecoverse.challenges) {
+      throw new Error('Challenges must be defined');
+    }
+    // First check if the challenge already exists on not...
+    for (const challenge of ecoverse.challenges) {
+      if (challenge.name === challengeData.name) {
+        // Challenge already exists, just return. Option:merge?
+        return challenge
+      }
+    }
+
+    // No existing challenge found, create and initialise a new one!
     const challenge = Challenge.create(challengeData);
-    await challenge.save();
+    challenge.initialiseMembers();
+    ecoverse.challenges.push(challenge);
+    await ecoverse.save();
 
     return challenge;
   }

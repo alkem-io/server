@@ -1,5 +1,5 @@
-mutation createGroup2($groupName: String!) {
-  createGroupOnChallenge(groupName: $groupName) {
+mutation createGroupOnEcoverse($groupName: String!) {
+  createGroupOnEcoverse(groupName: $groupName) {
     name,
     groups {
       name
