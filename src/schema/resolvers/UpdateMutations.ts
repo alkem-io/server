@@ -1,4 +1,4 @@
-import { Arg, Mutation, ID, Resolver } from 'type-graphql';
+import { Arg, Mutation, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, User, UserGroup } from '../../models';
 import { UpdateEcoverseInput, UpdateRootChallengeInput, UpdateRootContextInput, UpdateRootOrganisationInput, UpdateRootUserGroupInput, UpdateRootUserInput } from '../inputs';
 

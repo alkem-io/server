@@ -1,5 +1,4 @@
-import { Arg, Authorized, Mutation, Query, Resolver } from 'type-graphql';
-import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
+import { Arg, Authorized, Query, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
 import { Container, Inject } from 'typedi'
 import { IEcoverse } from 'src/interfaces/IEcoverse';

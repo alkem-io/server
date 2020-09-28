@@ -1,4 +1,3 @@
-import { group } from 'console';
 import { IUserGroup } from 'src/interfaces/IUserGroup';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
