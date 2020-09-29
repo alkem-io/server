@@ -13,7 +13,8 @@ export class UpdateMutations {
     const ecoverse = Ecoverse.create(ecoverseData);
     await ecoverse.save();
 
-    throw new Error('Entitiy not found!');
+    return ecoverse;
+    //   throw new Error('Entitiy not found!');
 
   }
 

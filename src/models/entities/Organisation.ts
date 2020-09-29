@@ -1,9 +1,9 @@
-import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { DID, Ecoverse, Tag, User, UserGroup, RestrictedGroupNames } from '.';
-import { Challenge } from './Challenge';
 import { IOrganisation } from 'src/interfaces/IOrganisation';
+import { Field, ID, ObjectType } from 'type-graphql';
+import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { DID, Ecoverse, RestrictedGroupNames, Tag, User, UserGroup } from '.';
 import { IGroupable } from '../interfaces';
+import { Challenge } from './Challenge';
 
 @Entity()
 @ObjectType()
@@ -44,7 +44,7 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.organisation,
-    { eager: true, cascade: true },
+    { eager: false, cascade: true },
   )
   groups?: UserGroup[];
 
@@ -55,7 +55,6 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
   challenges!: Challenge[];
 
   // The restricted group names at the challenge level
-  @Column('simple-array')
   restrictedGroupNames?: string[];
 
   constructor(name: string) {

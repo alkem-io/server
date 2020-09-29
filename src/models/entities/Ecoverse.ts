@@ -72,7 +72,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   tags?: Tag[];
 
   // The restricted group names at the ecoverse level
-  @Column('simple-array')
   restrictedGroupNames?: string[];
 
   // Create the ecoverse with enough defaults set/ members populated
@@ -93,9 +92,9 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
 
     // Instance has not been set, fix that by creating a new ecoverse if needed
     const ecoverseCount = await Ecoverse.count();
-    if (ecoverseCount != 1) {
-      throw new Error('Must always be exactly one ecoverse');
-    }
+    // if (ecoverseCount != 1) {
+    //   throw new Error('Must always be exactly one ecoverse');
+    // }
     Ecoverse.instance = await Ecoverse.findOneOrFail();
 
     return Ecoverse.instance;
