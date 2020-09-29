@@ -1,7 +1,7 @@
 import { IUserGroup } from 'src/interfaces/IUserGroup';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Challenge, Ecoverse, Tag, User } from '.';
+import { Challenge, Ecoverse, Organisation, Tag, User } from '.';
 import { IGroupable } from '../interfaces';
 
 @Entity()
@@ -45,6 +45,12 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     ecoverse => ecoverse.groups
   )
   ecoverse?: Ecoverse;
+
+  @ManyToOne(
+    () => Ecoverse,
+    organisation => organisation.groups
+  )
+  organisation?: Organisation;
 
   @ManyToOne(
     () => Challenge,

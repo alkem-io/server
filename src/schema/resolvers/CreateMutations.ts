@@ -1,11 +1,9 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
+import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
-import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
-import { group } from 'console';
 
 @Resolver()
 export class CreateMutations {
-
 
   @Mutation(() => Context)
   async createContext(
