@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { DID, Ecoverse, Tag, User } from '.';
+import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { DID, Ecoverse, Tag, User, UserGroup, RestrictedGroupNames } from '.';
 import { Challenge } from './Challenge';
 import { IOrganisation } from 'src/interfaces/IOrganisation';
 

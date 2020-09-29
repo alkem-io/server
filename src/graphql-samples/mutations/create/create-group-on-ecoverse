@@ -1,0 +1,14 @@
+mutation createGroupOnEcoverse($groupName: String!) {
+  createGroupOnEcoverse(groupName: $groupName) {
+    name,
+    groups {
+      name
+    }
+
+  }
+}
+
+Variables:
+{
+  "groupName": "testGroup"
+}

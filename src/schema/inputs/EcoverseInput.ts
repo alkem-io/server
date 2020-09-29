@@ -33,11 +33,14 @@ export class EcoverseInput {
 export class UpdateEcoverseInput {
 
   @Field({ nullable: true })
-  @MaxLength(30)
+  @MaxLength(100)
   name?: string;
 
   @Field(() => [UpdateNestedChallengeInput], { nullable: true })
   challenges?: UpdateNestedChallengeInput[];
+
+  @Field(() => UpdateNestedOrganisationInput, { nullable: true })
+  host?: UpdateNestedOrganisationInput;
 
   @Field(() => [UpdateNestedOrganisationInput], { nullable: true })
   partners?: UpdateNestedOrganisationInput[];

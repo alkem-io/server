@@ -48,4 +48,24 @@ export class Context extends BaseEntity implements IContext {
       //this.references = [];
     }
 
+    update(updatedContextStr: string): void {
+      // Convert the data to json
+      const updatedContextJSON = JSON.parse(updatedContextStr);
+      if (updatedContextJSON.tagline) {
+        this.tagline = updatedContextJSON.tagline;
+      }
+      if (updatedContextJSON.background) {
+        this.background = updatedContextJSON.background;
+      }
+      if (updatedContextJSON.vision) {
+        this.vision = updatedContextJSON.vision;
+      }
+      if (updatedContextJSON.impact) {
+        this.impact = updatedContextJSON.impact;
+      }
+      if (updatedContextJSON.who) {
+        this.who = updatedContextJSON.who;
+      }
+    }
+
 }

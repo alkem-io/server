@@ -79,23 +79,21 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     super();
     this.name = name;
     this.context = new Context();
-    this.restrictedGroupNames = [RestrictedGroupNames.Members, RestrictedGroupNames.Admins];
+    this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 
   // Helper method to ensure all members are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   initialiseMembers(): Challenge {
     if (!this.restrictedGroupNames) {
-      this.restrictedGroupNames = [RestrictedGroupNames.Members, RestrictedGroupNames.Admins];
+      this.restrictedGroupNames = [RestrictedGroupNames.Members];
     }
 
     if (!this.groups) {
       this.groups = [];
-      for (const name of this.restrictedGroupNames) {
-        const group = new UserGroup(name);
-        this.groups.push(group);
-      }
     }
+    // Check that the mandatory groups for a challenge are created
+    UserGroup.addMandatoryGroups(this, this.restrictedGroupNames);
 
     if (!this.tags) {
       this.tags = [];

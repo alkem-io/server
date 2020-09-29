@@ -80,7 +80,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     super();
     this.name = '';
     this.context = new Context();
-    this.host = new Organisation('Host');
+    this.host = new Organisation('Default host');
   }
 
   // Functional methods for managing the Ecoverse
@@ -96,7 +96,8 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     if (ecoverseCount != 1) {
       throw new Error('Must always be exactly one ecoverse');
     }
-    Ecoverse.instance = await Ecoverse.findOneOrFail();
+    const ecoverse = await Ecoverse.find();
+    Ecoverse.instance = ecoverse[0];
 
     return Ecoverse.instance;
   }
@@ -129,11 +130,10 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
 
     if (!this.groups) {
       this.groups = [];
-      for (const name of this.restrictedGroupNames) {
-        const group = new UserGroup(name);
-        this.groups.push(group);
-      }
     }
+
+    // Check that the mandatory groups for a challenge are created
+    UserGroup.addMandatoryGroups(this, this.restrictedGroupNames);
 
     if (!this.tags) {
       this.tags = [];

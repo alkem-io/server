@@ -1,5 +1,4 @@
-import { Arg, Authorized, Mutation, Query, Resolver } from 'type-graphql';
-import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
+import { Arg, Authorized, Query, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
 import { Container, Inject } from 'typedi'
 import { IEcoverse } from 'src/interfaces/IEcoverse';
@@ -74,12 +73,12 @@ export class Resolvers {
     }
 
     @Query(() => UserGroup, { nullable: false, description: 'A particualr user group' })
-    async userGroup(@Arg('ID') id: string): Promise<UserGroup | undefined> {
+    async group(@Arg('ID') id: string): Promise<UserGroup | undefined> {
         return await UserGroup.findOne({ where: { id } });
     }
 
     @Query(() => [UserGroup], { nullable: false, description: 'All groups of users at the ecoverse level' })
-    async userGroups(): Promise<UserGroup[]> {
+    async groups(): Promise<UserGroup[]> {
         //const ecoverserService = Container.get<EcoverseService>('EcoverseService');
         // TODO: replace with using service!!!
         const ecoverse = await Ecoverse.getInstance();
@@ -103,7 +102,11 @@ export class Resolvers {
 
     @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
     async challenges(): Promise<Challenge[]> {
-        return Challenge.find();
+      const ecoverse = await Ecoverse.getInstance();
+      if (!ecoverse.challenges) {
+        throw new Error('Challenges not defined');
+      }
+      return ecoverse.challenges;
     }
 
     // Misc
@@ -113,82 +116,5 @@ export class Resolvers {
         return await Tag.find();
     }
 
-
-    // The set of mutations to expose
-
-    // TBD - add in Host org mutation
-
-    @Mutation(() => Context)
-    async createContext(
-        @Arg('contextData') contextData: ContextInput): Promise<Context> {
-        const context = Context.create(contextData);
-        await context.save();
-
-        return context;
-    }
-
-    @Mutation(() => User)
-    async createUser(
-        @Arg('userData') userData: UserInput): Promise<User> {
-        const user = User.create(userData);
-        await user.save();
-
-        return user;
-    }
-
-    @Mutation(() => UserGroup)
-    async createUserGroup(
-        @Arg('userGroupData') userGroupData: UserGroupInput): Promise<UserGroup> {
-        const userGroup = UserGroup.create(userGroupData);
-        await userGroup.save();
-
-        return userGroup;
-    }
-
-    @Mutation(() => Organisation)
-    async createOrganisation(
-        @Arg('organisationData') organisationData: OrganisationInput): Promise<Organisation> {
-        const organisation = Organisation.create(organisationData);
-        await organisation.save();
-
-        return organisation;
-    }
-
-    @Mutation(() => Challenge)
-    async createChallenge(
-        @Arg('challengeData') challengeData: ChallengeInput): Promise<Challenge> {
-        const challenge = Challenge.create(challengeData);
-        await challenge.save();
-
-        return challenge;
-    }
-
-    @Mutation(() => Tag)
-    async createTag(
-        @Arg('tagData') tagData: TagInput): Promise<Tag> {
-        const tag = Tag.create(tagData);
-        await tag.save();
-
-        return tag;
-    }
-
-
-    // @Mutation(() => DID)
-    // async createDID(
-    //   @Arg('didData') didData: DID): Promise<Context> {
-    //   const context = Context.create(contextData);
-    //   await context.save();
-
-    //   return context;
-    // }
-
-    // @Mutation(() => T)
-    // async create <T extends BaseEntity, TT>(
-    //   @Arg('data') data: TT): Promise<T> {
-    //   const entity = T.create(data);
-    //   await entity.save();
-
-    //   return entity;
-    // }
 
 }

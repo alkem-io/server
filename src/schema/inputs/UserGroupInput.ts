@@ -6,7 +6,7 @@ import { MaxLength } from 'class-validator';
 export class UserGroupInput {
 
   @Field({ nullable: true })
-  @MaxLength(30)
+  @MaxLength(100)
   name?: string;
 
   @Field(() => UserInput, { nullable: true })

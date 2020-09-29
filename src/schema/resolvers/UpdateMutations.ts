@@ -5,16 +5,50 @@ import { UpdateEcoverseInput, UpdateRootChallengeInput, UpdateRootContextInput, 
 @Resolver()
 export class UpdateMutations {
 
+  @Mutation(() => UserGroup)
+  async addUserToGroup(
+    @Arg('userID') userID: number,
+    @Arg('groupID') groupID: number
+  ): Promise<UserGroup> {
+
+    console.log(`Adding user (${userID}) to group (${groupID})`);
+    // Try to find the user + groups
+    const user = await User.findOne(userID);
+    if (!user) {
+      const msg = `Unable to find user with ID: ${userID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    const group = await UserGroup.findOne(groupID);
+    if (!group) {
+      const msg = `Unable to find gropu with ID: ${groupID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    // Have both user + group so do the add
+    group.addUserToGroup(user);
+    await group.save();
+
+    return group;
+  }
+
   @Mutation(() => Ecoverse)
   async updateEcoverse(
     @Arg('ecoverseData') ecoverseData: UpdateEcoverseInput): Promise<Ecoverse> {
 
-    await Ecoverse.getInstance();
-    const ecoverse = Ecoverse.create(ecoverseData);
-    await ecoverse.save();
+    const ctVerse = await Ecoverse.getInstance();
 
-    throw new Error('Entitiy not found!');
+    // Copy over the received data
+    if (ecoverseData.name) {
+      ctVerse.name = ecoverseData.name;
+    }
+    ctVerse.context.update(JSON.stringify(ecoverseData.context));
 
+    await ctVerse.save();
+
+    return ctVerse
   }
 
   @Mutation(() => User)
@@ -32,7 +66,7 @@ export class UpdateMutations {
   async updateUserGroup(
     @Arg('userGroupData') userGroupData: UpdateRootUserGroupInput): Promise<UserGroup> {
 
-    if (User.findOne({ where: { userGroupData } })) {
+    if (UserGroup.findOne({ where: { userGroupData } })) {
       const userGroup = UserGroup.create(userGroupData);
       await userGroup.save();
 
@@ -45,12 +79,24 @@ export class UpdateMutations {
   @Mutation(() => Organisation)
   async updateOrganisation(
     @Arg('organisationData') organisationData: UpdateRootOrganisationInput): Promise<Organisation> {
-    if (User.findOne({ where: { organisationData } })) {
-      const organisation = Organisation.create(organisationData);
-      await organisation.save();
+    try {
+      const existingOrganisation = await Organisation.findOne(organisationData.id);
+      if (existingOrganisation) {
+        // Merge in the data
+        if (organisationData.name) {
+          existingOrganisation.name = organisationData.name;
+        }
 
-      return organisation;
+        // To do - merge in the rest of the organisation update
+        existingOrganisation.save();
 
+        // To do: ensure all references are updated
+        //const ctVerse = await Ecoverse.getInstance();
+        return existingOrganisation;
+      }
+    }
+    catch (e) {
+      console.log(e);
     }
 
     throw new Error('Entitiy not found!');
@@ -61,10 +107,6 @@ export class UpdateMutations {
     @Arg('challengeData') challengeData: UpdateRootChallengeInput): Promise<Challenge> {
     try {
       const result = await Challenge.update(challengeData.id, challengeData);
-      // const challenge = await Challenge.findOne({ where: { challenge: challengeData } });
-      // if (challenge != undefined) {
-      //   challenge = await Challenge.update(challengeData);
-      //   await challenge.save();
       if (result.affected) {
         const existingChallenge = await Challenge.findOne(challengeData.id);
         if (existingChallenge) {
@@ -75,7 +117,6 @@ export class UpdateMutations {
         newChallenge.initialiseMembers();
         return newChallenge;
       }
-      // }
     }
     catch (e) {
       console.log(e);

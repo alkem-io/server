@@ -2,7 +2,7 @@ import { Service } from 'typedi';
 import { EventDispatcher, EventDispatcherInterface } from '../decorators/eventDispatcher';
 import events from '../subscribers/events';
 import { IUserGroup } from 'src/interfaces/IUserGroup';
-import { Challenge } from '../models';
+import { Challenge, RestrictedGroupNames } from '../models';
 
 @Service('ChallengeService')
 export class ChallengeService {
@@ -23,7 +23,7 @@ export class ChallengeService {
             this.eventDispatcher.dispatch(events.logger.error, { message: 'No groups found with that challengeId!'});
         }
 
-        const membersGroup = challenge?.groups?.find(_ => _.name === 'members');
+        const membersGroup = challenge?.groups?.find(_ => _.name === RestrictedGroupNames.Members);
         this.eventDispatcher.dispatch(events.challenge.query, { challenge: challenge });
 
         return membersGroup as IUserGroup;
