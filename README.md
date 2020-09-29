@@ -49,6 +49,11 @@ AAD_CLIENT= [client (application) ID]
 AUTHENTICATION_ENABLED=true
 ```
 
+Optionally configure CORS origin for improved security with the following env variable (by default the value is *):
+
+```bash
+CORS_ORIGIN=[your CORS origin value]
+```
 
 ### Install dependencies
 
