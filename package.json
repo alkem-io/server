@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Cherrytwist back-end server that manages the representation of the ecoverse and all the entities stored wthin it",
   "main": "server.js",
   "author": "",

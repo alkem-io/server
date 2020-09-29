@@ -110,6 +110,33 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     throw new Error('Unable to find group with the name:' + { name });
   }
 
+  // Check that the mandatory groups are created
+  static addMandatoryGroups(groupable: IGroupable, mandatoryGroupNames: string[]): IGroupable {
+    const groupsToAdd: string[] = [];
+    if (!groupable.groups) {
+      throw new Error('Non-initialised Groupable submitted');
+    }
+    for (const mandatoryName of mandatoryGroupNames) {
+      let groupFound = false;
+      for (const group of groupable.groups) {
+        if (group.name === mandatoryName) {
+          // Found the group, break...
+          groupFound = true;
+          break;
+        }
+      }
+      if (!groupFound) {
+        // Add to list of groups to add
+        groupsToAdd.push(mandatoryName);
+      }
+    }
+    for (const groupToAdd of groupsToAdd) {
+      const newGroup = new UserGroup(groupToAdd);
+      groupable.groups.push(newGroup);
+    }
+    return groupable;
+  }
+
   static hasGroupWithName(groupable: IGroupable, name: string): boolean {
     // Double check groups array is initialised
     if (!groupable.groups) {

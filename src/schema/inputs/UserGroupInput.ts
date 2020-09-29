@@ -7,7 +7,7 @@ export class UserGroupInput {
 
   // TODO: [ATS] must be required field when group is created
   @Field({ nullable: true })
-  @MaxLength(30)
+  @MaxLength(100)
   name?: string;
 
   @Field(() => UserInput, { nullable: true })
