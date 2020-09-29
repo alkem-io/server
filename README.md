@@ -14,6 +14,7 @@ For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
 
 Default configuration is available. **DO NOT UPDATE `.env.default`**
 If you need to specify different configuration, add .env file in project root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST, GRAPHQL_ENDPOINT_PORT.
+Note: Only AAD v2 endpoints and tokens are supported!
 
 Example:
 
@@ -22,8 +23,10 @@ DATABASE_HOST=localhost
 MYSQL_DATABASE=cherrytwist
 MYSQL_ROOT_PASSWORD=toor
 GRAPHQL_ENDPOINT_PORT=4000
+
 ```
 
+Replace the content in [] with the guids from AAD - they can be retrieved from the Azure portal from the app registration page.
 Optional variables:
 
 - `MYSQL_DB_PORT` - specifies the MySQL port by default 3306.
@@ -31,10 +34,21 @@ Optional variables:
 
 Example:
 
-```
+```bash
 MYSQL_DB_PORT=55000
 ENABLE_ORM_LOGGING=true
 ```
+
+### Configure authentication
+
+Define AAD_TENANT, AAD_CLIENT environment variables - e.g. locally in .env environment. Optionally provide AUTHENTICATION_ENABLED=false for dev purposes (default value is TRUE) to test without AAD.
+
+```bash
+AAD_TENANT=[tenant (directory) ID]
+AAD_CLIENT= [client (application) ID]
+AUTHENTICATION_ENABLED=true
+```
+
 
 ### Install dependencies
 
@@ -50,11 +64,11 @@ npm run data-load-samples
 
 ### Start the server
 
-```
+```bash
 npm start
 ```
 
-Navigate to http://localhost:4000/graphql (4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
+Navigate to <http://localhost:4000/graphql> (4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
 
 ## Setup instructions (docker-compose and docker)
 
@@ -94,8 +108,9 @@ The technology stack is as follows:
 - mySQL: for data persistance
 - docker: for containers
 - docker-compose: for container orchestration
+- passportjs for authentication
 
-Credit: the setup of this project is inspired by the following article: https://medium.com/swlh/graphql-orm-with-typescript-implementing-apollo-server-express-and-sqlite-5f16a92968d0
+Credit: the setup of this project is inspired by the following article: <https://medium.com/swlh/graphql-orm-with-typescript-implementing-apollo-server-express-and-sqlite-5f16a92968d0>
 
 ### MySQL Server specific configuration for version 8
 

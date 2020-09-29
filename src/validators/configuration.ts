@@ -8,7 +8,9 @@ export class ConfigurationValidator {
             DATABASE_HOST: host(),
             MYSQL_DATABASE: str(),
             MYSQL_ROOT_PASSWORD: str(),
-            GRAPHQL_ENDPOINT_PORT: port()
+            GRAPHQL_ENDPOINT_PORT: port(),
+            AAD_TENANT:str(),
+            AAD_CLIENT:str()
         });
     }
 
