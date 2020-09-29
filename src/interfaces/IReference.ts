@@ -1,6 +1,6 @@
 export interface IReference {
-    id: number;
-    name: string;
-    uri: string;
-    description: string;
-  }
+  id: number;
+  name: string;
+  uri: string;
+  description: string;
+}

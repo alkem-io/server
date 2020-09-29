@@ -8,6 +8,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write src/**/*.ts{,x}",
     "start": "nodemon -w src --ext ts --exec ts-node src/server.ts",
     "start-local": "nodemon -w src --ext ts --exec ts-node -r dotenv/config src/server.ts",
     "test": "jest --coverage",
@@ -49,9 +50,12 @@
     "@typescript-eslint/parser": "^4.0.1",
     "envalid": "^6.0.2",
     "eslint": "^7.8.1",
+    "eslint-config-prettier": "^6.12.0",
     "eslint-plugin-jest": "^24.0.1",
+    "eslint-plugin-prettier": "^3.1.4",
     "jest": "^26.4.2",
     "nodemon": "^2.0.4",
+    "prettier": "^2.1.2",
     "source-map-support": "^0.5.19",
     "ts-jest": "^26.3.0"
   },

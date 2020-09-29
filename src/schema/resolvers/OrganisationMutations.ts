@@ -7,10 +7,10 @@ import { OrganisationService } from '../../services/OrganisationService';
 
 @Resolver()
 export class OrganisationMutations {
-
   @Mutation(() => Organisation)
   async addGroupToOrganisation(
-    @Arg('organisationData') organisationData: AddGroupToOrganisationInput): Promise<Organisation> {
+    @Arg('organisationData') organisationData: AddGroupToOrganisationInput
+  ): Promise<Organisation> {
     const { organisationId, groupName } = organisationData;
 
     const organisationService = Container.get<OrganisationService>('OrganisationService');
@@ -18,7 +18,7 @@ export class OrganisationMutations {
 
     if (!organisation) throw new ApolloError('Organisation not found!');
 
-    if (await UserGroup.count({ where: { name: groupName } }) !== 0)
+    if ((await UserGroup.count({ where: { name: groupName } })) !== 0)
       throw new ApolloError(`Group with name '${groupName}' already exists.`);
 
     organisation.groups?.push(new UserGroup(groupName));

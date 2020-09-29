@@ -1,14 +1,22 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Challenge, Context, DID, Organisation, Tag, User, UserGroup, RestrictedGroupNames } from '.';
 import { IEcoverse } from 'src/interfaces/IEcoverse';
 import { IGroupable } from '../interfaces';
 
-
 @Entity()
 @ObjectType()
 export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
-
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -34,19 +42,14 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   DID!: DID;
 
   @Field(() => [UserGroup], { nullable: true })
-  @OneToMany(
-    () => UserGroup,
-    userGroup => userGroup.ecoverse,
-    { eager: true, cascade: true },
-  )
+  @OneToMany(() => UserGroup, userGroup => userGroup.ecoverse, { eager: true, cascade: true })
   groups?: UserGroup[];
 
-  @Field(() => [Organisation], { nullable: true, description: 'The set of partner organisations associated with this Ecoverse' })
-  @ManyToMany(
-    () => Organisation,
-    organisation => organisation.ecoverses,
-    { eager: true, cascade: true },
-  )
+  @Field(() => [Organisation], {
+    nullable: true,
+    description: 'The set of partner organisations associated with this Ecoverse',
+  })
+  @ManyToMany(() => Organisation, organisation => organisation.ecoverses, { eager: true, cascade: true })
   @JoinTable({
     name: 'ecoverse_partner',
     joinColumns: [{ name: 'ecoverseId', referencedColumnName: 'id' }],
@@ -56,18 +59,11 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
 
   //
   @Field(() => [Challenge], { nullable: true, description: 'The Challenges hosted by the Ecoverse' })
-  @OneToMany(
-    () => Challenge,
-    challenge => challenge.ecoverse,
-    { eager: true, cascade: true },
-  )
+  @OneToMany(() => Challenge, challenge => challenge.ecoverse, { eager: true, cascade: true })
   challenges?: Challenge[];
 
   @Field(() => [Tag], { nullable: true, description: 'Set of restricted tags that are used within this ecoverse' })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.ecoverses,
-    { eager: true, cascade: true })
+  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
   @JoinTable({ name: 'ecoverse_tag' })
   tags?: Tag[];
 
@@ -107,7 +103,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     ecoverse.initialiseMembers();
     ecoverse.name = 'Empty ecoverse';
     ecoverse.context.tagline = 'An empty ecoverse to be populated';
-    ecoverse.host.name = 'Default host organisation'
+    ecoverse.host.name = 'Default host organisation';
 
     // Find the admin user and put that person in as member + admin
     const adminUser = new User('admin');
@@ -118,7 +114,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
 
     return ecoverse;
   }
-
 
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.

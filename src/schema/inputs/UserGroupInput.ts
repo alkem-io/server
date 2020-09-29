@@ -4,7 +4,6 @@ import { MaxLength } from 'class-validator';
 
 @InputType()
 export class UserGroupInput {
-
   // TODO: [ATS] must be required field when group is created
   @Field({ nullable: true })
   @MaxLength(100)
@@ -13,17 +12,15 @@ export class UserGroupInput {
   @Field(() => UserInput, { nullable: true })
   focalPoint?: UserInput;
 
-  @Field( () => [UserInput], { nullable: true })
+  @Field(() => [UserInput], { nullable: true })
   members?: UserInput[];
 
-  @Field( () => [TagInput], { nullable: true } )
+  @Field(() => [TagInput], { nullable: true })
   tags?: TagInput[];
-
 }
 
 @InputType()
 export class BaseUpdateUserGroupInput {
-
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
@@ -31,26 +28,21 @@ export class BaseUpdateUserGroupInput {
   @Field(() => UpdateNestedUserInput, { nullable: true })
   focalPoint?: UpdateNestedUserInput;
 
-  @Field( () => [UpdateNestedUserInput], { nullable: true })
+  @Field(() => [UpdateNestedUserInput], { nullable: true })
   members?: UpdateNestedUserInput[];
 
-  @Field( () => [UpdateNestedTagInput], { nullable: true } )
+  @Field(() => [UpdateNestedTagInput], { nullable: true })
   tags?: UpdateNestedTagInput[];
-
 }
 
 @InputType()
 export class UpdateRootUserGroupInput extends BaseUpdateUserGroupInput {
-
   @Field()
-  id! : number;
-
+  id!: number;
 }
 
 @InputType()
 export class UpdateNestedUserGroupInput extends BaseUpdateUserGroupInput {
-
-  @Field( { nullable: true } )
-  id? : number;
-
+  @Field({ nullable: true })
+  id?: number;
 }

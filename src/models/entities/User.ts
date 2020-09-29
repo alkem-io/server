@@ -1,6 +1,16 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToOne, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  OneToMany,
+} from 'typeorm';
 import { DID, Tag, UserGroup } from '.';
 import { IUser } from 'src/interfaces/IUser';
 
@@ -34,24 +44,14 @@ export class User extends BaseEntity implements IUser {
   @JoinColumn()
   DID!: DID;
 
-  @ManyToMany(
-    () => UserGroup,
-    userGroup => userGroup.members
-  )
+  @ManyToMany(() => UserGroup, userGroup => userGroup.members)
   userGroups?: UserGroup[];
 
-  @OneToMany(
-    () => UserGroup,
-    userGroup => userGroup.focalPoint,
-    { eager: false, cascade: true },
-  )
+  @OneToMany(() => UserGroup, userGroup => userGroup.focalPoint, { eager: false, cascade: true })
   focalPoints?: UserGroup[];
 
   @Field(() => [Tag], { nullable: true })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.users,
-    { eager: true, cascade: true })
+  @ManyToMany(() => Tag, tag => tag.users, { eager: true, cascade: true })
   @JoinTable({ name: 'user_tag' })
   tags?: Tag[];
 

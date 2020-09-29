@@ -4,7 +4,6 @@ import { MaxLength } from 'class-validator';
 
 @InputType()
 export class OrganisationInput {
-
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
@@ -14,12 +13,10 @@ export class OrganisationInput {
 
   @Field(() => [TagInput], { nullable: true })
   tags?: TagInput[];
-
 }
 
 @InputType()
 export class BaseUpdateOrganisationInput {
-
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
@@ -29,23 +26,18 @@ export class BaseUpdateOrganisationInput {
 
   @Field(() => [UpdateNestedTagInput], { nullable: true })
   tags!: UpdateNestedTagInput[];
-
 }
 
 @InputType()
 export class UpdateRootOrganisationInput extends BaseUpdateOrganisationInput {
-
   @Field()
   id!: number;
-
 }
 
 @InputType()
 export class UpdateNestedOrganisationInput extends BaseUpdateOrganisationInput {
-
   @Field({ nullable: true })
   id?: number;
-
 }
 
 @InputType()
