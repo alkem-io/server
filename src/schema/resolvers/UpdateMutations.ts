@@ -1,9 +1,19 @@
+import { EcoverseService } from '../../services/EcoverseService';
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, User, UserGroup } from '../../models';
 import { UpdateEcoverseInput, UpdateRootChallengeInput, UpdateRootContextInput, UpdateRootOrganisationInput, UpdateRootUserGroupInput, UpdateRootUserInput } from '../inputs';
+import Container, { Inject } from 'typedi';
 
 @Resolver()
 export class UpdateMutations {
+
+  private _ecoverse: EcoverseService;
+  constructor(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Inject('EcoverseService') ecoverse: EcoverseService
+  ) {
+    this._ecoverse = Container.get<EcoverseService>('EcoverseService');
+  }
 
   @Mutation(() => UserGroup)
   async addUserToGroup(
@@ -38,13 +48,14 @@ export class UpdateMutations {
   async updateEcoverse(
     @Arg('ecoverseData') ecoverseData: UpdateEcoverseInput): Promise<Ecoverse> {
 
-    const ctVerse = await Ecoverse.getInstance();
+    const ctVerse = await this._ecoverse.getEcoverse() as Ecoverse;
 
     // Copy over the received data
     if (ecoverseData.name) {
       ctVerse.name = ecoverseData.name;
     }
-    ctVerse.context.update(JSON.stringify(ecoverseData.context));
+    if (ecoverseData.context)
+      ctVerse.context.update(JSON.stringify(ecoverseData.context));
 
     await ctVerse.save();
 

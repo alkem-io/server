@@ -32,9 +32,14 @@ const main = async () => {
   }
 
   // Check that the base data is populated with exactly one ecoverse
-  try{
-    const ecoverseCount = await Ecoverse.count();
-    if (ecoverseCount == 0) {
+  try {
+    if (await Ecoverse.count() > 1) {
+      console.error('Only 1 ecoverse is supported!');
+      exit(1)
+    }
+
+    const ecoverse = await Ecoverse.findOne();
+    if (!ecoverse) {
       console.log('Detected empty ecoverse, populating....');
 
       const ecoverse = new Ecoverse();
@@ -45,11 +50,10 @@ const main = async () => {
       console.log('.....complete.');
     }
     // Get the name
-    const ecoverse = await Ecoverse.getInstance();
-    console.log(`Loaded ecoverse with name: ${ecoverse.name}`);
+    console.log(`Loaded ecoverse with name: ${ecoverse?.name}`);
   } catch (error) {
     console.log('Unable to populate empty ecoverse: ' + error);
-    exit();
+    exit(1);
   }
 
   // Build the schema
@@ -61,7 +65,7 @@ const main = async () => {
 
   const getUser = (req: Request, res: Response) =>
     new Promise((resolve, reject) => {
-      passport.authenticate('oauth-bearer', { session: true }, (err, user, info) => {
+      passport.authenticate('oauth-bearer', { session: true }, (err, user, _info) => {
         if (err) reject(err)
         resolve(user)
       })(req, res)

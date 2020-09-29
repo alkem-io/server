@@ -10,18 +10,18 @@ import { IUserGroup } from 'src/interfaces/IUserGroup';
 @Service('EcoverseService')
 export class EcoverseService {
   constructor(
-      @EventDispatcher() private eventDispatcher: EventDispatcherInterface,
-  ) {}
+    @EventDispatcher() private eventDispatcher: EventDispatcherInterface,
+  ) { }
 
   public async getEcoverse(): Promise<IEcoverse> {
     try {
 
-      const ecoverse = await Ecoverse.getInstance();
+      const ecoverse = await Ecoverse.findOneOrFail();
       this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
       return ecoverse;
     } catch (e) {
-        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getEcoverse()!!!', exception: e});
+      this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getEcoverse()!!!', exception: e });
       throw e;
     }
   }
@@ -29,12 +29,12 @@ export class EcoverseService {
   public async getName(): Promise<string> {
     try {
 
-      const ecoverse = await Ecoverse.getInstance();
+      const ecoverse = await this.getEcoverse()
       this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
       return ecoverse.name;
     } catch (e) {
-        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getName()!!!', exception: e});
+      this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getName()!!!', exception: e });
       throw e;
     }
   }
@@ -42,16 +42,16 @@ export class EcoverseService {
   public async getMembers(): Promise<IUserGroup> {
     try {
 
-        const ecoverse = await Ecoverse.getInstance();
-        const membersGroup = UserGroup.getGroupByName(ecoverse, RestrictedGroupNames.Members);
+      const ecoverse = await this.getEcoverse() as Ecoverse;
+      const membersGroup = UserGroup.getGroupByName(ecoverse, RestrictedGroupNames.Members);
 
-        this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+      this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
-        return membersGroup as IUserGroup;
+      return membersGroup as IUserGroup;
 
 
     } catch (e) {
-        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e});
+      this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
     }
   }
@@ -59,36 +59,34 @@ export class EcoverseService {
   public async getGroups(): Promise<IUserGroup[]> {
     try {
 
-        const ecoverse = await Ecoverse.getInstance();
+      const ecoverse = await this.getEcoverse() as Ecoverse;
 
-        this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-        // Convert groups array into IGroups array
-        const groups: IUserGroup[] = [];
-        if (!ecoverse.groups) {
-          throw new Error('Unreachable');
-        }
-        for (const group of ecoverse.groups) {
-          groups.push(group);
-        }
-        return groups;
+      this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+      // Convert groups array into IGroups array
+      const groups: IUserGroup[] = [];
+      if (!ecoverse.groups) {
+        throw new Error('Unreachable');
+      }
+      for (const group of ecoverse.groups) {
+        groups.push(group);
+      }
+      return groups;
     } catch (e) {
-        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e});
+      this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
     }
   }
 
-
-
   public async getContext(): Promise<IContext> {
     try {
 
-        const ecoverse = await Ecoverse.getInstance();
-        this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+      const ecoverse = await this.getEcoverse() as Ecoverse;
+      this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
-        return ecoverse.context as IContext;
+      return ecoverse.context as IContext;
 
     } catch (e) {
-        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e});
+      this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e });
       throw e;
     }
   }
@@ -96,13 +94,13 @@ export class EcoverseService {
   public async getHost(): Promise<IOrganisation> {
     try {
 
-        const ecoverse = await Ecoverse.getInstance();
-        this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+      const ecoverse = await this.getEcoverse() as Ecoverse;
+      this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
-        return ecoverse.host as IOrganisation;
+      return ecoverse.host as IOrganisation;
 
     } catch (e) {
-        this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getHost()!!!', exception: e});
+      this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getHost()!!!', exception: e });
       throw e;
     }
   }

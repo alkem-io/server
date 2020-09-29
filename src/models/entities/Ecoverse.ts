@@ -83,25 +83,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     this.host = new Organisation('Default host');
   }
 
-  // Functional methods for managing the Ecoverse
-  private static instance: Ecoverse;
-
-  static async getInstance(): Promise<Ecoverse> {
-    if (Ecoverse.instance) {
-      return Ecoverse.instance;
-    }
-
-    // Instance has not been set, fix that by creating a new ecoverse if needed
-    const ecoverseCount = await Ecoverse.count();
-    if (ecoverseCount != 1) {
-      throw new Error('Must always be exactly one ecoverse');
-    }
-    const ecoverse = await Ecoverse.find();
-    Ecoverse.instance = ecoverse[0];
-
-    return Ecoverse.instance;
-  }
-
   // Populate an empty ecoverse
   static async populateEmptyEcoverse(ecoverse: Ecoverse): Promise<Ecoverse> {
     // Create new Ecoverse
