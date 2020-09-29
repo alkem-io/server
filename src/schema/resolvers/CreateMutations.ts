@@ -5,7 +5,6 @@ import { Challenge, Context, Organisation, Tag, User, UserGroup } from '../../mo
 @Resolver()
 export class CreateMutations {
 
-
     @Mutation(() => Context)
     async createContext(
         @Arg('contextData') contextData: ContextInput): Promise<Context> {

@@ -1,14 +1,14 @@
-import { Arg, Authorized, Mutation, Query, Resolver } from 'type-graphql';
-import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
-import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
-import { Container, Inject } from 'typedi'
-import { IEcoverse } from 'src/interfaces/IEcoverse';
-import { EcoverseService } from '../../services/EcoverseService';
 import { IContext } from 'src/interfaces/IContext';
+import { IEcoverse } from 'src/interfaces/IEcoverse';
 import { IOrganisation } from 'src/interfaces/IOrganisation';
 import { IUserGroup } from 'src/interfaces/IUserGroup';
+import { OrganisationService } from '../../services/OrganisationService';
+import { Arg, Authorized, Mutation, Query, Resolver } from 'type-graphql';
+import { Container, Inject } from 'typedi';
+import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
 import { ChallengeService } from '../../services/ChallengeService';
-import { getRepository } from 'typeorm';
+import { EcoverseService } from '../../services/EcoverseService';
+import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
 @Resolver()
 export class Resolvers {
 
@@ -19,7 +19,9 @@ export class Resolvers {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Inject('EcoverseService') ecoverseService: EcoverseService,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    @Inject('ChallengeService') challengeService: ChallengeService
+    @Inject('ChallengeService') challengeService: ChallengeService,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Inject('OrganisationService') organisationService: OrganisationService
     // eslint-disable-next-line @typescript-eslint/no-empty-function
   ) { }
 
@@ -92,10 +94,8 @@ export class Resolvers {
 
   @Query(() => [Organisation], { nullable: false, description: 'All organisations' })
   async organisations(): Promise<Organisation[]> {
-    return await getRepository(Organisation)
-      .createQueryBuilder('organisation')
-      .leftJoinAndSelect('organisation.groups', 'group')
-      .getMany();
+    const organisationService = Container.get<OrganisationService>('OrganisationService');
+    return await organisationService.getOrganisations();
   }
 
   // Challenges related fields
