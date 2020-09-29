@@ -29,7 +29,7 @@ export class EcoverseService {
   public async getName(): Promise<string> {
     try {
 
-      const ecoverse = await Ecoverse.getInstance();
+      const ecoverse = await Ecoverse.findOneOrFail();
       this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
       return ecoverse.name;
