@@ -1,1 +1,1 @@
-export * from './bearerStrategy';
+export * from './bearer-strategy-factory';
