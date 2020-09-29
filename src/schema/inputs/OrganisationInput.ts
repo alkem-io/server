@@ -52,8 +52,6 @@ export class UpdateNestedOrganisationInput extends BaseUpdateOrganisationInput {
 export class AddGroupToOrganisationInput {
   @Field()
   organisationId!: number;
-  @Field({ nullable: true })
-  groupId?: number;
-  @Field(() => UserGroupInput, { nullable: true })
-  group?: UserGroupInput;
+  @Field()
+  groupName!: string;
 }
