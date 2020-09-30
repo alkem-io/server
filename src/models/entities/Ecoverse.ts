@@ -88,6 +88,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
 
     // Find the admin user and put that person in as member + admin
     const adminUser = new User('admin');
+    adminUser.initialiseMembers();
     const admins = UserGroup.getGroupByName(ecoverse, RestrictedGroupNames.Admins);
     const members = UserGroup.getGroupByName(ecoverse, RestrictedGroupNames.Members);
     admins.addUserToGroup(adminUser);

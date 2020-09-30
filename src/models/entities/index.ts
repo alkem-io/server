@@ -9,3 +9,4 @@ export * from './Context';
 export * from './Project';
 export * from './Agreement';
 export * from './Reference';
+export * from './Tagset';

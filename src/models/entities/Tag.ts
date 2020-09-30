@@ -14,9 +14,6 @@ export class Tag extends BaseEntity implements ITag {
   @Column()
   name: string;
 
-  @ManyToMany(() => Challenge, challenge => challenge.tags)
-  challenges?: Challenge;
-
   @ManyToMany(() => Project, project => project.tags)
   projects?: Project;
 
@@ -25,9 +22,6 @@ export class Tag extends BaseEntity implements ITag {
 
   @ManyToMany(() => Ecoverse, ecoverse => ecoverse.tags)
   ecoverses?: Ecoverse[];
-
-  @ManyToMany(() => User, user => user.tags)
-  users?: User;
 
   @ManyToMany(() => UserGroup, userGroup => userGroup.tags)
   userGroups?: UserGroup;

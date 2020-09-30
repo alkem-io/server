@@ -1,4 +1,4 @@
-import { Challenge, Context, Ecoverse, Reference, Tag, User, UserGroup } from '../models';
+import { Challenge, Context, Ecoverse, Reference, Tag, Tagset, User, UserGroup } from '../models';
 import { LoadConfiguration } from '../configuration-loader';
 import { ConnectionFactory } from '../connection-factory';
 
@@ -15,7 +15,7 @@ async function load_sample_data() {
 
   console.log('Loading sample data....');
   // Populate the Ecoverse beyond the defaults
-  const ctverse = await Ecoverse.getInstance();
+  const ctverse = await Ecoverse.findOneOrFail();
   ctverse.initialiseMembers();
   ctverse.name = 'Cherrytwist dogfood';
   ctverse.context.tagline = 'Powering multi-stakeholder collaboration!';
@@ -29,17 +29,22 @@ async function load_sample_data() {
 
   // Users
   const john = new User('john');
+  john.initialiseMembers();
   const bob = new User('bob');
+  bob.initialiseMembers()
   bob.email = 'admin@cherrytwist.org';
   const valentin = new User('Valentin');
+  valentin.initialiseMembers()
   valentin.email = 'valentin_yanakiev@yahoo.co.uk';
   const angel = new User('Angel');
+  angel.initialiseMembers
   angel.email = 'angel@cmd.bg';
-  const rene = new User('Rene');
-  const rutger = new User('Rutger');
-  const alex = new User('Alex');
   const neil = new User('Neil');
-  bob.tags = [java, graphql];
+  neil.initialiseMembers();
+  neil.email = 'neil@cherrytwist.org';
+  const defaultTagset = Tagset.defaultTagset(bob);
+  defaultTagset.addTag('java');
+  defaultTagset.addTag('graphql');
 
   // User Groups
   const members = UserGroup.getGroupByName(ctverse, 'members');
@@ -54,7 +59,8 @@ async function load_sample_data() {
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.initialiseMembers();
-  energyWeb.tags = [java, graphql, industry];
+  if (!energyWeb.tags) throw new Error("cannot reach this");
+  energyWeb.tags.addTag('java');
   energyWeb.context = new Context();
   energyWeb.context.tagline = 'Web of energy';
   const ref1 = new Reference('video', 'http://localhost:8443/myVid', 'Video explainer for the challenge');
@@ -67,7 +73,8 @@ async function load_sample_data() {
 
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.initialiseMembers();
-  cleanOceans.tags = [graphql, nature];
+  if (!cleanOceans.tags) throw new Error("cannot reach this");
+  cleanOceans.tags.addTag('Nature');
   cleanOceans.context = new Context();
   cleanOceans.context.tagline = 'Keep our Oceans clean and in balance!';
   const cleanOceanMembers = UserGroup.getGroupByName(ctverse, 'members');
@@ -77,12 +84,13 @@ async function load_sample_data() {
 
   const cargoInsurance = new Challenge('Cargo Insurance');
   cargoInsurance.initialiseMembers();
-  cargoInsurance.tags = [graphql, java, industry];
+  if (!cargoInsurance.tags) throw new Error("cannot reach this");
+  cargoInsurance.tags.addTag('Logistics');
   cargoInsurance.context = new Context();
   cargoInsurance.context.tagline = 'In an interconnected world, how to manage risk along the chain?';
   const cargoInsuranceMembers = UserGroup.getGroupByName(ctverse, 'members');
-  cargoInsuranceMembers.members = [rutger, rene, alex];
-  cargoInsuranceMembers.focalPoint = rene;
+  cargoInsuranceMembers.members = [angel, valentin, neil];
+  cargoInsuranceMembers.focalPoint = angel;
   cargoInsurance.groups = [cargoInsuranceMembers];
 
   ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];

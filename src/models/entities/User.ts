@@ -5,18 +5,19 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   OneToMany,
 } from 'typeorm';
-import { DID, Tag, UserGroup } from '.';
+import { DID, Tagset, UserGroup, RestrictedTagsetNames } from '.';
 import { IUser } from 'src/interfaces/IUser';
+import { ITag } from 'src/interfaces/ITag';
+import { ITaggable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class User extends BaseEntity implements IUser {
+export class User extends BaseEntity implements IUser, ITaggable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -24,9 +25,6 @@ export class User extends BaseEntity implements IUser {
   @Field(() => String)
   @Column()
   name: string;
-
-  @Column()
-  account: string = '';
 
   @Field(() => String)
   @Column()
@@ -50,13 +48,30 @@ export class User extends BaseEntity implements IUser {
   @OneToMany(() => UserGroup, userGroup => userGroup.focalPoint, { eager: false, cascade: true })
   focalPoints?: UserGroup[];
 
-  @Field(() => [Tag], { nullable: true })
-  @ManyToMany(() => Tag, tag => tag.users, { eager: true, cascade: true })
-  @JoinTable({ name: 'user_tag' })
-  tags?: Tag[];
+  @Field(() => [Tagset], { nullable: true, description: 'An array of named tag sets.' })
+  @OneToMany(() => Tagset, tagset => tagset.user, { eager: true, cascade: true })
+  tagsets?: Tagset[];
+
+  restrictedTagsetNames?: string[];
 
   constructor(name: string) {
     super();
     this.name = name;
+    this.restrictedTagsetNames = [RestrictedTagsetNames.Default];
   }
+
+  // Helper method to ensure all members are initialised properly.
+  // Note: has to be a seprate call due to restrictions from ORM.
+  initialiseMembers(): User {
+    if (!this.tagsets) {
+      this.tagsets = [];
+    }
+
+    // Check that the mandatory tagsets for a user are created
+    if (this.restrictedTagsetNames) {
+      Tagset.createRestrictedTagsets(this, this.restrictedTagsetNames);
+    }
+    return this;
+  }
+
 }
