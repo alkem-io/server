@@ -69,11 +69,10 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
 
     if (!this.groups) {
       this.groups = [];
-      for (const name of this.restrictedGroupNames) {
-        const group = new UserGroup(name);
-        this.groups.push(group);
-      }
     }
+    // Check that the mandatory groups for a challenge are created
+    UserGroup.addMandatoryGroups(this, this.restrictedGroupNames);
+
     return this;
   }
 }
