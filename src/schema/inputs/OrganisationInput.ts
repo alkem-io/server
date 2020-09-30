@@ -39,11 +39,3 @@ export class UpdateNestedOrganisationInput extends BaseUpdateOrganisationInput {
   @Field({ nullable: true })
   id?: number;
 }
-
-@InputType()
-export class AddGroupToOrganisationInput {
-  @Field()
-  organisationId!: number;
-  @Field()
-  groupName!: string;
-}
