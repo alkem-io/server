@@ -10,14 +10,13 @@ import { CreateMutations, Resolvers, UpdateMutations, OrganisationMutations } fr
 import { exit } from 'process';
 import { Ecoverse } from './models';
 import 'passport-azure-ad';
-import { BearerStrategyFactory } from './security/authentication'
+import { BearerStrategyFactory } from './security/authentication';
 import passport from 'passport';
 import session from 'express-session';
 import { cherrytwistAuthChecker } from './security';
 import { AADConnectionFactory } from './security/authentication/aad-connection-factory';
 
 const main = async () => {
-
   LoadConfiguration();
 
   const app = express();
@@ -70,53 +69,51 @@ const main = async () => {
 
   const getUser = (req: Request, res: Response) =>
     new Promise((resolve, reject) => {
-      passport.authenticate('oauth-bearer', { session: true }, (err, user, _info) => {
-        if (err) reject(err)
-        resolve(user)
-      })(req, res)
-    })
+      passport.authenticate('oauth-bearer', { session: true }, (err, user, info) => {
+        if (err) reject(err);
+        resolve(user);
+      })(req, res);
+    });
 
   // Enable authentication or not.
-  console.log(`Authentication enabled: ${EnableAuthentication}`)
+  console.log(`Authentication enabled: ${EnableAuthentication}`);
   let apolloServer: ApolloServer;
 
   if (!EnableAuthentication) {
     apolloServer = new ApolloServer({ schema });
   } else {
-    apolloServer = new ApolloServer(
-      {
-        schema,
-        context: async ({ res, req }) => {
-          const user = await getUser(req, res);
-          if (!user) throw new AuthenticationError('No user logged in!');
-          console.log('User found', user);
+    apolloServer = new ApolloServer({
+      schema,
+      context: async ({ res, req }) => {
+        const user = await getUser(req, res);
+        if (!user) throw new AuthenticationError('No user logged in!');
+        console.log('User found', user);
 
-          return user;
-        }
-      }
-    );
+        return user;
+      },
+    });
 
     const sessionConfig = {
       secret: 'keyboard cat',
       cookie: {},
       resave: true,
-      saveUninitialized: true
-    }
+      saveUninitialized: true,
+    };
 
     app.use(passport.initialize());
     app.use(passport.session());
 
     app.use(session(sessionConfig));
     passport.use(BearerStrategyFactory.getStrategy(AADConnectionFactory.GetOptions()));
-
   }
 
   apolloServer.applyMiddleware({
-    app, cors: {
+    app,
+    cors: {
       origin: process.env.CORS_ORIGIN || '*',
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-      allowedHeaders: 'Authorization,Origin,X-Requested-With,Content-Type,Accept'
-    }
+      allowedHeaders: 'Authorization,Origin,X-Requested-With,Content-Type,Accept',
+    },
   });
 
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -127,10 +124,7 @@ const main = async () => {
 
   const GRAPHQL_ENDPOINT_PORT = process.env.GRAPHQL_ENDPOINT_PORT || 4000;
 
-  app.listen(
-    GRAPHQL_ENDPOINT_PORT,
-    () => console.log(`....listening on http://localhost:${GRAPHQL_ENDPOINT_PORT}`),
-  );
+  app.listen(GRAPHQL_ENDPOINT_PORT, () => console.log(`....listening on http://localhost:${GRAPHQL_ENDPOINT_PORT}`));
 };
 
 main();

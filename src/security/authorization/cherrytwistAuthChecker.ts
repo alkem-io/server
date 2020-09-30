@@ -5,9 +5,8 @@ export const cherrytwistAuthChecker: AuthChecker<ICherrytwistContext> = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   { context: { user } },
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  roles,
+  roles
 ) => {
-
   // here we can read the user from context
   // and check his permission in the db against the `roles` argument
   // that comes from the `@Authorized` decorator, eg. ["ADMIN", "MODERATOR"]

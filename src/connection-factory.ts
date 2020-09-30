@@ -4,8 +4,7 @@ export class ConnectionFactory {
   public GetConnection(): Promise<Connection> {
 
     const dbPort = process.env.MYSQL_DB_PORT ? Number(process.env.MYSQL_DB_PORT) : 3306;
-    return createConnection(
-      {
+    return createConnection(      {
         type: 'mysql',
         host: process.env.DATABASE_HOST,
         port: dbPort,
@@ -16,12 +15,8 @@ export class ConnectionFactory {
         insecureAuth: true,
         synchronize: true,
         logging: process.env.ENABLE_ORM_LOGGING === 'true',
-        entities: [
-          './src/models/index.ts'
-        ],
-        migrations: [
-          'src/migrations/**/*.ts'
-        ]
+        entities: ['./src/models/index.ts'],
+        migrations: ['src/migrations/**/*.ts']
       }
     );
   }

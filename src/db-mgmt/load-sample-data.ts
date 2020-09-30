@@ -51,7 +51,6 @@ async function load_sample_data() {
   const crew = UserGroup.addGroupWithName(ctverse, 'Crew');
   ctverse.groups = [jedi, crew, members];
 
-
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.initialiseMembers();
@@ -97,17 +96,15 @@ async function load_sample_data() {
   //Organisations
   await ctverse.save();
 
-
   await connection.manager.save(ctverse);
-
 }
 
-
-load_sample_data().then(() => {
-  console.log('....sample data loaded');
-  process.exit();
-}).catch(function (e: Error) {
-  console.error(e.message);
-  process.exit(1);
-});
-
+load_sample_data()
+  .then(() => {
+    console.log('....sample data loaded');
+    process.exit();
+  })
+  .catch(function (e: Error) {
+    console.error(e.message);
+    process.exit(1);
+  });

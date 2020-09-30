@@ -24,9 +24,11 @@ async function reset_to_empty_db() {
   await drop_db(connection);
 }
 
-reset_to_empty_db().then(() => {
-  process.exit();
-}).catch(function (e: Error) {
-  console.error(e.message);
-  process.exit(1);
-});
+reset_to_empty_db()
+  .then(() => {
+    process.exit();
+  })
+  .catch(function (e: Error) {
+    console.error(e.message);
+    process.exit(1);
+  });

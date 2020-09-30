@@ -1,6 +1,16 @@
 import { IOrganisation } from 'src/interfaces/IOrganisation';
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { DID, Ecoverse, RestrictedGroupNames, Tag, User, UserGroup } from '.';
 import { IGroupable } from '../interfaces';
 import { Challenge } from './Challenge';
@@ -23,17 +33,11 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
   @OneToOne(() => Ecoverse, ecoverse => ecoverse.host)
   hostedEcoverse?: Ecoverse;
 
-  @ManyToMany(
-    () => Ecoverse,
-    ecoverse => ecoverse.partners
-  )
+  @ManyToMany(() => Ecoverse, ecoverse => ecoverse.partners)
   ecoverses?: Ecoverse[];
 
   @Field(() => [Tag], { nullable: true, description: 'The set of tags applied to this organisation.' })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.ecoverses,
-    { eager: true, cascade: true })
+  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
   @JoinTable({ name: 'organisation_tag' })
   tags?: Tag[];
 
@@ -41,17 +45,10 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
   members?: User[];
 
   @Field(() => [UserGroup], { nullable: true, description: 'Groups of users related to an organisation.' })
-  @OneToMany(
-    () => UserGroup,
-    userGroup => userGroup.organisation,
-    { eager: false, cascade: true },
-  )
+  @OneToMany(() => UserGroup, userGroup => userGroup.organisation, { eager: false, cascade: true })
   groups?: UserGroup[];
 
-  @ManyToMany(
-    () => Challenge,
-    challenge => challenge.challengeLeads,
-  )
+  @ManyToMany(() => Challenge, challenge => challenge.challengeLeads)
   challenges!: Challenge[];
 
   // The restricted group names at the challenge level

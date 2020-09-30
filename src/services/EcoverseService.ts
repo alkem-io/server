@@ -41,7 +41,6 @@ export class EcoverseService {
 
   public async getMembers(): Promise<IUserGroup> {
     try {
-
       const ecoverse = await this.getEcoverse() as Ecoverse;
       const membersGroup = UserGroup.getGroupByName(ecoverse, RestrictedGroupNames.Members);
 
@@ -50,6 +49,7 @@ export class EcoverseService {
       return membersGroup as IUserGroup;
 
 
+      return membersGroup as IUserGroup;
     } catch (e) {
       this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
@@ -58,7 +58,6 @@ export class EcoverseService {
 
   public async getGroups(): Promise<IUserGroup[]> {
     try {
-
       const ecoverse = await this.getEcoverse() as Ecoverse;
 
       this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
@@ -79,7 +78,6 @@ export class EcoverseService {
 
   public async getContext(): Promise<IContext> {
     try {
-
       const ecoverse = await this.getEcoverse() as Ecoverse;
       this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
@@ -93,7 +91,6 @@ export class EcoverseService {
 
   public async getHost(): Promise<IOrganisation> {
     try {
-
       const ecoverse = await this.getEcoverse() as Ecoverse;
       this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
@@ -104,5 +101,4 @@ export class EcoverseService {
       throw e;
     }
   }
-
 }

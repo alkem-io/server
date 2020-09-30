@@ -1,5 +1,5 @@
 export interface IDID {
-    id: number;
-    DID: string;
-    DDO: string;
-  }
+  id: number;
+  DID: string;
+  DDO: string;
+}

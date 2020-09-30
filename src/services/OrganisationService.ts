@@ -4,7 +4,6 @@ import { getRepository } from 'typeorm';
 
 @Service('OrganisationService')
 export class OrganisationService {
-
   private getQuery() {
     return getRepository(Organisation)
       .createQueryBuilder('organisation')

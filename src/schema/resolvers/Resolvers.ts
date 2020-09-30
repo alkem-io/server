@@ -117,6 +117,4 @@ export class Resolvers {
   async tags(): Promise<Tag[]> {
     return await Tag.find();
   }
-
-
 }
