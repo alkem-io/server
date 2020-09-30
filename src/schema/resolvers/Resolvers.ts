@@ -7,21 +7,22 @@ import { Container, Inject } from 'typedi';
 import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
 import { ChallengeService } from '../../services/ChallengeService';
 import { EcoverseService } from '../../services/EcoverseService';
-import { OrganisationService } from '../../services/OrganisationService';
+
 @Resolver()
 export class Resolvers {
-  // @Inject('EcoverseService')
-  // private ecoverseService : EcoverseService;
+
+  private _ecoverse: EcoverseService;
 
   constructor(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Inject('EcoverseService') ecoverseService: EcoverseService,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    @Inject('ChallengeService') challengeService: ChallengeService,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    @Inject('OrganisationService') organisationService: OrganisationService
+    @Inject('ChallengeService') challengeService: ChallengeService
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-  ) {}
+  ) {
+    this._ecoverse = Container.get<EcoverseService>('EcoverseService');
+  }
+
 
   async ecoverse(): Promise<IEcoverse> {
     const ecoverserService = Container.get<EcoverseService>('EcoverseService');
@@ -82,7 +83,7 @@ export class Resolvers {
   async groups(): Promise<UserGroup[]> {
     //const ecoverserService = Container.get<EcoverseService>('EcoverseService');
     // TODO: replace with using service!!!
-    const ecoverse = await Ecoverse.getInstance();
+    const ecoverse = await this._ecoverse.getEcoverse() as Ecoverse
     if (!ecoverse.groups) {
       throw new Error('not reachable');
     }
@@ -91,8 +92,7 @@ export class Resolvers {
 
   @Query(() => [Organisation], { nullable: false, description: 'All organisations' })
   async organisations(): Promise<Organisation[]> {
-    const organisationService = Container.get<OrganisationService>('OrganisationService');
-    return await organisationService.getOrganisations();
+    return await Organisation.find();
   }
 
   // Challenges related fields
@@ -104,7 +104,7 @@ export class Resolvers {
 
   @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
   async challenges(): Promise<Challenge[]> {
-    const ecoverse = await Ecoverse.getInstance();
+    const ecoverse = await this._ecoverse.getEcoverse() as Ecoverse
     if (!ecoverse.challenges) {
       throw new Error('Challenges not defined');
     }

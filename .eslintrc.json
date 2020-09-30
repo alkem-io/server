@@ -20,6 +20,12 @@
       "error",
       "single"
     ],
-    "no-multiple-empty-lines": "error"
+    "no-multiple-empty-lines": "error",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ]
   }
 }

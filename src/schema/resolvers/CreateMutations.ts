@@ -1,9 +1,21 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
+import { EcoverseService } from '../../services/EcoverseService';
+import Container, { Inject } from 'typedi';
 
 @Resolver()
 export class CreateMutations {
+
+  private _ecoverse: EcoverseService;
+  constructor(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Inject('EcoverseService') ecoverse: EcoverseService
+  ) {
+    this._ecoverse = Container.get<EcoverseService>('EcoverseService');
+  }
+
+
   @Mutation(() => Context)
   async createContext(@Arg('contextData') contextData: ContextInput): Promise<Context> {
     const context = Context.create(contextData);
@@ -29,10 +41,11 @@ export class CreateMutations {
   }
 
   @Mutation(() => UserGroup)
-  async createGroupOnEcoverse(@Arg('groupName') groupName: string): Promise<UserGroup> {
-    // First get the Ecoverse singleton
+  async createGroupOnEcoverse(
+    @Arg('groupName') groupName: string): Promise<UserGroup> {
+
     console.log(`Adding userGroup (${groupName}) to ecoverse`);
-    const ecoverse = await Ecoverse.getInstance();
+    const ecoverse = await this._ecoverse.getEcoverse() as Ecoverse;
     const group = UserGroup.addGroupWithName(ecoverse, groupName);
     await ecoverse.save();
 
@@ -79,8 +92,10 @@ export class CreateMutations {
   }
 
   @Mutation(() => Challenge)
-  async createChallenge(@Arg('challengeData') challengeData: ChallengeInput): Promise<Challenge> {
-    const ecoverse = await Ecoverse.getInstance();
+  async createChallenge(
+    @Arg('challengeData') challengeData: ChallengeInput): Promise<Challenge> {
+
+    const ecoverse = await this._ecoverse.getEcoverse() as Ecoverse;
     if (!ecoverse.challenges) {
       throw new Error('Challenges must be defined');
     }
