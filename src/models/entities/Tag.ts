@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Agreement, Challenge, Ecoverse, Organisation, Project, User, UserGroup } from '.';
+import { Agreement, Ecoverse, Organisation, Project, UserGroup } from '.';
 import { ITag } from 'src/interfaces/ITag';
 
 @Entity()

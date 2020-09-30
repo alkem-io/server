@@ -12,7 +12,7 @@ import {
   ManyToMany,
   JoinTable,
 } from 'typeorm';
-import { DID, Tag, User, UserGroup, Context, Ecoverse, Project, RestrictedGroupNames, Tagset, RestrictedTagsetNames } from '.';
+import { DID, User, UserGroup, Context, Ecoverse, Project, RestrictedGroupNames, Tagset, RestrictedTagsetNames } from '.';
 import { Organisation } from './Organisation';
 import { IChallenge } from 'src/interfaces/IChallenge';
 import { IGroupable } from '../interfaces';

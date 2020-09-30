@@ -1,7 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 import { User } from '.';
-import { ITag } from 'src/interfaces/ITag';
 import { ITaggable } from '../interfaces';
 import { ITagset } from 'src/interfaces/ITagset';
 
@@ -17,7 +16,7 @@ export class Tagset extends BaseEntity implements ITagset {
   name: string;
 
   @Field(() => [String])
-  @Column("simple-array")
+  @Column('simple-array')
   tags?: string[];
 
   @ManyToOne(() => User, user => user.tagsets)
@@ -63,13 +62,13 @@ export class Tagset extends BaseEntity implements ITagset {
 
   // Get the default tagset
   static defaultTagset(taggable: ITaggable): Tagset {
-    if (!taggable.tagsets) throw new Error("Tagsets not initialised");
+    if (!taggable.tagsets) throw new Error('Tagsets not initialised');
     for (const tagset of taggable.tagsets) {
       if (tagset.name === RestrictedTagsetNames.Default) {
         return tagset;
       }
    }
-    throw new Error("Unable to find default tagset");
+    throw new Error('Unable to find default tagset');
   }
 }
 

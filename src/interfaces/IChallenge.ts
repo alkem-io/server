@@ -1,4 +1,3 @@
-import { ITag } from './ITag';
 import { IContext } from './IContext';
 import { IUserGroup } from './IUserGroup';
 import { IOrganisation } from './IOrganisation';
