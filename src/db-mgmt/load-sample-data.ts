@@ -59,8 +59,8 @@ async function load_sample_data() {
   // Challenges
   const energyWeb = new Challenge('Energy Web');
   energyWeb.initialiseMembers();
-  if (!energyWeb.tags) throw new Error("cannot reach this");
-  energyWeb.tags.addTag('java');
+  if (!energyWeb.tagset) throw new Error("cannot reach this");
+  energyWeb.tagset.addTag('java');
   energyWeb.context = new Context();
   energyWeb.context.tagline = 'Web of energy';
   const ref1 = new Reference('video', 'http://localhost:8443/myVid', 'Video explainer for the challenge');
@@ -73,8 +73,8 @@ async function load_sample_data() {
 
   const cleanOceans = new Challenge('Clean Oceans');
   cleanOceans.initialiseMembers();
-  if (!cleanOceans.tags) throw new Error("cannot reach this");
-  cleanOceans.tags.addTag('Nature');
+  if (!cleanOceans.tagset) throw new Error("cannot reach this");
+  cleanOceans.tagset.addTag('Nature');
   cleanOceans.context = new Context();
   cleanOceans.context.tagline = 'Keep our Oceans clean and in balance!';
   const cleanOceanMembers = UserGroup.getGroupByName(ctverse, 'members');
@@ -84,8 +84,8 @@ async function load_sample_data() {
 
   const cargoInsurance = new Challenge('Cargo Insurance');
   cargoInsurance.initialiseMembers();
-  if (!cargoInsurance.tags) throw new Error("cannot reach this");
-  cargoInsurance.tags.addTag('Logistics');
+  if (!cargoInsurance.tagset) throw new Error("cannot reach this");
+  cargoInsurance.tagset.addTag('Logistics');
   cargoInsurance.context = new Context();
   cargoInsurance.context.tagline = 'In an interconnected world, how to manage risk along the chain?';
   const cargoInsuranceMembers = UserGroup.getGroupByName(ctverse, 'members');
