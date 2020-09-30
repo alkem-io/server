@@ -1,16 +1,18 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, User, UserGroup } from '../../models';
-import { UpdateEcoverseInput, UpdateRootChallengeInput, UpdateRootContextInput, UpdateRootOrganisationInput, UpdateRootUserGroupInput, UpdateRootUserInput } from '../inputs';
+import {
+  UpdateEcoverseInput,
+  UpdateRootChallengeInput,
+  UpdateRootContextInput,
+  UpdateRootOrganisationInput,
+  UpdateRootUserGroupInput,
+  UpdateRootUserInput,
+} from '../inputs';
 
 @Resolver()
 export class UpdateMutations {
-
   @Mutation(() => UserGroup)
-  async addUserToGroup(
-    @Arg('userID') userID: number,
-    @Arg('groupID') groupID: number
-  ): Promise<UserGroup> {
-
+  async addUserToGroup(@Arg('userID') userID: number, @Arg('groupID') groupID: number): Promise<UserGroup> {
     console.log(`Adding user (${userID}) to group (${groupID})`);
     // Try to find the user + groups
     const user = await User.findOne(userID);
@@ -35,9 +37,7 @@ export class UpdateMutations {
   }
 
   @Mutation(() => Ecoverse)
-  async updateEcoverse(
-    @Arg('ecoverseData') ecoverseData: UpdateEcoverseInput): Promise<Ecoverse> {
-
+  async updateEcoverse(@Arg('ecoverseData') ecoverseData: UpdateEcoverseInput): Promise<Ecoverse> {
     const ctVerse = await Ecoverse.getInstance();
 
     // Copy over the received data
@@ -48,12 +48,11 @@ export class UpdateMutations {
 
     await ctVerse.save();
 
-    return ctVerse
+    return ctVerse;
   }
 
   @Mutation(() => User)
-  async updateUser(
-    @Arg('userData') userData: UpdateRootUserInput): Promise<User> {
+  async updateUser(@Arg('userData') userData: UpdateRootUserInput): Promise<User> {
     if (User.findOne({ where: { userData } })) {
       const user = User.create(userData);
       await user.save();
@@ -63,9 +62,7 @@ export class UpdateMutations {
   }
 
   @Mutation(() => UserGroup)
-  async updateUserGroup(
-    @Arg('userGroupData') userGroupData: UpdateRootUserGroupInput): Promise<UserGroup> {
-
+  async updateUserGroup(@Arg('userGroupData') userGroupData: UpdateRootUserGroupInput): Promise<UserGroup> {
     if (UserGroup.findOne({ where: { userGroupData } })) {
       const userGroup = UserGroup.create(userGroupData);
       await userGroup.save();
@@ -78,7 +75,8 @@ export class UpdateMutations {
 
   @Mutation(() => Organisation)
   async updateOrganisation(
-    @Arg('organisationData') organisationData: UpdateRootOrganisationInput): Promise<Organisation> {
+    @Arg('organisationData') organisationData: UpdateRootOrganisationInput
+  ): Promise<Organisation> {
     try {
       const existingOrganisation = await Organisation.findOne(organisationData.id);
       if (existingOrganisation) {
@@ -94,8 +92,7 @@ export class UpdateMutations {
         //const ctVerse = await Ecoverse.getInstance();
         return existingOrganisation;
       }
-    }
-    catch (e) {
+    } catch (e) {
       console.log(e);
     }
 
@@ -103,8 +100,7 @@ export class UpdateMutations {
   }
 
   @Mutation(() => Challenge)
-  async updateChallenge(
-    @Arg('challengeData') challengeData: UpdateRootChallengeInput): Promise<Challenge> {
+  async updateChallenge(@Arg('challengeData') challengeData: UpdateRootChallengeInput): Promise<Challenge> {
     try {
       const result = await Challenge.update(challengeData.id, challengeData);
       if (result.affected) {
@@ -117,8 +113,7 @@ export class UpdateMutations {
         newChallenge.initialiseMembers();
         return newChallenge;
       }
-    }
-    catch (e) {
+    } catch (e) {
       console.log(e);
     }
 
@@ -126,17 +121,14 @@ export class UpdateMutations {
   }
 
   @Mutation(() => Context)
-  async updateContext(
-    @Arg('contextData') contextData: UpdateRootContextInput): Promise<Context> {
+  async updateContext(@Arg('contextData') contextData: UpdateRootContextInput): Promise<Context> {
     if (User.findOne({ where: { contextData } })) {
       const context = Context.create(contextData);
       await context.save();
 
       return context;
-
     }
 
     throw new Error('Entitiy not found!');
   }
-
 }

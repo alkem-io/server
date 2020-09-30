@@ -1,10 +1,22 @@
 import { InputType, Field } from 'type-graphql';
-import { TagInput, ChallengeInput, OrganisationInput, UserGroupInput, ContextInput, UserInput, UpdateNestedChallengeInput, UpdateNestedOrganisationInput, UpdateNestedUserInput, UpdateNestedUserGroupInput, UpdateNestedContextInput, UpdateNestedTagInput } from '.';
+import {
+  TagInput,
+  ChallengeInput,
+  OrganisationInput,
+  UserGroupInput,
+  ContextInput,
+  UserInput,
+  UpdateNestedChallengeInput,
+  UpdateNestedOrganisationInput,
+  UpdateNestedUserInput,
+  UpdateNestedUserGroupInput,
+  UpdateNestedContextInput,
+  UpdateNestedTagInput,
+} from '.';
 import { MaxLength } from 'class-validator';
 
 @InputType()
 export class EcoverseInput {
-
   @Field({ nullable: true })
   @MaxLength(100)
   name?: string;
@@ -24,14 +36,12 @@ export class EcoverseInput {
   @Field({ nullable: true })
   context?: ContextInput;
 
-  @Field( () => [TagInput], { nullable: true } )
+  @Field(() => [TagInput], { nullable: true })
   tags?: TagInput[];
-
 }
 
 @InputType()
 export class UpdateEcoverseInput {
-
   @Field({ nullable: true })
   @MaxLength(100)
   name?: string;
@@ -54,7 +64,6 @@ export class UpdateEcoverseInput {
   @Field({ nullable: true })
   context?: UpdateNestedContextInput;
 
-  @Field( () => [UpdateNestedTagInput], { nullable: true } )
+  @Field(() => [UpdateNestedTagInput], { nullable: true })
   tags?: UpdateNestedTagInput[];
-
 }

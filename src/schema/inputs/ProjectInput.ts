@@ -4,7 +4,6 @@ import { TagInput, AgreementInput, UpdateNestedTagInput, UpdateAgreementInput } 
 
 @InputType()
 export class ProjectInput {
-
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
@@ -17,18 +16,17 @@ export class ProjectInput {
   @MaxLength(255)
   lifecyclePhase?: string;
 
-  @Field( () => [TagInput], { nullable: true } )
+  @Field(() => [TagInput], { nullable: true })
   tags!: TagInput[];
 
-  @Field( () => [AgreementInput], { nullable: true })
+  @Field(() => [AgreementInput], { nullable: true })
   agreements?: AgreementInput[];
 }
 
 @InputType()
 export class UpdateProjectInput {
-
   @Field()
-  id! : number;
+  id!: number;
 
   @Field({ nullable: true })
   @MaxLength(30)
@@ -42,9 +40,9 @@ export class UpdateProjectInput {
   @MaxLength(255)
   lifecyclePhase?: string;
 
-  @Field( () => [UpdateNestedTagInput], { nullable: true } )
+  @Field(() => [UpdateNestedTagInput], { nullable: true })
   tags!: UpdateNestedTagInput[];
 
-  @Field( () => [UpdateAgreementInput], { nullable: true })
+  @Field(() => [UpdateAgreementInput], { nullable: true })
   agreements?: UpdateAgreementInput[];
 }

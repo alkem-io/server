@@ -4,7 +4,6 @@ import { TagInput, UpdateNestedTagInput } from '.';
 
 @InputType()
 export class UserInput {
-
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
@@ -21,18 +20,16 @@ export class UserInput {
   @MaxLength(60)
   lastName?: string;
 
-  @Field( { nullable: true } )
+  @Field({ nullable: true })
   @MaxLength(120)
   email?: string;
 
-  @Field( () => [TagInput], { nullable: true } )
+  @Field(() => [TagInput], { nullable: true })
   tags?: TagInput[];
-
 }
 
 @InputType()
 export class BaseUpdateUserInput {
-
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
@@ -49,26 +46,22 @@ export class BaseUpdateUserInput {
   @MaxLength(60)
   lastName?: string;
 
-  @Field( { nullable: true } )
+  @Field({ nullable: true })
   @MaxLength(120)
   email?: string;
 
-  @Field( () => [UpdateNestedTagInput], { nullable: true } )
+  @Field(() => [UpdateNestedTagInput], { nullable: true })
   tags?: UpdateNestedTagInput[];
 }
 
 @InputType()
 export class UpdateRootUserInput extends BaseUpdateUserInput {
-
   @Field()
-  id! : number;
-
+  id!: number;
 }
 
 @InputType()
 export class UpdateNestedUserInput extends BaseUpdateUserInput {
-
-  @Field( { nullable: true } )
-  id? : number;
-
+  @Field({ nullable: true })
+  id?: number;
 }

@@ -2,7 +2,6 @@ import { Ecoverse } from '../models';
 import { LoadConfiguration } from '../configuration-loader';
 import { ConnectionFactory } from '../connection-factory';
 
-
 async function reset_to_empty_ecoverse() {
   LoadConfiguration();
 
@@ -27,10 +26,11 @@ async function reset_to_empty_ecoverse() {
   console.log('.....populated.');
 }
 
-reset_to_empty_ecoverse().then(() => {
-  process.exit();
-}).catch(function (e: Error) {
-  console.error(e.message);
-  process.exit(1);
-});
-
+reset_to_empty_ecoverse()
+  .then(() => {
+    process.exit();
+  })
+  .catch(function (e: Error) {
+    console.error(e.message);
+    process.exit(1);
+  });

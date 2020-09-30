@@ -1,6 +1,6 @@
 import { UserGroup } from '../entities';
 
 export interface IGroupable {
- groups?: UserGroup[];
- restrictedGroupNames?: string[];
+  groups?: UserGroup[];
+  restrictedGroupNames?: string[];
 }

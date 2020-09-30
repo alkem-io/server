@@ -6,13 +6,13 @@ import { IUser } from './IUser';
 import { IProject } from './IProject';
 
 export interface IChallenge {
-    id: number;
-    name: string;
-    lifecyclePhase?: string;
-    context?: IContext;
-    tags?: ITag[];
-    groups?: IUserGroup[];
-    contributors?: IUser[];
-    projects?: IProject[];
-    challengeLeads?: IOrganisation[];
-  }
+  id: number;
+  name: string;
+  lifecyclePhase?: string;
+  context?: IContext;
+  tags?: ITag[];
+  groups?: IUserGroup[];
+  contributors?: IUser[];
+  projects?: IProject[];
+  challengeLeads?: IOrganisation[];
+}

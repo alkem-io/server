@@ -10,7 +10,6 @@ import { EcoverseService } from '../../services/EcoverseService';
 import { OrganisationService } from '../../services/OrganisationService';
 @Resolver()
 export class Resolvers {
-
   // @Inject('EcoverseService')
   // private ecoverseService : EcoverseService;
 
@@ -22,7 +21,7 @@ export class Resolvers {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Inject('OrganisationService') organisationService: OrganisationService
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-  ) { }
+  ) {}
 
   async ecoverse(): Promise<IEcoverse> {
     const ecoverserService = Container.get<EcoverseService>('EcoverseService');
@@ -118,6 +117,4 @@ export class Resolvers {
   async tags(): Promise<Tag[]> {
     return await Tag.find();
   }
-
-
 }

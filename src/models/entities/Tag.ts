@@ -6,58 +6,37 @@ import { ITag } from 'src/interfaces/ITag';
 @Entity()
 @ObjectType()
 export class Tag extends BaseEntity implements ITag {
-    @Field(() => ID)
-    @PrimaryGeneratedColumn()
-    id!: number;
+  @Field(() => ID)
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-    @Field(() => String)
-    @Column()
-    name: string;
+  @Field(() => String)
+  @Column()
+  name: string;
 
-    @ManyToMany(
-        () => Challenge,
-        challenge => challenge.tags
-    )
-    challenges?: Challenge;
+  @ManyToMany(() => Challenge, challenge => challenge.tags)
+  challenges?: Challenge;
 
-    @ManyToMany(
-        () => Project,
-        project => project.tags
-    )
-    projects?: Project;
+  @ManyToMany(() => Project, project => project.tags)
+  projects?: Project;
 
-    @ManyToMany(
-        () => Organisation,
-        organisation => organisation.tags
-    )
-    organisations?: Organisation;
+  @ManyToMany(() => Organisation, organisation => organisation.tags)
+  organisations?: Organisation;
 
-    @ManyToMany(
-        () => Ecoverse,
-        ecoverse => ecoverse.tags
-    )
-    ecoverses?: Ecoverse[];
+  @ManyToMany(() => Ecoverse, ecoverse => ecoverse.tags)
+  ecoverses?: Ecoverse[];
 
-    @ManyToMany(
-        () => User,
-        user => user.tags
-    )
-    users?: User;
+  @ManyToMany(() => User, user => user.tags)
+  users?: User;
 
-    @ManyToMany(
-        () => UserGroup,
-        userGroup => userGroup.tags
-    )
-    userGroups?: UserGroup;
+  @ManyToMany(() => UserGroup, userGroup => userGroup.tags)
+  userGroups?: UserGroup;
 
-    @ManyToMany(
-        () => Agreement,
-        agreement => agreement.tags
-    )
-    agreements?: Agreement[];
+  @ManyToMany(() => Agreement, agreement => agreement.tags)
+  agreements?: Agreement[];
 
-    constructor(name: string) {
-        super();
-        this.name = name;
-    }
+  constructor(name: string) {
+    super();
+    this.name = name;
+  }
 }
