@@ -1,12 +1,13 @@
-import { Arg, Authorized, Query, Resolver } from 'type-graphql';
-import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
-import { Container, Inject } from 'typedi'
-import { IEcoverse } from 'src/interfaces/IEcoverse';
-import { EcoverseService } from '../../services/EcoverseService';
 import { IContext } from 'src/interfaces/IContext';
+import { IEcoverse } from 'src/interfaces/IEcoverse';
 import { IOrganisation } from 'src/interfaces/IOrganisation';
 import { IUserGroup } from 'src/interfaces/IUserGroup';
+import { Arg, Authorized, Query, Resolver } from 'type-graphql';
+import { Container, Inject } from 'typedi';
+import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
 import { ChallengeService } from '../../services/ChallengeService';
+import { EcoverseService } from '../../services/EcoverseService';
+
 @Resolver()
 export class Resolvers {
 

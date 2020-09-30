@@ -6,18 +6,23 @@ import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
 import { LoadConfiguration } from './configuration-loader';
 import { ConnectionFactory } from './connection-factory';
-import { CreateMutations, Resolvers, UpdateMutations } from './schema';
+import { CreateMutations, Resolvers, UpdateMutations, OrganisationMutations } from './schema';
 import { exit } from 'process';
 import { Ecoverse } from './models';
 import 'passport-azure-ad';
-import { bearerStrategy } from './security/authentication'
+import { BearerStrategyFactory } from './security/authentication'
 import passport from 'passport';
 import session from 'express-session';
 import { cherrytwistAuthChecker } from './security';
+import { AADConnectionFactory } from './security/authentication/aad-connection-factory';
 
 const main = async () => {
 
   LoadConfiguration();
+
+  const app = express();
+
+  const EnableAuthentication = process.env.AUTHENTICATION_ENABLED !== 'false';
 
   // Connect to the database
   const connectionFactory = new ConnectionFactory();
@@ -59,7 +64,7 @@ const main = async () => {
   // Build the schema
   console.log('Establishing GraphQL schema + endpoint....');
   const schema = await buildSchema({
-    resolvers: [Resolvers, CreateMutations, UpdateMutations],
+    resolvers: [Resolvers, CreateMutations, UpdateMutations, OrganisationMutations],
     authChecker: cherrytwistAuthChecker,
   });
 
@@ -72,14 +77,10 @@ const main = async () => {
     })
 
   // Enable authentication or not.
-  const AUTHENTICATION_ENABLED =
-    process.env.AUTHENTICATION_ENABLED === undefined ||
-    process.env.AUTHENTICATION_ENABLED.toLowerCase() === 'true';
-
-  console.log(`Authentication enabled: ${AUTHENTICATION_ENABLED}`)
+  console.log(`Authentication enabled: ${EnableAuthentication}`)
   let apolloServer: ApolloServer;
 
-  if (!AUTHENTICATION_ENABLED) {
+  if (!EnableAuthentication) {
     apolloServer = new ApolloServer({ schema });
   } else {
     apolloServer = new ApolloServer(
@@ -94,13 +95,21 @@ const main = async () => {
         }
       }
     );
+
+    const sessionConfig = {
+      secret: 'keyboard cat',
+      cookie: {},
+      resave: true,
+      saveUninitialized: true
+    }
+
+    app.use(passport.initialize());
+    app.use(passport.session());
+
+    app.use(session(sessionConfig));
+    passport.use(BearerStrategyFactory.getStrategy(AADConnectionFactory.GetOptions()));
+
   }
-  const app = express();
-
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  passport.use(bearerStrategy);
 
   apolloServer.applyMiddleware({
     app, cors: {
@@ -110,21 +119,11 @@ const main = async () => {
     }
   });
 
-  const environment = process.env.NODE_ENV;
-  const isDevelopment = environment === 'development';
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   if (isDevelopment) {
     app.use('/voyager', voyagerMiddleware({ endpointUrl: '/graphql' }));
   }
-
-  const sessionConfig = {
-    secret: 'keyboard cat',
-    cookie: {},
-    resave: true,
-    saveUninitialized: true
-  }
-
-  app.use(session(sessionConfig));
 
   const GRAPHQL_ENDPOINT_PORT = process.env.GRAPHQL_ENDPOINT_PORT || 4000;
 

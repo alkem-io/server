@@ -1,6 +1,6 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
+import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
-import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models'
 import { EcoverseService } from '../../services/EcoverseService';
 import Container, { Inject } from 'typedi';
 

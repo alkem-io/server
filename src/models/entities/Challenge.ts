@@ -72,7 +72,6 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   ecoverse?: Ecoverse;
 
   // The restricted group names at the challenge level
-  @Column('simple-array')
   restrictedGroupNames?: string[];
 
   constructor(name: string) {

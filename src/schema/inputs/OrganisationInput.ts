@@ -1,33 +1,33 @@
 import { Field, InputType } from 'type-graphql';
-import { TagInput, UserInput, UpdateNestedUserInput, UpdateNestedTagInput } from '.';
+import { TagInput, UserInput, UpdateNestedUserInput, UpdateNestedTagInput, UserGroupInput } from '.';
 import { MaxLength } from 'class-validator';
 
 @InputType()
 export class OrganisationInput {
-  
-    @Field({ nullable: true })
-    @MaxLength(30)
-    name?: string;
-    
-    @Field(() => [UserInput], { nullable: true } )
-    members?: UserInput[];
 
-    @Field(() => [TagInput], { nullable: true } )
-    tags?: TagInput[];
+  @Field({ nullable: true })
+  @MaxLength(30)
+  name?: string;
+
+  @Field(() => [UserInput], { nullable: true })
+  members?: UserInput[];
+
+  @Field(() => [TagInput], { nullable: true })
+  tags?: TagInput[];
 
 }
 
 @InputType()
 export class BaseUpdateOrganisationInput {
 
-  @Field( { nullable: true } )
+  @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
-  
-  @Field(() => [UpdateNestedUserInput], { nullable: true } )
+
+  @Field(() => [UpdateNestedUserInput], { nullable: true })
   members?: UpdateNestedUserInput[];
 
-  @Field(() => [UpdateNestedTagInput], { nullable: true } )
+  @Field(() => [UpdateNestedTagInput], { nullable: true })
   tags!: UpdateNestedTagInput[];
 
 }
@@ -36,14 +36,22 @@ export class BaseUpdateOrganisationInput {
 export class UpdateRootOrganisationInput extends BaseUpdateOrganisationInput {
 
   @Field()
-  id! : number;
+  id!: number;
 
 }
 
 @InputType()
 export class UpdateNestedOrganisationInput extends BaseUpdateOrganisationInput {
 
-  @Field( { nullable: true } )
-  id? : number;
+  @Field({ nullable: true })
+  id?: number;
 
+}
+
+@InputType()
+export class AddGroupToOrganisationInput {
+  @Field()
+  organisationId!: number;
+  @Field()
+  groupName!: string;
 }
