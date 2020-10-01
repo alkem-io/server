@@ -70,6 +70,57 @@ export class Tagset extends BaseEntity implements ITagset {
    }
     throw new Error('Unable to find default tagset');
   }
+
+  static hasTagsetWithName(taggable: ITaggable, name: string): boolean {
+    // Double check groups array is initialised
+    if (!taggable.tagsets) {
+      throw new Error('Non-initialised Tagsets submitted');
+    }
+
+    // Find the right group
+    for (const tagset of taggable.tagsets) {
+      if (tagset.name === name) {
+        return true;
+      }
+    }
+
+    // If get here then no match group was found
+    return false;
+  }
+
+  static getTagsetByName(taggable: ITaggable, name: string): Tagset {
+    // Double check groups array is initialised
+    if (!taggable.tagsets) {
+      throw new Error('Non-initialised Taggable submitted');
+    }
+
+    for (const tagset of taggable.tagsets) {
+      if (tagset.name === name) {
+        return tagset;
+      }
+    }
+
+    // If get here then no match group was found
+    throw new Error('Unable to find tagset with the name:' + { name });
+  }
+
+  static addTagsetWithName(taggable: ITaggable, name: string): Tagset {
+    // Check if the group already exists, if so log a warning
+    if (this.hasTagsetWithName(taggable, name)) {
+      // TODO: log a warning
+      return this.getTagsetByName(taggable, name);
+    }
+
+    if (taggable.restrictedTagsetNames?.includes(name)) {
+      console.log(`Attempted to create a tagset using a restricted name: ${name}`);
+      throw new Error('Unable to create tagset with restricted name: ' + { name });
+    }
+
+    const newTagset = new Tagset(name);
+    newTagset.initialiseMembers();
+    taggable.tagsets?.push(newTagset);
+    return newTagset;
+  }
 }
 
 export enum RestrictedTagsetNames {

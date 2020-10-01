@@ -1,0 +1,19 @@
+mmutation updateTagsOnTagset($tagsInput: TagsInput!, $tagsetID: Float!) {
+  updateTagsOnTagset(tags: $tagsInput, tagsetID: $tagsetID) {
+    name,
+    tags
+  }
+}
+
+
+query variables:
+{
+  "tagsetID": 4,
+  "tagsInput": {
+    "tags": [
+              "tag1",
+              "tag2"
+            ]
+  }
+
+}

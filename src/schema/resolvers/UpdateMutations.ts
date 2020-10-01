@@ -1,8 +1,12 @@
 import { EcoverseService } from '../../services/EcoverseService';
 import { Arg, Mutation, Resolver } from 'type-graphql';
-import { Challenge, Context, Ecoverse, Organisation, User, UserGroup } from '../../models';
+import { Challenge, Context, Ecoverse, Organisation, User, UserGroup, Tagset } from '../../models';
 import { UpdateEcoverseInput, UpdateRootChallengeInput, UpdateRootContextInput, UpdateRootOrganisationInput, UpdateRootUserGroupInput, UpdateRootUserInput } from '../inputs';
 import Container, { Inject } from 'typedi';
+import { TagsetService } from 'src/services';
+import { ApolloError } from 'apollo-server-express';
+import { TagsInput } from '../inputs/TagsInput';
+
 
 @Resolver()
 export class UpdateMutations {
@@ -137,5 +141,29 @@ export class UpdateMutations {
     }
 
     throw new Error('Entitiy not found!');
+  }
+
+  @Mutation(() => Tagset, { description: 'Replace the set of tags in a tagset with the provided tags' })
+  async updateTagsOnTagset(
+    @Arg('tagsetID') tagsetID: number,
+    @Arg('tags') newTags: TagsInput
+  ): Promise<Tagset> {
+    const tagsetService = Container.get<TagsetService>('TagsetService');
+    const tagset = await tagsetService.getTagset(tagsetID);
+
+    if (!tagset) throw new ApolloError(`Tagset with id(${tagsetID}) not found!`);
+
+    // Check the incoming tags and replace if not null
+    if (newTags) {
+      if (!newTags.tags) {
+        tagset.tags = [];
+      } else {
+        tagset.tags = newTags.tags;
+      }
+
+      await tagset.save();
+    }
+
+    return tagset;
   }
 }
