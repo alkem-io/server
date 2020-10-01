@@ -1,6 +1,6 @@
 import { InputType, Field } from 'type-graphql';
 import {
-  TagInput,
+  TagsetInput,
   ChallengeInput,
   OrganisationInput,
   UserGroupInput,
@@ -11,7 +11,7 @@ import {
   UpdateNestedUserInput,
   UpdateNestedUserGroupInput,
   UpdateNestedContextInput,
-  UpdateNestedTagInput,
+  UpdateNestedTagsetInput,
 } from '.';
 import { MaxLength } from 'class-validator';
 
@@ -36,8 +36,8 @@ export class EcoverseInput {
   @Field({ nullable: true })
   context?: ContextInput;
 
-  @Field(() => [TagInput], { nullable: true })
-  tags?: TagInput[];
+  @Field(() => TagsetInput, { nullable: true })
+  tagset?: TagsetInput;
 }
 
 @InputType()
@@ -64,6 +64,6 @@ export class UpdateEcoverseInput {
   @Field({ nullable: true })
   context?: UpdateNestedContextInput;
 
-  @Field(() => [UpdateNestedTagInput], { nullable: true })
-  tags?: UpdateNestedTagInput[];
+  @Field(() => UpdateNestedTagsetInput, { nullable: true })
+  tags?: UpdateNestedTagsetInput;
 }

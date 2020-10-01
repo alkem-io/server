@@ -1,6 +1,6 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
-import { Challenge, Context, Ecoverse, Organisation, Tag, Tagset, User, UserGroup } from '../../models';
-import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
+import { Challenge, Context, Ecoverse, Organisation, Tagset, User, UserGroup } from '../../models';
+import { ChallengeInput, ContextInput, OrganisationInput, UserGroupInput, UserInput } from '../inputs';
 import { EcoverseService, OrganisationService, UserService } from '../../services';
 import Container, { Inject } from 'typedi';
 import {  } from '../../services/OrganisationService';
@@ -148,13 +148,5 @@ export class CreateMutations {
     await ecoverse.save();
 
     return challenge;
-  }
-
-  @Mutation(() => Tag)
-  async createTag(@Arg('tagData') tagData: TagInput): Promise<Tag> {
-    const tag = Tag.create(tagData);
-    await tag.save();
-
-    return tag;
   }
 }

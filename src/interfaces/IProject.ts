@@ -1,4 +1,4 @@
-import { ITag } from './ITag';
+import { ITagset } from './ITagset';
 import { IAgreement } from './IAgreement';
 
 export interface IProject {
@@ -6,6 +6,6 @@ export interface IProject {
   name: string;
   description?: string;
   lifecyclePhase?: string;
-  tags?: ITag[];
+  tagset?: ITagset;
   agreements?: IAgreement[];
 }

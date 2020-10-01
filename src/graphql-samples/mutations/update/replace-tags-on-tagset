@@ -1,5 +1,5 @@
-mmutation updateTagsOnTagset($tagsInput: TagsInput!, $tagsetID: Float!) {
-  updateTagsOnTagset(tags: $tagsInput, tagsetID: $tagsetID) {
+mmutation replaceTagsOnTagset($tagsInput: TagsInput!, $tagsetID: Float!) {
+  replaceTagsOnTagset(tags: $tagsInput, tagsetID: $tagsetID) {
     name,
     tags
   }

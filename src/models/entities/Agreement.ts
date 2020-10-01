@@ -1,11 +1,12 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Project, Tag } from '.';
+import { BaseEntity, Column, Entity, OneToOne, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Project, Tagset, RestrictedTagsetNames } from '.';
 import { IAgreement } from 'src/interfaces/IAgreement';
+import { ITaggable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class Agreement extends BaseEntity implements IAgreement {
+export class Agreement extends BaseEntity implements IAgreement, ITaggable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -21,13 +22,15 @@ export class Agreement extends BaseEntity implements IAgreement {
   @ManyToOne(() => Project, project => project.agreements)
   project?: Project;
 
-  @Field(() => [Tag], { nullable: true, description: 'The set of tags for this Agreement e.g. Team, Nature etc.' })
-  @ManyToMany(() => Tag, tag => tag.agreements, { eager: true, cascade: true })
-  @JoinTable({ name: 'agreement_tag' })
-  tags?: Tag[];
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the project' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   constructor(name: string) {
     super();
     this.name = name;
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    this.tagset.initialiseMembers();
   }
 }

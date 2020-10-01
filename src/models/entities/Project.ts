@@ -3,18 +3,19 @@ import {
   BaseEntity,
   Column,
   Entity,
-  JoinTable,
-  ManyToMany,
   ManyToOne,
+  OneToOne,
+  JoinColumn,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Agreement, Challenge, Tag } from '.';
+import { Agreement, Challenge, Tagset, RestrictedTagsetNames } from '.';
 import { IProject } from 'src/interfaces/IProject';
+import { ITaggable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class Project extends BaseEntity implements IProject {
+export class Project extends BaseEntity implements IProject, ITaggable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -34,10 +35,10 @@ export class Project extends BaseEntity implements IProject {
   @Column({ nullable: true })
   lifecyclePhase?: string;
 
-  @Field(() => [Tag], { nullable: true, description: 'The set of tags for this Project' })
-  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
-  @JoinTable({ name: 'project_tag' })
-  tags?: Tag[];
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the project' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   //@Field(() => [Agreement])
   @OneToMany(() => Agreement, agreement => agreement.project, { eager: true, cascade: true })
@@ -49,5 +50,7 @@ export class Project extends BaseEntity implements IProject {
   constructor(name: string) {
     super();
     this.name = name;
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    this.tagset.initialiseMembers();
   }
 }

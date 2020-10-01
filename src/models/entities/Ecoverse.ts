@@ -10,7 +10,7 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Challenge, Context, DID, Organisation, Tag, User, UserGroup, RestrictedGroupNames } from '.';
+import { Challenge, Context, DID, Organisation, Tagset, User, UserGroup, RestrictedGroupNames, RestrictedTagsetNames } from '.';
 import { IEcoverse } from 'src/interfaces/IEcoverse';
 import { IGroupable } from '../interfaces';
 
@@ -62,10 +62,10 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @OneToMany(() => Challenge, challenge => challenge.ecoverse, { eager: true, cascade: true })
   challenges?: Challenge[];
 
-  @Field(() => [Tag], { nullable: true, description: 'Set of restricted tags that are used within this ecoverse' })
-  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
-  @JoinTable({ name: 'ecoverse_tag' })
-  tags?: Tag[];
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the ecoverse' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   // The restricted group names at the ecoverse level
   restrictedGroupNames?: string[];
@@ -76,6 +76,9 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     this.name = '';
     this.context = new Context();
     this.host = new Organisation('Default host');
+    this.host.initialiseMembers();
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    this.tagset.initialiseMembers();
   }
 
   // Populate an empty ecoverse
@@ -110,10 +113,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
 
     // Check that the mandatory groups for a challenge are created
     UserGroup.addMandatoryGroups(this, this.restrictedGroupNames);
-
-    if (!this.tags) {
-      this.tags = [];
-    }
 
     if (!this.challenges) {
       this.challenges = [];

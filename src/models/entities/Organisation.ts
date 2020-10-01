@@ -5,19 +5,18 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToMany,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { DID, Ecoverse, RestrictedGroupNames, Tag, User, UserGroup } from '.';
-import { IGroupable } from '../interfaces';
+import { DID, Ecoverse, RestrictedGroupNames, Tagset, RestrictedTagsetNames, User, UserGroup } from '.';
+import { IGroupable, ITaggable } from '../interfaces';
 import { Challenge } from './Challenge';
 
 @Entity()
 @ObjectType()
-export class Organisation extends BaseEntity implements IOrganisation, IGroupable {
+export class Organisation extends BaseEntity implements IOrganisation, IGroupable, ITaggable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -36,11 +35,6 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
   @ManyToMany(() => Ecoverse, ecoverse => ecoverse.partners)
   ecoverses?: Ecoverse[];
 
-  @Field(() => [Tag], { nullable: true, description: 'The set of tags applied to this organisation.' })
-  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
-  @JoinTable({ name: 'organisation_tag' })
-  tags?: Tag[];
-
   @Field(() => [User], { nullable: true, description: 'The set of users that are associated with this organisation' })
   members?: User[];
 
@@ -51,12 +45,19 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
   @ManyToMany(() => Challenge, challenge => challenge.challengeLeads)
   challenges!: Challenge[];
 
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the organisation' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
+
   // The restricted group names at the challenge level
   restrictedGroupNames?: string[];
 
   constructor(name: string) {
     super();
     this.name = name;
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    this.tagset.initialiseMembers();
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 

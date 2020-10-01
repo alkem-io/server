@@ -4,7 +4,7 @@ import { IOrganisation } from 'src/interfaces/IOrganisation';
 import { IUserGroup } from 'src/interfaces/IUserGroup';
 import { Arg, Authorized, Query, Resolver } from 'type-graphql';
 import { Container, Inject } from 'typedi';
-import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
+import { Challenge, Context, Ecoverse, Organisation, Tagset, User, UserGroup } from '../../models';
 import { ChallengeService } from '../../services/ChallengeService';
 import { EcoverseService } from '../../services/EcoverseService';
 
@@ -113,8 +113,8 @@ export class Resolvers {
 
   // Misc
 
-  @Query(() => [Tag], { nullable: false, description: 'All tags associated with this Ecoverse' })
-  async tags(): Promise<Tag[]> {
-    return await Tag.find();
+  @Query(() => [Tagset], { nullable: false, description: 'All tagsets associated with this Ecoverse' })
+  async tagsets(): Promise<Tagset[]> {
+    return await Tagset.find();
   }
 }

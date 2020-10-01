@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 import { User } from '.';
-import { ITaggable } from '../interfaces';
+import { ITagsetable } from '../interfaces';
 import { ITagset } from 'src/interfaces/ITagset';
 
 @Entity()
@@ -48,22 +48,22 @@ export class Tagset extends BaseEntity implements ITagset {
     return this;
   }
 
-  static createRestrictedTagsets(taggable: ITaggable, names: string[]): boolean {
-    if (!taggable.restrictedTagsetNames) {
-      throw new Error('Non-initialised Taggable submitted');
+  static createRestrictedTagsets(tagsetable: ITagsetable, names: string[]): boolean {
+    if (!tagsetable.restrictedTagsetNames) {
+      throw new Error('Non-initialised tagsetable submitted');
     }
     for (const name of names) {
       const tagset = new Tagset(name);
       tagset.initialiseMembers();
-      taggable.tagsets?.push(tagset);
+      tagsetable.tagsets?.push(tagset);
     }
     return true;
   }
 
   // Get the default tagset
-  static defaultTagset(taggable: ITaggable): Tagset {
-    if (!taggable.tagsets) throw new Error('Tagsets not initialised');
-    for (const tagset of taggable.tagsets) {
+  static defaultTagset(tagsetable: ITagsetable): Tagset {
+    if (!tagsetable.tagsets) throw new Error('Tagsets not initialised');
+    for (const tagset of tagsetable.tagsets) {
       if (tagset.name === RestrictedTagsetNames.Default) {
         return tagset;
       }
@@ -71,14 +71,14 @@ export class Tagset extends BaseEntity implements ITagset {
     throw new Error('Unable to find default tagset');
   }
 
-  static hasTagsetWithName(taggable: ITaggable, name: string): boolean {
+  static hasTagsetWithName(tagsetable: ITagsetable, name: string): boolean {
     // Double check groups array is initialised
-    if (!taggable.tagsets) {
+    if (!tagsetable.tagsets) {
       throw new Error('Non-initialised Tagsets submitted');
     }
 
     // Find the right group
-    for (const tagset of taggable.tagsets) {
+    for (const tagset of tagsetable.tagsets) {
       if (tagset.name === name) {
         return true;
       }
@@ -88,13 +88,13 @@ export class Tagset extends BaseEntity implements ITagset {
     return false;
   }
 
-  static getTagsetByName(taggable: ITaggable, name: string): Tagset {
+  static getTagsetByName(tagsetable: ITagsetable, name: string): Tagset {
     // Double check groups array is initialised
-    if (!taggable.tagsets) {
-      throw new Error('Non-initialised Taggable submitted');
+    if (!tagsetable.tagsets) {
+      throw new Error('Non-initialised tagsetable submitted');
     }
 
-    for (const tagset of taggable.tagsets) {
+    for (const tagset of tagsetable.tagsets) {
       if (tagset.name === name) {
         return tagset;
       }
@@ -104,21 +104,21 @@ export class Tagset extends BaseEntity implements ITagset {
     throw new Error('Unable to find tagset with the name:' + { name });
   }
 
-  static addTagsetWithName(taggable: ITaggable, name: string): Tagset {
+  static addTagsetWithName(tagsetable: ITagsetable, name: string): Tagset {
     // Check if the group already exists, if so log a warning
-    if (this.hasTagsetWithName(taggable, name)) {
+    if (this.hasTagsetWithName(tagsetable, name)) {
       // TODO: log a warning
-      return this.getTagsetByName(taggable, name);
+      return this.getTagsetByName(tagsetable, name);
     }
 
-    if (taggable.restrictedTagsetNames?.includes(name)) {
+    if (tagsetable.restrictedTagsetNames?.includes(name)) {
       console.log(`Attempted to create a tagset using a restricted name: ${name}`);
       throw new Error('Unable to create tagset with restricted name: ' + { name });
     }
 
     const newTagset = new Tagset(name);
     newTagset.initialiseMembers();
-    taggable.tagsets?.push(newTagset);
+    tagsetable.tagsets?.push(newTagset);
     return newTagset;
   }
 }

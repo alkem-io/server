@@ -1,12 +1,12 @@
 import { IUserGroup } from 'src/interfaces/IUserGroup';
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Challenge, Ecoverse, Organisation, Tag, User } from '.';
-import { IGroupable } from '../interfaces';
+import { BaseEntity, Column, Entity, JoinTable, JoinColumn, OneToOne, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Challenge, Ecoverse, Organisation, RestrictedTagsetNames, Tagset, User } from '.';
+import { IGroupable, ITaggable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class UserGroup extends BaseEntity implements IUserGroup {
+export class UserGroup extends BaseEntity implements IUserGroup, ITaggable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -24,10 +24,10 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @ManyToOne(() => User, user => user.focalPoints)
   focalPoint?: User;
 
-  @Field(() => [Tag], { nullable: true, description: 'The set of tags for this group e.g. Team, Nature etc.' })
-  @ManyToMany(() => Tag, tag => tag.userGroups, { eager: true, cascade: true })
-  @JoinTable({ name: 'user_group_tag' })
-  tags?: Tag[];
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the group' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   @ManyToOne(() => Ecoverse, ecoverse => ecoverse.groups)
   ecoverse?: Ecoverse;
@@ -41,6 +41,9 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   constructor(name: string) {
     super();
     this.name = name;
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    this.tagset.initialiseMembers();
+
   }
 
   // Helper method to ensure all members that are arrays are initialised properly.
