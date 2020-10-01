@@ -6,7 +6,7 @@ import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
 import { LoadConfiguration } from './configuration-loader';
 import { ConnectionFactory } from './connection-factory';
-import { CreateMutations, Resolvers, UpdateMutations, OrganisationMutations } from './schema';
+import { CreateMutations, Resolvers, UpdateMutations } from './schema';
 import { exit } from 'process';
 import { Ecoverse } from './models';
 import 'passport-azure-ad';
@@ -63,7 +63,7 @@ const main = async () => {
   // Build the schema
   console.log('Establishing GraphQL schema + endpoint....');
   const schema = await buildSchema({
-    resolvers: [Resolvers, CreateMutations, UpdateMutations, OrganisationMutations],
+    resolvers: [Resolvers, CreateMutations, UpdateMutations],
     authChecker: cherrytwistAuthChecker,
   });
 

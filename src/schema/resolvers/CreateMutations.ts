@@ -1,8 +1,10 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
-import { EcoverseService } from '../../services/EcoverseService';
+import { EcoverseService, OrganisationService } from '../../services';
 import Container, { Inject } from 'typedi';
+import {  } from '../../services/OrganisationService';
+import { ApolloError } from 'apollo-server-express';
 
 @Resolver()
 export class CreateMutations {
@@ -70,6 +72,22 @@ export class CreateMutations {
     await challenge.save();
 
     return challenge;
+  }
+
+  @Mutation(() => Organisation)
+  async createGroupOnOrganisation(
+    @Arg('organisationID') organisationID: number,
+    @Arg('groupName') groupName: string
+  ): Promise<Organisation> {
+    const organisationService = Container.get<OrganisationService>('OrganisationService');
+    const organisation = await organisationService.getOrganisation(organisationID);
+
+    if (!organisation) throw new ApolloError(`Organisation with id(${organisationID}) not found!`);
+
+    UserGroup.addGroupWithName(organisation, groupName);
+    await organisation.save();
+
+    return organisation;
   }
 
   @Mutation(() => Organisation)
