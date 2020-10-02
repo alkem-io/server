@@ -29,6 +29,9 @@ export class ChallengeInput {
   @Field(() => ContextInput, { nullable: true })
   context?: ContextInput;
 
+  @Field(() => TagsetInput, { nullable: true })
+  tagset?: TagsetInput;
+
   @Field(() => [UserGroupInput], { nullable: true })
   groups?: UserGroupInput[];
 }
@@ -52,6 +55,9 @@ export class BaseUpdateChallengeInput {
 
   @Field(() => UpdateNestedContextInput, { nullable: true })
   context?: UpdateNestedContextInput;
+
+  @Field(() => UpdateNestedTagsetInput, { nullable: true })
+  tagset?: UpdateNestedTagsetInput;
 
   @Field(() => [UpdateNestedUserGroupInput], { nullable: true })
   groups?: UpdateNestedUserGroupInput[];

@@ -6,6 +6,8 @@ export class TagsetInput {
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
+
+  @Field(() => [String])
   tags?: string[];
 }
 

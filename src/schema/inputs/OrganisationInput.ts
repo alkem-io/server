@@ -25,7 +25,7 @@ export class BaseUpdateOrganisationInput {
   members?: UpdateNestedUserInput[];
 
   @Field(() => UpdateNestedTagsetInput, { nullable: true })
-  tagset!: UpdateNestedTagsetInput;
+  tagset?: UpdateNestedTagsetInput;
 }
 
 @InputType()

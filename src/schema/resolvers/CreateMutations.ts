@@ -1,7 +1,7 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
-import { Challenge, Context, Ecoverse, Organisation, Tagset, User, UserGroup } from '../../models';
+import { Challenge, Context, Ecoverse, Organisation, Tagset, User, UserGroup, Profile } from '../../models';
 import { ChallengeInput, ContextInput, OrganisationInput, UserGroupInput, UserInput } from '../inputs';
-import { EcoverseService, OrganisationService, UserService } from '../../services';
+import { EcoverseService, OrganisationService, ProfileService } from '../../services';
 import Container, { Inject } from 'typedi';
 import {  } from '../../services/OrganisationService';
 import { ApolloError } from 'apollo-server-express';
@@ -90,20 +90,20 @@ export class CreateMutations {
     return organisation;
   }
 
-  @Mutation(() => User, { description: 'Creates a new tagset with the specified name for the user with given id' })
-  async createTagsetOnUser(
-    @Arg('userID') userID: number,
+  @Mutation(() => Profile, { description: 'Creates a new tagset with the specified name for the profile with given id' })
+  async createTagsetOnProfile(
+    @Arg('profileID') profileID: number,
     @Arg('tagsetName') tagsetName: string
-  ): Promise<User> {
-    const userService = Container.get<UserService>('UserService');
-    const user = await userService.getUser(userID);
+  ): Promise<Profile> {
+    const profileService = Container.get<ProfileService>('ProfileService');
+    const profile = await profileService.getProfile(profileID);
 
-    if (!user) throw new ApolloError(`User with id(${userID}) not found!`);
+    if (!profile) throw new ApolloError(`Profile with id(${profileID}) not found!`);
 
-    Tagset.addTagsetWithName(user, tagsetName);
-    await user.save();
+    Tagset.addTagsetWithName(profile, tagsetName);
+    await profile.save();
 
-    return user;
+    return profile;
   }
 
   @Mutation(() => Organisation)

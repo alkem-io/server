@@ -1,15 +1,12 @@
 import { InputType, Field } from 'type-graphql';
 import { MaxLength } from 'class-validator';
+import { ProfileInput } from './';
 
 @InputType()
 export class UserInput {
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
-
-  @Field({ nullable: true })
-  @MaxLength(120)
-  account?: string;
 
   @Field({ nullable: true })
   @MaxLength(60)
@@ -23,6 +20,20 @@ export class UserInput {
   @MaxLength(120)
   email?: string;
 
+  @Field({ nullable: true })
+  @MaxLength(120)
+  phone?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(120)
+  city?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(120)
+  country?: string;
+
+  @Field(() => ProfileInput, { nullable: true })
+  profile?: ProfileInput;
 }
 
 @InputType()
@@ -32,10 +43,6 @@ export class BaseUpdateUserInput {
   name?: string;
 
   @Field({ nullable: true })
-  @MaxLength(120)
-  account?: string;
-
-  @Field({ nullable: true })
   @MaxLength(60)
   firstName?: string;
 
@@ -47,6 +54,20 @@ export class BaseUpdateUserInput {
   @MaxLength(120)
   email?: string;
 
+  @Field({ nullable: true })
+  @MaxLength(120)
+  phone?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(120)
+  city?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(120)
+  country?: string;
+
+  @Field(() => ProfileInput, { nullable: true })
+  profile?: ProfileInput;
 }
 
 @InputType()

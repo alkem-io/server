@@ -17,7 +17,7 @@ export class ProjectInput {
   lifecyclePhase?: string;
 
   @Field(() => TagsetInput, { nullable: true })
-  tagset!: TagsetInput;
+  tagset?: TagsetInput;
 
   @Field(() => [AgreementInput], { nullable: true })
   agreements?: AgreementInput[];
@@ -41,7 +41,7 @@ export class UpdateProjectInput {
   lifecyclePhase?: string;
 
   @Field(() => UpdateNestedTagsetInput, { nullable: true })
-  tagset!: UpdateNestedTagsetInput;
+  tagset?: UpdateNestedTagsetInput;
 
   @Field(() => [UpdateAgreementInput], { nullable: true })
   agreements?: UpdateAgreementInput[];

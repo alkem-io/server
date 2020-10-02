@@ -1,5 +1,5 @@
-import { ITag } from './ITag';
 import { IDID } from './IDID';
+import { IProfile } from './IProfile';
 
 export interface IUser {
   id: number;
@@ -7,5 +7,9 @@ export interface IUser {
   firstName: string;
   lastName: string;
   email: string;
+  city: string;
+  country: string;
+  gender: string;
   DID: IDID;
+  profile: IProfile;
 }

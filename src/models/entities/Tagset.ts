@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-import { User } from '.';
+import { Profile } from '.';
 import { ITagsetable } from '../interfaces';
 import { ITagset } from 'src/interfaces/ITagset';
 
@@ -19,8 +19,8 @@ export class Tagset extends BaseEntity implements ITagset {
   @Column('simple-array')
   tags?: string[];
 
-  @ManyToOne(() => User, user => user.tagsets)
-  user?: User;
+  @ManyToOne(() => Profile, profile => profile.tagsets)
+  profile?: Profile;
 
   /* Adds a tag, returning boolean for whether the tag was newly added or not */
   addTag(tagName: string): boolean {

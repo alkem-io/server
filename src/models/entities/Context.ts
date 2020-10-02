@@ -1,6 +1,5 @@
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Challenge } from './Challenge';
+import { BaseEntity, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Reference } from './Reference';
 import { IContext } from 'src/interfaces/IContext';
 
@@ -30,9 +29,6 @@ export class Context extends BaseEntity implements IContext {
   @Field(() => String, { nullable: true, description: 'Who should get involved in this challenge' })
   @Column('varchar', { length: 2000 })
   who?: string = '';
-
-  @OneToOne(() => Challenge, challenge => challenge.context)
-  context?: Context;
 
   @Field(() => [Reference], { nullable: true, description: 'A list of URLs to relevant information.' })
   @OneToMany(() => Reference, reference => reference.context, { eager: true, cascade: true })

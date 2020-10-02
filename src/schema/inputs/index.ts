@@ -6,5 +6,6 @@ export * from './EcoverseInput';
 export * from './OrganisationInput';
 export * from './UserGroupInput';
 export * from './ProjectInput';
+export * from './ProfileInput';
 export * from './TagsetInput';
 export * from './ReferenceInput';

@@ -1,10 +1,9 @@
-import { ITagset } from './ITagset';
-import { IUser } from './IUser';
+import { IUser, IProfile } from '.';
 
 export interface IUserGroup {
   id: number;
   name: string;
   members?: IUser[];
   focalPoint?: IUser;
-  tagset?: ITagset;
+  profile: IProfile;
 }

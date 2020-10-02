@@ -1,5 +1,5 @@
 import { InputType, Field } from 'type-graphql';
-import { TagsetInput, UserInput, UpdateNestedUserInput, UpdateNestedTagsetInput } from '.';
+import { TagsetInput, UserInput, UpdateNestedUserInput, UpdateNestedTagsetInput, ProfileInput } from '.';
 import { MaxLength } from 'class-validator';
 
 @InputType()
@@ -17,6 +17,9 @@ export class UserGroupInput {
 
   @Field(() => TagsetInput, { nullable: true })
   tagset?: TagsetInput;
+
+  @Field(() => ProfileInput, { nullable: true })
+  profile?: ProfileInput;
 }
 
 @InputType()
@@ -33,6 +36,9 @@ export class BaseUpdateUserGroupInput {
 
   @Field(() => UpdateNestedTagsetInput, { nullable: true })
   tagset?: UpdateNestedTagsetInput;
+
+  @Field(() => ProfileInput, { nullable: true })
+  profile?: ProfileInput;
 }
 
 @InputType()
