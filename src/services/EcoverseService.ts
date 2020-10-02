@@ -48,8 +48,6 @@ export class EcoverseService {
 
       return membersGroup as IUserGroup;
 
-
-      return membersGroup as IUserGroup;
     } catch (e) {
       this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
