@@ -5,6 +5,9 @@ Represents the core back-end server that manages the representation of the ecove
 Build Status:
 ![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
 
+Build Quality
+[![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/)
+
 ## Running the server locally (not in a container)
 
 To run the server a working MySQL Server is required.
