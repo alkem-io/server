@@ -1,6 +1,5 @@
 import { InputType, Field } from 'type-graphql';
 import { MaxLength } from 'class-validator';
-import { TagInput, UpdateNestedTagInput } from '.';
 
 @InputType()
 export class UserInput {

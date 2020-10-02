@@ -1,4 +1,4 @@
-import { ITag } from './ITag';
+import { ITagset } from './ITagset';
 import { IDID } from './IDID';
 import { IOrganisation } from './IOrganisation';
 import { IUser } from './IUser';
@@ -16,5 +16,5 @@ export interface IEcoverse {
   groups?: IUserGroup[];
   partners?: IOrganisation[];
   challenges?: IChallenge[];
-  tags?: ITag[];
+  tagset?: ITagset;
 }

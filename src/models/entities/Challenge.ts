@@ -15,11 +15,11 @@ import {
 import { DID, User, UserGroup, Context, Ecoverse, Project, RestrictedGroupNames, Tagset, RestrictedTagsetNames } from '.';
 import { Organisation } from './Organisation';
 import { IChallenge } from 'src/interfaces/IChallenge';
-import { IGroupable } from '../interfaces';
+import { IGroupable, ITaggable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class Challenge extends BaseEntity implements IChallenge, IGroupable {
+export class Challenge extends BaseEntity implements IChallenge, IGroupable, ITaggable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;

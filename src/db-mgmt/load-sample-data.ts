@@ -1,4 +1,4 @@
-import { Challenge, Context, Ecoverse, Reference, Tag, Tagset, User, UserGroup } from '../models';
+import { Challenge, Context, Ecoverse, Reference, Tagset, User, UserGroup } from '../models';
 import { LoadConfiguration } from '../configuration-loader';
 import { ConnectionFactory } from '../connection-factory';
 
@@ -15,17 +15,20 @@ async function load_sample_data() {
 
   console.log('Loading sample data....');
   // Populate the Ecoverse beyond the defaults
-  const ctverse = await Ecoverse.findOneOrFail();
-  ctverse.initialiseMembers();
+  let ctverse = await Ecoverse.findOne();
+  if (!ctverse) {
+    // No ecoverse, create one
+    console.log('...no ecoverse found, creating default ecoverse...');
+    ctverse = new Ecoverse();
+    ctverse.initialiseMembers();
+    Ecoverse.populateEmptyEcoverse(ctverse);
+  }
+
   ctverse.name = 'Cherrytwist dogfood';
   ctverse.context.tagline = 'Powering multi-stakeholder collaboration!';
 
   // Tags
-  const java = new Tag('Java');
-  const graphql = new Tag('GraphQL');
-  const nature = new Tag('Nature');
-  const industry = new Tag('Industry');
-  ctverse.tags = [java, graphql, industry, nature];
+   ctverse.tagset.tags = ['Java', 'GraphQL', 'Nature', 'Industry'];
 
   // Users
   const john = new User('john');

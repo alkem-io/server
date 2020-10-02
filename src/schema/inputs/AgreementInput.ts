@@ -1,6 +1,6 @@
 import { MaxLength } from 'class-validator';
 import { Field, InputType } from 'type-graphql';
-import { TagInput, UpdateNestedTagInput } from '.';
+import { TagsetInput, UpdateNestedTagsetInput } from './TagsetInput';
 
 @InputType()
 export class AgreementInput {
@@ -12,8 +12,8 @@ export class AgreementInput {
   @MaxLength(255)
   description?: string;
 
-  @Field(() => [TagInput], { nullable: true })
-  tags?: TagInput[];
+  @Field(() => TagsetInput, { nullable: true })
+  tagset?: TagsetInput;
 }
 
 @InputType()
@@ -29,6 +29,6 @@ export class UpdateAgreementInput {
   @MaxLength(255)
   description?: string;
 
-  @Field(() => [UpdateNestedTagInput], { nullable: true })
-  tags?: UpdateNestedTagInput[];
+  @Field(() => [UpdateNestedTagsetInput], { nullable: true })
+  tagset?: UpdateNestedTagsetInput[];
 }

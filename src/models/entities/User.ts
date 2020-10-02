@@ -12,12 +12,11 @@ import {
 } from 'typeorm';
 import { DID, Tagset, UserGroup, RestrictedTagsetNames } from '.';
 import { IUser } from 'src/interfaces/IUser';
-import { ITag } from 'src/interfaces/ITag';
-import { ITaggable } from '../interfaces';
+import { ITagsetable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class User extends BaseEntity implements IUser, ITaggable {
+export class User extends BaseEntity implements IUser, ITagsetable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;

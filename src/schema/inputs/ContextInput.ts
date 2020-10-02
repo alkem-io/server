@@ -1,6 +1,6 @@
 import { MaxLength } from 'class-validator';
 import { Field, InputType } from 'type-graphql';
-import { ReferenceInput, TagInput, UpdateReferenceInput, UpdateNestedTagInput } from '.';
+import { ReferenceInput, TagsetInput, UpdateReferenceInput, UpdateNestedTagsetInput } from '.';
 
 @InputType()
 export class ContextInput {
@@ -35,8 +35,8 @@ export class ContextInput {
   @Field(() => [ReferenceInput], { nullable: true })
   references?: ReferenceInput[];
 
-  @Field(() => [TagInput], { nullable: true })
-  tags?: TagInput[];
+  @Field(() => TagsetInput, { nullable: true })
+  tagset?: TagsetInput;
 }
 
 @InputType()
@@ -72,8 +72,8 @@ export class BaseUpdateContextInput {
   @Field(() => [UpdateReferenceInput], { nullable: true })
   references?: UpdateReferenceInput[];
 
-  @Field(() => [UpdateNestedTagInput], { nullable: true })
-  tags?: UpdateNestedTagInput[];
+  @Field(() => UpdateNestedTagsetInput, { nullable: true })
+  tagset?: UpdateNestedTagsetInput;
 }
 
 @InputType()

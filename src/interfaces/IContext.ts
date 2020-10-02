@@ -1,4 +1,4 @@
-import { ITag } from './ITag';
+import { ITagset } from './ITagset';
 import { IReference } from './IReference';
 
 export interface IContext {
@@ -9,5 +9,5 @@ export interface IContext {
   impact?: string;
   who?: string;
   references?: IReference[];
-  tags?: ITag[];
+  tagset?: ITagset;
 }

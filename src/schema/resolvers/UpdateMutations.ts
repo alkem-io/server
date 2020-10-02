@@ -144,7 +144,7 @@ export class UpdateMutations {
   }
 
   @Mutation(() => Tagset, { description: 'Replace the set of tags in a tagset with the provided tags' })
-  async updateTagsOnTagset(
+  async replaceTagsOnTagset(
     @Arg('tagsetID') tagsetID: number,
     @Arg('tags') newTags: TagsInput
   ): Promise<Tagset> {

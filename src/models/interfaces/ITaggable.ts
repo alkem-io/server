@@ -1,6 +1,5 @@
-import { UserGroup, Tagset } from '../entities';
+import { Tagset } from '../entities';
 
 export interface ITaggable {
-  tagsets?: Tagset[];
-  restrictedTagsetNames?: string[];
+  tagset?: Tagset;
 }
