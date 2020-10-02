@@ -45,9 +45,13 @@ async function load_sample_data() {
   const neil = new User('Neil');
   neil.initialiseMembers();
   neil.email = 'neil@cherrytwist.org';
-  const defaultTagset = Tagset.defaultTagset(bob);
+  neil.country = ' Netherlands';
+  neil.gender = 'Male';
+  const defaultTagset = Tagset.defaultTagset(neil.profile);
   defaultTagset.addTag('java');
   defaultTagset.addTag('graphql');
+  const skillsTags = Tagset.addTagsetWithName(neil.profile, 'Skills');
+  skillsTags.tags = ['Cooking', 'Cleaning'];
 
   // User Groups
   const members = UserGroup.getGroupByName(ctverse, 'members');

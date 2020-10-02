@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Context } from '.';
+import { Context, Profile } from '.';
 import { IReference } from 'src/interfaces/IReference';
 
 @Entity()
@@ -24,6 +24,9 @@ export class Reference extends BaseEntity implements IReference {
 
   @ManyToOne(() => Context, context => context.references)
   context?: Context;
+
+  @ManyToOne(() => Profile, profile => profile.references)
+  profile?: Profile;
 
   constructor(name: string, uri: string, description: string) {
     super();

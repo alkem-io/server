@@ -1,12 +1,12 @@
 import { IUserGroup } from 'src/interfaces/IUserGroup';
 import { Field, ID, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, Entity, JoinTable, JoinColumn, OneToOne, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Challenge, Ecoverse, Organisation, RestrictedTagsetNames, Tagset, User } from '.';
-import { IGroupable, ITaggable } from '../interfaces';
+import { Challenge, Ecoverse, Organisation, User, Profile } from '.';
+import { IGroupable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class UserGroup extends BaseEntity implements IUserGroup, ITaggable {
+export class UserGroup extends BaseEntity implements IUserGroup {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -24,10 +24,10 @@ export class UserGroup extends BaseEntity implements IUserGroup, ITaggable {
   @ManyToOne(() => User, user => user.focalPoints)
   focalPoint?: User;
 
-  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the group' })
-  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @Field(() => Profile, { nullable: true, description: 'The profile for the user group' })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
-  tagset: Tagset;
+  profile: Profile;
 
   @ManyToOne(() => Ecoverse, ecoverse => ecoverse.groups)
   ecoverse?: Ecoverse;
@@ -41,9 +41,9 @@ export class UserGroup extends BaseEntity implements IUserGroup, ITaggable {
   constructor(name: string) {
     super();
     this.name = name;
-    this.tagset = new Tagset(RestrictedTagsetNames.Default);
-    this.tagset.initialiseMembers();
 
+    this.profile = new Profile();
+    this.profile.initialiseMembers()
   }
 
   // Helper method to ensure all members that are arrays are initialised properly.

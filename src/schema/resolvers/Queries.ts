@@ -105,9 +105,7 @@ export class Resolvers {
     return ecoverse.challenges;
   }
 
-  // Misc
-
-  @Query(() => [Tagset], { nullable: false, description: 'All tagsets associated with this Ecoverse' })
+  @Query(() => [Tagset], { nullable: false, description: 'All tagsets associated in this Ecoverse' })
   async tagsets(): Promise<Tagset[]> {
     return await Tagset.find();
   }

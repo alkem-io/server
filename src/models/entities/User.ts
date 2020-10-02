@@ -10,13 +10,12 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
 } from 'typeorm';
-import { DID, Tagset, UserGroup, RestrictedTagsetNames } from '.';
+import { DID, UserGroup, Profile } from '.';
 import { IUser } from 'src/interfaces/IUser';
-import { ITagsetable } from '../interfaces';
 
 @Entity()
 @ObjectType()
-export class User extends BaseEntity implements IUser, ITagsetable {
+export class User extends BaseEntity implements IUser {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -37,6 +36,22 @@ export class User extends BaseEntity implements IUser, ITagsetable {
   @Column()
   email: string = '';
 
+  @Field(() => String)
+  @Column()
+  phone: string = '';
+
+  @Field(() => String)
+  @Column()
+  city: string = '';
+
+  @Field(() => String)
+  @Column()
+  country: string = '';
+
+  @Field(() => String)
+  @Column()
+  gender: string = '';
+
   @OneToOne(() => DID)
   @JoinColumn()
   DID!: DID;
@@ -47,29 +62,21 @@ export class User extends BaseEntity implements IUser, ITagsetable {
   @OneToMany(() => UserGroup, userGroup => userGroup.focalPoint, { eager: false, cascade: true })
   focalPoints?: UserGroup[];
 
-  @Field(() => [Tagset], { nullable: true, description: 'An array of named tag sets.' })
-  @OneToMany(() => Tagset, tagset => tagset.user, { eager: true, cascade: true })
-  tagsets?: Tagset[];
-
-  restrictedTagsetNames?: string[];
+  @Field(() => Profile, { nullable: true, description: 'The profile for the user' })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @JoinColumn()
+  profile: Profile;
 
   constructor(name: string) {
     super();
     this.name = name;
-    this.restrictedTagsetNames = [RestrictedTagsetNames.Default];
+    this.profile = new Profile();
+    this.profile.initialiseMembers();
   }
 
   // Helper method to ensure all members are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   initialiseMembers(): User {
-    if (!this.tagsets) {
-      this.tagsets = [];
-    }
-
-    // Check that the mandatory tagsets for a user are created
-    if (this.restrictedTagsetNames) {
-      Tagset.createRestrictedTagsets(this, this.restrictedTagsetNames);
-    }
     return this;
   }
 
