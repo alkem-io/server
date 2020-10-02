@@ -24,8 +24,6 @@ export class UserInput {
   @MaxLength(120)
   email?: string;
 
-  @Field(() => [TagInput], { nullable: true })
-  tags?: TagInput[];
 }
 
 @InputType()
@@ -50,8 +48,6 @@ export class BaseUpdateUserInput {
   @MaxLength(120)
   email?: string;
 
-  @Field(() => [UpdateNestedTagInput], { nullable: true })
-  tags?: UpdateNestedTagInput[];
 }
 
 @InputType()

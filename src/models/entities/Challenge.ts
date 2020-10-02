@@ -12,7 +12,7 @@ import {
   ManyToMany,
   JoinTable,
 } from 'typeorm';
-import { DID, Tag, User, UserGroup, Context, Ecoverse, Project, RestrictedGroupNames } from '.';
+import { DID, User, UserGroup, Context, Ecoverse, Project, RestrictedGroupNames, Tagset, RestrictedTagsetNames } from '.';
 import { Organisation } from './Organisation';
 import { IChallenge } from 'src/interfaces/IChallenge';
 import { IGroupable } from '../interfaces';
@@ -63,10 +63,10 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @Column({ nullable: true })
   lifecyclePhase?: string;
 
-  @Field(() => [Tag], { nullable: true, description: 'The set of tags to label the challenge' })
-  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
-  @JoinTable({ name: 'challenge_tag' })
-  tags?: Tag[];
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the challenge' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   @Field(() => [Project], { nullable: true, description: 'The set of projects within the context of this challenge' })
   @OneToMany(() => Project, project => project.challenge, { eager: true, cascade: true })
@@ -86,6 +86,8 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     super();
     this.name = name;
     this.context = new Context();
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    this.tagset.initialiseMembers();
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 
@@ -101,10 +103,6 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     }
     // Check that the mandatory groups for a challenge are created
     UserGroup.addMandatoryGroups(this, this.restrictedGroupNames);
-
-    if (!this.tags) {
-      this.tags = [];
-    }
 
     if (!this.projects) {
       this.projects = [];

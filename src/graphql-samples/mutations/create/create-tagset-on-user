@@ -1,0 +1,16 @@
+mutation createTagsetOnUser($tagsetName: String!, $userID: Float!) {
+  createTagsetOnUser(tagsetName: $tagsetName, userID: $userID) {
+    name,
+    id
+    tagsets {
+      name
+    }
+
+  }
+}
+
+Variables:
+{
+  "userID": 1,
+  "tagsetName": "testTagset"
+}

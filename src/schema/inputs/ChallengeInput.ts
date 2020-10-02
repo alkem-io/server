@@ -2,8 +2,8 @@ import { MaxLength } from 'class-validator';
 import { Field, InputType } from 'type-graphql';
 import {
   ContextInput,
-  TagInput,
-  UpdateNestedTagInput,
+  TagsetInput,
+  UpdateNestedTagsetInput,
   UpdateNestedContextInput,
   UserGroupInput,
   UpdateNestedUserGroupInput,
@@ -23,8 +23,8 @@ export class ChallengeInput {
   @MaxLength(255)
   lifecyclePhase?: string;
 
-  @Field(() => [TagInput], { nullable: true })
-  tags?: TagInput[];
+  @Field(() => TagsetInput, { nullable: true })
+  tags?: TagsetInput;
 
   @Field(() => ContextInput, { nullable: true })
   context?: ContextInput;
@@ -47,8 +47,8 @@ export class BaseUpdateChallengeInput {
   @MaxLength(255)
   lifecyclePhase?: string;
 
-  @Field(() => [UpdateNestedTagInput], { nullable: true })
-  tags?: UpdateNestedTagInput[];
+  @Field(() => UpdateNestedTagsetInput, { nullable: true })
+  tags?: UpdateNestedTagsetInput;
 
   @Field(() => UpdateNestedContextInput, { nullable: true })
   context?: UpdateNestedContextInput;

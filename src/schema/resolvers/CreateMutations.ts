@@ -1,7 +1,7 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
-import { Challenge, Context, Ecoverse, Organisation, Tag, User, UserGroup } from '../../models';
+import { Challenge, Context, Ecoverse, Organisation, Tag, Tagset, User, UserGroup } from '../../models';
 import { ChallengeInput, ContextInput, OrganisationInput, TagInput, UserGroupInput, UserInput } from '../inputs';
-import { EcoverseService, OrganisationService } from '../../services';
+import { EcoverseService, OrganisationService, UserService } from '../../services';
 import Container, { Inject } from 'typedi';
 import {  } from '../../services/OrganisationService';
 import { ApolloError } from 'apollo-server-express';
@@ -42,7 +42,7 @@ export class CreateMutations {
     return userGroup;
   }
 
-  @Mutation(() => UserGroup)
+  @Mutation(() => UserGroup, { description: 'Creates a new user group at the ecoverse level' })
   async createGroupOnEcoverse(
     @Arg('groupName') groupName: string): Promise<UserGroup> {
 
@@ -54,7 +54,7 @@ export class CreateMutations {
     return group;
   }
 
-  @Mutation(() => Challenge)
+  @Mutation(() => Challenge, { description: 'Creates a new user group for the challenge with the given id' })
   async createGroupOnChallenge(
     @Arg('challengeID') challengeID: number,
     @Arg('groupName') groupName: string
@@ -74,7 +74,7 @@ export class CreateMutations {
     return challenge;
   }
 
-  @Mutation(() => Organisation)
+  @Mutation(() => Organisation, { description: 'Creates a new user group for the organisation with the given id' })
   async createGroupOnOrganisation(
     @Arg('organisationID') organisationID: number,
     @Arg('groupName') groupName: string
@@ -88,6 +88,22 @@ export class CreateMutations {
     await organisation.save();
 
     return organisation;
+  }
+
+  @Mutation(() => User, { description: 'Creates a new tagset with the specified name for the user with given id' })
+  async createTagsetOnUser(
+    @Arg('userID') userID: number,
+    @Arg('tagsetName') tagsetName: string
+  ): Promise<User> {
+    const userService = Container.get<UserService>('UserService');
+    const user = await userService.getUser(userID);
+
+    if (!user) throw new ApolloError(`User with id(${userID}) not found!`);
+
+    Tagset.addTagsetWithName(user, tagsetName);
+    await user.save();
+
+    return user;
   }
 
   @Mutation(() => Organisation)

@@ -159,7 +159,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     for (const name of names) {
       const group = new UserGroup(name);
       groupable.groups?.push(group);
-      groupable.restrictedGroupNames.push(name);
     }
 
     // Todo: is this the right return type?
