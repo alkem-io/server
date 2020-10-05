@@ -21,7 +21,7 @@ export class UpdateMutations {
 
   @Mutation(() => UserGroup)
   async addUserToGroup(@Arg('userID') userID: number, @Arg('groupID') groupID: number): Promise<UserGroup> {
-    console.log(`Adding user (${userID}) to group (${groupID})`);
+    //console.log(`Adding user (${userID}) to group (${groupID})`);
     // Try to find the user + groups
     const user = await User.findOne(userID);
     if (!user) {

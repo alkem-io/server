@@ -8,4 +8,11 @@ export class UserService {
     const user = await User.findOne({ where: { id } });
     return user;
   }
+
+  public async getUserByEmail(email: string): Promise<User | undefined> {
+    const user = await User.findOne({ where: { email } });
+    return user;
+  }
+
+
 }
