@@ -1,75 +1,165 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+# Server
 
-[travis-image]: https://api.travis-ci.org/nestjs/nest.svg?branch=master
-[travis-url]: https://travis-ci.org/nestjs/nest
-[linux-image]: https://img.shields.io/travis/nestjs/nest/master.svg?label=linux
-[linux-url]: https://travis-ci.org/nestjs/nest
-  
-  <p align="center">A progressive <a href="http://nodejs.org" target="blank">Node.js</a> framework for building efficient and scalable server-side applications, heavily inspired by <a href="https://angular.io" target="blank">Angular</a>.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore"><img src="https://img.shields.io/npm/dm/@nestjs/core.svg" alt="NPM Downloads" /></a>
-<a href="https://travis-ci.org/nestjs/nest"><img src="https://api.travis-ci.org/nestjs/nest.svg?branch=master" alt="Travis" /></a>
-<a href="https://travis-ci.org/nestjs/nest"><img src="https://img.shields.io/travis/nestjs/nest/master.svg?label=linux" alt="Linux" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#5" alt="Coverage" /></a>
-<a href="https://gitter.im/nestjs/nestjs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge"><img src="https://badges.gitter.im/nestjs/nestjs.svg" alt="Gitter" /></a>
-<a href="https://opencollective.com/nest#backer"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec"><img src="https://img.shields.io/badge/Donate-PayPal-dc3d53.svg"/></a>
-  <a href="https://twitter.com/nestframework"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Represents the core back-end server that manages the representation of the ecoverse and all the entities stored wthin it.
 
-## Description
+Build Status:
+![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Build Quality
+[![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/)
 
-## Installation
+## Server architecture
+
+Cherrytwist server uses [NestJS](https://nestjs.com/) as framework and complies to its principles. The code is split into Data Layer (entities), Data Access Layer (), Service Layer and an API Layer (GraphQL).
+Interactions between different layers is depicted in the Layer Diagram below:
+
+![Layer Diagram](diagrams/ct-server-layer-diagram.png)
+
+## Running the server locally (not in a container)
+
+To run the server a working MySQL Server is required.
+For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
+
+### Configure the database connection
+
+Default configuration is available. **DO NOT UPDATE `.env.default`**
+If you need to specify different configuration, add .env file in project root folder and set values for MYSQL_DATABASE, MYSQL_ROOT_PASSWORD, DATABASE_HOST, GRAPHQL_ENDPOINT_PORT.
+Note: Only AAD v2 endpoints and tokens are supported!
+
+Example:
 
 ```bash
-$ npm install
+DATABASE_HOST=localhost
+MYSQL_DATABASE=cherrytwist
+MYSQL_ROOT_PASSWORD=toor
+GRAPHQL_ENDPOINT_PORT=4000
+
 ```
 
-## Running the app
+Replace the content in [] with the guids from AAD - they can be retrieved from the Azure portal from the app registration page.
+Optional variables:
+
+- `MYSQL_DB_PORT` - specifies the MySQL port by default 3306.
+- `ENABLE_ORM_LOGGING` -Enable/disable the internal ORM logging .
+
+Example:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+MYSQL_DB_PORT=55000
+ENABLE_ORM_LOGGING=true
 ```
 
-## Test
+### Configure authentication
+
+Define AAD_TENANT, AAD_CLIENT environment variables - e.g. locally in .env environment. Optionally provide AUTHENTICATION_ENABLED=false for dev purposes (default value is TRUE) to test without AAD.
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+AAD_TENANT=[tenant (directory) ID]
+AAD_CLIENT= [client (application) ID]
+AUTHENTICATION_ENABLED=true
 ```
 
-## Support
+Optionally configure CORS origin for improved security with the following env variable (by default the value is *):
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+CORS_ORIGIN=[your CORS origin value]
+```
 
-## Stay in touch
+### Install dependencies
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+npm install
+```
 
-## License
+### Load the database with sample data if you wish
 
-  Nest is [MIT licensed](LICENSE).
+```bash
+npm run data-load-samples
+```
+
+### Start the server
+
+```bash
+npm start
+```
+
+Navigate to <http://localhost:4000/graphql> (4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
+
+## Setup instructions (docker-compose and docker)
+
+Prerequisites:
+
+- Docker and docker-compose installed on x86 architecture (so not an ARM-based architecture like Raspberry pi)
+- ports 80, 4000 (GRAPHQL_ENDPOINT_PORT) and 3306 free on localhost
+
+To run this project:
+
+1. Build the server image, pull mySQL image and start the containers
+
+    ```bash
+    docker-compose --env-file .env.docker up -d --build
+    ```
+
+    if .env file has been added use:
+
+    ```bash
+    docker-compose up -d --build
+    ```
+
+2. Populate database with initial data:
+
+    ```bash
+    docker exec ct_server npm run data-load-samples
+    ```
+
+## Technology Stack
+
+The technology stack is as follows:
+
+- GraphQL: for specifying the interactions with the server, using Apollo server
+- Node: for runtime execution
+- TypeScript: for all logic
+- TypeORM: for the orbject relational mapping
+- mySQL: for data persistance
+- docker: for containers
+- docker-compose: for container orchestration
+- passportjs for authentication
+- NestJS as a framework
+- Azure Active Directory as an Identity Provider
+
+Credit: the setup of this project is inspired by the following article: <https://medium.com/swlh/graphql-orm-with-typescript-implementing-apollo-server-express-and-sqlite-5f16a92968d0>
+
+### MySQL Server specific configuration for version 8
+
+MySQL version 8 by default use `caching_sha2_password` password validation plugin that is not supported by typeORM. The plugin must be changed to 'mysql_native_password'. It can be done per user or default for the server.
+
+If the server is already up and running create new user:
+
+```sql
+CREATE USER 'nativeuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+```
+
+or alter existing one:
+
+```sql
+ALTER USER 'nativeuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+```
+
+For MySQL in docker:
+
+```bash
+docker run --name some-mysql \
+-p 3306:3306 \
+-e MYSQL_ROOT_PASSWORD=my-secret-pw \
+-d mysql \
+--default-authentication-plugin=mysql_native_password
+```
+
+## Pushing code the dockerhub
+
+We have automated the creation and deployment of containers to docker hub via a github action. To automaticly trigger the build up to dockerhub the following steps should be taken:
+
+- Ensure that the code that you would like to create the container from is pushed / merged into the `develop` branch.
+- Create a github release and tag it with the appropriate version number ie. `v0.1.3`
+- Go to github actions and view the `push to docker` action to see if everything ran correctly. 
+
