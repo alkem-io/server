@@ -16,9 +16,9 @@ export class UserInput {
   @MaxLength(60)
   lastName?: string;
 
-  @Field({ nullable: true })
+  @Field({ nullable: true , description: 'Email address is required for creating a new user'})
   @MaxLength(120)
-  email?: string;
+  email!: string;
 
   @Field({ nullable: true })
   @MaxLength(120)
@@ -31,6 +31,10 @@ export class UserInput {
   @Field({ nullable: true })
   @MaxLength(120)
   country?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(20)
+  gender?: string;
 
   @Field(() => ProfileInput, { nullable: true })
   profile?: ProfileInput;
@@ -50,9 +54,9 @@ export class BaseUpdateUserInput {
   @MaxLength(60)
   lastName?: string;
 
-  @Field({ nullable: true })
+  @Field({ nullable: true, description: 'Email address is required for creating a new user' })
   @MaxLength(120)
-  email?: string;
+  email!: string;
 
   @Field({ nullable: true })
   @MaxLength(120)
@@ -65,6 +69,10 @@ export class BaseUpdateUserInput {
   @Field({ nullable: true })
   @MaxLength(120)
   country?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(20)
+  gender?: string;
 
   @Field(() => ProfileInput, { nullable: true })
   profile?: ProfileInput;

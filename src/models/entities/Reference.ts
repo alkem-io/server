@@ -20,7 +20,7 @@ export class Reference extends BaseEntity implements IReference {
 
   @Field(() => String)
   @Column('varchar', { length: 300 })
-  description: string;
+  description?: string = '';
 
   @ManyToOne(() => Context, context => context.references)
   context?: Context;
@@ -32,6 +32,6 @@ export class Reference extends BaseEntity implements IReference {
     super();
     this.name = name;
     this.uri = uri;
-    this.description = description;
+    if (description) this.description = description;
   }
 }

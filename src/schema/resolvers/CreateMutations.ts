@@ -1,7 +1,7 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, Tagset, User, UserGroup, Profile } from '../../models';
 import { ChallengeInput, ContextInput, OrganisationInput, UserGroupInput, UserInput } from '../inputs';
-import { EcoverseService, OrganisationService, ProfileService } from '../../services';
+import { EcoverseService, OrganisationService, ProfileService, UserService } from '../../services';
 import Container, { Inject } from 'typedi';
 import {  } from '../../services/OrganisationService';
 import { ApolloError } from 'apollo-server-express';
@@ -28,6 +28,15 @@ export class CreateMutations {
 
   @Mutation(() => User)
   async createUser(@Arg('userData') userData: UserInput): Promise<User> {
+
+    // Check if a user with this email already exists
+    const newUserEmail = userData.email;
+    const userService = Container.get<UserService>('UserService');
+    const existingUser = await userService.getUserByEmail(newUserEmail);
+
+    if (existingUser) throw new ApolloError(`Already have a user with the provided email address: ${newUserEmail}`);
+
+    // Ok to create a new user + save
     const user = User.create(userData);
     await user.save();
 

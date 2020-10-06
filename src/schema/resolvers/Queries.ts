@@ -37,7 +37,7 @@ export class Resolvers {
     return await this._ecoverseService.getName();
   }
 
-  @Query(() => [UserGroup], { nullable: false, description: 'The name for this ecoverse' })
+  @Query(() => UserGroup, { nullable: false, description: 'The members group for this ecoverse' })
   async members(): Promise<IUserGroup> {
 
     return await this._ecoverseService.getMembers();
