@@ -1,31 +1,15 @@
 {
   "compilerOptions": {
-    "target": "es2018",
     "module": "commonjs",
-    "lib": [
-      "es2018",
-      "esnext.asynciterable"
-    ],
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2017",
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
-    "removeComments": true,
-    "strict": true,
     "baseUrl": "./",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
-  },
-  "exclude": [
-    "./node_modules",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
-  "include": [
-    "./src/**/*.ts"
-  ]
+    "incremental": true
+  }
 }
