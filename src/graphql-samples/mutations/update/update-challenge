@@ -1,4 +1,4 @@
-mutation UpdateChallenge($challengeData: RootUpdateChallengeInput!) {
+mutation UpdateChallenge($challengeData: UpdateRootChallengeInput!) {
   updateChallenge(challengeData: $challengeData) {
     name,
     id,
@@ -11,7 +11,7 @@ mutation UpdateChallenge($challengeData: RootUpdateChallengeInput!) {
 
 query variables:
 {
-  "challengeData": 
+  "challengeData":
 {
   	"id": 1,
     "name": "Balance the grid",

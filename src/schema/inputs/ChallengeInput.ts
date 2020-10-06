@@ -1,69 +1,76 @@
 import { MaxLength } from 'class-validator';
 import { Field, InputType } from 'type-graphql';
-import { ContextInput, TagInput, UpdateNestedTagInput, UpdateNestedContextInput, UserGroupInput, UpdateNestedUserGroupInput} from '.';
+import {
+  ContextInput,
+  TagsetInput,
+  UpdateNestedTagsetInput,
+  UpdateNestedContextInput,
+  UserGroupInput,
+  UpdateNestedUserGroupInput,
+} from '.';
 
 @InputType()
 export class ChallengeInput {
+  @Field({ nullable: true })
+  @MaxLength(100)
+  name?: string;
 
-    @Field({ nullable: true })
-    @MaxLength(30)
-    name?: string;
+  @Field({ nullable: true })
+  @MaxLength(255)
+  description?: string;
 
-    @Field({ nullable: true })
-    @MaxLength(255)
-    description?: string;
+  @Field({ nullable: true })
+  @MaxLength(255)
+  lifecyclePhase?: string;
 
-    @Field({ nullable: true })
-    @MaxLength(255)
-    lifecyclePhase?: string;
+  @Field(() => TagsetInput, { nullable: true })
+  tags?: TagsetInput;
 
-    @Field(() => [TagInput], { nullable: true })
-    tags?: TagInput[];
+  @Field(() => ContextInput, { nullable: true })
+  context?: ContextInput;
 
-    @Field(() => ContextInput, { nullable: true })
-    context?: ContextInput;
-    
-    @Field(() => [UserGroupInput], { nullable: true })
-    groups?: UserGroupInput[];
+  @Field(() => TagsetInput, { nullable: true })
+  tagset?: TagsetInput;
+
+  @Field(() => [UserGroupInput], { nullable: true })
+  groups?: UserGroupInput[];
 }
 
 @InputType()
 export class BaseUpdateChallengeInput {
-
-  @Field( { nullable: true } )
+  @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
 
-  @Field( { nullable: true } )
+  @Field({ nullable: true })
   @MaxLength(255)
   description?: string;
 
-  @Field( { nullable: true } )
+  @Field({ nullable: true })
   @MaxLength(255)
   lifecyclePhase?: string;
 
-  @Field(() => [UpdateNestedTagInput], { nullable: true } )
-  tags?: UpdateNestedTagInput[];
+  @Field(() => UpdateNestedTagsetInput, { nullable: true })
+  tags?: UpdateNestedTagsetInput;
 
-  @Field(() => UpdateNestedContextInput, { nullable: true } )
+  @Field(() => UpdateNestedContextInput, { nullable: true })
   context?: UpdateNestedContextInput;
-  
-  @Field(() => [UpdateNestedUserGroupInput], { nullable: true } )
+
+  @Field(() => UpdateNestedTagsetInput, { nullable: true })
+  tagset?: UpdateNestedTagsetInput;
+
+  @Field(() => [UpdateNestedUserGroupInput], { nullable: true })
   groups?: UpdateNestedUserGroupInput[];
 }
 
 @InputType()
 export class UpdateRootChallengeInput extends BaseUpdateChallengeInput {
-
   @Field()
-  id! : number;
-
+  id!: number;
 }
 
 @InputType()
 export class UpdateNestedChallengeInput extends BaseUpdateChallengeInput {
-
-  @Field( { nullable: true } )
-  id? : number;
-
+  @Field({ nullable: true })
+  id?: number;
 }

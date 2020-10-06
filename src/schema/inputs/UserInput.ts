@@ -1,17 +1,12 @@
 import { InputType, Field } from 'type-graphql';
 import { MaxLength } from 'class-validator';
-import { TagInput, UpdateNestedTagInput } from '.';
+import { ProfileInput } from './';
 
 @InputType()
 export class UserInput {
-
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
-
-  @Field({ nullable: true })
-  @MaxLength(120)
-  account?: string;
 
   @Field({ nullable: true })
   @MaxLength(60)
@@ -21,25 +16,35 @@ export class UserInput {
   @MaxLength(60)
   lastName?: string;
 
-  @Field( { nullable: true } )
+  @Field({ nullable: true , description: 'Email address is required for creating a new user'})
   @MaxLength(120)
-  email?: string;
+  email!: string;
 
-  @Field( () => [TagInput], { nullable: true } )
-  tags?: TagInput[];
+  @Field({ nullable: true })
+  @MaxLength(120)
+  phone?: string;
 
+  @Field({ nullable: true })
+  @MaxLength(120)
+  city?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(120)
+  country?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(20)
+  gender?: string;
+
+  @Field(() => ProfileInput, { nullable: true })
+  profile?: ProfileInput;
 }
 
 @InputType()
 export class BaseUpdateUserInput {
-
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;
-
-  @Field({ nullable: true })
-  @MaxLength(120)
-  account?: string;
 
   @Field({ nullable: true })
   @MaxLength(60)
@@ -49,26 +54,38 @@ export class BaseUpdateUserInput {
   @MaxLength(60)
   lastName?: string;
 
-  @Field( { nullable: true } )
+  @Field({ nullable: true, description: 'Email address is required for creating a new user' })
   @MaxLength(120)
-  email?: string;
+  email!: string;
 
-  @Field( () => [UpdateNestedTagInput], { nullable: true } )
-  tags?: UpdateNestedTagInput[];
+  @Field({ nullable: true })
+  @MaxLength(120)
+  phone?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(120)
+  city?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(120)
+  country?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(20)
+  gender?: string;
+
+  @Field(() => ProfileInput, { nullable: true })
+  profile?: ProfileInput;
 }
 
 @InputType()
 export class UpdateRootUserInput extends BaseUpdateUserInput {
-
   @Field()
-  id! : number;
-
+  id!: number;
 }
 
 @InputType()
 export class UpdateNestedUserInput extends BaseUpdateUserInput {
-
-  @Field( { nullable: true } )
-  id? : number;
-
+  @Field({ nullable: true })
+  id?: number;
 }

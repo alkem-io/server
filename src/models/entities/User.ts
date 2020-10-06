@@ -1,53 +1,83 @@
+/* eslint-disable @typescript-eslint/no-inferrable-types */
 import { Field, ID, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { DID, Tag, UserGroup } from '.';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  OneToMany,
+} from 'typeorm';
+import { DID, UserGroup, Profile } from '.';
+import { IUser } from 'src/interfaces/IUser';
 
 @Entity()
 @ObjectType()
-export class User extends BaseEntity {
-    @Field(() => ID)
-    @PrimaryGeneratedColumn()
-    id!: number;
+export class User extends BaseEntity implements IUser {
+  @Field(() => ID)
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-    @Field(() => String)
-    @Column()
-    name: string;
+  @Field(() => String)
+  @Column()
+  name: string;
 
-    @Column(() => String)
-    account = '';
+  @Field(() => String)
+  @Column()
+  firstName: string = '';
 
-    @Field(() => String)
-    @Column(() => String)
-    firstName = '';
+  @Field(() => String)
+  @Column()
+  lastName: string = '';
 
-    @Field(() => String)
-    @Column(() => String)
-    lastName = '';
+  @Field(() => String)
+  @Column()
+  email: string = '';
 
-    @Field(() => String)
-    @Column(() => String)
-    email = '';
+  @Field(() => String)
+  @Column()
+  phone: string = '';
 
-    @OneToOne(() => DID)
-    @JoinColumn()
-    DID!: DID;
+  @Field(() => String)
+  @Column()
+  city: string = '';
 
-    @ManyToMany(
-        () => UserGroup,
-        userGroup => userGroup.members
-    )
-    userGroup?: UserGroup;
+  @Field(() => String)
+  @Column()
+  country: string = '';
 
-    @Field(() => [Tag], { nullable: true })
-    @ManyToMany(
-        () => Tag,
-        tag => tag.users,
-        { eager: true, cascade: true })
-    @JoinTable()
-    tags?: Tag[];
+  @Field(() => String)
+  @Column()
+  gender: string = '';
 
-    constructor(name: string) {
-        super();
-        this.name = name;
-    }
+  @OneToOne(() => DID)
+  @JoinColumn()
+  DID!: DID;
+
+  @ManyToMany(() => UserGroup, userGroup => userGroup.members)
+  userGroups?: UserGroup[];
+
+  @OneToMany(() => UserGroup, userGroup => userGroup.focalPoint, { eager: false, cascade: true })
+  focalPoints?: UserGroup[];
+
+  @Field(() => Profile, { nullable: true, description: 'The profile for the user' })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @JoinColumn()
+  profile: Profile;
+
+  constructor(name: string) {
+    super();
+    this.name = name;
+    this.profile = new Profile();
+    this.profile.initialiseMembers();
+  }
+
+  // Helper method to ensure all members are initialised properly.
+  // Note: has to be a seprate call due to restrictions from ORM.
+  initialiseMembers(): User {
+    return this;
+  }
+
 }

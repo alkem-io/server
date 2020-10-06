@@ -1,12 +1,24 @@
 import { InputType, Field } from 'type-graphql';
-import { TagInput, ChallengeInput, OrganisationInput, UserGroupInput, ContextInput, UserInput, UpdateNestedChallengeInput, UpdateNestedOrganisationInput, UpdateNestedUserInput, UpdateNestedUserGroupInput, UpdateNestedContextInput, UpdateNestedTagInput } from '.';
+import {
+  TagsetInput,
+  ChallengeInput,
+  OrganisationInput,
+  UserGroupInput,
+  ContextInput,
+  UserInput,
+  UpdateNestedChallengeInput,
+  UpdateNestedOrganisationInput,
+  UpdateNestedUserInput,
+  UpdateNestedUserGroupInput,
+  UpdateNestedContextInput,
+  UpdateNestedTagsetInput,
+} from '.';
 import { MaxLength } from 'class-validator';
 
 @InputType()
 export class EcoverseInput {
-
   @Field({ nullable: true })
-  @MaxLength(30)
+  @MaxLength(100)
   name?: string;
 
   @Field(() => [ChallengeInput], { nullable: true })
@@ -24,20 +36,21 @@ export class EcoverseInput {
   @Field({ nullable: true })
   context?: ContextInput;
 
-  @Field( () => [TagInput], { nullable: true } )
-  tags?: TagInput[];
-
+  @Field(() => TagsetInput, { nullable: true })
+  tagset?: TagsetInput;
 }
 
 @InputType()
 export class UpdateEcoverseInput {
-
   @Field({ nullable: true })
-  @MaxLength(30)
+  @MaxLength(100)
   name?: string;
 
   @Field(() => [UpdateNestedChallengeInput], { nullable: true })
   challenges?: UpdateNestedChallengeInput[];
+
+  @Field(() => UpdateNestedOrganisationInput, { nullable: true })
+  host?: UpdateNestedOrganisationInput;
 
   @Field(() => [UpdateNestedOrganisationInput], { nullable: true })
   partners?: UpdateNestedOrganisationInput[];
@@ -51,7 +64,6 @@ export class UpdateEcoverseInput {
   @Field({ nullable: true })
   context?: UpdateNestedContextInput;
 
-  @Field( () => [UpdateNestedTagInput], { nullable: true } )
-  tags?: UpdateNestedTagInput[];
-
+  @Field(() => UpdateNestedTagsetInput, { nullable: true })
+  tags?: UpdateNestedTagsetInput;
 }

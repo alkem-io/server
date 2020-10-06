@@ -2,7 +2,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ develop ]
 
 jobs:
     build-and-deploy:
@@ -24,8 +24,8 @@ jobs:
             username: ${{ secrets.REGISTRY_USERNAME }}
             password: ${{ secrets.REGISTRY_PASSWORD }}
         - run: |
-            docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest
-            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest
+            docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }} -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest
+            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }}
 
         - uses: Azure/aks-set-context@v1
           with:
@@ -43,8 +43,9 @@ jobs:
         - uses: Azure/k8s-deploy@v1
           with:
             manifests: |
-              manifests/deployment.yml
+              manifests/25-server-deployment.yaml
+              manifests/30-server-service.yaml
             images: |
-              ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest
+              ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }}
             imagepullsecrets: |
               ct-server-secret

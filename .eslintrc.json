@@ -1,19 +1,31 @@
 {
   "root": true,
   "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
   "plugins": [
+    "jest",
     "@typescript-eslint"
   ],
   "extends": [
-    "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended"
+    "plugin:@typescript-eslint/recommended",
+    "prettier",
+    "prettier/@typescript-eslint",
+    "plugin:jest/recommended"
   ],
   "rules": {
     "quotes": [
       "error",
       "single"
     ],
-    "no-multiple-empty-lines": "error"
+    "no-multiple-empty-lines": "error",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ]
   }
 }
