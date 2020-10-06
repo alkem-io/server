@@ -1,4 +1,4 @@
-import { EcoverseService } from '../../services/EcoverseService';
+import { EcoverseService, UserService } from '../../services';
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { Challenge, Context, Ecoverse, Organisation, User, UserGroup, Tagset } from '../../models';
 import { UpdateEcoverseInput, UpdateRootChallengeInput, UpdateRootContextInput, UpdateRootOrganisationInput, UpdateRootUserGroupInput, UpdateRootUserInput } from '../inputs';
@@ -6,6 +6,7 @@ import Container, { Inject } from 'typedi';
 import { TagsetService } from 'src/services';
 import { ApolloError } from 'apollo-server-express';
 import { TagsInput } from '../inputs/TagsInput';
+//import { performance } from 'perf_hooks';
 
 
 @Resolver()
@@ -21,26 +22,38 @@ export class UpdateMutations {
 
   @Mutation(() => UserGroup)
   async addUserToGroup(@Arg('userID') userID: number, @Arg('groupID') groupID: number): Promise<UserGroup> {
-    //console.log(`Adding user (${userID}) to group (${groupID})`);
+    const userService = Container.get<UserService>('UserService');
+
+    //const t0 = performance.now()
     // Try to find the user + groups
-    const user = await User.findOne(userID);
+    const user = await userService.getUser(userID);
+
     if (!user) {
-      const msg = `Unable to find user with ID: ${userID}`;
+      const msg = `Unable to find exactly one user with ID: ${userID}`;
       console.log(msg);
       throw new Error(msg);
     }
 
-    const group = await UserGroup.findOne(groupID);
+    //const t1 = performance.now()
+    const group = await UserGroup.findOne({ where: [ { id: groupID } ] });
+
     if (!group) {
-      const msg = `Unable to find gropu with ID: ${groupID}`;
+      const msg = `Unable to find group with ID: ${groupID}`;
       console.log(msg);
       throw new Error(msg);
     }
+    //const t2 = performance.now()
 
     // Have both user + group so do the add
     group.addUserToGroup(user);
+    //const t3 = performance.now()
     await group.save();
 
+    //const delta1 = t0 - t1;
+    //const delta2 = t2 - t1;
+    //const delta3 = t3 - t2;
+    //const msg = `AddUserToGroup deltas: ${delta1}, ${delta2}, ${delta3}`;
+    //console.log(`AddUserToGroup deltas: ${delta1}, ${delta2}, ${delta3}`);
     return group;
   }
 

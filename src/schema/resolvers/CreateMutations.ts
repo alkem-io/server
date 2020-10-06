@@ -1,5 +1,5 @@
 import { Arg, Mutation, Resolver } from 'type-graphql';
-import { Challenge, Context, Ecoverse, Organisation, Tagset, User, UserGroup, Profile } from '../../models';
+import { Challenge, Context, Ecoverse, Organisation, Tagset, User, UserGroup } from '../../models';
 import { ChallengeInput, ContextInput, OrganisationInput, UserGroupInput, UserInput } from '../inputs';
 import { EcoverseService, OrganisationService, ProfileService, UserService } from '../../services';
 import Container, { Inject } from 'typedi';
@@ -99,20 +99,20 @@ export class CreateMutations {
     return organisation;
   }
 
-  @Mutation(() => Profile, { description: 'Creates a new tagset with the specified name for the profile with given id' })
+  @Mutation(() => Tagset, { description: 'Creates a new tagset with the specified name for the profile with given id' })
   async createTagsetOnProfile(
     @Arg('profileID') profileID: number,
     @Arg('tagsetName') tagsetName: string
-  ): Promise<Profile> {
+  ): Promise<Tagset> {
     const profileService = Container.get<ProfileService>('ProfileService');
     const profile = await profileService.getProfile(profileID);
 
     if (!profile) throw new ApolloError(`Profile with id(${profileID}) not found!`);
 
-    Tagset.addTagsetWithName(profile, tagsetName);
+    const tagset = Tagset.addTagsetWithName(profile, tagsetName);
     await profile.save();
 
-    return profile;
+    return tagset;
   }
 
   @Mutation(() => Organisation)
