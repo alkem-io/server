@@ -8,13 +8,21 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "skipFiles": [
-                "<node_internals>/**"
+            "args": [
+                "${workspaceFolder}/src/main.ts"
             ],
-            "program": "${workspaceFolder}/start",
-            "preLaunchTask": "tsc: build - tsconfig.json",
-            "outFiles": [
-                "${workspaceFolder}/dist/**/*.js"
+            "envFile": "${workspaceFolder}/.env",
+            "runtimeArgs": [
+                "ts-node/register",
+                "-r",
+                "tsconfig-paths/register"
+            ],
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "tsc: watch - tsconfig.build.json",
+            "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+            "skipFiles": [
+              "${workspaceFolder}/node_modules/**/*.js",
+              "<node_internals>/**/*.js"
             ]
         },
         {
