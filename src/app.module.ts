@@ -34,7 +34,7 @@ import { join } from 'path';
         database: 'cherrytwist',
         entities: [join(__dirname, '**', '*.entity.{ts,js}')], // https://stackoverflow.com/questions/59435293/typeorm-entity-in-nestjs-cannot-use-import-statement-outside-a-module
         synchronize: true,
-      },
+      }
     ),
     AuthenticationModule,
     AgreementModule,

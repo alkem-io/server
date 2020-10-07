@@ -9,12 +9,12 @@ import { UserService } from '../../domain/user/user.service';
 @Injectable()
 export class AzureADStrategy extends PassportStrategy(
   BearerStrategy,
-  'azure-ad',
+  'azure-ad'
 ) {
   constructor(
     @Inject(aadConfig.KEY)
     private azureConfig: ConfigType<typeof aadConfig>,
-    private userService: UserService,
+    private userService: UserService
   ) {
     super(
       //   //toDo fix this
@@ -31,14 +31,14 @@ export class AzureADStrategy extends PassportStrategy(
         loggingLevel: 'debug',
         scope: ['Cherrytwist-GraphQL'],
         loggingNoPII: false,
-      },
+      }
     );
   }
 
   async validate(
     _req: Request,
     token: IExtendedTokenPayload,
-    done: CallableFunction,
+    done: CallableFunction
   ): Promise<any> {
     try {
       if (!token.email) throw 'token email missing';

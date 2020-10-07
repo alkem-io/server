@@ -30,7 +30,7 @@ export class Reference extends BaseEntity implements IReference {
 
   @ManyToOne(
     () => Context,
-    context => context.references,
+    context => context.references
   )
   context?: Context;
 

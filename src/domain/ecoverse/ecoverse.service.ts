@@ -15,7 +15,7 @@ export class EcoverseService {
   constructor(
     private userGroupService: UserGroupService,
     @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>,
+    private ecoverseRepository: Repository<Ecoverse>
   ) {}
 
   // Populate an empty ecoverse
@@ -31,11 +31,11 @@ export class EcoverseService {
     const adminUser = new User('admin');
     const admins = await this.userGroupService.getGroupByName(
       ecoverse,
-      RestrictedGroupNames.Admins,
+      RestrictedGroupNames.Admins
     );
     const members = await this.userGroupService.getGroupByName(
       ecoverse,
-      RestrictedGroupNames.Members,
+      RestrictedGroupNames.Members
     );
     this.userGroupService.addUserToGroup(adminUser, admins);
     this.userGroupService.addUserToGroup(adminUser, members);
@@ -60,7 +60,7 @@ export class EcoverseService {
     // Check that the mandatory groups for a challenge are created
     await this.userGroupService.addMandatoryGroups(
       ecoverse,
-      ecoverse.restrictedGroupNames,
+      ecoverse.restrictedGroupNames
     );
 
     if (!ecoverse.tags) {
@@ -107,7 +107,7 @@ export class EcoverseService {
       const ecoverse = (await this.getEcoverse()) as Ecoverse;
       const membersGroup = await this.userGroupService.getGroupByName(
         ecoverse,
-        RestrictedGroupNames.Members,
+        RestrictedGroupNames.Members
       );
 
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
