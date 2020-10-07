@@ -18,6 +18,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
 import aadConfig from './config/aad.config';
 import databaseConfig from './config/database.config';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -31,7 +32,7 @@ import databaseConfig from './config/database.config';
         password: 'toor',
         insecureAuth: true,
         database: 'cherrytwist',
-        entities: ['src/**/*.entity.ts'],
+        entities: [join(__dirname, '**', '*.entity.{ts,js}')], // https://stackoverflow.com/questions/59435293/typeorm-entity-in-nestjs-cannot-use-import-statement-outside-a-module
         synchronize: true,
       },
     ),
