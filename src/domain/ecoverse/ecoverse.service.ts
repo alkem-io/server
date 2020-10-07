@@ -23,7 +23,8 @@ export class EcoverseService {
     // Create new Ecoverse
     this.initialiseMembers(ecoverse);
     ecoverse.name = 'Empty ecoverse';
-    (ecoverse.context as IContext).tagline = 'An empty ecoverse to be populated';
+    (ecoverse.context as IContext).tagline =
+      'An empty ecoverse to be populated';
     (ecoverse.host as IOrganisation).name = 'Default host organisation';
 
     // Find the admin user and put that person in as member + admin

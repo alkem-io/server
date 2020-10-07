@@ -19,11 +19,13 @@ export class AzureADStrategy extends PassportStrategy(
     super(
       //   //toDo fix this
       {
-        identityMetadata: `https://login.microsoftonline.com/22e3aada-5a09-4e2b-9e0e-dc4f02328b29/v2.0/.well-known/openid-configuration`,
+        identityMetadata:
+          'https://login.microsoftonline.com/22e3aada-5a09-4e2b-9e0e-dc4f02328b29/v2.0/.well-known/openid-configuration',
         clientID: '869e0dc2-907e-45fe-841f-34cc93beee63',
         validateIssuer: true,
         passReqToCallback: true,
-        issuer: `https://login.microsoftonline.com/22e3aada-5a09-4e2b-9e0e-dc4f02328b29/v2.0`,
+        issuer:
+          'https://login.microsoftonline.com/22e3aada-5a09-4e2b-9e0e-dc4f02328b29/v2.0',
         audience: '869e0dc2-907e-45fe-841f-34cc93beee63',
         allowMultiAudiencesInToken: false,
         loggingLevel: 'debug',
