@@ -7,6 +7,6 @@ import { ChallengeResolver } from './challenge.resolver';
 @Module({
   providers: [ChallengeService, UserGroupService, ChallengeResolver],
   imports: [UserGroupModule],
-  exports: [ChallengeService]
+  exports: [ChallengeService],
 })
 export class ChallengeModule {}

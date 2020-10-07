@@ -1,5 +1,5 @@
-import { IDID } from "src/did/did.interface";
-import { ITag } from "src/tag/tag.interface";
+import { IDID } from 'src/did/did.interface';
+import { ITag } from 'src/tag/tag.interface';
 
 export interface IUser {
   id: number;

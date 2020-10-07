@@ -1,10 +1,10 @@
-import { IChallenge } from "src/challenge/challenge.interface";
-import { IContext } from "src/context/context.interface";
-import { IDID } from "src/did/did.interface";
-import { IOrganisation } from "src/organisation/organisation.interface";
-import { ITag } from "src/tag/tag.interface";
-import { IUserGroup } from "src/user-group/user-group.interface";
-import { IUser } from "src/user/user.interface";
+import { IChallenge } from 'src/challenge/challenge.interface';
+import { IContext } from 'src/context/context.interface';
+import { IDID } from 'src/did/did.interface';
+import { IOrganisation } from 'src/organisation/organisation.interface';
+import { ITag } from 'src/tag/tag.interface';
+import { IUserGroup } from 'src/user-group/user-group.interface';
+import { IUser } from 'src/user/user.interface';
 
 export interface IEcoverse {
   id: number;

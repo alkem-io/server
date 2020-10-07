@@ -6,7 +6,13 @@ import { Organisation } from 'src/organisation/organisation.entity';
 import { Project } from 'src/project/project.entity';
 import { UserGroup } from 'src/user-group/user-group.entity';
 import { User } from 'src/user/user.entity';
-import { BaseEntity, Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { ITag } from './tag.interface';
 
 @Entity()
@@ -20,25 +26,46 @@ export class Tag extends BaseEntity implements ITag {
   @Column()
   name: string;
 
-  @ManyToMany(() => Challenge, challenge => challenge.tags)
+  @ManyToMany(
+    () => Challenge,
+    challenge => challenge.tags,
+  )
   challenges?: Challenge;
 
-  @ManyToMany(() => Project, project => project.tags)
+  @ManyToMany(
+    () => Project,
+    project => project.tags,
+  )
   projects?: Project;
 
-  @ManyToMany(() => Organisation, organisation => organisation.tags)
+  @ManyToMany(
+    () => Organisation,
+    organisation => organisation.tags,
+  )
   organisations?: Organisation;
 
-  @ManyToMany(() => Ecoverse, ecoverse => ecoverse.tags)
+  @ManyToMany(
+    () => Ecoverse,
+    ecoverse => ecoverse.tags,
+  )
   ecoverses?: Ecoverse[];
 
-  @ManyToMany(() => User, user => user.tags)
+  @ManyToMany(
+    () => User,
+    user => user.tags,
+  )
   users?: User;
 
-  @ManyToMany(() => UserGroup, userGroup => userGroup.tags)
+  @ManyToMany(
+    () => UserGroup,
+    userGroup => userGroup.tags,
+  )
   userGroups?: UserGroup;
 
-  @ManyToMany(() => Agreement, agreement => agreement.tags)
+  @ManyToMany(
+    () => Agreement,
+    agreement => agreement.tags,
+  )
   agreements?: Agreement[];
 
   constructor(name: string) {

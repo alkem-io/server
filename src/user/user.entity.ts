@@ -46,14 +46,25 @@ export class User extends BaseEntity implements IUser {
   @JoinColumn()
   DID!: DID;
 
-  @ManyToMany(() => UserGroup, userGroup => userGroup.members)
+  @ManyToMany(
+    () => UserGroup,
+    userGroup => userGroup.members,
+  )
   userGroups?: UserGroup[];
 
-  @OneToMany(() => UserGroup, userGroup => userGroup.focalPoint, { eager: false, cascade: true })
+  @OneToMany(
+    () => UserGroup,
+    userGroup => userGroup.focalPoint,
+    { eager: false, cascade: true },
+  )
   focalPoints?: UserGroup[];
 
   @Field(() => [Tag], { nullable: true })
-  @ManyToMany(() => Tag, tag => tag.users, { eager: true, cascade: true })
+  @ManyToMany(
+    () => Tag,
+    tag => tag.users,
+    { eager: true, cascade: true },
+  )
   @JoinTable({ name: 'user_tag' })
   tags?: Tag[];
 

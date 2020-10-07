@@ -31,12 +31,18 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @Column('varchar', { length: 100 })
   name: string;
 
-  @Field(() => Organisation, { nullable: true, description: 'The organisation that hosts this Ecoverse instance' })
+  @Field(() => Organisation, {
+    nullable: true,
+    description: 'The organisation that hosts this Ecoverse instance',
+  })
   @OneToOne(() => Organisation, { eager: true, cascade: true })
   @JoinColumn()
   host: Organisation;
 
-  @Field(() => Context, { nullable: true, description: 'The shared understanding for the Ecoverse' })
+  @Field(() => Context, {
+    nullable: true,
+    description: 'The shared understanding for the Ecoverse',
+  })
   @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
   context: Context;
@@ -47,28 +53,53 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   DID!: DID;
 
   @Field(() => [UserGroup], { nullable: true })
-  @OneToMany(() => UserGroup, userGroup => userGroup.ecoverse, { eager: true, cascade: true })
+  @OneToMany(
+    () => UserGroup,
+    userGroup => userGroup.ecoverse,
+    { eager: true, cascade: true },
+  )
   groups?: UserGroup[];
 
   @Field(() => [Organisation], {
     nullable: true,
-    description: 'The set of partner organisations associated with this Ecoverse',
+    description:
+      'The set of partner organisations associated with this Ecoverse',
   })
-  @ManyToMany(() => Organisation, organisation => organisation.ecoverses, { eager: true, cascade: true })
+  @ManyToMany(
+    () => Organisation,
+    organisation => organisation.ecoverses,
+    { eager: true, cascade: true },
+  )
   @JoinTable({
     name: 'ecoverse_partner',
     joinColumns: [{ name: 'ecoverseId', referencedColumnName: 'id' }],
-    inverseJoinColumns: [{ name: 'organisationId', referencedColumnName: 'id' }],
+    inverseJoinColumns: [
+      { name: 'organisationId', referencedColumnName: 'id' },
+    ],
   })
   partners?: Organisation[];
 
   //
-  @Field(() => [Challenge], { nullable: true, description: 'The Challenges hosted by the Ecoverse' })
-  @OneToMany(() => Challenge, challenge => challenge.ecoverse, { eager: true, cascade: true })
+  @Field(() => [Challenge], {
+    nullable: true,
+    description: 'The Challenges hosted by the Ecoverse',
+  })
+  @OneToMany(
+    () => Challenge,
+    challenge => challenge.ecoverse,
+    { eager: true, cascade: true },
+  )
   challenges?: Challenge[];
 
-  @Field(() => [Tag], { nullable: true, description: 'Set of restricted tags that are used within this ecoverse' })
-  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
+  @Field(() => [Tag], {
+    nullable: true,
+    description: 'Set of restricted tags that are used within this ecoverse',
+  })
+  @ManyToMany(
+    () => Tag,
+    tag => tag.ecoverses,
+    { eager: true, cascade: true },
+  )
   @JoinTable({ name: 'ecoverse_tag' })
   tags?: Tag[];
 

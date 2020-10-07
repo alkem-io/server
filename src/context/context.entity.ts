@@ -1,7 +1,14 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Challenge } from 'src/challenge/challenge.entity';
 import { Reference } from 'src/reference/reference.entity';
-import { BaseEntity, Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { IContext } from './context.interface';
 
 @Entity()
@@ -11,31 +18,56 @@ export class Context extends BaseEntity implements IContext {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Field(() => String, { nullable: true, description: 'A one line description' })
+  @Field(() => String, {
+    nullable: true,
+    description: 'A one line description',
+  })
   @Column('varchar', { length: 250 })
   tagline?: string = '';
 
-  @Field(() => String, { nullable: true, description: 'A detailed description of the current situation' })
+  @Field(() => String, {
+    nullable: true,
+    description: 'A detailed description of the current situation',
+  })
   @Column('varchar', { length: 2000 })
   background?: string = '';
 
-  @Field(() => String, { nullable: true, description: 'The goal that is being pursued' })
+  @Field(() => String, {
+    nullable: true,
+    description: 'The goal that is being pursued',
+  })
   @Column('varchar', { length: 2000 })
   vision?: string = '';
 
-  @Field(() => String, { nullable: true, description: 'What is the potential impact?' })
+  @Field(() => String, {
+    nullable: true,
+    description: 'What is the potential impact?',
+  })
   @Column('varchar', { length: 2000 })
   impact?: string = '';
 
-  @Field(() => String, { nullable: true, description: 'Who should get involved in this challenge' })
+  @Field(() => String, {
+    nullable: true,
+    description: 'Who should get involved in this challenge',
+  })
   @Column('varchar', { length: 2000 })
   who?: string = '';
 
-  @OneToOne(() => Challenge, challenge => challenge.context)
+  @OneToOne(
+    () => Challenge,
+    challenge => challenge.context,
+  )
   context?: Context;
 
-  @Field(() => [Reference], { nullable: true, description: 'A list of URLs to relevant information.' })
-  @OneToMany(() => Reference, reference => reference.context, { eager: true, cascade: true })
+  @Field(() => [Reference], {
+    nullable: true,
+    description: 'A list of URLs to relevant information.',
+  })
+  @OneToMany(
+    () => Reference,
+    reference => reference.context,
+    { eager: true, cascade: true },
+  )
   references?: Reference[];
 
   // Constructor

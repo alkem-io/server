@@ -1,5 +1,5 @@
-import { IReference } from "src/reference/reference.interface";
-import { ITag } from "src/tag/tag.interface";
+import { IReference } from 'src/reference/reference.interface';
+import { ITag } from 'src/tag/tag.interface';
 
 export interface IContext {
   id: number;

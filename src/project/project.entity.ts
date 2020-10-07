@@ -31,21 +31,36 @@ export class Project extends BaseEntity implements IProject {
 
   @Field(() => String, {
     nullable: true,
-    description: 'The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc',
+    description:
+      'The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc',
   })
   @Column({ nullable: true })
   lifecyclePhase?: string;
 
-  @Field(() => [Tag], { nullable: true, description: 'The set of tags for this Project' })
-  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
+  @Field(() => [Tag], {
+    nullable: true,
+    description: 'The set of tags for this Project',
+  })
+  @ManyToMany(
+    () => Tag,
+    tag => tag.ecoverses,
+    { eager: true, cascade: true },
+  )
   @JoinTable({ name: 'project_tag' })
   tags?: Tag[];
 
   //@Field(() => [Agreement])
-  @OneToMany(() => Agreement, agreement => agreement.project, { eager: true, cascade: true })
+  @OneToMany(
+    () => Agreement,
+    agreement => agreement.project,
+    { eager: true, cascade: true },
+  )
   agreements?: Agreement[];
 
-  @ManyToOne(() => Challenge, challenge => challenge.projects)
+  @ManyToOne(
+    () => Challenge,
+    challenge => challenge.projects,
+  )
   challenge?: Challenge;
 
   constructor(name: string) {

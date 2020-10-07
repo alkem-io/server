@@ -24,16 +24,16 @@ import databaseConfig from './config/database.config';
     TypeOrmModule.forRoot(
       // databaseConfig as TypeOrmModuleOptions
       {
-      type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
-      password: 'toor',
-      insecureAuth: true,
-      database: 'cherrytwist',
-      entities: ['src/**/*.entity.ts'],
-      synchronize: true,
-    }
+        type: 'mysql',
+        host: 'localhost',
+        port: 3306,
+        username: 'root',
+        password: 'toor',
+        insecureAuth: true,
+        database: 'cherrytwist',
+        entities: ['src/**/*.entity.ts'],
+        synchronize: true,
+      },
     ),
     AuthenticationModule,
     AgreementModule,
@@ -49,12 +49,12 @@ import databaseConfig from './config/database.config';
     UserGroupModule,
     GraphQLModule.forRoot({
       autoSchemaFile: 'schema.gql',
-      playground: true
+      playground: true,
     }),
     ConfigModule.forRoot({
       envFilePath: ['.env.default'],
       isGlobal: true,
-      load: [aadConfig, databaseConfig]
+      load: [aadConfig, databaseConfig],
     }),
   ],
   controllers: [AppController],

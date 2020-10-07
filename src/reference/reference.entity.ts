@@ -1,5 +1,11 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { BaseEntity, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { IReference } from './reference.interface';
 import { Context } from 'src/context/context.entity';
 
@@ -22,7 +28,10 @@ export class Reference extends BaseEntity implements IReference {
   @Column('varchar', { length: 300 })
   description: string;
 
-  @ManyToOne(() => Context, context => context.references)
+  @ManyToOne(
+    () => Context,
+    context => context.references,
+  )
   context?: Context;
 
   constructor(name: string, uri: string, description: string) {

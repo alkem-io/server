@@ -11,31 +11,42 @@ import { EcoverseService } from './ecoverse.service';
 
 @Resolver()
 export class EcoverseResolver {
-    constructor(
-        @Inject(EcoverseService) private ecoverseService: EcoverseService
-      ) { }
+  constructor(
+    @Inject(EcoverseService) private ecoverseService: EcoverseService,
+  ) {}
 
-    @Query(() => String, { nullable: false, description: 'The name for this ecoverse' })
-    async name(): Promise<string> {
-      return this.ecoverseService.getName();
-    }
+  @Query(() => String, {
+    nullable: false,
+    description: 'The name for this ecoverse',
+  })
+  async name(): Promise<string> {
+    return this.ecoverseService.getName();
+  }
 
-    @Query(() => [UserGroup], { nullable: false, description: 'The name for this ecoverse' })
-    async members(): Promise<IUserGroup> {
-  
-      return this.ecoverseService.getMembers();
-    }
+  @Query(() => [UserGroup], {
+    nullable: false,
+    description: 'The name for this ecoverse',
+  })
+  async members(): Promise<IUserGroup> {
+    return this.ecoverseService.getMembers();
+  }
 
-    @Get()
-    @UseGuards(GqlAuthGuard)
-    @Query(() => Organisation, { nullable: false, description: 'The host organisation for the ecoverse' })
-    async host(): Promise<IOrganisation> {
-      return this.ecoverseService.getHost();
-    }
-  
-    // Context related fields
-    @Query(() => Context, { nullable: false, description: 'The shared understanding for this ecoverse' })
-    async context(): Promise<IContext> {
-      return this.ecoverseService.getContext();
-    }
+  @Get()
+  @UseGuards(GqlAuthGuard)
+  @Query(() => Organisation, {
+    nullable: false,
+    description: 'The host organisation for the ecoverse',
+  })
+  async host(): Promise<IOrganisation> {
+    return this.ecoverseService.getHost();
+  }
+
+  // Context related fields
+  @Query(() => Context, {
+    nullable: false,
+    description: 'The shared understanding for this ecoverse',
+  })
+  async context(): Promise<IContext> {
+    return this.ecoverseService.getContext();
+  }
 }

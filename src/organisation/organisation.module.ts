@@ -7,6 +7,6 @@ import { OrganisationResolver } from './organisation.resolver';
 @Module({
   providers: [OrganisationService, UserGroupService, OrganisationResolver],
   imports: [UserGroupModule],
-  exports: [OrganisationService]
+  exports: [OrganisationService],
 })
 export class OrganisationModule {}

@@ -4,6 +4,6 @@ import { UserGroupResolver } from './user-group.resolver';
 
 @Module({
   providers: [UserGroupService, UserGroupResolver],
-  exports: [UserGroupService]
+  exports: [UserGroupService],
 })
 export class UserGroupModule {}

@@ -4,7 +4,10 @@ import { DID } from 'src/did/did.entity';
 import { Ecoverse } from 'src/ecoverse/ecoverse.entity';
 import { IGroupable } from 'src/interfaces/groupable.interface';
 import { Tag } from 'src/tag/tag.entity';
-import { RestrictedGroupNames, UserGroup } from 'src/user-group/user-group.entity';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from 'src/user-group/user-group.entity';
 import { User } from 'src/user/user.entity';
 import {
   BaseEntity,
@@ -21,7 +24,8 @@ import { IOrganisation } from './organisation.interface';
 
 @Entity()
 @ObjectType()
-export class Organisation extends BaseEntity implements IOrganisation, IGroupable {
+export class Organisation extends BaseEntity
+  implements IOrganisation, IGroupable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -34,25 +38,51 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
   @JoinColumn()
   DID!: DID;
 
-  @OneToOne(() => Ecoverse, ecoverse => ecoverse.host)
+  @OneToOne(
+    () => Ecoverse,
+    ecoverse => ecoverse.host,
+  )
   hostedEcoverse?: Ecoverse;
 
-  @ManyToMany(() => Ecoverse, ecoverse => ecoverse.partners)
+  @ManyToMany(
+    () => Ecoverse,
+    ecoverse => ecoverse.partners,
+  )
   ecoverses?: Ecoverse[];
 
-  @Field(() => [Tag], { nullable: true, description: 'The set of tags applied to this organisation.' })
-  @ManyToMany(() => Tag, tag => tag.ecoverses, { eager: true, cascade: true })
+  @Field(() => [Tag], {
+    nullable: true,
+    description: 'The set of tags applied to this organisation.',
+  })
+  @ManyToMany(
+    () => Tag,
+    tag => tag.ecoverses,
+    { eager: true, cascade: true },
+  )
   @JoinTable({ name: 'organisation_tag' })
   tags?: Tag[];
 
-  @Field(() => [User], { nullable: true, description: 'The set of users that are associated with this organisation' })
+  @Field(() => [User], {
+    nullable: true,
+    description: 'The set of users that are associated with this organisation',
+  })
   members?: User[];
 
-  @Field(() => [UserGroup], { nullable: true, description: 'Groups of users related to an organisation.' })
-  @OneToMany(() => UserGroup, userGroup => userGroup.organisation, { eager: false, cascade: true })
+  @Field(() => [UserGroup], {
+    nullable: true,
+    description: 'Groups of users related to an organisation.',
+  })
+  @OneToMany(
+    () => UserGroup,
+    userGroup => userGroup.organisation,
+    { eager: false, cascade: true },
+  )
   groups?: UserGroup[];
 
-  @ManyToMany(() => Challenge, challenge => challenge.challengeLeads)
+  @ManyToMany(
+    () => Challenge,
+    challenge => challenge.challengeLeads,
+  )
   challenges!: Challenge[];
 
   // The restricted group names at the challenge level
@@ -66,5 +96,4 @@ export class Organisation extends BaseEntity implements IOrganisation, IGroupabl
 
   // Helper method to ensure all members are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
-
 }

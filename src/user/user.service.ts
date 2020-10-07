@@ -4,8 +4,7 @@ import { IUser } from './user.interface';
 
 @Injectable()
 export class UserService {
-    
-    async findUserByEmail(email: string): Promise<IUser | undefined>{
-        return User.findOne({ email: email });
-    }
+  async findUserByEmail(email: string): Promise<IUser | undefined> {
+    return User.findOne({ email: email });
+  }
 }

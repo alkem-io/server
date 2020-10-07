@@ -10,8 +10,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Ecoverse } from './ecoverse.entity';
 
 @Module({
-  providers: [EcoverseService, UserGroupService, EcoverseResolver, AzureADStrategy],
-  imports: [UserGroupModule, AuthenticationModule, UserModule, TypeOrmModule.forFeature([Ecoverse])],
-  exports: [EcoverseService]
+  providers: [
+    EcoverseService,
+    UserGroupService,
+    EcoverseResolver,
+    AzureADStrategy,
+  ],
+  imports: [
+    UserGroupModule,
+    AuthenticationModule,
+    UserModule,
+    TypeOrmModule.forFeature([Ecoverse]),
+  ],
+  exports: [EcoverseService],
 })
 export class EcoverseModule {}

@@ -1,5 +1,5 @@
-import { ITag } from "src/tag/tag.interface";
-import { IUser } from "src/user/user.interface";
+import { ITag } from 'src/tag/tag.interface';
+import { IUser } from 'src/user/user.interface';
 
 export interface IUserGroup {
   id: number;

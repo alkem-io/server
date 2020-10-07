@@ -2,6 +2,6 @@ import { Module } from '@nestjs/common';
 import { ContextResolver } from './context.resolver';
 
 @Module({
-  providers: [ContextResolver]
+  providers: [ContextResolver],
 })
 export class ContextModule {}
