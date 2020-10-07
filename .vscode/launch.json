@@ -13,6 +13,7 @@
             ],
             "envFile": "${workspaceFolder}/.env",
             "runtimeArgs": [
+                "-r",
                 "ts-node/register",
                 "-r",
                 "tsconfig-paths/register"
