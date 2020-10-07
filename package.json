@@ -5,13 +5,16 @@
   "author": "",
   "private": true,
   "license": "EUPL",
+  "main": "src/main.ts",
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
+    "start": "nodemon -w src --ext ts --exec ts-node src/main.ts",
+    "start-local": "nodemon -w src --ext ts --exec ts-node -r dotenv/config src/main.ts",
+    "start-nest": "nest start",
+    "start-nest:dev": "nest start --watch",
+    "start-nest:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
@@ -37,7 +40,8 @@
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^6.6.3",
-    "typeorm": "^0.2.28"
+    "typeorm": "^0.2.28",
+    "nodemon": "^2.0.4"
   },
   "devDependencies": {
     "@nestjs/cli": "^7.0.0",
