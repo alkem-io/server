@@ -8,6 +8,13 @@ Build Status:
 Build Quality
 [![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/)
 
+## Server architecture
+
+Cherrytwist server uses [NestJS](https://nestjs.com/) as framework and complies to its principles. The code is split into Data Layer (entities), Data Access Layer (), Service Layer and an API Layer (GraphQL).
+Interactions between different layers is depicted in the Layer Diagram below:
+
+![Layer Diagram](diagrams/ct-server-layer-diagram.png)
+
 ## Running the server locally (not in a container)
 
 To run the server a working MySQL Server is required.
@@ -117,6 +124,8 @@ The technology stack is as follows:
 - docker: for containers
 - docker-compose: for container orchestration
 - passportjs for authentication
+- NestJS as a framework
+- Azure Active Directory as an Identity Provider
 
 Credit: the setup of this project is inspired by the following article: <https://medium.com/swlh/graphql-orm-with-typescript-implementing-apollo-server-express-and-sqlite-5f16a92968d0>
 

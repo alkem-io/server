@@ -1,0 +1,144 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type UserGroup {
+  id: ID!
+  name: String!
+
+  """The set of users that are members of this group"""
+  members: [User!]
+
+  """The focal point for this group"""
+  focalPoint: User
+
+  """The set of tags for this group e.g. Team, Nature etc."""
+  tags: [Tag!]
+}
+
+type Reference {
+  id: ID!
+  name: String!
+  uri: String!
+  description: String!
+}
+
+type Context {
+  id: ID!
+
+  """A one line description"""
+  tagline: String
+
+  """A detailed description of the current situation"""
+  background: String
+
+  """The goal that is being pursued"""
+  vision: String
+
+  """What is the potential impact?"""
+  impact: String
+
+  """Who should get involved in this challenge"""
+  who: String
+
+  """A list of URLs to relevant information."""
+  references: [Reference!]
+}
+
+type Organisation {
+  id: ID!
+
+  """"""
+  name: String!
+
+  """The set of tags applied to this organisation."""
+  tags: [Tag!]
+
+  """The set of users that are associated with this organisation"""
+  members: [User!]
+
+  """Groups of users related to an organisation."""
+  groups: [UserGroup!]
+}
+
+type Challenge {
+  id: ID!
+
+  """The name of the challenge"""
+  name: String!
+
+  """The shared understanding for the challenge"""
+  context: Context
+
+  """
+  The leads for the challenge. The focal point for the user group is the primary challenge lead.
+  """
+  challengeLeads: [Organisation!]!
+
+  """
+  Groups of users related to a challenge; each group also results in a role that is assigned to users in the group.
+  """
+  groups: [UserGroup!]
+
+  """
+  The community of users, including challenge leads, that are contributing.
+  """
+  contributors: [User!]
+
+  """
+  The maturity phase of the challenge i.e. new, being refined, ongoing etc
+  """
+  lifecyclePhase: String
+
+  """The set of tags to label the challenge"""
+  tags: [Tag!]
+
+  """The set of projects within the context of this challenge"""
+  projects: [Project!]
+}
+
+type Project {
+  id: ID!
+
+  """"""
+  name: String!
+
+  """"""
+  description: String
+
+  """
+  The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc
+  """
+  lifecyclePhase: String
+
+  """The set of tags for this Project"""
+  tags: [Tag!]
+}
+
+type Tag {
+  id: ID!
+  name: String!
+}
+
+type User {
+  id: ID!
+  name: String!
+  firstName: String!
+  lastName: String!
+  email: String!
+  tags: [Tag!]
+}
+
+type Query {
+  """The name for this ecoverse"""
+  name: String!
+
+  """The name for this ecoverse"""
+  members: [UserGroup!]!
+
+  """The host organisation for the ecoverse"""
+  host: Organisation!
+
+  """The shared understanding for this ecoverse"""
+  context: Context!
+}
