@@ -14,18 +14,18 @@ import {
 import { Field, ObjectType } from '@nestjs/graphql/dist/decorators';
 import { ID } from '@nestjs/graphql/dist';
 import { IChallenge } from './challenge.interface';
-import { Organisation } from 'src/organisation/organisation.entity';
-import { IGroupable } from 'src/interfaces/groupable.interface';
+import { Organisation } from '../organisation/organisation.entity';
+import { IGroupable } from '../interfaces/groupable.interface';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from 'src/user-group/user-group.entity';
-import { User } from 'src/user/user.entity';
-import { Tag } from 'src/tag/tag.entity';
-import { Project } from 'src/project/project.entity';
-import { DID } from 'src/did/did.entity';
-import { Ecoverse } from 'src/ecoverse/ecoverse.entity';
-import { Context } from 'src/context/context.entity';
+} from '../user-group/user-group.entity';
+import { User } from '../user/user.entity';
+import { Tag } from '../tag/tag.entity';
+import { Project } from '../project/project.entity';
+import { DID } from '../did/did.entity';
+import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { Context } from '../context/context.entity';
 
 @Entity()
 @ObjectType()

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { RestrictedGroupNames } from 'src/user-group/user-group.entity';
-import { UserGroupService } from 'src/user-group/user-group.service';
+import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { UserGroupService } from '../user-group/user-group.service';
 import { IOrganisation } from './organisation.interface';
 
 @Injectable()

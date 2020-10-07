@@ -1,4 +1,4 @@
-import { ITag } from 'src/tag/tag.interface';
+import { ITag } from '../tag/tag.interface';
 
 export interface IAgreement {
   id: number;

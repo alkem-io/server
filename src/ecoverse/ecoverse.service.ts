@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IContext } from 'src/context/context.interface';
-import { IOrganisation } from 'src/organisation/organisation.interface';
-import { RestrictedGroupNames } from 'src/user-group/user-group.entity';
-import { IUserGroup } from 'src/user-group/user-group.interface';
-import { UserGroupService } from 'src/user-group/user-group.service';
-import { User } from 'src/user/user.entity';
+import { IContext } from '../context/context.interface';
+import { IOrganisation } from '../organisation/organisation.interface';
+import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { IUserGroup } from '../user-group/user-group.interface';
+import { UserGroupService } from '../user-group/user-group.service';
+import { User } from '../user/user.entity';
 import { Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';

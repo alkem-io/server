@@ -1,10 +1,10 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from 'src/challenge/challenge.entity';
-import { DID } from 'src/did/did.entity';
-import { Organisation } from 'src/organisation/organisation.entity';
-import { Tag } from 'src/tag/tag.entity';
-import { UserGroup } from 'src/user-group/user-group.entity';
-import { Context } from 'src/context/context.entity';
+import { Challenge } from '../challenge/challenge.entity';
+import { DID } from '../did/did.entity';
+import { Organisation } from '../organisation/organisation.entity';
+import { Tag } from '../tag/tag.entity';
+import { UserGroup } from '../user-group/user-group.entity';
+import { Context } from '../context/context.entity';
 import {
   BaseEntity,
   Column,
@@ -17,7 +17,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IEcoverse } from './ecoverse.interface';
-import { IGroupable } from 'src/interfaces/groupable.interface';
+import { IGroupable } from '../interfaces/groupable.interface';
 
 @Entity()
 @ObjectType()

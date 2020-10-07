@@ -2,9 +2,9 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config/dist';
 import { PassportStrategy, AuthGuard } from '@nestjs/passport';
 import { BearerStrategy } from 'passport-azure-ad';
-import aadConfig from 'src/config/aad.config';
-import { IExtendedTokenPayload } from 'src/interfaces/extended-token-payload.interface';
-import { UserService } from 'src/user/user.service';
+import aadConfig from '../config/aad.config';
+import { IExtendedTokenPayload } from '../interfaces/extended-token-payload.interface';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class AzureADStrategy extends PassportStrategy(

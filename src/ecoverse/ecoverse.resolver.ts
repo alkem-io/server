@@ -1,12 +1,12 @@
 import { Get, Inject, UseGuards } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from 'src/authentication/graphql.guard';
-import { Context } from 'src/context/context.entity';
-import { IContext } from 'src/context/context.interface';
-import { Organisation } from 'src/organisation/organisation.entity';
-import { IOrganisation } from 'src/organisation/organisation.interface';
-import { UserGroup } from 'src/user-group/user-group.entity';
-import { IUserGroup } from 'src/user-group/user-group.interface';
+import { GqlAuthGuard } from '../authentication/graphql.guard';
+import { Context } from '../context/context.entity';
+import { IContext } from '../context/context.interface';
+import { Organisation } from '../organisation/organisation.entity';
+import { IOrganisation } from '../organisation/organisation.interface';
+import { UserGroup } from '../user-group/user-group.entity';
+import { IUserGroup } from '../user-group/user-group.interface';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()

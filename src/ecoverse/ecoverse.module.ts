@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { UserGroupModule } from 'src/user-group/user-group.module';
-import { UserGroupService } from 'src/user-group/user-group.service';
+import { UserGroupModule } from '../user-group/user-group.module';
+import { UserGroupService } from '../user-group/user-group.service';
 import { EcoverseService } from './ecoverse.service';
 import { EcoverseResolver } from './ecoverse.resolver';
-import { AuthenticationModule } from 'src/authentication/authentication.module';
-import { AzureADStrategy } from 'src/authentication/aad.strategy';
-import { UserModule } from 'src/user/user.module';
+import { AuthenticationModule } from '../authentication/authentication.module';
+import { AzureADStrategy } from '../authentication/aad.strategy';
+import { UserModule } from '../user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Ecoverse } from './ecoverse.entity';
 

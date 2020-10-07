@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from 'src/challenge/challenge.entity';
-import { Reference } from 'src/reference/reference.entity';
+import { Challenge } from '../challenge/challenge.entity';
+import { Reference } from '../reference/reference.entity';
 import {
   BaseEntity,
   Column,

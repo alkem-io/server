@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IReference } from './reference.interface';
-import { Context } from 'src/context/context.entity';
+import { Context } from '../context/context.entity';
 
 @Entity()
 @ObjectType()

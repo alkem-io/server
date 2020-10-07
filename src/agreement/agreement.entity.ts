@@ -1,8 +1,8 @@
 import { Field } from '@nestjs/graphql/dist/decorators/field.decorator';
 import { ObjectType } from '@nestjs/graphql/dist/decorators/object-type.decorator';
 import { ID } from '@nestjs/graphql/dist/scalars';
-import { Project } from 'src/project/project.entity';
-import { Tag } from 'src/tag/tag.entity';
+import { Project } from '../project/project.entity';
+import { Tag } from '../tag/tag.entity';
 import {
   BaseEntity,
   Column,

@@ -1,14 +1,14 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from 'src/challenge/challenge.entity';
-import { DID } from 'src/did/did.entity';
-import { Ecoverse } from 'src/ecoverse/ecoverse.entity';
-import { IGroupable } from 'src/interfaces/groupable.interface';
-import { Tag } from 'src/tag/tag.entity';
+import { Challenge } from '../challenge/challenge.entity';
+import { DID } from '../did/did.entity';
+import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { IGroupable } from '../interfaces/groupable.interface';
+import { Tag } from '../tag/tag.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from 'src/user-group/user-group.entity';
-import { User } from 'src/user/user.entity';
+} from '../user-group/user-group.entity';
+import { User } from '../user/user.entity';
 import {
   BaseEntity,
   Column,

@@ -1,9 +1,9 @@
-import { IContext } from 'src/context/context.interface';
-import { IOrganisation } from 'src/organisation/organisation.interface';
-import { IProject } from 'src/project/project.interface';
-import { ITag } from 'src/tag/tag.interface';
-import { IUserGroup } from 'src/user-group/user-group.interface';
-import { IUser } from 'src/user/user.interface';
+import { IContext } from '../context/context.interface';
+import { IOrganisation } from '../organisation/organisation.interface';
+import { IProject } from '../project/project.interface';
+import { ITag } from '../tag/tag.interface';
+import { IUserGroup } from '../user-group/user-group.interface';
+import { IUser } from '../user/user.interface';
 
 export interface IChallenge {
   id: number;

@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Agreement } from 'src/agreement/agreement.entity';
-import { Challenge } from 'src/challenge/challenge.entity';
-import { Tag } from 'src/tag/tag.entity';
+import { Agreement } from '../agreement/agreement.entity';
+import { Challenge } from '../challenge/challenge.entity';
+import { Tag } from '../tag/tag.entity';
 import {
   BaseEntity,
   Column,

@@ -1,11 +1,11 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Agreement } from 'src/agreement/agreement.entity';
-import { Challenge } from 'src/challenge/challenge.entity';
-import { Ecoverse } from 'src/ecoverse/ecoverse.entity';
-import { Organisation } from 'src/organisation/organisation.entity';
-import { Project } from 'src/project/project.entity';
-import { UserGroup } from 'src/user-group/user-group.entity';
-import { User } from 'src/user/user.entity';
+import { Agreement } from '../agreement/agreement.entity';
+import { Challenge } from '../challenge/challenge.entity';
+import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { Organisation } from '../organisation/organisation.entity';
+import { Project } from '../project/project.entity';
+import { UserGroup } from '../user-group/user-group.entity';
+import { User } from '../user/user.entity';
 import {
   BaseEntity,
   Column,

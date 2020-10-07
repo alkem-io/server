@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { IGroupable } from 'src/interfaces/groupable.interface';
-import { IUser } from 'src/user/user.interface';
+import { IGroupable } from '../interfaces/groupable.interface';
+import { IUser } from '../user/user.interface';
 import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 

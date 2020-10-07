@@ -1,9 +1,9 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from 'src/challenge/challenge.entity';
-import { Ecoverse } from 'src/ecoverse/ecoverse.entity';
-import { Organisation } from 'src/organisation/organisation.entity';
-import { Tag } from 'src/tag/tag.entity';
-import { User } from 'src/user/user.entity';
+import { Challenge } from '../challenge/challenge.entity';
+import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { Organisation } from '../organisation/organisation.entity';
+import { Tag } from '../tag/tag.entity';
+import { User } from '../user/user.entity';
 import {
   BaseEntity,
   Column,
