@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { IReference } from './reference.interface';
 import { Context } from '../context/context.entity';
+import { Profile } from '../profile/profile.entity';
 
 @Entity()
 @ObjectType()
@@ -33,6 +34,12 @@ export class Reference extends BaseEntity implements IReference {
     context => context.references
   )
   context?: Context;
+
+  @ManyToOne(
+    () => Profile,
+    profile => profile.references
+  )
+  profile?: Profile;
 
   constructor(name: string, uri: string, description: string) {
     super();

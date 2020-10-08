@@ -63,10 +63,6 @@ export class EcoverseService {
       ecoverse.restrictedGroupNames
     );
 
-    if (!ecoverse.tags) {
-      ecoverse.tags = [];
-    }
-
     if (!ecoverse.challenges) {
       ecoverse.challenges = [];
     }
@@ -83,7 +79,7 @@ export class EcoverseService {
       const ecoverse = await this.ecoverseRepository.findOneOrFail();
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
-      return ecoverse;
+      return ecoverse as IEcoverse;
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getEcoverse()!!!', exception: e });
       throw e;
@@ -104,7 +100,7 @@ export class EcoverseService {
 
   async getMembers(): Promise<IUserGroup> {
     try {
-      const ecoverse = (await this.getEcoverse()) as Ecoverse;
+      const ecoverse = (await this.getEcoverse()) as IEcoverse;
       const membersGroup = await this.userGroupService.getGroupByName(
         ecoverse,
         RestrictedGroupNames.Members
@@ -121,7 +117,7 @@ export class EcoverseService {
 
   async getGroups(): Promise<IUserGroup[]> {
     try {
-      const ecoverse = (await this.getEcoverse()) as Ecoverse;
+      const ecoverse = (await this.getEcoverse()) as IEcoverse;
 
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
       // Convert groups array into IGroups array
@@ -141,7 +137,7 @@ export class EcoverseService {
 
   async getContext(): Promise<IContext> {
     try {
-      const ecoverse = (await this.getEcoverse()) as Ecoverse;
+      const ecoverse = (await this.getEcoverse()) as IEcoverse;
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
       return ecoverse.context as IContext;

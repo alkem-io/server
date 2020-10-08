@@ -1,4 +1,4 @@
-import { ITag } from '../tag/tag.interface';
+import { IProfile } from '../profile/profile.interface';
 import { IUser } from '../user/user.interface';
 
 export interface IUserGroup {
@@ -6,7 +6,5 @@ export interface IUserGroup {
   name: string;
   members?: IUser[];
   focalPoint?: IUser;
-  tags?: ITag[];
-  //addUserToGroup(newUser: IUser): IUser;
-  //initialiseMembers(): IUserGroup;
+  profile?: IProfile;
 }

@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TagResolver } from './tag.resolver';
+import { TagsetResolver } from './tagset.resolver';
 
-describe('TagResolver', () => {
-  let resolver: TagResolver;
+describe('TagsetResolver', () => {
+  let resolver: TagsetResolver;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TagResolver],
+      providers: [TagsetResolver],
     }).compile();
 
-    resolver = module.get<TagResolver>(TagResolver);
+    resolver = module.get<TagsetResolver>(TagsetResolver);
   });
 
   it('should be defined', () => {

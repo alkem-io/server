@@ -3,7 +3,6 @@ import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
 import { IGroupable } from '../../interfaces/groupable.interface';
-import { Tag } from '../tag/tag.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
@@ -14,13 +13,13 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToMany,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IOrganisation } from './organisation.interface';
+import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 
 @Entity()
 @ObjectType()
@@ -50,17 +49,13 @@ export class Organisation extends BaseEntity
   )
   ecoverses?: Ecoverse[];
 
-  @Field(() => [Tag], {
+  @Field(() => Tagset, {
     nullable: true,
-    description: 'The set of tags applied to this organisation.',
+    description: 'The set of tags for the organisation',
   })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.ecoverses,
-    { eager: true, cascade: true }
-  )
-  @JoinTable({ name: 'organisation_tag' })
-  tags?: Tag[];
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   @Field(() => [User], {
     nullable: true,
@@ -91,6 +86,9 @@ export class Organisation extends BaseEntity
   constructor(name: string) {
     super();
     this.name = name;
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    // Todo: initialise the tagset
+
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 

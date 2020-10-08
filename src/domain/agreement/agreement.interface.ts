@@ -1,8 +1,8 @@
-import { ITag } from '../tag/tag.interface';
+import { ITagset } from '../tagset/tagset.interface';
 
 export interface IAgreement {
   id: number;
   name: string;
   description?: string;
-  tags?: ITag[];
+  tagsset?: ITagset;
 }

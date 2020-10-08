@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { DID } from '../did/did.entity';
-import { Tag } from '../tag/tag.entity';
+import { Profile } from '../profile/profile.entity';
 import { UserGroup } from '../user-group/user-group.entity';
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import {
@@ -8,7 +8,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -42,6 +41,22 @@ export class User extends BaseEntity implements IUser {
   @Column()
   email: string = '';
 
+  @Field(() => String)
+  @Column()
+  phone: string = '';
+
+  @Field(() => String)
+  @Column()
+  city: string = '';
+
+  @Field(() => String)
+  @Column()
+  country: string = '';
+
+  @Field(() => String)
+  @Column()
+  gender: string = '';
+
   @OneToOne(() => DID)
   @JoinColumn()
   DID!: DID;
@@ -52,6 +67,14 @@ export class User extends BaseEntity implements IUser {
   )
   userGroups?: UserGroup[];
 
+  @Field(() => Profile, {
+    nullable: true,
+    description: 'The profile for this user',
+  })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @JoinColumn()
+  profile?: Profile;
+
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.focalPoint,
@@ -59,17 +82,9 @@ export class User extends BaseEntity implements IUser {
   )
   focalPoints?: UserGroup[];
 
-  @Field(() => [Tag], { nullable: true })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.users,
-    { eager: true, cascade: true }
-  )
-  @JoinTable({ name: 'user_tag' })
-  tags?: Tag[];
-
   constructor(name: string) {
     super();
     this.name = name;
+    // todo: initialise this.profile.initialiseMembers();
   }
 }
