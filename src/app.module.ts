@@ -17,25 +17,36 @@ import { UserGroupModule } from './domain/user-group/user-group.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
 import aadConfig from './utils/config/aad.config';
-import databaseConfig from './utils/config/database.config';
 import { join } from 'path';
+import { ConfigService } from '@nestjs/config';
+import databaseConfig from './utils/config/database.config';
+import { IDatabaseConfig } from './interfaces/database.config.interface';
+import serviceConfig from './utils/config/service.config';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(
-      // databaseConfig as TypeOrmModuleOptions
-      {
+    ConfigModule.forRoot({
+      envFilePath: ['.env', '.env.default'],
+      isGlobal: true,
+      load: [aadConfig, databaseConfig, serviceConfig],
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
         type: 'mysql',
-        host: 'localhost',
-        port: 3306,
-        username: 'root',
-        password: 'toor',
+        host: configService.get<IDatabaseConfig>('database')?.host,
+        port: configService.get<IDatabaseConfig>('database')?.port,
+        cache: true,
+        username: configService.get<IDatabaseConfig>('database')?.username,
+        password: configService.get<IDatabaseConfig>('database')?.password,
+        database: configService.get<IDatabaseConfig>('database')?.schema,
         insecureAuth: true,
-        database: 'cherrytwist',
-        entities: [join(__dirname, '**', '*.entity.{ts,js}')], // https://stackoverflow.com/questions/59435293/typeorm-entity-in-nestjs-cannot-use-import-statement-outside-a-module
         synchronize: true,
-      }
-    ),
+        logging: configService.get<IDatabaseConfig>('database')?.logging,
+        entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+      }),
+    }),
     AuthenticationModule,
     AgreementModule,
     UserModule,
@@ -51,11 +62,6 @@ import { join } from 'path';
     GraphQLModule.forRoot({
       autoSchemaFile: 'schema.gql',
       playground: true,
-    }),
-    ConfigModule.forRoot({
-      envFilePath: ['.env.default'],
-      isGlobal: true,
-      load: [aadConfig, databaseConfig],
     }),
   ],
   controllers: [AppController],
