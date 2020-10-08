@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config/dist/utils/register-as.util';
+import { join } from 'path';
 
 export default registerAs('database', () => ({
   type: 'mysql',
@@ -7,9 +8,9 @@ export default registerAs('database', () => ({
   cache: true,
   username: 'root',
   password: process.env.MYSQL_ROOT_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
+  schema: process.env.MYSQL_DATABASE,
   insecureAuth: true,
   synchronize: true,
   logging: process.env.ENABLE_ORM_LOGGING === 'true',
-  entities: ['dist/**/*.entity.js'],
+  entities: [join(__dirname, '**', '*.entity.{ts,js}')],
 }));
