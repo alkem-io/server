@@ -74,7 +74,7 @@ export class UserGroupService {
     }
     for (const groupToAdd of groupsToAdd) {
       const newGroup = new UserGroup(groupToAdd);
-      groupable.groups.push(newGroup);
+      groupable.groups.push(newGroup as IUserGroup);
     }
     return groupable;
   }
@@ -118,7 +118,7 @@ export class UserGroupService {
       );
     }
 
-    const newGroup = new UserGroup(name);
+    const newGroup: IUserGroup = new UserGroup(name) as IUserGroup;
     groupable.groups?.push(newGroup);
     return newGroup;
   }
@@ -133,7 +133,7 @@ export class UserGroupService {
       groupable.restrictedGroupNames = [];
     }
     for (const name of names) {
-      const group = new UserGroup(name);
+      const group = new UserGroup(name) as IUserGroup;
       groupable.groups?.push(group);
       groupable.restrictedGroupNames.push(name);
     }

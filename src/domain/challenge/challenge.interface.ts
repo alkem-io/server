@@ -1,7 +1,7 @@
 import { IContext } from '../context/context.interface';
 import { IOrganisation } from '../organisation/organisation.interface';
 import { IProject } from '../project/project.interface';
-import { ITag } from '../tag/tag.interface';
+import { ITagset } from '../tagset/tagset.interface';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { IUser } from '../user/user.interface';
 
@@ -10,7 +10,7 @@ export interface IChallenge {
   name: string;
   lifecyclePhase?: string;
   context?: IContext;
-  tags?: ITag[];
+  tagset: ITagset;
   groups?: IUserGroup[];
   contributors?: IUser[];
   projects?: IProject[];

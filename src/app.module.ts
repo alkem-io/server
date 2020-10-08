@@ -12,7 +12,8 @@ import { EcoverseModule } from './domain/ecoverse/ecoverse.module';
 import { OrganisationModule } from './domain/organisation/organisation.module';
 import { ProjectModule } from './domain/project/project.module';
 import { ReferenceModule } from './domain/reference/reference.module';
-import { TagModule } from './domain/tag/tag.module';
+import { TagsetModule } from './domain/tagset/tagset.module';
+import { ProfileModule } from './domain/profile/profile.module';
 import { UserGroupModule } from './domain/user-group/user-group.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
@@ -49,15 +50,16 @@ import serviceConfig from './utils/config/service.config';
     }),
     AuthenticationModule,
     AgreementModule,
-    UserModule,
     ChallengeModule,
     ContextModule,
     DidModule,
     EcoverseModule,
     OrganisationModule,
+    ProfileModule,
     ProjectModule,
     ReferenceModule,
-    TagModule,
+    TagsetModule,
+    UserModule,
     UserGroupModule,
     GraphQLModule.forRoot({
       autoSchemaFile: 'schema.gql',

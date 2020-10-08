@@ -1,5 +1,5 @@
 import { IDID } from '../did/did.interface';
-import { ITag } from '../tag/tag.interface';
+import { IProfile } from '../profile/profile.interface';
 
 export interface IUser {
   id: number;
@@ -8,6 +8,10 @@ export interface IUser {
   firstName: string;
   lastName: string;
   email: string;
+  phone: string;
+  city: string;
+  country: string;
+  gender: string;
   DID: IDID;
-  tags?: ITag[];
+  profile: IProfile;
 }

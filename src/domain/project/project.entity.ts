@@ -1,18 +1,20 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Agreement } from '../agreement/agreement.entity';
 import { Challenge } from '../challenge/challenge.entity';
-import { Tag } from '../tag/tag.entity';
 import {
   BaseEntity,
   Column,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IProject } from './project.interface';
+import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 
 @Entity()
 @ObjectType()
@@ -37,17 +39,10 @@ export class Project extends BaseEntity implements IProject {
   @Column({ nullable: true })
   lifecyclePhase?: string;
 
-  @Field(() => [Tag], {
-    nullable: true,
-    description: 'The set of tags for this Project',
-  })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.ecoverses,
-    { eager: true, cascade: true }
-  )
-  @JoinTable({ name: 'project_tag' })
-  tags?: Tag[];
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the project' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   //@Field(() => [Agreement])
   @OneToMany(
@@ -66,5 +61,7 @@ export class Project extends BaseEntity implements IProject {
   constructor(name: string) {
     super();
     this.name = name;
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    // Todo: initialise the tagset
   }
 }

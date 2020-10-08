@@ -1,5 +1,4 @@
 import { IReference } from '../reference/reference.interface';
-import { ITag } from '../tag/tag.interface';
 
 export interface IContext {
   id: number;
@@ -9,5 +8,4 @@ export interface IContext {
   impact?: string;
   who?: string;
   references?: IReference[];
-  tags?: ITag[];
 }

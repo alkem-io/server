@@ -21,7 +21,7 @@ import {
   UserGroup,
 } from '../user-group/user-group.entity';
 import { User } from '../user/user.entity';
-import { Tag } from '../tag/tag.entity';
+import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 import { Project } from '../project/project.entity';
 import { DID } from '../did/did.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
@@ -90,17 +90,10 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @Column({ nullable: true })
   lifecyclePhase?: string;
 
-  @Field(() => [Tag], {
-    nullable: true,
-    description: 'The set of tags to label the challenge',
-  })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.ecoverses,
-    { eager: true, cascade: true }
-  )
-  @JoinTable({ name: 'challenge_tag' })
-  tags?: Tag[];
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the challenge' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   @Field(() => [Project], {
     nullable: true,
@@ -130,9 +123,8 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     super();
     this.name = name;
     this.context = new Context();
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    //this.tagsetService.initialiseMembers(this.tagset);
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
-
-  // Helper method to ensure all members are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
 }

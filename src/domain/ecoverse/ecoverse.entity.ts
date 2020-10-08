@@ -2,7 +2,6 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
 import { Organisation } from '../organisation/organisation.entity';
-import { Tag } from '../tag/tag.entity';
 import { UserGroup } from '../user-group/user-group.entity';
 import { Context } from '../context/context.entity';
 import {
@@ -18,6 +17,8 @@ import {
 } from 'typeorm';
 import { IEcoverse } from './ecoverse.interface';
 import { IGroupable } from '../../interfaces/groupable.interface';
+import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
+
 
 @Entity()
 @ObjectType()
@@ -91,17 +92,10 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   )
   challenges?: Challenge[];
 
-  @Field(() => [Tag], {
-    nullable: true,
-    description: 'Set of restricted tags that are used within this ecoverse',
-  })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.ecoverses,
-    { eager: true, cascade: true }
-  )
-  @JoinTable({ name: 'ecoverse_tag' })
-  tags?: Tag[];
+  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the ecoverse' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @JoinColumn()
+  tagset: Tagset;
 
   // The restricted group names at the ecoverse level
   restrictedGroupNames?: string[];
@@ -111,6 +105,9 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     super();
     this.name = '';
     this.context = new Context();
+    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    // Todo: initialise the tagset properly
+
     this.host = new Organisation('Default host');
   }
 }

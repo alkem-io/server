@@ -2,18 +2,20 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Challenge } from '../challenge/challenge.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
 import { Organisation } from '../organisation/organisation.entity';
-import { Tag } from '../tag/tag.entity';
 import { User } from '../user/user.entity';
 import {
   BaseEntity,
   Column,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IUserGroup } from './user-group.interface';
+import { Profile } from '../profile/profile.entity';
 
 @Entity()
 @ObjectType()
@@ -36,7 +38,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     { eager: true, cascade: true }
   )
   @JoinTable({ name: 'user_group_members' })
-  members?: User[];
+  members: User[];
 
   @Field(() => User, {
     nullable: true,
@@ -48,17 +50,11 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   )
   focalPoint?: User;
 
-  @Field(() => [Tag], {
-    nullable: true,
-    description: 'The set of tags for this group e.g. Team, Nature etc.',
-  })
-  @ManyToMany(
-    () => Tag,
-    tag => tag.userGroups,
-    { eager: true, cascade: true }
-  )
-  @JoinTable({ name: 'user_group_tag' })
-  tags?: Tag[];
+  /*@Field(() => Profile, { nullable: true, description: 'The profile for the user group' })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @JoinColumn()
+  profile: Profile;*/
+
 
   @ManyToOne(
     () => Ecoverse,
@@ -81,6 +77,11 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   constructor(name: string) {
     super();
     this.name = name;
+
+    //this.profile = new Profile();
+    // todo: initialise this.profile.initialiseMembers();
+
+    this.members = [];
   }
 }
 

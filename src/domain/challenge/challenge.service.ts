@@ -21,10 +21,6 @@ export class ChallengeService {
       challenge.restrictedGroupNames
     );
 
-    if (!challenge.tags) {
-      challenge.tags = [];
-    }
-
     if (!challenge.projects) {
       challenge.projects = [];
     }
