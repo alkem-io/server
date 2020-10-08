@@ -6,8 +6,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   ManyToOne,
   OneToMany,
   OneToOne,
@@ -39,7 +37,10 @@ export class Project extends BaseEntity implements IProject {
   @Column({ nullable: true })
   lifecyclePhase?: string;
 
-  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the project' })
+  @Field(() => Tagset, {
+    nullable: true,
+    description: 'The set of tags for the project',
+  })
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset: Tagset;

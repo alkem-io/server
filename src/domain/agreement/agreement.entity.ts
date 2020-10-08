@@ -7,8 +7,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -37,7 +35,10 @@ export class Agreement extends BaseEntity implements IAgreement {
   )
   project?: Project;
 
-  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the agreement' })
+  @Field(() => Tagset, {
+    nullable: true,
+    description: 'The set of tags for the agreement',
+  })
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset: Tagset;
@@ -46,6 +47,6 @@ export class Agreement extends BaseEntity implements IAgreement {
     super();
     this.name = name;
     this.tagset = new Tagset(RestrictedTagsetNames.Default);
-    //this.tagsetService.initialiseMembers(this.tagset);
+    //todo - ensure tagset is properly initialised
   }
 }

@@ -7,5 +7,4 @@ export interface IUserGroup {
   members?: IUser[];
   focalPoint?: IUser;
   profile?: IProfile;
-  //profile: IProfile;
 }

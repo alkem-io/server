@@ -90,7 +90,10 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @Column({ nullable: true })
   lifecyclePhase?: string;
 
-  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the challenge' })
+  @Field(() => Tagset, {
+    nullable: true,
+    description: 'The set of tags for the challenge',
+  })
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset: Tagset;

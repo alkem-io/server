@@ -13,7 +13,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToMany,
   OneToMany,
   OneToOne,
@@ -50,7 +49,10 @@ export class Organisation extends BaseEntity
   )
   ecoverses?: Ecoverse[];
 
-  @Field(() => Tagset, { nullable: true, description: 'The set of tags for the organisation' })
+  @Field(() => Tagset, {
+    nullable: true,
+    description: 'The set of tags for the organisation',
+  })
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset: Tagset;

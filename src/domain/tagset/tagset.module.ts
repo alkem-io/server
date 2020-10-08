@@ -4,6 +4,6 @@ import { TagsetService } from './tagset.service';
 
 @Module({
   providers: [TagsetService, TagsetResolver],
-  exports: [TagsetService]
+  exports: [TagsetService],
 })
 export class TagsetModule {}
