@@ -21,13 +21,14 @@ import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import databaseConfig from './utils/config/database.config';
 import { IDatabaseConfig } from './interfaces/database.config.interface';
+import serviceConfig from './utils/config/service.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: ['.env', '.env.default'],
       isGlobal: true,
-      load: [aadConfig, databaseConfig],
+      load: [aadConfig, databaseConfig, serviceConfig],
     }),
     TypeOrmModule.forRootAsync(
       {

@@ -117,7 +117,7 @@ To run this project:
 The technology stack is as follows:
 
 - GraphQL: for specifying the interactions with the server, using Apollo server
-- Node: for runtime execution
+- Node: for runtime execution - **NB: LTS Node version (12.8.3) is currently used for development.**
 - TypeScript: for all logic
 - TypeORM: for the orbject relational mapping
 - mySQL: for data persistance
