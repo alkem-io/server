@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileResolver } from './profile.resolver';
 
-describe('ProfileResolver', () => {
+describe('Profile3Resolver', () => {
   let resolver: ProfileResolver;
 
   beforeEach(async () => {

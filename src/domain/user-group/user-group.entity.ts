@@ -38,7 +38,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     { eager: true, cascade: true }
   )
   @JoinTable({ name: 'user_group_members' })
-  members: User[];
+  members?: User[];
 
   @Field(() => User, {
     nullable: true,
@@ -50,11 +50,18 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   )
   focalPoint?: User;
 
+  @Field(() => Profile, {
+    nullable: true,
+    description: 'The profile for the user group',
+  })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @JoinColumn()
+  profile?: Profile;
+
   /*@Field(() => Profile, { nullable: true, description: 'The profile for the user group' })
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
   profile: Profile;*/
-
 
   @ManyToOne(
     () => Ecoverse,
@@ -80,8 +87,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
 
     //this.profile = new Profile();
     // todo: initialise this.profile.initialiseMembers();
-
-    this.members = [];
   }
 }
 

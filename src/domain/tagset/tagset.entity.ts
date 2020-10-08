@@ -1,11 +1,5 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Agreement } from '../agreement/agreement.entity';
-import { Challenge } from '../challenge/challenge.entity';
-import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { Organisation } from '../organisation/organisation.entity';
-import { Project } from '../project/project.entity';
-import { UserGroup } from '../user-group/user-group.entity';
-import { User } from '../user/user.entity';
+
 import {
   BaseEntity,
   Column,
@@ -31,14 +25,16 @@ export class Tagset extends BaseEntity implements ITagset {
   @Column('simple-array')
   tags?: string[];
 
-  @ManyToOne(() => Profile, profile => profile.tagsets)
+  @ManyToOne(
+    () => Profile,
+    profile => profile.tagsets
+  )
   profile?: Profile;
 
   constructor(name: string) {
     super();
     this.name = name;
   }
-
 }
 
 export enum RestrictedTagsetNames {

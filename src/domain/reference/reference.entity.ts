@@ -35,7 +35,10 @@ export class Reference extends BaseEntity implements IReference {
   )
   context?: Context;
 
-  @ManyToOne(() => Profile, profile => profile.references)
+  @ManyToOne(
+    () => Profile,
+    profile => profile.references
+  )
   profile?: Profile;
 
   constructor(name: string, uri: string, description: string) {

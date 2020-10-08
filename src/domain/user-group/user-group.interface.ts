@@ -4,7 +4,8 @@ import { IUser } from '../user/user.interface';
 export interface IUserGroup {
   id: number;
   name: string;
-  members: IUser[];
+  members?: IUser[];
   focalPoint?: IUser;
+  profile?: IProfile;
   //profile: IProfile;
 }

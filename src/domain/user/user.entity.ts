@@ -8,7 +8,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
   ManyToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -68,6 +67,14 @@ export class User extends BaseEntity implements IUser {
   )
   userGroups?: UserGroup[];
 
+  @Field(() => Profile, {
+    nullable: true,
+    description: 'The profile for this user',
+  })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @JoinColumn()
+  profile?: Profile;
+
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.focalPoint,
@@ -75,15 +82,9 @@ export class User extends BaseEntity implements IUser {
   )
   focalPoints?: UserGroup[];
 
-  @Field(() => Profile, { nullable: true, description: 'The profile for the user' })
-  @OneToOne(() => Profile, { eager: true, cascade: true })
-  @JoinColumn()
-  profile: Profile;
-
   constructor(name: string) {
     super();
     this.name = name;
-    this.profile = new Profile();
     // todo: initialise this.profile.initialiseMembers();
   }
 }
