@@ -30,27 +30,23 @@ import serviceConfig from './utils/config/service.config';
       isGlobal: true,
       load: [aadConfig, databaseConfig, serviceConfig],
     }),
-    TypeOrmModule.forRootAsync(
-      {
-        imports: [ConfigModule],
-        inject:  [ConfigService],
-        useFactory: async (configService: ConfigService) => (
-          {
-            type: 'mysql',
-            host: configService.get<IDatabaseConfig>('database')?.host,
-            port: configService.get<IDatabaseConfig>('database')?.port,
-            cache: true,
-            username: configService.get<IDatabaseConfig>('database')?.username,
-            password: configService.get<IDatabaseConfig>('database')?.password,
-            database: configService.get<IDatabaseConfig>('database')?.schema,
-            insecureAuth: true,
-            synchronize: true,
-            logging: configService.get<IDatabaseConfig>('database')?.logging,
-            entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-          }
-        )
-      },
-    ),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<IDatabaseConfig>('database')?.host,
+        port: configService.get<IDatabaseConfig>('database')?.port,
+        cache: true,
+        username: configService.get<IDatabaseConfig>('database')?.username,
+        password: configService.get<IDatabaseConfig>('database')?.password,
+        database: configService.get<IDatabaseConfig>('database')?.schema,
+        insecureAuth: true,
+        synchronize: true,
+        logging: configService.get<IDatabaseConfig>('database')?.logging,
+        entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+      }),
+    }),
     AuthenticationModule,
     AgreementModule,
     UserModule,

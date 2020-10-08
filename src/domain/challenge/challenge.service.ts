@@ -18,7 +18,7 @@ export class ChallengeService {
     // Check that the mandatory groups for a challenge are created
     this.userGroupService.addMandatoryGroups(
       challenge,
-      challenge.restrictedGroupNames,
+      challenge.restrictedGroupNames
     );
 
     if (!challenge.tags) {
