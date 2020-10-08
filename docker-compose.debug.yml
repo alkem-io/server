@@ -18,6 +18,9 @@ services:
       - WAIT_SLEEP_INTERVAL
       - WAIT_HOST_CONNECT_TIMEOUT
       - GRAPHQL_ENDPOINT_PORT
+      - AAD_TENANT
+      - AAD_CLIENT
+      - AUTHENTICATION_ENABLED
     depends_on:
       - db
     restart: always
@@ -32,7 +35,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     ports:
-      - 3306:3306
+      - 3306
     environment:
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
