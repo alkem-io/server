@@ -9,32 +9,33 @@ import { IAzureADConfig } from 'src/interfaces/aad.config.interface';
 @Injectable()
 export class AzureADStrategy extends PassportStrategy(
   BearerStrategy,
-  'azure-ad',
+  'azure-ad'
 ) {
   constructor(
     private configService: ConfigService,
-    private userService: UserService,
+    private userService: UserService
   ) {
-    super(
-      {
-          identityMetadata: configService.get<IAzureADConfig>('aad')?.identityMetadata,
-          clientID: configService.get<IAzureADConfig>('aad')?.clientID,
-          validateIssuer: configService.get<IAzureADConfig>('aad')?.validateIssuer,
-          passReqToCallback: configService.get<IAzureADConfig>('aad')?.passReqToCallback,
-          issuer: configService.get<IAzureADConfig>('aad')?.issuer,
-          audience: configService.get<IAzureADConfig>('aad')?.audience,
-          allowMultiAudiencesInToken: configService.get<IAzureADConfig>('aad')?.allowMultiAudiencesInToken,
-          loggingLevel: configService.get<IAzureADConfig>('aad')?.loggingLevel,
-          scope: ['Cherrytwist-GraphQL'],
-          loggingNoPII: configService.get<IAzureADConfig>('aad')?.loggingNoPII,    
-        }
-    );
+    super({
+      identityMetadata: configService.get<IAzureADConfig>('aad')
+        ?.identityMetadata,
+      clientID: configService.get<IAzureADConfig>('aad')?.clientID,
+      validateIssuer: configService.get<IAzureADConfig>('aad')?.validateIssuer,
+      passReqToCallback: configService.get<IAzureADConfig>('aad')
+        ?.passReqToCallback,
+      issuer: configService.get<IAzureADConfig>('aad')?.issuer,
+      audience: configService.get<IAzureADConfig>('aad')?.audience,
+      allowMultiAudiencesInToken: configService.get<IAzureADConfig>('aad')
+        ?.allowMultiAudiencesInToken,
+      loggingLevel: configService.get<IAzureADConfig>('aad')?.loggingLevel,
+      scope: ['Cherrytwist-GraphQL'],
+      loggingNoPII: configService.get<IAzureADConfig>('aad')?.loggingNoPII,
+    });
   }
 
   async validate(
     _req: Request,
     token: IExtendedTokenPayload,
-    done: CallableFunction,
+    done: CallableFunction
   ): Promise<any> {
     try {
       if (!token.email) throw 'token email missing';

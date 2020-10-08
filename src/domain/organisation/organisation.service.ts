@@ -18,7 +18,7 @@ export class OrganisationService {
     // Check that the mandatory groups for a challenge are created
     await this.userGroupService.addMandatoryGroups(
       organisation,
-      organisation.restrictedGroupNames,
+      organisation.restrictedGroupNames
     );
 
     return organisation;

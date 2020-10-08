@@ -48,14 +48,14 @@ export class User extends BaseEntity implements IUser {
 
   @ManyToMany(
     () => UserGroup,
-    userGroup => userGroup.members,
+    userGroup => userGroup.members
   )
   userGroups?: UserGroup[];
 
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.focalPoint,
-    { eager: false, cascade: true },
+    { eager: false, cascade: true }
   )
   focalPoints?: UserGroup[];
 
@@ -63,7 +63,7 @@ export class User extends BaseEntity implements IUser {
   @ManyToMany(
     () => Tag,
     tag => tag.users,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   @JoinTable({ name: 'user_tag' })
   tags?: Tag[];
