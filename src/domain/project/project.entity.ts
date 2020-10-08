@@ -44,7 +44,7 @@ export class Project extends BaseEntity implements IProject {
   @ManyToMany(
     () => Tag,
     tag => tag.ecoverses,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   @JoinTable({ name: 'project_tag' })
   tags?: Tag[];
@@ -53,13 +53,13 @@ export class Project extends BaseEntity implements IProject {
   @OneToMany(
     () => Agreement,
     agreement => agreement.project,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   agreements?: Agreement[];
 
   @ManyToOne(
     () => Challenge,
-    challenge => challenge.projects,
+    challenge => challenge.projects
   )
   challenge?: Challenge;
 

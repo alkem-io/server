@@ -57,7 +57,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @ManyToMany(
     () => Organisation,
     organisation => organisation.challenges,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   @JoinTable({ name: 'challenge_lead' })
   challengeLeads?: Organisation[];
@@ -70,7 +70,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.challenge,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   groups?: UserGroup[];
 
@@ -97,7 +97,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @ManyToMany(
     () => Tag,
     tag => tag.ecoverses,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   @JoinTable({ name: 'challenge_tag' })
   tags?: Tag[];
@@ -109,7 +109,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @OneToMany(
     () => Project,
     project => project.challenge,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   projects?: Project[];
 
@@ -119,7 +119,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
 
   @ManyToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.challenges,
+    ecoverse => ecoverse.challenges
   )
   ecoverse?: Ecoverse;
 

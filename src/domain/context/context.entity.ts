@@ -55,7 +55,7 @@ export class Context extends BaseEntity implements IContext {
 
   @OneToOne(
     () => Challenge,
-    challenge => challenge.context,
+    challenge => challenge.context
   )
   context?: Context;
 
@@ -66,7 +66,7 @@ export class Context extends BaseEntity implements IContext {
   @OneToMany(
     () => Reference,
     reference => reference.context,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   references?: Reference[];
 

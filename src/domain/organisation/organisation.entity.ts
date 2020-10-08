@@ -40,13 +40,13 @@ export class Organisation extends BaseEntity
 
   @OneToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.host,
+    ecoverse => ecoverse.host
   )
   hostedEcoverse?: Ecoverse;
 
   @ManyToMany(
     () => Ecoverse,
-    ecoverse => ecoverse.partners,
+    ecoverse => ecoverse.partners
   )
   ecoverses?: Ecoverse[];
 
@@ -57,7 +57,7 @@ export class Organisation extends BaseEntity
   @ManyToMany(
     () => Tag,
     tag => tag.ecoverses,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   @JoinTable({ name: 'organisation_tag' })
   tags?: Tag[];
@@ -75,13 +75,13 @@ export class Organisation extends BaseEntity
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.organisation,
-    { eager: false, cascade: true },
+    { eager: false, cascade: true }
   )
   groups?: UserGroup[];
 
   @ManyToMany(
     () => Challenge,
-    challenge => challenge.challengeLeads,
+    challenge => challenge.challengeLeads
   )
   challenges!: Challenge[];
 
