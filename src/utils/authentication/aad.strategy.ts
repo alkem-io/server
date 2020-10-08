@@ -1,42 +1,41 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigType } from '@nestjs/config/dist';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy, AuthGuard } from '@nestjs/passport';
 import { BearerStrategy } from 'passport-azure-ad';
-import aadConfig from '../config/aad.config';
 import { IExtendedTokenPayload } from '../../interfaces/extended-token-payload.interface';
 import { UserService } from '../../domain/user/user.service';
+import { IAzureADConfig } from 'src/interfaces/aad.config.interface';
 
 @Injectable()
 export class AzureADStrategy extends PassportStrategy(
   BearerStrategy,
-  'azure-ad',
+  'azure-ad'
 ) {
   constructor(
-    @Inject(aadConfig.KEY)
-    private azureConfig: ConfigType<typeof aadConfig>,
-    private userService: UserService,
+    private configService: ConfigService,
+    private userService: UserService
   ) {
-    super(
-      //   //toDo fix this
-      {
-        identityMetadata: `https://login.microsoftonline.com/22e3aada-5a09-4e2b-9e0e-dc4f02328b29/v2.0/.well-known/openid-configuration`,
-        clientID: '869e0dc2-907e-45fe-841f-34cc93beee63',
-        validateIssuer: true,
-        passReqToCallback: true,
-        issuer: `https://login.microsoftonline.com/22e3aada-5a09-4e2b-9e0e-dc4f02328b29/v2.0`,
-        audience: '869e0dc2-907e-45fe-841f-34cc93beee63',
-        allowMultiAudiencesInToken: false,
-        loggingLevel: 'debug',
-        scope: ['Cherrytwist-GraphQL'],
-        loggingNoPII: false,
-      },
-    );
+    super({
+      identityMetadata: configService.get<IAzureADConfig>('aad')
+        ?.identityMetadata,
+      clientID: configService.get<IAzureADConfig>('aad')?.clientID,
+      validateIssuer: configService.get<IAzureADConfig>('aad')?.validateIssuer,
+      passReqToCallback: configService.get<IAzureADConfig>('aad')
+        ?.passReqToCallback,
+      issuer: configService.get<IAzureADConfig>('aad')?.issuer,
+      audience: configService.get<IAzureADConfig>('aad')?.audience,
+      allowMultiAudiencesInToken: configService.get<IAzureADConfig>('aad')
+        ?.allowMultiAudiencesInToken,
+      loggingLevel: configService.get<IAzureADConfig>('aad')?.loggingLevel,
+      scope: ['Cherrytwist-GraphQL'],
+      loggingNoPII: configService.get<IAzureADConfig>('aad')?.loggingNoPII,
+    });
   }
 
   async validate(
     _req: Request,
     token: IExtendedTokenPayload,
-    done: CallableFunction,
+    done: CallableFunction
   ): Promise<any> {
     try {
       if (!token.email) throw 'token email missing';

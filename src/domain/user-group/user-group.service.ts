@@ -33,7 +33,7 @@ export class UserGroupService {
 
   async getGroupByName(
     groupable: IGroupable,
-    name: string,
+    name: string
   ): Promise<IUserGroup> {
     // Double check groups array is initialised
     if (!groupable.groups) {
@@ -52,7 +52,7 @@ export class UserGroupService {
 
   async addMandatoryGroups(
     groupable: IGroupable,
-    mandatoryGroupNames: string[],
+    mandatoryGroupNames: string[]
   ): Promise<IGroupable> {
     const groupsToAdd: string[] = [];
     if (!groupable.groups) {
@@ -81,7 +81,7 @@ export class UserGroupService {
 
   async hasGroupWithName(
     groupable: IGroupable,
-    name: string,
+    name: string
   ): Promise<boolean> {
     // Double check groups array is initialised
     if (!groupable.groups) {
@@ -101,7 +101,7 @@ export class UserGroupService {
 
   async addGroupWithName(
     groupable: IGroupable,
-    name: string,
+    name: string
   ): Promise<IUserGroup> {
     // Check if the group already exists, if so log a warning
     if (this.hasGroupWithName(groupable, name)) {
@@ -111,10 +111,10 @@ export class UserGroupService {
 
     if (groupable.restrictedGroupNames?.includes(name)) {
       console.log(
-        `Attempted to create a usergroup using a restricted name: ${name}`,
+        `Attempted to create a usergroup using a restricted name: ${name}`
       );
       throw new Error(
-        'Unable to create user group with restricted name: ' + { name },
+        'Unable to create user group with restricted name: ' + { name }
       );
     }
 
@@ -127,7 +127,7 @@ export class UserGroupService {
 
   async createRestrictedGroups(
     groupable: IGroupable,
-    names: string[],
+    names: string[]
   ): Promise<IUserGroup[]> {
     if (!groupable.restrictedGroupNames) {
       groupable.restrictedGroupNames = [];

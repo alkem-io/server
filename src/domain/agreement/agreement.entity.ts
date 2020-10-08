@@ -31,7 +31,7 @@ export class Agreement extends BaseEntity implements IAgreement {
 
   @ManyToOne(
     () => Project,
-    project => project.agreements,
+    project => project.agreements
   )
   project?: Project;
 
@@ -42,7 +42,7 @@ export class Agreement extends BaseEntity implements IAgreement {
   @ManyToMany(
     () => Tag,
     tag => tag.agreements,
-    { eager: true, cascade: true },
+    { eager: true, cascade: true }
   )
   @JoinTable({ name: 'agreement_tag' })
   tags?: Tag[];

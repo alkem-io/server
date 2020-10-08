@@ -117,7 +117,7 @@ To run this project:
 The technology stack is as follows:
 
 - GraphQL: for specifying the interactions with the server, using Apollo server
-- Node: for runtime execution
+- Node: for runtime execution - **NB: LTS Node version (12.8.3) is currently used for development.**
 - TypeScript: for all logic
 - TypeORM: for the orbject relational mapping
 - mySQL: for data persistance
@@ -161,5 +161,4 @@ We have automated the creation and deployment of containers to docker hub via a 
 
 - Ensure that the code that you would like to create the container from is pushed / merged into the `develop` branch.
 - Create a github release and tag it with the appropriate version number ie. `v0.1.3`
-- Go to github actions and view the `push to docker` action to see if everything ran correctly. 
-
+- Go to github actions and view the `push to docker` action to see if everything ran correctly.

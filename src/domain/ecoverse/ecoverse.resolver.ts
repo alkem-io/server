@@ -12,7 +12,7 @@ import { EcoverseService } from './ecoverse.service';
 @Resolver()
 export class EcoverseResolver {
   constructor(
-    @Inject(EcoverseService) private ecoverseService: EcoverseService,
+    @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
   @Query(() => String, {
