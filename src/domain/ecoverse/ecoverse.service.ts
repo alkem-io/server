@@ -9,10 +9,12 @@ import { User } from '../user/user.entity';
 import { Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
+import { Inject, forwardRef } from '@nestjs/common';
 
 @Injectable()
 export class EcoverseService {
   constructor(
+    @Inject(forwardRef(() => UserGroupService))
     private userGroupService: UserGroupService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
@@ -157,5 +159,15 @@ export class EcoverseService {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getHost()!!!', exception: e });
       throw e;
     }
+  }
+
+  ///////////////////////////// Mutations ////////////////////////////////////
+
+  async createGroupOnEcoverse(groupName: string): Promise<IUserGroup> {
+    console.log(`Adding userGroup (${groupName}) to ecoverse`);
+    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    const group = this.userGroupService.addGroupWithName(ecoverse, groupName);
+    await ecoverse.save();
+    return group;
   }
 }

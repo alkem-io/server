@@ -19,6 +19,7 @@ import { Ecoverse } from './ecoverse.entity';
   imports: [
     UserGroupModule,
     AuthenticationModule,
+    UserGroupModule,
     UserModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],
