@@ -159,8 +159,6 @@ export class EcoverseService {
     }
   }
 
-  ///////////////////////////// Mutations ////////////////////////////////////
-
   async createGroupOnEcoverse(groupName: string): Promise<IUserGroup> {
     console.log(`Adding userGroup (${groupName}) to ecoverse`);
     const ecoverse = (await this.getEcoverse()) as Ecoverse;
