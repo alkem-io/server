@@ -158,4 +158,12 @@ export class EcoverseService {
       throw e;
     }
   }
+
+  async createGroupOnEcoverse(groupName: string): Promise<IUserGroup> {
+    console.log(`Adding userGroup (${groupName}) to ecoverse`);
+    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    const group = this.userGroupService.addGroupWithName(ecoverse, groupName);
+    await ecoverse.save();
+    return group;
+  }
 }

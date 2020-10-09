@@ -10,7 +10,7 @@ import { IUserGroup } from '../user-group/user-group.interface';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()
-export class EcoverseResolver {
+export class EcoverseResolverQueries {
   constructor(
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}

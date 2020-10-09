@@ -5,7 +5,6 @@ import { ITagset } from './tagset.interface';
 
 @Injectable()
 export class TagsetService {
-
   // Helper method to ensure all members are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(tagset: ITagset): Promise<ITagset> {
@@ -16,14 +15,35 @@ export class TagsetService {
     return tagset;
   }
 
-  async createRestrictedTagsets(tagsetable: ITagsetable, names: string[]): Promise<boolean> {
+  async getTagset(tagsetID: number): Promise<ITagset | undefined> {
+    return Tagset.findOne({ id: tagsetID });
+  }
+
+  async replaceTags(tagsetID: number, newTags: string[]): Promise<ITagset> {
+    const tagset = (await this.getTagset(tagsetID)) as Tagset;
+
+    if (!tagset) throw new Error(`Tagset with id(${tagsetID}) not found!`);
+    if (!newTags)
+      throw new Error(`Unable to replace tags on tagset(${tagsetID}`);
+
+    // Check the incoming tags and replace if not null
+    tagset.tags = newTags;
+    await tagset.save();
+
+    return tagset;
+  }
+
+  async createRestrictedTagsets(
+    tagsetable: ITagsetable,
+    names: string[]
+  ): Promise<boolean> {
     if (!tagsetable.restrictedTagsetNames) {
       throw new Error('Non-initialised tagsetable submitted');
     }
     for (const name of names) {
       const tagset = new Tagset(name);
-      this.initialiseMembers(tagsetable as ITagset);
-      tagsetable.tagsets?.push(tagsetable as ITagset);
+      this.initialiseMembers(tagset);
+      tagsetable.tagsets?.push(tagset as ITagset);
     }
     return true;
   }
@@ -35,7 +55,7 @@ export class TagsetService {
       if (tagset.name === RestrictedTagsetNames.Default) {
         return tagset;
       }
-   }
+    }
     throw new Error('Unable to find default tagset');
   }
 
@@ -80,8 +100,12 @@ export class TagsetService {
     }
 
     if (tagsetable.restrictedTagsetNames?.includes(name)) {
-      console.log(`Attempted to create a tagset using a restricted name: ${name}`);
-      throw new Error('Unable to create tagset with restricted name: ' + { name });
+      console.log(
+        `Attempted to create a tagset using a restricted name: ${name}`
+      );
+      throw new Error(
+        'Unable to create tagset with restricted name: ' + { name }
+      );
     }
 
     const newTagset = new Tagset(name);
