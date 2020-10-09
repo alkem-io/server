@@ -43,6 +43,9 @@ export class ChallengeService {
     console.log(
       `Adding userGroup (${groupName}) to challenge (${challengeID})`
     );
+    // Check a valid ID was passed
+    if (!challengeID)
+      throw new Error(`Invalid challenge id passed in: ${challengeID}`);
     // Try to find the challenge
     const challenge = await Challenge.findOne(challengeID);
     if (!challenge) {

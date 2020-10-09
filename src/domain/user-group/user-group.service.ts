@@ -65,10 +65,7 @@ export class UserGroupService {
     return user;
   }
 
-  async getGroupByName(
-    groupable: IGroupable,
-    name: string
-  ): Promise<IUserGroup> {
+  public getGroupByName(groupable: IGroupable, name: string): IUserGroup {
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
@@ -81,7 +78,7 @@ export class UserGroupService {
     }
 
     // If get here then no match group was found
-    throw new Error('Unable to find group with the name:' + { name });
+    throw new Error(`Unable to find group with the name:' + ${name}`);
   }
 
   async addMandatoryGroups(
@@ -113,10 +110,7 @@ export class UserGroupService {
     return groupable;
   }
 
-  async hasGroupWithName(
-    groupable: IGroupable,
-    name: string
-  ): Promise<boolean> {
+  public hasGroupWithName(groupable: IGroupable, name: string): boolean {
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
@@ -138,8 +132,9 @@ export class UserGroupService {
     name: string
   ): Promise<IUserGroup> {
     // Check if the group already exists, if so log a warning
-    if (this.hasGroupWithName(groupable, name)) {
-      // TODO: log a warning
+    const alreadyExists = this.hasGroupWithName(groupable, name);
+    if (alreadyExists) {
+      console.log(`Attempting to add group that already exists: ${name}`);
       return this.getGroupByName(groupable, name);
     }
 

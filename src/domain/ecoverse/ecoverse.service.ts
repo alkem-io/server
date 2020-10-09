@@ -84,6 +84,7 @@ export class EcoverseService {
       const ecoverseArray = await this.ecoverseRepository.find();
       const ecoverseCount = ecoverseArray.length;
       if (ecoverseCount == 0) {
+        console.log('No ecoverse found, creating empty ecoverse...');
         // Create a new ecoverse
         const ecoverse = new Ecoverse();
         this.initialiseMembers(ecoverse);
@@ -203,7 +204,10 @@ export class EcoverseService {
   async createGroup(groupName: string): Promise<IUserGroup> {
     console.log(`Adding userGroup (${groupName}) to ecoverse`);
     const ecoverse = (await this.getEcoverse()) as Ecoverse;
-    const group = this.userGroupService.addGroupWithName(ecoverse, groupName);
+    const group = await this.userGroupService.addGroupWithName(
+      ecoverse,
+      groupName
+    );
     await ecoverse.save();
     return group;
   }
