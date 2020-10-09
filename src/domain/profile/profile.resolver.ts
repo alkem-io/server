@@ -1,6 +1,7 @@
 import { Mutation, Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
 import { Tagset } from '../tagset/tagset.entity';
+import { ITagset } from '../tagset/tagset.interface';
 import { ProfileService } from './profile.service';
 
 @Resolver()
@@ -14,11 +15,11 @@ export class ProfileResolver {
   async createTagsetOnProfile(
     @Args('profileID') profileID: number,
     @Args('tagsetName') tagsetName: string
-  ): Promise<Tagset> {
+  ): Promise<ITagset> {
     const tagset = await this.profileService.createTagset(
       profileID,
       tagsetName
     );
-    return tagset as Tagset;
+    return tagset;
   }
 }

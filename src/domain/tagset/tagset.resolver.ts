@@ -1,6 +1,7 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { TagsInput } from './tagset.dto';
 import { Tagset } from './tagset.entity';
+import { ITagset } from './tagset.interface';
 import { TagsetService } from './tagset.service';
 
 @Resolver()
@@ -13,12 +14,12 @@ export class TagsetResolver {
   async replaceTagsOnTagset(
     @Args('tagsetID') tagsetID: number,
     @Args('tags') newTags: TagsInput
-  ): Promise<Tagset> {
+  ): Promise<ITagset> {
     if (!newTags.tags)
       throw new Error(`Unable to replace tags on tagset(${tagsetID}`);
 
     const tagset = await this.tagsetService.replaceTags(tagsetID, newTags.tags);
 
-    return tagset as Tagset;
+    return tagset;
   }
 }
