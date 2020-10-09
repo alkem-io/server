@@ -73,7 +73,7 @@ export class User extends BaseEntity implements IUser {
   })
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
-  profile?: Profile;
+  profile: Profile;
 
   @OneToMany(
     () => UserGroup,
@@ -85,6 +85,6 @@ export class User extends BaseEntity implements IUser {
   constructor(name: string) {
     super();
     this.name = name;
-    // todo: initialise this.profile.initialiseMembers();
+    this.profile = new Profile();
   }
 }

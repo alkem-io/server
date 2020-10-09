@@ -120,14 +120,13 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   ecoverse?: Ecoverse;
 
   // The restricted group names at the challenge level
-  restrictedGroupNames?: string[];
+  restrictedGroupNames: string[];
 
   constructor(name: string) {
     super();
     this.name = name;
     this.context = new Context();
     this.tagset = new Tagset(RestrictedTagsetNames.Default);
-    //this.tagsetService.initialiseMembers(this.tagset);
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 }

@@ -9,14 +9,27 @@ import { ContextModule } from '../context/context.module';
 import { ContextService } from '../context/context.service';
 import { ReferenceModule } from '../reference/reference.module';
 import { ReferenceService } from '../reference/reference.service';
+import { TagsetModule } from '../tagset/tagset.module';
+import { TagsetService } from '../tagset/tagset.service';
+import { ProfileModule } from '../profile/profile.module';
+import { ProfileService } from '../profile/profile.service';
 
 @Module({
-  imports: [ContextModule, ReferenceModule, UserGroupModule, UserModule],
+  imports: [
+    ContextModule,
+    ProfileModule,
+    ReferenceModule,
+    TagsetModule,
+    UserGroupModule,
+    UserModule,
+  ],
   providers: [
     ChallengeService,
     ChallengeResolver,
     ContextService,
+    ProfileService,
     ReferenceService,
+    TagsetService,
     UserGroupService,
     UserService,
   ],

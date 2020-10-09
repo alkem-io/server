@@ -54,13 +54,6 @@ export class EcoverseService {
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(ecoverse: IEcoverse): Promise<IEcoverse> {
-    if (!ecoverse.restrictedGroupNames) {
-      ecoverse.restrictedGroupNames = [
-        RestrictedGroupNames.Members,
-        RestrictedGroupNames.Admins,
-      ];
-    }
-
     if (!ecoverse.groups) {
       ecoverse.groups = [];
     }
@@ -79,19 +72,31 @@ export class EcoverseService {
       ecoverse.partners = [];
     }
 
-    if (!ecoverse.tagset) {
-      this.tagsetService.initialiseMembers(ecoverse.tagset);
-    }
+    // Initialise contained singletons
+    this.tagsetService.initialiseMembers(ecoverse.tagset);
+    this.contextService.initialiseMembers(ecoverse.context);
 
     return ecoverse;
   }
 
   async getEcoverse(): Promise<IEcoverse> {
     try {
-      const ecoverse = await this.ecoverseRepository.findOneOrFail();
+      const ecoverseArray = await this.ecoverseRepository.find();
+      const ecoverseCount = ecoverseArray.length;
+      if (ecoverseCount == 0) {
+        // Create a new ecoverse
+        const ecoverse = new Ecoverse();
+        this.initialiseMembers(ecoverse);
+        this.populateEmptyEcoverse(ecoverse);
+        ecoverse.save();
+        return ecoverse as IEcoverse;
+      }
+      if (ecoverseCount == 1) {
+        return ecoverseArray[0] as IEcoverse;
+      }
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
-      return ecoverse as IEcoverse;
+      throw new Error('Cannot have more than one ecoverse');
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getEcoverse()!!!', exception: e });
       throw e;

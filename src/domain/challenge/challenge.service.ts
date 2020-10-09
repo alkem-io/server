@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { ContextService } from '../context/context.service';
+import { TagsetService } from '../tagset/tagset.service';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
 import { Challenge } from './challenge.entity';
@@ -8,13 +8,13 @@ import { IChallenge } from './challenge.interface';
 
 @Injectable()
 export class ChallengeService {
-  constructor(private userGroupService: UserGroupService) {}
+  constructor(
+    private userGroupService: UserGroupService,
+    private contextService: ContextService,
+    private tagsetService: TagsetService
+  ) {}
 
   initialiseMembers(challenge: IChallenge): IChallenge {
-    if (!challenge.restrictedGroupNames) {
-      challenge.restrictedGroupNames = [RestrictedGroupNames.Members];
-    }
-
     if (!challenge.groups) {
       challenge.groups = [];
     }
@@ -28,9 +28,9 @@ export class ChallengeService {
       challenge.projects = [];
     }
 
-    if (!challenge.tagset) {
-      challenge.tagset = new Tagset(RestrictedTagsetNames.Default);
-    }
+    // Initialise contained objects
+    this.tagsetService.initialiseMembers(challenge.tagset);
+    this.contextService.initialiseMembers(challenge.context);
 
     return challenge;
   }
