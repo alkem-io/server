@@ -33,6 +33,7 @@ export class Tagset extends BaseEntity implements ITagset {
 
   constructor(name: string) {
     super();
+    this.tags = [];
     this.name = name;
   }
 }
