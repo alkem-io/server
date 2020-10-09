@@ -1,6 +1,5 @@
 import { Get, Inject, UseGuards } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Context } from '../context/context.entity';
 import { IContext } from '../context/context.interface';
@@ -11,7 +10,7 @@ import { IUserGroup } from '../user-group/user-group.interface';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()
-export class EcoverseResolver {
+export class EcoverseResolverQueries {
   constructor(
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
@@ -49,16 +48,5 @@ export class EcoverseResolver {
   })
   async context(): Promise<IContext> {
     return this.ecoverseService.getContext();
-  }
-
-  ///// Mutations /////
-  @Mutation(() => UserGroup, {
-    description: 'Creates a new user group at the ecoverse level',
-  })
-  async createGroupOnEcoverse(
-    @Args({ name: 'groupName', type: () => String }) groupName: string
-  ): Promise<UserGroup> {
-    const group = await this.ecoverseService.createGroupOnEcoverse(groupName);
-    return group as UserGroup;
   }
 }
