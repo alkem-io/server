@@ -101,7 +101,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'The tagset associated with this Ecoverse',
   })
-  async tagsets(): Promise<ITagset> {
+  async tagset(): Promise<ITagset> {
     return this.ecoverseService.getTagset();
   }
 }
