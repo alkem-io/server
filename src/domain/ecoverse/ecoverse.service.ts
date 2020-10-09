@@ -9,11 +9,13 @@ import { User } from '../user/user.entity';
 import { Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
+import { TagsetService } from '../tagset/tagset.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private userGroupService: UserGroupService,
+    private tagsetService: TagsetService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
@@ -69,6 +71,10 @@ export class EcoverseService {
 
     if (!ecoverse.partners) {
       ecoverse.partners = [];
+    }
+
+    if (!ecoverse.tagset) {
+      this.tagsetService.initialiseMembers(ecoverse.tagset);
     }
 
     return ecoverse;
@@ -159,7 +165,7 @@ export class EcoverseService {
     }
   }
 
-  async createGroupOnEcoverse(groupName: string): Promise<IUserGroup> {
+  async createGroup(groupName: string): Promise<IUserGroup> {
     console.log(`Adding userGroup (${groupName}) to ecoverse`);
     const ecoverse = (await this.getEcoverse()) as Ecoverse;
     const group = this.userGroupService.addGroupWithName(ecoverse, groupName);

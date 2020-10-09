@@ -9,6 +9,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { EcoverseResolverQueries } from './ecoverse.resolver.queries';
 import { EcoverseResolverMutations } from './ecoverse.resolver.mutations';
+import { TagsetModule } from '../tagset/tagset.module';
+import { TagsetService } from '../tagset/tagset.service';
 
 @Module({
   providers: [
@@ -17,12 +19,14 @@ import { EcoverseResolverMutations } from './ecoverse.resolver.mutations';
     EcoverseResolverQueries,
     EcoverseResolverMutations,
     AzureADStrategy,
+    TagsetService
   ],
   imports: [
     UserGroupModule,
     AuthenticationModule,
     UserGroupModule,
     UserModule,
+    TagsetModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],
   exports: [EcoverseService],
