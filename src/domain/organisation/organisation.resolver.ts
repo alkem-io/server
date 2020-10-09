@@ -30,7 +30,9 @@ export class OrganisationResolver {
     return group;
   }
 
-  @Mutation(() => Organisation)
+  @Mutation(() => Organisation, {
+    description: 'Updates the organisation with the given data',
+  })
   async updateOrganisation(
     @Args('orgID') orgID: number,
     @Args('organisationData') organisationData: OrganisationInput

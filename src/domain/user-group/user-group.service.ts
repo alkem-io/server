@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { userInfo } from 'os';
 import { IGroupable } from '../../interfaces/groupable.interface';
 import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
@@ -47,21 +48,21 @@ export class UserGroupService {
     return group;
   }
 
-  async addUserToGroup(newUser: IUser, group: IUserGroup): Promise<IUser> {
+  async addUserToGroup(user: IUser, group: IUserGroup): Promise<IUser> {
     if (!group.members) {
       group.members = [];
     }
 
-    for (const user of group.members) {
-      if (newUser.name === user.name) {
+    for (const existingUser of group.members) {
+      if (user.name === existingUser.name) {
         // Found an existing user
-        return newUser;
+        return user;
       }
     }
 
     // User was not already a member so add the user
-    group.members.push(newUser);
-    return newUser;
+    group.members.push(user);
+    return user;
   }
 
   async getGroupByName(

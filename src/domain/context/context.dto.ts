@@ -28,6 +28,9 @@ export class ContextInput {
   @MaxLength(1024)
   impact?: string;
 
-  @Field(() => [ReferenceInput], { nullable: true })
+  @Field(() => [ReferenceInput], {
+    nullable: true,
+    description: 'Set of references to _replace_ the existing references',
+  })
   references?: ReferenceInput[];
 }

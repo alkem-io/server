@@ -24,7 +24,9 @@ export class EcoverseResolverMutations {
     return group;
   }
 
-  @Mutation(() => Ecoverse)
+  @Mutation(() => Ecoverse, {
+    description: 'Updates the Ecoverse with the provided data',
+  })
   async updateEcoverse(
     @Args('ecoverseData') ecoverseData: EcoverseInput
   ): Promise<IEcoverse> {

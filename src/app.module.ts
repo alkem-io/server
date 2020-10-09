@@ -22,6 +22,7 @@ import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import databaseConfig from './utils/config/database.config';
 import { IDatabaseConfig } from './interfaces/database.config.interface';
+import { DataManagementModule } from './utils/data-management/data-management.module';
 import serviceConfig from './utils/config/service.config';
 
 @Module({
@@ -65,6 +66,7 @@ import serviceConfig from './utils/config/service.config';
       autoSchemaFile: 'schema.gql',
       playground: true,
     }),
+    DataManagementModule,
   ],
   controllers: [AppController],
   providers: [AppService],

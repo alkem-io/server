@@ -24,6 +24,7 @@ import { ReferenceService } from '../reference/reference.service';
     TagsetModule,
     UserGroupModule,
     UserModule,
+    TagsetModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],
   providers: [

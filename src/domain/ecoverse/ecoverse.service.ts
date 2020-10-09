@@ -76,6 +76,10 @@ export class EcoverseService {
       ecoverse.partners = [];
     }
 
+    if (!ecoverse.tagset) {
+      this.tagsetService.initialiseMembers(ecoverse.tagset);
+    }
+
     return ecoverse;
   }
 

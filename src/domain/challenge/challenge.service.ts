@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
@@ -25,6 +26,10 @@ export class ChallengeService {
 
     if (!challenge.projects) {
       challenge.projects = [];
+    }
+
+    if (!challenge.tagset) {
+      challenge.tagset = new Tagset(RestrictedTagsetNames.Default);
     }
 
     return challenge;

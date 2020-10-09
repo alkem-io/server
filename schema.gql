@@ -12,37 +12,14 @@ type UserGroup {
   """The focal point for this group"""
   focalPoint: User
 
-  """The set of tags for this group e.g. Team, Nature etc."""
-  tags: [Tag!]
+  """The profile for the user group"""
+  profile: Profile
 }
 
-type Reference {
+type Tagset {
   id: ID!
   name: String!
-  uri: String!
-  description: String!
-}
-
-type Context {
-  id: ID!
-
-  """A one line description"""
-  tagline: String
-
-  """A detailed description of the current situation"""
-  background: String
-
-  """The goal that is being pursued"""
-  vision: String
-
-  """What is the potential impact?"""
-  impact: String
-
-  """Who should get involved in this challenge"""
-  who: String
-
-  """A list of URLs to relevant information."""
-  references: [Reference!]
+  tags: [String!]!
 }
 
 type Organisation {
@@ -51,14 +28,32 @@ type Organisation {
   """"""
   name: String!
 
-  """The set of tags applied to this organisation."""
-  tags: [Tag!]
+  """The set of tags for the organisation"""
+  tagset: Tagset
 
   """The set of users that are associated with this organisation"""
   members: [User!]
 
   """Groups of users related to an organisation."""
   groups: [UserGroup!]
+}
+
+type Project {
+  id: ID!
+
+  """"""
+  name: String!
+
+  """"""
+  description: String
+
+  """
+  The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc
+  """
+  lifecyclePhase: String
+
+  """The set of tags for the project"""
+  tagset: Tagset
 }
 
 type Challenge {
@@ -90,34 +85,50 @@ type Challenge {
   """
   lifecyclePhase: String
 
-  """The set of tags to label the challenge"""
-  tags: [Tag!]
+  """The set of tags for the challenge"""
+  tagset: Tagset
 
   """The set of projects within the context of this challenge"""
   projects: [Project!]
 }
 
-type Project {
+type Context {
   id: ID!
 
-  """"""
-  name: String!
+  """A one line description"""
+  tagline: String
 
-  """"""
-  description: String
+  """A detailed description of the current situation"""
+  background: String
 
-  """
-  The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc
-  """
-  lifecyclePhase: String
+  """The goal that is being pursued"""
+  vision: String
 
-  """The set of tags for this Project"""
-  tags: [Tag!]
+  """What is the potential impact?"""
+  impact: String
+
+  """Who should get involved in this challenge"""
+  who: String
+
+  """A list of URLs to relevant information."""
+  references: [Reference!]
 }
 
-type Tag {
+type Reference {
   id: ID!
   name: String!
+  uri: String!
+  description: String!
+}
+
+type Profile {
+  id: ID!
+
+  """A list of URLs to relevant information."""
+  references: [Reference!]
+
+  """A list of named tagsets, each of which has a list of tags."""
+  tagsets: [Tagset!]
 }
 
 type User {
@@ -126,7 +137,13 @@ type User {
   firstName: String!
   lastName: String!
   email: String!
-  tags: [Tag!]
+  phone: String!
+  city: String!
+  country: String!
+  gender: String!
+
+  """The profile for this user"""
+  profile: Profile
 }
 
 type Query {
