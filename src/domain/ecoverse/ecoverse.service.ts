@@ -9,12 +9,10 @@ import { User } from '../user/user.entity';
 import { Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { Inject, forwardRef } from '@nestjs/common';
 
 @Injectable()
 export class EcoverseService {
   constructor(
-    @Inject(forwardRef(() => UserGroupService))
     private userGroupService: UserGroupService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
