@@ -4,6 +4,7 @@ import { Float } from '@nestjs/graphql';
 import { Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
 import { UserGroup } from '../user-group/user-group.entity';
+import { IUserGroup } from '../user-group/user-group.interface';
 import { OrganisationService } from './organisation.service';
 
 @Resolver()
@@ -21,7 +22,7 @@ export class OrganisationResolver {
   async createGroupOnOrganisation(
     @Args({ name: 'orgID', type: () => Float }) orgID: number,
     @Args({ name: 'groupName', type: () => String }) groupName: string
-  ): Promise<UserGroup> {
+  ): Promise<IUserGroup> {
     const group = await this.organisationService.createGroup(orgID, groupName);
     return group;
   }

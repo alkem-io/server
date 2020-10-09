@@ -3,6 +3,7 @@ import {
   RestrictedGroupNames,
   UserGroup,
 } from '../user-group/user-group.entity';
+import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
@@ -35,7 +36,7 @@ export class ChallengeService {
   async createGroup(
     challengeID: number,
     groupName: string
-  ): Promise<UserGroup> {
+  ): Promise<IUserGroup> {
     // First find the Challenge
     console.log(
       `Adding userGroup (${groupName}) to challenge (${challengeID})`
@@ -53,6 +54,6 @@ export class ChallengeService {
     );
     await challenge.save();
 
-    return group as UserGroup;
+    return group;
   }
 }

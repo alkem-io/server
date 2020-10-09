@@ -2,6 +2,7 @@ import { Inject } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Float, Mutation } from '@nestjs/graphql/dist';
 import { UserGroup } from '../user-group/user-group.entity';
+import { IUserGroup } from '../user-group/user-group.interface';
 import { ChallengeService } from './challenge.service';
 
 @Resolver()
@@ -17,7 +18,7 @@ export class ChallengeResolver {
   async createGroupOnChallenge(
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args({ name: 'groupName', type: () => String }) groupName: string
-  ): Promise<UserGroup> {
+  ): Promise<IUserGroup> {
     const group = await this.challengeService.createGroup(
       challengeID,
       groupName
