@@ -9,11 +9,16 @@ import { User } from '../user/user.entity';
 import { Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
+import { ContextService } from '../context/context.service';
+import { EcoverseInput } from './ecoverse.dto';
+import { TagsetService } from '../tagset/tagset.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private userGroupService: UserGroupService,
+    private contextService: ContextService,
+    private tagsetService: TagsetService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
@@ -159,11 +164,29 @@ export class EcoverseService {
     }
   }
 
-  async createGroupOnEcoverse(groupName: string): Promise<IUserGroup> {
+  async createGroup(groupName: string): Promise<IUserGroup> {
     console.log(`Adding userGroup (${groupName}) to ecoverse`);
     const ecoverse = (await this.getEcoverse()) as Ecoverse;
     const group = this.userGroupService.addGroupWithName(ecoverse, groupName);
     await ecoverse.save();
     return group;
+  }
+
+  async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
+    const ctVerse = await this.getEcoverse();
+
+    // Copy over the received data
+    if (ecoverseData.name) {
+      ctVerse.name = ecoverseData.name;
+    }
+    if (ecoverseData.context)
+      this.contextService.update(ctVerse, ecoverseData.context);
+
+    if (ecoverseData.tags && ecoverseData.tags.tags)
+      this.tagsetService.replaceTags(ctVerse.tagset.id, ecoverseData.tags.tags);
+
+    await (ctVerse as Ecoverse).save();
+
+    return ctVerse;
   }
 }

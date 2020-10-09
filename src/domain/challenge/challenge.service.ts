@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '../user-group/user-group.entity';
+import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
 import { Challenge } from './challenge.entity';

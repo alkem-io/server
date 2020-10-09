@@ -3,6 +3,9 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
 import { UserGroup } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
+import { EcoverseInput } from './ecoverse.dto';
+import { Ecoverse } from './ecoverse.entity';
+import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()
@@ -17,7 +20,15 @@ export class EcoverseResolverMutations {
   async createGroupOnEcoverse(
     @Args({ name: 'groupName', type: () => String }) groupName: string
   ): Promise<IUserGroup> {
-    const group = await this.ecoverseService.createGroupOnEcoverse(groupName);
+    const group = await this.ecoverseService.createGroup(groupName);
     return group;
+  }
+
+  @Mutation(() => Ecoverse)
+  async updateEcoverse(
+    @Args('ecoverseData') ecoverseData: EcoverseInput
+  ): Promise<IEcoverse> {
+    const ctVerse = await this.ecoverseService.update(ecoverseData);
+    return ctVerse;
   }
 }

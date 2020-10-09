@@ -5,6 +5,9 @@ import { Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
 import { UserGroup } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
+import { OrganisationInput } from './organisation.dto';
+import { Organisation } from './organisation.entity';
+import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 
 @Resolver()
@@ -25,5 +28,17 @@ export class OrganisationResolver {
   ): Promise<IUserGroup> {
     const group = await this.organisationService.createGroup(orgID, groupName);
     return group;
+  }
+
+  @Mutation(() => Organisation)
+  async updateOrganisation(
+    @Args('orgID') orgID: number,
+    @Args('organisationData') organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    const org = await this.organisationService.updateOrganisation(
+      orgID,
+      organisationData
+    );
+    return org;
   }
 }
