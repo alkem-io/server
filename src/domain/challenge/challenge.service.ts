@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from '../user-group/user-group.entity';
 import { UserGroupService } from '../user-group/user-group.service';
+import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 
 @Injectable()
@@ -26,5 +30,29 @@ export class ChallengeService {
     }
 
     return challenge;
+  }
+
+  async createGroup(
+    challengeID: number,
+    groupName: string
+  ): Promise<UserGroup> {
+    // First find the Challenge
+    console.log(
+      `Adding userGroup (${groupName}) to challenge (${challengeID})`
+    );
+    // Try to find the challenge
+    const challenge = await Challenge.findOne(challengeID);
+    if (!challenge) {
+      const msg = `Unable to find challenge with ID: ${challengeID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+    const group = await this.userGroupService.addGroupWithName(
+      challenge,
+      groupName
+    );
+    await challenge.save();
+
+    return group as UserGroup;
   }
 }
