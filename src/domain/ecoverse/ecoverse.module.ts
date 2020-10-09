@@ -15,9 +15,12 @@ import { TagsetModule } from '../tagset/tagset.module';
 import { TagsetService } from '../tagset/tagset.service';
 import { ReferenceModule } from '../reference/reference.module';
 import { ReferenceService } from '../reference/reference.service';
+import { ChallengeModule } from '../challenge/challenge.module';
+import { ChallengeService } from '../challenge/challenge.service';
 
 @Module({
   imports: [
+    ChallengeModule,
     ContextModule,
     AuthenticationModule,
     ReferenceModule,
@@ -28,6 +31,7 @@ import { ReferenceService } from '../reference/reference.service';
     TypeOrmModule.forFeature([Ecoverse]),
   ],
   providers: [
+    ChallengeService,
     ContextService,
     EcoverseService,
     EcoverseResolverQueries,

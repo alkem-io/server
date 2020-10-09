@@ -12,6 +12,9 @@ import { IEcoverse } from './ecoverse.interface';
 import { ContextService } from '../context/context.service';
 import { EcoverseInput } from './ecoverse.dto';
 import { TagsetService } from '../tagset/tagset.service';
+import { IUser } from '../user/user.interface';
+import { IChallenge } from '../challenge/challenge.interface';
+import { ITagset } from '../tagset/tagset.interface';
 
 @Injectable()
 export class EcoverseService {
@@ -107,7 +110,7 @@ export class EcoverseService {
     }
   }
 
-  async getMembers(): Promise<IUserGroup> {
+  async getMembers(): Promise<IUser[]> {
     try {
       const ecoverse = (await this.getEcoverse()) as IEcoverse;
       const membersGroup = await this.userGroupService.getGroupByName(
@@ -117,7 +120,7 @@ export class EcoverseService {
 
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
-      return membersGroup as IUserGroup;
+      return membersGroup.members as IUser[];
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
@@ -130,14 +133,26 @@ export class EcoverseService {
 
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
       // Convert groups array into IGroups array
-      const groups: IUserGroup[] = [];
       if (!ecoverse.groups) {
         throw new Error('Unreachable');
       }
-      for (const group of ecoverse.groups) {
-        groups.push(group);
+      return ecoverse.groups as IUserGroup[];
+    } catch (e) {
+      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
+      throw e;
+    }
+  }
+
+  async getChallenges(): Promise<IChallenge[]> {
+    try {
+      const ecoverse: IEcoverse = await this.getEcoverse();
+
+      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+      // Convert groups array into IGroups array
+      if (!ecoverse.challenges) {
+        throw new Error('Unreachable');
       }
-      return groups;
+      return ecoverse.challenges as IChallenge[];
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
@@ -150,6 +165,18 @@ export class EcoverseService {
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
 
       return ecoverse.context as IContext;
+    } catch (e) {
+      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e });
+      throw e;
+    }
+  }
+
+  async getTagset(): Promise<ITagset> {
+    try {
+      const ecoverse: IEcoverse = await this.getEcoverse();
+      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
+
+      return ecoverse.tagset as ITagset;
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e });
       throw e;

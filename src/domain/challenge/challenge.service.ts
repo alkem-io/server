@@ -58,4 +58,12 @@ export class ChallengeService {
 
     return group;
   }
+
+  async getChallengeByID(challengeID: number): Promise<IChallenge> {
+    //const t1 = performance.now()
+    const challenge = await Challenge.findOne({ where: [{ id: challengeID }] });
+    if (!challenge)
+      throw new Error(`Unable to find challenge with ID: ${challengeID}`);
+    return challenge;
+  }
 }
