@@ -24,7 +24,6 @@ import databaseConfig from './utils/config/database.config';
 import { IDatabaseConfig } from './interfaces/database.config.interface';
 import { DataManagementModule } from './utils/data-management/data-management.module';
 import serviceConfig from './utils/config/service.config';
-import { DataManagementController } from './utils/data-management/data-management.controller';
 
 @Module({
   imports: [
