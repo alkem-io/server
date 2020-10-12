@@ -13,9 +13,6 @@ export class ChallengeInput {
   @MaxLength(255)
   lifecyclePhase?: string;
 
-  @Field(() => TagsInput, { nullable: true })
-  tags?: TagsInput;
-
   @Field(() => ContextInput, { nullable: true })
   context?: ContextInput;
 
