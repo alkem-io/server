@@ -7,6 +7,8 @@ import { Organisation } from '../organisation/organisation.entity';
 import { IOrganisation } from '../organisation/organisation.interface';
 import { UserGroup } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
+import { User } from '../user/user.entity';
+import { IUser } from '../user/user.interface';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()
@@ -23,12 +25,14 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getName();
   }
 
-  @Query(() => [UserGroup], {
+  @Query(() => [User], {
     nullable: false,
     description: 'The name for this ecoverse',
   })
-  async members(): Promise<IUserGroup> {
-    return this.ecoverseService.getMembers();
+  async members(): Promise<IUser[]> {
+    const membersGroup = await this.ecoverseService.getMembers();
+    if (!membersGroup.members) throw new Error('Members group no initialised');
+    return membersGroup.members;
   }
 
   @Get()

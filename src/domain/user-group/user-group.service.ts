@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { userInfo } from 'os';
 import { IGroupable } from '../../interfaces/groupable.interface';
 import { IUser } from '../user/user.interface';
 import { UserGroup } from './user-group.entity';
@@ -7,7 +6,7 @@ import { IUserGroup } from './user-group.interface';
 
 @Injectable()
 export class UserGroupService {
-  async initialiseMembers(group: IUserGroup): Promise<IUserGroup> {
+  initialiseMembers(group: IUserGroup): IUserGroup {
     if (!group.members) {
       group.members = [];
     }
@@ -15,7 +14,7 @@ export class UserGroupService {
     return group;
   }
 
-  async addUserToGroup(user: IUser, group: IUserGroup): Promise<IUser> {
+  addUserToGroup(user: IUser, group: IUserGroup): IUser {
     if (!group.members) {
       group.members = [];
     }
@@ -32,10 +31,7 @@ export class UserGroupService {
     return user;
   }
 
-  async getGroupByName(
-    groupable: IGroupable,
-    name: string
-  ): Promise<IUserGroup> {
+  getGroupByName(groupable: IGroupable, name: string): IUserGroup {
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
@@ -51,10 +47,10 @@ export class UserGroupService {
     throw new Error('Unable to find group with the name:' + { name });
   }
 
-  async addMandatoryGroups(
+  addMandatoryGroups(
     groupable: IGroupable,
     mandatoryGroupNames: string[]
-  ): Promise<IGroupable> {
+  ): IGroupable {
     const groupsToAdd: string[] = [];
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
@@ -80,10 +76,7 @@ export class UserGroupService {
     return groupable;
   }
 
-  async hasGroupWithName(
-    groupable: IGroupable,
-    name: string
-  ): Promise<boolean> {
+  hasGroupWithName(groupable: IGroupable, name: string): boolean {
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
@@ -100,10 +93,7 @@ export class UserGroupService {
     return false;
   }
 
-  async addGroupWithName(
-    groupable: IGroupable,
-    name: string
-  ): Promise<IUserGroup> {
+  addGroupWithName(groupable: IGroupable, name: string): IUserGroup {
     // Check if the group already exists, if so log a warning
     if (this.hasGroupWithName(groupable, name)) {
       // TODO: log a warning
@@ -125,11 +115,7 @@ export class UserGroupService {
   }
 
   /* Create the set of restricted group names for an entity that has groups */
-
-  async createRestrictedGroups(
-    groupable: IGroupable,
-    names: string[]
-  ): Promise<IUserGroup[]> {
+  createRestrictedGroups(groupable: IGroupable, names: string[]): IUserGroup[] {
     if (!groupable.restrictedGroupNames) {
       groupable.restrictedGroupNames = [];
     }
