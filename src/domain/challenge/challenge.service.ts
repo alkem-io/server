@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '../user-group/user-group.entity';
+import { ContextService } from '../context/context.service';
+import { TagsetService } from '../tagset/tagset.service';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
 import { Challenge } from './challenge.entity';
@@ -11,13 +8,13 @@ import { IChallenge } from './challenge.interface';
 
 @Injectable()
 export class ChallengeService {
-  constructor(private userGroupService: UserGroupService) {}
+  constructor(
+    private userGroupService: UserGroupService,
+    private contextService: ContextService,
+    private tagsetService: TagsetService
+  ) {}
 
   initialiseMembers(challenge: IChallenge): IChallenge {
-    if (!challenge.restrictedGroupNames) {
-      challenge.restrictedGroupNames = [RestrictedGroupNames.Members];
-    }
-
     if (!challenge.groups) {
       challenge.groups = [];
     }
@@ -31,9 +28,9 @@ export class ChallengeService {
       challenge.projects = [];
     }
 
-    if (!challenge.tagset) {
-      challenge.tagset = new Tagset(RestrictedTagsetNames.Default);
-    }
+    // Initialise contained objects
+    this.tagsetService.initialiseMembers(challenge.tagset);
+    this.contextService.initialiseMembers(challenge.context);
 
     return challenge;
   }
@@ -46,6 +43,9 @@ export class ChallengeService {
     console.log(
       `Adding userGroup (${groupName}) to challenge (${challengeID})`
     );
+    // Check a valid ID was passed
+    if (!challengeID)
+      throw new Error(`Invalid challenge id passed in: ${challengeID}`);
     // Try to find the challenge
     const challenge = await Challenge.findOne(challengeID);
     if (!challenge) {
@@ -60,5 +60,13 @@ export class ChallengeService {
     await challenge.save();
 
     return group;
+  }
+
+  async getChallengeByID(challengeID: number): Promise<IChallenge> {
+    //const t1 = performance.now()
+    const challenge = await Challenge.findOne({ where: [{ id: challengeID }] });
+    if (!challenge)
+      throw new Error(`Unable to find challenge with ID: ${challengeID}`);
+    return challenge;
   }
 }

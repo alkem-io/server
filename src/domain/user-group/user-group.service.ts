@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { IGroupable } from '../../interfaces/groupable.interface';
 import { IUser } from '../user/user.interface';
+import { UserService } from '../user/user.service';
 import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 
 @Injectable()
 export class UserGroupService {
-  initialiseMembers(group: IUserGroup): IUserGroup {
+  constructor(private userService: UserService) {}
+
+  async initialiseMembers(group: IUserGroup): Promise<IUserGroup> {
     if (!group.members) {
       group.members = [];
     }
@@ -14,7 +17,37 @@ export class UserGroupService {
     return group;
   }
 
-  addUserToGroup(user: IUser, group: IUserGroup): IUser {
+  async getGroupByID(groupID: number): Promise<IUserGroup> {
+    //const t1 = performance.now()
+    const group = await UserGroup.findOne({ where: [{ id: groupID }] });
+    if (!group) throw new Error(`Unable to find group with ID: ${groupID}`);
+    return group;
+  }
+
+  async addUser(userID: number, groupID: number): Promise<IUserGroup> {
+    // Try to find the user + group
+    const user = await this.userService.getUserByID(userID);
+    if (!user) {
+      const msg = `Unable to find exactly one user with ID: ${userID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    if (!group) {
+      const msg = `Unable to find group with ID: ${groupID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    // Have both user + group so do the add
+    this.addUserToGroup(user, group);
+    await group.save();
+
+    return group;
+  }
+
+  async addUserToGroup(user: IUser, group: IUserGroup): Promise<IUser> {
     if (!group.members) {
       group.members = [];
     }
@@ -44,7 +77,7 @@ export class UserGroupService {
     }
 
     // If get here then no match group was found
-    throw new Error('Unable to find group with the name:' + { name });
+    throw new Error(`Unable to find group with the name:' + ${name}`);
   }
 
   addMandatoryGroups(
@@ -95,8 +128,9 @@ export class UserGroupService {
 
   addGroupWithName(groupable: IGroupable, name: string): IUserGroup {
     // Check if the group already exists, if so log a warning
-    if (this.hasGroupWithName(groupable, name)) {
-      // TODO: log a warning
+    const alreadyExists = this.hasGroupWithName(groupable, name);
+    if (alreadyExists) {
+      console.log(`Attempting to add group that already exists: ${name}`);
       return this.getGroupByName(groupable, name);
     }
 

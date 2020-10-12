@@ -54,14 +54,7 @@ export class DataManagementService {
 
       console.log('Loading sample data....');
       // Populate the Ecoverse beyond the defaults
-      let ctverse = await this.ecoverseService.getEcoverse();
-      if (!ctverse) {
-        // No ecoverse, create one
-        console.log('...no ecoverse found, creating default ecoverse...');
-        ctverse = new Ecoverse();
-        this.ecoverseService.initialiseMembers(ctverse);
-        this.ecoverseService.populateEmptyEcoverse(ctverse);
-      }
+      const ctverse = await this.ecoverseService.getEcoverse();
 
       ctverse.name = 'Cherrytwist dogfood';
       (ctverse as Ecoverse).context.tagline =
@@ -74,14 +67,18 @@ export class DataManagementService {
 
       // Users
       const john = new User('john');
-      membersGroup.members?.push(john);
+      this.userService.initialiseMembers(john);
       const bob = new User('bob');
+      this.userService.initialiseMembers(bob);
       bob.email = 'admin@cherrytwist.org';
       const valentin = new User('Valentin');
+      this.userService.initialiseMembers(valentin);
       valentin.email = 'valentin_yanakiev@yahoo.co.uk';
       const angel = new User('Angel');
+      this.userService.initialiseMembers(angel);
       angel.email = 'angel@cmd.bg';
       const neil = new User('Neil');
+      this.userService.initialiseMembers(neil);
       neil.email = 'neil@cherrytwist.org';
       neil.country = ' Netherlands';
       neil.gender = 'Male';
@@ -95,6 +92,8 @@ export class DataManagementService {
       membersGroup.members?.push(valentin);
       membersGroup.members?.push(neil);
       membersGroup.members?.push(angel);
+
+      await this.ecoverseRepository.save(ctverse);
 
       // User Groups
       const jediGroup = await this.ecoverseService.createGroup('jedi');
@@ -134,7 +133,7 @@ export class DataManagementService {
       cleanOceans.tagset.tags = ['java', 'linux'];
       cleanOceans.context.tagline = 'Keep our Oceans clean and in balance!';
       const cleanOceanMembers = this.userGroupService.getGroupByName(
-        ctverse,
+        cleanOceans,
         'members'
       );
       cleanOceanMembers.members = [angel, valentin, neil];
@@ -147,7 +146,7 @@ export class DataManagementService {
       cargoInsurance.context.tagline =
         'In an interconnected world, how to manage risk along the chain?';
       const cargoInsuranceMembers = this.userGroupService.getGroupByName(
-        ctverse,
+        cargoInsurance,
         'members'
       );
       cargoInsuranceMembers.members = [angel, valentin, neil];
@@ -155,10 +154,9 @@ export class DataManagementService {
 
       ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
 
-      //Organisations
+      // Persist the ecoverse
       await this.ecoverseRepository.save(ctverse);
       console.log('...loading of sample data completed successfully');
-      // await this.connection.manager.save(ctverse);
     } catch (error) {
       console.log(error.message);
     }
