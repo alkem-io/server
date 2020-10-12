@@ -17,7 +17,7 @@ export class EcoverseResolverMutations {
   async createGroupOnEcoverse(
     @Args({ name: 'groupName', type: () => String }) groupName: string
   ): Promise<IUserGroup> {
-    const group = await this.ecoverseService.createGroupOnEcoverse(groupName);
+    const group = await this.ecoverseService.createGroup(groupName);
     return group;
   }
 }
