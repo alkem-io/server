@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Challenge } from '../challenge/challenge.entity';
+import { Organisation } from '../organisation/organisation.entity';
 import { UserGroup } from '../user-group/user-group.entity';
 
 @ObjectType()
@@ -17,4 +18,9 @@ export class MemberOf {
     description: 'References to the challenges the user is a member of',
   })
   challenges?: Challenge[];
+
+  @Field(() => [Organisation], {
+    description: 'References to the orgnaisaitons the user is a member of',
+  })
+  organisations?: Organisation[];
 }

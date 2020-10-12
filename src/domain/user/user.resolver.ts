@@ -1,11 +1,10 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UserGroup } from '../user-group/user-group.entity';
 import { MemberOf } from './user.dto';
 import { User } from './user.entity';
 
 @Resolver(() => User)
 export class UserResolver {
-  @ResolveField('memberof', returns => MemberOf, {
+  @ResolveField('memberof', () => MemberOf, {
     nullable: true,
     description: 'An overview of the groups this user is a memberof',
   })
@@ -14,6 +13,7 @@ export class UserResolver {
     memberOf.email = user.email;
     memberOf.groups = [];
     memberOf.challenges = [];
+    memberOf.organisations = [];
 
     if (user.userGroups) {
       // Find all top level groups
@@ -30,6 +30,10 @@ export class UserResolver {
         if (group.challenge) {
           // challenge group
           memberOf.challenges.push(group.challenge);
+        }
+        if (group.organisation) {
+          // challenge group
+          memberOf.organisations.push(group.organisation);
         }
       }
     }
