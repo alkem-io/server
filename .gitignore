@@ -48,3 +48,6 @@ web_modules/
 
 # Optional eslint cache
 .eslintcache
+
+# GraphQL
+*.gql
