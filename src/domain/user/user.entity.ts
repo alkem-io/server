@@ -85,6 +85,5 @@ export class User extends BaseEntity implements IUser {
   constructor(name: string) {
     super();
     this.name = name;
-    // todo: initialise this.profile.initialiseMembers();
   }
 }
