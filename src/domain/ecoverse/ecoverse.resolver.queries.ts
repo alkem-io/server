@@ -33,6 +33,15 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getName();
   }
 
+  @Query(() => [User], {
+    nullable: false,
+    description: 'The members of this ecoverse',
+  })
+  async members(): Promise<IUser[]> {
+    const members = await this.ecoverseService.getMembers();
+    return members;
+  }
+
   @Get()
   @UseGuards(GqlAuthGuard)
   @Query(() => Organisation, {

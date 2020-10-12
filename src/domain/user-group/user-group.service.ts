@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { userInfo } from 'os';
 import { IGroupable } from '../../interfaces/groupable.interface';
 import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
@@ -65,7 +64,7 @@ export class UserGroupService {
     return user;
   }
 
-  public getGroupByName(groupable: IGroupable, name: string): IUserGroup {
+  getGroupByName(groupable: IGroupable, name: string): IUserGroup {
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
@@ -81,10 +80,10 @@ export class UserGroupService {
     throw new Error(`Unable to find group with the name:' + ${name}`);
   }
 
-  async addMandatoryGroups(
+  addMandatoryGroups(
     groupable: IGroupable,
     mandatoryGroupNames: string[]
-  ): Promise<IGroupable> {
+  ): IGroupable {
     const groupsToAdd: string[] = [];
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
@@ -110,7 +109,7 @@ export class UserGroupService {
     return groupable;
   }
 
-  public hasGroupWithName(groupable: IGroupable, name: string): boolean {
+  hasGroupWithName(groupable: IGroupable, name: string): boolean {
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
@@ -127,10 +126,7 @@ export class UserGroupService {
     return false;
   }
 
-  async addGroupWithName(
-    groupable: IGroupable,
-    name: string
-  ): Promise<IUserGroup> {
+  addGroupWithName(groupable: IGroupable, name: string): IUserGroup {
     // Check if the group already exists, if so log a warning
     const alreadyExists = this.hasGroupWithName(groupable, name);
     if (alreadyExists) {
@@ -153,11 +149,7 @@ export class UserGroupService {
   }
 
   /* Create the set of restricted group names for an entity that has groups */
-
-  async createRestrictedGroups(
-    groupable: IGroupable,
-    names: string[]
-  ): Promise<IUserGroup[]> {
+  createRestrictedGroups(groupable: IGroupable, names: string[]): IUserGroup[] {
     if (!groupable.restrictedGroupNames) {
       groupable.restrictedGroupNames = [];
     }

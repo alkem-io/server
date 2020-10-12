@@ -2,12 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from 'src/domain/challenge/challenge.entity';
 import { ChallengeService } from 'src/domain/challenge/challenge.service';
-import { Context } from 'src/domain/context/context.entity';
 import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
-import { Profile } from 'src/domain/profile/profile.entity';
 import { ProfileService } from 'src/domain/profile/profile.service';
 import { Reference } from 'src/domain/reference/reference.entity';
+import { Tagset } from 'src/domain/tagset/tagset.entity';
 import { TagsetService } from 'src/domain/tagset/tagset.service';
 import { UserGroupService } from 'src/domain/user-group/user-group.service';
 import { User } from 'src/domain/user/user.entity';
@@ -61,6 +60,11 @@ export class DataManagementService {
       (ctverse as Ecoverse).context.tagline =
         'Powering multi-stakeholder collaboration!';
 
+      const membersGroup = this.userGroupService.getGroupByName(
+        ctverse,
+        'members'
+      );
+
       // Users
       const john = new User('john');
       this.userService.initialiseMembers(john);
@@ -78,19 +82,26 @@ export class DataManagementService {
       neil.email = 'neil@cherrytwist.org';
       neil.country = ' Netherlands';
       neil.gender = 'Male';
-      const tagset = await this.tagsetService.addTagsetWithName(
-        neil.profile as Profile,
-        'sample'
-      );
+      const tagset = new Tagset('sample');
       tagset.tags = ['java', 'graphql'];
+      neil.profile?.tagsets?.push(tagset);
+
+      // Add the users to the groups
+      membersGroup.members?.push(john);
+      membersGroup.members?.push(bob);
+      membersGroup.members?.push(valentin);
+      membersGroup.members?.push(neil);
+      membersGroup.members?.push(angel);
+
+      await this.ecoverseRepository.save(ctverse);
 
       // User Groups
       const jediGroup = await this.ecoverseService.createGroup('jedi');
-      await this.userGroupService.addUserToGroup(angel, jediGroup);
-      await this.userGroupService.addUserToGroup(john, jediGroup);
+      this.userGroupService.addUserToGroup(angel, jediGroup);
+      this.userGroupService.addUserToGroup(john, jediGroup);
       const crewGroup = await this.ecoverseService.createGroup('crew');
-      await this.userGroupService.addUserToGroup(valentin, crewGroup);
-      await this.userGroupService.addUserToGroup(neil, crewGroup);
+      this.userGroupService.addUserToGroup(valentin, crewGroup);
+      this.userGroupService.addUserToGroup(neil, crewGroup);
 
       // Challenges
       const energyWeb = new Challenge('Energy Web');
@@ -108,16 +119,12 @@ export class DataManagementService {
         'https://www.energyweb.org/',
         'Official site'
       );
-      const energyWebMembers = await this.userGroupService.getGroupByName(
-        ctverse,
+      const energyWebMembers = this.userGroupService.getGroupByName(
+        energyWeb,
         'members'
       );
       energyWebMembers.members = [angel, valentin, neil];
       energyWebMembers.focalPoint = neil;
-      await this.userGroupService.addGroupWithName(
-        energyWeb,
-        'energyWebMembers'
-      );
       energyWeb.context.references = [ref1, ref2];
 
       const cleanOceans = new Challenge('Clean Oceans');
@@ -125,17 +132,12 @@ export class DataManagementService {
       if (!cleanOceans.tagset) throw new Error('cannot reach this');
       cleanOceans.tagset.tags = ['java', 'linux'];
       cleanOceans.context.tagline = 'Keep our Oceans clean and in balance!';
-      const cleanOceanMembers = await this.userGroupService.getGroupByName(
-        ctverse,
+      const cleanOceanMembers = this.userGroupService.getGroupByName(
+        cleanOceans,
         'members'
       );
       cleanOceanMembers.members = [angel, valentin, neil];
       cleanOceanMembers.focalPoint = neil;
-      await this.userGroupService.addGroupWithName(cleanOceans, 'crew');
-      await this.userGroupService.addGroupWithName(
-        cleanOceans,
-        'cleanOceanMembers'
-      );
 
       const cargoInsurance = new Challenge('Cargo Insurance');
       this.challengeService.initialiseMembers(cargoInsurance);
@@ -143,25 +145,18 @@ export class DataManagementService {
       cargoInsurance.tagset.tags = ['logistics', 'eco'];
       cargoInsurance.context.tagline =
         'In an interconnected world, how to manage risk along the chain?';
-      const cargoInsuranceMembers = await this.userGroupService.getGroupByName(
-        ctverse,
+      const cargoInsuranceMembers = this.userGroupService.getGroupByName(
+        cargoInsurance,
         'members'
       );
       cargoInsuranceMembers.members = [angel, valentin, neil];
       cargoInsuranceMembers.focalPoint = angel;
-      await this.userGroupService.addGroupWithName(
-        cargoInsurance,
-        'cargoInsuranceMembers'
-      );
 
       ctverse.challenges = [cleanOceans, energyWeb, cargoInsurance];
 
-      //Organisations
+      // Persist the ecoverse
       await this.ecoverseRepository.save(ctverse);
-
-      console.log('Loading data completed successfully.');
-
-      // await this.connection.manager.save(ctverse);
+      console.log('...loading of sample data completed successfully');
     } catch (error) {
       console.log(error.message);
     }
