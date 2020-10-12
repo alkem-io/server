@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { IGroupable } from '../../interfaces/groupable.interface';
 import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
@@ -7,7 +7,10 @@ import { IUserGroup } from './user-group.interface';
 
 @Injectable()
 export class UserGroupService {
-  constructor(private userService: UserService) {}
+  constructor(
+    @Inject(forwardRef(() => UserService))
+    private userService: UserService
+  ) {}
 
   async initialiseMembers(group: IUserGroup): Promise<IUserGroup> {
     if (!group.members) {

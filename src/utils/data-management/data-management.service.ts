@@ -4,10 +4,8 @@ import { Challenge } from 'src/domain/challenge/challenge.entity';
 import { ChallengeService } from 'src/domain/challenge/challenge.service';
 import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
-import { ProfileService } from 'src/domain/profile/profile.service';
 import { Reference } from 'src/domain/reference/reference.entity';
 import { Tagset } from 'src/domain/tagset/tagset.entity';
-import { TagsetService } from 'src/domain/tagset/tagset.service';
 import { UserGroupService } from 'src/domain/user-group/user-group.service';
 import { User } from 'src/domain/user/user.entity';
 import { UserService } from 'src/domain/user/user.service';
@@ -20,10 +18,8 @@ export class DataManagementService {
     private ecoverseService: EcoverseService,
     private userService: UserService,
     private userGroupService: UserGroupService,
-    private tagsetService: TagsetService,
     private connection: Connection,
     private challengeService: ChallengeService,
-    private profileService: ProfileService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
