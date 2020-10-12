@@ -2,10 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from 'src/domain/challenge/challenge.entity';
 import { ChallengeService } from 'src/domain/challenge/challenge.service';
-import { Context } from 'src/domain/context/context.entity';
 import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
-import { Profile } from 'src/domain/profile/profile.entity';
 import { ProfileService } from 'src/domain/profile/profile.service';
 import { Reference } from 'src/domain/reference/reference.entity';
 import { Tagset } from 'src/domain/tagset/tagset.entity';
@@ -69,8 +67,14 @@ export class DataManagementService {
       (ctverse as Ecoverse).context.tagline =
         'Powering multi-stakeholder collaboration!';
 
+      const membersGroup = this.userGroupService.getGroupByName(
+        ctverse,
+        'members'
+      );
+
       // Users
       const john = new User('john');
+      membersGroup.members?.push(john);
       const bob = new User('bob');
       bob.email = 'admin@cherrytwist.org';
       const valentin = new User('Valentin');
@@ -84,6 +88,13 @@ export class DataManagementService {
       const tagset = new Tagset('sample');
       tagset.tags = ['java', 'graphql'];
       neil.profile?.tagsets?.push(tagset);
+
+      // Add the users to the groups
+      membersGroup.members?.push(john);
+      membersGroup.members?.push(bob);
+      membersGroup.members?.push(valentin);
+      membersGroup.members?.push(neil);
+      membersGroup.members?.push(angel);
 
       // User Groups
       const jediGroup = await this.ecoverseService.createGroup('jedi');
@@ -110,7 +121,7 @@ export class DataManagementService {
         'Official site'
       );
       const energyWebMembers = this.userGroupService.getGroupByName(
-        ctverse,
+        energyWeb,
         'members'
       );
       energyWebMembers.members = [angel, valentin, neil];
