@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProfileService } from '../profile/profile.service';
+import { UserGroup } from '../user-group/user-group.entity';
 import { MemberOf } from './memberof.composite';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
@@ -42,7 +43,6 @@ export class UserService {
       // Find all top level groups
       let i;
       const count = userGroups.length;
-      console.log(`User ${user.name} is a member of ${count} groups...`);
       for (i = 0; i < count; i++) {
         const group = userGroups[i];
         const ecoverse = await group.ecoverse;
