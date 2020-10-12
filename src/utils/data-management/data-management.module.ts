@@ -15,6 +15,7 @@ import { TagsetModule } from 'src/domain/tagset/tagset.module';
 import { TagsetService } from 'src/domain/tagset/tagset.service';
 import { UserGroupModule } from 'src/domain/user-group/user-group.module';
 import { UserGroupService } from 'src/domain/user-group/user-group.service';
+import { User } from 'src/domain/user/user.entity';
 import { UserModule } from 'src/domain/user/user.module';
 import { UserService } from 'src/domain/user/user.service';
 import { DataManagementController } from './data-management.controller';
@@ -31,6 +32,7 @@ import { DataManagementService } from './data-management.service';
     UserModule,
     UserGroupModule,
     TypeOrmModule.forFeature([Ecoverse]),
+    TypeOrmModule.forFeature([User]),
   ],
   providers: [
     ChallengeService,

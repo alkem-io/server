@@ -13,6 +13,8 @@ import { TagsetModule } from '../tagset/tagset.module';
 import { TagsetService } from '../tagset/tagset.service';
 import { ProfileModule } from '../profile/profile.module';
 import { ProfileService } from '../profile/profile.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../user/user.entity';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { ProfileService } from '../profile/profile.service';
     TagsetModule,
     UserGroupModule,
     UserModule,
+    TypeOrmModule.forFeature([User]),
   ],
   providers: [
     ChallengeService,
