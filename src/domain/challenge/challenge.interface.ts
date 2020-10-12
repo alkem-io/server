@@ -9,11 +9,11 @@ export interface IChallenge {
   id: number;
   name: string;
   lifecyclePhase?: string;
-  context?: IContext;
+  context: IContext;
   tagset: ITagset;
   groups?: IUserGroup[];
   contributors?: IUser[];
   projects?: IProject[];
   challengeLeads?: IOrganisation[];
-  restrictedGroupNames?: string[];
+  restrictedGroupNames: string[];
 }

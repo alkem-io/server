@@ -9,13 +9,13 @@ import { IUser } from '../user/user.interface';
 export interface IEcoverse {
   id: number;
   name: string;
-  host?: IOrganisation;
-  context?: IContext;
+  host: IOrganisation;
+  context: IContext;
   DID: IDID;
   members?: IUser[];
   groups?: IUserGroup[];
   partners?: IOrganisation[];
   challenges?: IChallenge[];
   tagset: ITagset;
-  restrictedGroupNames?: string[];
+  restrictedGroupNames: string[];
 }

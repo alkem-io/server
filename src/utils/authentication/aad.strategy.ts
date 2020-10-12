@@ -40,7 +40,7 @@ export class AzureADStrategy extends PassportStrategy(
     try {
       if (!token.email) throw 'token email missing';
 
-      const knownUser = await this.userService.findUserByEmail(token.email);
+      const knownUser = await this.userService.getUserByEmail(token.email);
       if (knownUser) return done(null, knownUser, token);
 
       throw new UnauthorizedException();

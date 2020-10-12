@@ -1,16 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '../user-group/user-group.entity';
+import { TagsetService } from '../tagset/tagset.service';
+import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
+import { OrganisationInput } from './organisation.dto';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 
 @Injectable()
 export class OrganisationService {
-  constructor(private userGroupService: UserGroupService) {}
+  constructor(
+    private userGroupService: UserGroupService,
+    private tagsetService: TagsetService
+  ) {}
 
   async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
     if (!organisation.restrictedGroupNames) {
@@ -46,5 +48,32 @@ export class OrganisationService {
     await organisation.save();
 
     return group;
+  }
+
+  async updateOrganisation(
+    orgID: number,
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    const existingOrganisation = await Organisation.findOne(orgID);
+    if (!existingOrganisation)
+      throw new Error(`Oganisation with given ID (${orgID}) not found!`);
+
+    // Merge in the data
+    if (organisationData.name) {
+      existingOrganisation.name = organisationData.name;
+    }
+
+    if (organisationData.tags && organisationData.tags.tags)
+      this.tagsetService.replaceTags(
+        existingOrganisation.tagset.id,
+        organisationData.tags.tags
+      );
+
+    // To do - merge in the rest of the organisation update
+    existingOrganisation.save();
+
+    // To do: ensure all references are updated
+    //const ctVerse = await Ecoverse.getInstance();
+    return existingOrganisation;
   }
 }
