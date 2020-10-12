@@ -15,10 +15,13 @@ import { TagsetService } from '../tagset/tagset.service';
 import { IUser } from '../user/user.interface';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ITagset } from '../tagset/tagset.interface';
+import { UserInput } from '../user/user.dto';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
+    private userService: UserService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
@@ -228,5 +231,22 @@ export class EcoverseService {
     await (ctVerse as Ecoverse).save();
 
     return ctVerse;
+  }
+
+  async createUser(userData: UserInput): Promise<IUser> {
+    // Check if a user with this email already exists
+    const newUserEmail = userData.email;
+    const existingUser = await this.userService.getUserByEmail(newUserEmail);
+
+    if (existingUser)
+      throw new Error(
+        `Already have a user with the provided email address: ${newUserEmail}`
+      );
+
+    // Ok to create a new user + save
+    const user = User.create(userData);
+    await user.save();
+
+    return user;
   }
 }
