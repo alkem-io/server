@@ -29,8 +29,8 @@ import { DataManagementService } from './data-management.service';
     ReferenceModule,
     TagsetModule,
     UserModule,
-    UserGroupModule,
     TypeOrmModule.forFeature([Ecoverse]),
+    UserGroupModule,
   ],
   providers: [
     ChallengeService,
