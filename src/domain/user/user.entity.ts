@@ -65,7 +65,7 @@ export class User extends BaseEntity implements IUser {
     () => UserGroup,
     userGroup => userGroup.members
   )
-  userGroups?: UserGroup[];
+  userGroups?: Promise<UserGroup[]>;
 
   @Field(() => Profile, {
     nullable: true,
