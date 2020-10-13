@@ -89,8 +89,6 @@ export class DataManagementService {
       membersGroup.members?.push(neil);
       membersGroup.members?.push(angel);
 
-      await this.ecoverseRepository.save(ctverse);
-
       // User Groups
       const jediGroup = await this.ecoverseService.createGroup('jedi');
       this.userGroupService.addUserToGroup(angel, jediGroup);

@@ -15,10 +15,17 @@ import { TagsetService } from '../tagset/tagset.service';
 import { IUser } from '../user/user.interface';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ITagset } from '../tagset/tagset.interface';
+import { Challenge } from '../challenge/challenge.entity';
+import { ChallengeService } from '../challenge/challenge.service';
+import { ChallengeInput } from '../challenge/challenge.dto';
+import { UserService } from '../user/user.service';
+import { UserInput } from '../user/user.dto';
 
 @Injectable()
 export class EcoverseService {
   constructor(
+    private challengeService: ChallengeService,
+    private userService: UserService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
@@ -210,6 +217,45 @@ export class EcoverseService {
     );
     await ecoverse.save();
     return group;
+  }
+
+  async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
+    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    if (!ecoverse.challenges) {
+      throw new Error('Challenges must be defined');
+    }
+    // First check if the challenge already exists on not...
+    for (const challenge of ecoverse.challenges) {
+      if (challenge.name === challengeData.name) {
+        // Challenge already exists, just return. Option:merge?
+        return challenge;
+      }
+    }
+
+    // No existing challenge found, create and initialise a new one!
+    const challenge = await this.challengeService.createChallenge(
+      challengeData
+    );
+
+    ecoverse.challenges.push(challenge as Challenge);
+    await this.ecoverseRepository.save(ecoverse);
+
+    return challenge;
+  }
+
+  // Create the user and add the user into the members group
+  async createUser(userData: UserInput): Promise<IUser> {
+    const user = await this.userService.createUser(userData);
+    const ecoverse = await this.getEcoverse();
+    // Also add the user into the members group
+    const membersGroup = this.userGroupService.getGroupByName(
+      ecoverse,
+      RestrictedGroupNames.Members
+    );
+    await this.userGroupService.addUserToGroup(user, membersGroup);
+    await this.ecoverseRepository.save(ecoverse);
+
+    return user;
   }
 
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {

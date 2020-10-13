@@ -8,12 +8,14 @@ import { EcoverseResolverMutations } from './ecoverse.resolver.mutations';
 import { ContextModule } from '../context/context.module';
 import { TagsetModule } from '../tagset/tagset.module';
 import { ChallengeModule } from '../challenge/challenge.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
     ContextModule,
     TagsetModule,
     UserGroupModule,
+    UserModule,
     TagsetModule,
     ChallengeModule,
     TypeOrmModule.forFeature([Ecoverse]),

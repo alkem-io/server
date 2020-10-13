@@ -3,6 +3,7 @@ import { ContextService } from '../context/context.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
+import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 
@@ -67,6 +68,13 @@ export class ChallengeService {
     const challenge = await Challenge.findOne({ where: [{ id: challengeID }] });
     if (!challenge)
       throw new Error(`Unable to find challenge with ID: ${challengeID}`);
+    return challenge;
+  }
+
+  async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
+    // reate and initialise a new challenge using the first returned array item
+    const challenge = Challenge.create(challengeData);
+    this.initialiseMembers(challenge);
     return challenge;
   }
 }

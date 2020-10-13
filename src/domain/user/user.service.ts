@@ -5,6 +5,7 @@ import { EcoverseService } from '../ecoverse/ecoverse.service';
 import { ProfileService } from '../profile/profile.service';
 import { UserGroup } from '../user-group/user-group.entity';
 import { UserGroupService } from '../user-group/user-group.service';
+import { MemberOf } from './memberof.composite';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 
@@ -55,5 +56,57 @@ export class UserService {
     await this.userRepository.save(admin);
 
     return admin;
+  }
+
+  async getMemberOf(user: User): Promise<MemberOf> {
+    const userGroups = await user.userGroups;
+    const memberOf = new MemberOf();
+    memberOf.email = user.email;
+    memberOf.groups = [];
+    memberOf.challenges = [];
+    memberOf.organisations = [];
+
+    if (userGroups) {
+      // Find all top level groups
+      let i;
+      const count = userGroups.length;
+      for (i = 0; i < count; i++) {
+        const group = userGroups[i];
+        const ecoverse = await group.ecoverse;
+        const challenge = await group.challenge;
+        const organisation = await group.organisation;
+
+        // check if the group is an ecoverse group
+        if (ecoverse) {
+          // ecoverse group
+          memberOf.groups.push(group);
+        }
+        if (challenge) {
+          // challenge group
+          memberOf.challenges.push(challenge);
+        }
+        if (organisation) {
+          // challenge group
+          memberOf.organisations.push(organisation);
+        }
+      }
+    }
+    return memberOf;
+  }
+
+  async createUser(userData: UserInput): Promise<IUser> {
+    // Check if a user with this email already exists
+    const newUserEmail = userData.email;
+    const existingUser = await this.getUserByEmail(newUserEmail);
+
+    if (existingUser)
+      throw new Error(
+        `Already have a user with the provided email address: ${newUserEmail}`
+      );
+
+    // Ok to create a new user + save
+    const user = User.create(userData);
+
+    return user;
   }
 }

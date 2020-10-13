@@ -1,8 +1,14 @@
 import { Inject } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
+import { ChallengeInput } from '../challenge/challenge.dto';
+import { Challenge } from '../challenge/challenge.entity';
+import { IChallenge } from '../challenge/challenge.interface';
 import { UserGroup } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
+import { UserInput } from '../user/user.dto';
+import { User } from '../user/user.entity';
+import { IUser } from '../user/user.interface';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
@@ -32,5 +38,22 @@ export class EcoverseResolverMutations {
   ): Promise<IEcoverse> {
     const ctVerse = await this.ecoverseService.update(ecoverseData);
     return ctVerse;
+  }
+
+  @Mutation(() => User, {
+    description: 'Creates a new user as a member of the ecoverse',
+  })
+  async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
+    const user = await this.ecoverseService.createUser(userData);
+    return user;
+  }
+
+  @Mutation(() => Challenge)
+  async createChallenge(
+    @Args('challengeData') challengeData: ChallengeInput
+  ): Promise<IChallenge> {
+    const challenge = await this.ecoverseService.createChallenge(challengeData);
+
+    return challenge;
   }
 }
