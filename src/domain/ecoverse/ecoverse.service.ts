@@ -243,7 +243,7 @@ export class EcoverseService {
       RestrictedGroupNames.Members
     );
     await this.userGroupService.addUserToGroup(user, membersGroup);
-    await (ecoverse as Ecoverse).save();
+    await this.ecoverseRepository.save(ecoverse);
 
     return user;
   }
