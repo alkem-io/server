@@ -262,7 +262,7 @@ export class EcoverseService {
     const ctverse = await this.getEcoverse();
     const adminsGroup = await this.userGroupService.getGroupByName(
       ctverse,
-      'admins'
+      RestrictedGroupNames.Admins
     );
 
     await this.userGroupService.addUserToGroup(user, adminsGroup);
