@@ -18,11 +18,14 @@ import { ITagset } from '../tagset/tagset.interface';
 import { Challenge } from '../challenge/challenge.entity';
 import { ChallengeService } from '../challenge/challenge.service';
 import { ChallengeInput } from '../challenge/challenge.dto';
+import { UserService } from '../user/user.service';
+import { UserInput } from '../user/user.dto';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private challengeService: ChallengeService,
+    private userService: UserService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
@@ -238,6 +241,21 @@ export class EcoverseService {
     await this.ecoverseRepository.save(ecoverse);
 
     return challenge;
+  }
+
+  // Create the user and add the user into the members group
+  async createUser(userData: UserInput): Promise<IUser> {
+    const user = await this.userService.createUser(userData);
+    const ecoverse = await this.getEcoverse();
+    // Also add the user into the members group
+    const membersGroup = this.userGroupService.getGroupByName(
+      ecoverse,
+      RestrictedGroupNames.Members
+    );
+    await this.userGroupService.addUserToGroup(user, membersGroup);
+    await this.ecoverseRepository.save(ecoverse);
+
+    return user;
   }
 
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
