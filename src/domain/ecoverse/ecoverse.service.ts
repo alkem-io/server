@@ -230,10 +230,12 @@ export class EcoverseService {
     }
 
     // No existing challenge found, create and initialise a new one!
-    const challenge = Challenge.create(challengeData);
-    this.challengeService.initialiseMembers(challenge);
-    ecoverse.challenges.push(challenge);
-    await ecoverse.save();
+    const challenge = await this.challengeService.createChallenge(
+      challengeData
+    );
+
+    ecoverse.challenges.push(challenge as Challenge);
+    await this.ecoverseRepository.save(ecoverse);
 
     return challenge;
   }
