@@ -1,0 +1,18 @@
+mutation CreateOrganisation($organisationData: OrganisationInput!) {
+  createOrganisation(organisationData: $organisationData) {
+    name,
+    members
+    {
+     	name
+    }
+  }
+}
+
+
+query variables:
+{
+  "organisationData":
+  {
+    "name": "Cherrytwist",
+  }
+}

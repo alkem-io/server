@@ -4,6 +4,9 @@ import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
+import { OrganisationInput } from '../organisation/organisation.dto';
+import { Organisation } from '../organisation/organisation.entity';
+import { IOrganisation } from '../organisation/organisation.interface';
 import { UserGroup } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserInput } from '../user/user.dto';
@@ -48,12 +51,28 @@ export class EcoverseResolverMutations {
     return user;
   }
 
-  @Mutation(() => Challenge)
+  @Mutation(() => Challenge, {
+    description: 'Creates a new challenge and registers it with the ecoverse',
+  })
   async createChallenge(
     @Args('challengeData') challengeData: ChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.ecoverseService.createChallenge(challengeData);
 
     return challenge;
+  }
+
+  @Mutation(() => Organisation, {
+    description:
+      'Creates a new organisation and registers it with the ecoverse',
+  })
+  async createOrganisation(
+    @Args('organisationData') organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    const organisation = await this.ecoverseService.createOrganisation(
+      organisationData
+    );
+
+    return organisation;
   }
 }

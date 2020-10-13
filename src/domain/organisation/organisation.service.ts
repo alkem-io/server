@@ -50,6 +50,15 @@ export class OrganisationService {
     return group;
   }
 
+  async createOrganisation(
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    // Create and initialise a new organisation using the supplied data
+    const organisation = Organisation.create(organisationData);
+    this.initialiseMembers(organisation);
+    return organisation;
+  }
+
   async updateOrganisation(
     orgID: number,
     organisationData: OrganisationInput

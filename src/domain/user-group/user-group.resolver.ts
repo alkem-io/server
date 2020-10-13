@@ -7,7 +7,10 @@ import { UserGroupService } from './user-group.service';
 export class UserGroupResolver {
   constructor(private groupService: UserGroupService) {}
 
-  @Mutation(() => UserGroup)
+  @Mutation(() => UserGroup, {
+    description:
+      'Adds the user with the given identifier to the specified user group',
+  })
   async addUserToGroup(
     @Args('userID') userID: number,
     @Args('groupID') groupID: number

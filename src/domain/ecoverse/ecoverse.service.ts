@@ -20,11 +20,15 @@ import { ChallengeService } from '../challenge/challenge.service';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { UserService } from '../user/user.service';
 import { UserInput } from '../user/user.dto';
+import { OrganisationInput } from '../organisation/organisation.dto';
+import { Organisation } from '../organisation/organisation.entity';
+import { OrganisationService } from '../organisation/organisation.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private challengeService: ChallengeService,
+    private organisationService: OrganisationService,
     private userService: UserService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
@@ -75,8 +79,8 @@ export class EcoverseService {
       ecoverse.challenges = [];
     }
 
-    if (!ecoverse.partners) {
-      ecoverse.partners = [];
+    if (!ecoverse.organisations) {
+      ecoverse.organisations = [];
     }
 
     // Initialise contained singletons
@@ -241,6 +245,32 @@ export class EcoverseService {
     await this.ecoverseRepository.save(ecoverse);
 
     return challenge;
+  }
+
+  async createOrganisation(
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    if (!ecoverse.organisations) {
+      throw new Error('Organisations must be defined');
+    }
+    // First check if the organisation already exists on not...
+    for (const organisation of ecoverse.organisations) {
+      if (organisation.name === organisationData.name) {
+        // Organisation already exists, just return. Option:merge?
+        return organisation;
+      }
+    }
+
+    // No existing organisation found, create and initialise a new one!
+    const organisation = await this.organisationService.createOrganisation(
+      organisationData
+    );
+
+    ecoverse.organisations.push(organisation as Organisation);
+    await this.ecoverseRepository.save(ecoverse);
+
+    return organisation;
   }
 
   // Create the user and add the user into the members group
