@@ -233,19 +233,17 @@ export class EcoverseService {
     return ctVerse;
   }
 
+  // Create the user and add the user into the members group
   async createUser(userData: UserInput): Promise<IUser> {
-    // Check if a user with this email already exists
-    const newUserEmail = userData.email;
-    const existingUser = await this.userService.getUserByEmail(newUserEmail);
-
-    if (existingUser)
-      throw new Error(
-        `Already have a user with the provided email address: ${newUserEmail}`
-      );
-
-    // Ok to create a new user + save
-    const user = User.create(userData);
-    await user.save();
+    const user = await this.userService.createUser(userData);
+    const ecoverse = await this.getEcoverse();
+    // Also add the user into the members group
+    const membersGroup = this.userGroupService.getGroupByName(
+      ecoverse,
+      RestrictedGroupNames.Members
+    );
+    await this.userGroupService.addUserToGroup(user, membersGroup);
+    await (ecoverse as Ecoverse).save();
 
     return user;
   }
