@@ -1,10 +1,7 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EcoverseService } from '../ecoverse/ecoverse.service';
 import { ProfileService } from '../profile/profile.service';
-import { UserGroup } from '../user-group/user-group.entity';
-import { UserGroupService } from '../user-group/user-group.service';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
@@ -14,10 +11,6 @@ import { IUser } from './user.interface';
 export class UserService {
   constructor(
     private profileService: ProfileService,
-    @Inject(forwardRef(() => EcoverseService))
-    private ecoverseService: EcoverseService,
-    @Inject(forwardRef(() => UserGroupService))
-    private userGroupService: UserGroupService,
     @InjectRepository(User)
     private userRepository: Repository<User>
   ) {}
@@ -36,28 +29,6 @@ export class UserService {
 
   async getUserByEmail(email: string): Promise<IUser | undefined> {
     return this.userRepository.findOne({ email: email });
-  }
-
-  async getOrCreateCtAdmin(): Promise<IUser> {
-    let admin = await this.userRepository.findOne({
-      email: 'admin@cherrytwist.org',
-    });
-
-    if (admin) return admin;
-
-    const ctverse = await this.ecoverseService.getEcoverse();
-    const adminsGroup = await this.userGroupService.getGroupByName(
-      ctverse,
-      'members'
-    );
-
-    admin = new User('ctAdmin');
-    admin.email = 'admin@cherrytwist.org';
-    admin.lastName = 'admin';
-    ((await admin.userGroups) as UserGroup[]).push(adminsGroup as UserGroup);
-    await this.userRepository.save(admin);
-
-    return admin;
   }
 
   async getMemberOf(user: User): Promise<MemberOf> {

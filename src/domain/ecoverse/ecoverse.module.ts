@@ -1,4 +1,4 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { UserGroupModule } from '../user-group/user-group.module';
 import { EcoverseService } from './ecoverse.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -18,7 +18,7 @@ import { UserModule } from '../user/user.module';
     TagsetModule,
     ChallengeModule,
     TypeOrmModule.forFeature([Ecoverse]),
-    forwardRef(() => UserModule),
+    UserModule,
   ],
   providers: [
     EcoverseService,
