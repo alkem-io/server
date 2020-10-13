@@ -31,7 +31,7 @@ export class ChallengeResolver {
 
   @Mutation(() => Challenge)
   async updateChallenge(
-    @Args('challengeID') challengeID: number,
+    @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args('challengeData') challengeData: ChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.updateChallenge(

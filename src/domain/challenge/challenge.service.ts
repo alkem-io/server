@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ContextService } from '../context/context.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { IUserGroup } from '../user-group/user-group.interface';
@@ -12,7 +14,9 @@ export class ChallengeService {
   constructor(
     private userGroupService: UserGroupService,
     private contextService: ContextService,
-    private tagsetService: TagsetService
+    private tagsetService: TagsetService,
+    @InjectRepository(Challenge)
+    private challengeRepository: Repository<Challenge>
   ) {}
 
   initialiseMembers(challenge: IChallenge): IChallenge {
@@ -101,6 +105,8 @@ export class ChallengeService {
         challenge.tagset.id,
         challengeData.tagset.tags
       );
+
+    await this.challengeRepository.save(challenge);
 
     return challenge;
   }
