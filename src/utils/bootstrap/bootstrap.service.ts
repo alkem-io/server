@@ -11,12 +11,22 @@ export class BootstrapService {
   ) {}
 
   async boostrapEcoverse() {
-    this.ecoverseService.getEcoverse();
-    const ctAdminDto = new UserInput();
-    ctAdminDto.name = 'ctAdmin';
-    ctAdminDto.email = 'admin@cherrytwist.org';
-    ctAdminDto.lastName = 'admin';
-    const ctAdmin = await this.userService.createUser(ctAdminDto);
-    await this.ecoverseService.addAdmin(ctAdmin);
+    try {
+      this.ecoverseService.getEcoverse();
+      const ctAdminDto = new UserInput();
+      ctAdminDto.name = 'ctAdmin';
+      ctAdminDto.email = 'admin@cherrytwist.org';
+      ctAdminDto.lastName = 'admin';
+
+      if (this.userService.getUserByEmail('admin@cherrytwist.org')) {
+        console.info('Admin user already exists!');
+        return;
+      }
+
+      const ctAdmin = await this.userService.createUser(ctAdminDto);
+      await this.ecoverseService.addAdmin(ctAdmin);
+    } catch (error) {
+      console.log(error);
+    }
   }
 }
