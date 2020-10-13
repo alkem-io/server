@@ -3,6 +3,9 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Float, Mutation } from '@nestjs/graphql/dist';
 import { UserGroup } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
+import { ChallengeInput } from './challenge.dto';
+import { Challenge } from './challenge.entity';
+import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
 
 @Resolver()
@@ -24,5 +27,17 @@ export class ChallengeResolver {
       groupName
     );
     return group;
+  }
+
+  @Mutation(() => Challenge)
+  async updateChallenge(
+    @Args('challengeID') challengeID: number,
+    @Args('challengeData') challengeData: ChallengeInput
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeService.updateChallenge(
+      challengeID,
+      challengeData
+    );
+    return challenge;
   }
 }

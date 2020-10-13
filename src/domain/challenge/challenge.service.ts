@@ -77,4 +77,31 @@ export class ChallengeService {
     this.initialiseMembers(challenge);
     return challenge;
   }
+
+  async updateChallenge(
+    challengeID: number,
+    challengeData: ChallengeInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeByID(challengeID);
+
+    // Copy over the received data
+    if (challengeData.name) {
+      challenge.name = challengeData.name;
+    }
+
+    if (challengeData.lifecyclePhase) {
+      challenge.lifecyclePhase = challengeData.lifecyclePhase;
+    }
+
+    if (challengeData.context)
+      this.contextService.update(challenge, challengeData.context);
+
+    if (challengeData.tagset && challengeData.tagset.tags)
+      this.tagsetService.replaceTags(
+        challenge.tagset.id,
+        challengeData.tagset.tags
+      );
+
+    return challenge;
+  }
 }

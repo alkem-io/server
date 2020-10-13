@@ -241,20 +241,23 @@ export class EcoverseService {
   }
 
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
-    const ctVerse = await this.getEcoverse();
+    const ecoverse = await this.getEcoverse();
 
     // Copy over the received data
     if (ecoverseData.name) {
-      ctVerse.name = ecoverseData.name;
+      ecoverse.name = ecoverseData.name;
     }
     if (ecoverseData.context)
-      this.contextService.update(ctVerse, ecoverseData.context);
+      this.contextService.update(ecoverse, ecoverseData.context);
 
     if (ecoverseData.tags && ecoverseData.tags.tags)
-      this.tagsetService.replaceTags(ctVerse.tagset.id, ecoverseData.tags.tags);
+      this.tagsetService.replaceTags(
+        ecoverse.tagset.id,
+        ecoverseData.tags.tags
+      );
 
-    await (ctVerse as Ecoverse).save();
+    await this.ecoverseRepository.save(ecoverse);
 
-    return ctVerse;
+    return ecoverse;
   }
 }
