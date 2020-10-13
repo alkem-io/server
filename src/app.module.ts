@@ -63,7 +63,7 @@ import serviceConfig from './utils/config/service.config';
     UserModule,
     UserGroupModule,
     GraphQLModule.forRoot({
-      autoSchemaFile: 'schema.gql',
+      autoSchemaFile: true,
       playground: true,
     }),
     DataManagementModule,
