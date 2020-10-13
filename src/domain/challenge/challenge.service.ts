@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ContextService } from '../context/context.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { IUserGroup } from '../user-group/user-group.interface';
@@ -12,7 +14,9 @@ export class ChallengeService {
   constructor(
     private userGroupService: UserGroupService,
     private contextService: ContextService,
-    private tagsetService: TagsetService
+    private tagsetService: TagsetService,
+    @InjectRepository(Challenge)
+    private challengeRepository: Repository<Challenge>
   ) {}
 
   initialiseMembers(challenge: IChallenge): IChallenge {
@@ -75,6 +79,35 @@ export class ChallengeService {
     // reate and initialise a new challenge using the first returned array item
     const challenge = Challenge.create(challengeData);
     this.initialiseMembers(challenge);
+    return challenge;
+  }
+
+  async updateChallenge(
+    challengeID: number,
+    challengeData: ChallengeInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeByID(challengeID);
+
+    // Copy over the received data
+    if (challengeData.name) {
+      challenge.name = challengeData.name;
+    }
+
+    if (challengeData.lifecyclePhase) {
+      challenge.lifecyclePhase = challengeData.lifecyclePhase;
+    }
+
+    if (challengeData.context)
+      this.contextService.update(challenge, challengeData.context);
+
+    if (challengeData.tagset && challengeData.tagset.tags)
+      this.tagsetService.replaceTags(
+        challenge.tagset.id,
+        challengeData.tagset.tags
+      );
+
+    await this.challengeRepository.save(challenge);
+
     return challenge;
   }
 }
