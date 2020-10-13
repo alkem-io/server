@@ -1,6 +1,9 @@
 import { Inject } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
+import { ChallengeInput } from '../challenge/challenge.dto';
+import { Challenge } from '../challenge/challenge.entity';
+import { IChallenge } from '../challenge/challenge.interface';
 import { UserGroup } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { EcoverseInput } from './ecoverse.dto';
@@ -32,5 +35,14 @@ export class EcoverseResolverMutations {
   ): Promise<IEcoverse> {
     const ctVerse = await this.ecoverseService.update(ecoverseData);
     return ctVerse;
+  }
+
+  @Mutation(() => Challenge)
+  async createChallenge(
+    @Args('challengeData') challengeData: ChallengeInput
+  ): Promise<IChallenge> {
+    const challenge = await this.ecoverseService.createChallenge(challengeData);
+
+    return challenge;
   }
 }
