@@ -12,7 +12,7 @@ import { EcoverseModule } from '../ecoverse/ecoverse.module';
     ProfileModule,
     TypeOrmModule.forFeature([User]),
     forwardRef(() => UserGroupModule),
-    EcoverseModule,
+    forwardRef(() => EcoverseModule),
   ],
   providers: [UserService, UserResolver],
   exports: [UserService],

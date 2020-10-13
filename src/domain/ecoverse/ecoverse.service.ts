@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IContext } from '../context/context.interface';
 import { IOrganisation } from '../organisation/organisation.interface';
@@ -25,6 +25,7 @@ import { UserInput } from '../user/user.dto';
 export class EcoverseService {
   constructor(
     private challengeService: ChallengeService,
+    @Inject(forwardRef(() => UserService))
     private userService: UserService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,

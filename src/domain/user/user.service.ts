@@ -6,6 +6,7 @@ import { ProfileService } from '../profile/profile.service';
 import { UserGroup } from '../user-group/user-group.entity';
 import { UserGroupService } from '../user-group/user-group.service';
 import { MemberOf } from './memberof.composite';
+import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 
@@ -13,6 +14,7 @@ import { IUser } from './user.interface';
 export class UserService {
   constructor(
     private profileService: ProfileService,
+    @Inject(forwardRef(() => EcoverseService))
     private ecoverseService: EcoverseService,
     @Inject(forwardRef(() => UserGroupService))
     private userGroupService: UserGroupService,
@@ -52,7 +54,7 @@ export class UserService {
     admin = new User('ctAdmin');
     admin.email = 'admin@cherrytwist.org';
     admin.lastName = 'admin';
-    admin.userGroups?.push(adminsGroup as UserGroup);
+    ((await admin.userGroups) as UserGroup[]).push(adminsGroup as UserGroup);
     await this.userRepository.save(admin);
 
     return admin;
