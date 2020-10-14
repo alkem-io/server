@@ -1,0 +1,15 @@
+mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
+  assignGroupFocalPoint(groupID: $groupID, userID: $userID) {
+    name,
+    id,
+    focalPoint {
+      name
+    }
+  }
+}
+
+Variables:
+{
+  "userID": 7,
+  "groupID": 1
+}
