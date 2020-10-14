@@ -305,7 +305,6 @@ export class EcoverseService {
 
   // Removes the user and deletes the profile
   async removeUser(userID: number): Promise<boolean> {
-    const ecoverse = await this.getEcoverse();
     const user = await this.userService.getUserByID(userID);
     if (!user) throw new Error(`Could not locate specified user: ${userID}`);
 
@@ -317,9 +316,6 @@ export class EcoverseService {
 
     // And finally remove the user
     await this.userService.removeUser(user);
-
-    // and save
-    await this.ecoverseRepository.save(ecoverse);
 
     return true;
   }

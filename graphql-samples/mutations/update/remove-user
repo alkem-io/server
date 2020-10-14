@@ -1,0 +1,8 @@
+mutation removeUser($userID: Float!) {
+  removeUser(userID: $userID)
+}
+
+Variables:
+{
+  "userID": 7
+}
