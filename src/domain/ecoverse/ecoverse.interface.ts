@@ -14,7 +14,7 @@ export interface IEcoverse {
   DID: IDID;
   members?: IUser[];
   groups?: IUserGroup[];
-  partners?: IOrganisation[];
+  organisations?: IOrganisation[];
   challenges?: IChallenge[];
   tagset: ITagset;
   restrictedGroupNames: string[];

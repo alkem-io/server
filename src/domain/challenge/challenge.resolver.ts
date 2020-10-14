@@ -29,7 +29,10 @@ export class ChallengeResolver {
     return group;
   }
 
-  @Mutation(() => Challenge)
+  @Mutation(() => Challenge, {
+    description:
+      'Updates the specified Challenge with the provided data (merge)',
+  })
   async updateChallenge(
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args('challengeData') challengeData: ChallengeInput

@@ -80,7 +80,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
       { name: 'organisationId', referencedColumnName: 'id' },
     ],
   })
-  partners?: Organisation[];
+  organisations?: Organisation[];
 
   //
   @Field(() => [Challenge], {

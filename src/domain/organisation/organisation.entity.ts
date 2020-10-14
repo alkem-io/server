@@ -45,7 +45,7 @@ export class Organisation extends BaseEntity
 
   @ManyToMany(
     () => Ecoverse,
-    ecoverse => ecoverse.partners
+    ecoverse => ecoverse.organisations
   )
   ecoverses?: Ecoverse[];
 

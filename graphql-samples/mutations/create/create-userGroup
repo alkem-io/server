@@ -1,0 +1,19 @@
+mutation CreateUserGroup($userGroupData: UserGroupInput!) {
+  createUserGroup(userGroupData: $userGroupData) {
+    name,
+    members
+    {
+     id
+    }
+
+  }
+}
+
+
+query variables:
+{
+  "userGroupData":
+  {
+    "name": "Teenage Mutant Ninja Turtles"
+  }
+}
