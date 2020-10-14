@@ -18,8 +18,11 @@ import { OrganisationModule } from '../organisation/organisation.module';
     TagsetModule,
     OrganisationModule,
     UserGroupModule,
+    TagsetModule,
+    ChallengeModule,
     UserModule,
     TypeOrmModule.forFeature([Ecoverse]),
+    UserModule,
   ],
   providers: [
     EcoverseService,
