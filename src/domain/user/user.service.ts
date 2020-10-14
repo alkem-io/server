@@ -42,11 +42,11 @@ export class UserService {
   }
 
   async getUserByID(userID: number): Promise<IUser | undefined> {
-    return User.findOne({ id: userID });
+    return this.userRepository.findOne({ id: userID });
   }
 
   async getUserByEmail(email: string): Promise<IUser | undefined> {
-    return User.findOne({ email: email });
+    return this.userRepository.findOne({ email: email });
   }
 
   async getMemberOf(user: User): Promise<MemberOf> {
