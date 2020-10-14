@@ -9,14 +9,18 @@ import { ContextModule } from '../context/context.module';
 import { TagsetModule } from '../tagset/tagset.module';
 import { ChallengeModule } from '../challenge/challenge.module';
 import { UserModule } from '../user/user.module';
+import { OrganisationModule } from '../organisation/organisation.module';
 
 @Module({
   imports: [
+    ChallengeModule,
     ContextModule,
     TagsetModule,
+    OrganisationModule,
     UserGroupModule,
     TagsetModule,
     ChallengeModule,
+    UserModule,
     TypeOrmModule.forFeature([Ecoverse]),
     UserModule,
   ],

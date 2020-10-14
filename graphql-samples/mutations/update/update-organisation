@@ -1,0 +1,16 @@
+mutation UpdateOrganisation($organisationData: UpdateRootOrganisationInput!) {
+  updateOrganisation(organisationData: $organisationData) {
+    name,
+    id
+  }
+}
+
+query variables:
+{
+  "organisationID": 1,
+  "organisationData":
+  {
+    "name": "Cherrytwist2",
+  }
+}
+

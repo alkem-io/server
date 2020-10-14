@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
@@ -11,7 +13,9 @@ import { IOrganisation } from './organisation.interface';
 export class OrganisationService {
   constructor(
     private userGroupService: UserGroupService,
-    private tagsetService: TagsetService
+    private tagsetService: TagsetService,
+    @InjectRepository(Organisation)
+    private organisationRepository: Repository<Organisation>
   ) {}
 
   async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
@@ -50,6 +54,15 @@ export class OrganisationService {
     return group;
   }
 
+  async createOrganisation(
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    // Create and initialise a new organisation using the supplied data
+    const organisation = Organisation.create(organisationData);
+    this.initialiseMembers(organisation);
+    return organisation;
+  }
+
   async updateOrganisation(
     orgID: number,
     organisationData: OrganisationInput
@@ -70,10 +83,8 @@ export class OrganisationService {
       );
 
     // To do - merge in the rest of the organisation update
-    existingOrganisation.save();
+    await this.organisationRepository.save(existingOrganisation);
 
-    // To do: ensure all references are updated
-    //const ctVerse = await Ecoverse.getInstance();
     return existingOrganisation;
   }
 }
