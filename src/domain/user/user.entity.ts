@@ -77,8 +77,7 @@ export class User extends BaseEntity implements IUser {
 
   @OneToMany(
     () => UserGroup,
-    userGroup => userGroup.focalPoint,
-    { eager: false, cascade: true }
+    userGroup => userGroup.focalPoint
   )
   focalPoints?: UserGroup[];
 

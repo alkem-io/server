@@ -18,4 +18,17 @@ export class UserGroupResolver {
     const group = this.groupService.addUser(userID, groupID);
     return group;
   }
+
+  @Mutation(() => UserGroup, {
+    nullable: true,
+    description:
+      'Assign the user with the given ID as focal point for the given group',
+  })
+  async assignGroupFocalPoint(
+    @Args('userID') userID: number,
+    @Args('groupID') groupID: number
+  ): Promise<IUserGroup> {
+    const group = this.groupService.assignFocalPoint(userID, groupID);
+    return group;
+  }
 }
