@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
@@ -18,6 +19,9 @@ export class UserService {
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(user: IUser): Promise<IUser> {
+    if (!user.profile) {
+      user.profile = new Profile();
+    }
     // Initialise contained singletons
     this.profileService.initialiseMembers(user.profile);
 
@@ -97,6 +101,9 @@ export class UserService {
 
     // Ok to create a new user + save
     const user = User.create(userData);
+    // Have the user,ensure it is initialised
+    await this.initialiseMembers(user);
+    await this.userRepository.save(user);
 
     return user;
   }
