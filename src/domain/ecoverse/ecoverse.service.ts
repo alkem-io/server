@@ -5,7 +5,6 @@ import { IOrganisation } from '../organisation/organisation.interface';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
-import { User } from '../user/user.entity';
 import { Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
@@ -36,35 +35,6 @@ export class EcoverseService {
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
-
-  // Populate an empty ecoverse
-  async populateEmptyEcoverse(ecoverse: IEcoverse): Promise<IEcoverse> {
-    // Create new Ecoverse
-    this.initialiseMembers(ecoverse);
-    ecoverse.name = 'Empty ecoverse';
-    ecoverse.context.tagline = 'An empty ecoverse to be populated';
-
-    // Create the host organisation
-    const orgInput = new OrganisationInput();
-    orgInput.name = 'Default host organisation';
-    ecoverse.host = await this.createOrganisation(orgInput);
-
-    // Find the admin user and put that person in as member + admin
-    const adminUser = new User('admin');
-    const admins = await this.userGroupService.getGroupByName(
-      ecoverse,
-      RestrictedGroupNames.Admins
-    );
-    const members = await this.userGroupService.getGroupByName(
-      ecoverse,
-      RestrictedGroupNames.Members
-    );
-    this.userGroupService.addUserToGroup(adminUser, admins);
-    this.userGroupService.addUserToGroup(adminUser, members);
-
-    return ecoverse;
-  }
-
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(ecoverse: IEcoverse): Promise<IEcoverse> {
@@ -94,28 +64,7 @@ export class EcoverseService {
   }
 
   async getEcoverse(): Promise<IEcoverse> {
-    try {
-      const ecoverseArray = await this.ecoverseRepository.find();
-      const ecoverseCount = ecoverseArray.length;
-      if (ecoverseCount == 0) {
-        console.log('No ecoverse found, creating empty ecoverse...');
-        // Create a new ecoverse
-        const ecoverse = new Ecoverse();
-        this.initialiseMembers(ecoverse);
-        this.populateEmptyEcoverse(ecoverse);
-        ecoverse.save();
-        return ecoverse as IEcoverse;
-      }
-      if (ecoverseCount == 1) {
-        return ecoverseArray[0] as IEcoverse;
-      }
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      throw new Error('Cannot have more than one ecoverse');
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getEcoverse()!!!', exception: e });
-      throw e;
-    }
+    return await this.ecoverseRepository.findOneOrFail();
   }
 
   async getName(): Promise<string> {
