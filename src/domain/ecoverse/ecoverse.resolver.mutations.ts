@@ -51,6 +51,14 @@ export class EcoverseResolverMutations {
     return user;
   }
 
+  @Mutation(() => Boolean, {
+    description: 'Removes the specified user from the ecoverse',
+  })
+  async removeUser(@Args('userID') userID: number): Promise<boolean> {
+    const success = await this.ecoverseService.removeUser(userID);
+    return success;
+  }
+
   @Mutation(() => Challenge, {
     description: 'Creates a new challenge and registers it with the ecoverse',
   })
