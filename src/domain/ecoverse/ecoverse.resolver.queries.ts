@@ -15,12 +15,14 @@ import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
+import { UserService } from '../user/user.service';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()
 export class EcoverseResolverQueries {
   constructor(
     @Inject(EcoverseService) private ecoverseService: EcoverseService,
+    private userService: UserService,
     private groupService: UserGroupService,
     private challengeService: ChallengeService
   ) {}
@@ -69,9 +71,15 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getMembers();
   }
 
-  @Query(() => User, { nullable: false, description: 'A particular user' })
-  async user(@Args('ID') id: string): Promise<User | undefined> {
-    return await User.findOne({ where: { id } });
+  @Query(() => User, {
+    nullable: false,
+    description: 'A particular user, identified by the ID or by email',
+  })
+  async user(@Args('ID') id: string): Promise<IUser> {
+    const user = await this.userService.getUser(id);
+    if (user) return user;
+
+    throw new Error(`Unable to locate user with given id: ${id}`);
   }
 
   @Query(() => [UserGroup], {
