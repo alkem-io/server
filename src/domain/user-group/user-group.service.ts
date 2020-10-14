@@ -54,7 +54,7 @@ export class UserGroupService {
     return group;
   }
 
-  async addUserToGroup(user: IUser, group: IUserGroup): Promise<IUser> {
+  async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
     if (!group.members) {
       group.members = [];
     }
@@ -62,13 +62,13 @@ export class UserGroupService {
     for (const existingUser of group.members) {
       if (user.name === existingUser.name) {
         // Found an existing user
-        return user;
+        return false;
       }
     }
 
     // User was not already a member so add the user
     group.members.push(user);
-    return user;
+    return true;
   }
 
   async assignFocalPoint(userID: number, groupID: number): Promise<IUserGroup> {

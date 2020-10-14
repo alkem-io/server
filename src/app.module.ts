@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -24,6 +24,7 @@ import databaseConfig from './utils/config/database.config';
 import { IDatabaseConfig } from './interfaces/database.config.interface';
 import { DataManagementModule } from './utils/data-management/data-management.module';
 import serviceConfig from './utils/config/service.config';
+import { BootstrapModule } from './utils/bootstrap/bootstrap.module';
 
 @Module({
   imports: [
@@ -49,7 +50,7 @@ import serviceConfig from './utils/config/service.config';
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
       }),
     }),
-    AuthenticationModule,
+    forwardRef(() => AuthenticationModule),
     AgreementModule,
     ChallengeModule,
     ContextModule,
@@ -67,6 +68,7 @@ import serviceConfig from './utils/config/service.config';
       playground: true,
     }),
     DataManagementModule,
+    BootstrapModule,
   ],
   controllers: [AppController],
   providers: [AppService],

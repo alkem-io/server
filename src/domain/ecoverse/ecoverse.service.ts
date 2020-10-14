@@ -288,6 +288,21 @@ export class EcoverseService {
     return user;
   }
 
+  async addAdmin(user: IUser): Promise<boolean> {
+    const ctverse = await this.getEcoverse();
+    const adminsGroup = await this.userGroupService.getGroupByName(
+      ctverse,
+      RestrictedGroupNames.Admins
+    );
+
+    if (await this.userGroupService.addUserToGroup(user, adminsGroup)) {
+      await this.ecoverseRepository.save(ctverse);
+      return true;
+    }
+
+    return false;
+  }
+
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
     const ecoverse = await this.getEcoverse();
 
