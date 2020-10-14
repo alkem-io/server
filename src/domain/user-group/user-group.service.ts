@@ -154,8 +154,10 @@ export class UserGroupService {
       console.log(msg);
       throw new Error(msg);
     }
-    // Try to find the user + group
-    group.focalPoint = undefined;
+    // Set focalPoint to NULL will remove the relation.
+    // For typeorm 'undefined' means - 'Not changed'
+    // More information: https://github.com/typeorm/typeorm/issues/5454
+    group.focalPoint = null;
 
     await this.groupRepository.save(group);
 
