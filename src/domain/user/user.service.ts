@@ -100,16 +100,4 @@ export class UserService {
 
     return user;
   }
-
-  async removeUser(user: IUser): Promise<boolean> {
-    // Check if a user with this email already exists
-    let result;
-    try {
-      result = await this.userRepository.remove(user as User);
-    } catch (e) {
-      console.log(`Unable to remove user: ${e}`);
-    }
-    if (!result) throw new Error(`Unable to remove user: ${user.id}`);
-    return true;
-  }
 }

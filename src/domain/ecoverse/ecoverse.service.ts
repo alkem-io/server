@@ -288,27 +288,6 @@ export class EcoverseService {
     return user;
   }
 
-  // Removes the user and deletes the profile
-  async removeUser(userID: number): Promise<boolean> {
-    const ecoverse = await this.getEcoverse();
-    const user = await this.userService.getUserByID(userID);
-    if (!user) throw new Error(`Could not locate specified user: ${userID}`);
-
-    const groups = await this.getGroups();
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[i];
-      await this.userGroupService.removeUserFromGroup(user, group);
-    }
-
-    // And finally remove the user
-    await this.userService.removeUser(user);
-
-    // and save
-    await this.ecoverseRepository.save(ecoverse);
-
-    return true;
-  }
-
   async addAdmin(user: IUser): Promise<boolean> {
     const ctverse = await this.getEcoverse();
     const adminsGroup = await this.userGroupService.getGroupByName(
