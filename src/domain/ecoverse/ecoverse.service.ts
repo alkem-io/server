@@ -42,9 +42,12 @@ export class EcoverseService {
     // Create new Ecoverse
     this.initialiseMembers(ecoverse);
     ecoverse.name = 'Empty ecoverse';
-    (ecoverse.context as IContext).tagline =
-      'An empty ecoverse to be populated';
-    (ecoverse.host as IOrganisation).name = 'Default host organisation';
+    ecoverse.context.tagline = 'An empty ecoverse to be populated';
+
+    // Create the host organisation
+    const orgInput = new OrganisationInput();
+    orgInput.name = 'Default host organisation';
+    ecoverse.host = await this.createOrganisation(orgInput);
 
     // Find the admin user and put that person in as member + admin
     const adminUser = new User('admin');
@@ -172,6 +175,18 @@ export class EcoverseService {
       return ecoverse.challenges as IChallenge[];
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
+      throw e;
+    }
+  }
+
+  async getOrganisations(): Promise<IOrganisation[]> {
+    try {
+      const ecoverse: IEcoverse = await this.getEcoverse();
+
+      if (!ecoverse.organisations) throw new Error('Unreachable');
+
+      return ecoverse.organisations as IOrganisation[];
+    } catch (e) {
       throw e;
     }
   }
