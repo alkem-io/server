@@ -23,6 +23,24 @@ export class UserService {
 
     return user;
   }
+
+  // Find a user either by id or email
+  async getUser(userID: string): Promise<IUser | undefined> {
+    const idInt: number = parseInt(userID);
+    if (!isNaN(idInt)) {
+      const user = await this.getUserByID(idInt);
+      if (user) return user;
+    }
+    // If get here then id was not a number, or not found
+    // Check the email address format: simple format check
+    const expression = /\S+@\S+/;
+    const emailChecked = expression.test(String(userID).toLowerCase());
+    if (emailChecked) {
+      const user = await this.getUserByEmail(userID);
+      if (user) return user;
+    }
+  }
+
   async getUserByID(userID: number): Promise<IUser | undefined> {
     return User.findOne({ id: userID });
   }
