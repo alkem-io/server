@@ -41,7 +41,7 @@ export class OrganisationService {
       where: [{ id: organisationID }],
     });
     if (!organisation)
-      throw new Error(`Unable to find challenge with ID: ${organisationID}`);
+      throw new Error(`Unable to find organisation with ID: ${organisationID}`);
     return organisation;
   }
 

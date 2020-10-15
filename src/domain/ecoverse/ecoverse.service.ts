@@ -103,7 +103,7 @@ export class EcoverseService {
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
       // Convert groups array into IGroups array
       if (!ecoverse.groups) {
-        throw new Error('Unreachable');
+        throw new Error('Ecoverse groups must be defined');
       }
       return ecoverse.groups as IUserGroup[];
     } catch (e) {
@@ -132,7 +132,8 @@ export class EcoverseService {
     try {
       const ecoverse: IEcoverse = await this.getEcoverse();
 
-      if (!ecoverse.organisations) throw new Error('Unreachable');
+      if (!ecoverse.organisations)
+        throw new Error('Ecoverse organisations must be defined');
 
       return ecoverse.organisations as IOrganisation[];
     } catch (e) {
