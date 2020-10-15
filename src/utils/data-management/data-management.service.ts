@@ -36,13 +36,8 @@ export class DataManagementService {
 
       // Create new Ecoverse
       this.addLogMsg(msgs, 'Populating empty ecoverse... ');
-      const ctverse = new Ecoverse();
-      this.ecoverseService.initialiseMembers(ctverse);
-      this.ecoverseService.populateEmptyEcoverse(ctverse);
-
-      await this.ecoverseRepository.save(ctverse);
       await this.bootstrapService.bootstrapEcoverse();
-      this.addLogMsg('.....populated.');
+      this.addLogMsg(msgs, '.....populated.');
     } catch (error) {
       this.addLogMsg(msgs, error.message);
     }
@@ -182,21 +177,28 @@ export class DataManagementService {
   }
 
   async populatePageContent(message: string): Promise<string> {
-    const ecoverse = await this.ecoverseService.getEcoverse();
+    let ecoverseName = '<< No ecoverse >>';
+    try {
+      const ecoverse = await this.ecoverseService.getEcoverse();
+      ecoverseName = ecoverse.name;
+    } catch (e) {
+      // ecoverse not yet initialised so just skip the name
+      console.log(e);
+    }
     const content = `<!DOCTYPE html>
     <html>
     <body>
     <h1>Cherrytwist Data Management Utility</h1>
-    <h2>Ecoverse: <i>${ecoverse.name}</i></H2>
+    <h2>Ecoverse: <i>${ecoverseName}</i></H2>
     <p>
     <b>Messages:</b>${message}</p>
-    <form action="./reset-db">
+    <form action="/data-management/reset-db">
     <input type="submit" value="Reset DB" />
     </form>
-    <p><form action="./empty-ecoverse">
+    <p><form action="/data-management/empty-ecoverse">
     <input type="submit" value="Reset Ecoverse" />
     </form></p>
-    <p><form action="./seed-data">
+    <p><form action="/data-management/seed-data">
     <input type="submit" value="Sample Data" />
     </form></p>
     </body>
