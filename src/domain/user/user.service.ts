@@ -107,4 +107,9 @@ export class UserService {
 
     return user;
   }
+
+  async removeUser(user: IUser): Promise<IUser> {
+    const result = await this.userRepository.remove(user as User);
+    return result;
+  }
 }

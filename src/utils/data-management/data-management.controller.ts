@@ -6,19 +6,17 @@ export class DataManagementController {
   constructor(private readonly dataManagementService: DataManagementService) {}
 
   @Get('reset-db')
-  async resetDB(){
+  async resetDB() {
     await this.dataManagementService.reset_to_empty_db();
   }
 
   @Get('empty-ecoverse')
-  async emptyEcoverse()
-  {
+  async emptyEcoverse() {
     await this.dataManagementService.reset_to_empty_ecoverse();
   }
 
   @Get('seed-data')
-  async seedData()
-  {
+  async seedData() {
     await this.dataManagementService.load_sample_data();
   }
 }
