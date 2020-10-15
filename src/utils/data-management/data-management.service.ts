@@ -11,10 +11,12 @@ import { User } from 'src/domain/user/user.entity';
 import { UserService } from 'src/domain/user/user.service';
 import { Repository } from 'typeorm';
 import { Connection } from 'typeorm';
+import { BootstrapService } from '../bootstrap/bootstrap.service';
 
 @Injectable()
 export class DataManagementService {
   constructor(
+    private bootstrapService: BootstrapService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
     private userGroupService: UserGroupService,
@@ -39,7 +41,8 @@ export class DataManagementService {
       this.ecoverseService.populateEmptyEcoverse(ctverse);
 
       await this.ecoverseRepository.save(ctverse);
-      this.addLogMsg(msgs, '.....populated.');
+      await this.bootstrapService.bootstrapEcoverse();
+      this.addLogMsg('.....populated.');
     } catch (error) {
       this.addLogMsg(msgs, error.message);
     }

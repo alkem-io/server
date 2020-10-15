@@ -1,6 +1,5 @@
-import { Get, Inject, UseGuards } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ChallengeService } from '../challenge/challenge.service';
@@ -8,6 +7,7 @@ import { Context } from '../context/context.entity';
 import { IContext } from '../context/context.interface';
 import { Organisation } from '../organisation/organisation.entity';
 import { IOrganisation } from '../organisation/organisation.interface';
+import { OrganisationService } from '../organisation/organisation.service';
 import { Tagset } from '../tagset/tagset.entity';
 import { ITagset } from '../tagset/tagset.interface';
 import { UserGroup } from '../user-group/user-group.entity';
@@ -24,6 +24,7 @@ export class EcoverseResolverQueries {
     @Inject(EcoverseService) private ecoverseService: EcoverseService,
     private userService: UserService,
     private groupService: UserGroupService,
+    private organisationService: OrganisationService,
     private challengeService: ChallengeService
   ) {}
 
@@ -44,8 +45,8 @@ export class EcoverseResolverQueries {
     return members;
   }
 
-  @Get()
-  @UseGuards(GqlAuthGuard)
+  //@Get()
+  //@UseGuards(GqlAuthGuard)
   @Query(() => Organisation, {
     nullable: false,
     description: 'The host organisation for the ecoverse',
@@ -112,6 +113,25 @@ export class EcoverseResolverQueries {
   })
   async challenge(@Args('ID') id: number): Promise<IChallenge | undefined> {
     return await this.challengeService.getChallengeByID(id);
+  }
+
+  @Query(() => [Organisation], {
+    nullable: false,
+    description: 'All organisations',
+  })
+  async organisations(): Promise<IOrganisation[]> {
+    const organisations = await this.ecoverseService.getOrganisations();
+    return organisations;
+  }
+
+  @Query(() => Organisation, {
+    nullable: false,
+    description: 'A particular organisation',
+  })
+  async organisation(
+    @Args('ID') id: number
+  ): Promise<IOrganisation | undefined> {
+    return await this.organisationService.getOrganisationByID(id);
   }
 
   @Query(() => Tagset, {
