@@ -20,6 +20,18 @@ export class UserGroupResolver {
   }
 
   @Mutation(() => UserGroup, {
+    description:
+      'Remove the user with the given identifier to the specified user group',
+  })
+  async removeUserFromGroup(
+    @Args('userID') userID: number,
+    @Args('groupID') groupID: number
+  ): Promise<IUserGroup> {
+    const group = this.groupService.removeUser(userID, groupID);
+    return group;
+  }
+
+  @Mutation(() => UserGroup, {
     nullable: true,
     description:
       'Assign the user with the given ID as focal point for the given group',
@@ -29,6 +41,17 @@ export class UserGroupResolver {
     @Args('groupID') groupID: number
   ): Promise<IUserGroup> {
     const group = this.groupService.assignFocalPoint(userID, groupID);
+    return group;
+  }
+
+  @Mutation(() => UserGroup, {
+    nullable: true,
+    description: 'Remove the focal point for the given group',
+  })
+  async removeGroupFocalPoint(
+    @Args('groupID') groupID: number
+  ): Promise<IUserGroup> {
+    const group = this.groupService.removeFocalPoint(groupID);
     return group;
   }
 }
