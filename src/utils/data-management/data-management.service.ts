@@ -24,31 +24,39 @@ export class DataManagementService {
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
 
-  async reset_to_empty_ecoverse() {
+  async reset_to_empty_ecoverse(): Promise<string> {
+    const msgs: string[] = [];
     try {
-      console.log('Dropping existing database... ');
+      this.addLogMsg(msgs, 'Dropping existing database... ');
       await this.connection.dropDatabase();
       await this.connection.synchronize();
-      console.log('.....dropped.');
+      this.addLogMsg(msgs, '.....dropped.');
 
       // Create new Ecoverse
-      console.log('Populating empty ecoverse... ');
+      this.addLogMsg(msgs, 'Populating empty ecoverse... ');
       const ctverse = new Ecoverse();
       this.ecoverseService.initialiseMembers(ctverse);
       this.ecoverseService.populateEmptyEcoverse(ctverse);
 
       await this.ecoverseRepository.save(ctverse);
-      console.log('.....populated.');
+      this.addLogMsg(msgs, '.....populated.');
     } catch (error) {
-      console.log(error.message);
+      this.addLogMsg(msgs, error.message);
     }
+    return msgs.toString();
   }
 
-  async load_sample_data() {
-    try {
-      console.log('=== Ecoverse: Loading sample data ===');
+  addLogMsg(msgs: string[], msg: string) {
+    msgs.push(msg);
+    console.log(msg);
+  }
 
-      console.log('Loading sample data....');
+  async load_sample_data(): Promise<string> {
+    const msgs: string[] = [];
+    try {
+      this.addLogMsg(msgs, '=== Ecoverse: Loading sample data ===');
+
+      this.addLogMsg(msgs, 'Loading sample data....');
       // Populate the Ecoverse beyond the defaults
       const ctverse = await this.ecoverseService.getEcoverse();
 
@@ -150,20 +158,46 @@ export class DataManagementService {
 
       // Persist the ecoverse
       await this.ecoverseRepository.save(ctverse);
-      console.log('...loading of sample data completed successfully');
+      this.addLogMsg(msgs, '...loading of sample data completed successfully');
     } catch (error) {
-      console.log(error.message);
+      this.addLogMsg(msgs, error.message);
     }
+    return msgs.toString();
   }
 
-  async reset_to_empty_db() {
+  async reset_to_empty_db(): Promise<string> {
+    const msgs: string[] = [];
     try {
-      console.log('Dropping existing database... ');
+      this.addLogMsg(msgs, 'Dropping existing database... ');
       await this.connection.dropDatabase();
       await this.connection.synchronize();
-      console.log('.....dropped.');
+      this.addLogMsg(msgs, '.....dropped. Completed successfully.');
     } catch (error) {
       console.log(error.message);
     }
+    return msgs.toString();
+  }
+
+  async populatePageContent(message: string): Promise<string> {
+    const ecoverse = await this.ecoverseService.getEcoverse();
+    const content = `<!DOCTYPE html>
+    <html>
+    <body>
+    <h1>Cherrytwist Data Management Utility</h1>
+    <h2>Ecoverse: <i>${ecoverse.name}</i></H2>
+    <p>
+    <b>Messages:</b>${message}</p>
+    <form action="./reset-db">
+    <input type="submit" value="Reset DB" />
+    </form>
+    <p><form action="./empty-ecoverse">
+    <input type="submit" value="Reset Ecoverse" />
+    </form></p>
+    <p><form action="./seed-data">
+    <input type="submit" value="Sample Data" />
+    </form></p>
+    </body>
+    </html>`;
+    return content;
   }
 }
