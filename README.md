@@ -71,19 +71,20 @@ CORS_ORIGIN=[your CORS origin value]
 npm install
 ```
 
-### Load the database with sample data if you wish
-
-```bash
-npm run data-load-samples
-```
-
 ### Start the server
 
 ```bash
 npm start
 ```
 
-Navigate to <http://localhost:4000/graphql> (4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
+### Load the database with sample data if you wish
+
+Navigate with your browser to <http://localhost:4000/data-management> and click on loading sample data
+(4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
+
+### Browse the GraphQL api for the ecoverse
+Navigate to <http://localhost:4000/graphql>
+(4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
 
 ## Setup instructions (docker-compose and docker)
 
@@ -108,9 +109,8 @@ To run this project:
 
 2. Populate database with initial data:
 
-    ```bash
-    docker exec ct_server npm run data-load-samples
-    ```
+    Navigate with your browser to <http://localhost:4000/data-management> and click on the button for loading sample data
+    Navigate to <http://localhost:4000/graphql> and browse the api
 
 ## Technology Stack
 
