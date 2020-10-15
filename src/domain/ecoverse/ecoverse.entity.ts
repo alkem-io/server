@@ -40,7 +40,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   })
   @OneToOne(() => Organisation, { eager: true, cascade: true })
   @JoinColumn()
-  host: Organisation;
+  host?: Organisation;
 
   @Field(() => Context, {
     nullable: true,
@@ -111,7 +111,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     this.name = '';
     this.context = new Context();
     this.tagset = new Tagset(RestrictedTagsetNames.Default);
-    this.host = new Organisation('Default host');
     this.restrictedGroupNames = [
       RestrictedGroupNames.Members,
       RestrictedGroupNames.Admins,

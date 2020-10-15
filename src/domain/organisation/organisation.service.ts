@@ -35,6 +35,16 @@ export class OrganisationService {
     return organisation;
   }
 
+  async getOrganisationByID(organisationID: number): Promise<IOrganisation> {
+    //const t1 = performance.now()
+    const organisation = await Organisation.findOne({
+      where: [{ id: organisationID }],
+    });
+    if (!organisation)
+      throw new Error(`Unable to find organisation with ID: ${organisationID}`);
+    return organisation;
+  }
+
   async createGroup(orgID: number, groupName: string): Promise<IUserGroup> {
     // First find the Challenge
     console.log(`Adding userGroup (${groupName}) to organisation (${orgID})`);
