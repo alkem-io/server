@@ -8,14 +8,44 @@ Build Status:
 Build Quality
 [![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/)
 
-## Server architecture
+## === Server architecture ===
 
 Cherrytwist server uses [NestJS](https://nestjs.com/) as framework and complies to its principles. The code is split into Data Layer (entities), Data Access Layer (), Service Layer and an API Layer (GraphQL).
 Interactions between different layers is depicted in the Layer Diagram below:
 
 ![Layer Diagram](diagrams/ct-server-layer-diagram.png)
 
-## Running the server locally (not in a container)
+
+The technology stack is as follows:
+
+- GraphQL: for specifying the interactions with the server, using Apollo server
+- Node: for runtime execution - **NB: LTS Node version (12.8.3) is currently used for development, and is required for deployment.**
+- NestJS as a framework
+- TypeScript: for all logic
+- TypeORM: for the orbject relational mapping
+- mySQL: for data persistance
+- docker: for containers
+- docker-compose: for container orchestration
+- passportjs for authentication
+- Azure Active Directory as an Identity Provider
+
+## === Interacting with a Cherrytwist server ===
+### **Graphql API**
+The server primarily interacts via a GraphQL api that it exploses. This api is used by the [Cherrytwist Web Client](http://github.com/cherrytwist/Client.Web), but also by any other clients / integrations that need to interact with the Cherrytwist server.
+
+This can be found at the following location: <http://localhost:4000/graphql>
+(4000 is the default port, see below for information on adjusting this port)
+
+### **Data Management**
+For evaluation / development with the Cherrytwist server, there is also a simple Data Management panel, available at the following URL: <http://localhost:4000/data-management>.
+
+The Data Management panel provides the following capabilities:
+- **Empty Ecoverse**: Resets the database back to an empty state, and ensures there is an empty Ecoverse available. It is triggered by a http request to <http://localhost:4000/data-management/empty-ecoverse>, or alternatively by pressing the relevant button on the main Data Management panel.
+- **Load Sample Data**: Loads a set of sample data into the Ecoverse. It is triggered by a http request to <http://localhost:4000/data-management/seed-data>, or alternatively by pressing the relevant button on the main Data Management panel.
+
+Note: the sample data provided here is basic so users are encouraged to look also at the Demo project where additional and more extensive data loading capabilities are available.
+
+## === Running the server locally (not in a container) ===
 
 To run the server a working MySQL Server is required.
 For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
@@ -71,21 +101,15 @@ CORS_ORIGIN=[your CORS origin value]
 npm install
 ```
 
-### Load the database with sample data if you wish
-
-```bash
-npm run data-load-samples
-```
-
 ### Start the server
 
 ```bash
 npm start
 ```
 
-Navigate to <http://localhost:4000/graphql> (4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
+There should now be a running Cherrytwist server! It is possible to populate sample data into the server using the Data Management panel described above.
 
-## Setup instructions (docker-compose and docker)
+## === Running the server using containers (docker-compose and docker) ===
 
 Prerequisites:
 
@@ -105,31 +129,11 @@ To run this project:
     ```bash
     docker-compose up -d --build
     ```
+2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4000/graphql).
 
-2. Populate database with initial data:
+3. Optionally, populate database with initial data using the Data Management panel described above.
 
-    ```bash
-    docker exec ct_server npm run data-load-samples
-    ```
-
-## Technology Stack
-
-The technology stack is as follows:
-
-- GraphQL: for specifying the interactions with the server, using Apollo server
-- Node: for runtime execution - **NB: LTS Node version (12.8.3) is currently used for development.**
-- TypeScript: for all logic
-- TypeORM: for the orbject relational mapping
-- mySQL: for data persistance
-- docker: for containers
-- docker-compose: for container orchestration
-- passportjs for authentication
-- NestJS as a framework
-- Azure Active Directory as an Identity Provider
-
-Credit: the setup of this project is inspired by the following article: <https://medium.com/swlh/graphql-orm-with-typescript-implementing-apollo-server-express-and-sqlite-5f16a92968d0>
-
-### MySQL Server specific configuration for version 8
+## === MySQL Server specific configuration for version 8 ===
 
 MySQL version 8 by default use `caching_sha2_password` password validation plugin that is not supported by typeORM. The plugin must be changed to 'mysql_native_password'. It can be done per user or default for the server.
 
@@ -155,7 +159,7 @@ docker run --name some-mysql \
 --default-authentication-plugin=mysql_native_password
 ```
 
-## Pushing code the dockerhub
+## === Pushing code the dockerhub ===
 
 We have automated the creation and deployment of containers to docker hub via a github action. To automaticly trigger the build up to dockerhub the following steps should be taken:
 

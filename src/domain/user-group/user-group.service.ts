@@ -94,6 +94,7 @@ export class UserGroupService {
 
     // User was not already a member so add the user
     group.members.push(user);
+    await this.groupRepository.save(group);
     return true;
   }
 

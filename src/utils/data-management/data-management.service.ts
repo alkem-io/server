@@ -192,9 +192,6 @@ export class DataManagementService {
     <h2>Ecoverse: <i>${ecoverseName}</i></H2>
     <p>
     <b>Messages:</b>${message}</p>
-    <form action="/data-management/reset-db">
-    <input type="submit" value="Reset DB" />
-    </form>
     <p><form action="/data-management/empty-ecoverse">
     <input type="submit" value="Reset Ecoverse" />
     </form></p>
