@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ReferenceService } from '../reference/reference.service';
 import { ContextInput } from './context.dto';
+import { Context } from './context.entity';
 import { IContext } from './context.interface';
 
 @Injectable()
 export class ContextService {
-  constructor(private referenceService: ReferenceService) {}
+  constructor(
+    private referenceService: ReferenceService,
+    @InjectRepository(Context)
+    private contextRepository: Repository<Context>
+  ) {}
 
   initialiseMembers(context: IContext): IContext {
     if (!context.references) {
@@ -15,7 +22,10 @@ export class ContextService {
     return context;
   }
 
-  update(context: IContext, contextInput: ContextInput): void {
+  async update(
+    context: IContext,
+    contextInput: ContextInput
+  ): Promise<IContext> {
     // Convert the data to json
     if (contextInput.tagline) {
       context.tagline = contextInput.tagline;
@@ -34,13 +44,13 @@ export class ContextService {
     }
 
     // If references are supplied then replace the current references
-    if (!context.references)
-      throw new Error(`References not defined on context: ${context.id}`);
+    if (!context.references) context.references = [];
     if (contextInput.references) {
-      this.referenceService.replaceReferences(
-        context.references,
+      context.references = this.referenceService.convertReferences(
         contextInput.references
       );
     }
+    await this.contextRepository.save(context);
+    return context;
   }
 }

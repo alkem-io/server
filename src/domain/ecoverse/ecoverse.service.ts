@@ -328,7 +328,7 @@ export class EcoverseService {
       ecoverse.name = ecoverseData.name;
     }
     if (ecoverseData.context)
-      this.contextService.update(ecoverse, ecoverseData.context);
+      await this.contextService.update(ecoverse.context, ecoverseData.context);
 
     if (ecoverseData.tags && ecoverseData.tags.tags)
       this.tagsetService.replaceTags(
