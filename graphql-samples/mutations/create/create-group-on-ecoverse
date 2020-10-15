@@ -1,0 +1,12 @@
+mutation CreateGroupOnEcoverse($groupName: String!) {
+  createGroupOnEcoverse(groupName: $groupName) {
+    name,
+    id,
+  }
+}
+
+
+query variables:
+{
+  "groupName": "Teenage Mutant Ninja Turtles"
+}
