@@ -112,4 +112,40 @@ export class UserService {
     const result = await this.userRepository.remove(user as User);
     return result;
   }
+
+  // Note: explicitly do not support updating of email addresses
+  async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
+    const user = await this.getUserByID(userID);
+    if (!user) throw new Error(`Unable to update user with ID: ${userID}`);
+    // Convert the data to json
+    if (userInput.name) {
+      user.name = userInput.name;
+    }
+    if (userInput.firstName) {
+      user.firstName = userInput.firstName;
+    }
+    if (userInput.lastName) {
+      user.lastName = userInput.lastName;
+    }
+    if (userInput.phone) {
+      user.phone = userInput.phone;
+    }
+    if (userInput.city) {
+      user.city = userInput.city;
+    }
+    if (userInput.country) {
+      user.country = userInput.country;
+    }
+    if (userInput.gender) {
+      user.gender = userInput.gender;
+    }
+    if (userInput.email) {
+      throw new Error(
+        `Updating of email addresses is not supported: ${userID}`
+      );
+    }
+
+    await this.userRepository.save(user);
+    return user;
+  }
 }
