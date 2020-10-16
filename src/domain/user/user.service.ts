@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { MsGraphService } from 'src/utils/ms-graph/ms-graph.service';
 import { Repository } from 'typeorm';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
@@ -12,6 +13,7 @@ import { IUser } from './user.interface';
 export class UserService {
   constructor(
     private profileService: ProfileService,
+    private msGraphService: MsGraphService,
     @InjectRepository(User)
     private userRepository: Repository<User>
   ) {}
@@ -51,6 +53,19 @@ export class UserService {
 
   async getUserByEmail(email: string): Promise<IUser | undefined> {
     return this.userRepository.findOne({ email: email });
+  }
+
+  async userExistsAadCt(email: string): Promise<boolean> {
+    const ctExists = await this.userExists(email);
+    const aadExists = await this.msGraphService.userExists(undefined, email);
+
+    if (ctExists && aadExists) return true;
+    else return false;
+  }
+
+  async userExists(email: string): Promise<boolean> {
+    if (await this.getUserByEmail(email)) return true;
+    else return false;
   }
 
   async getMemberOf(user: User): Promise<MemberOf> {

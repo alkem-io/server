@@ -56,6 +56,8 @@ Define AAD_TENANT, AAD_CLIENT environment variables - e.g. locally in .env envir
 ```bash
 AAD_TENANT=[tenant (directory) ID]
 AAD_CLIENT= [client (application) ID]
+AAD_API_SCOPE= [API Scopes Required for Downstream APIs, in our case Microsoft Graph API]
+AAD_CLIENT_SECRET=Client secret obtained from the AAD App Registration
 AUTHENTICATION_ENABLED=true
 ```
 

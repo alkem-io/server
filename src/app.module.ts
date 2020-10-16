@@ -25,13 +25,15 @@ import { IDatabaseConfig } from './interfaces/database.config.interface';
 import { DataManagementModule } from './utils/data-management/data-management.module';
 import serviceConfig from './utils/config/service.config';
 import { BootstrapModule } from './utils/bootstrap/bootstrap.module';
+import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
+import msGraphConfig from './utils/config/ms-graph.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: ['.env', '.env.default'],
       isGlobal: true,
-      load: [aadConfig, databaseConfig, serviceConfig],
+      load: [aadConfig, databaseConfig, serviceConfig, msGraphConfig],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -69,6 +71,7 @@ import { BootstrapModule } from './utils/bootstrap/bootstrap.module';
     }),
     DataManagementModule,
     BootstrapModule,
+    MsGraphModule,
   ],
   controllers: [AppController],
   providers: [AppService],

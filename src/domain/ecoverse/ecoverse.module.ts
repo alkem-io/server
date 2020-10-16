@@ -10,6 +10,7 @@ import { TagsetModule } from '../tagset/tagset.module';
 import { ChallengeModule } from '../challenge/challenge.module';
 import { UserModule } from '../user/user.module';
 import { OrganisationModule } from '../organisation/organisation.module';
+import { MsGraphModule } from '../../utils/ms-graph/ms-graph.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { OrganisationModule } from '../organisation/organisation.module';
     UserModule,
     TypeOrmModule.forFeature([Ecoverse]),
     UserModule,
+    MsGraphModule,
   ],
   providers: [
     EcoverseService,
