@@ -5,26 +5,20 @@ import { IReference } from './reference.interface';
 
 @Injectable()
 export class ReferenceService {
-  async replaceReferences(
-    origReferences: IReference[],
-    newReferences: ReferenceInput[]
-  ): Promise<IReference[]> {
-    if (!origReferences)
-      throw new Error('Null references array passed in for replacing');
+  convertReferences(newReferences: ReferenceInput[]): IReference[] {
+    const references = [];
     if (newReferences) {
-      // Clear the existing array
-      origReferences.length = 0;
       for (const reference of newReferences) {
         const newRef = new Reference(
           reference.name,
           reference.uri,
           reference.description
         );
-        origReferences.push(newRef);
+        references.push(newRef);
       }
     }
 
-    return origReferences;
+    return references;
   }
 
   createReference(referenceInput: ReferenceInput): IReference {

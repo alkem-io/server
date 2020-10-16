@@ -11,10 +11,12 @@ import { User } from 'src/domain/user/user.entity';
 import { UserService } from 'src/domain/user/user.service';
 import { Repository } from 'typeorm';
 import { Connection } from 'typeorm';
+import { BootstrapService } from '../bootstrap/bootstrap.service';
 
 @Injectable()
 export class DataManagementService {
   constructor(
+    private bootstrapService: BootstrapService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
     private userGroupService: UserGroupService,
@@ -24,31 +26,35 @@ export class DataManagementService {
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
 
-  async reset_to_empty_ecoverse() {
+  async reset_to_empty_ecoverse(): Promise<string> {
+    const msgs: string[] = [];
     try {
-      console.log('Dropping existing database... ');
+      this.addLogMsg(msgs, 'Dropping existing database... ');
       await this.connection.dropDatabase();
       await this.connection.synchronize();
-      console.log('.....dropped.');
+      this.addLogMsg(msgs, '.....dropped.');
 
       // Create new Ecoverse
-      console.log('Populating empty ecoverse... ');
-      const ctverse = new Ecoverse();
-      this.ecoverseService.initialiseMembers(ctverse);
-      this.ecoverseService.populateEmptyEcoverse(ctverse);
-
-      await this.ecoverseRepository.save(ctverse);
-      console.log('.....populated.');
+      this.addLogMsg(msgs, 'Populating empty ecoverse... ');
+      await this.bootstrapService.bootstrapEcoverse();
+      this.addLogMsg(msgs, '.....populated.');
     } catch (error) {
-      console.log(error.message);
+      this.addLogMsg(msgs, error.message);
     }
+    return msgs.toString();
   }
 
-  async load_sample_data() {
-    try {
-      console.log('=== Ecoverse: Loading sample data ===');
+  addLogMsg(msgs: string[], msg: string) {
+    msgs.push(msg);
+    console.log(msg);
+  }
 
-      console.log('Loading sample data....');
+  async load_sample_data(): Promise<string> {
+    const msgs: string[] = [];
+    try {
+      this.addLogMsg(msgs, '=== Ecoverse: Loading sample data ===');
+
+      this.addLogMsg(msgs, 'Loading sample data....');
       // Populate the Ecoverse beyond the defaults
       const ctverse = await this.ecoverseService.getEcoverse();
 
@@ -150,20 +156,50 @@ export class DataManagementService {
 
       // Persist the ecoverse
       await this.ecoverseRepository.save(ctverse);
-      console.log('...loading of sample data completed successfully');
+      this.addLogMsg(msgs, '...loading of sample data completed successfully');
     } catch (error) {
-      console.log(error.message);
+      this.addLogMsg(msgs, error.message);
     }
+    return msgs.toString();
   }
 
-  async reset_to_empty_db() {
+  async reset_to_empty_db(): Promise<string> {
+    const msgs: string[] = [];
     try {
-      console.log('Dropping existing database... ');
+      this.addLogMsg(msgs, 'Dropping existing database... ');
       await this.connection.dropDatabase();
       await this.connection.synchronize();
-      console.log('.....dropped.');
+      this.addLogMsg(msgs, '.....dropped. Completed successfully.');
     } catch (error) {
       console.log(error.message);
     }
+    return msgs.toString();
+  }
+
+  async populatePageContent(message: string): Promise<string> {
+    let ecoverseName = '<< No ecoverse >>';
+    try {
+      const ecoverse = await this.ecoverseService.getEcoverse();
+      ecoverseName = ecoverse.name;
+    } catch (e) {
+      // ecoverse not yet initialised so just skip the name
+      console.log(e);
+    }
+    const content = `<!DOCTYPE html>
+    <html>
+    <body>
+    <h1>Cherrytwist Data Management Utility</h1>
+    <h2>Ecoverse: <i>${ecoverseName}</i></H2>
+    <p>
+    <b>Messages:</b>${message}</p>
+    <p><form action="/data-management/empty-ecoverse">
+    <input type="submit" value="Reset Ecoverse" />
+    </form></p>
+    <p><form action="/data-management/seed-data">
+    <input type="submit" value="Sample Data" />
+    </form></p>
+    </body>
+    </html>`;
+    return content;
   }
 }

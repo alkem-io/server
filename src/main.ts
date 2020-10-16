@@ -10,7 +10,7 @@ const bootstrap = async () => {
   });
 
   const bootstrapService: BootstrapService = app.get(BootstrapService);
-  await bootstrapService.boostrapEcoverse();
+  await bootstrapService.bootstrapEcoverse();
   const configService: ConfigService = app.get(ConfigService);
   app.enableCors({
     origin: configService.get<IServiceConfig>('service')?.corsOrigin,

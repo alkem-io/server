@@ -5,7 +5,6 @@ import { IOrganisation } from '../organisation/organisation.interface';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
-import { User } from '../user/user.entity';
 import { Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
@@ -36,32 +35,6 @@ export class EcoverseService {
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
-
-  // Populate an empty ecoverse
-  async populateEmptyEcoverse(ecoverse: IEcoverse): Promise<IEcoverse> {
-    // Create new Ecoverse
-    this.initialiseMembers(ecoverse);
-    ecoverse.name = 'Empty ecoverse';
-    (ecoverse.context as IContext).tagline =
-      'An empty ecoverse to be populated';
-    (ecoverse.host as IOrganisation).name = 'Default host organisation';
-
-    // Find the admin user and put that person in as member + admin
-    const adminUser = new User('admin');
-    const admins = await this.userGroupService.getGroupByName(
-      ecoverse,
-      RestrictedGroupNames.Admins
-    );
-    const members = await this.userGroupService.getGroupByName(
-      ecoverse,
-      RestrictedGroupNames.Members
-    );
-    this.userGroupService.addUserToGroup(adminUser, admins);
-    this.userGroupService.addUserToGroup(adminUser, members);
-
-    return ecoverse;
-  }
-
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(ecoverse: IEcoverse): Promise<IEcoverse> {
@@ -91,28 +64,7 @@ export class EcoverseService {
   }
 
   async getEcoverse(): Promise<IEcoverse> {
-    try {
-      const ecoverseArray = await this.ecoverseRepository.find();
-      const ecoverseCount = ecoverseArray.length;
-      if (ecoverseCount == 0) {
-        console.log('No ecoverse found, creating empty ecoverse...');
-        // Create a new ecoverse
-        const ecoverse = new Ecoverse();
-        this.initialiseMembers(ecoverse);
-        this.populateEmptyEcoverse(ecoverse);
-        ecoverse.save();
-        return ecoverse as IEcoverse;
-      }
-      if (ecoverseCount == 1) {
-        return ecoverseArray[0] as IEcoverse;
-      }
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      throw new Error('Cannot have more than one ecoverse');
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getEcoverse()!!!', exception: e });
-      throw e;
-    }
+    return await this.ecoverseRepository.findOneOrFail();
   }
 
   async getName(): Promise<string> {
@@ -151,7 +103,7 @@ export class EcoverseService {
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
       // Convert groups array into IGroups array
       if (!ecoverse.groups) {
-        throw new Error('Unreachable');
+        throw new Error('Ecoverse groups must be defined');
       }
       return ecoverse.groups as IUserGroup[];
     } catch (e) {
@@ -172,6 +124,19 @@ export class EcoverseService {
       return ecoverse.challenges as IChallenge[];
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
+      throw e;
+    }
+  }
+
+  async getOrganisations(): Promise<IOrganisation[]> {
+    try {
+      const ecoverse: IEcoverse = await this.getEcoverse();
+
+      if (!ecoverse.organisations)
+        throw new Error('Ecoverse organisations must be defined');
+
+      return ecoverse.organisations as IOrganisation[];
+    } catch (e) {
       throw e;
     }
   }
@@ -303,6 +268,23 @@ export class EcoverseService {
     return false;
   }
 
+  // Removes the user and deletes the profile
+  async removeUser(userID: number): Promise<boolean> {
+    const user = await this.userService.getUserByID(userID);
+    if (!user) throw new Error(`Could not locate specified user: ${userID}`);
+
+    const groups = await this.getGroups();
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+      await this.userGroupService.removeUserFromGroup(user, group);
+    }
+
+    // And finally remove the user
+    await this.userService.removeUser(user);
+
+    return true;
+  }
+
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
     const ecoverse = await this.getEcoverse();
 
@@ -311,7 +293,7 @@ export class EcoverseService {
       ecoverse.name = ecoverseData.name;
     }
     if (ecoverseData.context)
-      this.contextService.update(ecoverse, ecoverseData.context);
+      await this.contextService.update(ecoverse.context, ecoverseData.context);
 
     if (ecoverseData.tags && ecoverseData.tags.tags)
       this.tagsetService.replaceTags(

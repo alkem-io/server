@@ -94,7 +94,75 @@ export class UserGroupService {
 
     // User was not already a member so add the user
     group.members.push(user);
+    await this.groupRepository.save(group);
     return true;
+  }
+
+  async removeUser(userID: number, groupID: number): Promise<IUserGroup> {
+    // Try to find the user + group
+    const user = await this.userService.getUserByID(userID);
+    if (!user) {
+      const msg = `Unable to find exactly one user with ID: ${userID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    if (!group) {
+      const msg = `Unable to find group with ID: ${groupID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    // Have both user + group so do the add
+    this.removeUserFromGroup(user, group);
+    await group.save();
+
+    return group;
+  }
+
+  async removeUserFromGroup(
+    user: IUser,
+    group: IUserGroup
+  ): Promise<IUserGroup> {
+    if (!group.members) throw new Error('Members not initialised');
+
+    // Check the user exists in the group
+    const count = group.members.length;
+    for (let i = 0; i < count; i++) {
+      const existingUser = group.members[i];
+      if (user.id === existingUser.id) {
+        // Found an existing user
+        group.members.splice(i, 1);
+        break;
+      }
+    }
+
+    // Also remove the user from being a focal point
+    if (group.focalPoint && group.focalPoint.id === user.id) {
+      this.removeFocalPoint(group.id);
+    }
+
+    await this.groupRepository.save(group);
+
+    return group;
+  }
+
+  async removeFocalPoint(groupID: number): Promise<IUserGroup> {
+    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    if (!group) {
+      const msg = `Unable to find group with ID: ${groupID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+    // Set focalPoint to NULL will remove the relation.
+    // For typeorm 'undefined' means - 'Not changed'
+    // More information: https://github.com/typeorm/typeorm/issues/5454
+    group.focalPoint = null;
+
+    await this.groupRepository.save(group);
+
+    return group;
   }
 
   getGroupByName(groupable: IGroupable, name: string): IUserGroup {

@@ -43,4 +43,16 @@ export class ChallengeResolver {
     );
     return challenge;
   }
+
+  @Mutation(() => UserGroup, {
+    description:
+      'Adds the user with the given identifier as a member of the specified challenge',
+  })
+  async addUserToChallenge(
+    @Args('userID') userID: number,
+    @Args('challengeID') challengeID: number
+  ): Promise<IUserGroup> {
+    const group = this.challengeService.addMember(userID, challengeID);
+    return group;
+  }
 }

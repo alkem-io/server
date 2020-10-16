@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
@@ -18,6 +19,9 @@ export class UserService {
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(user: IUser): Promise<IUser> {
+    if (!user.profile) {
+      user.profile = new Profile();
+    }
     // Initialise contained singletons
     this.profileService.initialiseMembers(user.profile);
 
@@ -97,7 +101,51 @@ export class UserService {
 
     // Ok to create a new user + save
     const user = User.create(userData);
+    // Have the user,ensure it is initialised
+    await this.initialiseMembers(user);
+    await this.userRepository.save(user);
 
+    return user;
+  }
+
+  async removeUser(user: IUser): Promise<IUser> {
+    const result = await this.userRepository.remove(user as User);
+    return result;
+  }
+
+  // Note: explicitly do not support updating of email addresses
+  async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
+    const user = await this.getUserByID(userID);
+    if (!user) throw new Error(`Unable to update user with ID: ${userID}`);
+    // Convert the data to json
+    if (userInput.name) {
+      user.name = userInput.name;
+    }
+    if (userInput.firstName) {
+      user.firstName = userInput.firstName;
+    }
+    if (userInput.lastName) {
+      user.lastName = userInput.lastName;
+    }
+    if (userInput.phone) {
+      user.phone = userInput.phone;
+    }
+    if (userInput.city) {
+      user.city = userInput.city;
+    }
+    if (userInput.country) {
+      user.country = userInput.country;
+    }
+    if (userInput.gender) {
+      user.gender = userInput.gender;
+    }
+    if (userInput.email) {
+      throw new Error(
+        `Updating of email addresses is not supported: ${userID}`
+      );
+    }
+
+    await this.userRepository.save(user);
     return user;
   }
 }

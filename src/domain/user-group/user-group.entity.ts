@@ -49,7 +49,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     user => user.focalPoints,
     { eager: true, cascade: true }
   )
-  focalPoint?: User;
+  focalPoint?: User | null;
 
   @Field(() => Profile, {
     nullable: true,

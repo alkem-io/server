@@ -3,8 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ContextService } from '../context/context.service';
 import { TagsetService } from '../tagset/tagset.service';
+import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
+import { UserService } from '../user/user.service';
 import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
@@ -12,6 +14,7 @@ import { IChallenge } from './challenge.interface';
 @Injectable()
 export class ChallengeService {
   constructor(
+    private userService: UserService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
@@ -109,5 +112,31 @@ export class ChallengeService {
     await this.challengeRepository.save(challenge);
 
     return challenge;
+  }
+
+  async addMember(userID: number, challengeID: number): Promise<IUserGroup> {
+    // Try to find the user + group
+    const user = await this.userService.getUserByID(userID);
+    if (!user) {
+      const msg = `Unable to find exactly one user with ID: ${userID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    const challenge = (await this.getChallengeByID(challengeID)) as Challenge;
+    if (!challenge) {
+      const msg = `Unable to find challenge with ID: ${challengeID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    // Get the members group
+    const membersGroup = await this.userGroupService.getGroupByName(
+      challenge,
+      RestrictedGroupNames.Members
+    );
+    await this.userGroupService.addUserToGroup(user, membersGroup);
+
+    return membersGroup;
   }
 }
