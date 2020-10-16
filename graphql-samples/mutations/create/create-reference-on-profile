@@ -1,0 +1,18 @@
+mutation createReferenceOnProfile($referenceInput: ReferenceInput!, $profileID: Float!) {
+  createReferenceOnProfile(referenceInput: $referenceInput, profileID: $profileID) {
+    name,
+    uri,
+    description
+  }
+}
+
+Variables:
+{
+  "profileID": 1,
+  "referenceInput":
+                {
+                  "name": "wow",
+                  "uri": "something",
+                  "description": "this works"
+                }
+}
