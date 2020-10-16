@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Docker Image CI for test infra
 
 on:
   workflow_dispatch:
