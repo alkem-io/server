@@ -1,5 +1,8 @@
 import { Mutation, Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
+import { ReferenceInput } from '../reference/reference.dto';
+import { Reference } from '../reference/reference.entity';
+import { IReference } from '../reference/reference.interface';
 import { Tagset } from '../tagset/tagset.entity';
 import { ITagset } from '../tagset/tagset.interface';
 import { ProfileService } from './profile.service';
@@ -21,5 +24,20 @@ export class ProfileResolver {
       tagsetName
     );
     return tagset;
+  }
+
+  @Mutation(() => Reference, {
+    description:
+      'Creates a new reference with the specified name for the profile with given id',
+  })
+  async createReferenceOnProfile(
+    @Args('profileID') profileID: number,
+    @Args('referenceInput') referenceInput: ReferenceInput
+  ): Promise<IReference> {
+    const reference = await this.profileService.createReference(
+      profileID,
+      referenceInput
+    );
+    return reference;
   }
 }
