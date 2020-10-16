@@ -6,12 +6,14 @@ import { ContextModule } from '../context/context.module';
 import { TagsetModule } from '../tagset/tagset.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Challenge } from './challenge.entity';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
     ContextModule,
     TagsetModule,
     UserGroupModule,
+    UserModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [ChallengeService, ChallengeResolver],
