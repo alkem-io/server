@@ -28,7 +28,7 @@ jobs:
         - uses: Azure/aks-set-context@v1
           with:
             creds: ${{ secrets.AZURE_CRED_K8S }}
-            cluster-name: ${{ secrets.CLUSTER_NAME }}
+            cluster-name: ${{ secrets.CLUSTER_NAME_TEST }}
             resource-group: ${{ secrets.RESOURCE_GROUP_K8S_TEST }}
 
         - uses: Azure/k8s-create-secret@v1
