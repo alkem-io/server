@@ -231,7 +231,10 @@ export class UserGroupService {
     return false;
   }
 
-  addGroupWithName(groupable: IGroupable, name: string): IUserGroup {
+  async addGroupWithName(
+    groupable: IGroupable,
+    name: string
+  ): Promise<IUserGroup> {
     // Check if the group already exists, if so log a warning
     const alreadyExists = this.hasGroupWithName(groupable, name);
     if (alreadyExists) {
@@ -249,17 +252,22 @@ export class UserGroupService {
     }
 
     const newGroup: IUserGroup = new UserGroup(name) as IUserGroup;
-    groupable.groups?.push(newGroup);
+    await this.initialiseMembers(newGroup);
+    await groupable.groups?.push(newGroup);
     return newGroup;
   }
 
   /* Create the set of restricted group names for an entity that has groups */
-  createRestrictedGroups(groupable: IGroupable, names: string[]): IUserGroup[] {
+  async createRestrictedGroups(
+    groupable: IGroupable,
+    names: string[]
+  ): Promise<IUserGroup[]> {
     if (!groupable.restrictedGroupNames) {
       groupable.restrictedGroupNames = [];
     }
     for (const name of names) {
       const group = new UserGroup(name) as IUserGroup;
+      await this.initialiseMembers(group);
       groupable.groups?.push(group);
       groupable.restrictedGroupNames.push(name);
     }
