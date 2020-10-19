@@ -22,6 +22,7 @@ import { UserInput } from '../user/user.dto';
 import { OrganisationInput } from '../organisation/organisation.dto';
 import { Organisation } from '../organisation/organisation.entity';
 import { OrganisationService } from '../organisation/organisation.service';
+import { MsGraphService } from '../../utils/ms-graph/ms-graph.service';
 
 @Injectable()
 export class EcoverseService {
@@ -32,6 +33,7 @@ export class EcoverseService {
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
+    private msGraphService: MsGraphService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
@@ -260,7 +262,26 @@ export class EcoverseService {
 
   // Create the user and add the user into the members group
   async createUser(userData: UserInput): Promise<IUser> {
+    const ctUserExists = await this.userService.userExists(userData.email);
+    const aadUserExists = await this.msGraphService.userExists(
+      undefined,
+      userData.email
+    );
+
+    if (ctUserExists && aadUserExists) {
+      console.info(`User ${userData.email} already exists!`);
+      return (await this.userService.getUserByEmail(userData.email)) as IUser;
+    }
+
+    if (ctUserExists && !aadUserExists)
+      throw new Error(
+        `User ${userData.email} is in an inconsistent state. The user exists in CT database but doesn't exist in AAD`
+      );
+
+    if (!aadUserExists) await this.msGraphService.createUser(userData);
+
     const user = await this.userService.createUser(userData);
+
     const ecoverse = await this.getEcoverse();
     // Also add the user into the members group
     const membersGroup = this.userGroupService.getGroupByName(

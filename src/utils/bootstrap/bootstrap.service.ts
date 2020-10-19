@@ -5,6 +5,7 @@ import { IEcoverse } from 'src/domain/ecoverse/ecoverse.interface';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
 import { Organisation } from 'src/domain/organisation/organisation.entity';
 import { UserInput } from 'src/domain/user/user.dto';
+import { IUser } from 'src/domain/user/user.interface';
 import { UserService } from 'src/domain/user/user.service';
 import { Repository } from 'typeorm';
 
@@ -32,7 +33,8 @@ export class BootstrapService {
     console.log('=== Ensuring admin user is present ===');
     // Ensure user exists with admin email
     let user = await this.userService.getUserByEmail(ADMIN_EMAIL);
-    if (!user) {
+
+    if (!this.userService.userExists(ADMIN_EMAIL)) {
       console.info(
         `...no admin user present, creating user with email ${ADMIN_EMAIL}`
       );
@@ -46,9 +48,11 @@ export class BootstrapService {
     }
 
     // Ensure admin user is assigned to admin group
-    if (await this.ecoverseService.addAdmin(user)) {
+    if (await this.ecoverseService.addAdmin(user as IUser)) {
       console.info(
-        `...${user.email} added to the admins group on Ecoverse level`
+        `...${
+          (user as IUser).email
+        } added to the admins group on Ecoverse level`
       );
     }
     console.info('...administration role - presence verified');

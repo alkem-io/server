@@ -37,4 +37,8 @@ export class UserInput {
   @Field({ nullable: true })
   @MaxLength(20)
   gender?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(30)
+  aadPassword?: string;
 }
