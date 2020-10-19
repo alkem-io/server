@@ -92,7 +92,7 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
-  @Query(() => UserGroup, {
+  @Query(() => [UserGroup], {
     nullable: false,
     description: 'All groups that have the provided tag',
   })
