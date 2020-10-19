@@ -1,6 +1,7 @@
 export interface IAzureADConfig {
   identityMetadata: string;
   clientID: string;
+  clientSecret: string;
   validateIssuer: boolean;
   passReqToCallback: boolean;
   issuer: string;
@@ -8,4 +9,5 @@ export interface IAzureADConfig {
   allowMultiAudiencesInToken: string;
   loggingLevel: string;
   loggingNoPII: boolean;
+  scope: string;
 }

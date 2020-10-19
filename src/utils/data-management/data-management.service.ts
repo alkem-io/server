@@ -99,15 +99,15 @@ export class DataManagementService {
 
       // User Groups
       const jediGroup = await this.ecoverseService.createGroup('jedi');
-      this.userGroupService.addUserToGroup(angel, jediGroup);
-      this.userGroupService.addUserToGroup(john, jediGroup);
+      await this.userGroupService.addUserToGroup(angel, jediGroup);
+      await this.userGroupService.addUserToGroup(john, jediGroup);
       const crewGroup = await this.ecoverseService.createGroup('crew');
-      this.userGroupService.addUserToGroup(valentin, crewGroup);
-      this.userGroupService.addUserToGroup(neil, crewGroup);
+      await this.userGroupService.addUserToGroup(valentin, crewGroup);
+      await this.userGroupService.addUserToGroup(neil, crewGroup);
 
       // Challenges
       const energyWeb = new Challenge('Energy Web');
-      this.challengeService.initialiseMembers(energyWeb);
+      await this.challengeService.initialiseMembers(energyWeb);
       if (!energyWeb.tagset) throw new Error('cannot reach this');
       energyWeb.tagset.tags = ['java', 'graphql'];
       energyWeb.context.tagline = 'Web of energy';
@@ -130,7 +130,7 @@ export class DataManagementService {
       energyWeb.context.references = [ref1, ref2];
 
       const cleanOceans = new Challenge('Clean Oceans');
-      this.challengeService.initialiseMembers(cleanOceans);
+      await this.challengeService.initialiseMembers(cleanOceans);
       if (!cleanOceans.tagset) throw new Error('cannot reach this');
       cleanOceans.tagset.tags = ['java', 'linux'];
       cleanOceans.context.tagline = 'Keep our Oceans clean and in balance!';
@@ -142,7 +142,7 @@ export class DataManagementService {
       cleanOceanMembers.focalPoint = neil;
 
       const cargoInsurance = new Challenge('Cargo Insurance');
-      this.challengeService.initialiseMembers(cargoInsurance);
+      await this.challengeService.initialiseMembers(cargoInsurance);
       if (!cargoInsurance.tagset) throw new Error('cannot reach this');
       cargoInsurance.tagset.tags = ['logistics', 'eco'];
       cargoInsurance.context.tagline =
