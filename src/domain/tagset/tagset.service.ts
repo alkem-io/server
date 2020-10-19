@@ -1,10 +1,17 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { ITagsetable } from 'src/interfaces/tagsetable.interface';
+import { Repository } from 'typeorm';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 
 @Injectable()
 export class TagsetService {
+  constructor(
+    @InjectRepository(Tagset)
+    private tagsetRepository: Repository<Tagset>
+  ) {}
+
   // Helper method to ensure all members are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(tagset: ITagset): Promise<ITagset> {
@@ -28,7 +35,28 @@ export class TagsetService {
 
     // Check the incoming tags and replace if not null
     tagset.tags = newTags;
-    await tagset.save();
+    await this.tagsetRepository.save(tagset);
+
+    return tagset;
+  }
+
+  async addTag(tagsetID: number, newTag: string): Promise<ITagset> {
+    const tagset = (await this.getTagset(tagsetID)) as Tagset;
+
+    if (!tagset) throw new Error(`Tagset with id(${tagsetID}) not found!`);
+    if (!tagset.tags)
+      throw new Error(`Tagset with id(${tagsetID}) not initialised!`);
+
+    // Check if the tag already exists or not
+    for (const tag of tagset.tags) {
+      if (tag === newTag) {
+        // Tag already exists; just return
+        return tagset;
+      }
+    }
+    // Tag did not exist so add it
+    tagset.tags?.push(newTag);
+    await this.tagsetRepository.save(tagset);
 
     return tagset;
   }
@@ -112,5 +140,12 @@ export class TagsetService {
     this.initialiseMembers(newTagset as ITagset);
     tagsetable.tagsets?.push(newTagset as ITagset);
     return newTagset;
+  }
+
+  hasTag(tagset: ITagset, tagToCheck: string): boolean {
+    for (const tag of tagset.tags) {
+      if (tag === tagToCheck) return true;
+    }
+    return false;
   }
 }

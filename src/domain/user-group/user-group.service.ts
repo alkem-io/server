@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
+import { ProfileService } from '../profile/profile.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
@@ -12,6 +13,7 @@ import { IUserGroup } from './user-group.interface';
 export class UserGroupService {
   constructor(
     private userService: UserService,
+    private profileService: ProfileService,
     @InjectRepository(UserGroup)
     private groupRepository: Repository<UserGroup>
   ) {}
@@ -20,6 +22,8 @@ export class UserGroupService {
     if (!group.members) {
       group.members = [];
     }
+    // Initialise the profile
+    await this.profileService.initialiseMembers(group.profile);
 
     return group;
   }
@@ -181,14 +185,13 @@ export class UserGroupService {
     throw new Error(`Unable to find group with the name:' + ${name}`);
   }
 
-  addMandatoryGroups(
+  async addMandatoryGroups(
     groupable: IGroupable,
     mandatoryGroupNames: string[]
-  ): IGroupable {
+  ): Promise<IGroupable> {
     const groupsToAdd: string[] = [];
-    if (!groupable.groups) {
+    if (!groupable.groups)
       throw new Error('Non-initialised Groupable submitted');
-    }
     for (const mandatoryName of mandatoryGroupNames) {
       let groupFound = false;
       for (const group of groupable.groups) {
@@ -205,6 +208,7 @@ export class UserGroupService {
     }
     for (const groupToAdd of groupsToAdd) {
       const newGroup = new UserGroup(groupToAdd);
+      await this.initialiseMembers(newGroup);
       groupable.groups.push(newGroup as IUserGroup);
     }
     return groupable;
