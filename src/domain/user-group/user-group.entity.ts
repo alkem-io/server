@@ -66,7 +66,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   ecoverse?: Promise<Ecoverse>;
 
   @ManyToOne(
-    () => Ecoverse,
+    () => Organisation,
     organisation => organisation.groups
   )
   organisation?: Promise<Organisation>;

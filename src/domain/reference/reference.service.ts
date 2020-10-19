@@ -20,4 +20,13 @@ export class ReferenceService {
 
     return references;
   }
+
+  createReference(referenceInput: ReferenceInput): IReference {
+    const reference = new Reference(
+      referenceInput.name,
+      referenceInput.uri,
+      referenceInput.description
+    );
+    return reference;
+  }
 }
