@@ -85,7 +85,7 @@ export class EcoverseResolverQueries {
 
   @Query(() => [UserGroup], {
     nullable: false,
-    description: 'All groups of users at the ecoverse level',
+    description: 'All groups at the ecoverse level',
   })
   async groups(): Promise<IUserGroup[]> {
     const groups = await this.ecoverseService.getGroups();
@@ -94,7 +94,17 @@ export class EcoverseResolverQueries {
 
   @Query(() => UserGroup, {
     nullable: false,
-    description: 'A particualr user group',
+    description: 'All groups that have the provided tag',
+  })
+  async groupsWithTag(@Args('tag') tag: string): Promise<IUserGroup[]> {
+    const groups = await this.ecoverseService.getGroupsWithTag(tag);
+    return groups;
+  }
+
+  @Query(() => UserGroup, {
+    nullable: false,
+    description:
+      'The user group with the specified id anywhere in the ecoverse',
   })
   async group(@Args('ID') id: number): Promise<IUserGroup | undefined> {
     const group = await this.groupService.getGroupByID(id);

@@ -113,4 +113,11 @@ export class TagsetService {
     tagsetable.tagsets?.push(newTagset as ITagset);
     return newTagset;
   }
+
+  hasTag(tagset: ITagset, tagToCheck: string): boolean {
+    for (const tag of tagset.tags) {
+      if (tag === tagToCheck) return true;
+    }
+    return false;
+  }
 }

@@ -23,7 +23,7 @@ export class Tagset extends BaseEntity implements ITagset {
 
   @Field(() => [String])
   @Column('simple-array')
-  tags?: string[];
+  tags: string[];
 
   @ManyToOne(
     () => Profile,
