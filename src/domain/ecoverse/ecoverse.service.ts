@@ -99,19 +99,10 @@ export class EcoverseService {
 
   async getGroups(): Promise<IUserGroup[]> {
     try {
-      console.time('getting groups');
-      const ecoverse = await this.ecoverseRepository.findOneOrFail({
-        relations: ['groups', 'groups.members'],
-      });
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-      // Convert groups array into IGroups array
-      if (!ecoverse.groups) {
-        throw new Error('Ecoverse groups must be defined');
-      }
-      console.timeEnd('getting groups');
-      return (ecoverse && (ecoverse.groups as IUserGroup[])) || [];
+      const ecoverse = await this.getEcoverse();
+      const groups = await this.userGroupService.getGroups(ecoverse);
+      return groups;
     } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
     }
   }
@@ -286,10 +277,11 @@ export class EcoverseService {
 
     const ecoverse = await this.getEcoverse();
     // Also add the user into the members group
-    const membersGroup = this.userGroupService.getGroupByName(
+    const membersGroup = await this.userGroupService.getGroupByName(
       ecoverse,
       RestrictedGroupNames.Members
     );
+
     await this.userGroupService.addUserToGroup(user, membersGroup);
     await this.ecoverseRepository.save(ecoverse);
 

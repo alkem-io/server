@@ -172,22 +172,64 @@ export class UserGroupService {
     return group;
   }
 
-  getGroupByName(groupable: IGroupable, name: string): IUserGroup {
+  async getGroupByName(
+    groupable: IGroupable,
+    name: string
+  ): Promise<IUserGroup> {
+    let query = this.groupRepository
+      .createQueryBuilder()
+      .select('group')
+      .from(UserGroup, 'group')
+      .where('group.name=:name', { name });
+
     if (groupable instanceof Ecoverse) {
-      console.log('Groupable is Ecoverse');
+      query = query.andWhere('group.ecoverseId = :id', {
+        id: (groupable as Ecoverse).id,
+      });
     }
     if (groupable instanceof Challenge) {
-      console.log('Groupable is Challenge');
+      query = query.andWhere('group.challengeId = :id', {
+        id: (groupable as Challenge).id,
+      });
     }
     if (groupable instanceof Organisation) {
-      console.log('Groupable is Organisation');
-    }
-    // Double check groups array is initialised
-    if (!groupable.groups) {
-      throw new Error('Non-initialised Groupable submitted');
+      query = query.andWhere('group.organisationId = :id', {
+        id: (groupable as Organisation).id,
+      });
     }
 
-    const group = groupable.groups.find(x => x.name === name);
+    const group = await query.getOne();
+    if (group) {
+      return group;
+    }
+    // If get here then no match group was found
+    throw new Error(`Unable to find group with the name:' + ${name}`);
+  }
+
+  async getGroups(groupable: IGroupable): Promise<IUserGroup[]> {
+    let query = this.groupRepository
+      .createQueryBuilder()
+      .select('group')
+      .from(UserGroup, 'group')
+      .leftJoinAndSelect('group.members', 'members');
+
+    if (groupable instanceof Ecoverse) {
+      query = query.where('group.ecoverseId = :id', {
+        id: (groupable as Ecoverse).id,
+      });
+    }
+    if (groupable instanceof Challenge) {
+      query = query.where('group.challengeId = :id', {
+        id: (groupable as Challenge).id,
+      });
+    }
+    if (groupable instanceof Organisation) {
+      query = query.where('group.organisationId = :id', {
+        id: (groupable as Organisation).id,
+      });
+    }
+
+    const group = await query.getMany();
     if (group) {
       return group;
     }

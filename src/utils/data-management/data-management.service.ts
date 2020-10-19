@@ -62,7 +62,7 @@ export class DataManagementService {
       (ctverse as Ecoverse).context.tagline =
         'Powering multi-stakeholder collaboration!';
 
-      const membersGroup = this.userGroupService.getGroupByName(
+      const membersGroup = await this.userGroupService.getGroupByName(
         ctverse,
         'members'
       );
@@ -121,7 +121,7 @@ export class DataManagementService {
         'https://www.energyweb.org/',
         'Official site'
       );
-      const energyWebMembers = this.userGroupService.getGroupByName(
+      const energyWebMembers = await this.userGroupService.getGroupByName(
         energyWeb,
         'members'
       );
@@ -134,7 +134,7 @@ export class DataManagementService {
       if (!cleanOceans.tagset) throw new Error('cannot reach this');
       cleanOceans.tagset.tags = ['java', 'linux'];
       cleanOceans.context.tagline = 'Keep our Oceans clean and in balance!';
-      const cleanOceanMembers = this.userGroupService.getGroupByName(
+      const cleanOceanMembers = await this.userGroupService.getGroupByName(
         cleanOceans,
         'members'
       );
@@ -147,7 +147,7 @@ export class DataManagementService {
       cargoInsurance.tagset.tags = ['logistics', 'eco'];
       cargoInsurance.context.tagline =
         'In an interconnected world, how to manage risk along the chain?';
-      const cargoInsuranceMembers = this.userGroupService.getGroupByName(
+      const cargoInsuranceMembers = await this.userGroupService.getGroupByName(
         cargoInsurance,
         'members'
       );
