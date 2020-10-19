@@ -53,6 +53,11 @@ export class UserService {
     return this.userRepository.findOne({ email: email });
   }
 
+  async userExists(email: string): Promise<boolean> {
+    if (await this.getUserByEmail(email)) return true;
+    else return false;
+  }
+
   async getMemberOf(user: User): Promise<MemberOf> {
     const userGroups = await user.userGroups;
     const memberOf = new MemberOf();
