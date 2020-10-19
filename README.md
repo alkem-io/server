@@ -87,9 +87,10 @@ Define AAD_TENANT, AAD_CLIENT environment variables - e.g. locally in .env envir
 AAD_TENANT=[tenant (directory) ID]
 AAD_CLIENT= [client (application) ID]
 AAD_API_SCOPE= [API Scopes Required for Downstream APIs, in our case Microsoft Graph API]
-AAD_CLIENT_SECRET=Client secret obtained from the AAD App Registration
+AAD_CLIENT_SECRET=[App Client Secret obtained from cherrytwist-api app registration*]
 AUTHENTICATION_ENABLED=true
 ```
+***Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
 
 Optionally configure CORS origin for improved security with the following env variable (by default the value is *):
 
