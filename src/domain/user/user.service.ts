@@ -25,7 +25,7 @@ export class UserService {
       user.profile = new Profile();
     }
     // Initialise contained singletons
-    this.profileService.initialiseMembers(user.profile);
+    await this.profileService.initialiseMembers(user.profile);
 
     return user;
   }

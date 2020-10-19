@@ -4,9 +4,10 @@ import { UserGroupResolver } from './user-group.resolver';
 import { UserModule } from '../user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserGroup } from './user-group.entity';
+import { ProfileModule } from '../profile/profile.module';
 
 @Module({
-  imports: [UserModule, TypeOrmModule.forFeature([UserGroup])],
+  imports: [ProfileModule, UserModule, TypeOrmModule.forFeature([UserGroup])],
   providers: [UserGroupService, UserGroupResolver],
   exports: [UserGroupService],
 })

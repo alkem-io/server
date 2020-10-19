@@ -1,11 +1,15 @@
+import { UseGuards } from '@nestjs/common';
 import {
   Args,
   Mutation,
   Parent,
+  Query,
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
+import { GqlAuthGuard } from 'src/utils/authentication/graphql.guard';
 import { MemberOf } from './memberof.composite';
+import { CurrentUser } from './user.decorator';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
@@ -35,5 +39,15 @@ export class UserResolver {
   ): Promise<IUser> {
     const group = this.userService.updateUser(userID, userData);
     return group;
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Query(() => User, {
+    nullable: false,
+    description: 'The currently logged in user',
+  })
+  async me(@CurrentUser() email: string): Promise<IUser> {
+    const user = await this.userService.getUserByEmail(email);
+    return user as IUser;
   }
 }

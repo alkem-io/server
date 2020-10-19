@@ -59,8 +59,8 @@ export class EcoverseService {
     }
 
     // Initialise contained singletons
-    this.tagsetService.initialiseMembers(ecoverse.tagset);
-    this.contextService.initialiseMembers(ecoverse.context);
+    await this.tagsetService.initialiseMembers(ecoverse.tagset);
+    await this.contextService.initialiseMembers(ecoverse.context);
 
     return ecoverse;
   }
@@ -112,6 +112,26 @@ export class EcoverseService {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
     }
+  }
+
+  async getGroupsWithTag(tagFilter: string): Promise<IUserGroup[]> {
+    const ecoverse: IEcoverse = await this.getEcoverse();
+    if (!ecoverse.groups) throw new Error('Ecoverse groups must be defined');
+    const groupsToReturn: IUserGroup[] = [];
+    for (let i = 0; i < ecoverse.groups.length; i++) {
+      const group: IUserGroup = ecoverse.groups[i];
+      if (!tagFilter) {
+        // no filter, just add the group
+        groupsToReturn.push(group);
+        continue;
+      }
+      const tagset = this.tagsetService.defaultTagset(group.profile);
+      if (this.tagsetService.hasTag(tagset, tagFilter)) {
+        // Found a group with the matching tag so add it
+        groupsToReturn.push(group);
+      }
+    }
+    return groupsToReturn;
   }
 
   async getChallenges(): Promise<IChallenge[]> {
