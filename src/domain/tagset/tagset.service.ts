@@ -48,11 +48,9 @@ export class TagsetService {
       throw new Error(`Tagset with id(${tagsetID}) not initialised!`);
 
     // Check if the tag already exists or not
-    for (const tag of tagset.tags) {
-      if (tag === newTag) {
-        // Tag already exists; just return
-        return tagset;
-      }
+    if (tagset.tags.includes(newTag)) {
+      // Tag already exists; just return
+      return tagset;
     }
     // Tag did not exist so add it
     tagset.tags?.push(newTag);
