@@ -67,26 +67,28 @@ export class DataManagementService {
         'members'
       );
 
+      await this.userGroupService.initialiseMembers(membersGroup);
+
       // Users
       const john = new User('john');
-      this.userService.initialiseMembers(john);
+      await this.userService.initialiseMembers(john);
       const bob = new User('bob');
-      this.userService.initialiseMembers(bob);
+      await this.userService.initialiseMembers(bob);
       bob.email = 'admin@cherrytwist.org';
       const valentin = new User('Valentin');
-      this.userService.initialiseMembers(valentin);
+      await this.userService.initialiseMembers(valentin);
       valentin.email = 'valentin_yanakiev@yahoo.co.uk';
       const angel = new User('Angel');
-      this.userService.initialiseMembers(angel);
+      await this.userService.initialiseMembers(angel);
       angel.email = 'angel@cmd.bg';
       const neil = new User('Neil');
-      this.userService.initialiseMembers(neil);
+      await this.userService.initialiseMembers(neil);
       neil.email = 'neil@cherrytwist.org';
       neil.country = ' Netherlands';
       neil.gender = 'Male';
       const tagset = new Tagset('sample');
       tagset.tags = ['java', 'graphql'];
-      neil.profile?.tagsets?.push(tagset);
+      neil.profile.tagsets?.push(tagset);
 
       // Add the users to the groups
       membersGroup.members?.push(john);

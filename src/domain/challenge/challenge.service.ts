@@ -22,12 +22,12 @@ export class ChallengeService {
     private challengeRepository: Repository<Challenge>
   ) {}
 
-  initialiseMembers(challenge: IChallenge): IChallenge {
+  async initialiseMembers(challenge: IChallenge): Promise<IChallenge> {
     if (!challenge.groups) {
       challenge.groups = [];
     }
     // Check that the mandatory groups for a challenge are created
-    this.userGroupService.addMandatoryGroups(
+    await this.userGroupService.addMandatoryGroups(
       challenge,
       challenge.restrictedGroupNames
     );

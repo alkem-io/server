@@ -19,7 +19,7 @@ export class ProfileService {
     private profileRepository: Repository<Profile>
   ) {}
 
-  initialiseMembers(profile: IProfile): IProfile {
+  async initialiseMembers(profile: IProfile): Promise<IProfile> {
     if (!profile.references) {
       profile.references = [];
     }
