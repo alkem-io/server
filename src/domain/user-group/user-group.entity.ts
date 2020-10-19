@@ -35,7 +35,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @ManyToMany(
     () => User,
     user => user.userGroups,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   @JoinTable({ name: 'user_group_members' })
   members?: User[];

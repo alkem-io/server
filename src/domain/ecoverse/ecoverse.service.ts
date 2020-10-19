@@ -1,27 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ChallengeInput } from '../challenge/challenge.dto';
+import { Challenge } from '../challenge/challenge.entity';
+import { IChallenge } from '../challenge/challenge.interface';
+import { ChallengeService } from '../challenge/challenge.service';
 import { IContext } from '../context/context.interface';
+import { ContextService } from '../context/context.service';
+import { OrganisationInput } from '../organisation/organisation.dto';
+import { Organisation } from '../organisation/organisation.entity';
 import { IOrganisation } from '../organisation/organisation.interface';
+import { OrganisationService } from '../organisation/organisation.service';
+import { ITagset } from '../tagset/tagset.interface';
+import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
-import { Repository } from 'typeorm';
+import { UserInput } from '../user/user.dto';
+import { IUser } from '../user/user.interface';
+import { UserService } from '../user/user.service';
+import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { ContextService } from '../context/context.service';
-import { EcoverseInput } from './ecoverse.dto';
-import { TagsetService } from '../tagset/tagset.service';
-import { IUser } from '../user/user.interface';
-import { IChallenge } from '../challenge/challenge.interface';
-import { ITagset } from '../tagset/tagset.interface';
-import { Challenge } from '../challenge/challenge.entity';
-import { ChallengeService } from '../challenge/challenge.service';
-import { ChallengeInput } from '../challenge/challenge.dto';
-import { UserService } from '../user/user.service';
-import { UserInput } from '../user/user.dto';
-import { OrganisationInput } from '../organisation/organisation.dto';
-import { Organisation } from '../organisation/organisation.entity';
-import { OrganisationService } from '../organisation/organisation.service';
 
 @Injectable()
 export class EcoverseService {
@@ -86,10 +86,9 @@ export class EcoverseService {
         ecoverse,
         RestrictedGroupNames.Members
       );
-
+      console.log('Ecoverse: Get Members');
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return membersGroup.members as IUser[];
+      return this.userGroupService.getMembers(membersGroup.id);
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
@@ -98,14 +97,17 @@ export class EcoverseService {
 
   async getGroups(): Promise<IUserGroup[]> {
     try {
-      const ecoverse = (await this.getEcoverse()) as IEcoverse;
-
+      console.time('getting groups');
+      const ecoverse = await this.ecoverseRepository.findOneOrFail({
+        relations: ['groups', 'groups.members'],
+      });
       // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
       // Convert groups array into IGroups array
       if (!ecoverse.groups) {
         throw new Error('Ecoverse groups must be defined');
       }
-      return ecoverse.groups as IUserGroup[];
+      console.timeEnd('getting groups');
+      return (ecoverse && (ecoverse.groups as IUserGroup[])) || [];
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;

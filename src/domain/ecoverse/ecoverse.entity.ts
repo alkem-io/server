@@ -59,7 +59,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.ecoverse,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   groups?: UserGroup[];
 

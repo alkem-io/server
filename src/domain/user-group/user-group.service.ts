@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
+import { Challenge } from '../challenge/challenge.entity';
+import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { Organisation } from '../organisation/organisation.entity';
 import { ProfileService } from '../profile/profile.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
@@ -170,17 +173,24 @@ export class UserGroupService {
   }
 
   getGroupByName(groupable: IGroupable, name: string): IUserGroup {
+    if (groupable instanceof Ecoverse) {
+      console.log('Groupable is Ecoverse');
+    }
+    if (groupable instanceof Challenge) {
+      console.log('Groupable is Challenge');
+    }
+    if (groupable instanceof Organisation) {
+      console.log('Groupable is Organisation');
+    }
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new Error('Non-initialised Groupable submitted');
     }
 
-    for (const group of groupable.groups) {
-      if (group.name === name) {
-        return group;
-      }
+    const group = groupable.groups.find(x => x.name === name);
+    if (group) {
+      return group;
     }
-
     // If get here then no match group was found
     throw new Error(`Unable to find group with the name:' + ${name}`);
   }
@@ -277,5 +287,13 @@ export class UserGroupService {
       throw new Error('Cannot reach here');
     }
     return groupable.groups;
+  }
+
+  async getMembers(groupId: number): Promise<IUser[]> {
+    const group = await this.groupRepository.findOne({
+      where: { id: groupId },
+      relations: ['members'],
+    });
+    return (group && group.members) || [];
   }
 }
