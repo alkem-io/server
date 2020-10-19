@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import fetch from 'node-fetch';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
@@ -10,7 +10,6 @@ import { AzureADStrategy } from '../authentication/aad.strategy';
 export class MsGraphService {
   constructor(
     private configService: ConfigService,
-    @Inject(forwardRef(() => AzureADStrategy))
     private azureAdStrategy: AzureADStrategy
   ) {}
 
