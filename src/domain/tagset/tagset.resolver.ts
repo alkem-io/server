@@ -22,4 +22,16 @@ export class TagsetResolver {
 
     return tagset;
   }
+
+  @Mutation(() => Tagset, {
+    description: 'Add the provided tag to the tagset with the given ID',
+  })
+  async addTagToTagset(
+    @Args('tagsetID') tagsetID: number,
+    @Args('tag') newTag: string
+  ): Promise<ITagset> {
+    const tagset = await this.tagsetService.addTag(tagsetID, newTag);
+
+    return tagset;
+  }
 }
