@@ -43,7 +43,7 @@ export class AzureADStrategy
     done: CallableFunction
   ): Promise<any> {
     try {
-      if (!token.email) throw 'token email missing';
+      if (!token.email) throw new Error('Token email missing!');
 
       await this.cacheBearerToken(req);
 
