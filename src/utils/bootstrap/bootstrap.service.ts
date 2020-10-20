@@ -34,7 +34,7 @@ export class BootstrapService {
 
   async validateAccountManagementSetup() {
     console.log('=== Validating Account Management configuration ===');
-    const accountsEnabled = await this.accountService.accountUsageEnabled();
+    const accountsEnabled = this.accountService.accountUsageEnabled();
     if (accountsEnabled) {
       console.log('...usage of Accounts is enabled');
     } else {
