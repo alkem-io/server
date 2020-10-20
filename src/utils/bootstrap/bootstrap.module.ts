@@ -3,12 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { EcoverseModule } from 'src/domain/ecoverse/ecoverse.module';
 import { UserModule } from 'src/domain/user/user.module';
-import { AuthenticationModule } from '../authentication/authentication.module';
+import { AccountModule } from '../account/account.module';
 import { BootstrapService } from './bootstrap.service';
 
 @Module({
   imports: [
-    AuthenticationModule,
+    AccountModule,
     EcoverseModule,
     UserModule,
     TypeOrmModule.forFeature([Ecoverse]),

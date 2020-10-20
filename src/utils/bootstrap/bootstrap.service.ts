@@ -8,13 +8,13 @@ import { UserInput } from 'src/domain/user/user.dto';
 import { IUser } from 'src/domain/user/user.interface';
 import { UserService } from 'src/domain/user/user.service';
 import { Repository } from 'typeorm';
-import { AuthenticationService } from '../authentication/authentication.service';
+import { AccountService } from '../account/account.service';
 
 const ADMIN_EMAIL = 'admin@cherrytwist.org';
 @Injectable()
 export class BootstrapService {
   constructor(
-    private authenticationService: AuthenticationService,
+    private accountService: AccountService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
     @InjectRepository(Ecoverse)
@@ -26,19 +26,19 @@ export class BootstrapService {
       console.info('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
       await this.ensureAdminRole();
-      await this.validateAuthenticationSetup();
+      await this.validateAccountMgmtSetup();
     } catch (error) {
       console.log(error);
     }
   }
 
-  async validateAuthenticationSetup() {
-    console.log('=== Validating Authentication configuration ===');
-    if (!this.authenticationService.authenticationEnabled()) {
-      console.warn('...Authentication is DISABLED');
+  async validateAccountMgmtSetup() {
+    console.log('=== Validating Account Management configuration ===');
+    if (!this.accountService.accountUsageEnabled()) {
+      console.warn('...usage of Accounts is DISABLED');
       return;
     }
-    console.warn('...Authentication is enabled');
+    console.log('...usage of Accounts is enabled');
   }
 
   async ensureAdminRole() {

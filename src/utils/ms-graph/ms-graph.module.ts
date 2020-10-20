@@ -3,8 +3,8 @@ import { AuthenticationModule } from '../authentication/authentication.module';
 import { MsGraphService } from './ms-graph.service';
 
 @Module({
+  imports: [AuthenticationModule],
   providers: [MsGraphService],
   exports: [MsGraphService],
-  imports: [AuthenticationModule],
 })
 export class MsGraphModule {}
