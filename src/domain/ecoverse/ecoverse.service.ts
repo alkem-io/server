@@ -108,35 +108,40 @@ export class EcoverseService {
   }
 
   async getGroupsWithTag(tagFilter: string): Promise<IUserGroup[]> {
-    const ecoverse: IEcoverse = await this.getEcoverse();
-    if (!ecoverse.groups) throw new Error('Ecoverse groups must be defined');
-    const groupsToReturn: IUserGroup[] = [];
-    for (let i = 0; i < ecoverse.groups.length; i++) {
-      const group: IUserGroup = ecoverse.groups[i];
+    const groups = await this.getGroups();
+    return groups.filter(g => {
       if (!tagFilter) {
-        // no filter, just add the group
-        groupsToReturn.push(group);
-        continue;
+        return true;
       }
-      const tagset = this.tagsetService.defaultTagset(group.profile);
+      const tagset = this.tagsetService.defaultTagset(g.profile);
       if (this.tagsetService.hasTag(tagset, tagFilter)) {
-        // Found a group with the matching tag so add it
-        groupsToReturn.push(group);
+        return true;
       }
+      return false;
+    });
+  }
+
+  async getEcoverseId(): Promise<number> {
+    const ecoverse = await this.ecoverseRepository
+      .createQueryBuilder('ecoverse')
+      .select('ecoverse.id')
+      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
+
+    if (!ecoverse) {
+      throw new Error('Ecoverse is missing!');
     }
-    return groupsToReturn;
+    return ecoverse.id;
   }
 
   async getChallenges(): Promise<IChallenge[]> {
     try {
-      const ecoverse: IEcoverse = await this.getEcoverse();
+      console.time('Get challenges');
+      const ecoverseId = await this.getEcoverseId();
+      const challanges = await this.challengeService.getChallenges(ecoverseId);
+      console.timeEnd('Get challenges');
+      return challanges;
 
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-      // Convert groups array into IGroups array
-      if (!ecoverse.challenges) {
-        throw new Error('Unreachable');
-      }
-      return ecoverse.challenges as IChallenge[];
+      //return (ecoverse && ecoverse.challenges) || [];
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;

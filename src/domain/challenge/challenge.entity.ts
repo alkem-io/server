@@ -70,7 +70,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.challenge,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   groups?: UserGroup[];
 

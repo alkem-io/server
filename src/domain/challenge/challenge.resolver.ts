@@ -1,17 +1,25 @@
 import { Inject } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
-import { Args, Float, Mutation } from '@nestjs/graphql/dist';
+import {
+  Args,
+  Float,
+  Mutation,
+  Parent,
+  ResolveField,
+} from '@nestjs/graphql/dist';
 import { UserGroup } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
+import { UserGroupService } from '../user-group/user-group.service';
 import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
 
-@Resolver()
+@Resolver(() => Challenge)
 export class ChallengeResolver {
   constructor(
-    @Inject(ChallengeService) private challengeService: ChallengeService
+    @Inject(ChallengeService) private challengeService: ChallengeService,
+    @Inject(UserGroupService) private userGrouipService: UserGroupService
   ) {}
 
   ///// Mutations /////
@@ -55,4 +63,13 @@ export class ChallengeResolver {
     const group = this.challengeService.addMember(userID, challengeID);
     return group;
   }
+
+  // @ResolveField('groups', () => UserGroup, {
+  //   nullable: true,
+  //   description:
+  //     'Groups of users related to a challenge; each group also results in a role that is assigned to users in the group.',
+  // })
+  // async groups(@Parent() challenge: Challenge) {
+  //   return this.userGrouipService.getGroups(challenge);
+  // }
 }

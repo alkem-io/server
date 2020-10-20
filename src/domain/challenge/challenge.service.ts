@@ -139,4 +139,12 @@ export class ChallengeService {
 
     return membersGroup;
   }
+
+  async getChallenges(ecoverseId: number): Promise<Challenge[]> {
+    const challenges = await this.challengeRepository.find({
+      relations: ['groups', 'groups.members'],
+      where: { ecoverse: { id: ecoverseId } },
+    });
+    return challenges || [];
+  }
 }
