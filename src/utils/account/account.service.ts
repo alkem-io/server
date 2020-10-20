@@ -21,6 +21,7 @@ export class AccountService {
   }
 
   async accountUsageEnabled(): Promise<boolean> {
+    // Currently the only factor for account usage is authentication enabled or not i.e. accounts are used if auth is enabled
     return this.authenticationEnabled();
   }
 

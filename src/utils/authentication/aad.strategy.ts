@@ -79,7 +79,7 @@ export class AzureADStrategy
     const upstreamAccessToken = await this.getCachedBearerToken();
     const response = await this.getDownstreamAccessToken(upstreamAccessToken);
     const downstreamAccessToken = response['access_token'] as string;
-    console.info(`Downstream access token: ${downstreamAccessToken}`);
+    //console.info(`Downstream access token: ${downstreamAccessToken}`);
 
     return downstreamAccessToken;
   }

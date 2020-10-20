@@ -34,11 +34,13 @@ export class BootstrapService {
 
   async validateAccountMgmtSetup() {
     console.log('=== Validating Account Management configuration ===');
-    if (!this.accountService.accountUsageEnabled()) {
+    const accountsEnabled = await this.accountService.accountUsageEnabled();
+    if (accountsEnabled) {
+      console.log('...usage of Accounts is enabled');
+    } else {
       console.warn('...usage of Accounts is DISABLED');
       return;
     }
-    console.log('...usage of Accounts is enabled');
   }
 
   async ensureAdminRole() {
