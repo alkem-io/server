@@ -8,11 +8,13 @@ import { UserInput } from 'src/domain/user/user.dto';
 import { IUser } from 'src/domain/user/user.interface';
 import { UserService } from 'src/domain/user/user.service';
 import { Repository } from 'typeorm';
+import { AccountService } from '../account/account.service';
 
 const ADMIN_EMAIL = 'admin@cherrytwist.org';
 @Injectable()
 export class BootstrapService {
   constructor(
+    private accountService: AccountService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
     @InjectRepository(Ecoverse)
@@ -24,8 +26,20 @@ export class BootstrapService {
       console.info('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
       await this.ensureAdminRole();
+      await this.validateAccountManagementSetup();
     } catch (error) {
       console.log(error);
+    }
+  }
+
+  async validateAccountManagementSetup() {
+    console.log('=== Validating Account Management configuration ===');
+    const accountsEnabled = this.accountService.accountUsageEnabled();
+    if (accountsEnabled) {
+      console.log('...usage of Accounts is enabled');
+    } else {
+      console.warn('...usage of Accounts is DISABLED');
+      return;
     }
   }
 
@@ -34,7 +48,7 @@ export class BootstrapService {
     // Ensure user exists with admin email
     let user = await this.userService.getUserByEmail(ADMIN_EMAIL);
 
-    if (!this.userService.userExists(ADMIN_EMAIL)) {
+    if (!user) {
       console.info(
         `...no admin user present, creating user with email ${ADMIN_EMAIL}`
       );

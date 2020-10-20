@@ -1,48 +1,48 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Launch Program",
-            "args": [
-                "${workspaceFolder}/src/main.ts",
-                "--watch"
-            ],
-            "envFile": "${workspaceFolder}/.env",
-            "runtimeArgs": [
-                "-r",
-                "ts-node/register",
-                "-r",
-                "tsconfig-paths/register"
-            ],
-            "cwd": "${workspaceRoot}",
-            "preLaunchTask": "tsc: watch - tsconfig.build.json",
-            "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-            "skipFiles": [
-              "${workspaceFolder}/node_modules/**/*.js",
-              "<node_internals>/**/*.js"
-            ],
-            "sourceMaps": true
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Debug Nest Framework",
-            "program": "${workspaceFolder}/node_modules/@nestjs/cli/bin/nest.js",
-            "args": [
-                "start",
-                "debug",
-                "--watch"
-            ],
-            "sourceMaps": true,
-            "envFile": "${workspaceFolder}/.env",
-            "cwd": "${workspaceRoot}",
-            "console": "integratedTerminal",
-            "protocol": "inspector"
-        }
-    ]
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Program",
+      "args": [
+        "${workspaceFolder}/src/main.ts"
+      ],
+      "envFile": "${workspaceFolder}/.env",
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register",
+        "-r",
+        "tsconfig-paths/register"
+      ],
+      "cwd": "${workspaceRoot}",
+      "preLaunchTask": "tsc: watch - tsconfig.build.json",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "skipFiles": [
+        "${workspaceFolder}/node_modules/**/*.js",
+        "<node_internals>/**/*.js"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Nest Framework",
+      "program": "${workspaceFolder}/node_modules/@nestjs/cli/bin/nest.js",
+      "args": [
+        "start",
+        "debug",
+        "--watch"
+      ],
+      "sourceMaps": true,
+      "envFile": "${workspaceFolder}/.env",
+      "cwd": "${workspaceRoot}",
+      "console": "integratedTerminal",
+      "protocol": "inspector"
+    }
+  ]
 }

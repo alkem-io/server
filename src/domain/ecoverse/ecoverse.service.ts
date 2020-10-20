@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AccountService } from 'src/utils/account/account.service';
 import { Repository } from 'typeorm';
-import { MsGraphService } from '../../utils/ms-graph/ms-graph.service';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
@@ -33,7 +33,7 @@ export class EcoverseService {
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
-    private msGraphService: MsGraphService,
+    private accountService: AccountService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
@@ -261,24 +261,24 @@ export class EcoverseService {
   // Create the user and add the user into the members group
   async createUser(userData: UserInput): Promise<IUser> {
     const ctUserExists = await this.userService.userExists(userData.email);
-    const aadUserExists = await this.msGraphService.userExists(
-      undefined,
-      userData.email
-    );
-
-    if (ctUserExists && aadUserExists) {
-      console.info(`User ${userData.email} already exists!`);
-      return (await this.userService.getUserByEmail(userData.email)) as IUser;
+    let accountExists = true;
+    if (this.accountService.accountUsageEnabled()) {
+      accountExists = await this.accountService.accountExists(userData.email);
     }
 
-    if (ctUserExists && !aadUserExists)
-      throw new Error(
-        `User ${userData.email} is in an inconsistent state. The user exists in CT database but doesn't exist in AAD`
-      );
-
-    if (!aadUserExists) await this.msGraphService.createUser(userData);
+    if (ctUserExists) {
+      if (accountExists) {
+        console.info(`User ${userData.email} already exists!`);
+        return (await this.userService.getUserByEmail(userData.email)) as IUser;
+      } else {
+        throw new Error(
+          `User ${userData.email} is in an inconsistent state. The user exists in CT database but doesn't have an account`
+        );
+      }
+    }
 
     const user = await this.userService.createUser(userData);
+    if (!accountExists) await this.accountService.createAccount(userData);
 
     const ecoverse = await this.getEcoverse();
     // Also add the user into the members group

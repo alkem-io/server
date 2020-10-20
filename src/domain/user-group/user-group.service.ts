@@ -81,8 +81,7 @@ export class UserGroupService {
     }
 
     // Have both user + group so do the add
-    this.addUserToGroup(user, group);
-    await group.save();
+    await this.addUserToGroup(user, group);
 
     return group;
   }
@@ -122,8 +121,7 @@ export class UserGroupService {
     }
 
     // Have both user + group so do the add
-    this.removeUserFromGroup(user, group);
-    await group.save();
+    await this.removeUserFromGroup(user, group);
 
     return group;
   }
