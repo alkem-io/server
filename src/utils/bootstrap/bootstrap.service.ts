@@ -26,13 +26,13 @@ export class BootstrapService {
       console.info('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
       await this.ensureAdminRole();
-      await this.validateAccountMgmtSetup();
+      await this.validateAccountManagementSetup();
     } catch (error) {
       console.log(error);
     }
   }
 
-  async validateAccountMgmtSetup() {
+  async validateAccountManagementSetup() {
     console.log('=== Validating Account Management configuration ===');
     const accountsEnabled = await this.accountService.accountUsageEnabled();
     if (accountsEnabled) {

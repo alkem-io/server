@@ -26,8 +26,11 @@ export class AccountService {
   }
 
   async accountExists(email: string): Promise<boolean> {
-    // If authentication is disabled then the logic should continue as if an account is present
-    if (!this.authenticationEnabled()) return true;
+    // Should not be called if account usage is disabled
+    if (!this.accountUsageEnabled())
+      throw new Error(
+        `Attempting to locate account (${email}) but account usage is disabled`
+      );
     return await this.msGraphService.userExists(undefined, email);
   }
 
