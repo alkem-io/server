@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config/dist';
 import fetch from 'node-fetch';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
 import { UserInput } from 'src/domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
+import { AuthenticationService } from '../authentication/authentication.service';
 
 @Injectable()
 export class MsGraphService {
   constructor(
-    private configService: ConfigService,
+    private authService: AuthenticationService,
     private azureAdStrategy: AzureADStrategy
   ) {}
 
@@ -81,6 +81,8 @@ export class MsGraphService {
     client: Client | undefined,
     email: string
   ): Promise<boolean> {
+    // If authentication is disabled then the logic should continue as if the user is present
+    if (!this.authService.authenticationEnabled()) return true;
     let user;
     try {
       user = await this.getUser(client, email);
