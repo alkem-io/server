@@ -28,7 +28,7 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
   canActivate(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
     const { req } = ctx.getContext();
-    console.log(req);
+    //console.log(req);
 
     const auth_roles = this.reflector.get<string[]>(
       'roles',
@@ -45,6 +45,7 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
   }
 
   handleRequest(err: any, user: any) {
+    // Always handle the request if authentication is disabled
     if (
       this.configService.get<IServiceConfig>('service')
         ?.authenticationEnabled === 'false'

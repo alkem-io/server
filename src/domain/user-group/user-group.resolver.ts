@@ -15,7 +15,7 @@ export class UserGroupResolver {
     @Args('userID') userID: number,
     @Args('groupID') groupID: number
   ): Promise<IUserGroup> {
-    const group = this.groupService.addUser(userID, groupID);
+    const group = await this.groupService.addUser(userID, groupID);
     return group;
   }
 
@@ -27,7 +27,7 @@ export class UserGroupResolver {
     @Args('userID') userID: number,
     @Args('groupID') groupID: number
   ): Promise<IUserGroup> {
-    const group = this.groupService.removeUser(userID, groupID);
+    const group = await this.groupService.removeUser(userID, groupID);
     return group;
   }
 
@@ -40,7 +40,7 @@ export class UserGroupResolver {
     @Args('userID') userID: number,
     @Args('groupID') groupID: number
   ): Promise<IUserGroup> {
-    const group = this.groupService.assignFocalPoint(userID, groupID);
+    const group = await this.groupService.assignFocalPoint(userID, groupID);
     return group;
   }
 
@@ -51,7 +51,7 @@ export class UserGroupResolver {
   async removeGroupFocalPoint(
     @Args('groupID') groupID: number
   ): Promise<IUserGroup> {
-    const group = this.groupService.removeFocalPoint(groupID);
+    const group = await this.groupService.removeFocalPoint(groupID);
     return group;
   }
 }
