@@ -153,13 +153,11 @@ export class EcoverseService {
 
   async getOrganisations(): Promise<IOrganisation[]> {
     try {
-      console.time('Get Organisations');
-      const ecoverseId = await this.getEcoverseId();
-      const organisations = await this.organisationService.getOrganisations(
-        ecoverseId
-      );
-      console.timeEnd('Get Organisations');
-      return organisations;
+      const ecoverse = await this.getEcoverse({
+        relations: ['organisations', 'organisations.groups'],
+      });
+
+      return ecoverse.organisations || [];
     } catch (e) {
       throw e;
     }
@@ -264,25 +262,30 @@ export class EcoverseService {
   async createOrganisation(
     organisationData: OrganisationInput
   ): Promise<IOrganisation> {
-    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    const ecoverse = await this.getEcoverse({
+      join: {
+        alias: 'ecoverse',
+        leftJoinAndSelect: {
+          organisations: 'ecoverse.organisations',
+        },
+      },
+    });
     if (!ecoverse.organisations) {
       throw new Error('Organisations must be defined');
     }
-    // First check if the organisation already exists on not...
-    for (const organisation of ecoverse.organisations) {
-      if (organisation.name === organisationData.name) {
-        // Organisation already exists, just return. Option:merge?
-        return organisation;
-      }
-    }
 
-    // No existing organisation found, create and initialise a new one!
-    const organisation = await this.organisationService.createOrganisation(
-      organisationData
+    let organisation = ecoverse.organisations.find(
+      o => o.name === organisationData.name
     );
-
-    ecoverse.organisations.push(organisation as Organisation);
-    await this.ecoverseRepository.save(ecoverse);
+    // First check if the organisation already exists on not...
+    if (!organisation) {
+      // No existing organisation found, create and initialise a new one!
+      organisation = await this.organisationService.createOrganisation(
+        organisationData
+      );
+      ecoverse.organisations.push(organisation as Organisation);
+      await this.ecoverseRepository.save(ecoverse);
+    }
 
     return organisation;
   }
