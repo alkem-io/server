@@ -108,7 +108,8 @@ export class EcoverseService {
   }
 
   async getGroupsWithTag(tagFilter: string): Promise<IUserGroup[]> {
-    const groups = await this.getGroups();
+    const ecoverse = await this.getEcoverse();
+    const groups = await this.userGroupService.getGroups(ecoverse);
     return groups.filter(g => {
       if (!tagFilter) {
         return true;

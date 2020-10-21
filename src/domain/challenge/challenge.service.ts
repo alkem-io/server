@@ -74,7 +74,6 @@ export class ChallengeService {
     const challenge = await this.challengeRepository.findOne({
       where: [{ id: challengeID }],
     });
-    //relations: ['groups', 'groups.members'],
 
     if (!challenge)
       throw new Error(`Unable to find challenge with ID: ${challengeID}`);

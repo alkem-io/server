@@ -209,7 +209,8 @@ export class UserGroupService {
       .createQueryBuilder()
       .select('group')
       .from(UserGroup, 'group')
-      .leftJoinAndSelect('group.members', 'members');
+      .leftJoinAndSelect('group.members', 'members')
+      .leftJoinAndSelect('group.profile.tagsets', 'profile.tagsets');
 
     if (groupable instanceof Ecoverse) {
       query = query.where('group.ecoverseId = :id', {
