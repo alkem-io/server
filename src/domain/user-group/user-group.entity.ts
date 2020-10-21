@@ -86,6 +86,8 @@ export class UserGroup extends BaseEntity implements IUserGroup {
 }
 
 export enum RestrictedGroupNames {
-  Admins = 'admins',
+  Admins = 'ecoverse-admins',
   Members = 'members',
+  GlobalAdmins = 'global-admins',
+  CommunityAdmins = 'community-admins',
 }

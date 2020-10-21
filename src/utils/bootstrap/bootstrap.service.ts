@@ -1,22 +1,25 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { IEcoverse } from 'src/domain/ecoverse/ecoverse.interface';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
 import { Organisation } from 'src/domain/organisation/organisation.entity';
+import { RestrictedGroupNames } from 'src/domain/user-group/user-group.entity';
+import { IUserGroup } from 'src/domain/user-group/user-group.interface';
 import { UserInput } from 'src/domain/user/user.dto';
-import { IUser } from 'src/domain/user/user.interface';
 import { UserService } from 'src/domain/user/user.service';
+import { IServiceConfig } from 'src/interfaces/service.config.interface';
 import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
 
-const ADMIN_EMAIL = 'admin@cherrytwist.org';
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
+    private configService: ConfigService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
@@ -25,8 +28,47 @@ export class BootstrapService {
     try {
       console.info('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
-      await this.ensureAdminRole();
+      await this.bootstrapProfiles();
       await this.validateAccountManagementSetup();
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async bootstrapProfiles() {
+    const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
+      ?.authorisationBootstrapPath as string;
+
+    const bootstrapData = await import(bootstrapFilePath);
+    await this.createGroupProfiles(
+      RestrictedGroupNames.Admins,
+      await bootstrapData[RestrictedGroupNames.Admins]
+    );
+    await this.createGroupProfiles(
+      RestrictedGroupNames.GlobalAdmins,
+      await bootstrapData[RestrictedGroupNames.GlobalAdmins]
+    );
+    await this.createGroupProfiles(
+      RestrictedGroupNames.CommunityAdmins,
+      await bootstrapData[RestrictedGroupNames.CommunityAdmins]
+    );
+  }
+
+  async createGroupProfiles(groupName: string, emails: string[]) {
+    try {
+      emails.forEach(async email => {
+        const userInput = new UserInput();
+        userInput.email = email;
+        userInput.name = 'Imported User';
+        //env variable AUTHENTICATION_ENABLED=false. Otherwise this won't work.
+        let user = await this.userService.getUserByEmail(email);
+
+        if (!user) user = await this.userService.createUser(userInput);
+        const groups = (await user.userGroups) as IUserGroup[];
+
+        if (!groups.some(({ name }) => groupName === name))
+          await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
+      });
     } catch (error) {
       console.log(error);
     }
@@ -41,36 +83,6 @@ export class BootstrapService {
       console.warn('...usage of Accounts is DISABLED');
       return;
     }
-  }
-
-  async ensureAdminRole() {
-    console.log('=== Ensuring admin user is present ===');
-    // Ensure user exists with admin email
-    let user = await this.userService.getUserByEmail(ADMIN_EMAIL);
-
-    if (!user) {
-      console.info(
-        `...no admin user present, creating user with email ${ADMIN_EMAIL}`
-      );
-      // No user with admin email, so create + add
-      const ctAdminDto = new UserInput();
-      ctAdminDto.name = 'ctAdmin';
-      ctAdminDto.email = ADMIN_EMAIL;
-      ctAdminDto.lastName = 'admin';
-
-      user = await this.ecoverseService.createUser(ctAdminDto);
-    }
-
-    // Ensure admin user is assigned to admin group
-    if (await this.ecoverseService.addAdmin(user as IUser)) {
-      console.info(
-        `...${
-          (user as IUser).email
-        } added to the admins group on Ecoverse level`
-      );
-    }
-    console.info('...administration role - presence verified');
-    return;
   }
 
   async ensureEcoverseSingleton(): Promise<IEcoverse> {

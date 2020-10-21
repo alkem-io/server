@@ -114,6 +114,8 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     this.restrictedGroupNames = [
       RestrictedGroupNames.Members,
       RestrictedGroupNames.Admins,
+      RestrictedGroupNames.GlobalAdmins,
+      RestrictedGroupNames.CommunityAdmins,
     ];
   }
 }

@@ -295,10 +295,37 @@ export class EcoverseService {
   }
 
   async addAdmin(user: IUser): Promise<boolean> {
+    return await this.addUserToRestrictedGroup(
+      user,
+      RestrictedGroupNames.Admins
+    );
+  }
+
+  async addGlobalAdmin(user: IUser): Promise<boolean> {
+    return await this.addUserToRestrictedGroup(
+      user,
+      RestrictedGroupNames.GlobalAdmins
+    );
+  }
+
+  async addCommunityAdmin(user: IUser): Promise<boolean> {
+    return await this.addUserToRestrictedGroup(
+      user,
+      RestrictedGroupNames.CommunityAdmins
+    );
+  }
+
+  async addUserToRestrictedGroup(
+    user: IUser,
+    groupName: string
+  ): Promise<boolean> {
+    if (!(await this.groupIsRestricted(groupName)))
+      throw new Error(`${groupName} is not a restricted group name!`);
+
     const ctverse = await this.getEcoverse();
     const adminsGroup = await this.userGroupService.getGroupByName(
       ctverse,
-      RestrictedGroupNames.Admins
+      groupName
     );
 
     if (await this.userGroupService.addUserToGroup(user, adminsGroup)) {
@@ -306,6 +333,19 @@ export class EcoverseService {
       return true;
     }
 
+    return false;
+  }
+
+  async groupIsRestricted(groupName: string): Promise<boolean> {
+    if (
+      [
+        RestrictedGroupNames.Admins as string,
+        RestrictedGroupNames.CommunityAdmins as string,
+        RestrictedGroupNames.GlobalAdmins as string,
+        RestrictedGroupNames.Members as string,
+      ].includes(groupName)
+    )
+      return true;
     return false;
   }
 
