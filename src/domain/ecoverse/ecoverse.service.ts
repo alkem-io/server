@@ -209,17 +209,22 @@ export class EcoverseService {
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    const query = this.ecoverseRepository
+      .createQueryBuilder()
+      .select('ecoverse')
+      .from(Ecoverse, 'ecoverse')
+      .leftJoinAndSelect('ecoverse.challenges', 'challenges');
+
+    const ecoverses = await query.getMany();
+    const ecoverse = ecoverses[0];
     if (!ecoverse.challenges) {
       throw new Error('Challenges must be defined');
     }
     // First check if the challenge already exists on not...
-    for (const challenge of ecoverse.challenges) {
-      if (challenge.name === challengeData.name) {
-        // Challenge already exists, just return. Option:merge?
-        return challenge;
-      }
-    }
+    const existingChallenge = ecoverse.challenges.find(
+      t => t.name === challengeData.name
+    );
+    if (existingChallenge) return existingChallenge; // Option:merge?
 
     // No existing challenge found, create and initialise a new one!
     const challenge = await this.challengeService.createChallenge(
