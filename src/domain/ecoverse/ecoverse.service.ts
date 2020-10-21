@@ -95,7 +95,9 @@ export class EcoverseService {
 
   async getMembers(): Promise<IUser[]> {
     try {
-      const ecoverse = (await this.getEcoverse()) as IEcoverse;
+      const ecoverse = (await this.getEcoverse({
+        relations: ['groups'],
+      })) as IEcoverse;
       const membersGroup = await this.userGroupService.getGroupByName(
         ecoverse,
         RestrictedGroupNames.Members
@@ -310,7 +312,9 @@ export class EcoverseService {
     const user = await this.userService.createUser(userData);
     if (!accountExists) await this.accountService.createAccount(userData);
 
-    const ecoverse = await this.getEcoverse();
+    const ecoverse = await this.getEcoverse({
+      relations: ['groups'],
+    });
     // Also add the user into the members group
     const membersGroup = await this.userGroupService.getGroupByName(
       ecoverse,
@@ -350,7 +354,7 @@ export class EcoverseService {
     if (!(await this.groupIsRestricted(groupName)))
       throw new Error(`${groupName} is not a restricted group name!`);
 
-    const ctverse = await this.getEcoverse();
+    const ctverse = await this.getEcoverse({ relations: ['groups'] });
     const adminsGroup = await this.userGroupService.getGroupByName(
       ctverse,
       groupName
