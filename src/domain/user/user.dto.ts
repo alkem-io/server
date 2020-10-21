@@ -1,5 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
+import { IUserGroup } from '../user-group/user-group.interface';
 
 @InputType()
 export class UserInput {
@@ -41,4 +42,14 @@ export class UserInput {
   @Field({ nullable: true })
   @MaxLength(30)
   aadPassword?: string;
+}
+
+export class AuthUserDTO {
+  email: string;
+  userGroups: IUserGroup[];
+
+  constructor(email: string, userGroups: IUserGroup[]) {
+    this.email = email;
+    this.userGroups = userGroups;
+  }
 }
