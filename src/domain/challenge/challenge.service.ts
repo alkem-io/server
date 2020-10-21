@@ -81,7 +81,7 @@ export class ChallengeService {
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
     // reate and initialise a new challenge using the first returned array item
     const challenge = Challenge.create(challengeData);
-    this.initialiseMembers(challenge);
+    await this.initialiseMembers(challenge);
     return challenge;
   }
 
