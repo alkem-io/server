@@ -6,5 +6,5 @@ export interface IUserGroup {
   name: string;
   members?: IUser[];
   focalPoint?: IUser | null; // because of https://github.com/typeorm/typeorm/issues/5454
-  profile: IProfile;
+  profile?: IProfile;
 }

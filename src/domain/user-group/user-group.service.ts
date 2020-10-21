@@ -2,6 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
+import { Challenge } from '../challenge/challenge.entity';
+import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { IEcoverse } from '../ecoverse/ecoverse.interface';
+import { Organisation } from '../organisation/organisation.entity';
+import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
@@ -18,9 +23,32 @@ export class UserGroupService {
     private groupRepository: Repository<UserGroup>
   ) {}
 
+  async getGroups(groupable: IGroupable): Promise<IUserGroup[]> {
+    if (groupable instanceof Ecoverse) {
+      return await this.groupRepository.find({
+        where: { ecoverse: { id: (groupable as Ecoverse).id } },
+      });
+    }
+    if (groupable instanceof Challenge) {
+      return await this.groupRepository.find({
+        where: { challenge: { id: (groupable as Challenge).id } },
+      });
+    }
+    if (groupable instanceof Organisation) {
+      return await this.groupRepository.find({
+        where: { organisation: { id: (groupable as Organisation).id } },
+      });
+    }
+
+    return [];
+  }
+
   async initialiseMembers(group: IUserGroup): Promise<IUserGroup> {
     if (!group.members) {
       group.members = [];
+    }
+    if (!group.profile) {
+      group.profile = new Profile();
     }
     // Initialise the profile
     await this.profileService.initialiseMembers(group.profile);
@@ -167,20 +195,39 @@ export class UserGroupService {
     return group;
   }
 
-  getGroupByName(groupable: IGroupable, name: string): IUserGroup {
-    // Double check groups array is initialised
-    if (!groupable.groups) {
-      throw new Error('Non-initialised Groupable submitted');
+  async getGroupByName(
+    groupable: IGroupable,
+    name: string
+  ): Promise<IUserGroup> {
+    let query = this.groupRepository
+      .createQueryBuilder()
+      .select('group')
+      .from(UserGroup, 'group')
+      .leftJoinAndSelect('group.members', 'members')
+      .where('group.name=:name', { name });
+
+    if (groupable instanceof Ecoverse) {
+      query = query.andWhere('group.ecoverseId = :id', {
+        id: (groupable as Ecoverse).id,
+      });
+    }
+    if (groupable instanceof Challenge) {
+      query = query.andWhere('group.challengeId = :id', {
+        id: (groupable as Challenge).id,
+      });
+    }
+    if (groupable instanceof Organisation) {
+      query = query.andWhere('group.organisationId = :id', {
+        id: (groupable as Organisation).id,
+      });
     }
 
-    for (const group of groupable.groups) {
-      if (group.name === name) {
-        return group;
-      }
+    const group = await query.getOne();
+    if (group) {
+      return group;
     }
-
     // If get here then no match group was found
-    throw new Error(`Unable to find group with the name:' + ${name}`);
+    throw new Error(`Unable to find group with the name:' ${name}`);
   }
 
   async addMandatoryGroups(

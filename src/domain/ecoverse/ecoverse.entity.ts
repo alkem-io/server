@@ -59,7 +59,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.ecoverse,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   groups?: UserGroup[];
 
@@ -71,7 +71,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @ManyToMany(
     () => Organisation,
     organisation => organisation.ecoverses,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   @JoinTable({
     name: 'ecoverse_partner',
@@ -90,7 +90,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @OneToMany(
     () => Challenge,
     challenge => challenge.ecoverse,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   challenges?: Challenge[];
 
@@ -98,7 +98,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     nullable: true,
     description: 'The set of tags for the ecoverse',
   })
-  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @OneToOne(() => Tagset, { eager: false, cascade: true })
   @JoinColumn()
   tagset: Tagset;
 
