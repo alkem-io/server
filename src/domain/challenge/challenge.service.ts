@@ -71,8 +71,9 @@ export class ChallengeService {
   }
 
   async getChallengeByID(challengeID: number): Promise<IChallenge> {
-    //const t1 = performance.now()
-    const challenge = await Challenge.findOne({ where: [{ id: challengeID }] });
+    const challenge = await this.challengeRepository.findOne({
+      where: { id: challengeID },
+    });
     if (!challenge)
       throw new Error(`Unable to find challenge with ID: ${challengeID}`);
     return challenge;
@@ -81,7 +82,7 @@ export class ChallengeService {
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
     // reate and initialise a new challenge using the first returned array item
     const challenge = Challenge.create(challengeData);
-    this.initialiseMembers(challenge);
+    await this.initialiseMembers(challenge);
     return challenge;
   }
 
@@ -138,5 +139,12 @@ export class ChallengeService {
     await this.userGroupService.addUserToGroup(user, membersGroup);
 
     return membersGroup;
+  }
+
+  async getChallenges(ecoverseId: number): Promise<Challenge[]> {
+    const challenges = await this.challengeRepository.find({
+      where: { ecoverse: { id: ecoverseId } },
+    });
+    return challenges || [];
   }
 }

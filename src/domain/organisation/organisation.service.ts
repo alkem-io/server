@@ -18,6 +18,13 @@ export class OrganisationService {
     private organisationRepository: Repository<Organisation>
   ) {}
 
+  async getOrganisations(ecoverseId: number): Promise<Organisation[]> {
+    const organisations = await this.organisationRepository.find({
+      where: { ecoverse: { id: ecoverseId } },
+    });
+    return organisations || [];
+  }
+
   async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
     if (!organisation.restrictedGroupNames) {
       organisation.restrictedGroupNames = [RestrictedGroupNames.Members];

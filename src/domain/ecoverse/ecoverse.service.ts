@@ -5,7 +5,7 @@ import { IOrganisation } from '../organisation/organisation.interface';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { ContextService } from '../context/context.service';
@@ -65,8 +65,8 @@ export class EcoverseService {
     return ecoverse;
   }
 
-  async getEcoverse(): Promise<IEcoverse> {
-    return await this.ecoverseRepository.findOneOrFail();
+  async getEcoverse(options?: FindOneOptions<Ecoverse>): Promise<IEcoverse> {
+    return await this.ecoverseRepository.findOneOrFail(options);
   }
 
   async getName(): Promise<string> {
@@ -79,6 +79,18 @@ export class EcoverseService {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getName()!!!', exception: e });
       throw e;
     }
+  }
+
+  async getEcoverseId(): Promise<number> {
+    const ecoverse = await this.ecoverseRepository
+      .createQueryBuilder('ecoverse')
+      .select('ecoverse.id')
+      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
+
+    if (!ecoverse) {
+      throw new Error('Ecoverse is missing!');
+    }
+    return ecoverse.id;
   }
 
   async getMembers(): Promise<IUser[]> {
@@ -100,14 +112,9 @@ export class EcoverseService {
 
   async getGroups(): Promise<IUserGroup[]> {
     try {
-      const ecoverse = (await this.getEcoverse()) as IEcoverse;
-
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-      // Convert groups array into IGroups array
-      if (!ecoverse.groups) {
-        throw new Error('Ecoverse groups must be defined');
-      }
-      return ecoverse.groups as IUserGroup[];
+      const ecoverse = await this.getEcoverse();
+      const groups = await this.userGroupService.getGroups(ecoverse);
+      return groups;
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
@@ -115,35 +122,29 @@ export class EcoverseService {
   }
 
   async getGroupsWithTag(tagFilter: string): Promise<IUserGroup[]> {
-    const ecoverse: IEcoverse = await this.getEcoverse();
-    if (!ecoverse.groups) throw new Error('Ecoverse groups must be defined');
-    const groupsToReturn: IUserGroup[] = [];
-    for (let i = 0; i < ecoverse.groups.length; i++) {
-      const group: IUserGroup = ecoverse.groups[i];
+    const groups = await this.getGroups();
+    return groups.filter(g => {
       if (!tagFilter) {
-        // no filter, just add the group
-        groupsToReturn.push(group);
-        continue;
+        return true;
       }
-      const tagset = this.tagsetService.defaultTagset(group.profile);
-      if (this.tagsetService.hasTag(tagset, tagFilter)) {
-        // Found a group with the matching tag so add it
-        groupsToReturn.push(group);
-      }
-    }
-    return groupsToReturn;
+
+      if (!g.profile) return false;
+
+      const tagset = this.tagsetService.defaultTagset(g.profile);
+
+      return (
+        tagset !== undefined && this.tagsetService.hasTag(tagset, tagFilter)
+      );
+    });
   }
 
   async getChallenges(): Promise<IChallenge[]> {
     try {
-      const ecoverse: IEcoverse = await this.getEcoverse();
-
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-      // Convert groups array into IGroups array
-      if (!ecoverse.challenges) {
-        throw new Error('Unreachable');
-      }
-      return ecoverse.challenges as IChallenge[];
+      console.time('Get challenges');
+      const ecoverseId = await this.getEcoverseId();
+      const challanges = await this.challengeService.getChallenges(ecoverseId);
+      console.timeEnd('Get challenges');
+      return challanges;
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
@@ -152,12 +153,13 @@ export class EcoverseService {
 
   async getOrganisations(): Promise<IOrganisation[]> {
     try {
-      const ecoverse: IEcoverse = await this.getEcoverse();
-
-      if (!ecoverse.organisations)
-        throw new Error('Ecoverse organisations must be defined');
-
-      return ecoverse.organisations as IOrganisation[];
+      console.time('Get Organisations');
+      const ecoverseId = await this.getEcoverseId();
+      const organisations = await this.organisationService.getOrganisations(
+        ecoverseId
+      );
+      console.timeEnd('Get Organisations');
+      return organisations;
     } catch (e) {
       throw e;
     }
@@ -201,36 +203,61 @@ export class EcoverseService {
 
   async createGroup(groupName: string): Promise<IUserGroup> {
     console.log(`Adding userGroup (${groupName}) to ecoverse`);
-    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+
+    const ecoverse = (await this.getEcoverse({
+      join: {
+        alias: 'ecoverse',
+        leftJoinAndSelect: {
+          groups: 'ecoverse.groups',
+        },
+      },
+    })) as Ecoverse;
+
     const group = await this.userGroupService.addGroupWithName(
       ecoverse,
       groupName
     );
+
     await ecoverse.save();
+
     return group;
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    console.time('Challenge created');
+    console.time('getting ecoverse');
+
+    const ecoverse = await this.getEcoverse({
+      join: {
+        alias: 'ecoverse',
+        leftJoinAndSelect: {
+          challenges: 'ecoverse.challenges',
+        },
+      },
+    });
+
+    console.timeEnd('getting ecoverse');
+
     if (!ecoverse.challenges) {
       throw new Error('Challenges must be defined');
     }
     // First check if the challenge already exists on not...
-    for (const challenge of ecoverse.challenges) {
-      if (challenge.name === challengeData.name) {
-        // Challenge already exists, just return. Option:merge?
-        return challenge;
-      }
-    }
-
-    // No existing challenge found, create and initialise a new one!
-    const challenge = await this.challengeService.createChallenge(
-      challengeData
+    // TODO: Inform the user that the entity already exists instead of returning it.
+    let challenge = ecoverse.challenges.find(
+      c => c.name === challengeData.name
     );
+    if (!challenge) {
+      // No existing challenge found, create and initialise a new one!
+      challenge = await this.challengeService.createChallenge(challengeData);
 
-    ecoverse.challenges.push(challenge as Challenge);
-    await this.ecoverseRepository.save(ecoverse);
-
+      ecoverse.challenges.push(challenge as Challenge);
+      await this.ecoverseRepository.save(ecoverse);
+    } else {
+      // load the whole challenge
+      console.log('Creating Challenge: Challenge already exists!');
+      challenge = await this.challengeService.getChallengeByID(challenge.id);
+    }
+    console.timeEnd('Challenge created');
     return challenge;
   }
 
@@ -284,7 +311,7 @@ export class EcoverseService {
 
     const ecoverse = await this.getEcoverse();
     // Also add the user into the members group
-    const membersGroup = this.userGroupService.getGroupByName(
+    const membersGroup = await this.userGroupService.getGroupByName(
       ecoverse,
       RestrictedGroupNames.Members
     );
