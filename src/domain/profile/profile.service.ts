@@ -44,7 +44,10 @@ export class ProfileService {
 
     if (!profile) throw new Error(`Profile with id(${profileID}) not found!`);
 
-    const tagset = this.tagsetService.addTagsetWithName(profile, tagsetName);
+    const tagset = await this.tagsetService.addTagsetWithName(
+      profile,
+      tagsetName
+    );
     await this.profileRepository.save(profile);
 
     return tagset;

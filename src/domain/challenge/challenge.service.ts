@@ -83,6 +83,8 @@ export class ChallengeService {
     // reate and initialise a new challenge using the first returned array item
     const challenge = Challenge.create(challengeData);
     await this.initialiseMembers(challenge);
+    await this.challengeRepository.save(challenge);
+
     return challenge;
   }
 
