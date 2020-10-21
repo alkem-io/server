@@ -203,6 +203,7 @@ export class UserGroupService {
       .createQueryBuilder()
       .select('group')
       .from(UserGroup, 'group')
+      .leftJoinAndSelect('group.members', 'members')
       .where('group.name=:name', { name });
 
     if (groupable instanceof Ecoverse) {
@@ -226,7 +227,7 @@ export class UserGroupService {
       return group;
     }
     // If get here then no match group was found
-    throw new Error(`Unable to find group with the name:' + ${name}`);
+    throw new Error(`Unable to find group with the name:' ${name}`);
   }
 
   async addMandatoryGroups(
