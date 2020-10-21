@@ -223,7 +223,8 @@ export class UserGroupService {
     if (group) {
       return group as IUserGroup;
     }
-    throw new Error(`Unable to find group with the name:'${name}'`);
+    // If get here then no match group was found
+    throw new Error(`Unable to find group with the name:' ${name}`);
   }
 
   async addMandatoryGroups(

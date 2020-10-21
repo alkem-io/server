@@ -116,7 +116,10 @@ export class TagsetService {
     throw new Error('Unable to find tagset with the name:' + { name });
   }
 
-  addTagsetWithName(tagsetable: ITagsetable, name: string): ITagset {
+  async addTagsetWithName(
+    tagsetable: ITagsetable,
+    name: string
+  ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(tagsetable, name)) {
       // TODO: log a warning
@@ -133,7 +136,7 @@ export class TagsetService {
     }
 
     const newTagset = new Tagset(name);
-    this.initialiseMembers(newTagset as ITagset);
+    await this.initialiseMembers(newTagset as ITagset);
     tagsetable.tagsets?.push(newTagset as ITagset);
     return newTagset;
   }

@@ -103,11 +103,9 @@ export class EcoverseService {
         RestrictedGroupNames.Members
       );
 
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return membersGroup.members as IUser[];
+      const members = membersGroup.members;
+      return members as IUser[];
     } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
     }
   }
