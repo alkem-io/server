@@ -75,14 +75,12 @@ export class TagsetService {
   }
 
   // Get the default tagset
-  defaultTagset(tagsetable: ITagsetable): ITagset {
+  defaultTagset(tagsetable: ITagsetable): ITagset | undefined {
     if (!tagsetable.tagsets) throw new Error('Tagsets not initialised');
-    for (const tagset of tagsetable.tagsets) {
-      if (tagset.name === RestrictedTagsetNames.Default) {
-        return tagset;
-      }
-    }
-    throw new Error('Unable to find default tagset');
+    const defaultTagset = tagsetable.tagsets.find(
+      t => t.name === RestrictedTagsetNames.Default
+    );
+    return defaultTagset;
   }
 
   hasTagsetWithName(tagsetable: ITagsetable, name: string): boolean {

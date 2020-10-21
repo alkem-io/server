@@ -57,7 +57,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   })
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
-  profile: Profile;
+  profile?: Profile;
 
   @ManyToOne(
     () => Ecoverse,
@@ -80,8 +80,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   constructor(name: string) {
     super();
     this.name = name;
-
-    this.profile = new Profile();
   }
 }
 
