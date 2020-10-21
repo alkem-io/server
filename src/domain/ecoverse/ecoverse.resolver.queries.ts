@@ -1,5 +1,7 @@
-import { Inject } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
+import { GqlAuthGuard } from 'src/utils/authentication/graphql.guard';
+import { Roles } from 'src/utils/decorators/roles.decorator';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ChallengeService } from '../challenge/challenge.service';
@@ -45,8 +47,6 @@ export class EcoverseResolverQueries {
     return members;
   }
 
-  //@Get()
-  //@UseGuards(GqlAuthGuard)
   @Query(() => Organisation, {
     nullable: false,
     description: 'The host organisation for the ecoverse',
