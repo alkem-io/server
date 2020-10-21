@@ -232,7 +232,9 @@ export class EcoverseService {
     const existingChallenge = ecoverse.challenges.find(
       t => t.name === challengeData.name
     );
-    if (existingChallenge) return existingChallenge; // Option:merge?
+    if (existingChallenge) {
+      return await this.challengeService.getChallengeByID(existingChallenge.id);
+    } // Option:merge?
 
     // No existing challenge found, create and initialise a new one!
     const challenge = await this.challengeService.createChallenge(
