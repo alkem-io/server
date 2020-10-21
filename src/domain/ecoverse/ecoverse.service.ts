@@ -22,7 +22,7 @@ import { UserInput } from '../user/user.dto';
 import { OrganisationInput } from '../organisation/organisation.dto';
 import { Organisation } from '../organisation/organisation.entity';
 import { OrganisationService } from '../organisation/organisation.service';
-import { AccountService } from 'src/utils/account/account.service';
+import { AccountService } from '../../utils/account/account.service';
 
 @Injectable()
 export class EcoverseService {

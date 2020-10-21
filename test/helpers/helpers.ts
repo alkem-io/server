@@ -1,4 +1,4 @@
-import request from 'supertest';
+import  request from 'supertest';
 
 // ToDo
 // Add support for connection to the DB and drop/populate DB
@@ -14,3 +14,4 @@ export const graphqlRequest = (requestParams: any) => {
     .send({ ...requestParams })
     .set('Accept', 'application/json');
 };
+

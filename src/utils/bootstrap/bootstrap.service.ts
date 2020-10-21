@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
+import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
 import { IEcoverse } from 'src/domain/ecoverse/ecoverse.interface';
-import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
-import { Organisation } from 'src/domain/organisation/organisation.entity';
-import { UserInput } from 'src/domain/user/user.dto';
+import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
+import { Organisation } from '../../domain/organisation/organisation.entity';
+import { UserInput } from '../../domain/user/user.dto';
 import { IUser } from 'src/domain/user/user.interface';
-import { UserService } from 'src/domain/user/user.service';
+import { UserService } from '../../domain/user/user.service';
 import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
 

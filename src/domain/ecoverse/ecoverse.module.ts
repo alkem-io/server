@@ -10,7 +10,7 @@ import { TagsetModule } from '../tagset/tagset.module';
 import { ChallengeModule } from '../challenge/challenge.module';
 import { UserModule } from '../user/user.module';
 import { OrganisationModule } from '../organisation/organisation.module';
-import { AccountModule } from 'src/utils/account/account.module';
+import { AccountModule } from '../../utils/account/account.module';
 
 @Module({
   imports: [
