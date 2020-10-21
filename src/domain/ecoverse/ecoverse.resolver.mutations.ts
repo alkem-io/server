@@ -1,7 +1,8 @@
-import { Get, Inject, UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
 import { GqlAuthGuard } from 'src/utils/authentication/graphql.guard';
+import { Roles } from 'src/utils/decorators/roles.decorator';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
@@ -44,7 +45,7 @@ export class EcoverseResolverMutations {
     return ctVerse;
   }
 
-  @Get()
+  @Roles('admins')
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Creates a new user as a member of the ecoverse',
