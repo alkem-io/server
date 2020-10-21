@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
 import { Challenge } from '../challenge/challenge.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { IEcoverse } from '../ecoverse/ecoverse.interface';
 import { Organisation } from '../organisation/organisation.entity';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
@@ -199,34 +198,32 @@ export class UserGroupService {
     groupable: IGroupable,
     name: string
   ): Promise<IUserGroup> {
-    let query = this.groupRepository
-      .createQueryBuilder()
-      .select('group')
-      .from(UserGroup, 'group')
-      .where('group.name=:name', { name });
+    // let options: FindOneOptions<UserGroup> = { where: { name } };
+    // if (groupable instanceof Ecoverse) {
+    //   options = {
+    //     where: [{ name, ecoverse: { id: groupable.id } }],
+    //   };
+    // }
+    // if (groupable instanceof Challenge) {
+    //   options = {
+    //     where: [{ name, challenge: { id: groupable.id } }],
+    //   };
+    // }
+    // if (groupable instanceof Organisation) {
+    //   options = {
+    //     where: [{ name, organisations: { id: groupable.id } }],
+    //   };
+    // }
+    // const group = await this.groupRepository.findOne(options);
+    let group: IUserGroup | undefined = undefined;
+    if (groupable.groups) {
+      group = groupable.groups?.find(g => g.name === name);
+    }
 
-    if (groupable instanceof Ecoverse) {
-      query = query.andWhere('group.ecoverseId = :id', {
-        id: (groupable as Ecoverse).id,
-      });
-    }
-    if (groupable instanceof Challenge) {
-      query = query.andWhere('group.challengeId = :id', {
-        id: (groupable as Challenge).id,
-      });
-    }
-    if (groupable instanceof Organisation) {
-      query = query.andWhere('group.organisationId = :id', {
-        id: (groupable as Organisation).id,
-      });
-    }
-
-    const group = await query.getOne();
     if (group) {
-      return group;
+      return group as IUserGroup;
     }
-    // If get here then no match group was found
-    throw new Error(`Unable to find group with the name:' + ${name}`);
+    throw new Error(`Unable to find group with the name:'${name}'`);
   }
 
   async addMandatoryGroups(

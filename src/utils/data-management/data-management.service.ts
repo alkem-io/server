@@ -56,7 +56,9 @@ export class DataManagementService {
 
       this.addLogMsg(msgs, 'Loading sample data....');
       // Populate the Ecoverse beyond the defaults
-      const ctverse = await this.ecoverseService.getEcoverse();
+      const ctverse = await this.ecoverseService.getEcoverse({
+        relations: ['groups'],
+      });
 
       ctverse.name = 'Cherrytwist dogfood';
       (ctverse as Ecoverse).context.tagline =
