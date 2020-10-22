@@ -14,6 +14,7 @@ import { IServiceConfig } from 'src/interfaces/service.config.interface';
 import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
 import fs from 'fs';
+import * as defaultRoles from '../config/authorisation-bootstrap.json';
 
 @Injectable()
 export class BootstrapService {
@@ -41,13 +42,22 @@ export class BootstrapService {
     const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
       ?.authorisationBootstrapPath as string;
 
-    const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
-    console.info(bootstratDataStr);
-    if (!bootstratDataStr) {
-      console.error('No authorisation bootstrap file found!');
-      return;
+    let bootstrapJson = {
+      ...defaultRoles,
+    };
+
+    if (
+      fs.statSync(bootstrapFilePath).isFile() &&
+      fs.existsSync(bootstrapFilePath)
+    ) {
+      const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
+      console.info(bootstratDataStr);
+      if (!bootstratDataStr) {
+        console.error('No authorisation bootstrap file found!');
+        return;
+      }
+      bootstrapJson = JSON.parse(bootstratDataStr);
     }
-    const bootstrapJson = JSON.parse(bootstratDataStr);
 
     const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
     if (!ecoverseAdmins)
