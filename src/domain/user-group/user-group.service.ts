@@ -285,7 +285,7 @@ export class UserGroupService {
     const alreadyExists = this.hasGroupWithName(groupable, name);
     if (alreadyExists) {
       console.log(`Attempting to add group that already exists: ${name}`);
-      return this.getGroupByName(groupable, name);
+      return await this.getGroupByName(groupable, name);
     }
 
     if (groupable.restrictedGroupNames?.includes(name)) {
