@@ -104,7 +104,7 @@ export class EcoverseService {
     return ecoverse.id;
   }
 
-  async getMembers(): Promise<IUser[]> {
+  async getUsers(): Promise<IUser[]> {
     try {
       const ecoverse = (await this.getEcoverse({
         relations: ['groups'],
@@ -127,7 +127,6 @@ export class EcoverseService {
       const groups = await this.userGroupService.getGroups(ecoverse);
       return groups;
     } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
     }
   }
@@ -151,10 +150,8 @@ export class EcoverseService {
 
   async getChallenges(): Promise<IChallenge[]> {
     try {
-      console.time('Get challenges');
       const ecoverseId = await this.getEcoverseId();
       const challanges = await this.challengeService.getChallenges(ecoverseId);
-      console.timeEnd('Get challenges');
       return challanges;
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
@@ -233,9 +230,6 @@ export class EcoverseService {
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    console.time('Challenge created');
-    console.time('getting ecoverse');
-
     const ecoverse = await this.getEcoverse({
       join: {
         alias: 'ecoverse',
@@ -244,8 +238,6 @@ export class EcoverseService {
         },
       },
     });
-
-    console.timeEnd('getting ecoverse');
 
     if (!ecoverse.challenges) {
       throw new Error('Challenges must be defined');
@@ -266,7 +258,6 @@ export class EcoverseService {
       console.log('Creating Challenge: Challenge already exists!');
       challenge = await this.challengeService.getChallengeByID(challenge.id);
     }
-    console.timeEnd('Challenge created');
     return challenge;
   }
 
