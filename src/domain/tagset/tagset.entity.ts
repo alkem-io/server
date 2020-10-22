@@ -10,6 +10,11 @@ import {
 import { ITagset } from './tagset.interface';
 import { Profile } from '../profile/profile.entity';
 
+export enum RestrictedTagsetNames {
+  Default = 'default',
+  Skills = 'skills',
+}
+
 @Entity()
 @ObjectType()
 export class Tagset extends BaseEntity implements ITagset {
@@ -18,7 +23,7 @@ export class Tagset extends BaseEntity implements ITagset {
   id!: number;
 
   @Field(() => String)
-  @Column()
+  @Column({ default: RestrictedTagsetNames.Default })
   name: string;
 
   @Field(() => [String])
@@ -36,9 +41,4 @@ export class Tagset extends BaseEntity implements ITagset {
     this.tags = [];
     this.name = name;
   }
-}
-
-export enum RestrictedTagsetNames {
-  Default = 'default',
-  Skills = 'skills',
 }

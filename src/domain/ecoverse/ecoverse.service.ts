@@ -23,6 +23,8 @@ import { OrganisationInput } from '../organisation/organisation.dto';
 import { Organisation } from '../organisation/organisation.entity';
 import { OrganisationService } from '../organisation/organisation.service';
 import { AccountService } from 'src/utils/account/account.service';
+import { Context } from '../context/context.entity';
+import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 
 @Injectable()
 export class EcoverseService {
@@ -56,6 +58,14 @@ export class EcoverseService {
 
     if (!ecoverse.organisations) {
       ecoverse.organisations = [];
+    }
+
+    if (!ecoverse.tagset) {
+      ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
+    }
+
+    if (!ecoverse.context) {
+      ecoverse.context = new Context();
     }
 
     // Initialise contained singletons
@@ -404,14 +414,23 @@ export class EcoverseService {
     if (ecoverseData.name) {
       ecoverse.name = ecoverseData.name;
     }
-    if (ecoverseData.context)
-      await this.contextService.update(ecoverse.context, ecoverseData.context);
 
-    if (ecoverseData.tags && ecoverseData.tags.tags)
+    if (ecoverseData.context) {
+      if (!ecoverse.context) {
+        ecoverse.context = new Context();
+      }
+      await this.contextService.update(ecoverse.context, ecoverseData.context);
+    }
+
+    if (ecoverseData.tags && ecoverseData.tags.tags) {
+      if (!ecoverse.tagset) {
+        ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
+      }
       this.tagsetService.replaceTags(
         ecoverse.tagset.id,
         ecoverseData.tags.tags
       );
+    }
 
     await this.ecoverseRepository.save(ecoverse);
 
