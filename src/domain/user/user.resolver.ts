@@ -8,6 +8,8 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { GqlAuthGuard } from 'src/utils/authentication/graphql.guard';
+import { Roles } from 'src/utils/decorators/roles.decorator';
+import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { MemberOf } from './memberof.composite';
 import { CurrentUser } from './user.decorator';
 import { UserInput } from './user.dto';
@@ -29,6 +31,11 @@ export class UserResolver {
     return memberships;
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description:
       'Update the base user information. Note: email address cannot be updated.',
@@ -41,6 +48,11 @@ export class UserResolver {
     return group;
   }
 
+  @Roles(
+    RestrictedGroupNames.Members,
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
   @UseGuards(GqlAuthGuard)
   @Query(() => User, {
     nullable: false,

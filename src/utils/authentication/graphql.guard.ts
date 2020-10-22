@@ -8,6 +8,7 @@ import { IServiceConfig } from 'src/interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
 import { AuthUserDTO } from 'src/domain/user/user.dto';
 import { IUserGroup } from 'src/domain/user-group/user-group.interface';
+import { RestrictedGroupNames } from 'src/domain/user-group/user-group.entity';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {
@@ -40,6 +41,11 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
   }
 
   matchRoles(userGroups: IUserGroup[]): boolean {
+    if (
+      userGroups.some(({ name }) => name === RestrictedGroupNames.GlobalAdmins)
+    )
+      return true;
+
     if (userGroups.some(({ name }) => this.roles.includes(name))) return true;
     return false;
   }

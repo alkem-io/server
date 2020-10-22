@@ -12,7 +12,10 @@ import { IOrganisation } from '../organisation/organisation.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { Tagset } from '../tagset/tagset.entity';
 import { ITagset } from '../tagset/tagset.interface';
-import { UserGroup } from '../user-group/user-group.entity';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { UserGroupService } from '../user-group/user-group.service';
 import { User } from '../user/user.entity';
@@ -64,6 +67,11 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getContext();
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => [User], {
     nullable: false,
     description: 'The users associated with this ecoverse',
@@ -72,6 +80,12 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getMembers();
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  //should be in user queries
   @Query(() => User, {
     nullable: false,
     description: 'A particular user, identified by the ID or by email',
@@ -83,6 +97,11 @@ export class EcoverseResolverQueries {
     throw new Error(`Unable to locate user with given id: ${id}`);
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
     description: 'All groups at the ecoverse level',
@@ -92,6 +111,11 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
     description: 'All groups that have the provided tag',
@@ -101,6 +125,11 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => UserGroup, {
     nullable: false,
     description:
@@ -111,12 +140,24 @@ export class EcoverseResolverQueries {
     return group;
   }
 
+  @Roles(
+    RestrictedGroupNames.Members,
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
   async challenges(): Promise<IChallenge[]> {
     const challenges = await this.ecoverseService.getChallenges();
     return challenges;
   }
 
+  @Roles(
+    RestrictedGroupNames.Members,
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => Challenge, {
     nullable: false,
     description: 'A particular challenge',
@@ -125,6 +166,12 @@ export class EcoverseResolverQueries {
     return await this.challengeService.getChallengeByID(id);
   }
 
+  @Roles(
+    RestrictedGroupNames.Members,
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => [Organisation], {
     nullable: false,
     description: 'All organisations',
@@ -134,6 +181,12 @@ export class EcoverseResolverQueries {
     return organisations;
   }
 
+  @Roles(
+    RestrictedGroupNames.Members,
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => Organisation, {
     nullable: false,
     description: 'A particular organisation',
@@ -144,6 +197,12 @@ export class EcoverseResolverQueries {
     return await this.organisationService.getOrganisationByID(id);
   }
 
+  @Roles(
+    RestrictedGroupNames.Members,
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => Tagset, {
     nullable: false,
     description: 'The tagset associated with this Ecoverse',

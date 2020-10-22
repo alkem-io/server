@@ -1,5 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { UserGroup } from './user-group.entity';
+import { Roles } from 'src/utils/decorators/roles.decorator';
+import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 
@@ -7,6 +8,10 @@ import { UserGroupService } from './user-group.service';
 export class UserGroupResolver {
   constructor(private groupService: UserGroupService) {}
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
   @Mutation(() => UserGroup, {
     description:
       'Adds the user with the given identifier to the specified user group',
@@ -19,6 +24,10 @@ export class UserGroupResolver {
     return group;
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
   @Mutation(() => UserGroup, {
     description:
       'Remove the user with the given identifier to the specified user group',
@@ -31,6 +40,10 @@ export class UserGroupResolver {
     return group;
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
   @Mutation(() => UserGroup, {
     nullable: true,
     description:
@@ -44,6 +57,10 @@ export class UserGroupResolver {
     return group;
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
   @Mutation(() => UserGroup, {
     nullable: true,
     description: 'Remove the focal point for the given group',
