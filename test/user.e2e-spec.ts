@@ -23,6 +23,20 @@ describe('Create User', () => {
     expect(response.body.data.createUser.name).toEqual(userName);
   });
 
+  test.skip('should throw error - same user is created twice', async () => {
+    // Arrange
+    const response = await createUserMutation(userName);
+    userId = response.body.data.createUser.id;
+
+    // Act
+    const responseSecondTime = await createUserMutation(userName);
+    userId = responseSecondTime.body.data.createUser.id;
+
+    // Assert
+    expect(responseSecondTime.status).toBe(200);
+    expect(responseSecondTime.text).toContain('User "x" already exists!');
+  });
+
   test('should query created user', async () => {
     // Arrange
     const response = await createUserMutation(userName);
@@ -72,7 +86,7 @@ describe('Create User', () => {
           name: 'test77',
           firstName: 'testFN',
           lastName: 'testLN',
-          email: 'testEmail',
+          email: 'testEmail@test.com',
           phone: '092834',
           city: 'testCity',
           country: 'testCountry',
@@ -115,7 +129,9 @@ describe('Create User', () => {
     expect(responseParamsQueryUser.body.data.user.name).toEqual('test77');
     expect(responseParamsQueryUser.body.data.user.firstName).toEqual('testFN');
     expect(responseParamsQueryUser.body.data.user.lastName).toEqual('testLN');
-    expect(responseParamsQueryUser.body.data.user.email).toEqual('testEmail');
+    expect(responseParamsQueryUser.body.data.user.email).toEqual(
+      'testEmail@test.com'
+    );
     expect(responseParamsQueryUser.body.data.user.phone).toEqual('092834');
     expect(responseParamsQueryUser.body.data.user.city).toEqual('testCity');
     expect(responseParamsQueryUser.body.data.user.country).toEqual(
@@ -126,11 +142,11 @@ describe('Create User', () => {
       references: [],
     });
     expect(responseParamsQueryUser.body.data.user.memberof).toEqual({
-      email: 'testEmail',
+      email: 'testEmail@test.com',
     });
   });
 
-  test('should throw error - create user with ID only', async () => {
+  test('should throw error - create user with ID instead of name', async () => {
     // Arrange
     const requestParams = {
       operationName: 'CreateUser',
@@ -173,23 +189,37 @@ describe('Create User', () => {
   });
 
   // Confirm the behaviour!!!!!
-  test.skip('should created user without name', async () => {
-    // Arrange
+  test.skip('should throw error - create user without name', async () => {
+    // Act
     const response = await createUserMutation('');
     userId = response.body.data.createUser.id;
 
-    // Act
-    const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") { 
-        name 
-        id 
-      }}`,
+    // Assert
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('Could not create user with without name');
+  });
+
+  test.skip('should throw error - create user with invalid email', async () => {
+    const requestParams = {
+      operationName: 'CreateUser',
+      query:
+        'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name }}',
+      variables: {
+        userData: {
+          name: 'name',
+          email: 'testEmail',
+        },
+      },
     };
-    const responseQuery = await graphqlRequest(requestParamsQueryUser);
+
+    const responseQuery = await graphqlRequest(requestParams);
+    userId = responseQuery.body.data.createUser.id;
 
     // Assert
-    //expect(responseQuery.status).toBe(400);
-    //expect(responseQuery.body.data.user.name).toEqual("");
+    expect(responseQuery.status).toBe(200);
+    expect(responseQuery.text).toContain(
+      'Could not create user with invalid email'
+    );
   });
 });
 
@@ -231,6 +261,28 @@ describe('Remove user', () => {
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
       'Could not locate specified user: 77777'
+    );
+  });
+
+  test('should not get result for quering removed user', async () => {
+    // Arrange
+    const response = await createUserMutation(userName);
+    userId = response.body.data.createUser.id;
+    await removeUserMutation(userId);
+
+    // Act
+    const requestParamsQueryUser = {
+      query: `{user(ID: "${userId}") { 
+        name 
+        id 
+      }}`,
+    };
+    const responseQueryResult = await graphqlRequest(requestParamsQueryUser);
+
+    // Assert
+    expect(responseQueryResult.status).toBe(200);
+    expect(responseQueryResult.text).toContain(
+      `Unable to locate user with given id: ${userId}`
     );
   });
 });
