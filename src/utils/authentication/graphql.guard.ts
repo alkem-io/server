@@ -6,7 +6,7 @@ import { AuthenticationError } from 'apollo-server-core';
 import { ConfigService } from '@nestjs/config';
 import { IServiceConfig } from 'src/interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
-import { AuthUserDTO } from 'src/domain/user/user.dto';
+import { AuthUserDTO } from '../../domain/user/user.dto';
 import { IUserGroup } from 'src/domain/user-group/user-group.interface';
 
 @Injectable()

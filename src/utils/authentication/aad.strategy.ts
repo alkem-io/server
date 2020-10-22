@@ -9,7 +9,7 @@ import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
-import { AuthUserDTO } from 'src/domain/user/user.dto';
+import { AuthUserDTO } from '../../domain/user/user.dto';
 import { IUserGroup } from 'src/domain/user-group/user-group.interface';
 
 @Injectable()

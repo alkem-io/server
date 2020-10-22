@@ -182,3 +182,17 @@ We have automated the creation and deployment of containers to docker hub via a 
 - Ensure that the code that you would like to create the container from is pushed / merged into the `develop` branch.
 - Create a github release and tag it with the appropriate version number ie. `v0.1.3`
 - Go to github actions and view the `push to docker` action to see if everything ran correctly.
+
+
+## === Testing ===
+
+Initial version of integration tests is in place. To run them, look at the prerequisites, below:
+
+- Used frameworks/packages [jest](https://jestjs.io/) and `supertest`
+- Running `MySQL sql server`
+- Running `Cherrytwist/Server` service.
+- In .env file the flag for `AUTHENTICATION_ENABLED=false` must be available.
+- In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
+  - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
+- The results of the test, will be displayed at the end of the execution.
+

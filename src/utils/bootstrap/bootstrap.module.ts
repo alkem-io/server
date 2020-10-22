@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
-import { EcoverseModule } from 'src/domain/ecoverse/ecoverse.module';
-import { UserModule } from 'src/domain/user/user.module';
+import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
+import { EcoverseModule } from '../../domain/ecoverse/ecoverse.module';
+import { UserModule } from '../../domain/user/user.module';
 import { AccountModule } from '../account/account.module';
 import { BootstrapService } from './bootstrap.service';
 

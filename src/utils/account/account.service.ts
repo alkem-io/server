@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { UserInput } from 'src/domain/user/user.dto';
-import { IServiceConfig } from 'src/interfaces/service.config.interface';
+import { UserInput } from '../../domain/user/user.dto';
+import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { MsGraphService } from '../ms-graph/ms-graph.service';
 
 @Injectable()
