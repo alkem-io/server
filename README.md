@@ -47,12 +47,14 @@ Note: the sample data provided here is basic so users are encouraged to look als
 
 ## === Bootstrapping Ecoverse roles ===
 
-In order to create Ecoverse profiles, do the following:
+In order to bootstrap Ecoverse profiles **first time**, do the following:
 
 1. Set AUTHENTICATION_ENABLED=false environment variable
 1. If you are running an old version of the application (<0.3.*) do a Reset Ecoverse + Sample Data from the Data Management Panel.
 1. Prepare a bootstrap json. Default json file is provided in src/utils/config/authorisation-bootstrap.json. If you'd like to change the name / location of the bootstrap file, set AUTH_BOOTSTRAP_PATH environment variable with the full path to your file.
 1. Start the CT server. Your users and roles will be updated.
+
+On every application restart afterwards the list of user and roles will be validated and roles will be re-added to the users based on the configuration.
 
 **NB! The bootstrapping process creates only Profiles. It doesn't create accounts!.**
 

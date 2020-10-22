@@ -28,60 +28,100 @@ export class BootstrapService {
     try {
       console.info('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
-      await this.bootstrapProfiles();
-      await this.validateAccountManagementSetup();
+      const accountsEnabled = (await this.validateAccountManagementSetup()) as boolean;
+      await this.bootstrapProfiles(accountsEnabled);
     } catch (error) {
       console.log(error);
     }
   }
 
-  async bootstrapProfiles() {
+  async bootstrapProfiles(accounbtsEnabled: boolean) {
     const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
       ?.authorisationBootstrapPath as string;
 
     const bootstrapData = await import(bootstrapFilePath);
+
+    if (!bootstrapData) {
+      console.error('No authorisation bootstrap file found!');
+      return;
+    }
+
+    const ecoverseAdmins = bootstrapData[RestrictedGroupNames.EcoverseAdmins];
+    if (!ecoverseAdmins)
+      console.info(
+        'No ecoverse admins section in the authorisation bootstrap file!'
+      );
+    const globalAdmins = bootstrapData[RestrictedGroupNames.GlobalAdmins];
+    if (!globalAdmins) {
+      console.info(
+        'No global admins section in the authorisation bootstrap file!'
+      );
+    }
+    const communityAdmins = bootstrapData[RestrictedGroupNames.CommunityAdmins];
+    if (!communityAdmins) {
+      console.info(
+        'No community admins section in the authorisation bootstrap file!'
+      );
+    }
     await this.createGroupProfiles(
-      RestrictedGroupNames.Admins,
-      await bootstrapData[RestrictedGroupNames.Admins]
+      RestrictedGroupNames.EcoverseAdmins,
+      ecoverseAdmins,
+      accounbtsEnabled
     );
     await this.createGroupProfiles(
       RestrictedGroupNames.GlobalAdmins,
-      await bootstrapData[RestrictedGroupNames.GlobalAdmins]
+      globalAdmins,
+      accounbtsEnabled
     );
     await this.createGroupProfiles(
       RestrictedGroupNames.CommunityAdmins,
-      await bootstrapData[RestrictedGroupNames.CommunityAdmins]
+      communityAdmins,
+      accounbtsEnabled
     );
   }
 
-  async createGroupProfiles(groupName: string, emails: string[]) {
+  async createGroupProfiles(
+    groupName: string,
+    emails: string[],
+    accountsEnabled: boolean
+  ) {
     try {
-      emails.forEach(async email => {
+      for await (const email of emails) {
         const userInput = new UserInput();
         userInput.email = email;
         userInput.name = 'Imported User';
-        //env variable AUTHENTICATION_ENABLED=false. Otherwise this won't work.
         let user = await this.userService.getUserByEmail(email);
 
-        if (!user) user = await this.userService.createUser(userInput);
+        if (!user && !accountsEnabled)
+          user = await this.userService.createUser(userInput);
+
+        if (!user)
+          throw new Error(`User with email ${email} doesn't exist in CT DB and couldn't be created.
+          Try setting AUTHENTICATION_ENABLED=false env variable to bootstrap CT accounts!`);
+
         const groups = (await user.userGroups) as IUserGroup[];
 
         if (!groups.some(({ name }) => groupName === name))
           await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
-      });
+        else
+          console.info(
+            `User ${userInput.email} already exists in group ${groupName}`
+          );
+      }
     } catch (error) {
       console.log(error);
     }
   }
 
-  async validateAccountManagementSetup() {
+  async validateAccountManagementSetup(): Promise<boolean> {
     console.log('=== Validating Account Management configuration ===');
     const accountsEnabled = this.accountService.accountUsageEnabled();
     if (accountsEnabled) {
       console.log('...usage of Accounts is enabled');
+      return true;
     } else {
       console.warn('...usage of Accounts is DISABLED');
-      return;
+      return false;
     }
   }
 

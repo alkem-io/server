@@ -113,7 +113,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     this.tagset = new Tagset(RestrictedTagsetNames.Default);
     this.restrictedGroupNames = [
       RestrictedGroupNames.Members,
-      RestrictedGroupNames.Admins,
+      RestrictedGroupNames.EcoverseAdmins,
       RestrictedGroupNames.GlobalAdmins,
       RestrictedGroupNames.CommunityAdmins,
     ];

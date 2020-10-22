@@ -329,7 +329,7 @@ export class EcoverseService {
   async addAdmin(user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
       user,
-      RestrictedGroupNames.Admins
+      RestrictedGroupNames.EcoverseAdmins
     );
   }
 
@@ -361,7 +361,6 @@ export class EcoverseService {
     );
 
     if (await this.userGroupService.addUserToGroup(user, adminsGroup)) {
-      await this.ecoverseRepository.save(ctverse);
       return true;
     }
 
@@ -371,7 +370,7 @@ export class EcoverseService {
   async groupIsRestricted(groupName: string): Promise<boolean> {
     if (
       [
-        RestrictedGroupNames.Admins as string,
+        RestrictedGroupNames.EcoverseAdmins as string,
         RestrictedGroupNames.CommunityAdmins as string,
         RestrictedGroupNames.GlobalAdmins as string,
         RestrictedGroupNames.Members as string,
