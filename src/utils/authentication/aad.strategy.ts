@@ -4,13 +4,13 @@ import { PassportStrategy, AuthGuard } from '@nestjs/passport';
 import { BearerStrategy } from 'passport-azure-ad';
 import { IExtendedTokenPayload } from '../../interfaces/extended-token-payload.interface';
 import { UserService } from '../../domain/user/user.service';
-import { IAzureADConfig } from 'src/interfaces/aad.config.interface';
+import { IAzureADConfig } from '../../interfaces/aad.config.interface';
 import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
 import { AuthUserDTO } from '../../domain/user/user.dto';
-import { IUserGroup } from 'src/domain/user-group/user-group.interface';
+import { IUserGroup } from '../../domain/user-group/user-group.interface';
 
 @Injectable()
 export class AzureADStrategy

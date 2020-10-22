@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
-import { UserInput } from 'src/domain/user/user.dto';
+import { UserInput } from '../../domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
 
 @Injectable()
