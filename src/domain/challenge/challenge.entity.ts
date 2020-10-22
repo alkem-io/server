@@ -1,31 +1,31 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
+import { ID } from '@nestjs/graphql/dist';
+import { Field, ObjectType } from '@nestjs/graphql/dist/decorators';
 import {
   BaseEntity,
   Column,
   Entity,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  OneToOne,
   JoinColumn,
-  OneToMany,
-  ManyToMany,
   JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Field, ObjectType } from '@nestjs/graphql/dist/decorators';
-import { ID } from '@nestjs/graphql/dist';
-import { IChallenge } from './challenge.interface';
-import { Organisation } from '../organisation/organisation.entity';
 import { IGroupable } from '../../interfaces/groupable.interface';
+import { Context } from '../context/context.entity';
+import { DID } from '../did/did.entity';
+import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { Organisation } from '../organisation/organisation.entity';
+import { Project } from '../project/project.entity';
+import { Tagset } from '../tagset/tagset.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
 } from '../user-group/user-group.entity';
 import { User } from '../user/user.entity';
-import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
-import { Project } from '../project/project.entity';
-import { DID } from '../did/did.entity';
-import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { Context } from '../context/context.entity';
+import { IChallenge } from './challenge.interface';
 
 @Entity()
 @ObjectType()
@@ -47,7 +47,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   })
   @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
-  context: Context;
+  context?: Context;
 
   // Community
   @Field(() => [Organisation], {
@@ -96,7 +96,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   })
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
-  tagset: Tagset;
+  tagset?: Tagset;
 
   @Field(() => [Project], {
     nullable: true,
@@ -125,8 +125,6 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   constructor(name: string) {
     super();
     this.name = name;
-    this.context = new Context();
-    this.tagset = new Tagset(RestrictedTagsetNames.Default);
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 }
