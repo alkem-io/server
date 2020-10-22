@@ -10,12 +10,12 @@ export interface IEcoverse {
   id: number;
   name: string;
   host?: IOrganisation;
-  context: IContext;
+  context?: IContext;
   DID: IDID;
   members?: IUser[];
   groups?: IUserGroup[];
   organisations?: IOrganisation[];
   challenges?: IChallenge[];
-  tagset: ITagset;
+  tagset?: ITagset;
   restrictedGroupNames: string[];
 }
