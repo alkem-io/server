@@ -1,22 +1,26 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { IEcoverse } from 'src/domain/ecoverse/ecoverse.interface';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
 import { Organisation } from 'src/domain/organisation/organisation.entity';
+import { RestrictedGroupNames } from 'src/domain/user-group/user-group.entity';
+import { IUserGroup } from 'src/domain/user-group/user-group.interface';
 import { UserInput } from 'src/domain/user/user.dto';
-import { IUser } from 'src/domain/user/user.interface';
 import { UserService } from 'src/domain/user/user.service';
+import { IServiceConfig } from 'src/interfaces/service.config.interface';
 import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
+import fs from 'fs';
 
-const ADMIN_EMAIL = 'admin@cherrytwist.org';
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
+    private configService: ConfigService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
@@ -25,52 +29,106 @@ export class BootstrapService {
     try {
       console.info('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
-      await this.ensureAdminRole();
-      await this.validateAccountManagementSetup();
+      const accountsEnabled = (await this.validateAccountManagementSetup()) as boolean;
+      await this.bootstrapProfiles(accountsEnabled);
     } catch (error) {
       console.log(error);
     }
   }
 
-  async validateAccountManagementSetup() {
+  async bootstrapProfiles(accountsEnabled: boolean) {
+    const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
+      ?.authorisationBootstrapPath as string;
+
+    const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
+    console.info(bootstratDataStr);
+    if (!bootstratDataStr) {
+      console.error('No authorisation bootstrap file found!');
+      return;
+    }
+    const bootstrapJson = JSON.parse(bootstratDataStr);
+
+    const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
+    if (!ecoverseAdmins)
+      console.info(
+        'No ecoverse admins section in the authorisation bootstrap file!'
+      );
+    else {
+      await this.createGroupProfiles(
+        RestrictedGroupNames.EcoverseAdmins,
+        ecoverseAdmins,
+        accountsEnabled
+      );
+    }
+    const globalAdmins = bootstrapJson.globalAdmins;
+    if (!globalAdmins) {
+      console.info(
+        'No global admins section in the authorisation bootstrap file!'
+      );
+    } else {
+      await this.createGroupProfiles(
+        RestrictedGroupNames.GlobalAdmins,
+        globalAdmins,
+        accountsEnabled
+      );
+    }
+    const communityAdmins = bootstrapJson.communityAdmins;
+    if (!communityAdmins) {
+      console.info(
+        'No community admins section in the authorisation bootstrap file!'
+      );
+    } else {
+      await this.createGroupProfiles(
+        RestrictedGroupNames.CommunityAdmins,
+        communityAdmins,
+        accountsEnabled
+      );
+    }
+  }
+
+  async createGroupProfiles(
+    groupName: string,
+    emails: string[],
+    accountsEnabled: boolean
+  ) {
+    try {
+      for await (const email of emails) {
+        const userInput = new UserInput();
+        userInput.email = email;
+        userInput.name = 'Imported User';
+        let user = await this.userService.getUserByEmail(email);
+
+        if (!user && !accountsEnabled)
+          user = await this.userService.createUser(userInput);
+
+        if (!user)
+          throw new Error(`User with email ${email} doesn't exist in CT DB and couldn't be created.
+          Try setting AUTHENTICATION_ENABLED=false env variable to bootstrap CT accounts!`);
+
+        const groups = (await user.userGroups) as IUserGroup[];
+
+        if (!groups.some(({ name }) => groupName === name))
+          await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
+        else
+          console.info(
+            `User ${userInput.email} already exists in group ${groupName}`
+          );
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async validateAccountManagementSetup(): Promise<boolean> {
     console.log('=== Validating Account Management configuration ===');
     const accountsEnabled = this.accountService.accountUsageEnabled();
     if (accountsEnabled) {
       console.log('...usage of Accounts is enabled');
+      return true;
     } else {
       console.warn('...usage of Accounts is DISABLED');
-      return;
+      return false;
     }
-  }
-
-  async ensureAdminRole() {
-    console.log('=== Ensuring admin user is present ===');
-    // Ensure user exists with admin email
-    let user = await this.userService.getUserByEmail(ADMIN_EMAIL);
-
-    if (!user) {
-      console.info(
-        `...no admin user present, creating user with email ${ADMIN_EMAIL}`
-      );
-      // No user with admin email, so create + add
-      const ctAdminDto = new UserInput();
-      ctAdminDto.name = 'ctAdmin';
-      ctAdminDto.email = ADMIN_EMAIL;
-      ctAdminDto.lastName = 'admin';
-
-      user = await this.ecoverseService.createUser(ctAdminDto);
-    }
-
-    // Ensure admin user is assigned to admin group
-    if (await this.ecoverseService.addAdmin(user as IUser)) {
-      console.info(
-        `...${
-          (user as IUser).email
-        } added to the admins group on Ecoverse level`
-      );
-    }
-    console.info('...administration role - presence verified');
-    return;
   }
 
   async ensureEcoverseSingleton(): Promise<IEcoverse> {

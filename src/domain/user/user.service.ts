@@ -101,7 +101,7 @@ export class UserService {
 
     if (existingUser)
       throw new Error(
-        `Already have a user with the provided email address: ${newUserEmail}`
+        `A user with the provided email address: ${newUserEmail} already exists!`
       );
 
     // Ok to create a new user + save
@@ -109,6 +109,8 @@ export class UserService {
     // Have the user,ensure it is initialised
     await this.initialiseMembers(user);
     await this.userRepository.save(user);
+
+    console.info(`User ${userData.email} was created!`);
 
     return user;
   }
