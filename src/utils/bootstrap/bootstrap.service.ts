@@ -35,7 +35,7 @@ export class BootstrapService {
     }
   }
 
-  async bootstrapProfiles(accounbtsEnabled: boolean) {
+  async bootstrapProfiles(accountsEnabled: boolean) {
     const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
       ?.authorisationBootstrapPath as string;
 
@@ -55,7 +55,7 @@ export class BootstrapService {
       await this.createGroupProfiles(
         RestrictedGroupNames.EcoverseAdmins,
         ecoverseAdmins,
-        accounbtsEnabled
+        accountsEnabled
       );
     }
     const globalAdmins = bootstrapData[RestrictedGroupNames.GlobalAdmins];
@@ -67,7 +67,7 @@ export class BootstrapService {
       await this.createGroupProfiles(
         RestrictedGroupNames.GlobalAdmins,
         globalAdmins,
-        accounbtsEnabled
+        accountsEnabled
       );
     }
     const communityAdmins = bootstrapData[RestrictedGroupNames.CommunityAdmins];
@@ -79,7 +79,7 @@ export class BootstrapService {
       await this.createGroupProfiles(
         RestrictedGroupNames.CommunityAdmins,
         communityAdmins,
-        accounbtsEnabled
+        accountsEnabled
       );
     }
   }
