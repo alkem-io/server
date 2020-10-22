@@ -1,13 +1,4 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from '../challenge/challenge.entity';
-import { DID } from '../did/did.entity';
-import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { IGroupable } from '../../interfaces/groupable.interface';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '../user-group/user-group.entity';
-import { User } from '../user/user.entity';
 import {
   BaseEntity,
   Column,
@@ -18,8 +9,18 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { IGroupable } from '../../interfaces/groupable.interface';
+import { ITagsetable } from '../../interfaces/tagsetable.interface';
+import { Challenge } from '../challenge/challenge.entity';
+import { DID } from '../did/did.entity';
+import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { Tagset } from '../tagset/tagset.entity';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from '../user-group/user-group.entity';
+import { User } from '../user/user.entity';
 import { IOrganisation } from './organisation.interface';
-import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 
 @Entity()
 @ObjectType()
@@ -55,7 +56,7 @@ export class Organisation extends BaseEntity
   })
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
-  tagset: Tagset;
+  tagset?: Tagset;
 
   @Field(() => [User], {
     nullable: true,
@@ -86,9 +87,6 @@ export class Organisation extends BaseEntity
   constructor(name: string) {
     super();
     this.name = name;
-    this.tagset = new Tagset(RestrictedTagsetNames.Default);
-    // Todo: initialise the tagset
-
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 

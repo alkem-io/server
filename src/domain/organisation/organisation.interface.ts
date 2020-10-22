@@ -8,7 +8,7 @@ export interface IOrganisation {
   id: number;
   name: string;
   DID: IDID;
-  tagset: ITagset;
+  tagset?: ITagset;
   members?: IUser[];
   challenges?: IChallenge[];
   groups?: IUserGroup[];

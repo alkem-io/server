@@ -1,12 +1,4 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from '../challenge/challenge.entity';
-import { DID } from '../did/did.entity';
-import { Organisation } from '../organisation/organisation.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '../user-group/user-group.entity';
-import { Context } from '../context/context.entity';
 import {
   BaseEntity,
   Column,
@@ -18,9 +10,17 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IEcoverse } from './ecoverse.interface';
 import { IGroupable } from '../../interfaces/groupable.interface';
-import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
+import { Challenge } from '../challenge/challenge.entity';
+import { Context } from '../context/context.entity';
+import { DID } from '../did/did.entity';
+import { Organisation } from '../organisation/organisation.entity';
+import { Tagset } from '../tagset/tagset.entity';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from '../user-group/user-group.entity';
+import { IEcoverse } from './ecoverse.interface';
 
 @Entity()
 @ObjectType()
@@ -48,7 +48,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   })
   @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
-  context: Context;
+  context?: Context;
 
   // The digital identity for the Ecoverse - critical for its trusted role
   @OneToOne(() => DID, { eager: true, cascade: true })
@@ -98,9 +98,9 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     nullable: true,
     description: 'The set of tags for the ecoverse',
   })
-  @OneToOne(() => Tagset, { eager: false, cascade: true })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
-  tagset: Tagset;
+  tagset?: Tagset;
 
   // The restricted group names at the ecoverse level
   restrictedGroupNames: string[];
@@ -109,8 +109,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   constructor() {
     super();
     this.name = '';
-    this.context = new Context();
-    this.tagset = new Tagset(RestrictedTagsetNames.Default);
     this.restrictedGroupNames = [
       RestrictedGroupNames.Members,
       RestrictedGroupNames.Admins,
