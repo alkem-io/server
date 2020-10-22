@@ -10,7 +10,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
-import { ITagsetable } from '../../interfaces/tagsetable.interface';
 import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
