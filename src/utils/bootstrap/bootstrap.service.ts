@@ -1,19 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Context } from 'src/domain/context/context.entity';
-import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
-import { IEcoverse } from 'src/domain/ecoverse/ecoverse.interface';
-import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
-import { Organisation } from 'src/domain/organisation/organisation.entity';
-import { RestrictedGroupNames } from 'src/domain/user-group/user-group.entity';
-import { IUserGroup } from 'src/domain/user-group/user-group.interface';
-import { UserInput } from 'src/domain/user/user.dto';
-import { UserService } from 'src/domain/user/user.service';
-import { IServiceConfig } from 'src/interfaces/service.config.interface';
+import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
+import { Context } from '../../domain/context/context.entity';
+import { IEcoverse } from '../../domain/ecoverse/ecoverse.interface';
+import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
+import { Organisation } from '../../domain/organisation/organisation.entity';
+import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
+import { IUserGroup } from '../../domain/user-group/user-group.interface';
+import { UserInput } from '../../domain/user/user.dto';
+import { UserService } from '../../domain/user/user.service';
+import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
 import fs from 'fs';
+import * as defaultRoles from '../config/authorisation-bootstrap.json';
 
 @Injectable()
 export class BootstrapService {
@@ -41,13 +42,22 @@ export class BootstrapService {
     const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
       ?.authorisationBootstrapPath as string;
 
-    const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
-    console.info(bootstratDataStr);
-    if (!bootstratDataStr) {
-      console.error('No authorisation bootstrap file found!');
-      return;
+    let bootstrapJson = {
+      ...defaultRoles,
+    };
+
+    if (
+      fs.statSync(bootstrapFilePath).isFile() &&
+      fs.existsSync(bootstrapFilePath)
+    ) {
+      const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
+      console.info(bootstratDataStr);
+      if (!bootstratDataStr) {
+        console.error('No authorisation bootstrap file found!');
+        return;
+      }
+      bootstrapJson = JSON.parse(bootstratDataStr);
     }
-    const bootstrapJson = JSON.parse(bootstratDataStr);
 
     const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
     if (!ecoverseAdmins)

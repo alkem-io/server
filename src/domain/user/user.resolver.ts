@@ -7,8 +7,8 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { GqlAuthGuard } from 'src/utils/authentication/graphql.guard';
-import { Roles } from 'src/utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '../../utils/decorators/roles.decorator';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { MemberOf } from './memberof.composite';
 import { CurrentUser } from './user.decorator';

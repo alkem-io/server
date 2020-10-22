@@ -1,6 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Roles } from 'src/utils/decorators/roles.decorator';
+import { Roles } from '../../utils/decorators/roles.decorator';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { TagsInput } from './tagset.dto';

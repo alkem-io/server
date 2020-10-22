@@ -3,7 +3,7 @@ import { Mutation } from '@nestjs/graphql';
 import { Float } from '@nestjs/graphql';
 import { Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
-import { Roles } from 'src/utils/decorators/roles.decorator';
+import { Roles } from '../../utils/decorators/roles.decorator';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,

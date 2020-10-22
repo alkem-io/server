@@ -1,7 +1,7 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Float, Mutation } from '@nestjs/graphql/dist';
-import { Roles } from 'src/utils/decorators/roles.decorator';
+import { Roles } from '../../utils/decorators/roles.decorator';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,

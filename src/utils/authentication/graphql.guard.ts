@@ -4,11 +4,11 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import { AuthenticationError } from 'apollo-server-core';
 import { ConfigService } from '@nestjs/config';
-import { IServiceConfig } from 'src/interfaces/service.config.interface';
+import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
-import { AuthUserDTO } from 'src/domain/user/user.dto';
-import { IUserGroup } from 'src/domain/user-group/user-group.interface';
-import { RestrictedGroupNames } from 'src/domain/user-group/user-group.entity';
+import { AuthUserDTO } from '../../domain/user/user.dto';
+import { IUserGroup } from '../../domain/user-group/user-group.interface';
+import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {
