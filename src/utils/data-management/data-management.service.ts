@@ -2,19 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChallengeInput } from 'src/domain/challenge/challenge.dto';
 import { IChallenge } from 'src/domain/challenge/challenge.interface';
+import { Context } from 'src/domain/context/context.entity';
 import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
 import { ProfileService } from 'src/domain/profile/profile.service';
 import { Reference } from 'src/domain/reference/reference.entity';
-import { Tagset } from 'src/domain/tagset/tagset.entity';
 import { TagsetService } from 'src/domain/tagset/tagset.service';
 import { IUserGroup } from 'src/domain/user-group/user-group.interface';
 import { UserGroupService } from 'src/domain/user-group/user-group.service';
 import { UserInput } from 'src/domain/user/user.dto';
 import { IUser } from 'src/domain/user/user.interface';
 import { UserService } from 'src/domain/user/user.service';
-import { Repository } from 'typeorm';
-import { Connection } from 'typeorm';
+import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 
 @Injectable()
@@ -66,8 +65,8 @@ export class DataManagementService {
       });
 
       ctverse.name = 'Cherrytwist dogfood';
-      (ctverse as Ecoverse).context.tagline =
-        'Powering multi-stakeholder collaboration!';
+      if (!ctverse.context) ctverse.context = new Context();
+      ctverse.context.tagline = 'Powering multi-stakeholder collaboration!';
 
       const membersGroup = await this.userGroupService.getGroupByName(
         ctverse,
@@ -114,9 +113,11 @@ export class DataManagementService {
       await this.userGroupService.addUserToGroup(neil, crewGroup);
 
       // Challenges
-      const energyWeb = await this.createChallenge('Energy Web');
-      energyWeb.context.tagline = 'Web of energy';
-      energyWeb.tagset.tags = ['java', 'graphql'];
+      const energyWeb = await this.createChallenge(
+        'Energy Web',
+        'Web of energy',
+        ['java', 'graphql']
+      );
       const ref1 = new Reference(
         'video',
         'http://localhost:8443/myVid',
@@ -135,11 +136,15 @@ export class DataManagementService {
       await this.userGroupService.addUserToGroup(valentin, energyWebMembers);
       await this.userGroupService.addUserToGroup(neil, energyWebMembers);
       energyWebMembers.focalPoint = neil;
+      if (!energyWeb.context) throw new Error('Contextn not initilised');
       energyWeb.context.references = [ref1, ref2];
 
-      const cleanOceans = await this.createChallenge('Clean Oceans');
-      cleanOceans.tagset.tags = ['java', 'linux'];
-      cleanOceans.context.tagline = 'Keep our Oceans clean and in balance!';
+      const cleanOceans = await this.createChallenge(
+        'Clean Oceans',
+        'Keep our Oceans clean and in balance!',
+        ['java', 'linux']
+      );
+
       const cleanOceanMembers = await this.userGroupService.getGroupByName(
         cleanOceans,
         'members'
@@ -149,10 +154,11 @@ export class DataManagementService {
       await this.userGroupService.addUserToGroup(neil, cleanOceanMembers);
       cleanOceanMembers.focalPoint = neil;
 
-      const cargoInsurance = await this.createChallenge('Cargo Insurance');
-      cargoInsurance.tagset.tags = ['logistics', 'eco'];
-      cargoInsurance.context.tagline =
-        'In an interconnected world, how to manage risk along the chain?';
+      const cargoInsurance = await this.createChallenge(
+        'Cargo Insurance',
+        'In an interconnected world, how to manage risk along the chain?',
+        ['logistics', 'eco']
+      );
       const cargoInsuranceMembers = await this.userGroupService.getGroupByName(
         cargoInsurance,
         'members'
@@ -186,9 +192,23 @@ export class DataManagementService {
     return user;
   }
 
-  async createChallenge(name: string): Promise<IChallenge> {
+  async createChallenge(
+    name: string,
+    tagline?: string,
+    tags?: string[]
+  ): Promise<IChallenge> {
     const challengeInput = new ChallengeInput();
     challengeInput.name = name;
+    if (tagline) {
+      challengeInput.context = {
+        tagline,
+      };
+    }
+    if (tags) {
+      challengeInput.tagset = {
+        tags,
+      };
+    }
 
     const challenge = await this.ecoverseService.createChallenge(
       challengeInput

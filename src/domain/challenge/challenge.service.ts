@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
@@ -35,9 +36,14 @@ export class ChallengeService {
     if (!challenge.projects) {
       challenge.projects = [];
     }
+    if (!challenge.tagset) {
+      challenge.tagset = this.tagsetService.createTagset({});
+    }
 
+    if (!challenge.context) {
+      challenge.context = new Context();
+    }
     // Initialise contained objects
-    this.tagsetService.initialiseMembers(challenge.tagset);
     this.contextService.initialiseMembers(challenge.context);
 
     return challenge;
@@ -107,8 +113,8 @@ export class ChallengeService {
       this.contextService.update(challenge, challengeData.context);
 
     if (challengeData.tagset && challengeData.tagset.tags)
-      this.tagsetService.replaceTags(
-        challenge.tagset.id,
+      this.tagsetService.replaceTagsOnEntity(
+        challenge as Challenge,
         challengeData.tagset.tags
       );
 

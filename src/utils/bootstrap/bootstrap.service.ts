@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Context } from 'src/domain/context/context.entity';
 import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { IEcoverse } from 'src/domain/ecoverse/ecoverse.interface';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
@@ -133,8 +134,10 @@ export class BootstrapService {
 
   async ensureEcoverseSingleton(): Promise<IEcoverse> {
     console.log('=== Ensuring single ecoverse is present ===');
-    const ecoverseArray = await this.ecoverseRepository.find();
-    const ecoverseCount = ecoverseArray.length;
+    const [
+      ecoverseArray,
+      ecoverseCount,
+    ] = await this.ecoverseRepository.findAndCount();
     if (ecoverseCount == 0) {
       console.log('...No ecoverse present...');
       console.log('........creating...');
@@ -161,6 +164,7 @@ export class BootstrapService {
   async populateEmptyEcoverse(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Set the default values
     ecoverse.name = 'Empty ecoverse';
+    if (!ecoverse.context) ecoverse.context = new Context();
     ecoverse.context.tagline = 'An empty ecoverse to be populated';
 
     // Create the host organisation

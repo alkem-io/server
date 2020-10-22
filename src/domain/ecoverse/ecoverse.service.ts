@@ -23,6 +23,8 @@ import { OrganisationInput } from '../organisation/organisation.dto';
 import { Organisation } from '../organisation/organisation.entity';
 import { OrganisationService } from '../organisation/organisation.service';
 import { AccountService } from 'src/utils/account/account.service';
+import { Context } from '../context/context.entity';
+import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 
 @Injectable()
 export class EcoverseService {
@@ -56,6 +58,14 @@ export class EcoverseService {
 
     if (!ecoverse.organisations) {
       ecoverse.organisations = [];
+    }
+
+    if (!ecoverse.tagset) {
+      ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
+    }
+
+    if (!ecoverse.context) {
+      ecoverse.context = new Context();
     }
 
     // Initialise contained singletons
@@ -140,10 +150,8 @@ export class EcoverseService {
 
   async getChallenges(): Promise<IChallenge[]> {
     try {
-      console.time('Get challenges');
       const ecoverseId = await this.getEcoverseId();
       const challanges = await this.challengeService.getChallenges(ecoverseId);
-      console.timeEnd('Get challenges');
       return challanges;
     } catch (e) {
       // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
@@ -222,9 +230,6 @@ export class EcoverseService {
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    console.time('Challenge created');
-    console.time('getting ecoverse');
-
     const ecoverse = await this.getEcoverse({
       join: {
         alias: 'ecoverse',
@@ -233,8 +238,6 @@ export class EcoverseService {
         },
       },
     });
-
-    console.timeEnd('getting ecoverse');
 
     if (!ecoverse.challenges) {
       throw new Error('Challenges must be defined');
@@ -255,7 +258,6 @@ export class EcoverseService {
       console.log('Creating Challenge: Challenge already exists!');
       challenge = await this.challengeService.getChallengeByID(challenge.id);
     }
-    console.timeEnd('Challenge created');
     return challenge;
   }
 
@@ -404,14 +406,23 @@ export class EcoverseService {
     if (ecoverseData.name) {
       ecoverse.name = ecoverseData.name;
     }
-    if (ecoverseData.context)
-      await this.contextService.update(ecoverse.context, ecoverseData.context);
 
-    if (ecoverseData.tags && ecoverseData.tags.tags)
+    if (ecoverseData.context) {
+      if (!ecoverse.context) {
+        ecoverse.context = new Context();
+      }
+      await this.contextService.update(ecoverse.context, ecoverseData.context);
+    }
+
+    if (ecoverseData.tags && ecoverseData.tags.tags) {
+      if (!ecoverse.tagset) {
+        ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
+      }
       this.tagsetService.replaceTags(
         ecoverse.tagset.id,
         ecoverseData.tags.tags
       );
+    }
 
     await this.ecoverseRepository.save(ecoverse);
 

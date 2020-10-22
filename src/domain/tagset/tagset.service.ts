@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ITagsetable } from 'src/interfaces/tagsetable.interface';
 import { Repository } from 'typeorm';
+import { Challenge } from '../challenge/challenge.entity';
+import { Organisation } from '../organisation/organisation.entity';
+import { Project } from '../project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 
@@ -22,6 +25,12 @@ export class TagsetService {
     return tagset;
   }
 
+  createTagset({ name, tags }: { name?: string; tags?: string[] }) {
+    const tagset = new Tagset(name ? name : RestrictedTagsetNames.Default);
+    tagset.tags = tags ? [...tags] : [];
+    return tagset;
+  }
+
   async getTagset(tagsetID: number): Promise<ITagset | undefined> {
     return Tagset.findOne({ id: tagsetID });
   }
@@ -38,6 +47,20 @@ export class TagsetService {
     await this.tagsetRepository.save(tagset);
 
     return tagset;
+  }
+
+  replaceTagsOnEntity(
+    entity: Organisation | Challenge | Project,
+    tags: string[]
+  ) {
+    if (!entity.tagset) {
+      entity.tagset = this.createTagset({
+        tags: [...tags],
+      });
+    } else {
+      entity.tagset.tags = [...tags];
+    }
+    return entity;
   }
 
   async addTag(tagsetID: number, newTag: string): Promise<ITagset> {

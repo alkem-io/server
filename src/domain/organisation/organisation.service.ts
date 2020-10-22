@@ -86,11 +86,12 @@ export class OrganisationService {
       existingOrganisation.name = organisationData.name;
     }
 
-    if (organisationData.tags && organisationData.tags.tags)
-      this.tagsetService.replaceTags(
-        existingOrganisation.tagset.id,
+    if (organisationData.tags && organisationData.tags.tags) {
+      this.tagsetService.replaceTagsOnEntity(
+        existingOrganisation,
         organisationData.tags.tags
       );
+    }
 
     // To do - merge in the rest of the organisation update
     await this.organisationRepository.save(existingOrganisation);
