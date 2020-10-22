@@ -51,10 +51,23 @@ export class BootstrapService {
       console.info(
         'No ecoverse admins section in the authorisation bootstrap file!'
       );
+    else {
+      await this.createGroupProfiles(
+        RestrictedGroupNames.EcoverseAdmins,
+        ecoverseAdmins,
+        accounbtsEnabled
+      );
+    }
     const globalAdmins = bootstrapData[RestrictedGroupNames.GlobalAdmins];
     if (!globalAdmins) {
       console.info(
         'No global admins section in the authorisation bootstrap file!'
+      );
+    } else {
+      await this.createGroupProfiles(
+        RestrictedGroupNames.GlobalAdmins,
+        globalAdmins,
+        accounbtsEnabled
       );
     }
     const communityAdmins = bootstrapData[RestrictedGroupNames.CommunityAdmins];
@@ -62,22 +75,13 @@ export class BootstrapService {
       console.info(
         'No community admins section in the authorisation bootstrap file!'
       );
+    } else {
+      await this.createGroupProfiles(
+        RestrictedGroupNames.CommunityAdmins,
+        communityAdmins,
+        accounbtsEnabled
+      );
     }
-    await this.createGroupProfiles(
-      RestrictedGroupNames.EcoverseAdmins,
-      ecoverseAdmins,
-      accounbtsEnabled
-    );
-    await this.createGroupProfiles(
-      RestrictedGroupNames.GlobalAdmins,
-      globalAdmins,
-      accounbtsEnabled
-    );
-    await this.createGroupProfiles(
-      RestrictedGroupNames.CommunityAdmins,
-      communityAdmins,
-      accounbtsEnabled
-    );
   }
 
   async createGroupProfiles(
