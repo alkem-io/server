@@ -57,7 +57,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   })
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
-  profile: Profile;
+  profile?: Profile;
 
   @ManyToOne(
     () => Ecoverse,
@@ -80,12 +80,12 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   constructor(name: string) {
     super();
     this.name = name;
-
-    this.profile = new Profile();
   }
 }
 
 export enum RestrictedGroupNames {
-  Admins = 'admins',
   Members = 'members',
+  CommunityAdmins = 'community-admins',
+  EcoverseAdmins = 'ecoverse-admins',
+  GlobalAdmins = 'global-admins',
 }

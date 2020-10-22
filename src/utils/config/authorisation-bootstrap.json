@@ -1,0 +1,13 @@
+{
+  "globalAdmins": [
+    "admin@cherrytwist.org",
+    "valentin_yanakiev@yahoo.co.uk"
+  ],
+  "ecoverseAdmins":[
+    "neil@cherrytwist.org",
+    "valentin@cherrytwist.org"
+  ],
+  "communityAdmins":[
+    "evgeni@cherrytwist.org"
+  ]
+}
