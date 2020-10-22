@@ -5,7 +5,7 @@ import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
 import { IEcoverse } from 'src/domain/ecoverse/ecoverse.interface';
 import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
 import { Organisation } from '../../domain/organisation/organisation.entity';
-import { RestrictedGroupNames } from 'src/domain/user-group/user-group.entity';
+import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
 import { IUserGroup } from 'src/domain/user-group/user-group.interface';
 import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';

@@ -1,6 +1,6 @@
 import { graphqlRequest } from './helpers';
 
-export const createUser = async (userName: string) => {
+export const createUserMutation = async (userName: string) => {
   const requestParams = {
     operationName: 'CreateUser',
     query:
@@ -9,6 +9,19 @@ export const createUser = async (userName: string) => {
       userData: {
         name: userName,
       },
+    },
+  };
+
+  return await graphqlRequest(requestParams);
+};
+// let id
+// let removeUserID = parseFloat(id)
+export const removeUserMutation = async (removeUserID: any) => {
+  const requestParams = {
+    operationName: 'removeUser',
+    query: 'mutation removeUser($userID: Float!) {removeUser(userID: $userID)}',
+    variables: {
+      userID: parseFloat(removeUserID),
     },
   };
 
