@@ -117,6 +117,9 @@ export class UserGroupService {
 
     for (const existingUser of group.members) {
       if (user.name === existingUser.name) {
+        console.info(
+          `User ${user.email} already exists in group ${group.name}!`
+        );
         // Found an existing user
         return false;
       }
@@ -125,6 +128,7 @@ export class UserGroupService {
     // User was not already a member so add the user
     group.members.push(user);
     await this.groupRepository.save(group);
+    console.info(`User ${user.email} added to group ${group.name}!`);
     return true;
   }
 
