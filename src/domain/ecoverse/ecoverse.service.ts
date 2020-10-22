@@ -103,7 +103,7 @@ export class EcoverseService {
     return ecoverse.id;
   }
 
-  async getMembers(): Promise<IUser[]> {
+  async getUsers(): Promise<IUser[]> {
     try {
       const ecoverse = (await this.getEcoverse({
         relations: ['groups'],
@@ -126,7 +126,6 @@ export class EcoverseService {
       const groups = await this.userGroupService.getGroups(ecoverse);
       return groups;
     } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
       throw e;
     }
   }
