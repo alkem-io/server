@@ -14,7 +14,6 @@ import { UserGroupService } from '../../domain/user-group/user-group.service';
 import { UserInput } from '../../domain/user/user.dto';
 import { IUser } from '../../domain/user/user.interface';
 import { UserService } from '../../domain/user/user.service';
-import { Repository } from 'typeorm';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 
