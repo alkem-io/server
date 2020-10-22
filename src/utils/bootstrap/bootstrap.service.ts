@@ -46,7 +46,10 @@ export class BootstrapService {
       ...defaultRoles,
     };
 
-    if (fs.existsSync(bootstrapFilePath)) {
+    if (
+      fs.statSync(bootstrapFilePath).isFile() &&
+      fs.existsSync(bootstrapFilePath)
+    ) {
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
       console.info(bootstratDataStr);
       if (!bootstratDataStr) {
