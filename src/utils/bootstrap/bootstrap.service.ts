@@ -12,6 +12,7 @@ import { UserService } from 'src/domain/user/user.service';
 import { IServiceConfig } from 'src/interfaces/service.config.interface';
 import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
+import fs from 'fs';
 
 @Injectable()
 export class BootstrapService {
@@ -39,14 +40,15 @@ export class BootstrapService {
     const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
       ?.authorisationBootstrapPath as string;
 
-    const bootstrapData = await import(bootstrapFilePath);
-
-    if (!bootstrapData) {
+    const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
+    console.info(bootstratDataStr);
+    if (!bootstratDataStr) {
       console.error('No authorisation bootstrap file found!');
       return;
     }
+    const bootstrapJson = JSON.parse(bootstratDataStr);
 
-    const ecoverseAdmins = bootstrapData[RestrictedGroupNames.EcoverseAdmins];
+    const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
     if (!ecoverseAdmins)
       console.info(
         'No ecoverse admins section in the authorisation bootstrap file!'
@@ -58,7 +60,7 @@ export class BootstrapService {
         accountsEnabled
       );
     }
-    const globalAdmins = bootstrapData[RestrictedGroupNames.GlobalAdmins];
+    const globalAdmins = bootstrapJson.globalAdmins;
     if (!globalAdmins) {
       console.info(
         'No global admins section in the authorisation bootstrap file!'
@@ -70,7 +72,7 @@ export class BootstrapService {
         accountsEnabled
       );
     }
-    const communityAdmins = bootstrapData[RestrictedGroupNames.CommunityAdmins];
+    const communityAdmins = bootstrapJson.communityAdmins;
     if (!communityAdmins) {
       console.info(
         'No community admins section in the authorisation bootstrap file!'
