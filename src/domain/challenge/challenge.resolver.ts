@@ -1,7 +1,8 @@
-import { Inject } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Float, Mutation } from '@nestjs/graphql/dist';
 import { Roles } from 'src/utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,
@@ -22,6 +23,7 @@ export class ChallengeResolver {
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group for the challenge with the given id',
   })
@@ -37,6 +39,7 @@ export class ChallengeResolver {
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
     description:
       'Updates the specified Challenge with the provided data (merge)',
@@ -56,6 +59,7 @@ export class ChallengeResolver {
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
       'Adds the user with the given identifier as a member of the specified challenge',

@@ -1,5 +1,7 @@
+import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Roles } from 'src/utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { TagsInput } from './tagset.dto';
 import { Tagset } from './tagset.entity';
@@ -14,6 +16,7 @@ export class TagsetResolver {
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description: 'Replace the set of tags in a tagset with the provided tags',
   })
@@ -33,6 +36,7 @@ export class TagsetResolver {
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description: 'Add the provided tag to the tagset with the given ID',
   })

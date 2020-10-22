@@ -1,5 +1,7 @@
-import { Inject } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
+import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '../../utils/decorators/roles.decorator';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ChallengeService } from '../challenge/challenge.service';

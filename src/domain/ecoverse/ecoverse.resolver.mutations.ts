@@ -29,6 +29,7 @@ export class EcoverseResolverMutations {
   ) {}
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group at the ecoverse level',
   })
@@ -40,6 +41,7 @@ export class EcoverseResolverMutations {
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Ecoverse, {
     description: 'Updates the Ecoverse with the provided data',
   })
@@ -67,6 +69,7 @@ export class EcoverseResolverMutations {
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the specified user from the ecoverse',
   })
@@ -76,6 +79,7 @@ export class EcoverseResolverMutations {
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
     description: 'Creates a new challenge and registers it with the ecoverse',
   })
@@ -88,6 +92,7 @@ export class EcoverseResolverMutations {
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description:
       'Creates a new organisation and registers it with the ecoverse',

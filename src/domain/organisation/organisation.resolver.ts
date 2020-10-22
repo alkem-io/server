@@ -1,9 +1,10 @@
-import { Inject } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Mutation } from '@nestjs/graphql';
 import { Float } from '@nestjs/graphql';
 import { Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
 import { Roles } from 'src/utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,
@@ -25,6 +26,7 @@ export class OrganisationResolver {
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
       'Creates a new user group for the organisation with the given id',
@@ -38,6 +40,7 @@ export class OrganisationResolver {
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description: 'Updates the organisation with the given data',
   })

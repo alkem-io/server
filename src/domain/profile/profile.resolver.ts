@@ -1,6 +1,8 @@
+import { UseGuards } from '@nestjs/common';
 import { Mutation, Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
 import { Roles } from 'src/utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { ReferenceInput } from '../reference/reference.dto';
 import { Reference } from '../reference/reference.entity';
 import { IReference } from '../reference/reference.interface';
@@ -17,6 +19,7 @@ export class ProfileResolver {
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description:
       'Creates a new tagset with the specified name for the profile with given id',
@@ -36,6 +39,7 @@ export class ProfileResolver {
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
     description:
       'Creates a new reference with the specified name for the profile with given id',
