@@ -1,7 +1,5 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from 'src/utils/authentication/graphql.guard';
-import { Roles } from 'src/utils/decorators/roles.decorator';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ChallengeService } from '../challenge/challenge.service';
@@ -38,15 +36,6 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getName();
   }
 
-  @Query(() => [User], {
-    nullable: false,
-    description: 'The members of this ecoverse',
-  })
-  async members(): Promise<IUser[]> {
-    const members = await this.ecoverseService.getMembers();
-    return members;
-  }
-
   @Query(() => Organisation, {
     nullable: false,
     description: 'The host organisation for the ecoverse',
@@ -66,10 +55,10 @@ export class EcoverseResolverQueries {
 
   @Query(() => [User], {
     nullable: false,
-    description: 'The users associated with this ecoverse',
+    description: 'The members of this this ecoverse',
   })
   async users(): Promise<IUser[]> {
-    return this.ecoverseService.getMembers();
+    return this.ecoverseService.getUsers();
   }
 
   @Query(() => User, {

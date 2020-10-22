@@ -6,7 +6,6 @@ import { Ecoverse } from 'src/domain/ecoverse/ecoverse.entity';
 import { EcoverseService } from 'src/domain/ecoverse/ecoverse.service';
 import { ProfileService } from 'src/domain/profile/profile.service';
 import { Reference } from 'src/domain/reference/reference.entity';
-import { Tagset } from 'src/domain/tagset/tagset.entity';
 import { TagsetService } from 'src/domain/tagset/tagset.service';
 import { IUserGroup } from 'src/domain/user-group/user-group.interface';
 import { UserGroupService } from 'src/domain/user-group/user-group.service';
