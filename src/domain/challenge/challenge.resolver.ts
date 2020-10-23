@@ -1,7 +1,12 @@
-import { Inject } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Float, Mutation } from '@nestjs/graphql/dist';
-import { UserGroup } from '../user-group/user-group.entity';
+import { Roles } from '../../utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
@@ -14,7 +19,11 @@ export class ChallengeResolver {
     @Inject(ChallengeService) private challengeService: ChallengeService
   ) {}
 
-  ///// Mutations /////
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group for the challenge with the given id',
   })
@@ -29,6 +38,8 @@ export class ChallengeResolver {
     return group;
   }
 
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
     description:
       'Updates the specified Challenge with the provided data (merge)',
@@ -44,6 +55,11 @@ export class ChallengeResolver {
     return challenge;
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
       'Adds the user with the given identifier as a member of the specified challenge',

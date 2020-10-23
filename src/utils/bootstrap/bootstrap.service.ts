@@ -3,11 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
 import { Context } from '../../domain/context/context.entity';
-import { IEcoverse } from 'src/domain/ecoverse/ecoverse.interface';
+import { IEcoverse } from '../../domain/ecoverse/ecoverse.interface';
 import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
 import { Organisation } from '../../domain/organisation/organisation.entity';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
-import { IUserGroup } from 'src/domain/user-group/user-group.interface';
+import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
@@ -47,16 +47,24 @@ export class BootstrapService {
     };
 
     if (
+      bootstrapFilePath &&
       fs.statSync(bootstrapFilePath).isFile() &&
       fs.existsSync(bootstrapFilePath)
     ) {
+      console.info(
+        `Authorisation bootstrap: configuration being loaded from '${bootstrapFilePath}'`
+      );
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
       console.info(bootstratDataStr);
       if (!bootstratDataStr) {
-        console.error('No authorisation bootstrap file found!');
+        console.error('Specified authorisation bootstrap file not found!');
         return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
+    } else {
+      console.info(
+        'Authorisation bootstrap: default configuration being loaded'
+      );
     }
 
     const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
