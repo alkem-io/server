@@ -59,11 +59,14 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
       return true;
     }
     if (err || !user) {
-      throw err || new AuthenticationError('GqlAuthGuard');
+      throw err ||
+        new AuthenticationError('User does not exists in this ecoverse!');
     }
 
     const ctUser = user as AuthUserDTO;
     if (this.matchRoles(ctUser.userGroups)) return user;
-    throw new AuthenticationError('GqlAuthGuard');
+    throw new AuthenticationError(
+      `User '${ctUser.email}' doesn't have any roles in this ecoverse.`
+    );
   }
 }
