@@ -29,7 +29,6 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
   canActivate(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
     const { req } = ctx.getContext();
-    //console.log(req);
 
     const auth_roles = this.reflector.get<string[]>(
       'roles',
@@ -41,26 +40,28 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
   }
 
   matchRoles(userGroups: IUserGroup[]): boolean {
-    if (
-      userGroups.some(({ name }) => name === RestrictedGroupNames.GlobalAdmins)
-    )
-      return true;
-
-    if (userGroups.some(({ name }) => this.roles.includes(name))) return true;
-    return false;
+    return userGroups.some(
+      ({ name }) =>
+        name === RestrictedGroupNames.GlobalAdmins || this.roles.includes(name)
+    );
   }
 
-  handleRequest(err: any, user: any) {
+  handleRequest(err: any, user: any, info: any) {
     // Always handle the request if authentication is disabled
     if (
       this.configService.get<IServiceConfig>('service')
         ?.authenticationEnabled === 'false'
     ) {
-      return true;
+      return user;
     }
-    if (err || !user) {
-      throw err ||
-        new AuthenticationError('User does not exists in this ecoverse!');
+
+    if (err) throw err;
+
+    if (!user) {
+      console.error(info);
+      throw new AuthenticationError(
+        'You are not authorized to access this resource.'
+      );
     }
 
     const ctUser = user as AuthUserDTO;
