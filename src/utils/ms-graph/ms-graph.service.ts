@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
@@ -7,7 +7,10 @@ import { AzureADStrategy } from '../authentication/aad.strategy';
 
 @Injectable()
 export class MsGraphService {
-  constructor(private azureAdStrategy: AzureADStrategy) {}
+  constructor(
+    @Inject(forwardRef(() => AzureADStrategy))
+    private azureAdStrategy: AzureADStrategy
+  ) {}
 
   async callResourceAPI(accessToken: string, resourceURI: string) {
     const options = {
