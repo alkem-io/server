@@ -41,6 +41,13 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @Column('varchar', { length: 100 })
   name: string;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'A short text identifier for this challenge',
+  })
+  @Column('varchar', { length: 15 })
+  textID: string;
+
   @Field(() => Context, {
     nullable: true,
     description: 'The shared understanding for the challenge',
@@ -122,9 +129,10 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   // The restricted group names at the challenge level
   restrictedGroupNames: string[];
 
-  constructor(name: string) {
+  constructor(name: string, textID: string) {
     super();
     this.name = name;
+    this.textID = textID;
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 }
