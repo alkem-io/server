@@ -10,6 +10,10 @@ export class ChallengeInput {
   name?: string;
 
   @Field({ nullable: true })
+  @MaxLength(15)
+  textID?: string;
+
+  @Field({ nullable: true })
   @MaxLength(255)
   lifecyclePhase?: string;
 
