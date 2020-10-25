@@ -8,6 +8,7 @@ import { IUser } from '../user/user.interface';
 export interface IChallenge {
   id: number;
   name: string;
+  textID: string;
   lifecyclePhase?: string;
   context?: IContext;
   tagset?: ITagset;

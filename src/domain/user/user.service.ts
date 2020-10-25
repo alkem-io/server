@@ -35,11 +35,7 @@ export class UserService {
       const user = await this.getUserByID(idInt);
       if (user) return user;
     }
-    // If get here then id was not a number, or not found
-    // Check the email address format: simple format check
-    const expression = /\S+@\S+/;
-    const emailChecked = expression.test(String(userID).toLowerCase());
-    if (emailChecked) {
+    if (this.isValidEmail(userID)) {
       const user = await this.getUserByEmail(userID);
       if (user) return user;
     }
@@ -95,10 +91,16 @@ export class UserService {
   }
 
   async createUser(userData: UserInput): Promise<IUser> {
-    // Check if a user with this email already exists
+    // Check if a valid email address was given
     const newUserEmail = userData.email;
-    const existingUser = await this.getUserByEmail(newUserEmail);
+    // Validate that the user has some key fields et
+    if (!this.isValidEmail(newUserEmail))
+      throw new Error(
+        `Valid email address required to create a user: ${newUserEmail}`
+      );
 
+    // Check if a user with the given email already exists
+    const existingUser = await this.getUserByEmail(newUserEmail);
     if (existingUser)
       throw new Error(
         `A user with the provided email address: ${newUserEmail} already exists!`
@@ -106,7 +108,6 @@ export class UserService {
 
     // Ok to create a new user + save
     const user = User.create(userData);
-    // Have the user,ensure it is initialised
     await this.initialiseMembers(user);
     await this.userRepository.save(user);
 
@@ -154,5 +155,11 @@ export class UserService {
 
     await this.userRepository.save(user);
     return user;
+  }
+
+  isValidEmail(email: string): boolean {
+    // The reg exp used to validate the email format
+    const emailValidationExpression = /\S+@\S+/;
+    return emailValidationExpression.test(String(email).toLowerCase());
   }
 }
