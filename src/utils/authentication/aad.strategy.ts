@@ -9,8 +9,6 @@ import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
-import { AuthUserDTO } from '../../domain/user/user.dto';
-import { IUserGroup } from '../../domain/user-group/user-group.interface';
 
 @Injectable()
 export class AzureADStrategy
@@ -49,13 +47,10 @@ export class AzureADStrategy
 
       await this.cacheBearerToken(req);
 
-      const knownUser = await this.userService.getUserByEmail(token.email);
+      const knownUser = await this.userService.getUserWithGroups(token.email);
       if (!knownUser) throw new UnauthorizedException();
 
-      const groups = (await knownUser?.userGroups) as IUserGroup[];
-      const userDto = new AuthUserDTO(token.email, groups);
-
-      return done(null, userDto, token);
+      return done(null, knownUser, token);
     } catch (error) {
       console.error(`Failed adding the user to the request object: ${error}`);
       done(new Error(`Failed adding the user to the request object: ${error}`));

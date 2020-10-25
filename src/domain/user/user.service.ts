@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
+import { IUserGroup } from '../user-group/user-group.interface';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
@@ -28,7 +29,8 @@ export class UserService {
     return user;
   }
 
-  // Find a user either by id or email
+  //Find a user either by id or email
+  //toDo - review that
   async getUser(userID: string): Promise<IUser | undefined> {
     const idInt: number = parseInt(userID);
     if (!isNaN(idInt)) {
@@ -49,34 +51,76 @@ export class UserService {
     return this.userRepository.findOne({ id: userID });
   }
 
-  async getUserByEmail(email: string): Promise<IUser | undefined> {
-    return this.userRepository.findOne({ email: email });
+  async getUserByEmail(
+    email: string,
+    options?: FindOneOptions<User>
+  ): Promise<IUser | undefined> {
+    return this.userRepository.findOne({ email: email }, options);
   }
 
-  async userExists(email: string): Promise<boolean> {
-    if (await this.getUserByEmail(email)) return true;
-    else return false;
+  async findUser(
+    conditions?: FindConditions<User>,
+    options?: FindOneOptions<User>
+  ): Promise<IUser | undefined> {
+    return await this.userRepository.findOne(conditions, options);
+  }
+
+  async getUserWithGroups(email: string): Promise<IUser | undefined> {
+    const user = await this.userRepository.findOne(
+      { email: email },
+      { relations: ['userGroups'] }
+    );
+
+    if (!user) {
+      console.log(`No user with email ${email} exists!`);
+      return undefined;
+    }
+
+    if (!user.userGroups) {
+      console.log(`User with email ${email} doesn't belong to any groups!`);
+    }
+
+    return user;
+  }
+
+  async userExists(
+    email: string | undefined,
+    id: number | undefined
+  ): Promise<boolean> {
+    if (email) {
+      if (await this.getUserByEmail(email)) return true;
+      else return false;
+    } else if (id) {
+      if (await this.getUserByID(id)) return true;
+      else return false;
+    } else throw new Error('No email or id provided!');
   }
 
   async getMemberOf(user: User): Promise<MemberOf> {
-    const userGroups = await user.userGroups;
+    const membership = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userGroups', 'userGroup')
+      .leftJoinAndSelect('userGroup.ecoverse', 'ecoverse')
+      .leftJoinAndSelect('userGroup.challenge', 'challenge')
+      .leftJoinAndSelect('userGroup.organisation', 'organisation')
+      .where('user.id = :userId')
+      .setParameters({ userId: `${user.id}` })
+      .getOne();
+
     const memberOf = new MemberOf();
     memberOf.email = user.email;
     memberOf.groups = [];
     memberOf.challenges = [];
     memberOf.organisations = [];
 
-    if (userGroups) {
-      // Find all top level groups
-      let i;
-      const count = userGroups.length;
-      for (i = 0; i < count; i++) {
-        const group = userGroups[i];
-        const ecoverse = await group.ecoverse;
-        const challenge = await group.challenge;
-        const organisation = await group.organisation;
+    if (!membership) return memberOf;
 
-        // check if the group is an ecoverse group
+    if (membership?.userGroups) {
+      for await (const group of membership?.userGroups) {
+        const ecoverse = group.ecoverse;
+        const challenge = group.challenge;
+        const organisation = group.organisation;
+
         if (ecoverse) {
           // ecoverse group
           memberOf.groups.push(group);
@@ -90,7 +134,9 @@ export class UserService {
           memberOf.organisations.push(organisation);
         }
       }
+      return memberOf;
     }
+
     return memberOf;
   }
 

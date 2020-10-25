@@ -113,8 +113,7 @@ export class EcoverseService {
         RestrictedGroupNames.Members
       );
 
-      const members = membersGroup.members;
-      return members as IUser[];
+      return await this.userGroupService.getMembers(membersGroup.id);
     } catch (e) {
       throw e;
     }
@@ -293,7 +292,10 @@ export class EcoverseService {
 
   // Create the user and add the user into the members group
   async createUser(userData: UserInput): Promise<IUser> {
-    const ctUserExists = await this.userService.userExists(userData.email);
+    const ctUserExists = await this.userService.userExists(
+      userData.email,
+      undefined
+    );
     let accountExists = true;
     if (this.accountService.accountUsageEnabled()) {
       accountExists = await this.accountService.accountExists(userData.email);

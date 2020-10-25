@@ -15,6 +15,7 @@ import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
 import fs from 'fs';
 import * as defaultRoles from '../config/authorisation-bootstrap.json';
+import { IUser } from '../../domain/user/user.interface';
 
 @Injectable()
 export class BootstrapService {
@@ -115,7 +116,7 @@ export class BootstrapService {
         const userInput = new UserInput();
         userInput.email = email;
         userInput.name = 'Imported User';
-        let user = await this.userService.getUserByEmail(email);
+        let user = await this.userService.getUserWithGroups(email);
 
         if (!user && !accountsEnabled)
           user = await this.userService.createUser(userInput);
@@ -124,7 +125,11 @@ export class BootstrapService {
           throw new Error(`User with email ${email} doesn't exist in CT DB and couldn't be created.
           Try setting AUTHENTICATION_ENABLED=false env variable to bootstrap CT accounts!`);
 
-        const groups = (await user.userGroups) as IUserGroup[];
+        const groups = (user as IUser).userGroups;
+        if (!groups)
+          throw new Error(
+            `User ${user.email} isn't initialised properly. The user doesn't belong to any groups!`
+          );
 
         if (!groups.some(({ name }) => groupName === name))
           await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
