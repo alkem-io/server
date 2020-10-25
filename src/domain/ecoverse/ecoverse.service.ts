@@ -222,7 +222,7 @@ export class EcoverseService {
       groupName
     );
 
-    await ecoverse.save();
+    await this.ecoverseRepository.save(ecoverse);
 
     return group;
   }
