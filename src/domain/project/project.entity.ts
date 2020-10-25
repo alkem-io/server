@@ -10,7 +10,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Agreement } from '../agreement/agreement.entity';
-import { Challenge } from '../challenge/challenge.entity';
+import { Opportunity } from '../opportunity/opportunity.entity';
 import { Tagset } from '../tagset/tagset.entity';
 import { IProject } from './project.interface';
 
@@ -35,7 +35,7 @@ export class Project extends BaseEntity implements IProject {
       'The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc',
   })
   @Column({ nullable: true })
-  lifecyclePhase?: string;
+  state: string;
 
   @Field(() => Tagset, {
     nullable: true,
@@ -54,13 +54,14 @@ export class Project extends BaseEntity implements IProject {
   agreements?: Agreement[];
 
   @ManyToOne(
-    () => Challenge,
-    challenge => challenge.projects
+    () => Opportunity,
+    opportunity => opportunity.projects
   )
-  challenge?: Challenge;
+  opportunity?: Opportunity;
 
   constructor(name: string) {
     super();
     this.name = name;
+    this.state = '';
   }
 }

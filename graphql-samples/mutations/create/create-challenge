@@ -22,7 +22,6 @@ query variables:
         "vision": "Enable the entire energy sector to transition from an ego-system to an eco-system, where everyone and anything is incentivized to share demand AND production of green power. You will co-create the fast and energy efficient digital power market commons by developing a protocol communication layer to power an awesome fossil-free future within one generation.",
         "impact": "The power grid is one of the most sophisticated infrastructures ever built. By building the energy flexibility ecosystem on a digital protocol layer, the network will become fit for a fossil-free future and will prevent major and costly physical grid investments that will impact the grid and its customers. It will make the power system more robust and transparent, enabling anyone to build an infinite amount of business cases on top of your solution.",
         "who": "Vattenfall is inviting energy specialists throughout the entire sector, from DSOs and TSOs to solar power solution providers, to work with the teams to create the best solutions",
-        "lifecyclePhase": "Defined",
         "references": [
             {
                 "name": "video",

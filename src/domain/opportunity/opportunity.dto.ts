@@ -4,7 +4,7 @@ import { ContextInput } from '../context/context.dto';
 import { TagsInput } from '../tagset/tagset.dto';
 
 @InputType()
-export class ChallengeInput {
+export class OpportunityInput {
   @Field({ nullable: true })
   @MaxLength(100)
   name?: string;

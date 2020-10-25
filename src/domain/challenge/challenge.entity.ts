@@ -17,8 +17,8 @@ import { IGroupable } from '../../interfaces/groupable.interface';
 import { Context } from '../context/context.entity';
 import { DID } from '../did/did.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { Opportunity } from '../opportunity/opportunity.entity';
 import { Organisation } from '../organisation/organisation.entity';
-import { Project } from '../project/project.entity';
 import { Tagset } from '../tagset/tagset.entity';
 import {
   RestrictedGroupNames,
@@ -95,7 +95,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
       'The maturity phase of the challenge i.e. new, being refined, ongoing etc',
   })
   @Column({ nullable: true })
-  lifecyclePhase?: string;
+  state: string;
 
   @Field(() => Tagset, {
     nullable: true,
@@ -105,16 +105,17 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @JoinColumn()
   tagset?: Tagset;
 
-  @Field(() => [Project], {
+  @Field(() => [Opportunity], {
     nullable: true,
-    description: 'The set of projects within the context of this challenge',
+    description:
+      'The set of opportunities within the context of this challenge',
   })
   @OneToMany(
-    () => Project,
-    project => project.challenge,
+    () => Opportunity,
+    opportunity => opportunity.challenge,
     { eager: true, cascade: true }
   )
-  projects?: Project[];
+  opportunities?: Opportunity[];
 
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
@@ -132,6 +133,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   constructor(name: string, textID: string) {
     super();
     this.name = name;
+    this.state = '';
     this.textID = textID;
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
