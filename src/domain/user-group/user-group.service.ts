@@ -140,7 +140,9 @@ export class UserGroupService {
 
   async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
     if (!group.members) {
-      group.members = [];
+      throw new Error(
+        `Attempt to add user to a non-initialised group: ${group.name}`
+      );
     }
 
     //toDo vyanakiev - move the check for group membership to all method invokers to avoid multiple SQL calls.
@@ -216,20 +218,20 @@ export class UserGroupService {
     if (groupable instanceof Ecoverse) {
       const userGroup = (await this.groupRepository.findOne({
         where: { ecoverse: { id: groupable.id }, name: name },
-        relations: ['ecoverse'],
+        relations: ['ecoverse', 'members'],
       })) as IUserGroup;
       return userGroup;
     }
     if (groupable instanceof Challenge) {
       return (await this.groupRepository.findOne({
         where: { challenge: { id: groupable.id }, name: name },
-        relations: ['challenge'],
+        relations: ['challenge', 'members'],
       })) as IUserGroup;
     }
     if (groupable instanceof Organisation) {
       return (await this.groupRepository.findOne({
         where: { organisation: { id: groupable.id }, name: name },
-        relations: ['organisation'],
+        relations: ['organisation', 'members'],
       })) as IUserGroup;
     }
 

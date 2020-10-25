@@ -326,7 +326,10 @@ export class EcoverseService {
     await this.userGroupService.addUserToGroup(user, membersGroup);
     await this.ecoverseRepository.save(ecoverse);
 
-    return user;
+    // get the user again as a work around
+    const userNew = await this.userService.getUserWithGroups(user.email);
+    if (!userNew) throw new Error(`Not able to locate user: ${user.email}`);
+    return userNew;
   }
 
   async addAdmin(user: IUser): Promise<boolean> {
