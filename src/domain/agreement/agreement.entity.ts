@@ -47,6 +47,5 @@ export class Agreement extends BaseEntity implements IAgreement {
     super();
     this.name = name;
     this.tagset = new Tagset(RestrictedTagsetNames.Default);
-    //todo - ensure tagset is properly initialised
   }
 }

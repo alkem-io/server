@@ -119,7 +119,7 @@ export class BootstrapService {
         let user = await this.userService.getUserWithGroups(email);
 
         if (!user && !accountsEnabled)
-          user = await this.userService.createUser(userInput);
+          user = await this.ecoverseService.createUser(userInput);
 
         if (!user)
           throw new Error(`User with email ${email} doesn't exist in CT DB and couldn't be created.
