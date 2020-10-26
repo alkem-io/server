@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
 import { Challenge } from '../challenge/challenge.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
@@ -12,6 +12,8 @@ import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
 import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
+import { getConnection } from 'typeorm';
+import { getManager } from 'typeorm';
 
 @Injectable()
 export class UserGroupService {
@@ -22,20 +24,24 @@ export class UserGroupService {
     private groupRepository: Repository<UserGroup>
   ) {}
 
+  //toDo vyanakiev - fix this
   async getGroups(groupable: IGroupable): Promise<IUserGroup[]> {
     if (groupable instanceof Ecoverse) {
       return await this.groupRepository.find({
-        where: { ecoverse: { id: (groupable as Ecoverse).id } },
+        where: { ecoverse: { id: groupable.id } },
+        relations: ['members'],
       });
     }
     if (groupable instanceof Challenge) {
       return await this.groupRepository.find({
-        where: { challenge: { id: (groupable as Challenge).id } },
+        where: { challenge: { id: groupable.id } },
+        relations: ['members'],
       });
     }
     if (groupable instanceof Organisation) {
       return await this.groupRepository.find({
-        where: { organisation: { id: (groupable as Organisation).id } },
+        where: { organisation: { id: groupable.id } },
+        relations: ['members'],
       });
     }
 
@@ -81,54 +87,77 @@ export class UserGroupService {
     return group;
   }
 
-  async getGroupByID(groupID: number): Promise<IUserGroup> {
+  async getGroupByID(
+    groupID: number,
+    options?: FindOneOptions<UserGroup>
+  ): Promise<IUserGroup> {
     //const t1 = performance.now()
-    const group = await UserGroup.findOne({ where: [{ id: groupID }] });
+    const group = await this.groupRepository.findOne(
+      {
+        id: groupID,
+      },
+      options
+    );
     if (!group) throw new Error(`Unable to find group with ID: ${groupID}`);
     return group;
   }
 
-  async addUser(userID: number, groupID: number): Promise<IUserGroup> {
-    // Try to find the user + group
-    const user = await this.userService.getUserByID(userID);
-    if (!user) {
-      const msg = `Unable to find exactly one user with ID: ${userID}`;
-      console.log(msg);
-      throw new Error(msg);
-    }
+  async addUser(userID: number, groupID: number): Promise<boolean> {
+    const user = (await this.userService.getUserByID(userID)) as IUser;
+    if (!user) throw new Error(`No user with id ${userID} was found!`);
 
-    const group = (await this.getGroupByID(groupID)) as UserGroup;
-    if (!group) {
-      const msg = `Unable to find group with ID: ${groupID}`;
-      console.log(msg);
-      throw new Error(msg);
-    }
+    const group = (await this.getGroupByID(groupID)) as IUserGroup;
+    if (!group) throw new Error(`No group with id ${groupID} was found!`);
+    return this.addUserToGroup(user, group);
+  }
 
-    // Have both user + group so do the add
-    await this.addUserToGroup(user, group);
+  async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
+    if (!(await this.userService.userExists(undefined, userID)))
+      throw new Error(`No user with id ${userID} found!`);
+    if (!(await this.groupExists(groupID)))
+      throw new Error(`No group with id ${groupID} found!`);
 
-    return group;
+    const userGroup = (await this.groupRepository.findOne({
+      where: { members: { id: userID }, id: groupID },
+      relations: ['members'],
+    })) as IUserGroup;
+
+    const members = userGroup?.members;
+    if (!members || members.length === 0) return false;
+
+    return true;
+  }
+
+  async groupExists(groupID: number): Promise<boolean> {
+    const group = this.groupRepository.findOne({ id: groupID });
+    if (group) return true;
+    else return false;
   }
 
   async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
-    if (!group.members) {
-      group.members = [];
-    }
+    const entityManager = getManager();
+    const rawData = await entityManager.query(
+      `SELECT * from user_group_members where userId=${user.id} and userGroupId=${group.id}`
+    );
 
-    for (const existingUser of group.members) {
-      if (user.email === existingUser.email) {
-        console.info(
-          `User ${user.email} already exists in group ${group.name}!`
-        );
-        // Found an existing user
-        return false;
-      }
+    if (rawData.length > 0) {
+      console.log(`User ${user.email} already exists in group ${group.name}!`);
+      return false;
     }
+    const res = await getConnection()
+      .createQueryBuilder()
+      .insert()
+      .into('user_group_members')
+      .values({
+        userGroupId: group.id,
+        userId: user.id,
+      })
+      .execute();
 
-    // User was not already a member so add the user
-    group.members.push(user);
-    await this.groupRepository.save(group);
-    console.info(`User ${user.email} added to group ${group.name}!`);
+    //this is a bit hacky
+    if (res.identifiers.length === 0)
+      throw new Error('Unable to add user to groups!');
+
     return true;
   }
 
@@ -160,16 +189,7 @@ export class UserGroupService {
   ): Promise<IUserGroup> {
     if (!group.members) throw new Error('Members not initialised');
 
-    // Check the user exists in the group
-    const count = group.members.length;
-    for (let i = 0; i < count; i++) {
-      const existingUser = group.members[i];
-      if (user.id === existingUser.id) {
-        // Found an existing user
-        group.members.splice(i, 1);
-        break;
-      }
-    }
+    group.members = group.members.filter(member => !(member.id === user.id));
 
     // Also remove the user from being a focal point
     if (group.focalPoint && group.focalPoint.id === user.id) {
@@ -198,65 +218,56 @@ export class UserGroupService {
     return group;
   }
 
+  //toDo vyanakiev - fix this
   async getGroupByName(
     groupable: IGroupable,
     name: string
   ): Promise<IUserGroup> {
-    // let options: FindOneOptions<UserGroup> = { where: { name } };
-    // if (groupable instanceof Ecoverse) {
-    //   options = {
-    //     where: [{ name, ecoverse: { id: groupable.id } }],
-    //   };
-    // }
-    // if (groupable instanceof Challenge) {
-    //   options = {
-    //     where: [{ name, challenge: { id: groupable.id } }],
-    //   };
-    // }
-    // if (groupable instanceof Organisation) {
-    //   options = {
-    //     where: [{ name, organisations: { id: groupable.id } }],
-    //   };
-    // }
-    // const group = await this.groupRepository.findOne(options);
-    let group: IUserGroup | undefined = undefined;
-    if (groupable.groups) {
-      group = groupable.groups?.find(g => g.name === name);
+    if (groupable instanceof Ecoverse) {
+      const userGroup = (await this.groupRepository.findOne({
+        where: { ecoverse: { id: groupable.id }, name: name },
+        relations: ['ecoverse', 'members'],
+      })) as IUserGroup;
+      return userGroup;
+    }
+    if (groupable instanceof Challenge) {
+      return (await this.groupRepository.findOne({
+        where: { challenge: { id: groupable.id }, name: name },
+        relations: ['challenge', 'members'],
+      })) as IUserGroup;
+    }
+    if (groupable instanceof Organisation) {
+      return (await this.groupRepository.findOne({
+        where: { organisation: { id: groupable.id }, name: name },
+        relations: ['organisation', 'members'],
+      })) as IUserGroup;
     }
 
-    if (group) {
-      return group as IUserGroup;
-    }
-    // If get here then no match group was found
-    throw new Error(`Unable to find group with the name:' ${name}`);
+    throw new Error('Unrecognized groupabble type!');
   }
 
   async addMandatoryGroups(
     groupable: IGroupable,
     mandatoryGroupNames: string[]
   ): Promise<IGroupable> {
-    const groupsToAdd: string[] = [];
     if (!groupable.groups)
       throw new Error('Non-initialised Groupable submitted');
-    for (const mandatoryName of mandatoryGroupNames) {
-      let groupFound = false;
-      for (const group of groupable.groups) {
-        if (group.name === mandatoryName) {
-          // Found the group, break...
-          groupFound = true;
-          break;
-        }
-      }
-      if (!groupFound) {
-        // Add to list of groups to add
-        groupsToAdd.push(mandatoryName);
-      }
-    }
-    for (const groupToAdd of groupsToAdd) {
+
+    const newMandatoryGroups = new Set(
+      [...mandatoryGroupNames].filter(
+        mandatoryGroupName =>
+          !groupable.groups?.find(
+            groupable => groupable.name === mandatoryGroupName
+          )
+      )
+    );
+
+    for (const groupToAdd of newMandatoryGroups) {
       const newGroup = new UserGroup(groupToAdd);
       await this.initialiseMembers(newGroup);
       groupable.groups.push(newGroup as IUserGroup);
     }
+
     return groupable;
   }
 
@@ -297,7 +308,7 @@ export class UserGroupService {
       );
     }
 
-    const newGroup: IUserGroup = new UserGroup(name) as IUserGroup;
+    const newGroup: IUserGroup = new UserGroup(name);
     await this.initialiseMembers(newGroup);
     await groupable.groups?.push(newGroup);
     return newGroup;
@@ -318,10 +329,18 @@ export class UserGroupService {
       groupable.restrictedGroupNames.push(name);
     }
 
-    // Todo: is this the right return type?
     if (!groupable.groups) {
-      throw new Error('Cannot reach here');
+      throw new Error('No restricted group names found!');
     }
     return groupable.groups;
+  }
+
+  async getMembers(groupID: number): Promise<IUser[]> {
+    return (
+      await this.groupRepository.findOne({
+        where: { id: groupID },
+        relations: ['members'],
+      })
+    )?.members as IUser[];
   }
 }

@@ -15,5 +15,5 @@ export interface IUser {
   gender: string;
   DID: IDID;
   profile: IProfile;
-  userGroups?: Promise<IUserGroup[]>;
+  userGroups?: IUserGroup[];
 }

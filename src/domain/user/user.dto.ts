@@ -43,13 +43,3 @@ export class UserInput {
   @MaxLength(30)
   aadPassword?: string;
 }
-
-export class AuthUserDTO {
-  email: string;
-  userGroups: IUserGroup[];
-
-  constructor(email: string, userGroups: IUserGroup[]) {
-    this.email = email;
-    this.userGroups = userGroups;
-  }
-}
