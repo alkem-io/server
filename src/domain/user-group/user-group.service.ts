@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
 import { Challenge } from '../challenge/challenge.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
@@ -85,11 +85,17 @@ export class UserGroupService {
     return group;
   }
 
-  async getGroupByID(groupID: number): Promise<IUserGroup> {
+  async getGroupByID(
+    groupID: number,
+    options?: FindOneOptions<UserGroup>
+  ): Promise<IUserGroup> {
     //const t1 = performance.now()
-    const group = await this.groupRepository.findOne({
-      where: [{ id: groupID }],
-    });
+    const group = await this.groupRepository.findOne(
+      {
+        id: groupID,
+      },
+      options
+    );
     if (!group) throw new Error(`Unable to find group with ID: ${groupID}`);
     return group;
   }
@@ -98,30 +104,19 @@ export class UserGroupService {
     const user = (await this.userService.getUserByID(userID)) as IUser;
     if (!user) throw new Error(`No user with id ${userID} was found!`);
 
-    // if (!(await !this.groupExists(groupID)))
-    //   throw new Error(`Group with id ${groupID} doesn't exist!`);
+    const group = (await this.getGroupByID(groupID, {
+      relations: ['members'],
+    })) as IUserGroup;
+    if (!group) throw new Error(`No group with id ${groupID} was found!`);
 
-    const userGroup = await this.groupRepository
-      .createQueryBuilder('userGroup')
-      .leftJoinAndSelect('userGroup.members', 'user')
-      .where('userGroup.id = :groupId')
-      .andWhere('user.id = :userId')
-      .setParameters({ userId: `${userID}`, groupId: `${groupID}` })
-      .getOne();
-
-    if (!userGroup)
-      throw new Error(`No user group with id ${groupID} was found!`);
-
-    const members = userGroup?.members;
-    if (!members) throw new Error('No members were found!');
-    if (members.length > 0) {
+    if (group.members?.some(member => member.id === userID)) {
       console.log(
         `User with id ${userID} is already in a group with id ${groupID}`
       );
-      return userGroup;
+      return group;
     }
 
-    return this.addUserToGroup(user, userGroup);
+    return this.addUserToGroup(user, group);
   }
 
   async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
