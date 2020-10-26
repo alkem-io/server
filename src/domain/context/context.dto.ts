@@ -9,10 +9,6 @@ export class ContextInput {
   background?: string;
 
   @Field({ nullable: true })
-  @MaxLength(128)
-  lifecyclePhase?: string;
-
-  @Field({ nullable: true })
   @MaxLength(1024)
   vision?: string;
 

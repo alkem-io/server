@@ -7,7 +7,6 @@ import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
 import { ProfileService } from '../../domain/profile/profile.service';
 import { Reference } from '../../domain/reference/reference.entity';
 import { Context } from '../../domain/context/context.entity';
-import { Tagset } from '../../domain/tagset/tagset.entity';
 import { TagsetService } from '../../domain/tagset/tagset.service';
 import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { UserGroupService } from '../../domain/user-group/user-group.service';
@@ -116,6 +115,7 @@ export class DataManagementService {
       // Challenges
       const energyWeb = await this.createChallenge(
         'Energy Web',
+        'energy-web',
         'Web of energy',
         ['java', 'graphql']
       );
@@ -142,6 +142,7 @@ export class DataManagementService {
 
       const cleanOceans = await this.createChallenge(
         'Clean Oceans',
+        'clean-oceans',
         'Keep our Oceans clean and in balance!',
         ['java', 'linux']
       );
@@ -157,6 +158,7 @@ export class DataManagementService {
 
       const cargoInsurance = await this.createChallenge(
         'Cargo Insurance',
+        'cargo-insurance',
         'In an interconnected world, how to manage risk along the chain?',
         ['logistics', 'eco']
       );
@@ -195,10 +197,12 @@ export class DataManagementService {
 
   async createChallenge(
     name: string,
+    textID: string,
     tagline?: string,
     tags?: string[]
   ): Promise<IChallenge> {
     const challengeInput = new ChallengeInput();
+    challengeInput.textID = textID;
     challengeInput.name = name;
     if (tagline) {
       challengeInput.context = {

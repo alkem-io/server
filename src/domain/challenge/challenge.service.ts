@@ -3,6 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
+import { OpportunityInput } from '../opportunity/opportunity.dto';
+import { Opportunity } from '../opportunity/opportunity.entity';
+import { IOpportunity } from '../opportunity/opportunity.interface';
+import { OpportunityService } from '../opportunity/opportunity.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
@@ -19,6 +23,7 @@ export class ChallengeService {
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
+    private opportunityService: OpportunityService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
   ) {}
@@ -33,8 +38,8 @@ export class ChallengeService {
       challenge.restrictedGroupNames
     );
 
-    if (!challenge.projects) {
-      challenge.projects = [];
+    if (!challenge.opportunities) {
+      challenge.opportunities = [];
     }
     if (!challenge.tagset) {
       challenge.tagset = this.tagsetService.createTagset({});
@@ -76,6 +81,43 @@ export class ChallengeService {
     return group;
   }
 
+  async createOpportunity(
+    challengeID: number,
+    opportunityData: OpportunityInput
+  ): Promise<IOpportunity> {
+    // First find the Challenge
+    console.log(`Adding opportunity to challenge (${challengeID})`);
+    // Try to find the challenge
+    const challenge = await Challenge.findOne(challengeID);
+    if (!challenge) {
+      const msg = `Unable to find challenge with ID: ${challengeID}`;
+      console.log(msg);
+      throw new Error(msg);
+    }
+
+    const opportunities = challenge.opportunities;
+    if (!opportunities)
+      throw new Error(
+        `Challenge without initialised Opportunities encountered ${challengeID}`
+      );
+    const existingOpportunity = opportunities.find(
+      opportunity => opportunity.textID === opportunityData.textID
+    );
+    // check if the opportunity already exists with the textID
+    if (existingOpportunity)
+      throw new Error(
+        `Trying to create an opportunity but one with the given textID already exists: ${opportunityData.textID}`
+      );
+
+    const opportunity = await this.opportunityService.createOpportunity(
+      opportunityData
+    );
+    opportunities.push(opportunity as Opportunity);
+    await this.challengeRepository.save(challenge);
+
+    return opportunity;
+  }
+
   async getChallengeByID(challengeID: number): Promise<IChallenge> {
     const challenge = await this.challengeRepository.findOne({
       where: { id: challengeID },
@@ -86,6 +128,16 @@ export class ChallengeService {
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
+    // Verify that required textID field is present and that it has the right format
+    const textID = challengeData.textID;
+    if (!textID) throw new Error('Required field textID not specified');
+    const expression = /^[a-zA-Z0-9.\-_]+$/;
+    const textIdCheck = expression.test(String(textID).toLowerCase());
+    if (!textIdCheck)
+      throw new Error(
+        `Required field textID provided not in the correct format: ${textID}`
+      );
+
     // reate and initialise a new challenge using the first returned array item
     const challenge = Challenge.create(challengeData);
     await this.initialiseMembers(challenge);
@@ -105,8 +157,8 @@ export class ChallengeService {
       challenge.name = challengeData.name;
     }
 
-    if (challengeData.lifecyclePhase) {
-      challenge.lifecyclePhase = challengeData.lifecyclePhase;
+    if (challengeData.state) {
+      challenge.state = challengeData.state;
     }
 
     if (challengeData.context)

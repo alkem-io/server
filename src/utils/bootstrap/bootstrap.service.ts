@@ -47,16 +47,24 @@ export class BootstrapService {
     };
 
     if (
-      fs.statSync(bootstrapFilePath).isFile() &&
-      fs.existsSync(bootstrapFilePath)
+      bootstrapFilePath &&
+      fs.existsSync(bootstrapFilePath) &&
+      fs.statSync(bootstrapFilePath).isFile()
     ) {
+      console.info(
+        `Authorisation bootstrap: configuration being loaded from '${bootstrapFilePath}'`
+      );
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
       console.info(bootstratDataStr);
       if (!bootstratDataStr) {
-        console.error('No authorisation bootstrap file found!');
+        console.error('Specified authorisation bootstrap file not found!');
         return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
+    } else {
+      console.info(
+        'Authorisation bootstrap: default configuration being loaded'
+      );
     }
 
     const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
