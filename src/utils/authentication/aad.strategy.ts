@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy, AuthGuard } from '@nestjs/passport';
 import { BearerStrategy } from 'passport-azure-ad';
@@ -18,6 +23,7 @@ export class AzureADStrategy
 
   constructor(
     private configService: ConfigService,
+    @Inject(forwardRef(() => UserService))
     private userService: UserService
   ) {
     super({

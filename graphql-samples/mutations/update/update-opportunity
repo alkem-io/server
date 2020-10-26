@@ -1,0 +1,15 @@
+mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
+  updateOpportunity(opportunityData: $opportunityData, ID: $ID) {
+    name,
+    id
+  }
+}
+
+Variables:
+{
+  "ID": 1,
+  "opportunityData":
+  {
+    "name": "AI for good222"
+  }
+}

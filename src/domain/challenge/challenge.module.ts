@@ -7,11 +7,13 @@ import { TagsetModule } from '../tagset/tagset.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Challenge } from './challenge.entity';
 import { UserModule } from '../user/user.module';
+import { OpportunityModule } from '../opportunity/opportunity.module';
 
 @Module({
   imports: [
     ContextModule,
     TagsetModule,
+    OpportunityModule,
     UserGroupModule,
     UserModule,
     TypeOrmModule.forFeature([Challenge]),

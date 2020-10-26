@@ -49,8 +49,8 @@ export class BootstrapService {
 
     if (
       bootstrapFilePath &&
-      fs.statSync(bootstrapFilePath).isFile() &&
-      fs.existsSync(bootstrapFilePath)
+      fs.existsSync(bootstrapFilePath) &&
+      fs.statSync(bootstrapFilePath).isFile()
     ) {
       console.info(
         `Authorisation bootstrap: configuration being loaded from '${bootstrapFilePath}'`
