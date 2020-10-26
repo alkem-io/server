@@ -91,14 +91,20 @@ export class UserGroupService {
     return group;
   }
 
-  async addUser(userID: number, groupID: number): Promise<boolean> {
+  async addUser(userID: number, groupID: number): Promise<IUserGroup> {
     const user = (await this.userService.getUserByID(userID)) as IUser;
     if (!user) throw new Error(`No user with id ${userID} was found!`);
 
-    const userGroup = (await this.groupRepository.findOne({
-      where: { members: { id: userID }, id: groupID },
-      relations: ['members'],
-    })) as IUserGroup;
+    // if (!(await !this.groupExists(groupID)))
+    //   throw new Error(`Group with id ${groupID} doesn't exist!`);
+
+    const userGroup = await this.groupRepository
+      .createQueryBuilder('userGroup')
+      .leftJoinAndSelect('userGroup.members', 'user')
+      .where('userGroup.id = :groupId')
+      .andWhere('user.id = :userId')
+      .setParameters({ userId: `${userID}`, groupId: `${groupID}` })
+      .getOne();
 
     if (!userGroup)
       throw new Error(`No user group with id ${groupID} was found!`);
@@ -109,7 +115,7 @@ export class UserGroupService {
       console.log(
         `User with id ${userID} is already in a group with id ${groupID}`
       );
-      return false;
+      return userGroup;
     }
 
     return this.addUserToGroup(user, userGroup);
@@ -138,7 +144,7 @@ export class UserGroupService {
     else return false;
   }
 
-  async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
+  async addUserToGroup(user: IUser, group: IUserGroup): Promise<IUserGroup> {
     if (!group.members) {
       group.members = [];
     }
@@ -148,7 +154,7 @@ export class UserGroupService {
     group.members.push(user);
     await this.groupRepository.save(group);
     console.info(`User ${user.email} added to group ${group.name}!`);
-    return true;
+    return group;
   }
 
   async removeUser(userID: number, groupID: number): Promise<IUserGroup> {

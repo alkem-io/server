@@ -22,9 +22,9 @@ export class UserGroupResolver {
   async addUserToGroup(
     @Args('userID') userID: number,
     @Args('groupID') groupID: number
-  ): Promise<boolean> {
-    const res = await this.groupService.addUser(userID, groupID);
-    return res;
+  ): Promise<IUserGroup> {
+    const group = await this.groupService.addUser(userID, groupID);
+    return group;
   }
 
   @Roles(
