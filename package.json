@@ -1,8 +1,8 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.2.2",
-  "description": "",
-  "author": "",
+  "version": "0.3.1",
+  "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
+  "author": "Cherrytwist Foundation",
   "private": true,
   "license": "EUPL",
   "main": "src/main.ts",
