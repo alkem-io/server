@@ -1,13 +1,17 @@
 import { graphqlRequest } from './helpers';
 
-export const createUserMutation = async (userName: string) => {
+export const createUserMutation = async (
+  userName: string,
+  userEmail: string
+) => {
   const requestParams = {
     operationName: 'CreateUser',
     query:
-      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name }}',
+      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email}}',
     variables: {
       userData: {
         name: userName,
+        email: userEmail,
       },
     },
   };
@@ -80,6 +84,50 @@ export const removeUserMutation = async (removeUserID: any) => {
     query: 'mutation removeUser($userID: Float!) {removeUser(userID: $userID)}',
     variables: {
       userID: parseFloat(removeUserID),
+    },
+  };
+
+  return await graphqlRequest(requestParams);
+};
+
+export const addUserToGroup = async (userId: any, groupId: string) => {
+  const requestParams = {
+    operationName: 'addUserToGroup',
+    query: `mutation addUserToGroup($userID: Float!, $groupID: Float!) {
+      addUserToGroup(groupID: $groupID, userID: $userID) {
+        name,
+        id,
+        members {
+          id,
+          name
+        }
+      }
+    }`,
+    variables: {
+      userID: parseFloat(userId),
+      groupID: parseFloat(groupId),
+    },
+  };
+
+  return await graphqlRequest(requestParams);
+};
+
+export const removeUserFromGroup = async (userId: any, groupId: string) => {
+  const requestParams = {
+    operationName: 'removeUserFromGroup',
+    query: `mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {
+      removeUserFromGroup(groupID: $groupID, userID: $userID) {
+        name,
+        id,
+        members {
+          id,
+          name
+        }
+      }
+    }`,
+    variables: {
+      userID: parseFloat(userId),
+      groupID: parseFloat(groupId),
     },
   };
 

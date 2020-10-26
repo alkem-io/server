@@ -1,7 +1,10 @@
+import { createGroupMutation } from './helpers/group';
 import { graphqlRequest } from './helpers/helpers';
 import {
+  addUserToGroup,
   createUserDetailsMutation,
   createUserMutation,
+  removeUserFromGroup,
   removeUserMutation,
   updateUserMutation,
 } from './helpers/user';
@@ -10,6 +13,7 @@ let userName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
+let groupName = '';
 
 let userNameAfterUpdate = '';
 let phoneAfterUpdate = '';
@@ -28,7 +32,7 @@ describe('Create User', () => {
 
   test('should create a user', async () => {
     // Act
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, userEmail);
     userId = response.body.data.createUser.id;
 
     // Assert
@@ -38,12 +42,16 @@ describe('Create User', () => {
 
   test.skip('should throw error - same user is created twice', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, userEmail);
     userId = response.body.data.createUser.id;
-
+    console.log('userid1: ' + userId);
+    console.log(response.body);
     // Act
-    const responseSecondTime = await createUserMutation(userName);
-    userId = responseSecondTime.body.data.createUser.id;
+    const responseSecondTime = await createUserMutation(userName, userEmail);
+    const userId2 = responseSecondTime.body.data.createUser.id;
+    console.log(responseSecondTime.body);
+
+    console.log('userid2: ' + userId2);
 
     // Assert
     expect(responseSecondTime.status).toBe(200);
@@ -52,7 +60,7 @@ describe('Create User', () => {
 
   test('should query created user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, userEmail);
     userId = response.body.data.createUser.id;
 
     // Act
@@ -188,6 +196,7 @@ describe('Create User', () => {
         userData: {
           name:
             'very loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong name',
+          email: userEmail,
         },
       },
     };
@@ -204,7 +213,7 @@ describe('Create User', () => {
   // Confirm the behaviour!!!!!
   test.skip('should throw error - create user without name', async () => {
     // Act
-    const response = await createUserMutation('');
+    const response = await createUserMutation('', userEmail);
     userId = response.body.data.createUser.id;
 
     // Assert
@@ -212,7 +221,7 @@ describe('Create User', () => {
     expect(response.text).toContain('Could not create user with without name');
   });
 
-  test.skip('should throw error - create user with invalid email', async () => {
+  test('should throw error - create user with invalid email', async () => {
     const requestParams = {
       operationName: 'CreateUser',
       query:
@@ -226,12 +235,12 @@ describe('Create User', () => {
     };
 
     const responseQuery = await graphqlRequest(requestParams);
-    userId = responseQuery.body.data.createUser.id;
+    // userId = responseQuery.body.data.createUser.id;
 
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'Could not create user with invalid email'
+      'Valid email address required to create a user: testEmail'
     );
   });
 });
@@ -239,7 +248,7 @@ describe('Create User', () => {
 describe('Remove user', () => {
   test('should remove created user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, userEmail);
     userId = response.body.data.createUser.id;
 
     // Act
@@ -252,7 +261,7 @@ describe('Remove user', () => {
 
   test('should receive a message for removing already removed user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, userEmail);
     userId = response.body.data.createUser.id;
     await removeUserMutation(userId);
 
@@ -279,7 +288,7 @@ describe('Remove user', () => {
 
   test('should not get result for quering removed user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, userEmail);
     userId = response.body.data.createUser.id;
     await removeUserMutation(userId);
 
@@ -306,6 +315,11 @@ describe('Update user', () => {
     phoneAfterUpdate = 'testUserAfterUpdate-Phone' + Math.random().toString();
     emailAfterUpdate = 'testUserAfterUpdate-Email' + Math.random().toString();
   });
+
+  afterEach(async () => {
+    await removeUserMutation(userId);
+  });
+
   test('should update user "name" only', async () => {
     // Arrange
     const responseCreateUser = await createUserDetailsMutation(
@@ -459,6 +473,170 @@ describe('Update user', () => {
           phone: userPhone,
         }),
       ])
+    );
+  });
+});
+
+describe('Users and Groups', () => {
+  beforeEach(() => {
+    userNameAfterUpdate = 'testUserAfterUpdate-Name' + Math.random().toString();
+    groupName = 'groupName ' + Math.random().toString();
+  });
+
+  afterEach(async () => {
+    await removeUserMutation(userId);
+  });
+
+  test('should add "user" to "group"', async () => {
+    // Arrange
+    const responseCreate = await createGroupMutation(groupName);
+    const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
+
+    const responseCreateUser = await createUserDetailsMutation(
+      userName,
+      userPhone,
+      userEmail
+    );
+    userId = responseCreateUser.body.data.createUser.id;
+
+    // Act
+    const responseAddUserToGroup = await addUserToGroup(userId, groupId);
+
+    // Assert
+    expect(responseAddUserToGroup.status).toBe(200);
+    expect(responseAddUserToGroup.body.data.addUserToGroup.id).toEqual(groupId);
+    expect(responseAddUserToGroup.body.data.addUserToGroup.members).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: userId })])
+    );
+  });
+
+  test.skip('should throw error whem add same "user", twice to same "group"', async () => {
+    // Arrange
+    const responseCreate = await createGroupMutation(groupName);
+    const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
+
+    const responseCreateUser = await createUserDetailsMutation(
+      userName,
+      userPhone,
+      userEmail
+    );
+    userId = responseCreateUser.body.data.createUser.id;
+
+    // Act
+    await addUserToGroup(userId, groupId);
+    const responseAddUserToGroup = await addUserToGroup(userId, groupId);
+
+    // Assert
+    expect(responseAddUserToGroup.status).toBe(200);
+    expect(responseAddUserToGroup.text).toContain(
+      `User ${userEmail} already exists in group ${groupName}!`
+    );
+  });
+
+  test('should add same "user" to 2 different "groups"', async () => {
+    // Arrange
+    const testGroupOne = 'testGroup1';
+    const testGroupTwo = 'testGroup2';
+
+    const responseCreateGroupOne = await createGroupMutation(testGroupOne);
+    const groupIdOne =
+      responseCreateGroupOne.body.data.createGroupOnEcoverse.id;
+
+    const responseCreateGroupTwo = await createGroupMutation(testGroupTwo);
+    const groupIdTwo =
+      responseCreateGroupTwo.body.data.createGroupOnEcoverse.id;
+
+    const responseCreateUser = await createUserDetailsMutation(
+      userName,
+      userPhone,
+      userEmail
+    );
+    userId = responseCreateUser.body.data.createUser.id;
+
+    // Act
+    const responseAddUserToGroupOne = await addUserToGroup(userId, groupIdOne);
+
+    const responseAddUserToGroupTwo = await addUserToGroup(userId, groupIdTwo);
+
+    // Assert
+    expect(responseAddUserToGroupOne.status).toBe(200);
+    expect(responseAddUserToGroupOne.body.data.addUserToGroup.members).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: userId })])
+    );
+
+    expect(responseAddUserToGroupTwo.status).toBe(200);
+    expect(responseAddUserToGroupTwo.body.data.addUserToGroup.members).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: userId })])
+    );
+  });
+
+  test('should remove "user" from a "group"', async () => {
+    // Arrange
+    const responseCreate = await createGroupMutation(groupName);
+    const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
+
+    const responseCreateUser = await createUserDetailsMutation(
+      userName,
+      userPhone,
+      userEmail
+    );
+    userId = responseCreateUser.body.data.createUser.id;
+
+    await addUserToGroup(userId, groupId);
+
+    // Act
+    const responseRemoveUserFromGroup = await removeUserFromGroup(
+      userId,
+      groupId
+    );
+
+    // Assert
+    expect(responseRemoveUserFromGroup.status).toBe(200);
+    expect(
+      responseRemoveUserFromGroup.body.data.removeUserFromGroup.id
+    ).toEqual(groupId);
+    expect(
+      responseRemoveUserFromGroup.body.data.removeUserFromGroup.members
+    ).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: userId })])
+    );
+  });
+
+  test('should remove/delete a "user" after added in a "group"', async () => {
+    // Arrange
+    const responseCreate = await createGroupMutation(groupName);
+    const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
+
+    const responseCreateUser = await createUserDetailsMutation(
+      userName,
+      userPhone,
+      userEmail
+    );
+    userId = responseCreateUser.body.data.createUser.id;
+
+    await addUserToGroup(userId, groupId);
+
+    // Act
+    const responseRemoveUser = await removeUserMutation(userId);
+
+    const responseQueryGroups = await graphqlRequest({
+      query: `{
+        groups{
+          name,
+          id,
+          members{
+            name,
+            id
+          }
+        }
+      }`,
+    });
+
+    // Assert
+    expect(responseRemoveUser.status).toBe(200);
+    expect(responseRemoveUser.body.data.removeUser).toBe(true);
+    expect(responseQueryGroups.body.data.groups).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: userId })])
     );
   });
 });
