@@ -5,7 +5,7 @@ export interface IProject {
   id: number;
   name: string;
   description?: string;
-  lifecyclePhase?: string;
+  state: string;
   tagset?: ITagset;
   agreements?: IAgreement[];
 }

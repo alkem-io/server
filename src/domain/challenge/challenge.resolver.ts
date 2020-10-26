@@ -12,6 +12,8 @@ import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
+import { OpportunityInput } from '../opportunity/opportunity.dto';
+import { Opportunity } from '../opportunity/opportunity.entity';
 
 @Resolver()
 export class ChallengeResolver {
@@ -34,6 +36,27 @@ export class ChallengeResolver {
     const group = await this.challengeService.createGroup(
       challengeID,
       groupName
+    );
+    return group;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Opportunity, {
+    description:
+      'Creates a new Opportunity for the challenge with the given id',
+  })
+  async createOpportunityOnChallenge(
+    @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
+    @Args({ name: 'opportunityData', type: () => OpportunityInput })
+    opportunityData: OpportunityInput
+  ): Promise<IUserGroup> {
+    const group = await this.challengeService.createOpportunity(
+      challengeID,
+      opportunityData
     );
     return group;
   }
