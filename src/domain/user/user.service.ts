@@ -79,10 +79,7 @@ export class UserService {
     return user;
   }
 
-  async userExists(
-    email: string | undefined,
-    id: number | undefined
-  ): Promise<boolean> {
+  async userExists(email?: string, id?: number): Promise<boolean> {
     if (email) {
       if (await this.getUserByEmail(email)) return true;
       else return false;
@@ -136,7 +133,10 @@ export class UserService {
     return memberOf;
   }
 
-  async createUser(userData: UserInput): Promise<IUser> {
+  async createUser(
+    userData: UserInput,
+    validateExistingUser = true
+  ): Promise<IUser> {
     // Check if a valid email address was given
     const newUserEmail = userData.email;
     // Validate that the user has some key fields et
@@ -146,11 +146,13 @@ export class UserService {
       );
 
     // Check if a user with the given email already exists
-    const existingUser = await this.getUserByEmail(newUserEmail);
-    if (existingUser)
-      throw new Error(
-        `A user with the provided email address: ${newUserEmail} already exists!`
-      );
+    if (validateExistingUser) {
+      const existingUser = await this.getUserByEmail(newUserEmail);
+      if (existingUser)
+        throw new Error(
+          `A user with the provided email address: ${newUserEmail} already exists!`
+        );
+    }
 
     // Ok to create a new user + save
     const user = User.create(userData);

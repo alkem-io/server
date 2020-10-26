@@ -292,19 +292,18 @@ export class EcoverseService {
 
   // Create the user and add the user into the members group
   async createUser(userData: UserInput): Promise<IUser> {
-    const ctUserExists = await this.userService.userExists(
-      userData.email,
-      undefined
-    );
+    let ctUser = (await this.userService.getUserByEmail(
+      userData.email
+    )) as IUser;
     let accountExists = true;
     if (this.accountService.accountUsageEnabled()) {
       accountExists = await this.accountService.accountExists(userData.email);
     }
 
-    if (ctUserExists) {
+    if (ctUser) {
       if (accountExists) {
         console.info(`User ${userData.email} already exists!`);
-        return (await this.userService.getUserByEmail(userData.email)) as IUser;
+        return ctUser;
       } else {
         throw new Error(
           `User ${userData.email} is in an inconsistent state. The user exists in CT database but doesn't have an account`
@@ -312,7 +311,9 @@ export class EcoverseService {
       }
     }
 
-    const user = await this.userService.createUser(userData);
+    ctUser = await this.userService.createUser(userData, false);
+    if (ctUser) throw new Error(`User ${userData.email} could not be created!`);
+
     if (!accountExists) await this.accountService.createAccount(userData);
 
     const ecoverse = await this.getEcoverse({
@@ -323,13 +324,10 @@ export class EcoverseService {
       ecoverse,
       RestrictedGroupNames.Members
     );
-    await this.userGroupService.addUserToGroup(user, membersGroup);
+    await this.userGroupService.addUserToGroup(ctUser, membersGroup);
     await this.ecoverseRepository.save(ecoverse);
 
-    // get the user again as a work around
-    const userNew = await this.userService.getUserWithGroups(user.email);
-    if (!userNew) throw new Error(`Not able to locate user: ${user.email}`);
-    return userNew;
+    return ctUser;
   }
 
   async addAdmin(user: IUser): Promise<boolean> {

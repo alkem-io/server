@@ -149,7 +149,15 @@ export class UserGroupService {
       );
     }
 
-    //toDo vyanakiev - move the check for group membership to all method invokers to avoid multiple SQL calls.
+    for (const existingUser of group.members) {
+      if (user.email === existingUser.email) {
+        console.info(
+          `User ${user.email} already exists in group ${group.name}!`
+        );
+        // Found an existing user
+        return group;
+      }
+    }
 
     group.members.push(user);
     await this.groupRepository.save(group);
