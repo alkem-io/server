@@ -312,7 +312,8 @@ export class EcoverseService {
     }
 
     ctUser = await this.userService.createUser(userData, false);
-    if (ctUser) throw new Error(`User ${userData.email} could not be created!`);
+    if (!ctUser)
+      throw new Error(`User ${userData.email} could not be created!`);
 
     if (!accountExists) await this.accountService.createAccount(userData);
 
@@ -325,7 +326,6 @@ export class EcoverseService {
       RestrictedGroupNames.Members
     );
     await this.userGroupService.addUserToGroup(ctUser, membersGroup);
-    await this.ecoverseRepository.save(ecoverse);
 
     return ctUser;
   }
