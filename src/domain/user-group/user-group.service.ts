@@ -12,6 +12,8 @@ import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
 import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
+import { getConnection } from 'typeorm';
+import { getManager } from 'typeorm';
 
 @Injectable()
 export class UserGroupService {
@@ -100,22 +102,12 @@ export class UserGroupService {
     return group;
   }
 
-  async addUser(userID: number, groupID: number): Promise<IUserGroup> {
+  async addUser(userID: number, groupID: number): Promise<boolean> {
     const user = (await this.userService.getUserByID(userID)) as IUser;
     if (!user) throw new Error(`No user with id ${userID} was found!`);
 
-    const group = (await this.getGroupByID(groupID, {
-      relations: ['members'],
-    })) as IUserGroup;
+    const group = (await this.getGroupByID(groupID)) as IUserGroup;
     if (!group) throw new Error(`No group with id ${groupID} was found!`);
-
-    if (group.members?.some(member => member.id === userID)) {
-      console.log(
-        `User with id ${userID} is already in a group with id ${groupID}`
-      );
-      return group;
-    }
-
     return this.addUserToGroup(user, group);
   }
 
@@ -142,27 +134,31 @@ export class UserGroupService {
     else return false;
   }
 
-  async addUserToGroup(user: IUser, group: IUserGroup): Promise<IUserGroup> {
-    if (!group.members) {
-      throw new Error(
-        `Attempt to add user to a non-initialised group: ${group.name}`
-      );
-    }
+  async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
+    const entityManager = getManager();
+    const rawData = await entityManager.query(
+      `SELECT * from user_group_members where userId=${user.id} and userGroupId=${group.id}`
+    );
 
-    for (const existingUser of group.members) {
-      if (user.email === existingUser.email) {
-        console.info(
-          `User ${user.email} already exists in group ${group.name}!`
-        );
-        // Found an existing user
-        return group;
-      }
+    if (rawData.length > 0) {
+      console.log(`User ${user.email} already exists in group ${group.name}!`);
+      return false;
     }
+    const res = await getConnection()
+      .createQueryBuilder()
+      .insert()
+      .into('user_group_members')
+      .values({
+        userGroupId: group.id,
+        userId: user.id,
+      })
+      .execute();
 
-    group.members.push(user);
-    await this.groupRepository.save(group);
-    console.info(`User ${user.email} added to group ${group.name}!`);
-    return group;
+    //this is a bit hacky
+    if (res.identifiers.length === 0)
+      throw new Error('Unable to add user to groups!');
+
+    return true;
   }
 
   async removeUser(userID: number, groupID: number): Promise<IUserGroup> {
