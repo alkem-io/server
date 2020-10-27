@@ -35,7 +35,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @ManyToMany(
     () => User,
     user => user.userGroups,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   @JoinTable({ name: 'user_group_members' })
   members?: User[];
@@ -47,7 +47,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @ManyToOne(
     () => User,
     user => user.focalPoints,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   focalPoint?: User | null;
 
@@ -61,21 +61,24 @@ export class UserGroup extends BaseEntity implements IUserGroup {
 
   @ManyToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.groups
+    ecoverse => ecoverse.groups,
+    { eager: false }
   )
-  ecoverse?: Promise<Ecoverse>;
+  ecoverse?: Ecoverse;
 
   @ManyToOne(
     () => Organisation,
-    organisation => organisation.groups
+    organisation => organisation.groups,
+    { eager: false }
   )
-  organisation?: Promise<Organisation>;
+  organisation?: Organisation;
 
   @ManyToOne(
     () => Challenge,
-    challenge => challenge.groups
+    challenge => challenge.groups,
+    { eager: false }
   )
-  challenge?: Promise<Challenge>;
+  challenge?: Challenge;
 
   constructor(name: string) {
     super();

@@ -15,6 +15,7 @@ import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
 import fs from 'fs';
 import * as defaultRoles from '../config/authorisation-bootstrap.json';
+import { IUser } from '../../domain/user/user.interface';
 
 @Injectable()
 export class BootstrapService {
@@ -75,8 +76,7 @@ export class BootstrapService {
     else {
       await this.createGroupProfiles(
         RestrictedGroupNames.EcoverseAdmins,
-        ecoverseAdmins,
-        accountsEnabled
+        ecoverseAdmins
       );
     }
     const globalAdmins = bootstrapJson.globalAdmins;
@@ -87,8 +87,7 @@ export class BootstrapService {
     } else {
       await this.createGroupProfiles(
         RestrictedGroupNames.GlobalAdmins,
-        globalAdmins,
-        accountsEnabled
+        globalAdmins
       );
     }
     const communityAdmins = bootstrapJson.communityAdmins;
@@ -99,32 +98,35 @@ export class BootstrapService {
     } else {
       await this.createGroupProfiles(
         RestrictedGroupNames.CommunityAdmins,
-        communityAdmins,
-        accountsEnabled
+        communityAdmins
       );
     }
   }
 
-  async createGroupProfiles(
-    groupName: string,
-    emails: string[],
-    accountsEnabled: boolean
-  ) {
+  async createGroupProfiles(groupName: string, emails: string[]) {
     try {
       for await (const email of emails) {
         const userInput = new UserInput();
         userInput.email = email;
         userInput.name = 'Imported User';
-        let user = await this.userService.getUserByEmail(email);
+        let user = await this.userService.getUserWithGroups(email);
 
-        if (!user && !accountsEnabled)
-          user = await this.userService.createUser(userInput);
+        if (!user) {
+          user = await this.ecoverseService.createUser(userInput);
+          user = await this.userService.getUserWithGroups(email);
+        }
 
-        if (!user)
-          throw new Error(`User with email ${email} doesn't exist in CT DB and couldn't be created.
-          Try setting AUTHENTICATION_ENABLED=false env variable to bootstrap CT accounts!`);
+        //if (!user)
+        //  throw new Error(`User with email ${email} doesn't exist in CT DB and couldn't be created.
+        //  Try setting AUTHENTICATION_ENABLED=false env variable to bootstrap CT accounts!`);
 
-        const groups = (await user.userGroups) as IUserGroup[];
+        if (!user) throw new Error('something');
+
+        const groups = (user as IUser).userGroups;
+        if (!groups)
+          throw new Error(
+            `User ${user.email} isn't initialised properly. The user doesn't belong to any groups!`
+          );
 
         if (!groups.some(({ name }) => groupName === name))
           await this.ecoverseService.addUserToRestrictedGroup(user, groupName);

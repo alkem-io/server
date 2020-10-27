@@ -63,9 +63,10 @@ export class User extends BaseEntity implements IUser {
 
   @ManyToMany(
     () => UserGroup,
-    userGroup => userGroup.members
+    userGroup => userGroup.members,
+    { eager: false }
   )
-  userGroups?: Promise<UserGroup[]>;
+  userGroups?: UserGroup[];
 
   @Field(() => Profile, {
     nullable: true,
@@ -77,7 +78,8 @@ export class User extends BaseEntity implements IUser {
 
   @OneToMany(
     () => UserGroup,
-    userGroup => userGroup.focalPoint
+    userGroup => userGroup.focalPoint,
+    { eager: false }
   )
   focalPoints?: UserGroup[];
 
