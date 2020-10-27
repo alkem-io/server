@@ -4,6 +4,12 @@ node_js:
 cache:
   directories:
       - "node_modules"
+env:
+  - DATABASE_HOST=localhost
+  - MYSQL_DATABASE=cherrytwist
+  - MYSQL_ROOT_PASSWORD=toor
+  - AUTHENTICATION_ENABLED=false
+
 install:
   - npm install
 services:
