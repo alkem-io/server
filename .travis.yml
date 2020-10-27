@@ -7,6 +7,7 @@ before_install:
   - mysql -e 'CREATE DATABASE IF NOT EXISTS cherrytwist;'
 before_script:
   - npm run-script prebuild
+  - npm install
   - npm run-script build
   - echo "USE mysql;\nUPDATE mysql.user SET authentication_string= 'toor' WHERE User = 'root';\nFLUSH PRIVILEGES;\n" | mysql -u root
 script:
