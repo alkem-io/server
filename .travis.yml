@@ -1,0 +1,8 @@
+language: node_js
+node_js:
+  - v12.18.3
+before_script:
+  - npm run-script prebuild
+  - npm run-script build
+script:
+  - npm run-script test:e2e
