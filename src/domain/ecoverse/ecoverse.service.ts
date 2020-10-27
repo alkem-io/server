@@ -292,30 +292,53 @@ export class EcoverseService {
 
   // Create the user and add the user into the members group
   async createUser(userData: UserInput): Promise<IUser> {
+    const user = await this.createUserProfile(userData);
+    if (this.accountService.authenticationEnabled()) {
+      await this.createUserAccount(user.id);
+    }
+    return user;
+  }
+
+  // Create the user and add the user into the members group
+  async createUserAccount(userID: number): Promise<boolean> {
+    if (!this.accountService.accountUsageEnabled()) {
+      throw new Error(
+        'Not able to create accounts while authentication is disabled'
+      );
+    }
+    const ctUser = await this.userService.getUserByID(userID);
+    if (!ctUser) throw new Error(`No user with given id located: ${userID}`);
+
+    const accountExists = await this.accountService.accountExists(ctUser.email);
+
+    if (accountExists) {
+      console.info(`User ${ctUser.email} already exists!`);
+      return false;
+    }
+
+    const userData = new UserInput();
+    userData.name = ctUser.name;
+    userData.firstName = ctUser.firstName;
+    userData.lastName = ctUser.lastName;
+    userData.email = ctUser.email;
+
+    return await this.accountService.createAccount(userData);
+  }
+
+  // Create the user and add the user into the members group
+  async createUserProfile(userData: UserInput): Promise<IUser> {
     let ctUser = (await this.userService.getUserByEmail(
       userData.email
     )) as IUser;
-    let accountExists = true;
-    if (this.accountService.accountUsageEnabled()) {
-      accountExists = await this.accountService.accountExists(userData.email);
-    }
 
     if (ctUser) {
-      if (accountExists) {
-        console.info(`User ${userData.email} already exists!`);
-        return ctUser;
-      } else {
-        throw new Error(
-          `User ${userData.email} is in an inconsistent state. The user exists in CT database but doesn't have an account`
-        );
-      }
+      console.info(`User ${userData.email} already exists!`);
+      return ctUser;
     }
 
     ctUser = await this.userService.createUser(userData, false);
     if (!ctUser)
       throw new Error(`User ${userData.email} could not be created!`);
-
-    if (!accountExists) await this.accountService.createAccount(userData);
 
     const ecoverse = await this.getEcoverse({
       relations: ['groups'],
@@ -327,7 +350,12 @@ export class EcoverseService {
     );
     await this.userGroupService.addUserToGroup(ctUser, membersGroup);
 
-    return ctUser;
+    // Ensure user has groups loaded before returning; todo later
+    const userWithGroups = await this.userService.getUserWithGroups(
+      ctUser.email
+    );
+    if (!userWithGroups) throw new Error('Could not load user just created');
+    return userWithGroups;
   }
 
   async addAdmin(user: IUser): Promise<boolean> {

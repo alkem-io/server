@@ -67,34 +67,4 @@ export class UserResolver {
     const user = await this.userService.getUserByEmail(email);
     return user as IUser;
   }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description: 'Creates a new user profile',
-  })
-  async createUserProfile(
-    @Args('userData') userData: UserInput
-  ): Promise<IUser> {
-    const user = await this.userService.createUser(userData);
-    return user;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description: 'Creates a new user account',
-  })
-  async createUserAccount(
-    @Args('userData') userData: UserInput
-  ): Promise<IUser> {
-    const user = await this.msGraphService.createUser(userData);
-    return user;
-  }
 }

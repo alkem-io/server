@@ -7,7 +7,6 @@ import { IEcoverse } from '../../domain/ecoverse/ecoverse.interface';
 import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
 import { Organisation } from '../../domain/organisation/organisation.entity';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
-import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
@@ -32,14 +31,14 @@ export class BootstrapService {
     try {
       console.info('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
-      const accountsEnabled = (await this.validateAccountManagementSetup()) as boolean;
-      await this.bootstrapProfiles(accountsEnabled);
+      await this.validateAccountManagementSetup();
+      await this.bootstrapProfiles();
     } catch (error) {
       console.log(error);
     }
   }
 
-  async bootstrapProfiles(accountsEnabled: boolean) {
+  async bootstrapProfiles() {
     const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
       ?.authorisationBootstrapPath as string;
 
@@ -112,15 +111,10 @@ export class BootstrapService {
         let user = await this.userService.getUserWithGroups(email);
 
         if (!user) {
-          user = await this.ecoverseService.createUser(userInput);
-          user = await this.userService.getUserWithGroups(email);
+          user = await this.ecoverseService.createUserProfile(userInput);
         }
 
-        //if (!user)
-        //  throw new Error(`User with email ${email} doesn't exist in CT DB and couldn't be created.
-        //  Try setting AUTHENTICATION_ENABLED=false env variable to bootstrap CT accounts!`);
-
-        if (!user) throw new Error('something');
+        if (!user) throw new Error('Unable to create group profiles');
 
         const groups = (user as IUser).userGroups;
         if (!groups)
