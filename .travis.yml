@@ -10,7 +10,6 @@ services:
   - mysql
 before_install:
   - mysql -e 'CREATE DATABASE IF NOT EXISTS cherrytwist;'
-before_script:
-  - echo "USE mysql;\nALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'toor';\nFLUSH PRIVILEGES;\n" | mysql -u root
+  - mysql -e 'ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'toor';'
 script:
   - npm run-script test:e2e
