@@ -1,8 +1,13 @@
 language: node_js
 node_js:
   - v12.18.3
+services:
+  - mysql
+before_install:
+  - mysql -e 'CREATE DATABASE IF NOT EXISTS cherrytwist;'
 before_script:
   - npm run-script prebuild
   - npm run-script build
+  - echo "USE mysql;\nUPDATE user SET password=PASSWORD('toor') WHERE user='root';\nFLUSH PRIVILEGES;\n" | mysql -u root
 script:
   - npm run-script test:e2e
