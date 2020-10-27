@@ -1,21 +1,60 @@
-import { graphqlRequest } from './helpers/helpers';
-import { createUserMutation, removeUserMutation } from './helpers/user';
+import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import {
+  createUserMutation,
+  getUsers,
+  removeUserMutation,
+} from './user.request.params';
+import { AppModule } from '../../src/app.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { GraphQLModule } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
+import { UserModule } from '../../src/domain/user/user.module';
+import { IDatabaseConfig } from '../../src/interfaces/database.config.interface';
+import aadConfig from '../../src/utils/config/aad.config';
+import databaseConfig from '../../src/utils/config/database.config';
+import msGraphConfig from '../../src/utils/config/ms-graph.config';
+import serviceConfig from '../../src/utils/config/service.config';
+import { graphqlRequest } from '../utils/graphql.request';
+import '../utils/array.matcher';
+import { TestDataService } from '../../src/utils/data-management/test-data.service';
+import { DataManagementModule } from '../../src/utils/data-management/data-management.module';
 
 let userName = '';
 let userId = '';
+let testDataService: TestDataService;
 
 beforeEach(() => {
   userName = 'test' + Math.random().toString();
 });
+let app: INestApplication;
+
+beforeAll(async () => {
+  const testModule: TestingModule = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
+
+  app = testModule.createNestApplication();
+  await app.init();
+  testDataService = testModule.get(TestDataService);
+
+  await testDataService.initUsers();
+});
+
+afterAll(async () => {
+  await testDataService.teardownUsers();
+  await app.close();
+});
 
 describe('Create User', () => {
   afterEach(async () => {
-    await removeUserMutation(userId);
+    await removeUserMutation(userId, app);
   });
 
   test('should create a user', async () => {
     // Act
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, app);
     userId = response.body.data.createUser.id;
 
     // Assert
@@ -25,17 +64,17 @@ describe('Create User', () => {
 
   test('should query created user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, app);
     userId = response.body.data.createUser.id;
 
     // Act
     const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") { 
-        name 
-        id 
-      }}`,
+      query: `{user(ID: "${userId}") {
+          name
+          id
+        }}`,
     };
-    const responseQuery = await graphqlRequest(requestParamsQueryUser);
+    const responseQuery = await graphqlRequest(requestParamsQueryUser, app);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -47,26 +86,26 @@ describe('Create User', () => {
     const requestParams = {
       operationName: 'CreateUser',
       query: `mutation CreateUser($userData: UserInput!) {
-        createUser(userData: $userData) {
-          id
-          name
-          firstName
-          lastName
-          email
-          phone
-          city
-          country
-          gender
-          profile {
-            references {
-              name
+          createUser(userData: $userData) {
+            id
+            name
+            firstName
+            lastName
+            email
+            phone
+            city
+            country
+            gender
+            profile {
+              references {
+                name
+              }
+            }
+            memberof {
+              email
             }
           }
-          memberof {
-            email
-          }
-        }
-      }`,
+        }`,
       variables: {
         userData: {
           name: 'test77',
@@ -81,33 +120,34 @@ describe('Create User', () => {
       },
     };
 
-    const responseQuery = await graphqlRequest(requestParams);
+    const responseQuery = await graphqlRequest(requestParams, app);
     userId = responseQuery.body.data.createUser.id;
     // Act
     const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}")  
-                {
-                  name
-                  firstName
-                  lastName
-                  email
-                  phone
-                  city
-                  country
-                  gender
-                  profile {
-                    references {
-                      name
+      query: `{user(ID: "${userId}")
+                  {
+                    name
+                    firstName
+                    lastName
+                    email
+                    phone
+                    city
+                    country
+                    gender
+                    profile {
+                      references {
+                        name
+                      }
+                    }
+                    memberof {
+                      email
                     }
                   }
-                  memberof {
-                    email
-                  }
-                }
-              }`,
+                }`,
     };
     const responseParamsQueryUser = await graphqlRequest(
-      requestParamsQueryUser
+      requestParamsQueryUser,
+      app
     );
 
     // Assert
@@ -144,7 +184,7 @@ describe('Create User', () => {
     };
 
     // Act
-    const responseQuery = await graphqlRequest(requestParams);
+    const responseQuery = await graphqlRequest(requestParams, app);
 
     // Assert
     expect(responseQuery.status).toBe(400);
@@ -163,44 +203,44 @@ describe('Create User', () => {
       },
     };
 
-    const responseQuery = await graphqlRequest(requestParams);
+    const responseQuery = await graphqlRequest(requestParams, app);
 
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      "ER_DATA_TOO_LONG: Data too long for column 'name' at row 1"
+      'ER_DATA_TOO_LONG: Data too long for column \'name\' at row 1'
     );
   });
 
   // Confirm the behaviour!!!!!
   test.skip('should created user without name', async () => {
     // Arrange
-    const response = await createUserMutation('');
+    const response = await createUserMutation('', app);
     userId = response.body.data.createUser.id;
 
     // Act
     const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") { 
-        name 
-        id 
-      }}`,
+      query: `{user(ID: "${userId}") {
+          name
+          id
+        }}`,
     };
-    const responseQuery = await graphqlRequest(requestParamsQueryUser);
+    const responseQuery = await graphqlRequest(requestParamsQueryUser, app);
 
     // Assert
-    //expect(responseQuery.status).toBe(400);
-    //expect(responseQuery.body.data.user.name).toEqual("");
+    expect(responseQuery.status).toBe(400);
+    expect(responseQuery.body.data.user.name).toEqual('');
   });
 });
 
 describe('Remove user', () => {
   test('should remove created user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, app);
     userId = response.body.data.createUser.id;
 
     // Act
-    const responseQuery = await removeUserMutation(userId);
+    const responseQuery = await removeUserMutation(userId, app);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -209,12 +249,12 @@ describe('Remove user', () => {
 
   test('should receive a message for removing already removed user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
+    const response = await createUserMutation(userName, app);
     userId = response.body.data.createUser.id;
-    await removeUserMutation(userId);
+    await removeUserMutation(userId, app);
 
     // Act
-    const responseQuery = await removeUserMutation(userId);
+    const responseQuery = await removeUserMutation(userId, app);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -225,7 +265,7 @@ describe('Remove user', () => {
 
   test('should receive a message for removing unexisting user', async () => {
     // Act
-    const responseQuery = await removeUserMutation(77777);
+    const responseQuery = await removeUserMutation(77777, app);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -235,4 +275,18 @@ describe('Remove user', () => {
   });
 });
 
-describe('Query all users', () => {});
+describe('Query all users', () => {
+  it('should get users', async () => {
+    const response = await getUsers(app);
+    expect(response.status).toBe(200);
+    expect(response.body.data.users).toContainObject({
+      name: 'Bat Georgi',
+    });
+  });
+
+  // test('should get memberships', async () => {
+  //   const response = await getUserMemberships(app);
+
+  //   expect(response.status).toBe(200);
+  // });
+});
