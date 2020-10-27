@@ -6,20 +6,10 @@ import {
   removeUserMutation,
 } from './user.request.params';
 import { AppModule } from '../../src/app.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { GraphQLModule } from '@nestjs/graphql';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { join } from 'path';
-import { UserModule } from '../../src/domain/user/user.module';
-import { IDatabaseConfig } from '../../src/interfaces/database.config.interface';
-import aadConfig from '../../src/utils/config/aad.config';
-import databaseConfig from '../../src/utils/config/database.config';
-import msGraphConfig from '../../src/utils/config/ms-graph.config';
-import serviceConfig from '../../src/utils/config/service.config';
 import { graphqlRequest } from '../utils/graphql.request';
 import '../utils/array.matcher';
 import { TestDataService } from '../../src/utils/data-management/test-data.service';
-import { DataManagementModule } from '../../src/utils/data-management/data-management.module';
+import { DataManagementService } from '../../src/utils/data-management/data-management.service';
 
 let userName = '';
 let userId = '';
@@ -39,11 +29,13 @@ beforeAll(async () => {
   await app.init();
   testDataService = testModule.get(TestDataService);
 
+  await testDataService.initDB();
   await testDataService.initUsers();
 });
 
 afterAll(async () => {
   await testDataService.teardownUsers();
+  await testDataService.teardownDB();
   await app.close();
 });
 
@@ -208,7 +200,7 @@ describe('Create User', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'ER_DATA_TOO_LONG: Data too long for column \'name\' at row 1'
+      "ER_DATA_TOO_LONG: Data too long for column 'name' at row 1"
     );
   });
 
