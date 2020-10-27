@@ -42,6 +42,7 @@ export class MsGraphService {
       displayName: userData.name,
       mailNickname: nickname,
       userPrincipalName: upn,
+      mail: userData.email,
       passwordProfile: {
         forceChangePasswordNextSignIn: true,
         password: userData.aadPassword,
