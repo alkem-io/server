@@ -5,7 +5,7 @@ import { IUserGroup } from '../user-group/user-group.interface';
 export interface IUser {
   id: number;
   name: string;
-  account: string;
+  accountUpn: string;
   firstName: string;
   lastName: string;
   email: string;

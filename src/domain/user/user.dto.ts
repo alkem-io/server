@@ -1,6 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
-import { IUserGroup } from '../user-group/user-group.interface';
 
 @InputType()
 export class UserInput {

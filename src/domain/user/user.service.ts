@@ -167,6 +167,11 @@ export class UserService {
     return user;
   }
 
+  async saveUser(user: IUser): Promise<boolean> {
+    await this.userRepository.save(user);
+    return true;
+  }
+
   async removeUser(user: IUser): Promise<IUser> {
     const result = await this.userRepository.remove(user as User);
     return result;
