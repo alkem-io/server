@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
-import { IUserGroup } from '../user-group/user-group.interface';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
