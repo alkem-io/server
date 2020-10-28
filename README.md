@@ -28,6 +28,7 @@ The technology stack is as follows:
 - docker-compose: for container orchestration
 - passportjs for authentication
 - Azure Active Directory as an Identity Provider
+- Winston and Nest-Winston for logging
 
 ## === Interacting with a Cherrytwist server ===
 ### **Graphql API**
