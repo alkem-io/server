@@ -88,20 +88,6 @@ export class EcoverseResolverMutations {
   )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
-    description:
-      'Creates a new account on the identity provider for the user profile with the given ID',
-  })
-  async createUserAccount(@Args('userID') userID: number): Promise<boolean> {
-    const success = await this.ecoverseService.createUserAccount(userID);
-    return success;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
     description: 'Removes the specified user from the ecoverse',
   })
   async removeUser(@Args('userID') userID: number): Promise<boolean> {

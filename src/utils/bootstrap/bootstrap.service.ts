@@ -108,11 +108,14 @@ export class BootstrapService {
         const userInput = new UserInput();
         userInput.email = email;
         userInput.name = 'Imported User';
-        let user = await this.userService.getUserWithGroups(email);
 
+        // Check the user exists
+        let user = await this.userService.getUserByEmail(email);
         if (!user) {
+          // First create, then ensure groups are loaded - not optimal but only on bootstrap
           user = await this.ecoverseService.createUserProfile(userInput);
         }
+        user = await this.userService.getUserWithGroups(email);
 
         if (!user) throw new Error('Unable to create group profiles');
 
