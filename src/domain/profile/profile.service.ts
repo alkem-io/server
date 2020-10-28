@@ -76,6 +76,15 @@ export class ProfileService {
     return newReference;
   }
 
+  async updateAvatar(profileID: number, avatarUri: string): Promise<boolean> {
+    const profile = (await this.getProfile(profileID)) as Profile;
+    if (!profile) throw new Error(`Profile with id(${profileID}) not found!`);
+
+    profile.avatar = avatarUri;
+    await this.profileRepository.save(profile);
+    return true;
+  }
+
   async getProfile(profileID: number): Promise<IProfile | undefined> {
     return Profile.findOne({ id: profileID });
   }
