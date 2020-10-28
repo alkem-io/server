@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Injectable, ExecutionContext, Inject, Logger } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
@@ -8,6 +8,7 @@ import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
 import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {
@@ -21,7 +22,8 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
 
   constructor(
     private configService: ConfigService,
-    private reflector: Reflector
+    private reflector: Reflector,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {
     super();
   }
@@ -57,7 +59,7 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
     if (err) throw err;
 
     if (!user) {
-      console.error(info);
+      this.logger.error(info);
       throw new AuthenticationError(
         'You are not authorized to access this resource.'
       );
