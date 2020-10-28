@@ -33,6 +33,7 @@ export class BootstrapService {
     try {
       this.logger.verbose('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
+      await this.validateAccountManagementSetup();
       await this.bootstrapProfiles();
     } catch (error) {
       this.logger.error(error, undefined, 'Bootstrap');
@@ -109,18 +110,16 @@ export class BootstrapService {
         const userInput = new UserInput();
         userInput.email = email;
         userInput.name = 'Imported User';
-        let user = await this.userService.getUserWithGroups(email);
 
+        // Check the user exists
+        let user = await this.userService.getUserByEmail(email);
         if (!user) {
-          user = await this.ecoverseService.createUser(userInput);
-          user = await this.userService.getUserWithGroups(email);
+          // First create, then ensure groups are loaded - not optimal but only on bootstrap
+          user = await this.ecoverseService.createUserProfile(userInput);
         }
+        user = await this.userService.getUserWithGroups(email);
 
-        //if (!user)
-        //  throw new Error(`User with email ${email} doesn't exist in CT DB and couldn't be created.
-        //  Try setting AUTHENTICATION_ENABLED=false env variable to bootstrap CT accounts!`);
-
-        if (!user) throw new Error('something');
+        if (!user) throw new Error('Unable to create group profiles');
 
         const groups = (user as IUser).userGroups;
         if (!groups)

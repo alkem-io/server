@@ -54,4 +54,17 @@ export class ProfileResolver {
     );
     return reference;
   }
+
+  @Roles(RestrictedGroupNames.Members, RestrictedGroupNames.CommunityAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Updates the avatar location (i.e. uri) for the profile with given id',
+  })
+  async updateAvatar(
+    @Args('profileID') profileID: number,
+    @Args('uri') avatarUri: string
+  ): Promise<boolean> {
+    return await this.profileService.updateAvatar(profileID, avatarUri);
+  }
 }

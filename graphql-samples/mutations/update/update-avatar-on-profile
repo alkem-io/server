@@ -1,0 +1,9 @@
+mutation updateAvatar($uri: String!, $profileID: Float!) {
+  updateAvatar(uri: $uri, profileID: $profileID)
+}
+
+Variables:
+{
+  "profileID": 1,
+  "avatar": "http://someUri"
+}

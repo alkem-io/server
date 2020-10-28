@@ -1,4 +1,4 @@
-import { forwardRef, Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import {
   Args,
   Mutation,
@@ -9,7 +9,6 @@ import {
 } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
-import { MsGraphService } from '../../utils/ms-graph/ms-graph.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { MemberOf } from './memberof.composite';
 import { CurrentUser } from './user.decorator';
@@ -20,11 +19,7 @@ import { UserService } from './user.service';
 
 @Resolver(() => User)
 export class UserResolver {
-  constructor(
-    private userService: UserService,
-    @Inject(forwardRef(() => MsGraphService))
-    private msGraphService: MsGraphService
-  ) {}
+  constructor(private userService: UserService) {}
 
   @ResolveField('memberof', () => MemberOf, {
     nullable: true,
@@ -66,35 +61,5 @@ export class UserResolver {
   async me(@CurrentUser() email: string): Promise<IUser> {
     const user = await this.userService.getUserByEmail(email);
     return user as IUser;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description: 'Creates a new user profile',
-  })
-  async createUserProfile(
-    @Args('userData') userData: UserInput
-  ): Promise<IUser> {
-    const user = await this.userService.createUser(userData);
-    return user;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description: 'Creates a new user account',
-  })
-  async createUserAccount(
-    @Args('userData') userData: UserInput
-  ): Promise<IUser> {
-    const user = await this.msGraphService.createUser(userData);
-    return user;
   }
 }
