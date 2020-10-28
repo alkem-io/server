@@ -5,5 +5,6 @@ export interface IProfile {
   id: number;
   references?: IReference[];
   tagsets?: ITagset[];
+  avatar: string;
   restrictedTagsetNames?: string[];
 }
