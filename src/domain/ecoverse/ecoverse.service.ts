@@ -292,30 +292,32 @@ export class EcoverseService {
 
   // Create the user and add the user into the members group
   async createUser(userData: UserInput): Promise<IUser> {
+    const user = await this.createUserProfile(userData);
+    if (this.accountService.authenticationEnabled()) {
+      const tmpPassword = userData.aadPassword;
+      if (!tmpPassword)
+        throw new Error(
+          `Unable to create account for user (${user.name} as no password provided)`
+        );
+      await this.accountService.createUserAccount(user.id, tmpPassword);
+    }
+    return user;
+  }
+
+  // Create the user and add the user into the members group
+  async createUserProfile(userData: UserInput): Promise<IUser> {
     let ctUser = (await this.userService.getUserByEmail(
       userData.email
     )) as IUser;
-    let accountExists = true;
-    if (this.accountService.accountUsageEnabled()) {
-      accountExists = await this.accountService.accountExists(userData.email);
-    }
 
     if (ctUser) {
-      if (accountExists) {
-        console.info(`User ${userData.email} already exists!`);
-        return ctUser;
-      } else {
-        throw new Error(
-          `User ${userData.email} is in an inconsistent state. The user exists in CT database but doesn't have an account`
-        );
-      }
+      console.info(`User ${userData.email} already exists!`);
+      return ctUser;
     }
 
     ctUser = await this.userService.createUser(userData, false);
     if (!ctUser)
       throw new Error(`User ${userData.email} could not be created!`);
-
-    if (!accountExists) await this.accountService.createAccount(userData);
 
     const ecoverse = await this.getEcoverse({
       relations: ['groups'],

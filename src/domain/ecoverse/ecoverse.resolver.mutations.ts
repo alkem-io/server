@@ -58,10 +58,27 @@ export class EcoverseResolverMutations {
   )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
-    description: 'Creates a new user as a member of the ecoverse',
+    description:
+      'Creates a new user as a member of the ecoverse, including an account if enabled',
   })
   async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
     const user = await this.ecoverseService.createUser(userData);
+    return user;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => User, {
+    description:
+      'Creates a new user as a member of the ecoverse, without an account',
+  })
+  async createUserProfile(
+    @Args('userData') userData: UserInput
+  ): Promise<IUser> {
+    const user = await this.ecoverseService.createUserProfile(userData);
     return user;
   }
 
