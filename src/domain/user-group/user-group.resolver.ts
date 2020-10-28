@@ -15,16 +15,16 @@ export class UserGroupResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @Mutation(() => Boolean, {
     description:
       'Adds the user with the given identifier to the specified user group',
   })
   async addUserToGroup(
     @Args('userID') userID: number,
     @Args('groupID') groupID: number
-  ): Promise<IUserGroup> {
-    const group = await this.groupService.addUser(userID, groupID);
-    return group;
+  ): Promise<boolean> {
+    const res = await this.groupService.addUser(userID, groupID);
+    return res;
   }
 
   @Roles(

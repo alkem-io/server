@@ -6,7 +6,6 @@ import { AuthenticationError } from 'apollo-server-core';
 import { ConfigService } from '@nestjs/config';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
-import { AuthUserDTO } from '../../domain/user/user.dto';
 import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
 
@@ -64,10 +63,9 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
       );
     }
 
-    const ctUser = user as AuthUserDTO;
-    if (this.matchRoles(ctUser.userGroups)) return user;
+    if (this.matchRoles(user.userGroups)) return user;
     throw new AuthenticationError(
-      `User '${ctUser.email}' doesn't have any roles in this ecoverse.`
+      `User '${user.email}' doesn't have any roles in this ecoverse.`
     );
   }
 }

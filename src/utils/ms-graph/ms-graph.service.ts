@@ -39,9 +39,12 @@ export class MsGraphService {
 
     const user = {
       accountEnabled: true,
+      givenName: userData.firstName,
+      surname: userData.lastName,
       displayName: userData.name,
       mailNickname: nickname,
       userPrincipalName: upn,
+      mail: userData.email,
       passwordProfile: {
         forceChangePasswordNextSignIn: true,
         password: userData.aadPassword,

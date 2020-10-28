@@ -10,6 +10,7 @@ import { UserModule } from '../../domain/user/user.module';
 import { BootstrapModule } from '../bootstrap/bootstrap.module';
 import { DataManagementController } from './data-management.controller';
 import { DataManagementService } from './data-management.service';
+import { TestDataService } from './test-data.service';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { DataManagementService } from './data-management.service';
     TypeOrmModule.forFeature([Ecoverse]),
     UserGroupModule,
   ],
-  providers: [DataManagementService],
+  providers: [DataManagementService, TestDataService],
   controllers: [DataManagementController],
 })
 export class DataManagementModule {}

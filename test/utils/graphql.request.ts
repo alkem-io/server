@@ -1,4 +1,5 @@
-import  request from 'supertest';
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
 
 // ToDo
 // Add support for connection to the DB and drop/populate DB
@@ -6,12 +7,12 @@ import  request from 'supertest';
 // Add configurations file for environment against which, the tests are going to be run
 // Add support for authentication
 
-const baseUrl = 'http://localhost:4000/graphql';
-
-export const graphqlRequest = (requestParams: any) => {
-  return request(baseUrl)
-    .post('/')
+export const graphqlRequest = async (
+  requestParams: any,
+  app: INestApplication
+) => {
+  return request(app.getHttpServer())
+    .post('/graphql')
     .send({ ...requestParams })
     .set('Accept', 'application/json');
 };
-

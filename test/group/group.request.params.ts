@@ -1,6 +1,10 @@
-import { graphqlRequest } from './helpers';
+import { INestApplication } from '@nestjs/common';
+import { graphqlRequest } from '../utils/graphql.request';
 
-export const createGroupMutation = async (testGroup: string) => {
+export const createGroupMutation = async (
+  testGroup: string,
+  app: INestApplication
+) => {
   const requestParams = {
     operationName: 'CreateGroupOnEcoverse',
     query: `mutation CreateGroupOnEcoverse($groupName: String!) {
@@ -14,5 +18,5 @@ export const createGroupMutation = async (testGroup: string) => {
     },
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequest(requestParams, app);
 };
