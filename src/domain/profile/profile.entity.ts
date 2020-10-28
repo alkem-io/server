@@ -1,5 +1,11 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { BaseEntity, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Reference } from '../reference/reference.entity';
 import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 import { IProfile } from './profile.interface';
@@ -32,6 +38,14 @@ export class Profile extends BaseEntity implements IProfile {
     { eager: true, cascade: true }
   )
   tagsets?: Tagset[];
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'A URI that points to the location of an avatar, either on a shared location or a gravatar',
+  })
+  @Column('varchar', { length: 250 })
+  avatar = '';
 
   restrictedTagsetNames?: string[];
 

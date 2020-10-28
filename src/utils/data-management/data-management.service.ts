@@ -180,7 +180,6 @@ export class DataManagementService {
     return msgs.toString();
   }
 
-  // Note: this goes to the user service as opposed to ecoverse service to avoid dealing with accounts
   async createUser(
     name: string,
     email: string,
@@ -190,7 +189,7 @@ export class DataManagementService {
     userInput.name = name;
     userInput.email = email;
 
-    const user = await this.userService.createUser(userInput);
+    const user = await this.ecoverseService.createUserProfile(userInput);
 
     await this.userGroupService.addUserToGroup(user, membersGroup);
 
