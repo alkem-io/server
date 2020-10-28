@@ -28,7 +28,7 @@ export class User extends BaseEntity implements IUser {
 
   @Field(() => String, {
     description:
-      'The unique identifier for this account associated with this user profile',
+      'The unique personal identifier (upn) for the account associated with this user profile',
   })
   @Column()
   accountUpn: string = '';
