@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Logger } from 'msal';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
@@ -15,7 +17,8 @@ export class OrganisationService {
     private userGroupService: UserGroupService,
     private tagsetService: TagsetService,
     @InjectRepository(Organisation)
-    private organisationRepository: Repository<Organisation>
+    private organisationRepository: Repository<Organisation>,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {}
 
   async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
@@ -47,12 +50,14 @@ export class OrganisationService {
 
   async createGroup(orgID: number, groupName: string): Promise<IUserGroup> {
     // First find the Challenge
-    console.log(`Adding userGroup (${groupName}) to organisation (${orgID})`);
+    this.logger.verbose(
+      `Adding userGroup (${groupName}) to organisation (${orgID})`
+    );
     // Try to find the challenge
     const organisation = await Organisation.findOne(orgID);
     if (!organisation) {
       const msg = `Unable to find organisation with ID: ${orgID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
     const group = await this.userGroupService.addGroupWithName(

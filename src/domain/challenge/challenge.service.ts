@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
@@ -25,7 +26,8 @@ export class ChallengeService {
     private tagsetService: TagsetService,
     private opportunityService: OpportunityService,
     @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>
+    private challengeRepository: Repository<Challenge>,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {}
 
   async initialiseMembers(challenge: IChallenge): Promise<IChallenge> {
@@ -59,7 +61,7 @@ export class ChallengeService {
     groupName: string
   ): Promise<IUserGroup> {
     // First find the Challenge
-    console.log(
+    this.logger.verbose(
       `Adding userGroup (${groupName}) to challenge (${challengeID})`
     );
     // Check a valid ID was passed
@@ -69,7 +71,7 @@ export class ChallengeService {
     const challenge = await Challenge.findOne(challengeID);
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
     const group = await this.userGroupService.addGroupWithName(
@@ -86,12 +88,12 @@ export class ChallengeService {
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
     // First find the Challenge
-    console.log(`Adding opportunity to challenge (${challengeID})`);
+    this.logger.verbose(`Adding opportunity to challenge (${challengeID})`);
     // Try to find the challenge
     const challenge = await Challenge.findOne(challengeID);
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
 
@@ -180,14 +182,14 @@ export class ChallengeService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
 
     const challenge = (await this.getChallengeByID(challengeID)) as Challenge;
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
 
