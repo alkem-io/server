@@ -313,7 +313,7 @@ export class EcoverseService {
     )) as IUser;
 
     if (ctUser) {
-      this.logger.verbose(`User ${userData.email} already exists!`);
+      this.logger.warn(`User ${userData.email} already exists!`);
       return ctUser;
     }
 
