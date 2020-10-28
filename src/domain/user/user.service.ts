@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
@@ -14,7 +15,8 @@ export class UserService {
   constructor(
     private profileService: ProfileService,
     @InjectRepository(User)
-    private userRepository: Repository<User>
+    private userRepository: Repository<User>,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {}
 
   // Helper method to ensure all members that are arrays are initialised properly.
@@ -68,12 +70,14 @@ export class UserService {
     );
 
     if (!user) {
-      console.log(`No user with email ${email} exists!`);
+      this.logger.verbose(`No user with email ${email} exists!`);
       return undefined;
     }
 
     if (!user.userGroups) {
-      console.log(`User with email ${email} doesn't belong to any groups!`);
+      this.logger.verbose(
+        `User with email ${email} doesn't belong to any groups!`
+      );
     }
 
     return user;
@@ -159,7 +163,7 @@ export class UserService {
     await this.initialiseMembers(user);
     await this.userRepository.save(user);
 
-    console.info(`User ${userData.email} was created!`);
+    this.logger.verbose(`User ${userData.email} was created!`);
 
     return user;
   }

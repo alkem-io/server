@@ -8,7 +8,14 @@ export default registerAs('aad', () => ({
   issuer: `https://login.microsoftonline.com/${process.env.AAD_TENANT}/v2.0`,
   audience: process.env.AAD_CLIENT || '',
   allowMultiAudiencesInToken: false,
-  loggingLevel: 'info',
+  loggingLevel: process.env.AAD_LOGGING_LEVEL || AAD_LOGGING_LEVEL.Error,
   scope: ['Cherrytwist-GraphQL'],
-  loggingNoPII: false,
+  loggingNoPII: process.env.AAD_LOGGING_NO_PII || true,
 }));
+
+export enum AAD_LOGGING_LEVEL {
+  Error = 'Error',
+  Warning = 'Warning',
+  Info = 'Info',
+  Verbose = 'Verbose',
+}

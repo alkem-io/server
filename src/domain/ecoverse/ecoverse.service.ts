@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IContext } from '../context/context.interface';
 import { IOrganisation } from '../organisation/organisation.interface';
@@ -25,6 +25,7 @@ import { OrganisationService } from '../organisation/organisation.service';
 import { AccountService } from '../../utils/account/account.service';
 import { Context } from '../context/context.entity';
 import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class EcoverseService {
@@ -37,7 +38,8 @@ export class EcoverseService {
     private tagsetService: TagsetService,
     private accountService: AccountService,
     @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>
+    private ecoverseRepository: Repository<Ecoverse>,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {}
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
@@ -206,7 +208,7 @@ export class EcoverseService {
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
-    console.log(`Adding userGroup (${groupName}) to ecoverse`);
+    this.logger.verbose(`Adding userGroup (${groupName}) to ecoverse`);
 
     const ecoverse = (await this.getEcoverse({
       join: {
@@ -253,7 +255,7 @@ export class EcoverseService {
       await this.ecoverseRepository.save(ecoverse);
     } else {
       // load the whole challenge
-      console.log('Creating Challenge: Challenge already exists!');
+      this.logger.verbose('Creating Challenge: Challenge already exists!');
       challenge = await this.challengeService.getChallengeByID(challenge.id);
     }
     return challenge;
@@ -302,7 +304,7 @@ export class EcoverseService {
 
     if (ctUser) {
       if (accountExists) {
-        console.info(`User ${userData.email} already exists!`);
+        this.logger.verbose(`User ${userData.email} already exists!`);
         return ctUser;
       } else {
         throw new Error(

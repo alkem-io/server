@@ -27,6 +27,8 @@ import serviceConfig from './utils/config/service.config';
 import { BootstrapModule } from './utils/bootstrap/bootstrap.module';
 import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
 import msGraphConfig from './utils/config/ms-graph.config';
+import { WinstonModule } from 'nest-winston';
+import { WinstonConfigService } from './utils/config/winston.config';
 
 @Module({
   imports: [
@@ -72,6 +74,9 @@ import msGraphConfig from './utils/config/ms-graph.config';
     DataManagementModule,
     BootstrapModule,
     MsGraphModule,
+    WinstonModule.forRootAsync({
+      useClass: WinstonConfigService,
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],

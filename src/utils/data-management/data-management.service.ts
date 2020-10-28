@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChallengeInput } from '../../domain/challenge/challenge.dto';
 import { IChallenge } from '../../domain/challenge/challenge.interface';
@@ -15,6 +15,7 @@ import { IUser } from '../../domain/user/user.interface';
 import { UserService } from '../../domain/user/user.service';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class DataManagementService {
@@ -27,7 +28,8 @@ export class DataManagementService {
     private tagsetService: TagsetService,
     private connection: Connection,
     @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>
+    private ecoverseRepository: Repository<Ecoverse>,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {}
 
   async reset_to_empty_ecoverse(): Promise<string> {
@@ -50,7 +52,7 @@ export class DataManagementService {
 
   addLogMsg(msgs: string[], msg: string) {
     msgs.push(msg);
-    console.log(msg);
+    this.logger.verbose(msg);
   }
 
   async load_sample_data(): Promise<string> {
@@ -230,7 +232,7 @@ export class DataManagementService {
       await this.connection.synchronize();
       this.addLogMsg(msgs, '.....dropped. Completed successfully.');
     } catch (error) {
-      console.log(error.message);
+      this.logger.verbose(error.message);
     }
     return msgs.toString();
   }
@@ -242,7 +244,7 @@ export class DataManagementService {
       ecoverseName = ecoverse.name;
     } catch (e) {
       // ecoverse not yet initialised so just skip the name
-      console.log(e);
+      this.logger.verbose(e);
     }
     const content = `<!DOCTYPE html>
     <html>
