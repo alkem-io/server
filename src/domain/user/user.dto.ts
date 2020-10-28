@@ -3,6 +3,8 @@ import { MaxLength } from 'class-validator';
 
 @InputType()
 export class UserInput {
+  accountUpn!: string;
+
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;

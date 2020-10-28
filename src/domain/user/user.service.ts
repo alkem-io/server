@@ -82,6 +82,30 @@ export class UserService {
     return user;
   }
 
+  async getUserForAccountWithGroups(
+    accountUpn: string
+  ): Promise<IUser | undefined> {
+    const user = await this.userRepository.findOne(
+      { accountUpn: accountUpn },
+      { relations: ['userGroups'] }
+    );
+
+    if (!user) {
+      this.logger.verbose(
+        `No user with provided account UPN ${accountUpn} exists!`
+      );
+      return undefined;
+    }
+
+    if (!user.userGroups) {
+      this.logger.verbose(
+        `User with provided account UPN ${accountUpn} doesn't belong to any groups!`
+      );
+    }
+
+    return user;
+  }
+
   async userExists(email?: string, id?: number): Promise<boolean> {
     if (email) {
       if (await this.getUserByEmail(email)) return true;
