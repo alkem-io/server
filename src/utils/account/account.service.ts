@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
@@ -10,7 +11,8 @@ export class AccountService {
   constructor(
     private configService: ConfigService,
     private userService: UserService,
-    private msGraphService: MsGraphService
+    private msGraphService: MsGraphService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {}
 
   authenticationEnabled(): boolean {
@@ -49,7 +51,7 @@ export class AccountService {
     const accountExists = await this.accountExists(ctUser.email);
 
     if (accountExists) {
-      console.info(`User ${ctUser.email} already exists!`);
+      this.logger.verbose(`User ${ctUser.email} already exists!`);
       return false;
     }
 

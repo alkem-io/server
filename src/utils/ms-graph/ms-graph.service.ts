@@ -1,15 +1,17 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
 import { UserInput } from '../../domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class MsGraphService {
   constructor(
     @Inject(forwardRef(() => AzureADStrategy))
-    private azureAdStrategy: AzureADStrategy
+    private azureAdStrategy: AzureADStrategy,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {}
 
   async callResourceAPI(accessToken: string, resourceURI: string) {
@@ -74,7 +76,7 @@ export class MsGraphService {
     try {
       res = await client.api(`/users/${upn}`).get();
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
     }
     return res;
   }
@@ -87,7 +89,7 @@ export class MsGraphService {
     try {
       user = await this.getUser(client, email);
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
     }
 
     if (user) return true;
@@ -100,7 +102,7 @@ export class MsGraphService {
       const org = await this.getOrganisation(client);
       tenantName = org.value[0]['verifiedDomains'][0]['name'];
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
     }
 
     return tenantName;
@@ -116,15 +118,15 @@ export class MsGraphService {
       }
 
       const tenantName = await this.getTenantName(client);
-      console.info(`Tenant name: ${tenantName}`);
+      this.logger.verbose(`Tenant name: ${tenantName}`);
       const mailNickname = await this.getMailNickname(email);
-      console.info(`Mail nickname: ${mailNickname}`);
+      this.logger.verbose(`Mail nickname: ${mailNickname}`);
       const upn = `${mailNickname}@${tenantName}`;
-      console.info(`Upn: ${upn}`);
+      this.logger.verbose(`Upn: ${upn}`);
 
       return upn;
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
     }
     return '';
   }

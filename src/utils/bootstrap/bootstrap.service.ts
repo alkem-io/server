@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
@@ -15,6 +15,7 @@ import { AccountService } from '../account/account.service';
 import fs from 'fs';
 import * as defaultRoles from '../config/authorisation-bootstrap.json';
 import { IUser } from '../../domain/user/user.interface';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class BootstrapService {
@@ -24,17 +25,18 @@ export class BootstrapService {
     private userService: UserService,
     private configService: ConfigService,
     @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>
+    private ecoverseRepository: Repository<Ecoverse>,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
   ) {}
 
   async bootstrapEcoverse() {
     try {
-      console.info('Bootstrapping Ecoverse...');
+      this.logger.verbose('Bootstrapping Ecoverse...');
       await this.ensureEcoverseSingleton();
       await this.validateAccountManagementSetup();
       await this.bootstrapProfiles();
     } catch (error) {
-      console.log(error);
+      this.logger.error(error, undefined, 'Bootstrap');
     }
   }
 
@@ -51,25 +53,25 @@ export class BootstrapService {
       fs.existsSync(bootstrapFilePath) &&
       fs.statSync(bootstrapFilePath).isFile()
     ) {
-      console.info(
+      this.logger.verbose(
         `Authorisation bootstrap: configuration being loaded from '${bootstrapFilePath}'`
       );
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
-      console.info(bootstratDataStr);
+      this.logger.verbose(bootstratDataStr);
       if (!bootstratDataStr) {
-        console.error('Specified authorisation bootstrap file not found!');
+        this.logger.error('Specified authorisation bootstrap file not found!');
         return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
     } else {
-      console.info(
+      this.logger.verbose(
         'Authorisation bootstrap: default configuration being loaded'
       );
     }
 
     const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
     if (!ecoverseAdmins)
-      console.info(
+      this.logger.verbose(
         'No ecoverse admins section in the authorisation bootstrap file!'
       );
     else {
@@ -80,7 +82,7 @@ export class BootstrapService {
     }
     const globalAdmins = bootstrapJson.globalAdmins;
     if (!globalAdmins) {
-      console.info(
+      this.logger.verbose(
         'No global admins section in the authorisation bootstrap file!'
       );
     } else {
@@ -91,7 +93,7 @@ export class BootstrapService {
     }
     const communityAdmins = bootstrapJson.communityAdmins;
     if (!communityAdmins) {
-      console.info(
+      this.logger.verbose(
         'No community admins section in the authorisation bootstrap file!'
       );
     } else {
@@ -128,49 +130,49 @@ export class BootstrapService {
         if (!groups.some(({ name }) => groupName === name))
           await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
         else
-          console.info(
+          this.logger.verbose(
             `User ${userInput.email} already exists in group ${groupName}`
           );
       }
     } catch (error) {
-      console.log(error);
+      this.logger.error(error);
     }
   }
 
   async validateAccountManagementSetup(): Promise<boolean> {
-    console.log('=== Validating Account Management configuration ===');
+    this.logger.verbose('=== Validating Account Management configuration ===');
     const accountsEnabled = this.accountService.accountUsageEnabled();
     if (accountsEnabled) {
-      console.log('...usage of Accounts is enabled');
+      this.logger.verbose('...usage of Accounts is enabled');
       return true;
     } else {
-      console.warn('...usage of Accounts is DISABLED');
+      this.logger.warn('...usage of Accounts is DISABLED');
       return false;
     }
   }
 
   async ensureEcoverseSingleton(): Promise<IEcoverse> {
-    console.log('=== Ensuring single ecoverse is present ===');
+    this.logger.verbose('=== Ensuring single ecoverse is present ===');
     const [
       ecoverseArray,
       ecoverseCount,
     ] = await this.ecoverseRepository.findAndCount();
     if (ecoverseCount == 0) {
-      console.log('...No ecoverse present...');
-      console.log('........creating...');
+      this.logger.verbose('...No ecoverse present...');
+      this.logger.verbose('........creating...');
       // Create a new ecoverse
       const ecoverse = new Ecoverse();
       this.ecoverseService.initialiseMembers(ecoverse);
       // Save is needed so that the ecoverse is there for other methods
       await this.ecoverseRepository.save(ecoverse);
 
-      console.log('........populating...');
+      this.logger.verbose('........populating...');
       await this.populateEmptyEcoverse(ecoverse);
       await this.ecoverseRepository.save(ecoverse);
       return ecoverse as IEcoverse;
     }
     if (ecoverseCount == 1) {
-      console.info('...single ecoverse - verified');
+      this.logger.verbose('...single ecoverse - verified');
       return ecoverseArray[0] as IEcoverse;
     }
 
