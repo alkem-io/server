@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
@@ -27,7 +27,7 @@ export class ChallengeService {
     private opportunityService: OpportunityService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   async initialiseMembers(challenge: IChallenge): Promise<IChallenge> {

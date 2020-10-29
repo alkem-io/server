@@ -15,7 +15,7 @@ import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class AzureADStrategy
@@ -27,7 +27,7 @@ export class AzureADStrategy
     private configService: ConfigService,
     @Inject(forwardRef(() => UserService))
     private userService: UserService,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {
     super({
       identityMetadata: configService.get<IAzureADConfig>('aad')

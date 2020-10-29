@@ -8,7 +8,7 @@ import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
 import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {
@@ -23,7 +23,7 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
   constructor(
     private configService: ConfigService,
     private reflector: Reflector,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {
     super();
   }

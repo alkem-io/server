@@ -1,9 +1,12 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
-import { IUserGroup } from '../user-group/user-group.interface';
 
 @InputType()
 export class UserInput {
+  @Field({ nullable: true })
+  @MaxLength(50)
+  accountUpn!: string;
+
   @Field({ nullable: true })
   @MaxLength(30)
   name?: string;

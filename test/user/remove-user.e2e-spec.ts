@@ -1,43 +1,35 @@
-import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import { createUserMutation, removeUserMutation } from './user.request.params';
-import { AppModule } from '../../src/app.module';
 import { graphqlRequest } from '../utils/graphql.request';
 import '../utils/array.matcher';
+import { appSingleton } from '../utils/app.singleton';
 
 let userName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
 
+beforeAll(async () => {
+  if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+});
+
+afterAll(async () => {
+  if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
+});
+
 beforeEach(() => {
   userName = 'testUser ' + Math.random().toString();
   userPhone = 'userPhone ' + Math.random().toString();
   userEmail = Math.random().toString() + '@test.com';
 });
-let app: INestApplication;
-
-beforeAll(async () => {
-  const testModule: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
-
-  app = testModule.createNestApplication();
-  await app.init();
-});
-
-afterAll(async () => {
-  await app.close();
-});
 
 describe('Remove user', () => {
   test('should remove created user', async () => {
     // Arrange
-    const response = await createUserMutation(userName, app);
+    const response = await createUserMutation(userName);
     userId = response.body.data.createUser.id;
 
     // Act
-    const responseQuery = await removeUserMutation(userId, app);
+    const responseQuery = await removeUserMutation(userId);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -46,12 +38,12 @@ describe('Remove user', () => {
 
   test('should receive a message for removing already removed user', async () => {
     // Arrange
-    const response = await createUserMutation(userName, app);
+    const response = await createUserMutation(userName);
     userId = response.body.data.createUser.id;
-    await removeUserMutation(userId, app);
+    await removeUserMutation(userId);
 
     // Act
-    const responseQuery = await removeUserMutation(userId, app);
+    const responseQuery = await removeUserMutation(userId);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -62,7 +54,7 @@ describe('Remove user', () => {
 
   test('should receive a message for removing unexisting user', async () => {
     // Act
-    const responseQuery = await removeUserMutation(77777, app);
+    const responseQuery = await removeUserMutation(77777);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -73,9 +65,9 @@ describe('Remove user', () => {
 
   test('should not get result for quering removed user', async () => {
     // Arrange
-    const response = await createUserMutation(userName, app);
+    const response = await createUserMutation(userName);
     userId = response.body.data.createUser.id;
-    await removeUserMutation(userId, app);
+    await removeUserMutation(userId);
 
     // Act
     const requestParamsQueryUser = {
@@ -84,10 +76,7 @@ describe('Remove user', () => {
           id
         }}`,
     };
-    const responseQueryResult = await graphqlRequest(
-      requestParamsQueryUser,
-      app
-    );
+    const responseQueryResult = await graphqlRequest(requestParamsQueryUser);
 
     // Assert
     expect(responseQueryResult.status).toBe(200);

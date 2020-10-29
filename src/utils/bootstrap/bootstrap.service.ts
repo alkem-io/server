@@ -15,7 +15,7 @@ import { AccountService } from '../account/account.service';
 import fs from 'fs';
 import * as defaultRoles from '../config/authorisation-bootstrap.json';
 import { IUser } from '../../domain/user/user.interface';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class BootstrapService {
@@ -26,7 +26,7 @@ export class BootstrapService {
     private configService: ConfigService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   async bootstrapEcoverse() {
@@ -109,7 +109,11 @@ export class BootstrapService {
       for await (const email of emails) {
         const userInput = new UserInput();
         userInput.email = email;
+        // For bootstrap puroposes also set the upn to the same as the email
+        userInput.accountUpn = email;
         userInput.name = 'Imported User';
+        userInput.firstName = 'Imported';
+        userInput.lastName = 'User';
 
         // Check the user exists
         let user = await this.userService.getUserByEmail(email);

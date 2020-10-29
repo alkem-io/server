@@ -25,5 +25,6 @@ import { TestDataService } from './test-data.service';
   ],
   providers: [DataManagementService, TestDataService],
   controllers: [DataManagementController],
+  exports: [DataManagementService, TestDataService],
 })
 export class DataManagementModule {}

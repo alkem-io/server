@@ -104,6 +104,7 @@ AAD_API_SCOPE= [API Scopes Required for Downstream APIs, in our case Microsoft G
 AAD_CLIENT_SECRET=[App Client Secret obtained from cherrytwist-api app registration*]
 AAD_LOGGING_LEVEL=Error|Warning|Info|Verbose. Defaults to Error if no value is set.
 AAD_LOGGING_NO_PII=true|false. Default is true. Specifies whether AAD personal identifiable information can be logged.
+AAD_UPN_DOMAIN=[Domain name to be used when generating the UPN for accounts created on AAD by the platform]. Defaults to "playgroundcherrytwist.onmicrosoft.com", so a user gets a UPN like "first.last@playgroundcherrytwist.onmicrosoft.com". Note: the domain name specified needs to be either the default domain for the AAD tenant or a configured "verified domain name".
 AUTHENTICATION_ENABLED=true
 ```
 ***Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
