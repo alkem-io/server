@@ -22,7 +22,7 @@ export class AccountResolver {
     @Args('userID') userID: number,
     @Args('password') password: string
   ): Promise<boolean> {
-    const success = await this.accountService.createUserAccount(
+    const success = await this.accountService.createAccountForExistingUser(
       userID,
       password
     );

@@ -11,5 +11,6 @@ export interface IAzureADConfig {
   allowMultiAudiencesInToken: string;
   loggingLevel: AAD_LOGGING_LEVEL;
   loggingNoPII: boolean;
+  upnDomain: string;
   scope: string;
 }

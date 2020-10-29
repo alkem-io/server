@@ -82,6 +82,30 @@ export class UserService {
     return user;
   }
 
+  async getUserForAccountWithGroups(
+    accountUpn: string
+  ): Promise<IUser | undefined> {
+    const user = await this.userRepository.findOne(
+      { accountUpn: accountUpn },
+      { relations: ['userGroups'] }
+    );
+
+    if (!user) {
+      this.logger.verbose(
+        `No user with provided account UPN ${accountUpn} exists!`
+      );
+      return undefined;
+    }
+
+    if (!user.userGroups) {
+      this.logger.verbose(
+        `User with provided account UPN ${accountUpn} doesn't belong to any groups!`
+      );
+    }
+
+    return user;
+  }
+
   async userExists(email?: string, id?: number): Promise<boolean> {
     if (email) {
       if (await this.getUserByEmail(email)) return true;
@@ -136,26 +160,8 @@ export class UserService {
     return memberOf;
   }
 
-  async createUser(
-    userData: UserInput,
-    validateExistingUser = true
-  ): Promise<IUser> {
-    // Check if a valid email address was given
-    const newUserEmail = userData.email;
-    // Validate that the user has some key fields et
-    if (!this.isValidEmail(newUserEmail))
-      throw new Error(
-        `Valid email address required to create a user: ${newUserEmail}`
-      );
-
-    // Check if a user with the given email already exists
-    if (validateExistingUser) {
-      const existingUser = await this.getUserByEmail(newUserEmail);
-      if (existingUser)
-        throw new Error(
-          `A user with the provided email address: ${newUserEmail} already exists!`
-        );
-    }
+  async createUser(userData: UserInput): Promise<IUser> {
+    await this.validateUserProfileCreationRequest(userData);
 
     // Ok to create a new user + save
     const user = User.create(userData);
@@ -165,6 +171,38 @@ export class UserService {
     this.logger.verbose(`User ${userData.email} was created!`);
 
     return user;
+  }
+
+  async validateUserProfileCreationRequest(
+    userData: UserInput
+  ): Promise<boolean> {
+    if (!this.isValidEmail(userData.email))
+      throw new Error(
+        `Valid email address required to create a user: ${userData.email}`
+      );
+    if (!userData.firstName || userData.firstName.length == 0)
+      throw new Error(
+        `User profile creation (${userData.email}) missing required first name`
+      );
+    if (!userData.lastName || userData.lastName.length == 0)
+      throw new Error(
+        `User profile creation (${userData.email}) missing required last name`
+      );
+    if (!userData.email || userData.email.length == 0)
+      throw new Error(
+        `User profile creation (${userData.firstName}) missing required email`
+      );
+    const userCheck = await this.getUserByEmail(userData.email);
+    if (userCheck)
+      throw new Error(
+        `User profile with the specified email (${userData.email}) already exists`
+      );
+    return true;
+  }
+
+  async saveUser(user: IUser): Promise<boolean> {
+    await this.userRepository.save(user);
+    return true;
   }
 
   async removeUser(user: IUser): Promise<IUser> {
