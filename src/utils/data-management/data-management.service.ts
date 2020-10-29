@@ -15,7 +15,7 @@ import { IUser } from '../../domain/user/user.interface';
 import { UserService } from '../../domain/user/user.service';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class DataManagementService {
@@ -29,7 +29,7 @@ export class DataManagementService {
     private connection: Connection,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   async reset_to_empty_ecoverse(): Promise<string> {

@@ -14,7 +14,7 @@ import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class UserGroupService {
@@ -23,7 +23,7 @@ export class UserGroupService {
     private profileService: ProfileService,
     @InjectRepository(UserGroup)
     private groupRepository: Repository<UserGroup>,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   //toDo vyanakiev - fix this
