@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Logger } from 'msal';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
@@ -18,7 +18,7 @@ export class OrganisationService {
     private tagsetService: TagsetService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {

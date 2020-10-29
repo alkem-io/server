@@ -7,14 +7,14 @@ import { Organisation } from '../organisation/organisation.entity';
 import { Project } from '../project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class TagsetService {
   constructor(
     @InjectRepository(Tagset)
     private tagsetRepository: Repository<Tagset>,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   // Helper method to ensure all members are initialised properly.

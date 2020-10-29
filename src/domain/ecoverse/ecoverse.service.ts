@@ -25,7 +25,7 @@ import { OrganisationService } from '../organisation/organisation.service';
 import { AccountService } from '../../utils/account/account.service';
 import { Context } from '../context/context.entity';
 import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class EcoverseService {
@@ -39,7 +39,7 @@ export class EcoverseService {
     private accountService: AccountService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.

@@ -4,14 +4,14 @@ import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
 import { UserInput } from '../../domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class MsGraphService {
   constructor(
     @Inject(forwardRef(() => AzureADStrategy))
     private azureAdStrategy: AzureADStrategy,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   async callResourceAPI(accessToken: string, resourceURI: string) {

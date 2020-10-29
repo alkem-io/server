@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
@@ -15,7 +15,7 @@ export class UserService {
     private profileService: ProfileService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   // Helper method to ensure all members that are arrays are initialised properly.
