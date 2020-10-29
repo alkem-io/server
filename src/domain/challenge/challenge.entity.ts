@@ -69,11 +69,6 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @JoinTable({ name: 'challenge_lead' })
   challengeLeads?: Organisation[];
 
-  @Field(() => [UserGroup], {
-    nullable: true,
-    description:
-      'Groups of users related to a challenge; each group also results in a role that is assigned to users in the group.',
-  })
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.challenge,

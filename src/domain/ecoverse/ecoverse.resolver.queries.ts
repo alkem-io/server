@@ -131,12 +131,6 @@ export class EcoverseResolverQueries {
     return group;
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
   async challenges(): Promise<IChallenge[]> {
     const challenges = await this.ecoverseService.getChallenges();

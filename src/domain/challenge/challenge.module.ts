@@ -8,6 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Challenge } from './challenge.entity';
 import { UserModule } from '../user/user.module';
 import { OpportunityModule } from '../opportunity/opportunity.module';
+import { ChallengeResolverFields } from './challenge.resolver.fields';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { OpportunityModule } from '../opportunity/opportunity.module';
     UserModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
-  providers: [ChallengeService, ChallengeResolver],
+  providers: [ChallengeService, ChallengeResolver, ChallengeResolverFields],
   exports: [ChallengeService],
 })
 export class ChallengeModule {}
