@@ -11,6 +11,8 @@ export default registerAs('aad', () => ({
   loggingLevel: process.env.AAD_LOGGING_LEVEL || AAD_LOGGING_LEVEL.Error,
   scope: ['Cherrytwist-GraphQL'],
   loggingNoPII: process.env.AAD_LOGGING_NO_PII || true,
+  upnDomain:
+    process.env.AAD_UPN_DOMAIN || 'playgroundcherrytwist.onmicrosoft.com',
 }));
 
 export enum AAD_LOGGING_LEVEL {

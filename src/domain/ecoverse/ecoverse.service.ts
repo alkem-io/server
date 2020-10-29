@@ -292,32 +292,25 @@ export class EcoverseService {
     return organisation;
   }
 
-  // Create the user and add the user into the members group
+  // Create the user and an account on the identity provider
   async createUser(userData: UserInput): Promise<IUser> {
+    // Check that a valid profile and a valid account can be created. It is double work but not easily avoided.
+    await this.userService.validateUserProfileCreationRequest(userData);
+    if (this.accountService.authenticationEnabled()) {
+      await this.accountService.validateAccountCreationRequest(userData);
+    }
+
+    // Ok to proceed to creating profile and optionally account
     const user = await this.createUserProfile(userData);
     if (this.accountService.authenticationEnabled()) {
-      const tmpPassword = userData.aadPassword;
-      if (!tmpPassword)
-        throw new Error(
-          `Unable to create account for user (${user.name} as no password provided)`
-        );
-      await this.accountService.createUserAccount(user.id, tmpPassword);
+      await this.accountService.createUserAccount(userData);
     }
     return user;
   }
 
   // Create the user and add the user into the members group
   async createUserProfile(userData: UserInput): Promise<IUser> {
-    let ctUser = (await this.userService.getUserByEmail(
-      userData.email
-    )) as IUser;
-
-    if (ctUser) {
-      this.logger.warn(`User ${userData.email} already exists!`);
-      return ctUser;
-    }
-
-    ctUser = await this.userService.createUser(userData, false);
+    const ctUser = await this.userService.createUser(userData);
     if (!ctUser)
       throw new Error(`User ${userData.email} could not be created!`);
 

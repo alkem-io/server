@@ -109,6 +109,8 @@ export class BootstrapService {
       for await (const email of emails) {
         const userInput = new UserInput();
         userInput.email = email;
+        // For bootstrap puroposes also set the upn to the same as the email
+        userInput.accountUpn = email;
         userInput.name = 'Imported User';
 
         // Check the user exists
