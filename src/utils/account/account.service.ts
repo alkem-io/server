@@ -39,51 +39,85 @@ export class AccountService {
     return await this.msGraphService.userExists(undefined, accountUpn);
   }
 
-  // Create the user and add the user into the members group
-  async createUserAccount(userID: number, password: string): Promise<boolean> {
-    if (!this.accountUsageEnabled()) {
-      throw new Error(
-        'Not able to create accounts while authentication is disabled'
-      );
-    }
-    const ctUser = await this.userService.getUserByID(userID);
-    if (!ctUser) throw new Error(`No user with given id located: ${userID}`);
+  // Create an account for the specified user and update the user to store the UPN
+  async createUserAccount(userData: UserInput): Promise<boolean> {
+    await this.validateAccountCreationRequest(userData);
 
-    const existingUpn = ctUser.accountUpn;
-    const accountExists =
-      existingUpn.length > 0 && (await this.accountExists(existingUpn));
-
-    if (accountExists) {
-      this.logger.verbose(`User ${ctUser.accountUpn} already exists!`);
-      return false;
-    }
-
-    const userData = new UserInput();
-    userData.name = ctUser.name;
-    userData.firstName = ctUser.firstName;
-    userData.lastName = ctUser.lastName;
-    userData.email = ctUser.email;
-    userData.aadPassword = password;
-
-    const accountUpn = this.buildUPN(userData.firstName, userData.lastName);
-
+    const accountUpn = this.buildUPN(userData);
     const result = await this.msGraphService.createUser(userData, accountUpn);
-    if (result) {
-      // store the generated account UPN
-      ctUser.accountUpn = accountUpn;
-      return await this.userService.saveUser(ctUser);
-    }
+    // Save the accountUpn on the user profile
+    if (!result)
+      throw new Error(
+        `Unable to complete account creation for ${userData.email}`
+      );
+    // Update the user
+    const user = await this.userService.getUserByEmail(userData.email);
+    if (!user) throw new Error(`Unable to update user: ${userData.email}`);
+    user.accountUpn = accountUpn;
+    await this.userService.saveUser(user);
     return true;
   }
 
-  buildUPN(firstName: string, lastName: string): string {
+  // Create an account for the specified user and update the user to store the UPN
+  async createAccountForExistingUser(
+    userID: number,
+    password: string
+  ): Promise<boolean> {
+    const user = await this.userService.getUserByID(userID);
+    if (!user) throw new Error(`Unable to locate user: ${userID}`);
+    const userData = new UserInput();
+    userData.accountUpn = user.accountUpn;
+    userData.aadPassword = password;
+    userData.firstName = user.firstName;
+    userData.lastName = user.lastName;
+    userData.email = user.email;
+
+    await this.createUserAccount(userData);
+    return true;
+  }
+
+  buildUPN(userData: UserInput): string {
     const upnDomain = this.configService.get<IAzureADConfig>('aad')?.upnDomain;
     if (!upnDomain)
       throw new Error('Unable to identify the upn domain to be used');
+
+    // Note: requesting client has the option to explicilty specify the account UPN to use
+    const accountUpn = userData.accountUpn;
+    const firstName = userData.firstName;
+    const lastName = userData.lastName;
+    if (!accountUpn || accountUpn.length == 0) {
+      // Not specified, create one automatically based on the user profile data
+      if (!firstName)
+        throw new Error('Missing first name information for generating UPN');
+      if (!lastName)
+        throw new Error('Missing last name information for generating UPN');
+    }
 
     const upn = `${firstName}.${lastName}@${upnDomain}`;
     this.logger.verbose(`Upn: ${upn}`);
 
     return upn;
+  }
+
+  async validateAccountCreationRequest(userData: UserInput) {
+    if (!this.accountUsageEnabled()) {
+      throw new Error(
+        'Not able to create accounts while authentication is disabled'
+      );
+    }
+    const tmpPassword = userData.aadPassword;
+    if (!tmpPassword)
+      throw new Error(
+        `Unable to create account for user (${userData.name} as no password provided)`
+      );
+
+    const accountUpn = this.buildUPN(userData);
+
+    // Check if the account exists already
+    const accountExists = await this.accountExists(accountUpn);
+    if (accountExists)
+      throw new Error(
+        `There already exists an account with UPN (${accountUpn}); please choose another`
+      );
   }
 }
