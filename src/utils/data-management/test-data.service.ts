@@ -24,6 +24,8 @@ export class TestDataService {
 
   async initUsers() {
     const user = new UserInput();
+    user.firstName = 'Bat';
+    user.lastName = 'Georgi';
     user.email = 'testuser@test.com';
     user.name = 'Bat Georgi';
     await this.ecoverseService.createUser(user);

@@ -165,6 +165,11 @@ describe('Update user', () => {
     userId = responseCreateUser.body.data.createUser.id;
 
     // Act
+    const responseUpdateUser = await updateUserMutation(
+      userId,
+      userNameAfterUpdate,
+      userPhone
+    );
 
     const requestParamsQueryUsers = {
       query: `{users {
