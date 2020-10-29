@@ -70,6 +70,7 @@ import { WinstonConfigService } from './utils/config/winston.config';
     GraphQLModule.forRoot({
       autoSchemaFile: true,
       playground: true,
+      fieldResolverEnhancers: ['guards'],
     }),
     DataManagementModule,
     BootstrapModule,
