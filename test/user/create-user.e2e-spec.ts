@@ -3,6 +3,8 @@ import { graphqlRequest } from '../utils/graphql.request';
 import '../utils/array.matcher';
 import { appSingleton } from '../utils/app.singleton';
 
+let userFirstName = '';
+let userLastName = '';
 let userName = '';
 let userId = '';
 let userPhone = '';
@@ -18,6 +20,8 @@ afterAll(async () => {
 
 beforeEach(() => {
   userName = 'testUser ' + Math.random().toString();
+  userFirstName = 'testUserFirstName ' + Math.random().toString();
+  userLastName = 'testUserLastName' + Math.random().toString();
   userPhone = 'userPhone ' + Math.random().toString();
   userEmail = Math.random().toString() + '@test.com';
 });
@@ -99,11 +103,11 @@ describe('Create User', () => {
         }`,
       variables: {
         userData: {
-          name: 'test77',
-          firstName: 'testFN',
-          lastName: 'testLN',
-          email: 'testEmail@test.com',
-          phone: '092834',
+          name: userName,
+          firstName: userFirstName,
+          lastName: userLastName,
+          email: userEmail,
+          phone: userPhone,
           city: 'testCity',
           country: 'testCountry',
           gender: 'testGender',
@@ -144,13 +148,15 @@ describe('Create User', () => {
 
     // Assert
     expect(responseParamsQueryUser.status).toBe(200);
-    expect(responseParamsQueryUser.body.data.user.name).toEqual('test77');
-    expect(responseParamsQueryUser.body.data.user.firstName).toEqual('testFN');
-    expect(responseParamsQueryUser.body.data.user.lastName).toEqual('testLN');
-    expect(responseParamsQueryUser.body.data.user.email).toEqual(
-      'testEmail@test.com'
+    expect(responseParamsQueryUser.body.data.user.name).toEqual(userName);
+    expect(responseParamsQueryUser.body.data.user.firstName).toEqual(
+      userFirstName
     );
-    expect(responseParamsQueryUser.body.data.user.phone).toEqual('092834');
+    expect(responseParamsQueryUser.body.data.user.lastName).toEqual(
+      userLastName
+    );
+    expect(responseParamsQueryUser.body.data.user.email).toEqual(userEmail);
+    expect(responseParamsQueryUser.body.data.user.phone).toEqual(userPhone);
     expect(responseParamsQueryUser.body.data.user.city).toEqual('testCity');
     expect(responseParamsQueryUser.body.data.user.country).toEqual(
       'testCountry'
@@ -158,9 +164,6 @@ describe('Create User', () => {
     expect(responseParamsQueryUser.body.data.user.gender).toEqual('testGender');
     expect(responseParamsQueryUser.body.data.user.profile).toEqual({
       references: [],
-    });
-    expect(responseParamsQueryUser.body.data.user.memberof).toEqual({
-      email: 'testEmail@test.com',
     });
   });
 
@@ -195,8 +198,8 @@ describe('Create User', () => {
           name:
             'very loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong name',
           email: userEmail,
-          firstName: 'testFN',
-          lastName: 'testLN'
+          firstName: 'testF',
+          lastName: 'testL',
         },
       },
     };
@@ -207,7 +210,7 @@ describe('Create User', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'ER_DATA_TOO_LONG: Data too long for column \'name\' at row 1'
+      "ER_DATA_TOO_LONG: Data too long for column 'name' at row 1"
     );
   });
 
