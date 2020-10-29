@@ -174,7 +174,9 @@ export class UserGroupService {
       throw new Error(msg);
     }
 
-    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    const group = await this.getGroupByID(groupID, {
+      relations: ['members'],
+    });
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
       this.logger.verbose(msg);
