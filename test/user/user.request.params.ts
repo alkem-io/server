@@ -8,6 +8,8 @@ export const createUserMutation = async (userName: string) => {
     variables: {
       userData: {
         name: userName,
+        firstName: userName,
+        lastName: userName,
         email: `${userName}@test.com`,
       },
     },
@@ -166,7 +168,6 @@ export const getUserMemberships = async () => {
       users {
         name
         memberof {
-          email
           groups {
             name
           }
