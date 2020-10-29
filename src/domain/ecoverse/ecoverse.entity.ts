@@ -55,7 +55,10 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @JoinColumn()
   DID!: DID;
 
-  @Field(() => [UserGroup], { nullable: true })
+  @Field(() => [UserGroup], {
+    nullable: true,
+    description: 'The set of groups at the Ecoverse level',
+  })
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.ecoverse,

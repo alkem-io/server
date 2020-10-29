@@ -128,7 +128,6 @@ export class UserService {
       .getOne();
 
     const memberOf = new MemberOf();
-    memberOf.email = user.email;
     memberOf.groups = [];
     memberOf.challenges = [];
     memberOf.organisations = [];

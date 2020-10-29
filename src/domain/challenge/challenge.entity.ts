@@ -24,7 +24,6 @@ import {
   RestrictedGroupNames,
   UserGroup,
 } from '../user-group/user-group.entity';
-import { User } from '../user/user.entity';
 import { IChallenge } from './challenge.interface';
 
 @Entity()
@@ -69,24 +68,12 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @JoinTable({ name: 'challenge_lead' })
   challengeLeads?: Organisation[];
 
-  @Field(() => [UserGroup], {
-    nullable: true,
-    description:
-      'Groups of users related to a challenge; each group also results in a role that is assigned to users in the group.',
-  })
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.challenge,
     { eager: true, cascade: true }
   )
   groups?: UserGroup[];
-
-  @Field(() => [User], {
-    nullable: true,
-    description:
-      'The community of users, including challenge leads, that are contributing.',
-  })
-  contributors?: User[];
 
   // Other
   @Field(() => String, {
