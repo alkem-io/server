@@ -1,5 +1,5 @@
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { appSingleton } from './app.singleton';
 
 // ToDo
 // Add support for connection to the DB and drop/populate DB
@@ -8,10 +8,10 @@ import request from 'supertest';
 // Add support for authentication
 
 export const graphqlRequest = async (
-  requestParams: any,
-  app: INestApplication
+  requestParams: any
+  // app: INestApplication
 ) => {
-  return request(app.getHttpServer())
+  return request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
     .send({ ...requestParams })
     .set('Accept', 'application/json');

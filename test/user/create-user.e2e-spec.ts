@@ -1,43 +1,35 @@
-import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import { createUserMutation, removeUserMutation } from './user.request.params';
-import { AppModule } from '../../src/app.module';
 import { graphqlRequest } from '../utils/graphql.request';
 import '../utils/array.matcher';
+import { appSingleton } from '../utils/app.singleton';
 
 let userName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
 
+beforeAll(async () => {
+  if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+});
+
+afterAll(async () => {
+  if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
+});
+
 beforeEach(() => {
   userName = 'testUser ' + Math.random().toString();
   userPhone = 'userPhone ' + Math.random().toString();
   userEmail = Math.random().toString() + '@test.com';
 });
-let app: INestApplication;
-
-beforeAll(async () => {
-  const testModule: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
-
-  app = testModule.createNestApplication();
-  await app.init();
-});
-
-afterAll(async () => {
-  await app.close();
-});
 
 describe('Create User', () => {
   afterEach(async () => {
-    await removeUserMutation(userId, app);
+    await removeUserMutation(userId);
   });
 
   test('should create a user', async () => {
     // Act
-    const response = await createUserMutation(userName, app);
+    const response = await createUserMutation(userName);
     userId = response.body.data.createUser.id;
 
     // Assert
@@ -47,11 +39,11 @@ describe('Create User', () => {
 
   test.skip('should throw error - same user is created twice', async () => {
     // Arrange
-    const response = await createUserMutation(userName, app);
+    const response = await createUserMutation(userName);
     userId = response.body.data.createUser.id;
 
     // Act
-    const responseSecondTime = await createUserMutation(userName, app);
+    const responseSecondTime = await createUserMutation(userName);
     userId = responseSecondTime.body.data.createUser.id;
 
     // Assert
@@ -61,7 +53,7 @@ describe('Create User', () => {
 
   test('should query created user', async () => {
     // Arrange
-    const response = await createUserMutation(userName, app);
+    const response = await createUserMutation(userName);
     userId = response.body.data.createUser.id;
 
     // Act
@@ -71,7 +63,7 @@ describe('Create User', () => {
           id
         }}`,
     };
-    const responseQuery = await graphqlRequest(requestParamsQueryUser, app);
+    const responseQuery = await graphqlRequest(requestParamsQueryUser);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -117,7 +109,7 @@ describe('Create User', () => {
       },
     };
 
-    const responseQuery = await graphqlRequest(requestParams, app);
+    const responseQuery = await graphqlRequest(requestParams);
     userId = responseQuery.body.data.createUser.id;
     // Act
     const requestParamsQueryUser = {
@@ -143,8 +135,7 @@ describe('Create User', () => {
                 }`,
     };
     const responseParamsQueryUser = await graphqlRequest(
-      requestParamsQueryUser,
-      app
+      requestParamsQueryUser
     );
 
     // Assert
@@ -183,7 +174,7 @@ describe('Create User', () => {
     };
 
     // Act
-    const responseQuery = await graphqlRequest(requestParams, app);
+    const responseQuery = await graphqlRequest(requestParams);
 
     // Assert
     expect(responseQuery.status).toBe(400);
@@ -205,7 +196,7 @@ describe('Create User', () => {
     };
 
     // Act
-    const responseQuery = await graphqlRequest(requestParams, app);
+    const responseQuery = await graphqlRequest(requestParams);
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -229,7 +220,7 @@ describe('Create User', () => {
     };
 
     // Act
-    const responseQuery = await graphqlRequest(requestParams, app);
+    const responseQuery = await graphqlRequest(requestParams);
 
     // Assert
     expect(responseQuery.status).toBe(200);

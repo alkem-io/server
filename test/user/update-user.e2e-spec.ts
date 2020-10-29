@@ -1,13 +1,11 @@
-import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import {
   createUserDetailsMutation,
   removeUserMutation,
   updateUserMutation,
 } from './user.request.params';
-import { AppModule } from '../../src/app.module';
 import { graphqlRequest } from '../utils/graphql.request';
 import '../utils/array.matcher';
+import { appSingleton } from '../utils/app.singleton';
 
 let userName = '';
 let userId = '';
@@ -18,24 +16,18 @@ let userNameAfterUpdate = '';
 let phoneAfterUpdate = '';
 let emailAfterUpdate = '';
 
+beforeAll(async () => {
+  if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+});
+
+afterAll(async () => {
+  if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
+});
+
 beforeEach(() => {
   userName = 'testUser ' + Math.random().toString();
   userPhone = 'userPhone ' + Math.random().toString();
   userEmail = Math.random().toString() + '@test.com';
-});
-let app: INestApplication;
-
-beforeAll(async () => {
-  const testModule: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
-
-  app = testModule.createNestApplication();
-  await app.init();
-});
-
-afterAll(async () => {
-  await app.close();
 });
 
 describe('Update user', () => {
@@ -46,7 +38,7 @@ describe('Update user', () => {
   });
 
   afterEach(async () => {
-    await removeUserMutation(userId, app);
+    await removeUserMutation(userId);
   });
 
   test('should update user "name" only', async () => {
@@ -54,8 +46,7 @@ describe('Update user', () => {
     const responseCreateUser = await createUserDetailsMutation(
       userName,
       userPhone,
-      userEmail,
-      app
+      userEmail
     );
     userId = responseCreateUser.body.data.createUser.id;
 
@@ -63,21 +54,19 @@ describe('Update user', () => {
     const responseUpdateUser = await updateUserMutation(
       userId,
       userNameAfterUpdate,
-      userPhone,
-      app
+      userPhone
     );
 
     const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") { 
-          name 
+      query: `{user(ID: "${userId}") {
+          name
           id
           email
           phone
         }}`,
     };
     const responseParamsQueryUser = await graphqlRequest(
-      requestParamsQueryUser,
-      app
+      requestParamsQueryUser
     );
 
     // Assert
@@ -95,8 +84,7 @@ describe('Update user', () => {
     const responseCreateUser = await createUserDetailsMutation(
       userName,
       userPhone,
-      userEmail,
-      app
+      userEmail
     );
     userId = responseCreateUser.body.data.createUser.id;
 
@@ -104,21 +92,19 @@ describe('Update user', () => {
     const responseUpdateUser = await updateUserMutation(
       userId,
       userName,
-      phoneAfterUpdate,
-      app
+      phoneAfterUpdate
     );
 
     const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") { 
-          name 
+      query: `{user(ID: "${userId}") {
+          name
           id
           email
           phone
         }}`,
     };
     const responseParamsQueryUser = await graphqlRequest(
-      requestParamsQueryUser,
-      app
+      requestParamsQueryUser
     );
 
     // Assert
@@ -136,8 +122,7 @@ describe('Update user', () => {
     const responseCreateUser = await createUserDetailsMutation(
       userName,
       userPhone,
-      userEmail,
-      app
+      userEmail
     );
     userId = responseCreateUser.body.data.createUser.id;
 
@@ -149,7 +134,7 @@ describe('Update user', () => {
               id
               name
               phone
-              email          
+              email
             }
           }`,
       variables: {
@@ -161,10 +146,7 @@ describe('Update user', () => {
         },
       },
     };
-    const responseUpdateUser = await graphqlRequest(
-      updateUserRequestParams,
-      app
-    );
+    const responseUpdateUser = await graphqlRequest(updateUserRequestParams);
 
     // Assert
     expect(responseUpdateUser.status).toBe(200);
@@ -178,30 +160,22 @@ describe('Update user', () => {
     const responseCreateUser = await createUserDetailsMutation(
       userName,
       userPhone,
-      userEmail,
-      app
+      userEmail
     );
     userId = responseCreateUser.body.data.createUser.id;
 
     // Act
-    const responseUpdateUser = await updateUserMutation(
-      userId,
-      userNameAfterUpdate,
-      userPhone,
-      app
-    );
 
     const requestParamsQueryUsers = {
-      query: `{users { 
-          name 
+      query: `{users {
+          name
           id
           email
           phone
         }}`,
     };
     const responseParamsQueryUsers = await graphqlRequest(
-      requestParamsQueryUsers,
-      app
+      requestParamsQueryUsers
     );
 
     // Assert

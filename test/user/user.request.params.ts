@@ -1,10 +1,6 @@
-import { INestApplication } from '@nestjs/common';
 import { graphqlRequest } from '../utils/graphql.request';
 
-export const createUserMutation = async (
-  userName: string,
-  app: INestApplication
-) => {
+export const createUserMutation = async (userName: string) => {
   const requestParams = {
     operationName: 'CreateUser',
     query:
@@ -17,23 +13,22 @@ export const createUserMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
 export const createUserDetailsMutation = async (
   userName: string,
   phone: string,
-  email: string,
-  app: INestApplication
+  email: string
 ) => {
   const requestParams = {
     operationName: 'CreateUser',
     query: `mutation CreateUser($userData: UserInput!) {
         createUser(userData: $userData) {
-           id 
-           name 
+           id
+           name
            phone
-           email            
+           email
           }
         }`,
     variables: {
@@ -50,14 +45,13 @@ export const createUserDetailsMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
 export const updateUserMutation = async (
   updateUserId: any,
   name: string,
-  phone: string,
-  app: INestApplication
+  phone: string
 ) => {
   const requestParams = {
     operationName: 'UpdateUser',
@@ -66,7 +60,7 @@ export const updateUserMutation = async (
           id
           name
           phone
-          email          
+          email
         }
       }`,
     variables: {
@@ -78,13 +72,10 @@ export const updateUserMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
-export const removeUserMutation = async (
-  removeUserID: any,
-  app: INestApplication
-) => {
+export const removeUserMutation = async (removeUserID: any) => {
   const requestParams = {
     operationName: 'removeUser',
     query: 'mutation removeUser($userID: Float!) {removeUser(userID: $userID)}',
@@ -93,18 +84,14 @@ export const removeUserMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
-export const addUserToGroup = async (
-  userId: any,
-  groupId: string,
-  app: INestApplication
-) => {
+export const addUserToGroup = async (userId: any, groupId: string) => {
   const requestParams = {
     operationName: null,
     query: `mutation addUserToGroup($userID: Float!, $groupID: Float!) {
-      addUserToGroup(groupID: $groupID, userID: $userID)       
+      addUserToGroup(groupID: $groupID, userID: $userID)
     }`,
     variables: {
       userID: parseFloat(userId),
@@ -112,13 +99,10 @@ export const addUserToGroup = async (
     },
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
-export const createGroupMutation = async (
-  testGroup: string,
-  app: INestApplication
-) => {
+export const createGroupMutation = async (testGroup: string) => {
   const requestParams = {
     operationName: 'CreateGroupOnEcoverse',
     query: `mutation CreateGroupOnEcoverse($groupName: String!) {
@@ -132,14 +116,10 @@ export const createGroupMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
-export const removeUserFromGroup = async (
-  userId: any,
-  groupId: string,
-  app: INestApplication
-) => {
+export const removeUserFromGroup = async (userId: any, groupId: string) => {
   const requestParams = {
     operationName: 'removeUserFromGroup',
     query: `mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {
@@ -158,18 +138,17 @@ export const removeUserFromGroup = async (
     },
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
 export const addUserToOrganisation = async (
   userId: any,
-  organisationId: string,
-  app: INestApplication
+  organisationId: string
 ) => {
   const requestParams = {
     operationName: null,
     query: `mutation addUserToOrganisation($userID: Float!, $groupID: Float!) {
-      addUserToOrganisation(groupID: $groupID, userID: $userID) 
+      addUserToOrganisation(groupID: $groupID, userID: $userID)
     }`,
     variables: {
       userID: parseFloat(userId),
@@ -177,10 +156,10 @@ export const addUserToOrganisation = async (
     },
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
-export const getUserMemberships = async (app: INestApplication) => {
+export const getUserMemberships = async () => {
   const requestParams = {
     operationName: null,
     query: `query {
@@ -202,15 +181,15 @@ export const getUserMemberships = async (app: INestApplication) => {
     }`,
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
 
-export const getUsers = async (app: INestApplication) => {
+export const getUsers = async () => {
   const requestParams = {
     operationName: null,
     variables: {},
     query: 'query{users {name}}',
   };
 
-  return await graphqlRequest(requestParams, app);
+  return await graphqlRequest(requestParams);
 };
