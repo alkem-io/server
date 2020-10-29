@@ -110,7 +110,7 @@ export class UserGroupService {
 
     const group = (await this.getGroupByID(groupID)) as IUserGroup;
     if (!group) throw new Error(`No group with id ${groupID} was found!`);
-    return this.addUserToGroup(user, group);
+    return await this.addUserToGroup(user, group);
   }
 
   async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
@@ -131,7 +131,7 @@ export class UserGroupService {
   }
 
   async groupExists(groupID: number): Promise<boolean> {
-    const group = this.groupRepository.findOne({ id: groupID });
+    const group = await this.groupRepository.findOne({ id: groupID });
     if (group) return true;
     else return false;
   }
