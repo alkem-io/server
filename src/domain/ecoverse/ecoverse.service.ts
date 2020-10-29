@@ -303,14 +303,7 @@ export class EcoverseService {
     // Ok to proceed to creating profile and optionally account
     const user = await this.createUserProfile(userData);
     if (this.accountService.authenticationEnabled()) {
-      const result = await this.accountService.createUserAccount(userData);
-      // Save the accountUpn on the user profile
-      if (!result)
-        throw new Error(
-          `Unable to complete account creation for ${userData.email}`
-        );
-      user.accountUpn = this.accountService.buildUPN(userData);
-      await this.userService.saveUser(user);
+      await this.accountService.createUserAccount(userData);
     }
     return user;
   }

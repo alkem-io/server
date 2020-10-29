@@ -50,7 +50,7 @@ export class AccountService {
       throw new Error(
         `Unable to complete account creation for ${userData.email}`
       );
-    // Update the user
+    // Update the user to store the upn
     const user = await this.userService.getUserByEmail(userData.email);
     if (!user) throw new Error(`Unable to update user: ${userData.email}`);
     user.accountUpn = accountUpn;
