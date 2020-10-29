@@ -24,7 +24,6 @@ import {
   RestrictedGroupNames,
   UserGroup,
 } from '../user-group/user-group.entity';
-import { User } from '../user/user.entity';
 import { IChallenge } from './challenge.interface';
 
 @Entity()
@@ -75,13 +74,6 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     { eager: true, cascade: true }
   )
   groups?: UserGroup[];
-
-  @Field(() => [User], {
-    nullable: true,
-    description:
-      'The community of users, including challenge leads, that are contributing.',
-  })
-  contributors?: User[];
 
   // Other
   @Field(() => String, {

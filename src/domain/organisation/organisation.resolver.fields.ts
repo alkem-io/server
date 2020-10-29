@@ -7,12 +7,12 @@ import {
   RestrictedGroupNames,
   UserGroup,
 } from '../user-group/user-group.entity';
-import { Challenge } from './challenge.entity';
+import { Organisation } from './organisation.entity';
 import { User } from '../user/user.entity';
 import { UserGroupService } from '../user-group/user-group.service';
 
-@Resolver(() => Challenge)
-export class ChallengeResolverFields {
+@Resolver(() => Organisation)
+export class OrganisationResolverFields {
   constructor(private userGroupService: UserGroupService) {}
 
   @Roles(
@@ -22,11 +22,12 @@ export class ChallengeResolverFields {
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
-    description: 'Groups of users related to a challenge.',
+    description: 'Groups defined on this organisation.',
   })
-  async groups(@Parent() challenge: Challenge) {
-    const groups = await challenge.groups;
-    if (!groups) throw new Error(`No groups on challenge: ${challenge.name}`);
+  async groups(@Parent() organisation: Organisation) {
+    const groups = await organisation.groups;
+    if (!groups)
+      throw new Error(`No groups on organisation: ${organisation.name}`);
     return groups;
   }
 
@@ -35,23 +36,23 @@ export class ChallengeResolverFields {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @ResolveField('contributors', () => [User], {
+  @ResolveField('members', () => [User], {
     nullable: true,
-    description: 'All users that are contributing to this challenge.',
+    description: 'Users that are contributing to this organisation.',
   })
-  async contributors(@Parent() challenge: Challenge) {
+  async contributors(@Parent() organisation: Organisation) {
     const group = await this.userGroupService.getGroupByName(
-      challenge,
+      organisation,
       RestrictedGroupNames.Members
     );
     if (!group)
       throw new Error(
-        `Unable to locate members group on challenge: ${challenge.name}`
+        `Unable to locate members group on organisation: ${organisation.name}`
       );
     const members = group.members;
     if (!members)
       throw new Error(
-        `Members group not initialised on challenge: ${challenge.name}`
+        `Members group not initialised on organisation: ${organisation.name}`
       );
     return members;
   }

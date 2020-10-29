@@ -16,7 +16,7 @@ import { OpportunityInput } from '../opportunity/opportunity.dto';
 import { Opportunity } from '../opportunity/opportunity.entity';
 
 @Resolver()
-export class ChallengeResolver {
+export class ChallengeResolverMutations {
   constructor(
     @Inject(ChallengeService) private challengeService: ChallengeService
   ) {}

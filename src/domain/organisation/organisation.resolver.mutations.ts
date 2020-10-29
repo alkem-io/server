@@ -15,8 +15,8 @@ import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 
-@Resolver()
-export class OrganisationResolver {
+@Resolver(() => Organisation)
+export class OrganisationResolverMutations {
   constructor(
     @Inject(OrganisationService)
     private organisationService: OrganisationService
