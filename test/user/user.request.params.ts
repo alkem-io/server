@@ -10,6 +10,8 @@ export const createUserMutation = async (userName: string) => {
         firstName: 'testFN',
         lastName: 'testLN',
         name: userName,
+        firstName: userName,
+        lastName: userName,
         email: `${userName}@test.com`,
       },
     },
@@ -168,7 +170,6 @@ export const getUserMemberships = async () => {
       users {
         name
         memberof {
-          email
           groups {
             name
           }

@@ -91,7 +91,9 @@ describe('Create User', () => {
               }
             }
             memberof {
-              email
+              groups {
+                name
+              }
             }
           }
         }`,
@@ -129,7 +131,9 @@ describe('Create User', () => {
                       }
                     }
                     memberof {
-                      email
+                      groups {
+                        name
+                      }
                     }
                   }
                 }`,
@@ -203,7 +207,7 @@ describe('Create User', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      "ER_DATA_TOO_LONG: Data too long for column 'name' at row 1"
+      'ER_DATA_TOO_LONG: Data too long for column \'name\' at row 1'
     );
   });
 
@@ -216,6 +220,8 @@ describe('Create User', () => {
       variables: {
         userData: {
           name: 'name',
+          firstName: 'name',
+          lastName: 'name',
           email: 'testEmail',
         },
       },
