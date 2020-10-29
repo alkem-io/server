@@ -197,7 +197,7 @@ export class UserGroupService {
 
     // Also remove the user from being a focal point
     if (group.focalPoint && group.focalPoint.id === user.id) {
-      this.removeFocalPoint(group.id);
+      await this.removeFocalPoint(group.id);
     }
 
     await this.groupRepository.save(group);
