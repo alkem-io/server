@@ -131,7 +131,7 @@ export class UserGroupService {
   }
 
   async groupExists(groupID: number): Promise<boolean> {
-    const group = this.groupRepository.findOne({ id: groupID });
+    const group = await this.groupRepository.findOne({ id: groupID });
     if (group) return true;
     else return false;
   }
