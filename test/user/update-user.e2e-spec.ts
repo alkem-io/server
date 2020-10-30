@@ -16,6 +16,8 @@ let userNameAfterUpdate = '';
 let phoneAfterUpdate = '';
 let emailAfterUpdate = '';
 
+let uniqueId = Math.random().toString();
+
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
 });
@@ -25,16 +27,16 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  userName = 'testUser ' + Math.random().toString();
-  userPhone = 'userPhone ' + Math.random().toString();
-  userEmail = Math.random().toString() + '@test.com';
+  userName = `testUser ${uniqueId}`;
+  userPhone = `userPhone ${uniqueId}`;
+  userEmail = `${uniqueId}@test.com`;
 });
 
 describe('Update user', () => {
   beforeEach(() => {
-    userNameAfterUpdate = 'testUserAfterUpdate-Name' + Math.random().toString();
-    phoneAfterUpdate = 'testUserAfterUpdate-Phone' + Math.random().toString();
-    emailAfterUpdate = 'testUserAfterUpdate-Email' + Math.random().toString();
+    userNameAfterUpdate = `testUserAfterUpdate-Name_${uniqueId}`;
+    phoneAfterUpdate = `testUserAfterUpdate-Phone_${uniqueId}`;
+    emailAfterUpdate = `testUserAfterUpdate-Email_${uniqueId}@test.com`;
   });
 
   afterEach(async () => {

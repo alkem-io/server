@@ -18,12 +18,14 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
+let uniqueId = Math.random().toString();
+
 beforeEach(() => {
-  userName = 'testUser ' + Math.random().toString();
-  userFirstName = 'testUserFirstName ' + Math.random().toString();
-  userLastName = 'testUserLastName' + Math.random().toString();
-  userPhone = 'userPhone ' + Math.random().toString();
-  userEmail = Math.random().toString() + '@test.com';
+  userName = `testUser ${uniqueId}`;
+  userFirstName = `testUserFirstName ${uniqueId}`;
+  userLastName = `testUserLastName ${uniqueId}`;
+  userPhone = `userPhone ${uniqueId}`;
+  userEmail = `${uniqueId}@test.com`;
 });
 
 describe('Create User', () => {
@@ -41,18 +43,20 @@ describe('Create User', () => {
     expect(response.body.data.createUser.name).toEqual(userName);
   });
 
-  test.skip('should throw error - same user is created twice', async () => {
+  test('should throw error - same user is created twice', async () => {
     // Arrange
     const response = await createUserMutation(userName);
     userId = response.body.data.createUser.id;
+    const userEmailGenerated = response.body.data.createUser.email;
 
     // Act
     const responseSecondTime = await createUserMutation(userName);
-    userId = responseSecondTime.body.data.createUser.id;
 
     // Assert
     expect(responseSecondTime.status).toBe(200);
-    expect(responseSecondTime.body.data.createUserMutation).toEqual(false);
+    expect(responseSecondTime.text).toContain(
+      `User profile with the specified email (${userEmailGenerated}) already exists`
+    );
   });
 
   test('should query created user', async () => {

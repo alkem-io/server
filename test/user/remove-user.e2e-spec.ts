@@ -8,6 +8,8 @@ let userId = '';
 let userPhone = '';
 let userEmail = '';
 
+let uniqueId = Math.random().toString();
+
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
 });
@@ -17,9 +19,9 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  userName = 'testUser ' + Math.random().toString();
-  userPhone = 'userPhone ' + Math.random().toString();
-  userEmail = Math.random().toString() + '@test.com';
+  userName = `testUser ${uniqueId}`;
+  userPhone = `userPhone ${uniqueId}`;
+  userEmail = `${uniqueId}@test.com`;
 });
 
 describe('Remove user', () => {
