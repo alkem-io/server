@@ -114,7 +114,7 @@ describe('Users and Groups', () => {
     expect(responseAddUserToGroupTwo.body.data.addUserToGroup).toEqual(true);
   });
 
-  test.skip('should remove "user" from a "group"', async () => {
+  test('should remove "user" from a "group"', async () => {
     // Arrange
     const responseCreate = await createGroupMutation(groupName);
     const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
@@ -137,7 +137,11 @@ describe('Users and Groups', () => {
     // Assert
     expect(responseRemoveUserFromGroup.status).toBe(200);
     expect(responseRemoveUserFromGroup.body.data.removeUserFromGroup).toEqual(
-      true
+      expect.objectContaining({
+        name: groupName,
+        members: [],
+        id: groupId,
+      })
     );
     expect(
       responseRemoveUserFromGroup.body.data.removeUserFromGroup.members
