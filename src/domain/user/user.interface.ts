@@ -16,4 +16,5 @@ export interface IUser {
   DID: IDID;
   profile: IProfile;
   userGroups?: IUserGroup[];
+  lastModified: number;
 }

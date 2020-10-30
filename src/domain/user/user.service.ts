@@ -52,7 +52,7 @@ export class UserService {
     email: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | undefined> {
-    return this.userRepository.findOne({ email: email }, options);
+    return await this.userRepository.findOne({ email: email }, options);
   }
 
   async findUser(
@@ -165,6 +165,7 @@ export class UserService {
     // Ok to create a new user + save
     const user = User.create(userData);
     await this.initialiseMembers(user);
+    this.updateLastModified(user);
     await this.userRepository.save(user);
 
     this.logger.verbose(`User ${userData.email} was created!`);
@@ -241,6 +242,7 @@ export class UserService {
       );
     }
 
+    this.updateLastModified(user);
     await this.userRepository.save(user);
     return user;
   }
@@ -249,5 +251,9 @@ export class UserService {
     // The reg exp used to validate the email format
     const emailValidationExpression = /\S+@\S+/;
     return emailValidationExpression.test(String(email).toLowerCase());
+  }
+
+  updateLastModified(user: IUser) {
+    user.lastModified = Math.floor(new Date().getTime() / 1000);
   }
 }
