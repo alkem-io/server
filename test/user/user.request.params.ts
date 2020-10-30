@@ -4,7 +4,7 @@ export const createUserMutation = async (userName: string) => {
   const requestParams = {
     operationName: 'CreateUser',
     query:
-      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name }}',
+      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email }}',
     variables: {
       userData: {
         firstName: 'firstName' + Math.random().toString(),
