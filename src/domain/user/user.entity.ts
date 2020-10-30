@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { DID } from '../did/did.entity';
 import { Profile } from '../profile/profile.entity';
 import { UserGroup } from '../user-group/user-group.entity';
@@ -80,6 +80,14 @@ export class User extends BaseEntity implements IUser {
   @JoinColumn()
   profile: Profile;
 
+  @Field(() => Int, {
+    nullable: true,
+    description:
+      'The last timestamp, in seconds, when this user was modified - either via creation or via update. Note: updating of profile data or group memberships does not update this field.',
+  })
+  @Column()
+  lastModified: number;
+
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.focalPoint,
@@ -91,5 +99,6 @@ export class User extends BaseEntity implements IUser {
     super();
     this.name = name;
     this.profile = new Profile();
+    this.lastModified = 0;
   }
 }
