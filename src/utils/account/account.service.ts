@@ -48,7 +48,7 @@ export class AccountService {
       const result = await this.msGraphService.createUser(userData, accountUpn);
       if (!result)
         throw new Error(
-          `Unable to complete account creation for ${userData.email}`
+          `Unable to complete account creation for ${userData.email} using UPN: ${accountUpn}`
         );
     } catch (e) {
       const msg = `Unable to complete account creation for ${userData.email}: ${e}`;
@@ -87,6 +87,8 @@ export class AccountService {
     if (!upnDomain)
       throw new Error('Unable to identify the upn domain to be used');
 
+    const normalizer = require('normalizer');
+
     // Note: requesting client has the option to explicilty specify the account UPN to use
     const accountUpn = userData.accountUpn;
     const firstName = userData.firstName;
@@ -101,8 +103,12 @@ export class AccountService {
 
     let upn = `${firstName}.${lastName}@${upnDomain}`;
 
+    // remove any unusual characters
+    upn = normalizer.normalize(upn);
+
     // extra check to remove any blank spaces
     upn = upn.replace(/\s/g, '');
+
     this.logger.verbose(`Upn: ${upn}`);
 
     return upn;
