@@ -44,12 +44,17 @@ export class AccountService {
     await this.validateAccountCreationRequest(userData);
 
     const accountUpn = this.buildUPN(userData);
-    const result = await this.msGraphService.createUser(userData, accountUpn);
-    // Save the accountUpn on the user profile
-    if (!result)
-      throw new Error(
-        `Unable to complete account creation for ${userData.email}`
-      );
+    try {
+      const result = await this.msGraphService.createUser(userData, accountUpn);
+      if (!result)
+        throw new Error(
+          `Unable to complete account creation for ${userData.email}`
+        );
+    } catch (e) {
+      const msg = `Unable to complete account creation for ${userData.email}: ${e}`;
+      this.logger.error(msg);
+      throw new Error(msg);
+    }
     // Update the user to store the upn
     const user = await this.userService.getUserByEmail(userData.email);
     if (!user) throw new Error(`Unable to update user: ${userData.email}`);
@@ -70,6 +75,7 @@ export class AccountService {
     userData.aadPassword = password;
     userData.firstName = user.firstName;
     userData.lastName = user.lastName;
+    userData.name = user.name;
     userData.email = user.email;
 
     await this.createUserAccount(userData);
