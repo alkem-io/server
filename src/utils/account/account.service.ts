@@ -99,7 +99,10 @@ export class AccountService {
         throw new Error('Missing last name information for generating UPN');
     }
 
-    const upn = `${firstName}.${lastName}@${upnDomain}`;
+    let upn = `${firstName}.${lastName}@${upnDomain}`;
+
+    // extra check to remove any blank spaces
+    upn = upn.replace(/\s/g, '');
     this.logger.verbose(`Upn: ${upn}`);
 
     return upn;
