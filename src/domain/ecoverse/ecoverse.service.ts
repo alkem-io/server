@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IContext } from '../context/context.interface';
 import { IOrganisation } from '../organisation/organisation.interface';
@@ -25,6 +25,7 @@ import { OrganisationService } from '../organisation/organisation.service';
 import { AccountService } from '../../utils/account/account.service';
 import { Context } from '../context/context.entity';
 import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class EcoverseService {
@@ -37,7 +38,8 @@ export class EcoverseService {
     private tagsetService: TagsetService,
     private accountService: AccountService,
     @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>
+    private ecoverseRepository: Repository<Ecoverse>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
@@ -206,7 +208,7 @@ export class EcoverseService {
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
-    console.log(`Adding userGroup (${groupName}) to ecoverse`);
+    this.logger.verbose(`Adding userGroup (${groupName}) to ecoverse`);
 
     const ecoverse = (await this.getEcoverse({
       join: {
@@ -253,7 +255,7 @@ export class EcoverseService {
       await this.ecoverseRepository.save(ecoverse);
     } else {
       // load the whole challenge
-      console.log('Creating Challenge: Challenge already exists!');
+      this.logger.verbose('Creating Challenge: Challenge already exists!');
       challenge = await this.challengeService.getChallengeByID(challenge.id);
     }
     return challenge;
@@ -290,32 +292,27 @@ export class EcoverseService {
     return organisation;
   }
 
-  // Create the user and add the user into the members group
+  // Create the user and an account on the identity provider
   async createUser(userData: UserInput): Promise<IUser> {
-    let ctUser = (await this.userService.getUserByEmail(
-      userData.email
-    )) as IUser;
-    let accountExists = true;
-    if (this.accountService.accountUsageEnabled()) {
-      accountExists = await this.accountService.accountExists(userData.email);
+    // Check that a valid profile and a valid account can be created. It is double work but not easily avoided.
+    await this.userService.validateUserProfileCreationRequest(userData);
+    if (this.accountService.authenticationEnabled()) {
+      await this.accountService.validateAccountCreationRequest(userData);
     }
 
-    if (ctUser) {
-      if (accountExists) {
-        console.info(`User ${userData.email} already exists!`);
-        return ctUser;
-      } else {
-        throw new Error(
-          `User ${userData.email} is in an inconsistent state. The user exists in CT database but doesn't have an account`
-        );
-      }
+    // Ok to proceed to creating profile and optionally account
+    const user = await this.createUserProfile(userData);
+    if (this.accountService.authenticationEnabled()) {
+      await this.accountService.createUserAccount(userData);
     }
+    return user;
+  }
 
-    ctUser = await this.userService.createUser(userData, false);
+  // Create the user and add the user into the members group
+  async createUserProfile(userData: UserInput): Promise<IUser> {
+    const ctUser = await this.userService.createUser(userData);
     if (!ctUser)
       throw new Error(`User ${userData.email} could not be created!`);
-
-    if (!accountExists) await this.accountService.createAccount(userData);
 
     const ecoverse = await this.getEcoverse({
       relations: ['groups'],

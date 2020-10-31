@@ -1,15 +1,17 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
 import { UserInput } from '../../domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class MsGraphService {
   constructor(
     @Inject(forwardRef(() => AzureADStrategy))
-    private azureAdStrategy: AzureADStrategy
+    private azureAdStrategy: AzureADStrategy,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   async callResourceAPI(accessToken: string, resourceURI: string) {
@@ -28,22 +30,20 @@ export class MsGraphService {
     return json;
   }
 
-  async createUser(userData: UserInput): Promise<any> {
+  async createUser(userData: UserInput, accountUpn: string): Promise<any> {
     const clientOptions: ClientOptions = {
       authProvider: this.azureAdStrategy,
     };
     const client = Client.initWithMiddleware(clientOptions);
 
-    const nickname = await this.getMailNickname(userData.email);
-    const upn = await this.buildUPN(client, userData.email);
-
+    const mailNickname = this.getMailNickname(userData.email);
     const user = {
       accountEnabled: true,
       givenName: userData.firstName,
       surname: userData.lastName,
       displayName: userData.name,
-      mailNickname: nickname,
-      userPrincipalName: upn,
+      mailNickname: mailNickname,
+      userPrincipalName: accountUpn,
       mail: userData.email,
       passwordProfile: {
         forceChangePasswordNextSignIn: true,
@@ -61,7 +61,7 @@ export class MsGraphService {
     return res;
   }
 
-  async getUser(client: Client | undefined, email: string): Promise<any> {
+  async getUser(client: Client | undefined, accountUpn: string): Promise<any> {
     if (!client) {
       const clientOptions: ClientOptions = {
         authProvider: this.azureAdStrategy,
@@ -69,29 +69,32 @@ export class MsGraphService {
       client = Client.initWithMiddleware(clientOptions);
     }
 
-    const upn = await this.buildUPN(client, email);
     let res = undefined;
     try {
-      res = await client.api(`/users/${upn}`).get();
+      res = await client.api(`/users/${accountUpn}`).get();
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
     }
     return res;
   }
 
   async userExists(
     client: Client | undefined,
-    email: string
+    accountUpn: string
   ): Promise<boolean> {
     let user;
     try {
-      user = await this.getUser(client, email);
+      user = await this.getUser(client, accountUpn);
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
     }
 
     if (user) return true;
     return false;
+  }
+
+  getMailNickname(email: string): string {
+    return email.split('@')[0];
   }
 
   async getTenantName(client: Client): Promise<string | undefined> {
@@ -100,36 +103,9 @@ export class MsGraphService {
       const org = await this.getOrganisation(client);
       tenantName = org.value[0]['verifiedDomains'][0]['name'];
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
     }
 
     return tenantName;
-  }
-
-  async buildUPN(client: Client, email: string): Promise<string> {
-    try {
-      if (!client) {
-        const clientOptions: ClientOptions = {
-          authProvider: this.azureAdStrategy,
-        };
-        client = Client.initWithMiddleware(clientOptions);
-      }
-
-      const tenantName = await this.getTenantName(client);
-      console.info(`Tenant name: ${tenantName}`);
-      const mailNickname = await this.getMailNickname(email);
-      console.info(`Mail nickname: ${mailNickname}`);
-      const upn = `${mailNickname}@${tenantName}`;
-      console.info(`Upn: ${upn}`);
-
-      return upn;
-    } catch (error) {
-      console.error(error);
-    }
-    return '';
-  }
-
-  async getMailNickname(email: string): Promise<string> {
-    return email.split('@')[0];
   }
 }

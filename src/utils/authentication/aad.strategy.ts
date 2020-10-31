@@ -2,6 +2,7 @@ import {
   forwardRef,
   Inject,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
@@ -14,6 +15,7 @@ import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class AzureADStrategy
@@ -24,7 +26,8 @@ export class AzureADStrategy
   constructor(
     private configService: ConfigService,
     @Inject(forwardRef(() => UserService))
-    private userService: UserService
+    private userService: UserService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {
     super({
       identityMetadata: configService.get<IAzureADConfig>('aad')
@@ -58,7 +61,9 @@ export class AzureADStrategy
 
       return done(null, knownUser, token);
     } catch (error) {
-      console.error(`Failed adding the user to the request object: ${error}`);
+      this.logger.error(
+        `Failed adding the user to the request object: ${error}`
+      );
       done(new Error(`Failed adding the user to the request object: ${error}`));
     }
   }
@@ -70,7 +75,9 @@ export class AzureADStrategy
       const parsedHeaders = JSON.parse(headers);
       await this.myCache.set('accessToken', parsedHeaders.authorization, 60);
     } catch (error) {
-      console.error(`Failed adding the user to the request object: ${error}`);
+      this.logger.error(
+        `Failed adding the user to the request object: ${error}`
+      );
     }
   }
 
@@ -85,7 +92,7 @@ export class AzureADStrategy
     const upstreamAccessToken = await this.getCachedBearerToken();
     const response = await this.getDownstreamAccessToken(upstreamAccessToken);
     const downstreamAccessToken = response['access_token'] as string;
-    console.info(`Downstream access token: ${downstreamAccessToken}`);
+    this.logger.verbose(`Downstream access token: ${downstreamAccessToken}`);
 
     return downstreamAccessToken;
   }
@@ -94,7 +101,7 @@ export class AzureADStrategy
   //Credits to: https://github.com/Azure-Samples/ms-identity-nodejs-webapi-onbehalfof-azurefunctions/blob/master/Function/MyHttpTrigger/index.js
   async getDownstreamAccessToken(userToken: string) {
     const [bearer, tokenValue] = userToken.split(' ');
-    console.info(`Upstream access token: ${bearer} ${tokenValue}`);
+    this.logger.verbose(`Upstream access token: ${bearer} ${tokenValue}`);
 
     const authority = 'login.microsoftonline.com';
     const tenant = process.env.AAD_TENANT;

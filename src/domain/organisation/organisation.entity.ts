@@ -18,7 +18,6 @@ import {
   RestrictedGroupNames,
   UserGroup,
 } from '../user-group/user-group.entity';
-import { User } from '../user/user.entity';
 import { IOrganisation } from './organisation.interface';
 
 @Entity()
@@ -57,16 +56,6 @@ export class Organisation extends BaseEntity
   @JoinColumn()
   tagset?: Tagset;
 
-  @Field(() => [User], {
-    nullable: true,
-    description: 'The set of users that are associated with this organisation',
-  })
-  members?: User[];
-
-  @Field(() => [UserGroup], {
-    nullable: true,
-    description: 'Groups of users related to an organisation.',
-  })
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.organisation,
@@ -88,7 +77,4 @@ export class Organisation extends BaseEntity
     this.name = name;
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
-
-  // Helper method to ensure all members are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
 }

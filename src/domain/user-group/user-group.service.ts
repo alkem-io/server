@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
@@ -14,6 +14,7 @@ import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class UserGroupService {
@@ -21,7 +22,8 @@ export class UserGroupService {
     private userService: UserService,
     private profileService: ProfileService,
     @InjectRepository(UserGroup)
-    private groupRepository: Repository<UserGroup>
+    private groupRepository: Repository<UserGroup>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
   //toDo vyanakiev - fix this
@@ -66,14 +68,14 @@ export class UserGroupService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
 
     const group = (await this.getGroupByID(groupID)) as UserGroup;
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
 
@@ -108,7 +110,7 @@ export class UserGroupService {
 
     const group = (await this.getGroupByID(groupID)) as IUserGroup;
     if (!group) throw new Error(`No group with id ${groupID} was found!`);
-    return this.addUserToGroup(user, group);
+    return await this.addUserToGroup(user, group);
   }
 
   async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
@@ -129,7 +131,7 @@ export class UserGroupService {
   }
 
   async groupExists(groupID: number): Promise<boolean> {
-    const group = this.groupRepository.findOne({ id: groupID });
+    const group = await this.groupRepository.findOne({ id: groupID });
     if (group) return true;
     else return false;
   }
@@ -141,7 +143,9 @@ export class UserGroupService {
     );
 
     if (rawData.length > 0) {
-      console.log(`User ${user.email} already exists in group ${group.name}!`);
+      this.logger.verbose(
+        `User ${user.email} already exists in group ${group.name}!`
+      );
       return false;
     }
     const res = await getConnection()
@@ -166,14 +170,16 @@ export class UserGroupService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
 
-    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    const group = await this.getGroupByID(groupID, {
+      relations: ['members'],
+    });
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
 
@@ -193,7 +199,7 @@ export class UserGroupService {
 
     // Also remove the user from being a focal point
     if (group.focalPoint && group.focalPoint.id === user.id) {
-      this.removeFocalPoint(group.id);
+      await this.removeFocalPoint(group.id);
     }
 
     await this.groupRepository.save(group);
@@ -205,7 +211,7 @@ export class UserGroupService {
     const group = (await this.getGroupByID(groupID)) as UserGroup;
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      console.log(msg);
+      this.logger.verbose(msg);
       throw new Error(msg);
     }
     // Set focalPoint to NULL will remove the relation.
@@ -295,12 +301,14 @@ export class UserGroupService {
     // Check if the group already exists, if so log a warning
     const alreadyExists = this.hasGroupWithName(groupable, name);
     if (alreadyExists) {
-      console.log(`Attempting to add group that already exists: ${name}`);
+      this.logger.verbose(
+        `Attempting to add group that already exists: ${name}`
+      );
       return await this.getGroupByName(groupable, name);
     }
 
     if (groupable.restrictedGroupNames?.includes(name)) {
-      console.log(
+      this.logger.verbose(
         `Attempted to create a usergroup using a restricted name: ${name}`
       );
       throw new Error(

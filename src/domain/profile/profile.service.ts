@@ -30,7 +30,7 @@ export class ProfileService {
 
     // Check that the mandatory tagsets for a user are created
     if (profile.restrictedTagsetNames) {
-      this.tagsetService.createRestrictedTagsets(
+      await this.tagsetService.createRestrictedTagsets(
         profile,
         profile.restrictedTagsetNames
       );
@@ -61,7 +61,9 @@ export class ProfileService {
 
     if (!profile) throw new Error(`Profile with id(${profileID}) not found!`);
 
-    const newReference = this.referenceService.createReference(referenceInput);
+    const newReference = await this.referenceService.createReference(
+      referenceInput
+    );
     if (!profile.references) throw new Error('References not defined');
     // check there is not already a reference with the same name
     for (const reference of profile.references) {
@@ -76,7 +78,16 @@ export class ProfileService {
     return newReference;
   }
 
+  async updateAvatar(profileID: number, avatarUri: string): Promise<boolean> {
+    const profile = (await this.getProfile(profileID)) as Profile;
+    if (!profile) throw new Error(`Profile with id(${profileID}) not found!`);
+
+    profile.avatar = avatarUri;
+    await this.profileRepository.save(profile);
+    return true;
+  }
+
   async getProfile(profileID: number): Promise<IProfile | undefined> {
-    return Profile.findOne({ id: profileID });
+    return await Profile.findOne({ id: profileID });
   }
 }

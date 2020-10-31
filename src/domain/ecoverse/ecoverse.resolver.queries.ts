@@ -49,7 +49,6 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getHost();
   }
 
-  // Context related fields
   @Query(() => Context, {
     nullable: false,
     description: 'The shared understanding for this ecoverse',
@@ -131,24 +130,12 @@ export class EcoverseResolverQueries {
     return group;
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
   async challenges(): Promise<IChallenge[]> {
     const challenges = await this.ecoverseService.getChallenges();
     return challenges;
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @Query(() => Challenge, {
     nullable: false,
     description: 'A particular challenge',
@@ -157,12 +144,6 @@ export class EcoverseResolverQueries {
     return await this.challengeService.getChallengeByID(id);
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @Query(() => [Organisation], {
     nullable: false,
     description: 'All organisations',
@@ -172,12 +153,6 @@ export class EcoverseResolverQueries {
     return organisations;
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @Query(() => Organisation, {
     nullable: false,
     description: 'A particular organisation',
@@ -188,12 +163,6 @@ export class EcoverseResolverQueries {
     return await this.organisationService.getOrganisationByID(id);
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @Query(() => Tagset, {
     nullable: false,
     description: 'The tagset associated with this Ecoverse',

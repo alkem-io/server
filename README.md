@@ -28,6 +28,7 @@ The technology stack is as follows:
 - docker-compose: for container orchestration
 - passportjs for authentication
 - Azure Active Directory as an Identity Provider
+- Winston and Nest-Winston for logging
 
 ## === Interacting with a Cherrytwist server ===
 ### **Graphql API**
@@ -71,7 +72,7 @@ Note: Only AAD v2 endpoints and tokens are supported!
 
 Example:
 
-```bash
+```conf
 DATABASE_HOST=localhost
 MYSQL_DATABASE=cherrytwist
 MYSQL_ROOT_PASSWORD=toor
@@ -87,7 +88,7 @@ Optional variables:
 
 Example:
 
-```bash
+```conf
 MYSQL_DB_PORT=55000
 ENABLE_ORM_LOGGING=true
 ```
@@ -96,19 +97,29 @@ ENABLE_ORM_LOGGING=true
 
 Define AAD_TENANT, AAD_CLIENT environment variables - e.g. locally in .env environment. Optionally provide AUTHENTICATION_ENABLED=false for dev purposes (default value is TRUE) to test without AAD.
 
-```bash
+```conf
 AAD_TENANT=[tenant (directory) ID]
 AAD_CLIENT= [client (application) ID]
 AAD_API_SCOPE= [API Scopes Required for Downstream APIs, in our case Microsoft Graph API]
 AAD_CLIENT_SECRET=[App Client Secret obtained from cherrytwist-api app registration*]
+AAD_LOGGING_LEVEL=Error|Warning|Info|Verbose. Defaults to Error if no value is set.
+AAD_LOGGING_NO_PII=true|false. Default is true. Specifies whether AAD personal identifiable information can be logged.
+AAD_UPN_DOMAIN=[Domain name to be used when generating the UPN for accounts created on AAD by the platform]. Defaults to "playgroundcherrytwist.onmicrosoft.com", so a user gets a UPN like "first.last@playgroundcherrytwist.onmicrosoft.com". Note: the domain name specified needs to be either the default domain for the AAD tenant or a configured "verified domain name".
 AUTHENTICATION_ENABLED=true
 ```
 ***Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
 
 Optionally configure CORS origin for improved security with the following env variable (by default the value is *):
 
-```bash
+```conf
 CORS_ORIGIN=[your CORS origin value]
+```
+
+### Configure logging
+To configure logging levels, use:
+
+```conf
+LOGGING_LEVEL=Error|Warn|Info|Http|Verbose|Debug|Silly. Defaults to Error if no value is set.
 ```
 
 ### Install dependencies

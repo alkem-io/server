@@ -1,3 +1,5 @@
+import { AAD_LOGGING_LEVEL } from '../utils/config/aad.config';
+
 export interface IAzureADConfig {
   identityMetadata: string;
   clientID: string;
@@ -7,7 +9,8 @@ export interface IAzureADConfig {
   issuer: string;
   audience: string;
   allowMultiAudiencesInToken: string;
-  loggingLevel: string;
+  loggingLevel: AAD_LOGGING_LEVEL;
   loggingNoPII: boolean;
+  upnDomain: string;
   scope: string;
 }

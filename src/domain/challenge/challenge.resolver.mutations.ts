@@ -1,6 +1,6 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
-import { Args, Float, Mutation } from '@nestjs/graphql/dist';
+import { Args, Float, Mutation } from '@nestjs/graphql';
 import { Roles } from '../../utils/decorators/roles.decorator';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import {
@@ -16,7 +16,7 @@ import { OpportunityInput } from '../opportunity/opportunity.dto';
 import { Opportunity } from '../opportunity/opportunity.entity';
 
 @Resolver()
-export class ChallengeResolver {
+export class ChallengeResolverMutations {
   constructor(
     @Inject(ChallengeService) private challengeService: ChallengeService
   ) {}
