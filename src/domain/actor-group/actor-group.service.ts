@@ -6,10 +6,13 @@ import { IActorGroup } from './actor-group.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorInput } from '../actor/actor.dto';
 import { ActorGroupInput } from './actor-group.dto';
+import { ActorService } from '../actor/actor.service';
+import { IActor } from '../actor/actor.interface';
 
 @Injectable()
 export class ActorGroupService {
   constructor(
+    private actorService: ActorService,
     @InjectRepository(ActorGroup)
     private actorGroupRepository: Repository<ActorGroup>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
@@ -25,19 +28,22 @@ export class ActorGroupService {
     return actorGroup;
   }
 
-  async addActor(
+  async createActor(
     actorGroupID: number,
     actorData: ActorInput
-  ): Promise<boolean> {
+  ): Promise<IActor> {
     const actorGroup = await this.getActorGroup(actorGroupID);
     if (!actorGroup)
       throw new Error(`Unable to locate actor group with id: ${actorGroupID}`);
 
-    // Todo: fill out the rest of this when implement Actor ad return an Actor instance
-    const name = actorData.name;
-    if (!name)
-      throw new Error(`Required name not specified on ${actorGroupID}`);
-    return true;
+    const actor = await this.actorService.createActor(actorData);
+    if (!actorGroup.actors)
+      throw new Error(`Non-initialised ActorGroup: ${actorGroupID}`);
+    actorGroup.actors.push(actor);
+
+    await this.actorGroupRepository.save(actorGroup);
+
+    return actor;
   }
 
   async createActorGroup(

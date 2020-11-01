@@ -5,6 +5,8 @@ import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { ActorGroupService } from './actor-group.service';
 import { ActorInput } from '../actor/actor.dto';
+import { IActor } from '../actor/actor.interface';
+import { Actor } from '../actor/actor.entity';
 
 @Resolver()
 export class ActorGroupResolver {
@@ -15,15 +17,14 @@ export class ActorGroupResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Replace the set of tags in a ActorGroup with the provided tags',
+  @Mutation(() => Actor, {
+    description: 'Create a new actor on the ActorGroup with the specified ID',
   })
-  async addActorOnActorGroup(
+  async createActor(
     @Args('actorGroupID') actorGroupID: number,
     @Args('actorData') actorData: ActorInput
-  ): Promise<boolean> {
-    const result = await this.actorGroupService.addActor(
+  ): Promise<IActor> {
+    const result = await this.actorGroupService.createActor(
       actorGroupID,
       actorData
     );
