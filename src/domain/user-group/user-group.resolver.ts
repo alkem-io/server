@@ -1,12 +1,19 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import {
+  Args,
+  Mutation,
+  Parent,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql';
 import { Roles } from '../../utils/decorators/roles.decorator';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
+import { User } from '../user/user.entity';
 
-@Resolver()
+@Resolver(() => UserGroup)
 export class UserGroupResolver {
   constructor(private groupService: UserGroupService) {}
 
@@ -76,5 +83,13 @@ export class UserGroupResolver {
   ): Promise<IUserGroup> {
     const group = await this.groupService.removeFocalPoint(groupID);
     return group;
+  }
+
+  @ResolveField('members', () => User)
+  async members(@Parent() group: UserGroup): Promise<User[]> {
+    if (!group) return [];
+
+    const members = await this.groupService.getMembers(group.id);
+    return (members || []) as User[];
   }
 }
