@@ -14,6 +14,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { IUser } from './user.interface';
+import { Template } from '../template/template.entity';
 
 @Entity()
 @ObjectType()
@@ -71,6 +72,13 @@ export class User extends BaseEntity implements IUser {
     { eager: false }
   )
   userGroups?: UserGroup[];
+
+  @ManyToMany(
+    () => Template,
+    template => template.users,
+    { eager: false }
+  )
+  templates?: Template[];
 
   @Field(() => Profile, {
     nullable: true,
