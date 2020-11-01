@@ -98,6 +98,16 @@ export class OpportunityService {
     if (!opportunity)
       throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
 
+    // Check that do not already have an aspect with the same title
+    const title = aspectData.title;
+    const existingAspect = opportunity.aspects?.find(
+      aspect => aspect.title === title
+    );
+    if (existingAspect)
+      throw new Error(
+        `Already have an aspect with the provided title: ${title}`
+      );
+
     const aspect = await this.aspectService.createAspect(aspectData);
     if (!opportunity.aspects)
       throw new Error(`Opportunity (${opportunityId}) not initialised`);
