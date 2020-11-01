@@ -53,7 +53,7 @@ export class AccountService {
     } catch (e) {
       const msg = `Unable to complete account creation for ${userData.email}: ${e}`;
       this.logger.error(msg);
-      throw new Error(msg);
+      throw e;
     }
     // Update the user to store the upn
     const user = await this.userService.getUserByEmail(userData.email);
@@ -87,6 +87,7 @@ export class AccountService {
     if (!upnDomain)
       throw new Error('Unable to identify the upn domain to be used');
 
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const normalizer = require('normalizer');
 
     // Note: requesting client has the option to explicilty specify the account UPN to use
