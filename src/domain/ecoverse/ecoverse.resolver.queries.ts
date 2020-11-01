@@ -12,6 +12,8 @@ import { IOrganisation } from '../organisation/organisation.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { Tagset } from '../tagset/tagset.entity';
 import { ITagset } from '../tagset/tagset.interface';
+import { Template } from '../template/template.entity';
+import { ITemplate } from '../template/template.interface';
 import {
   RestrictedGroupNames,
   UserGroup,
@@ -134,6 +136,12 @@ export class EcoverseResolverQueries {
   async challenges(): Promise<IChallenge[]> {
     const challenges = await this.ecoverseService.getChallenges();
     return challenges;
+  }
+
+  @Query(() => [Template], { nullable: false, description: 'All templates' })
+  async templates(): Promise<ITemplate[]> {
+    const templates = await this.ecoverseService.getTemplates();
+    return templates;
   }
 
   @Query(() => Challenge, {
