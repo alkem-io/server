@@ -1,0 +1,15 @@
+mutation CreateTemplate($templateData: TemplateInput!) {
+  createTemplate(templateData: $templateData) {
+    name,
+    description
+  }
+}
+
+query variables:
+{
+  "templateData":
+  {
+    "name": "CherrytwistDefault",
+    "description": "The default template that comes with Cherrytwist"
+  }
+}

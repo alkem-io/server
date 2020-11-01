@@ -9,6 +9,9 @@ import { IChallenge } from '../challenge/challenge.interface';
 import { OrganisationInput } from '../organisation/organisation.dto';
 import { Organisation } from '../organisation/organisation.entity';
 import { IOrganisation } from '../organisation/organisation.interface';
+import { TemplateInput } from '../template/template.dto';
+import { Template } from '../template/template.entity';
+import { ITemplate } from '../template/template.interface';
 import {
   RestrictedGroupNames,
   UserGroup,
@@ -63,6 +66,19 @@ export class EcoverseResolverMutations {
   })
   async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
     const user = await this.ecoverseService.createUser(userData);
+    return user;
+  }
+
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Template, {
+    description:
+      'Creates a new template for the population of entities within tis ecoverse',
+  })
+  async createTemplate(
+    @Args('templateData') templateData: TemplateInput
+  ): Promise<ITemplate> {
+    const user = await this.ecoverseService.createTemplate(templateData);
     return user;
   }
 
