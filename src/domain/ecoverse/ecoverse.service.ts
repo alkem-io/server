@@ -17,30 +17,35 @@ import { ITagset } from '../tagset/tagset.interface';
 import { Challenge } from '../challenge/challenge.entity';
 import { ChallengeService } from '../challenge/challenge.service';
 import { ChallengeInput } from '../challenge/challenge.dto';
-import { UserService } from '../user/user.service';
 import { UserInput } from '../user/user.dto';
 import { OrganisationInput } from '../organisation/organisation.dto';
 import { Organisation } from '../organisation/organisation.entity';
-import { OrganisationService } from '../organisation/organisation.service';
-import { AccountService } from '../../utils/account/account.service';
 import { Context } from '../context/context.entity';
 import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TemplateService } from '../template/template.service';
+import { TemplateInput } from '../template/template.dto';
+import { ITemplate } from '../template/template.interface';
+import { OrganisationService } from '../organisation/organisation.service';
+import { UserService } from '../user/user.service';
+import { AccountService } from '../../utils/account/account.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
-    private challengeService: ChallengeService,
     private organisationService: OrganisationService,
     private userService: UserService,
+    private challengeService: ChallengeService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
     private accountService: AccountService,
+    private templateService: TemplateService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
+
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(ecoverse: IEcoverse): Promise<IEcoverse> {
@@ -82,15 +87,8 @@ export class EcoverseService {
   }
 
   async getName(): Promise<string> {
-    try {
-      const ecoverse = await this.getEcoverse();
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return ecoverse.name;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getName()!!!', exception: e });
-      throw e;
-    }
+    const ecoverse = await this.getEcoverse();
+    return ecoverse.name;
   }
 
   async getEcoverseId(): Promise<number> {
@@ -149,14 +147,15 @@ export class EcoverseService {
   }
 
   async getChallenges(): Promise<IChallenge[]> {
-    try {
-      const ecoverseId = await this.getEcoverseId();
-      const challanges = await this.challengeService.getChallenges(ecoverseId);
-      return challanges;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
-      throw e;
-    }
+    const ecoverseId = await this.getEcoverseId();
+    const challanges = await this.challengeService.getChallenges(ecoverseId);
+    return challanges;
+  }
+
+  async getTemplates(): Promise<ITemplate[]> {
+    const ecoverseId = await this.getEcoverseId();
+    const templates = await this.templateService.getTemplates(ecoverseId);
+    return templates;
   }
 
   async getOrganisations(): Promise<IOrganisation[]> {
@@ -172,39 +171,18 @@ export class EcoverseService {
   }
 
   async getContext(): Promise<IContext> {
-    try {
-      const ecoverse = (await this.getEcoverse()) as IEcoverse;
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return ecoverse.context as IContext;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e });
-      throw e;
-    }
+    const ecoverse = (await this.getEcoverse()) as IEcoverse;
+    return ecoverse.context as IContext;
   }
 
   async getTagset(): Promise<ITagset> {
-    try {
-      const ecoverse: IEcoverse = await this.getEcoverse();
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return ecoverse.tagset as ITagset;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e });
-      throw e;
-    }
+    const ecoverse: IEcoverse = await this.getEcoverse();
+    return ecoverse.tagset as ITagset;
   }
 
   async getHost(): Promise<IOrganisation> {
-    try {
-      const ecoverse = (await this.getEcoverse()) as Ecoverse;
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return ecoverse.host as IOrganisation;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getHost()!!!', exception: e });
-      throw e;
-    }
+    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    return ecoverse.host as IOrganisation;
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
@@ -259,6 +237,34 @@ export class EcoverseService {
       challenge = await this.challengeService.getChallengeByID(challenge.id);
     }
     return challenge;
+  }
+
+  async createTemplate(templateData: TemplateInput): Promise<ITemplate> {
+    const ecoverse = await this.getEcoverse({
+      join: {
+        alias: 'ecoverse',
+        leftJoinAndSelect: {
+          challenges: 'ecoverse.templates',
+        },
+      },
+    });
+
+    if (!ecoverse.templates) {
+      throw new Error('Templates must be defined');
+    }
+    // First check if the challenge already exists on not...
+    let template = ecoverse.templates.find(c => c.name === templateData.name);
+    if (template)
+      throw new Error(
+        `Template with the provided name already exists: ${templateData.name}`
+      );
+    // No existing challenge found, create and initialise a new one!
+    template = await this.templateService.createTemplate(templateData);
+
+    ecoverse.templates.push(template);
+    await this.ecoverseRepository.save(ecoverse);
+
+    return template;
   }
 
   async createOrganisation(

@@ -16,6 +16,7 @@ import { Context } from '../context/context.entity';
 import { DID } from '../did/did.entity';
 import { Organisation } from '../organisation/organisation.entity';
 import { Tagset } from '../tagset/tagset.entity';
+import { Template } from '../template/template.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
@@ -96,6 +97,17 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     { eager: false, cascade: true }
   )
   challenges?: Challenge[];
+
+  @Field(() => [Template], {
+    nullable: true,
+    description: 'The set of templates registered with this Ecoverse',
+  })
+  @OneToMany(
+    () => Template,
+    template => template.ecoverse,
+    { eager: false, cascade: true }
+  )
+  templates?: Template[];
 
   @Field(() => Tagset, {
     nullable: true,
