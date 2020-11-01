@@ -37,7 +37,7 @@ export class Template extends BaseEntity implements ITemplate {
     user => user.templates,
     { eager: true, cascade: true }
   )
-  @JoinTable({ name: 'user_group_members' })
+  @JoinTable({ name: 'template_members' })
   users?: User[];
 
   @ManyToOne(

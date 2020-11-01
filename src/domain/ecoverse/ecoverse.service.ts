@@ -45,6 +45,7 @@ export class EcoverseService {
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
+
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(ecoverse: IEcoverse): Promise<IEcoverse> {
@@ -86,15 +87,8 @@ export class EcoverseService {
   }
 
   async getName(): Promise<string> {
-    try {
-      const ecoverse = await this.getEcoverse();
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return ecoverse.name;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getName()!!!', exception: e });
-      throw e;
-    }
+    const ecoverse = await this.getEcoverse();
+    return ecoverse.name;
   }
 
   async getEcoverseId(): Promise<number> {
@@ -153,25 +147,15 @@ export class EcoverseService {
   }
 
   async getChallenges(): Promise<IChallenge[]> {
-    try {
-      const ecoverseId = await this.getEcoverseId();
-      const challanges = await this.challengeService.getChallenges(ecoverseId);
-      return challanges;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
-      throw e;
-    }
+    const ecoverseId = await this.getEcoverseId();
+    const challanges = await this.challengeService.getChallenges(ecoverseId);
+    return challanges;
   }
 
   async getTemplates(): Promise<ITemplate[]> {
-    try {
-      const ecoverseId = await this.getEcoverseId();
-      const templates = await this.templateService.getTemplates(ecoverseId);
-      return templates;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getMembers()!!!', exception: e });
-      throw e;
-    }
+    const ecoverseId = await this.getEcoverseId();
+    const templates = await this.templateService.getTemplates(ecoverseId);
+    return templates;
   }
 
   async getOrganisations(): Promise<IOrganisation[]> {
@@ -187,39 +171,18 @@ export class EcoverseService {
   }
 
   async getContext(): Promise<IContext> {
-    try {
-      const ecoverse = (await this.getEcoverse()) as IEcoverse;
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return ecoverse.context as IContext;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e });
-      throw e;
-    }
+    const ecoverse = (await this.getEcoverse()) as IEcoverse;
+    return ecoverse.context as IContext;
   }
 
   async getTagset(): Promise<ITagset> {
-    try {
-      const ecoverse: IEcoverse = await this.getEcoverse();
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return ecoverse.tagset as ITagset;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getContext()!!!', exception: e });
-      throw e;
-    }
+    const ecoverse: IEcoverse = await this.getEcoverse();
+    return ecoverse.tagset as ITagset;
   }
 
   async getHost(): Promise<IOrganisation> {
-    try {
-      const ecoverse = (await this.getEcoverse()) as Ecoverse;
-      // this.eventDispatcher.dispatch(events.ecoverse.query, { ecoverse: ecoverse });
-
-      return ecoverse.host as IOrganisation;
-    } catch (e) {
-      // this.eventDispatcher.dispatch(events.logger.error, { message: 'Something went wrong in getHost()!!!', exception: e });
-      throw e;
-    }
+    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    return ecoverse.host as IOrganisation;
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
