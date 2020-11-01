@@ -16,6 +16,7 @@ import {
   ActorGroup,
   RestrictedActorGroupNames,
 } from '../actor-group/actor-group.entity';
+import { Aspect } from '../aspect/aspect.entity';
 import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
 import { Profile } from '../profile/profile.entity';
@@ -73,6 +74,7 @@ export class Opportunity extends BaseEntity
   )
   projects?: Project[];
 
+
   @Field(() => [ActorGroup], {
     nullable: true,
     description:
@@ -84,6 +86,18 @@ export class Opportunity extends BaseEntity
     { eager: true, cascade: true }
   )
   actorGroups?: ActorGroup[];
+
+  @Field(() => [Aspect], {
+    nullable: true,
+    description: 'The set of solution aspects for this Opportunity',
+  })
+  @OneToMany(
+    () => Aspect,
+    aspect => aspect.opportunity,
+    { eager: true, cascade: true }
+  )
+  aspects?: Aspect[];
+
 
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()

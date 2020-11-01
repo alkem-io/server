@@ -6,6 +6,9 @@ import { ActorGroupInput } from '../actor-group/actor-group.dto';
 import { RestrictedActorGroupNames } from '../actor-group/actor-group.entity';
 import { IActorGroup } from '../actor-group/actor-group.interface';
 import { ActorGroupService } from '../actor-group/actor-group.service';
+import { AspectInput } from '../aspect/aspect.dto';
+import { IAspect } from '../aspect/aspect.interface';
+import { AspectService } from '../aspect/aspect.service';
 import { ProfileService } from '../profile/profile.service';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
@@ -15,6 +18,7 @@ import { IOpportunity } from './opportunity.interface';
 export class OpportunityService {
   constructor(
     private actorGroupService: ActorGroupService,
+    private aspectService: AspectService,
     private profileService: ProfileService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -28,6 +32,10 @@ export class OpportunityService {
 
     if (!opportunity.actorGroups) {
       opportunity.actorGroups = [];
+    }
+
+    if (!opportunity.aspects) {
+      opportunity.aspects = [];
     }
 
     // Initialise contained objects
@@ -93,6 +101,7 @@ export class OpportunityService {
     });
     return opportunites || [];
   }
+
 
   async createRestrictedActorGroups(
     opportunity: IOpportunity
@@ -176,5 +185,32 @@ export class OpportunityService {
     opportunity.actorGroups?.push(newActorGroup as IActorGroup);
     await this.opportunityRepository.save(opportunity);
     return newActorGroup;
+}
+
+  async createAspect(
+    opportunityId: number,
+    aspectData: AspectInput
+  ): Promise<IAspect> {
+    const opportunity = await this.getOpportunityByID(opportunityId);
+    if (!opportunity)
+      throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
+
+    // Check that do not already have an aspect with the same title
+    const title = aspectData.title;
+    const existingAspect = opportunity.aspects?.find(
+      aspect => aspect.title === title
+    );
+    if (existingAspect)
+      throw new Error(
+        `Already have an aspect with the provided title: ${title}`
+      );
+
+    const aspect = await this.aspectService.createAspect(aspectData);
+    if (!opportunity.aspects)
+      throw new Error(`Opportunity (${opportunityId}) not initialised`);
+    opportunity.aspects.push(aspect);
+    await this.opportunityRepository.save(opportunity);
+    return aspect;
+
   }
 }
