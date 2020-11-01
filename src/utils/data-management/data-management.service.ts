@@ -75,44 +75,52 @@ export class DataManagementService {
         'members'
       );
       // Users
-      const john = await this.createUser('john', 'john@test.com', membersGroup);
+      const john = await this.createUser(
+        'John',
+        'Doe',
+        'john@test.com',
+        membersGroup
+      );
       const bob = await this.createUser(
-        'bob',
+        'Bob',
+        'Cat',
         'bob@cherrytwist.org',
         membersGroup
       );
-      const valentin = await this.createUser(
-        'Valentin',
-        'valentin_yanakiev@yahoo.co.uk',
+      const jane = await this.createUser(
+        'Jane',
+        'Doh',
+        'jane@yahoo.co.uk',
         membersGroup
       );
-      const angel = await this.createUser(
-        'Angel',
-        'angel@cmd.bg',
+      const clint = await this.createUser(
+        'Clint',
+        'Eastwood',
+        'clint@eastwood.com',
         membersGroup
       );
-      const neil = await this.createUser(
-        'Neil',
-        'neil@cherrytwist.org',
+      const bruce = await this.createUser(
+        'Bruce',
+        'Lee',
+        'bruce.lee@martialarts.com',
         membersGroup
       );
-      neil.email = 'neil@cherrytwist.org';
-      neil.country = ' Netherlands';
-      neil.gender = 'Male';
+      bruce.country = ' Netherlands';
+      bruce.gender = 'Male';
       const tagset = await this.profileService.createTagset(
-        neil.profile.id,
+        bruce.profile.id,
         'sample2'
       );
       await this.tagsetService.replaceTags(tagset.id, ['java', 'graphql']);
 
       // User Groups
       const jediGroup = await this.ecoverseService.createGroup('jedi');
-      await this.userGroupService.addUserToGroup(angel, jediGroup);
-      await this.userGroupService.addUserToGroup(john, jediGroup);
+      await this.userGroupService.addUserToGroup(bruce, jediGroup);
+      await this.userGroupService.addUserToGroup(jane, jediGroup);
       await this.userGroupService.addUserToGroup(bob, jediGroup);
       const crewGroup = await this.ecoverseService.createGroup('crew');
-      await this.userGroupService.addUserToGroup(valentin, crewGroup);
-      await this.userGroupService.addUserToGroup(neil, crewGroup);
+      await this.userGroupService.addUserToGroup(john, crewGroup);
+      await this.userGroupService.addUserToGroup(clint, crewGroup);
 
       // Challenges
       const energyWeb = await this.createChallenge(
@@ -135,10 +143,10 @@ export class DataManagementService {
         energyWeb,
         'members'
       );
-      await this.userGroupService.addUserToGroup(angel, energyWebMembers);
-      await this.userGroupService.addUserToGroup(valentin, energyWebMembers);
-      await this.userGroupService.addUserToGroup(neil, energyWebMembers);
-      energyWebMembers.focalPoint = neil;
+      await this.userGroupService.addUserToGroup(jane, energyWebMembers);
+      await this.userGroupService.addUserToGroup(clint, energyWebMembers);
+      await this.userGroupService.addUserToGroup(bruce, energyWebMembers);
+      energyWebMembers.focalPoint = jane;
       if (!energyWeb.context) throw new Error('Contextn not initilised');
       energyWeb.context.references = [ref1, ref2];
 
@@ -153,10 +161,10 @@ export class DataManagementService {
         cleanOceans,
         'members'
       );
-      await this.userGroupService.addUserToGroup(angel, cleanOceanMembers);
-      await this.userGroupService.addUserToGroup(valentin, cleanOceanMembers);
-      await this.userGroupService.addUserToGroup(neil, cleanOceanMembers);
-      cleanOceanMembers.focalPoint = neil;
+      await this.userGroupService.addUserToGroup(john, cleanOceanMembers);
+      await this.userGroupService.addUserToGroup(bob, cleanOceanMembers);
+      await this.userGroupService.addUserToGroup(bruce, cleanOceanMembers);
+      cleanOceanMembers.focalPoint = bruce;
 
       const cargoInsurance = await this.createChallenge(
         'Cargo Insurance',
@@ -181,13 +189,16 @@ export class DataManagementService {
   }
 
   async createUser(
-    name: string,
+    firstName: string,
+    lastName: string,
     email: string,
     membersGroup: IUserGroup
   ): Promise<IUser> {
     const userInput = new UserInput();
-    userInput.name = name;
+    userInput.name = `${firstName} ${lastName}`;
     userInput.email = email;
+    userInput.firstName = firstName;
+    userInput.lastName = lastName;
 
     const user = await this.ecoverseService.createUserProfile(userInput);
 
