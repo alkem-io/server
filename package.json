@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -43,6 +43,7 @@
     "node-cache": "^5.1.2",
     "node-fetch": "^2.6.1",
     "nodemon": "^2.0.4",
+    "normalizer": "^1.2.7",
     "passport": "^0.4.1",
     "passport-azure-ad": "^4.3.0",
     "reflect-metadata": "^0.1.13",

@@ -111,9 +111,10 @@ export class BootstrapService {
         userInput.email = email;
         // For bootstrap puroposes also set the upn to the same as the email
         userInput.accountUpn = email;
-        userInput.name = 'Imported User';
-        userInput.firstName = 'Imported';
-        userInput.lastName = 'User';
+        const parts = email.split('@');
+        userInput.name = parts[0];
+        userInput.firstName = parts[0];
+        userInput.lastName = 'ImportedUser';
 
         // Check the user exists
         let user = await this.userService.getUserByEmail(email);

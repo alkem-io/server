@@ -44,12 +44,17 @@ export class AccountService {
     await this.validateAccountCreationRequest(userData);
 
     const accountUpn = this.buildUPN(userData);
-    const result = await this.msGraphService.createUser(userData, accountUpn);
-    // Save the accountUpn on the user profile
-    if (!result)
-      throw new Error(
-        `Unable to complete account creation for ${userData.email}`
-      );
+    try {
+      const result = await this.msGraphService.createUser(userData, accountUpn);
+      if (!result)
+        throw new Error(
+          `Unable to complete account creation for ${userData.email} using UPN: ${accountUpn}`
+        );
+    } catch (e) {
+      const msg = `Unable to complete account creation for ${userData.email}: ${e}`;
+      this.logger.error(msg);
+      throw e;
+    }
     // Update the user to store the upn
     const user = await this.userService.getUserByEmail(userData.email);
     if (!user) throw new Error(`Unable to update user: ${userData.email}`);
@@ -70,6 +75,7 @@ export class AccountService {
     userData.aadPassword = password;
     userData.firstName = user.firstName;
     userData.lastName = user.lastName;
+    userData.name = user.name;
     userData.email = user.email;
 
     await this.createUserAccount(userData);
@@ -80,6 +86,9 @@ export class AccountService {
     const upnDomain = this.configService.get<IAzureADConfig>('aad')?.upnDomain;
     if (!upnDomain)
       throw new Error('Unable to identify the upn domain to be used');
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const normalizer = require('normalizer');
 
     // Note: requesting client has the option to explicilty specify the account UPN to use
     const accountUpn = userData.accountUpn;
@@ -93,7 +102,14 @@ export class AccountService {
         throw new Error('Missing last name information for generating UPN');
     }
 
-    const upn = `${firstName}.${lastName}@${upnDomain}`;
+    let upn = `${firstName}.${lastName}@${upnDomain}`;
+
+    // remove any unusual characters
+    upn = normalizer.normalize(upn);
+
+    // extra check to remove any blank spaces
+    upn = upn.replace(/\s/g, '');
+
     this.logger.verbose(`Upn: ${upn}`);
 
     return upn;
