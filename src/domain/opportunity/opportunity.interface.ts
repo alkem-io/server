@@ -1,3 +1,5 @@
+
+import { IActorGroup } from '../actor-group/actor-group.interface';
 import { IAspect } from '../aspect/aspect.interface';
 import { IProfile } from '../profile/profile.interface';
 import { IProject } from '../project/project.interface';
@@ -8,6 +10,8 @@ export interface IOpportunity {
   textID: string;
   state: string;
   projects?: IProject[];
+  actorGroups?: IActorGroup[];
   profile: IProfile;
+  restrictedActorGroupNames: string[];
   aspects?: IAspect[];
 }

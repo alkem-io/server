@@ -12,6 +12,10 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
+import {
+  ActorGroup,
+  RestrictedActorGroupNames,
+} from '../actor-group/actor-group.entity';
 import { Aspect } from '../aspect/aspect.entity';
 import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
@@ -70,6 +74,19 @@ export class Opportunity extends BaseEntity
   )
   projects?: Project[];
 
+
+  @Field(() => [ActorGroup], {
+    nullable: true,
+    description:
+      'The set of actor groups within the context of this Opportunity',
+  })
+  @OneToMany(
+    () => ActorGroup,
+    actorGroup => actorGroup.opportunity,
+    { eager: true, cascade: true }
+  )
+  actorGroups?: ActorGroup[];
+
   @Field(() => [Aspect], {
     nullable: true,
     description: 'The set of solution aspects for this Opportunity',
@@ -80,6 +97,7 @@ export class Opportunity extends BaseEntity
     { eager: true, cascade: true }
   )
   aspects?: Aspect[];
+
 
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
@@ -93,6 +111,8 @@ export class Opportunity extends BaseEntity
 
   // The restricted group names at the Opportunity level
   restrictedGroupNames: string[];
+  // The restricted actor group names at the Opportunity level
+  restrictedActorGroupNames: string[];
 
   constructor(name: string, textID: string) {
     super();
@@ -100,6 +120,7 @@ export class Opportunity extends BaseEntity
     this.textID = textID;
     this.state = '';
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
+    this.restrictedActorGroupNames = [RestrictedActorGroupNames.Collaborators];
     this.profile = new Profile();
   }
 }
