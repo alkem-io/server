@@ -12,6 +12,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
+import { Aspect } from '../aspect/aspect.entity';
 import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
 import { Profile } from '../profile/profile.entity';
@@ -68,6 +69,17 @@ export class Opportunity extends BaseEntity
     { eager: true, cascade: true }
   )
   projects?: Project[];
+
+  @Field(() => [Aspect], {
+    nullable: true,
+    description: 'The set of solution aspects for this Opportunity',
+  })
+  @OneToMany(
+    () => Aspect,
+    aspect => aspect.opportunity,
+    { eager: true, cascade: true }
+  )
+  aspects?: Aspect[];
 
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()

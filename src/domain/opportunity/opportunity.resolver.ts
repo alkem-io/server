@@ -9,6 +9,9 @@ import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
 import { Args, Query } from '@nestjs/graphql';
+import { AspectInput } from '../aspect/aspect.dto';
+import { IAspect } from '../aspect/aspect.interface';
+import { Aspect } from '../aspect/aspect.entity';
 
 @Resolver()
 export class OpportunityResolver {
@@ -47,5 +50,24 @@ export class OpportunityResolver {
       opportunityData
     );
     return Opportunity;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Aspect, {
+    description: 'Create a new aspect on the Opportunity identified by the ID',
+  })
+  async createAspect(
+    @Args('opportunityID') opportunityId: number,
+    @Args('aspectData') aspectData: AspectInput
+  ): Promise<IAspect> {
+    const opportunity = await this.opportunityService.createAspect(
+      opportunityId,
+      aspectData
+    );
+    return opportunity;
   }
 }
