@@ -10,6 +10,7 @@ import { Tagset } from '../tagset/tagset.entity';
 import { ITagset } from '../tagset/tagset.interface';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { ProfileService } from './profile.service';
+import { ProfileInput } from './profile.dto';
 
 @Resolver()
 export class ProfileResolver {
@@ -59,12 +60,12 @@ export class ProfileResolver {
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:
-      'Updates the avatar location (i.e. uri) for the profile with given id',
+      'Updates the fields on the Profile, such as avatar location or description',
   })
-  async updateAvatar(
-    @Args('profileID') profileID: number,
-    @Args('uri') avatarUri: string
+  async updateProfile(
+    @Args('ID') profileID: number,
+    @Args('profileData') profileData: ProfileInput
   ): Promise<boolean> {
-    return await this.profileService.updateAvatar(profileID, avatarUri);
+    return await this.profileService.updateProfile(profileID, profileData);
   }
 }

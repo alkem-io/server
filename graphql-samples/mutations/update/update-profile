@@ -1,0 +1,12 @@
+mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
+  updateProfile(profileData: $profileData, ID: $ID)
+}
+
+Variables:
+{
+  "ID": 1,
+  "profileData": {
+    "description": "some description",
+    "avatar": "http://someUri"
+  }
+}
