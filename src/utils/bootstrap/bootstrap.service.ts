@@ -14,8 +14,14 @@ import { Repository } from 'typeorm';
 import { AccountService } from '../account/account.service';
 import fs from 'fs';
 import * as defaultRoles from '../config/authorisation-bootstrap.json';
+import * as defaultTemplates from '../config/templates-bootstrap.json';
 import { IUser } from '../../domain/user/user.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TemplateService } from '../../domain/template/template.service';
+import { TemplateInput } from '../../domain/template/template.dto';
+import { ProfileService } from '../../domain/profile/profile.service';
+import { TagsetService } from '../../domain/tagset/tagset.service';
+import { ReferenceInput } from '../../domain/reference/reference.dto';
 
 @Injectable()
 export class BootstrapService {
@@ -23,7 +29,10 @@ export class BootstrapService {
     private accountService: AccountService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
+    private profileService: ProfileService,
+    private tagsetService: TagsetService,
     private configService: ConfigService,
+    private templateService: TemplateService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
@@ -35,6 +44,7 @@ export class BootstrapService {
       await this.ensureEcoverseSingleton();
       await this.validateAccountManagementSetup();
       await this.bootstrapProfiles();
+      await this.bootstrapTemplates();
     } catch (error) {
       this.logger.error(error, undefined, 'Bootstrap');
     }
@@ -196,5 +206,104 @@ export class BootstrapService {
     ecoverse.organisations?.push(ecoverse.host);
 
     return ecoverse;
+  }
+
+  async bootstrapTemplates() {
+    // Check if the ecoverse already has a template, if not then instantiate one
+    const ecoverseID = await this.ecoverseService.getEcoverseId();
+    const existingTemplates = await this.templateService.getTemplates(
+      ecoverseID
+    );
+    if (existingTemplates && existingTemplates.length > 0) {
+      this.logger.verbose(
+        'Ecoverse already has at least one template; skipping loading of templates'
+      );
+      return;
+    }
+    // No templates so load them
+    const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
+      ?.templatesBootstrapPath as string;
+
+    let bootstrapJson = {
+      ...defaultTemplates,
+    };
+
+    if (
+      bootstrapFilePath &&
+      fs.existsSync(bootstrapFilePath) &&
+      fs.statSync(bootstrapFilePath).isFile()
+    ) {
+      this.logger.warn(
+        `Templates bootstrap: configuration being loaded from '${bootstrapFilePath}'`
+      );
+      const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
+      this.logger.verbose(bootstratDataStr);
+      if (!bootstratDataStr) {
+        this.logger.error('Specified templates bootstrap file not found!');
+        return;
+      }
+      bootstrapJson = JSON.parse(bootstratDataStr);
+    } else {
+      this.logger.verbose(
+        'Templates bootstrap: default configuration being loaded'
+      );
+    }
+
+    const templatesJson = bootstrapJson.templates;
+    for await (const templateJson of templatesJson) {
+      // Create and instantiate a new template
+      const templateData = new TemplateInput();
+      templateData.name = templateJson.name;
+      templateData.description = templateJson.description;
+      const template = await this.ecoverseService.createTemplate(templateData);
+
+      // Create the users
+      for await (const userJson of templateJson.users) {
+        const userData = new UserInput();
+        userData.firstName = userJson.firstName;
+        userData.lastName = userJson.lastName;
+        userData.name = userJson.name;
+        userData.email = userJson.email;
+        // Create directly on userservice to not add to members group
+        const user = await this.userService.createUser(userData);
+        template.users?.push(user);
+        // save the template again for each user, to reflect user assignment to template
+        await this.templateService.save(template);
+        const profileId = user.profile.id;
+
+        // Add the tagsets
+        const tagsetsJson = userJson.profile.tagsets;
+        for await (const tagsetJson of tagsetsJson) {
+          const tagset = await this.profileService.createTagset(
+            profileId,
+            tagsetJson.name
+          );
+          await this.tagsetService.replaceTags(tagset.id, tagsetJson.tags);
+          this.logger.verbose(
+            `Templates bootstrap: added tagset with name ${tagset.name}`
+          );
+        }
+
+        // Add the tagsets + references
+        const referencesJson = userJson.profile.references;
+        for await (const referenceJson of referencesJson) {
+          const refData = new ReferenceInput();
+          refData.name = referenceJson.name;
+          refData.uri = referenceJson.uri;
+          refData.description = '';
+          const reference = await this.profileService.createReference(
+            profileId,
+            refData
+          );
+          this.logger.verbose(
+            `Templates bootstrap: added reference with name ${reference.name}`
+          );
+        }
+      }
+
+      this.logger.verbose(
+        `Templates bootstrap: created a new template with name: '${template.name}'`
+      );
+    }
   }
 }
