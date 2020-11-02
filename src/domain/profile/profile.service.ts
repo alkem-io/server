@@ -87,7 +87,7 @@ export class ProfileService {
     if (!profile) throw new Error(`Profile with id (${profileID}) not found!`);
 
     profile.avatar = profileData.avatar;
-    profile.description = profileData.avatar;
+    profile.description = profileData.description;
     await this.profileRepository.save(profile);
     return true;
   }
