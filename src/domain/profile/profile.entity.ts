@@ -47,6 +47,14 @@ export class Profile extends BaseEntity implements IProfile {
   @Column('varchar', { length: 250 })
   avatar = '';
 
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'A short description of the entity associated with this profile.',
+  })
+  @Column('varchar', { length: 400 })
+  description = '';
+
   restrictedTagsetNames?: string[];
 
   // Constructor
