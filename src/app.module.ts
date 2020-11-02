@@ -33,7 +33,12 @@ import { WinstonConfigService } from './utils/config/winston.config';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env', '.env.default'],
+      envFilePath: [
+        '.env',
+        '.env.default',
+        '.env.aad.cherrytwist.api.default',
+        '.env.aad.cherrytwist.client.default',
+      ],
       isGlobal: true,
       load: [aadConfig, databaseConfig, serviceConfig, msGraphConfig],
     }),
