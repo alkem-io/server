@@ -2,7 +2,7 @@
 name: Epic
 about: A theme of work that contain sub-tasks required to complete the larger goal / larger user-story
 title: ''
-labels: ''
+labels: 'epic, server'
 assignees: ''
 
 ---
