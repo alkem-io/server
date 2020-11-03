@@ -221,7 +221,7 @@ export class UserService {
   }
 
   // Note: explicitly do not support updating of email addresses
-  async updateUser(userID: number, userInput: UserInput): Promise<boolean> {
+  async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
     const user = await this.getUserByID(userID);
     if (!user) throw new Error(`Unable to update user with ID: ${userID}`);
     // Convert the data to json
@@ -263,7 +263,10 @@ export class UserService {
       );
     }
 
-    return true;
+    const populatedUser = await this.getUserByID(user.id);
+    if (!populatedUser) throw new Error(`Unable to get user by id: ${user.id}`);
+
+    return populatedUser;
   }
 
   isValidEmail(email: string): boolean {

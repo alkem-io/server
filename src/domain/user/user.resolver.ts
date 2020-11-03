@@ -44,8 +44,8 @@ export class UserResolver {
     @Args('userID') userID: number,
     @Args('userData') userData: UserInput
   ): Promise<IUser> {
-    const group = this.userService.updateUser(userID, userData);
-    return group;
+    const user = await this.userService.updateUser(userID, userData);
+    return user;
   }
 
   @Roles(
