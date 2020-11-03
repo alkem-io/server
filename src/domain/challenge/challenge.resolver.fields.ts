@@ -10,10 +10,14 @@ import {
 import { Challenge } from './challenge.entity';
 import { User } from '../user/user.entity';
 import { UserGroupService } from '../user-group/user-group.service';
+import { ChallengeService } from './challenge.service';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
-  constructor(private userGroupService: UserGroupService) {}
+  constructor(
+    private userGroupService: UserGroupService,
+    private challengeService: ChallengeService
+  ) {}
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
@@ -25,8 +29,7 @@ export class ChallengeResolverFields {
     description: 'Groups of users related to a challenge.',
   })
   async groups(@Parent() challenge: Challenge) {
-    const groups = await challenge.groups;
-    if (!groups) throw new Error(`No groups on challenge: ${challenge.name}`);
+    const groups = await this.challengeService.getGroups(challenge);
     return groups;
   }
 
