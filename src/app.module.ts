@@ -29,13 +29,26 @@ import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
 import msGraphConfig from './utils/config/ms-graph.config';
 import { WinstonModule } from 'nest-winston';
 import { WinstonConfigService } from './utils/config/winston.config';
+import aadClientConfig from './utils/config/aad.client.config';
+import { CherrytwistConfigModule } from './utils/cherrytwist-config/cherrytwist-config.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env', '.env.default'],
+      envFilePath: [
+        '.env',
+        '.env.default',
+        '.env.aad.cherrytwist.api.default',
+        '.env.aad.cherrytwist.client.default',
+      ],
       isGlobal: true,
-      load: [aadConfig, databaseConfig, serviceConfig, msGraphConfig],
+      load: [
+        aadConfig,
+        databaseConfig,
+        serviceConfig,
+        msGraphConfig,
+        aadClientConfig,
+      ],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -67,6 +80,7 @@ import { WinstonConfigService } from './utils/config/winston.config';
     TagsetModule,
     UserModule,
     UserGroupModule,
+    CherrytwistConfigModule,
     GraphQLModule.forRoot({
       autoSchemaFile: true,
       playground: true,

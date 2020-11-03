@@ -95,17 +95,20 @@ ENABLE_ORM_LOGGING=true
 
 ### Configure authentication
 
-Define AAD_TENANT, AAD_CLIENT environment variables - e.g. locally in .env environment. Optionally provide AUTHENTICATION_ENABLED=false for dev purposes (default value is TRUE) to test without AAD.
+Define environment variables - e.g. locally in .env environment. Optionally provide AUTH_ENABLED=false for dev purposes (default value is TRUE) to test without AAD.
 
 ```conf
-AAD_TENANT=[tenant (directory) ID]
-AAD_CLIENT= [client (application) ID]
-AAD_API_SCOPE= [API Scopes Required for Downstream APIs, in our case Microsoft Graph API]
-AAD_CLIENT_SECRET=[App Client Secret obtained from cherrytwist-api app registration*]
-AAD_LOGGING_LEVEL=Error|Warning|Info|Verbose. Defaults to Error if no value is set.
-AAD_LOGGING_NO_PII=true|false. Default is true. Specifies whether AAD personal identifiable information can be logged.
-AAD_UPN_DOMAIN=[Domain name to be used when generating the UPN for accounts created on AAD by the platform]. Defaults to "playgroundcherrytwist.onmicrosoft.com", so a user gets a UPN like "first.last@playgroundcherrytwist.onmicrosoft.com". Note: the domain name specified needs to be either the default domain for the AAD tenant or a configured "verified domain name".
-AUTHENTICATION_ENABLED=true
+AUTH_AAD_TENANT=[tenant (directory) ID]
+AUTH_AAD_CHERRYTWIST_API_APP_ID= [client (application) ID]
+AUTH_AAD_MSGRAPH_API_SCOPE= [API Scopes Required for Downstream APIs, in our case Microsoft Graph API]
+AUTH_AAD_MSGRAPH_API_SECRET=[App Client Secret obtained from cherrytwist-api app registration*]
+AUTH_AAD_LOGGING_LEVEL=Error|Warning|Info|Verbose. Defaults to Error if no value is set.
+AUTH_AAD_LOGGING_LOG_PII=true|false. Default is false. Specifies whether AAD personal identifiable information can be logged.
+AUTH_AAD_UPN_DOMAIN=[Domain name to be used when generating the UPN for accounts created on AAD by the platform]. Defaults to "playgroundcherrytwist.onmicrosoft.com", so a user gets a UPN like "first.last@playgroundcherrytwist.onmicrosoft.com". Note: the domain name specified needs to be either the default domain for the AAD tenant or a configured "verified domain name".
+AUTH_ENABLED=true. Specifies whether authentication should be enabled on the CT Web Client and CT Server.
+AUTH_AAD_CLIENT_APP_ID= The AAD app registrion client id of the Cherrytwist Web Client.
+AUTH_AAD_CHERRYTWIST_API_SCOPE=[Cherrytwist API URI]./default - it is very important to have ./default after the API URI as this scope aggregates all the scopes of the Cherrytwist API and all downstream API scopes.
+AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI=The login redirect for the Cherrytwist Web Client.
 ```
 ***Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
 
