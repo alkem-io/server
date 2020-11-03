@@ -5,7 +5,7 @@ export default registerAs('aad_client', () => ({
   msalConfig: {
     auth: {
       clientId: process.env.AUTH_AAD_CLIENT_APP_ID || '',
-      authority: `https://login.microsoftonline.com/${process.env.AUTH_AAD_TENANT_ID}`,
+      authority: `https://login.microsoftonline.com/${process.env.AUTH_AAD_TENANT}`,
       redirectUri:
         process.env.AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI ||
         'http://localhost:3000',
