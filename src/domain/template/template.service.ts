@@ -46,4 +46,9 @@ export class TemplateService {
     });
     return templates || [];
   }
+
+  async save(template: ITemplate): Promise<ITemplate> {
+    await this.templateRepository.save(template);
+    return template;
+  }
 }
