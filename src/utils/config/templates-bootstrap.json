@@ -1,0 +1,34 @@
+{
+    "templates": [
+      {
+        "name": "default",
+        "description": "Default template",
+        "users": [
+          {
+            "name": "default",
+            "firstName": "default",
+            "lastName": "default",
+            "email": "not@used.com",
+            "profile": {
+              "tagsets": [
+                {
+                  "name": "skills",
+                  "tags": ["webdev", "architecture", "*"]
+                },
+                {
+                  "name": "interests",
+                  "tags": ["tech", "nature"]
+                }
+              ],
+              "references": [
+                {
+                  "name": "linkedin",
+                  "uri": ""
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+}
