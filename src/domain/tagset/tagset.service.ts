@@ -38,7 +38,7 @@ export class TagsetService {
     return Tagset.findOne({ id: tagsetID });
   }
 
-  async replaceTags(tagsetID: number, newTags: string[]): Promise<boolean> {
+  async replaceTags(tagsetID: number, newTags: string[]): Promise<ITagset> {
     const tagset = (await this.getTagset(tagsetID)) as Tagset;
 
     if (!tagset) throw new Error(`Tagset with id(${tagsetID}) not found!`);
@@ -49,7 +49,7 @@ export class TagsetService {
     tagset.tags = newTags;
     await this.tagsetRepository.save(tagset);
 
-    return true;
+    return tagset;
   }
 
   async updateOrCreateTagset(

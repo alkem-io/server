@@ -5,6 +5,7 @@ import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { Tagset } from './tagset.entity';
 import { TagsetService } from './tagset.service';
+import { ITagset } from './tagset.interface';
 
 @Resolver(() => Tagset)
 export class TagsetResolver {
@@ -21,13 +22,11 @@ export class TagsetResolver {
   async replaceTagsOnTagset(
     @Args('tagsetID') tagsetID: number,
     @Args({ name: 'tags', type: () => [String] }) newTags: string[]
-  ): Promise<boolean> {
+  ): Promise<ITagset> {
     if (!newTags)
       throw new Error(`Unable to replace tags on tagset(${tagsetID}`);
 
-    await this.tagsetService.replaceTags(tagsetID, newTags);
-
-    return true;
+    return await this.tagsetService.replaceTags(tagsetID, newTags);
   }
 
   @Roles(
@@ -41,9 +40,7 @@ export class TagsetResolver {
   async addTagToTagset(
     @Args('tagsetID') tagsetID: number,
     @Args({ name: 'tag', type: () => String }) newTag: string
-  ): Promise<boolean> {
-    await this.tagsetService.addTag(tagsetID, newTag);
-
-    return true;
+  ): Promise<ITagset> {
+    return await this.tagsetService.addTag(tagsetID, newTag);
   }
 }
