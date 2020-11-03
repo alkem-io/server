@@ -72,17 +72,16 @@ export class ChallengeService {
       where: { id: challengeID },
       relations: ['groups'],
     });
-    //const challenge = await Challenge.findOne(challengeID);
     if (!challenge) {
-      const msg = `Unable to find challenge with ID: ${challengeID}`;
-      this.logger.verbose(msg);
-      throw new Error(msg);
+      throw new Error(
+        `Unable to create the group: no challenge with ID: ${challengeID}`
+      );
     }
     const group = await this.userGroupService.addGroupWithName(
       challenge,
       groupName
     );
-    await await this.challengeRepository.save(challenge);
+    await this.challengeRepository.save(challenge);
 
     return group;
   }
@@ -100,7 +99,10 @@ export class ChallengeService {
     // First find the Challenge
     this.logger.verbose(`Adding opportunity to challenge (${challengeID})`);
     // Try to find the challenge
-    const challenge = await Challenge.findOne(challengeID);
+    const challenge = await this.challengeRepository.findOne({
+      where: { id: challengeID },
+      relations: ['groups'],
+    });
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
       this.logger.verbose(msg);
