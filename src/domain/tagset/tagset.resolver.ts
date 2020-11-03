@@ -16,7 +16,7 @@ export class TagsetResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Tagset, {
     description: 'Replace the set of tags in a tagset with the provided tags',
   })
   async replaceTagsOnTagset(
@@ -34,7 +34,7 @@ export class TagsetResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Tagset, {
     description: 'Add the provided tag to the tagset with the given ID',
   })
   async addTagToTagset(
