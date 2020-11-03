@@ -7,6 +7,7 @@ import { IReference } from '../reference/reference.interface';
 import { ReferenceService } from '../reference/reference.service';
 import { ITagset } from '../tagset/tagset.interface';
 import { TagsetService } from '../tagset/tagset.service';
+import { ProfileInput } from './profile.dto';
 import { Profile } from './profile.entity';
 import { IProfile } from './profile.interface';
 
@@ -78,11 +79,15 @@ export class ProfileService {
     return newReference;
   }
 
-  async updateAvatar(profileID: number, avatarUri: string): Promise<boolean> {
+  async updateProfile(
+    profileID: number,
+    profileData: ProfileInput
+  ): Promise<boolean> {
     const profile = (await this.getProfile(profileID)) as Profile;
-    if (!profile) throw new Error(`Profile with id(${profileID}) not found!`);
+    if (!profile) throw new Error(`Profile with id (${profileID}) not found!`);
 
-    profile.avatar = avatarUri;
+    profile.avatar = profileData.avatar;
+    profile.description = profileData.description;
     await this.profileRepository.save(profile);
     return true;
   }

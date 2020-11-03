@@ -68,19 +68,28 @@ export class ChallengeService {
     if (!challengeID)
       throw new Error(`Invalid challenge id passed in: ${challengeID}`);
     // Try to find the challenge
-    const challenge = await Challenge.findOne(challengeID);
+    const challenge = await this.challengeRepository.findOne({
+      where: { id: challengeID },
+      relations: ['groups'],
+    });
     if (!challenge) {
-      const msg = `Unable to find challenge with ID: ${challengeID}`;
-      this.logger.verbose(msg);
-      throw new Error(msg);
+      throw new Error(
+        `Unable to create the group: no challenge with ID: ${challengeID}`
+      );
     }
     const group = await this.userGroupService.addGroupWithName(
       challenge,
       groupName
     );
-    await challenge.save();
+    await this.challengeRepository.save(challenge);
 
     return group;
+  }
+
+  async getGroups(challenge: Challenge): Promise<IUserGroup[]> {
+    const groups = await this.userGroupService.getGroups(challenge);
+    if (!groups) throw new Error(`No groups on challenge: ${challenge.name}`);
+    return groups;
   }
 
   async createOpportunity(
@@ -90,7 +99,10 @@ export class ChallengeService {
     // First find the Challenge
     this.logger.verbose(`Adding opportunity to challenge (${challengeID})`);
     // Try to find the challenge
-    const challenge = await Challenge.findOne(challengeID);
+    const challenge = await this.challengeRepository.findOne({
+      where: { id: challengeID },
+      relations: ['groups'],
+    });
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
       this.logger.verbose(msg);
