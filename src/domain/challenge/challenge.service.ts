@@ -178,10 +178,10 @@ export class ChallengeService {
     if (challengeData.context)
       this.contextService.update(challenge, challengeData.context);
 
-    if (challengeData.tagset && challengeData.tagset.tags)
+    if (challengeData.tags)
       this.tagsetService.replaceTagsOnEntity(
         challenge as Challenge,
-        challengeData.tagset.tags
+        challengeData.tags
       );
 
     await this.challengeRepository.save(challenge);

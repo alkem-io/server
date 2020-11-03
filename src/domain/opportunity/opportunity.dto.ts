@@ -1,7 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 import { ContextInput } from '../context/context.dto';
-import { TagsInput } from '../tagset/tagset.dto';
 
 @InputType()
 export class OpportunityInput {
@@ -20,6 +19,6 @@ export class OpportunityInput {
   @Field(() => ContextInput, { nullable: true })
   context?: ContextInput;
 
-  @Field(() => TagsInput, { nullable: true })
-  tagset?: TagsInput;
+  @Field(() => [String], { nullable: true })
+  tagset?: string[];
 }

@@ -166,11 +166,21 @@ export class UserService {
     const user = User.create(userData);
     await this.initialiseMembers(user);
     this.updateLastModified(user);
+    // Need to save to get the object identifiers assigned
     await this.userRepository.save(user);
+
+    // Now update the profile if needed
+    const profileData = userData.profileData;
+    if (profileData) {
+      await this.profileService.updateProfile(user.profile.id, profileData);
+    }
+    // reload the user to get it populated
+    const populatedUser = await this.getUserByID(user.id);
+    if (!populatedUser) throw new Error(`Unable to locate user: ${user.id}`);
 
     this.logger.verbose(`User ${userData.email} was created!`);
 
-    return user;
+    return populatedUser;
   }
 
   async validateUserProfileCreationRequest(
@@ -244,7 +254,19 @@ export class UserService {
 
     this.updateLastModified(user);
     await this.userRepository.save(user);
-    return user;
+
+    // Check the tagsets
+    if (userInput.profileData) {
+      await this.profileService.updateProfile(
+        user.profile.id,
+        userInput.profileData
+      );
+    }
+
+    const populatedUser = await this.getUserByID(user.id);
+    if (!populatedUser) throw new Error(`Unable to get user by id: ${user.id}`);
+
+    return populatedUser;
   }
 
   isValidEmail(email: string): boolean {

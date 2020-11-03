@@ -1,7 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 import { ContextInput } from '../context/context.dto';
-import { TagsInput } from '../tagset/tagset.dto';
 
 @InputType()
 export class EcoverseInput {
@@ -16,9 +15,9 @@ export class EcoverseInput {
   })
   context?: ContextInput;
 
-  @Field(() => TagsInput, {
+  @Field(() => [String], {
     nullable: true,
     description: 'The set of tags to apply to this ecoverse',
   })
-  tags?: TagsInput;
+  tags?: string[];
 }

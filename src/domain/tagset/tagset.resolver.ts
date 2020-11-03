@@ -3,12 +3,11 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Roles } from '../../utils/decorators/roles.decorator';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
-import { TagsInput } from './tagset.dto';
 import { Tagset } from './tagset.entity';
-import { ITagset } from './tagset.interface';
 import { TagsetService } from './tagset.service';
+import { ITagset } from './tagset.interface';
 
-@Resolver()
+@Resolver(() => Tagset)
 export class TagsetResolver {
   constructor(private tagsetService: TagsetService) {}
 
@@ -17,19 +16,17 @@ export class TagsetResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Tagset, {
+  @Mutation(() => Boolean, {
     description: 'Replace the set of tags in a tagset with the provided tags',
   })
   async replaceTagsOnTagset(
     @Args('tagsetID') tagsetID: number,
-    @Args('tags') newTags: TagsInput
+    @Args({ name: 'tags', type: () => [String] }) newTags: string[]
   ): Promise<ITagset> {
-    if (!newTags.tags)
+    if (!newTags)
       throw new Error(`Unable to replace tags on tagset(${tagsetID}`);
 
-    const tagset = await this.tagsetService.replaceTags(tagsetID, newTags.tags);
-
-    return tagset;
+    return await this.tagsetService.replaceTags(tagsetID, newTags);
   }
 
   @Roles(
@@ -37,15 +34,13 @@ export class TagsetResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Tagset, {
+  @Mutation(() => Boolean, {
     description: 'Add the provided tag to the tagset with the given ID',
   })
   async addTagToTagset(
     @Args('tagsetID') tagsetID: number,
-    @Args('tag') newTag: string
+    @Args({ name: 'tag', type: () => String }) newTag: string
   ): Promise<ITagset> {
-    const tagset = await this.tagsetService.addTag(tagsetID, newTag);
-
-    return tagset;
+    return await this.tagsetService.addTag(tagsetID, newTag);
   }
 }

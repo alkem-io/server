@@ -102,7 +102,6 @@ export class OpportunityService {
     return opportunites || [];
   }
 
-
   async createRestrictedActorGroups(
     opportunity: IOpportunity
   ): Promise<boolean> {
@@ -185,7 +184,7 @@ export class OpportunityService {
     opportunity.actorGroups?.push(newActorGroup as IActorGroup);
     await this.opportunityRepository.save(opportunity);
     return newActorGroup;
-}
+  }
 
   async createAspect(
     opportunityId: number,
@@ -211,6 +210,5 @@ export class OpportunityService {
     opportunity.aspects.push(aspect);
     await this.opportunityRepository.save(opportunity);
     return aspect;
-
   }
 }

@@ -1,8 +1,5 @@
 mutation addTagToTagset($tag: String!, $tagsetID: Float!) {
-  addTagToTagset(tag: $tag, tagsetID: $tagsetID) {
-    name,
-    tags
-  }
+  addTagToTagset(tag: $tag, tagsetID: $tagsetID)
 }
 
 

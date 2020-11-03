@@ -222,9 +222,7 @@ export class DataManagementService {
       };
     }
     if (tags) {
-      challengeInput.tagset = {
-        tags,
-      };
+      challengeInput.tags = tags;
     }
 
     const challenge = await this.ecoverseService.createChallenge(

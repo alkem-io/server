@@ -91,10 +91,10 @@ export class OrganisationService {
       existingOrganisation.name = organisationData.name;
     }
 
-    if (organisationData.tags && organisationData.tags.tags) {
+    if (organisationData.tags) {
       this.tagsetService.replaceTagsOnEntity(
         existingOrganisation,
-        organisationData.tags.tags
+        organisationData.tags
       );
     }
 
