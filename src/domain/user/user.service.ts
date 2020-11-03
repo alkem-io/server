@@ -236,7 +236,10 @@ export class UserService {
     if (userInput.gender) {
       user.gender = userInput.gender;
     }
-    if (userInput.email) {
+    if (
+      userInput.email &&
+      userInput.email.toLowerCase() !== user.email.toLowerCase()
+    ) {
       throw new Error(
         `Updating of email addresses is not supported: ${userID}`
       );
