@@ -211,4 +211,32 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
     return aspect;
   }
+
+  async createActorGroup(
+    opportunityId: number,
+    actorGroupData: ActorGroupInput
+  ): Promise<IActorGroup> {
+    const opportunity = await this.getOpportunityByID(opportunityId);
+    if (!opportunity)
+      throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
+
+    // Check that do not already have an aspect with the same title
+    const name = actorGroupData.name;
+    const existingActorGroup = opportunity.actorGroups?.find(
+      actorGroup => actorGroup.name === name
+    );
+    if (existingActorGroup)
+      throw new Error(
+        `Already have an actor group with the provided name: ${name}`
+      );
+
+    const actorGroup = await this.actorGroupService.createActorGroup(
+      actorGroupData
+    );
+    if (!opportunity.actorGroups)
+      throw new Error(`Opportunity (${opportunityId}) not initialised`);
+    opportunity.actorGroups.push(actorGroup);
+    await this.opportunityRepository.save(opportunity);
+    return actorGroup;
+  }
 }

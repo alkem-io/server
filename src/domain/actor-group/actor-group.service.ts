@@ -56,6 +56,16 @@ export class ActorGroupService {
     return actorGroup;
   }
 
+  async removeActorGroup(actorGroupID: number): Promise<boolean> {
+    const actorGroup = await this.getActorGroup(actorGroupID);
+    if (!actorGroup)
+      throw new Error(
+        `Not able to locate actorGroup with the specified ID: ${actorGroupID}`
+      );
+    await this.actorGroupRepository.remove(actorGroup as ActorGroup);
+    return true;
+  }
+
   async getActorGroup(actorGroupID: number): Promise<IActorGroup | undefined> {
     return await this.actorGroupRepository.findOne({ id: actorGroupID });
   }
