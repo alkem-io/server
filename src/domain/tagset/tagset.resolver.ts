@@ -3,12 +3,10 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Roles } from '../../utils/decorators/roles.decorator';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
-import { TagsInput } from './tagset.dto';
 import { Tagset } from './tagset.entity';
-import { ITagset } from './tagset.interface';
 import { TagsetService } from './tagset.service';
 
-@Resolver()
+@Resolver(() => Tagset)
 export class TagsetResolver {
   constructor(private tagsetService: TagsetService) {}
 
@@ -17,19 +15,19 @@ export class TagsetResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Tagset, {
+  @Mutation(() => Boolean, {
     description: 'Replace the set of tags in a tagset with the provided tags',
   })
   async replaceTagsOnTagset(
     @Args('tagsetID') tagsetID: number,
-    @Args('tags') newTags: TagsInput
-  ): Promise<ITagset> {
-    if (!newTags.tags)
+    @Args({ name: 'tags', type: () => [String] }) newTags: string[]
+  ): Promise<boolean> {
+    if (!newTags)
       throw new Error(`Unable to replace tags on tagset(${tagsetID}`);
 
-    const tagset = await this.tagsetService.replaceTags(tagsetID, newTags.tags);
+    await this.tagsetService.replaceTags(tagsetID, newTags);
 
-    return tagset;
+    return true;
   }
 
   @Roles(
@@ -37,15 +35,15 @@ export class TagsetResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Tagset, {
+  @Mutation(() => Boolean, {
     description: 'Add the provided tag to the tagset with the given ID',
   })
   async addTagToTagset(
     @Args('tagsetID') tagsetID: number,
-    @Args('tag') newTag: string
-  ): Promise<ITagset> {
-    const tagset = await this.tagsetService.addTag(tagsetID, newTag);
+    @Args({ name: 'tag', type: () => String }) newTag: string
+  ): Promise<boolean> {
+    await this.tagsetService.addTag(tagsetID, newTag);
 
-    return tagset;
+    return true;
   }
 }

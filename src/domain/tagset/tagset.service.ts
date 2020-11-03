@@ -8,6 +8,7 @@ import { Project } from '../project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TagsetInput } from './tagset.dto';
 
 @Injectable()
 export class TagsetService {
@@ -37,7 +38,7 @@ export class TagsetService {
     return Tagset.findOne({ id: tagsetID });
   }
 
-  async replaceTags(tagsetID: number, newTags: string[]): Promise<ITagset> {
+  async replaceTags(tagsetID: number, newTags: string[]): Promise<boolean> {
     const tagset = (await this.getTagset(tagsetID)) as Tagset;
 
     if (!tagset) throw new Error(`Tagset with id(${tagsetID}) not found!`);
@@ -48,6 +49,27 @@ export class TagsetService {
     tagset.tags = newTags;
     await this.tagsetRepository.save(tagset);
 
+    return true;
+  }
+
+  async updateOrCreateTagset(
+    tagsetable: ITagsetable,
+    tagsetData: TagsetInput
+  ): Promise<ITagset> {
+    if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
+      const tagset = this.getTagsetByName(tagsetable, tagsetData.name);
+      // Check the incoming tags and replace
+      if (tagsetData.tags) {
+        tagset.tags = tagsetData.tags;
+      } else {
+        tagset.tags = [];
+      }
+      await this.tagsetRepository.save(tagset);
+      return tagset;
+    }
+    // If get here then need to create a new tagset
+    const tagset = await this.createTagset(tagsetData);
+    tagsetable.tagsets?.push(tagset);
     return tagset;
   }
 
@@ -93,7 +115,7 @@ export class TagsetService {
     }
     for (const name of names) {
       const tagset = new Tagset(name);
-      this.initialiseMembers(tagset);
+      await this.initialiseMembers(tagset);
       tagsetable.tagsets?.push(tagset as ITagset);
     }
     return true;

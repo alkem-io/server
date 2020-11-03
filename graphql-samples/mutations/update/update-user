@@ -1,8 +1,5 @@
 mutation UpdateUser($userID: Float!, $userData: UserInput!) {
-  updateUser(userID: $userID, userData: $userData) {
-    name,
-  	email
-  }
+  updateUser(userID: $userID, userData: $userData)
 }
 
 

@@ -419,14 +419,11 @@ export class EcoverseService {
       await this.contextService.update(ecoverse.context, ecoverseData.context);
     }
 
-    if (ecoverseData.tags && ecoverseData.tags.tags) {
+    if (ecoverseData.tags) {
       if (!ecoverse.tagset) {
         ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
       }
-      this.tagsetService.replaceTags(
-        ecoverse.tagset.id,
-        ecoverseData.tags.tags
-      );
+      this.tagsetService.replaceTags(ecoverse.tagset.id, ecoverseData.tags);
     }
 
     await this.ecoverseRepository.save(ecoverse);
