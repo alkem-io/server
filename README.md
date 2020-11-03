@@ -50,7 +50,7 @@ Note: the sample data provided here is basic so users are encouraged to look als
 
 In order to bootstrap Ecoverse profiles **first time**, do the following:
 
-1. Set AUTHENTICATION_ENABLED=false environment variable
+1. Set AUTH_ENABLED=false environment variable
 1. If you are running an old version of the application (<0.3.*) do a Reset Ecoverse + Sample Data from the Data Management Panel.
 1. Prepare a bootstrap json. Default json file is provided in src/utils/config/authorisation-bootstrap.json. If you'd like to change the name / location of the bootstrap file, set AUTH_BOOTSTRAP_PATH environment variable with the full path to your file.
 1. Start the CT server. Your users and roles will be updated.
@@ -205,7 +205,7 @@ Initial version of integration tests is in place. To run them, look at the prere
 - Used frameworks/packages [jest](https://jestjs.io/) and `supertest`
 - Running `MySQL sql server`
 - Running `Cherrytwist/Server` service.
-- In .env file the flag for `AUTHENTICATION_ENABLED=false` must be available.
+- In .env file the flag for `AUTH_ENABLED=false` must be available.
 - In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
   - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.

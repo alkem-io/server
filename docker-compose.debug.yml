@@ -20,7 +20,7 @@ services:
       - GRAPHQL_ENDPOINT_PORT
       - AAD_TENANT
       - AAD_CLIENT
-      - AUTHENTICATION_ENABLED
+      - AUTH_ENABLED
     depends_on:
       - db
     restart: always
