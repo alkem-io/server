@@ -29,7 +29,7 @@ export class ActorService {
   }
 
   async getActor(actorID: number): Promise<IActor | undefined> {
-    return Actor.findOne({ id: actorID });
+    return await this.actorRepository.findOne({ id: actorID });
   }
 
   async removeActor(actorID: number): Promise<boolean> {
