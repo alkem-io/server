@@ -27,6 +27,9 @@ services:
       - AUTH_AAD_UPN_DOMAIN
       - AUTH_AAD_TENANT
       - AUTH_ENABLED
+      - AUTH_AAD_CLIENT_APP_ID
+      - AUTH_AAD_CHERRYTWIST_API_SCOPE
+      - AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI
     depends_on:
       - db
     restart: always
@@ -45,4 +48,3 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
-
