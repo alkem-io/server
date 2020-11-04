@@ -19,7 +19,9 @@ export class ActorService {
       throw new Error('A name is required to create an Actor');
 
     const actor = new Actor(actorData.name);
-    actor.description = actorData.description;
+    if (actorData.description) {
+      actor.description = actorData.description;
+    }
     actor.value = actorData.value;
     actor.impact = actorData.impact;
     await this.actorRepository.save(actor);
@@ -64,7 +66,7 @@ export class ActorService {
       actor.impact = actorData.impact;
     }
 
-    await this.actorRepository.save(Actor);
+    await this.actorRepository.save(actor);
 
     return actor;
   }

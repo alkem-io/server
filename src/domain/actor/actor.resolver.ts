@@ -4,6 +4,7 @@ import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { ActorInput } from './actor.dto';
+import { Actor } from './actor.entity';
 import { IActor } from './actor.interface';
 import { ActorService } from './actor.service';
 
@@ -28,7 +29,7 @@ export class ActorResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Actor, {
     description:
       'Updates the actor with the specified ID with the supplied data',
   })
