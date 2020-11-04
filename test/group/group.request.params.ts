@@ -16,3 +16,13 @@ export const createGroupMutation = async (testGroup: string) => {
 
   return await graphqlRequest(requestParams);
 };
+
+export const getGroups = async () => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: 'query{groups {name id}}',
+  };
+
+  return await graphqlRequest(requestParams);
+};
