@@ -1,0 +1,8 @@
+mutation removeAspect($ID: Float!) {
+  removeAspect(ID: $ID)
+}
+
+Variables:
+{
+  "ID": 7
+}

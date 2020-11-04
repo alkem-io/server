@@ -12,6 +12,9 @@ import { Args, Query } from '@nestjs/graphql';
 import { AspectInput } from '../aspect/aspect.dto';
 import { IAspect } from '../aspect/aspect.interface';
 import { Aspect } from '../aspect/aspect.entity';
+import { ActorGroupInput } from '../actor-group/actor-group.dto';
+import { IActorGroup } from '../actor-group/actor-group.interface';
+import { ActorGroup } from '../actor-group/actor-group.entity';
 
 @Resolver()
 export class OpportunityResolver {
@@ -64,10 +67,30 @@ export class OpportunityResolver {
     @Args('opportunityID') opportunityId: number,
     @Args('aspectData') aspectData: AspectInput
   ): Promise<IAspect> {
-    const opportunity = await this.opportunityService.createAspect(
+    const aspect = await this.opportunityService.createAspect(
       opportunityId,
       aspectData
     );
-    return opportunity;
+    return aspect;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => ActorGroup, {
+    description:
+      'Create a new actor group on the Opportunity identified by the ID',
+  })
+  async createActorGroup(
+    @Args('opportunityID') opportunityId: number,
+    @Args('actorGroupData') actorGroupData: ActorGroupInput
+  ): Promise<IActorGroup> {
+    const actorGroup = await this.opportunityService.createActorGroup(
+      opportunityId,
+      actorGroupData
+    );
+    return actorGroup;
   }
 }
