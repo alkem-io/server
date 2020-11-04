@@ -29,7 +29,7 @@ export class ChallengeResolverFields {
     description: 'Groups of users related to a challenge.',
   })
   async groups(@Parent() challenge: Challenge) {
-    const groups = await this.challengeService.getGroups(challenge);
+    const groups = await this.challengeService.loadGroups(challenge);
     return groups;
   }
 

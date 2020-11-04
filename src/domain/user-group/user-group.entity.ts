@@ -80,6 +80,9 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   )
   challenge?: Challenge;
 
+  // Flag to say whether members field should be populated
+  membersPopulationEnabled = true;
+
   constructor(name: string) {
     super();
     this.name = name;
