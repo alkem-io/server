@@ -9,7 +9,7 @@ export class ActorInput {
 
   @Field({ nullable: true })
   @MaxLength(200)
-  description!: string;
+  description?: string;
 
   @Field({ nullable: true })
   @MaxLength(200)
