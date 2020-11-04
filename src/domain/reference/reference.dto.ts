@@ -13,5 +13,5 @@ export class ReferenceInput {
 
   @Field({ nullable: true })
   @MaxLength(300)
-  description!: string;
+  description?: string;
 }
