@@ -41,10 +41,14 @@ export class Reference extends BaseEntity implements IReference {
   )
   profile?: Profile;
 
-  constructor(name: string, uri: string, description: string) {
+  constructor(name: string, uri: string, description: string | undefined) {
     super();
     this.name = name;
     this.uri = uri;
-    this.description = description;
+    if (description) {
+      this.description = description;
+    } else {
+      this.description = '';
+    }
   }
 }
