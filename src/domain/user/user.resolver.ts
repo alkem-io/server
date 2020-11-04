@@ -23,7 +23,8 @@ export class UserResolver {
 
   @ResolveField('memberof', () => MemberOf, {
     nullable: true,
-    description: 'An overview of the groups this user is a memberof',
+    description:
+      'An overview of the groups this user is a memberof. Note: all groups are returned without members to avoid recursion.',
   })
   async membership(@Parent() user: User) {
     const memberships = await this.userService.getMemberOf(user);

@@ -133,27 +133,52 @@ export class UserService {
     memberOf.organisations = [];
 
     if (!membership) return memberOf;
+    if (!membership.userGroups) return memberOf;
 
-    if (membership?.userGroups) {
-      for await (const group of membership?.userGroups) {
-        const ecoverse = group.ecoverse;
-        const challenge = group.challenge;
-        const organisation = group.organisation;
+    // First get the list of challenges + orgs + groups to return
+    for (const group of membership?.userGroups) {
+      // Set flag on the group to block population of the members field
+      group.membersPopulationEnabled = false;
+      const ecoverse = group.ecoverse;
+      const challenge = group.challenge;
+      const organisation = group.organisation;
 
-        if (ecoverse) {
-          // ecoverse group
-          memberOf.groups.push(group);
-        }
-        if (challenge) {
+      if (ecoverse) {
+        // ecoverse group
+        memberOf.groups.push(group);
+      }
+      if (challenge) {
+        // challenge group
+        memberOf.challenges.push(challenge);
+      }
+      if (organisation) {
+        // challenge group
+        memberOf.organisations.push(organisation);
+      }
+    }
+
+    // Also need to only return the groups that the user is a member of
+    for (const challenge of memberOf.challenges) {
+      challenge.groups = [];
+      // add back in the groups for this challenge
+      for (const group of membership?.userGroups) {
+        if (group.challenge) {
           // challenge group
-          memberOf.challenges.push(challenge);
-        }
-        if (organisation) {
-          // challenge group
-          memberOf.organisations.push(organisation);
+          challenge.groups?.push(group);
         }
       }
-      return memberOf;
+    }
+
+    // Also need to only return the groups that the user is a member of
+    for (const organisation of memberOf.organisations) {
+      organisation.groups = [];
+      // add back in the groups for this challenge
+      for (const group of membership?.userGroups) {
+        if (group.challenge) {
+          // challenge group
+          organisation.groups?.push(group);
+        }
+      }
     }
 
     return memberOf;

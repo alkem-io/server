@@ -86,7 +86,13 @@ export class ChallengeService {
     return group;
   }
 
-  async getGroups(challenge: Challenge): Promise<IUserGroup[]> {
+  // Loads the group into the challenge entity if not already present
+  async loadGroups(challenge: Challenge): Promise<IUserGroup[]> {
+    if (challenge.groups && challenge.groups.length > 0) {
+      // challenge already has groups loaded
+      return challenge.groups;
+    }
+    // challenge is not populated wih
     const groups = await this.userGroupService.getGroups(challenge);
     if (!groups) throw new Error(`No groups on challenge: ${challenge.name}`);
     return groups;

@@ -87,7 +87,7 @@ export class UserGroupResolver {
 
   @ResolveField('members', () => User)
   async members(@Parent() group: UserGroup): Promise<User[]> {
-    if (!group) return [];
+    if (!group || !group.membersPopulationEnabled) return [];
 
     const members = await this.groupService.getMembers(group.id);
     return (members || []) as User[];
