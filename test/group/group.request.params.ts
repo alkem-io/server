@@ -26,3 +26,25 @@ export const getGroups = async () => {
 
   return await graphqlRequest(requestParams);
 };
+
+export const getGroup = async (groupId: any) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query {
+      group(ID: ${groupId}) {
+        id
+        focalPoint {
+          name
+        }
+        members {
+          name
+          id
+        }
+      }
+    }
+    `,
+  };
+
+  return await graphqlRequest(requestParams);
+};
