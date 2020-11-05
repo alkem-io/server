@@ -309,7 +309,16 @@ export class EcoverseService {
     // Ok to proceed to creating profile and optionally account
     const user = await this.createUserProfile(userData);
     if (this.accountService.authenticationEnabled()) {
-      await this.accountService.createUserAccount(userData);
+      try {
+        const result = await this.accountService.createUserAccount(userData);
+        if (!result) throw new Error('unable to create account for user');
+      } catch (e) {
+        // Account creation failed; need to remove the user
+        await this.userService.removeUser(user);
+        throw new Error(
+          `unable to create account for user; removing created user profile: ${user.name}`
+        );
+      }
     }
     return user;
   }
