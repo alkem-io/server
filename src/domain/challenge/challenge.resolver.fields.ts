@@ -11,6 +11,7 @@ import { Challenge } from './challenge.entity';
 import { User } from '../user/user.entity';
 import { UserGroupService } from '../user-group/user-group.service';
 import { ChallengeService } from './challenge.service';
+import { Opportunity } from '../opportunity/opportunity.entity';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -31,6 +32,22 @@ export class ChallengeResolverFields {
   async groups(@Parent() challenge: Challenge) {
     const groups = await this.challengeService.loadGroups(challenge);
     return groups;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('opportunities', () => [Opportunity], {
+    nullable: true,
+    description: 'The set of opportunities within this challenge.',
+  })
+  async opportunities(@Parent() challenge: Challenge) {
+    const opportunities = await this.challengeService.loadOpportunities(
+      challenge
+    );
+    return opportunities;
   }
 
   @Roles(

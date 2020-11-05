@@ -74,7 +74,6 @@ export class Opportunity extends BaseEntity
   )
   projects?: Project[];
 
-
   @Field(() => [ActorGroup], {
     nullable: true,
     description:
@@ -97,7 +96,6 @@ export class Opportunity extends BaseEntity
     { eager: true, cascade: true }
   )
   aspects?: Aspect[];
-
 
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
