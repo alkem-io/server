@@ -98,6 +98,28 @@ export class ChallengeService {
     return groups;
   }
 
+  // Loads the challenges into the challenge entity if not already present
+  async loadOpportunities(challenge: Challenge): Promise<IOpportunity[]> {
+    if (challenge.opportunities && challenge.opportunities.length > 0) {
+      // challenge already has groups loaded
+      return challenge.opportunities;
+    }
+
+    const challengeWithOpportunities = await this.challengeRepository.findOne({
+      where: { id: challenge.id },
+      relations: ['opportunities'],
+    });
+    if (
+      !challengeWithOpportunities ||
+      !challengeWithOpportunities.opportunities
+    )
+      throw new Error(
+        `Unable to load opportunities for challenge ${challenge.id} `
+      );
+
+    return challengeWithOpportunities.opportunities;
+  }
+
   async createOpportunity(
     challengeID: number,
     opportunityData: OpportunityInput
@@ -107,7 +129,7 @@ export class ChallengeService {
     // Try to find the challenge
     const challenge = await this.challengeRepository.findOne({
       where: { id: challengeID },
-      relations: ['groups'],
+      relations: ['opportunities'],
     });
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
