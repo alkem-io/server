@@ -13,6 +13,7 @@ export default registerAs('aad', () => ({
   loggingNoPII: !process.env.AUTH_AAD_LOGGING_PII || true,
   upnDomain:
     process.env.AUTH_AAD_UPN_DOMAIN || 'playgroundcherrytwist.onmicrosoft.com',
+  tenant: process.env.AUTH_AAD_TENANT || '',
 }));
 
 export enum AAD_LOGGING_LEVEL {
