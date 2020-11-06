@@ -11,11 +11,13 @@
 
 - [ ] In file: `flows-challenge.e2e-spec.ts`
   - [ ] create 2 users
-         - make one of them focal point to user group
+         - create a challenge
+         - make the first user focal point to the group, created with the challenge creation
          - add the user group to the challenge and assert that a group focal point is a challenge_lead??
   - [ ] create a user
          - create a challenge with group
-         - query the user (contributor) - should not be available
+         - don't add the user to the challenge or to the challenge group
+         - query the challenge contributors - should not be available
   - [ ] create a challenge with a name 'x'
          - create second challenge with name 'y'
          - modify the first challenge name to 'y' - error should be thrown

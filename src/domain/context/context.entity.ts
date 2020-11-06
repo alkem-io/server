@@ -73,6 +73,5 @@ export class Context extends BaseEntity implements IContext {
   // Constructor
   constructor() {
     super();
-    //this.references = [];
   }
 }
