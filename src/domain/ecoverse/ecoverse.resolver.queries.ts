@@ -94,6 +94,25 @@ export class EcoverseResolverQueries {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
+  //should be in user queries
+  @Query(() => [User], {
+    nullable: false,
+    description: 'The members of this this ecoverse filtered by list of IDs.',
+  })
+  async usersById(
+    @Args({ name: 'IDs', type: () => [String] }) ids: string[]
+  ): Promise<IUser[]> {
+    const users = await this.ecoverseService.getUsers();
+    return users.filter(x => {
+      return ids ? ids.indexOf(x.id.toString()) > -1 : false;
+    });
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
     description: 'All groups at the ecoverse level',
