@@ -225,17 +225,18 @@ export class EcoverseService {
     let challenge = ecoverse.challenges.find(
       c => c.name === challengeData.name
     );
-    if (!challenge) {
-      // No existing challenge found, create and initialise a new one!
-      challenge = await this.challengeService.createChallenge(challengeData);
-
-      ecoverse.challenges.push(challenge as Challenge);
-      await this.ecoverseRepository.save(ecoverse);
-    } else {
-      // load the whole challenge
-      this.logger.verbose('Creating Challenge: Challenge already exists!');
-      challenge = await this.challengeService.getChallengeByID(challenge.id);
+    if (challenge) {
+      // already have a challenge with the given name, not allowed
+      throw new Error(
+        `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`
+      );
     }
+    // No existing challenge found, create and initialise a new one!
+    challenge = await this.challengeService.createChallenge(challengeData);
+
+    ecoverse.challenges.push(challenge as Challenge);
+    await this.ecoverseRepository.save(ecoverse);
+
     return challenge;
   }
 
