@@ -13,4 +13,5 @@ export interface IAzureADConfig {
   loggingNoPII: boolean;
   upnDomain: string;
   scope: string;
+  tenant: string;
 }
