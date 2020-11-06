@@ -97,7 +97,7 @@ export class EcoverseResolverQueries {
   //should be in user queries
   @Query(() => [User], {
     nullable: false,
-    description: 'A particular user, identified by the ID or by email',
+    description: 'The members of this this ecoverse filtered by list of IDs.',
   })
   async usersById(
     @Args({ name: 'IDs', type: () => [String] }) ids: string[]
