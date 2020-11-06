@@ -1,5 +1,6 @@
 import {
   addUserToGroup,
+  assignGroupFocalPointMutation,
   createUserDetailsMutation,
   removeUserFromGroup,
   removeUserMutation,
@@ -186,5 +187,25 @@ describe('Users and Groups', () => {
     expect(responseQueryGroups.body.data.groups).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: userId })])
     );
+  });
+
+  test('should add "user" to "group" as focal point', async () => {
+    // Arrange
+    const responseCreate = await createGroupMutation(groupName);
+    const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
+
+    const responseCreateUser = await createUserDetailsMutation(
+      userName,
+      userPhone,
+      userEmail
+    );
+    userId = responseCreateUser.body.data.createUser.id;
+
+    // Act
+    const responseAddUserToGroup = await assignGroupFocalPointMutation(userId, groupId);
+
+    // Assert
+    expect(responseAddUserToGroup.status).toBe(200);
+    expect(responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name).toEqual(userName);
   });
 });

@@ -74,7 +74,7 @@ export class OrganisationService {
   ): Promise<IOrganisation> {
     // Create and initialise a new organisation using the supplied data
     const organisation = Organisation.create(organisationData);
-    this.initialiseMembers(organisation);
+    await this.initialiseMembers(organisation);
     return organisation;
   }
 

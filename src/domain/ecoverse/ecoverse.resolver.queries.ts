@@ -178,6 +178,6 @@ export class EcoverseResolverQueries {
     description: 'The tagset associated with this Ecoverse',
   })
   async tagset(): Promise<ITagset> {
-    return this.ecoverseService.getTagset();
+    return await this.ecoverseService.getTagset();
   }
 }

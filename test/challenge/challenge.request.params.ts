@@ -51,6 +51,29 @@ export const createChallangeMutation = async (
   return await graphqlRequest(requestParams);
 };
 
+export const updateChallangeMutation = async (
+  challengeId: any,
+  challengeName: string
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation UpdateChallenge($challengeID: Float! $challengeData: ChallengeInput!) {
+      updateChallenge(challengeID: $challengeID, challengeData: $challengeData) {
+        name,
+        id
+      }
+    }`,
+    variables: {
+      challengeID: parseFloat(challengeId),
+      challengeData: {
+        name: challengeName,
+      },
+    },
+  };
+
+  return await graphqlRequest(requestParams);
+};
+
 export const getChallenges = async () => {
   const requestParams = {
     operationName: null,
@@ -65,7 +88,34 @@ export const getChallenge = async (challengeId: any) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{challenges (ID: ${challengeId}) {name id}}`
+    query: `query{challenges (ID: ${challengeId}) {name id}}`,
+  };
+
+  return await graphqlRequest(requestParams);
+};
+
+export const getChallengeUsers = async (challengeId: any) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query {
+      challenge(ID: ${challengeId}) {
+        id
+        contributors {
+          name
+        }
+        groups {
+          id
+          name
+          focalPoint {
+            name
+          }
+          members {
+            name
+          }
+        }
+      }
+    }`,
   };
 
   return await graphqlRequest(requestParams);

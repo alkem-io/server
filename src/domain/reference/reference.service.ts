@@ -28,12 +28,13 @@ export class ReferenceService {
     return references;
   }
 
-  createReference(referenceInput: ReferenceInput): IReference {
+  async createReference(referenceInput: ReferenceInput): Promise<IReference> {
     const reference = new Reference(
       referenceInput.name,
       referenceInput.uri,
       referenceInput.description
     );
+    await this.referenceRepository.save(reference);
     return reference;
   }
 
