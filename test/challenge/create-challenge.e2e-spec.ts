@@ -61,23 +61,6 @@ describe('Create Challenge', () => {
     );
   });
 
-  //to be implemeneted?
-  test.skip('should thow error - creating 2 challenges with same name', async () => {
-    // Act
-    await createChallangeMutation(challengeName, uniqueTextId);
-    const response = await createChallangeMutation('1', uniqueTextId);
-    challengeId = response.body.data.createChallenge.id;
-    console.log(response.body);
-    console.log(challengeName);
-    console.log(response.text);
-
-    // Assert
-    expect(response.status).toBe(200);
-    // expect(response.body.data.createChallenge.name).toEqual(
-    //   `Challenge with name: ${challengeName} is already created`
-    // );
-  });
-
   test('should create challenge without reference and context', async () => {
     // Act
     const requestParamsCreateChallenge = {

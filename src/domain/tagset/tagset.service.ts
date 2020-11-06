@@ -57,7 +57,7 @@ export class TagsetService {
     tagsetData: TagsetInput
   ): Promise<ITagset> {
     if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
-      const tagset = this.getTagsetByName(tagsetable, tagsetData.name);
+      const tagset = await this.getTagsetByName(tagsetable, tagsetData.name);
       // Check the incoming tags and replace
       if (tagsetData.tags) {
         tagset.tags = tagsetData.tags;

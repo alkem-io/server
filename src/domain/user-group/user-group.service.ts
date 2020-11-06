@@ -31,19 +31,19 @@ export class UserGroupService {
     if (groupable instanceof Ecoverse) {
       return await this.groupRepository.find({
         where: { ecoverse: { id: groupable.id } },
-        relations: ['members'],
+        relations: ['members', 'focalPoint'],
       });
     }
     if (groupable instanceof Challenge) {
       return await this.groupRepository.find({
         where: { challenge: { id: groupable.id } },
-        relations: ['members'],
+        relations: ['members', 'focalPoint'],
       });
     }
     if (groupable instanceof Organisation) {
       return await this.groupRepository.find({
         where: { organisation: { id: groupable.id } },
-        relations: ['members'],
+        relations: ['members', 'focalPoint'],
       });
     }
 

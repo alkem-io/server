@@ -432,7 +432,10 @@ export class EcoverseService {
       if (!ecoverse.tagset) {
         ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
       }
-      this.tagsetService.replaceTags(ecoverse.tagset.id, ecoverseData.tags);
+      await this.tagsetService.replaceTags(
+        ecoverse.tagset.id,
+        ecoverseData.tags
+      );
     }
 
     await this.ecoverseRepository.save(ecoverse);
