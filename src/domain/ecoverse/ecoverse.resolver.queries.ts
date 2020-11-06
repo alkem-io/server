@@ -128,7 +128,9 @@ export class EcoverseResolverQueries {
       'The user group with the specified id anywhere in the ecoverse',
   })
   async group(@Args('ID') id: number): Promise<IUserGroup | undefined> {
-    const group = await this.groupService.getGroupByID(id);
+    const group = await this.groupService.getGroupByID(id, {
+      relations: ['members', 'focalPoint'],
+    });
     return group;
   }
 
