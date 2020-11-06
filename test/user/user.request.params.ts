@@ -104,6 +104,27 @@ export const addUserToGroup = async (userId: any, groupId: string) => {
   return await graphqlRequest(requestParams);
 };
 
+export const assignGroupFocalPointMutation = async (userId: any, groupId: string) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
+      assignGroupFocalPoint(groupID: $groupID, userID: $userID) {
+        name,
+        id,
+        focalPoint {
+          name
+        }
+      }
+    }`,
+    variables: {
+      userID: parseFloat(userId),
+      groupID: parseFloat(groupId),
+    },
+  };
+
+  return await graphqlRequest(requestParams);
+};
+
 export const createGroupMutation = async (testGroup: string) => {
   const requestParams = {
     operationName: 'CreateGroupOnEcoverse',

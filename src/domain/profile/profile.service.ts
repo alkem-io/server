@@ -112,7 +112,7 @@ export class ProfileService {
             referenceData
           );
         } else {
-          const newReference = this.referenceService.createReference(
+          const newReference = await this.referenceService.createReference(
             referenceData
           );
           profile.references?.push(newReference as Reference);

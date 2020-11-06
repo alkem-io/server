@@ -311,12 +311,12 @@ export class EcoverseService {
     if (this.accountService.authenticationEnabled()) {
       try {
         const result = await this.accountService.createUserAccount(userData);
-        if (!result) throw new Error('unable to create account for user');
+        if (!result) throw new Error('Unable to create account for user!');
       } catch (e) {
         // Account creation failed; need to remove the user
         await this.userService.removeUser(user);
         throw new Error(
-          `unable to create account for user; removing created user profile: ${user.name}`
+          `Unable to create account for user. Removing created user profile: ${user.name}.  ${e}`
         );
       }
     }
@@ -432,7 +432,10 @@ export class EcoverseService {
       if (!ecoverse.tagset) {
         ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
       }
-      this.tagsetService.replaceTags(ecoverse.tagset.id, ecoverseData.tags);
+      await this.tagsetService.replaceTags(
+        ecoverse.tagset.id,
+        ecoverseData.tags
+      );
     }
 
     await this.ecoverseRepository.save(ecoverse);

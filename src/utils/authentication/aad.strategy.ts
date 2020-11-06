@@ -57,7 +57,10 @@ export class AzureADStrategy
       await this.cacheBearerToken(req);
 
       const knownUser = await this.userService.getUserWithGroups(token.email);
-      if (!knownUser) throw new UnauthorizedException();
+      if (!knownUser)
+        throw new UnauthorizedException(
+          `No user with email ${token.email} found!`
+        );
 
       return done(null, knownUser, token);
     } catch (error) {
@@ -104,7 +107,7 @@ export class AzureADStrategy
     this.logger.verbose(`Upstream access token: ${bearer} ${tokenValue}`);
 
     const authority = 'login.microsoftonline.com';
-    const tenant = process.env.AAD_TENANT;
+    const tenant = this.configService.get<IAzureADConfig>('aad')?.tenant;
     const tokenEndpoint = `https://${authority}/${tenant}/oauth2/v2.0/token`;
 
     const myHeaders = new Headers();
