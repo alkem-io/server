@@ -91,7 +91,7 @@ export class ChallengeResolverMutations {
     @Args('userID') userID: number,
     @Args('challengeID') challengeID: number
   ): Promise<IUserGroup> {
-    const group = this.challengeService.addMember(userID, challengeID);
+    const group = await this.challengeService.addMember(userID, challengeID);
     return group;
   }
 }
