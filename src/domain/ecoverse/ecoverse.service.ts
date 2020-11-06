@@ -14,7 +14,6 @@ import { TagsetService } from '../tagset/tagset.service';
 import { IUser } from '../user/user.interface';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ITagset } from '../tagset/tagset.interface';
-import { Challenge } from '../challenge/challenge.entity';
 import { ChallengeService } from '../challenge/challenge.service';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { UserInput } from '../user/user.dto';
@@ -234,7 +233,7 @@ export class EcoverseService {
     // No existing challenge found, create and initialise a new one!
     challenge = await this.challengeService.createChallenge(challengeData);
 
-    ecoverse.challenges.push(challenge as Challenge);
+    ecoverse.challenges.push(challenge);
     await this.ecoverseRepository.save(ecoverse);
 
     return challenge;
