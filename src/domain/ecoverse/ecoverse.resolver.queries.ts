@@ -23,7 +23,6 @@ import { UserGroupService } from '../user-group/user-group.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
-import { IdList } from '../IDList.dto';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()
@@ -100,12 +99,12 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'A particular user, identified by the ID or by email',
   })
-  async usersById(@Args('IdList') idList: IdList): Promise<IUser[]> {
+  async usersById(
+    @Args({ name: 'IDs', type: () => [String] }) ids: string[]
+  ): Promise<IUser[]> {
     const users = await this.ecoverseService.getUsers();
     return users.filter(x => {
-      return idList && idList.ids
-        ? idList.ids.indexOf(x.id.toString()) > -1
-        : false;
+      return ids ? ids.indexOf(x.id.toString()) > -1 : false;
     });
   }
 
