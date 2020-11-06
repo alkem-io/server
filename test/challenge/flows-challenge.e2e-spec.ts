@@ -43,7 +43,7 @@ afterAll(async () => {
 
 describe('Create Challenge', () => {
   // Enable the test after bug fix: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/398
-  test.skip('should add "user" to "group" as focal point', async () => {
+  test('should add "user" to "group" as focal point', async () => {
     // Arrange
 
     // Create a challenge and get the created GroupId created within it
@@ -51,6 +51,7 @@ describe('Create Challenge', () => {
       challengeName,
       uniqueTextId
     );
+    challengeId = responseCreateChallenge.body.data.createChallenge.id;
     const challengeGroupId =
       responseCreateChallenge.body.data.createChallenge.groups[0].id;
 
@@ -65,11 +66,13 @@ describe('Create Challenge', () => {
 
     // Create second User
     const responseCreateUserTwo = await createUserDetailsMutation(
-      userName,
+      userName + userName,
       userPhone,
       userEmail + userEmail
     );
     const secondUserName = responseCreateUserTwo.body.data.createUser.name;
+
+    // Act
 
     // Assign first User as a focal point to the group
     const responseAddUserToGroup = await assignGroupFocalPointMutation(
@@ -77,9 +80,14 @@ describe('Create Challenge', () => {
       challengeGroupId
     );
 
-    // Query the group focal point
+    // Query focal point through challenge group
+    const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
+    const groupFocalPointFromChallenge =
+      responseChallengeGroupQuery.body.data.challenge.groups[0].focalPoint.name;
+
+    // Query focal point directly from group
     const responseGroupQuery = await getGroup(challengeGroupId);
-    const groupFocalPoint = responseGroupQuery.body.data.group.focalPoint;
+    const groupFocalPoint = responseGroupQuery.body.data.group.focalPoint.name;
 
     // Assert
     expect(responseAddUserToGroup.status).toBe(200);
@@ -87,6 +95,8 @@ describe('Create Challenge', () => {
       responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name
     ).toEqual(userName);
 
+    expect(groupFocalPointFromChallenge).toEqual(firstUserName);
+    expect(groupFocalPointFromChallenge).not.toEqual(secondUserName);
     expect(groupFocalPoint).toEqual(firstUserName);
     expect(groupFocalPoint).not.toEqual(secondUserName);
   });
