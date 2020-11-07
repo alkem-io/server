@@ -42,7 +42,6 @@ export class BootstrapService {
 
   async bootstrapEcoverse() {
     try {
-      this.logger.verbose('Bootstrapping Ecoverse...');
       Measure.logger = this.logger;
       this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
       await this.ensureEcoverseSingleton();
