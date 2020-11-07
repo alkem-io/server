@@ -22,6 +22,7 @@ import { TemplateInput } from '../../domain/template/template.dto';
 import { ProfileService } from '../../domain/profile/profile.service';
 import { TagsetService } from '../../domain/tagset/tagset.service';
 import { ReferenceInput } from '../../domain/reference/reference.dto';
+import { Measure } from '../logging/logging.profile.decorator';
 
 @Injectable()
 export class BootstrapService {
@@ -41,6 +42,7 @@ export class BootstrapService {
   async bootstrapEcoverse() {
     try {
       this.logger.verbose('Bootstrapping Ecoverse...');
+      Measure.logger = this.logger;
       await this.ensureEcoverseSingleton();
       await this.validateAccountManagementSetup();
       await this.bootstrapProfiles();
@@ -114,6 +116,7 @@ export class BootstrapService {
     }
   }
 
+  @Measure.api
   async createGroupProfiles(groupName: string, emails: string[]) {
     try {
       for await (const email of emails) {

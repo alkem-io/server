@@ -28,9 +28,9 @@ import { BootstrapModule } from './utils/bootstrap/bootstrap.module';
 import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
 import msGraphConfig from './utils/config/ms-graph.config';
 import { WinstonModule } from 'nest-winston';
-import { WinstonConfigService } from './utils/config/winston.config';
 import aadClientConfig from './utils/config/aad.client.config';
 import { CherrytwistConfigModule } from './utils/cherrytwist-config/cherrytwist-config.module';
+import { WinstonConfigService } from './utils/logging/winston.config';
 
 @Module({
   imports: [

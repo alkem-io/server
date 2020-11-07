@@ -12,6 +12,7 @@ import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 import { User } from '../user/user.entity';
+import { Measure } from '../../utils/logging/logging.profile.decorator';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolver {
@@ -26,6 +27,7 @@ export class UserGroupResolver {
     description:
       'Adds the user with the given identifier to the specified user group',
   })
+  @Measure.api
   async addUserToGroup(
     @Args('userID') userID: number,
     @Args('groupID') groupID: number
@@ -43,6 +45,7 @@ export class UserGroupResolver {
     description:
       'Remove the user with the given identifier to the specified user group',
   })
+  @Measure.api
   async removeUserFromGroup(
     @Args('userID') userID: number,
     @Args('groupID') groupID: number
@@ -61,6 +64,7 @@ export class UserGroupResolver {
     description:
       'Assign the user with the given ID as focal point for the given group',
   })
+  @Measure.api
   async assignGroupFocalPoint(
     @Args('userID') userID: number,
     @Args('groupID') groupID: number
@@ -78,6 +82,7 @@ export class UserGroupResolver {
     nullable: true,
     description: 'Remove the focal point for the given group',
   })
+  @Measure.api
   async removeGroupFocalPoint(
     @Args('groupID') groupID: number
   ): Promise<IUserGroup> {
@@ -86,6 +91,7 @@ export class UserGroupResolver {
   }
 
   @ResolveField('members', () => User)
+  @Measure.api
   async members(@Parent() group: UserGroup): Promise<User[]> {
     if (!group || !group.membersPopulationEnabled) return [];
 
