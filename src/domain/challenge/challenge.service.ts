@@ -198,10 +198,24 @@ export class ChallengeService {
     challengeData: ChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.getChallengeByID(challengeID);
-
-    // Copy over the received data
-    if (challengeData.name) {
-      challenge.name = challengeData.name;
+    if (!challenge) {
+      throw new Error(`Unable to locate challenge: ${challengeID}`);
+    }
+    const newName = challengeData.name;
+    if (newName) {
+      if (!(newName === challenge.name)) {
+        // challenge is being renamed...
+        const otherChallenge = await this.challengeRepository.findOne({
+          where: { name: name },
+        });
+        // already have a challenge with the given name, not allowed
+        if (otherChallenge)
+          throw new Error(
+            `Unable to update challenge: already have a challenge with the provided name (${challengeData.name})`
+          );
+        // Ok to rename
+        challenge.name = newName;
+      }
     }
 
     if (challengeData.state) {
