@@ -3,6 +3,7 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
+import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
@@ -36,6 +37,7 @@ export class EcoverseResolverMutations {
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group at the ecoverse level',
   })
+  @Profiling.api
   async createGroupOnEcoverse(
     @Args({ name: 'groupName', type: () => String }) groupName: string
   ): Promise<IUserGroup> {
@@ -48,6 +50,7 @@ export class EcoverseResolverMutations {
   @Mutation(() => Ecoverse, {
     description: 'Updates the Ecoverse with the provided data',
   })
+  @Profiling.api
   async updateEcoverse(
     @Args('ecoverseData') ecoverseData: EcoverseInput
   ): Promise<IEcoverse> {
@@ -64,6 +67,7 @@ export class EcoverseResolverMutations {
     description:
       'Creates a new user as a member of the ecoverse, including an account if enabled',
   })
+  @Profiling.api
   async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
     const user = await this.ecoverseService.createUser(userData);
     return user;
@@ -75,6 +79,7 @@ export class EcoverseResolverMutations {
     description:
       'Creates a new template for the population of entities within tis ecoverse',
   })
+  @Profiling.api
   async createTemplate(
     @Args('templateData') templateData: TemplateInput
   ): Promise<ITemplate> {
@@ -91,6 +96,7 @@ export class EcoverseResolverMutations {
     description:
       'Creates a new user as a member of the ecoverse, without an account',
   })
+  @Profiling.api
   async createUserProfile(
     @Args('userData') userData: UserInput
   ): Promise<IUser> {
@@ -106,6 +112,7 @@ export class EcoverseResolverMutations {
   @Mutation(() => Boolean, {
     description: 'Removes the specified user from the ecoverse',
   })
+  @Profiling.api
   async removeUser(@Args('userID') userID: number): Promise<boolean> {
     const success = await this.ecoverseService.removeUser(userID);
     return success;
@@ -116,6 +123,7 @@ export class EcoverseResolverMutations {
   @Mutation(() => Challenge, {
     description: 'Creates a new challenge and registers it with the ecoverse',
   })
+  @Profiling.api
   async createChallenge(
     @Args('challengeData') challengeData: ChallengeInput
   ): Promise<IChallenge> {
@@ -130,6 +138,7 @@ export class EcoverseResolverMutations {
     description:
       'Creates a new organisation and registers it with the ecoverse',
   })
+  @Profiling.api
   async createOrganisation(
     @Args('organisationData') organisationData: OrganisationInput
   ): Promise<IOrganisation> {

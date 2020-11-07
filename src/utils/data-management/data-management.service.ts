@@ -16,7 +16,7 @@ import { UserService } from '../../domain/user/user.service';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../logging/logging-framework';
+import { LogContexts } from '../logging/logging.contexts';
 
 @Injectable()
 export class DataManagementService {

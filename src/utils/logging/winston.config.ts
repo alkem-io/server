@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import * as winston from 'winston';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
+import { ConfigService } from '@nestjs/config';
+import { ILoggingConfig } from '../../interfaces/logging.config.interface';
 
 @Injectable()
 export class WinstonConfigService {
+  constructor(private configService: ConfigService) {}
+
   async createWinstonModuleOptions() {
     return {
       transports: [
@@ -12,22 +16,11 @@ export class WinstonConfigService {
             winston.format.timestamp(),
             nestWinstonModuleUtilities.format.nestLike()
           ),
-          level:
-            process.env.LOGGING_LEVEL?.toLowerCase() ||
-            LOGGING_LEVEL.Error.toString().toLowerCase(),
+          level: this.configService.get<ILoggingConfig>('logging')
+            ?.loggingLevel,
         }),
         // other transports...
       ],
     };
   }
-}
-
-export enum LOGGING_LEVEL {
-  Error = 0,
-  Warn = 1,
-  Info = 2,
-  Http = 3,
-  Verbose = 4,
-  Debug = 5,
-  Silly = 6,
 }

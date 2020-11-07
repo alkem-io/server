@@ -15,6 +15,7 @@ import { Aspect } from '../aspect/aspect.entity';
 import { ActorGroupInput } from '../actor-group/actor-group.dto';
 import { IActorGroup } from '../actor-group/actor-group.interface';
 import { ActorGroup } from '../actor-group/actor-group.entity';
+import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 
 @Resolver()
 export class OpportunityResolver {
@@ -31,6 +32,7 @@ export class OpportunityResolver {
     nullable: false,
     description: 'A particular opportunitiy, identified by the ID',
   })
+  @Profiling.api
   async opportunity(@Args('ID') id: number): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityByID(id);
     if (opportunity) return opportunity;
@@ -44,6 +46,7 @@ export class OpportunityResolver {
     description:
       'Updates the specified Opportunity with the provided data (merge)',
   })
+  @Profiling.api
   async updateOpportunity(
     @Args({ name: 'ID', type: () => Float }) opportunityID: number,
     @Args('opportunityData') opportunityData: OpportunityInput
@@ -63,6 +66,7 @@ export class OpportunityResolver {
   @Mutation(() => Aspect, {
     description: 'Create a new aspect on the Opportunity identified by the ID',
   })
+  @Profiling.api
   async createAspect(
     @Args('opportunityID') opportunityId: number,
     @Args('aspectData') aspectData: AspectInput
@@ -83,6 +87,7 @@ export class OpportunityResolver {
     description:
       'Create a new actor group on the Opportunity identified by the ID',
   })
+  @Profiling.api
   async createActorGroup(
     @Args('opportunityID') opportunityId: number,
     @Args('actorGroupData') actorGroupData: ActorGroupInput

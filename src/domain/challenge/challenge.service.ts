@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { LogContexts } from '../../utils/logging/logging-framework';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
 import { OpportunityInput } from '../opportunity/opportunity.dto';

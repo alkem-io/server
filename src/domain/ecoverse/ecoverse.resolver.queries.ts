@@ -2,6 +2,7 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
+import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ChallengeService } from '../challenge/challenge.service';
@@ -39,6 +40,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'The name for this ecoverse',
   })
+  @Profiling.api
   async name(): Promise<string> {
     return this.ecoverseService.getName();
   }
@@ -47,6 +49,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'The host organisation for the ecoverse',
   })
+  @Profiling.api
   async host(): Promise<IOrganisation> {
     return this.ecoverseService.getHost();
   }
@@ -55,6 +58,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'The shared understanding for this ecoverse',
   })
+  @Profiling.api
   async context(): Promise<IContext> {
     return this.ecoverseService.getContext();
   }
@@ -68,6 +72,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'The members of this this ecoverse',
   })
+  @Profiling.api
   async users(): Promise<IUser[]> {
     return this.ecoverseService.getUsers();
   }
@@ -82,6 +87,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'A particular user, identified by the ID or by email',
   })
+  @Profiling.api
   async user(@Args('ID') id: string): Promise<IUser> {
     const user = await this.userService.getUser(id);
     if (user) return user;
@@ -99,6 +105,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'The members of this this ecoverse filtered by list of IDs.',
   })
+  @Profiling.api
   async usersById(
     @Args({ name: 'IDs', type: () => [String] }) ids: string[]
   ): Promise<IUser[]> {
@@ -117,6 +124,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'All groups at the ecoverse level',
   })
+  @Profiling.api
   async groups(): Promise<IUserGroup[]> {
     const groups = await this.ecoverseService.getGroups();
     return groups;
@@ -131,6 +139,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'All groups that have the provided tag',
   })
+  @Profiling.api
   async groupsWithTag(@Args('tag') tag: string): Promise<IUserGroup[]> {
     const groups = await this.ecoverseService.getGroupsWithTag(tag);
     return groups;
@@ -146,6 +155,7 @@ export class EcoverseResolverQueries {
     description:
       'The user group with the specified id anywhere in the ecoverse',
   })
+  @Profiling.api
   async group(@Args('ID') id: number): Promise<IUserGroup | undefined> {
     const group = await this.groupService.getGroupByID(id, {
       relations: ['members', 'focalPoint'],
@@ -154,12 +164,14 @@ export class EcoverseResolverQueries {
   }
 
   @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
+  @Profiling.api
   async challenges(): Promise<IChallenge[]> {
     const challenges = await this.ecoverseService.getChallenges();
     return challenges;
   }
 
   @Query(() => [Template], { nullable: false, description: 'All templates' })
+  @Profiling.api
   async templates(): Promise<ITemplate[]> {
     const templates = await this.ecoverseService.getTemplates();
     return templates;
@@ -169,6 +181,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'A particular challenge',
   })
+  @Profiling.api
   async challenge(@Args('ID') id: number): Promise<IChallenge | undefined> {
     return await this.challengeService.getChallengeByID(id);
   }
@@ -177,6 +190,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'All organisations',
   })
+  @Profiling.api
   async organisations(): Promise<IOrganisation[]> {
     const organisations = await this.ecoverseService.getOrganisations();
     return organisations;
@@ -186,6 +200,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'A particular organisation',
   })
+  @Profiling.api
   async organisation(
     @Args('ID') id: number
   ): Promise<IOrganisation | undefined> {
@@ -196,6 +211,7 @@ export class EcoverseResolverQueries {
     nullable: false,
     description: 'The tagset associated with this Ecoverse',
   })
+  @Profiling.api
   async tagset(): Promise<ITagset> {
     return await this.ecoverseService.getTagset();
   }

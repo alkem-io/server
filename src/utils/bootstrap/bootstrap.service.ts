@@ -22,7 +22,9 @@ import { TemplateInput } from '../../domain/template/template.dto';
 import { ProfileService } from '../../domain/profile/profile.service';
 import { TagsetService } from '../../domain/tagset/tagset.service';
 import { ReferenceInput } from '../../domain/reference/reference.dto';
-import { LogContexts } from '../logging/logging-framework';
+import { Profiling } from '../logging/logging.profiling.decorator';
+import { LogContexts } from '../logging/logging.contexts';
+import { ILoggingConfig } from '../../interfaces/logging.config.interface';
 
 @Injectable()
 export class BootstrapService {
@@ -41,7 +43,15 @@ export class BootstrapService {
 
   async bootstrapEcoverse() {
     try {
+      this.logger.verbose('Bootstrapping Ecoverse...');
+
+      Profiling.logger = this.logger;
+      const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
+        ?.profilingEnabled;
+      if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
       this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
+
+      // Now setup the rest...
       await this.ensureEcoverseSingleton();
       await this.validateAccountManagementSetup();
       await this.bootstrapProfiles();
@@ -124,6 +134,7 @@ export class BootstrapService {
     }
   }
 
+  @Profiling.api
   async createGroupProfiles(groupName: string, emails: string[]) {
     try {
       for await (const email of emails) {

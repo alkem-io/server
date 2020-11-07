@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
-import { LogContexts } from '../../utils/logging/logging-framework';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
