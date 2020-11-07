@@ -15,7 +15,7 @@ import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../../utils/logging/logging-framework';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 
 @Injectable()
 export class UserGroupService {

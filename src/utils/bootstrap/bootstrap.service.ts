@@ -22,8 +22,8 @@ import { TemplateInput } from '../../domain/template/template.dto';
 import { ProfileService } from '../../domain/profile/profile.service';
 import { TagsetService } from '../../domain/tagset/tagset.service';
 import { ReferenceInput } from '../../domain/reference/reference.dto';
-import { Measure } from '../logging/logging.profile.decorator';
-import { LogContexts } from '../logging/logging-framework';
+import { Profiling } from '../logging/logging.profiling.decorator';
+import { LogContexts } from '../logging/logging.contexts';
 import { ILoggingConfig } from '../../interfaces/logging.config.interface';
 
 @Injectable()
@@ -45,10 +45,10 @@ export class BootstrapService {
     try {
       this.logger.verbose('Bootstrapping Ecoverse...');
 
-      Measure.logger = this.logger;
+      Profiling.logger = this.logger;
       const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
         ?.profilingEnabled;
-      if (profilingEnabled) Measure.profilingEnabled = profilingEnabled;
+      if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
       this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
 
       // Now setup the rest...
@@ -134,7 +134,7 @@ export class BootstrapService {
     }
   }
 
-  @Measure.api
+  @Profiling.api
   async createGroupProfiles(groupName: string, emails: string[]) {
     try {
       for await (const email of emails) {

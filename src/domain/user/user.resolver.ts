@@ -9,7 +9,7 @@ import {
 } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
-import { Measure } from '../../utils/logging/logging.profile.decorator';
+import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { MemberOf } from './memberof.composite';
 import { CurrentUser } from './user.decorator';
@@ -27,7 +27,7 @@ export class UserResolver {
     description:
       'An overview of the groups this user is a memberof. Note: all groups are returned without members to avoid recursion.',
   })
-  @Measure.api
+  @Profiling.api
   async membership(@Parent() user: User) {
     const memberships = await this.userService.getMemberOf(user);
     // Find all challenges the user is a member of
@@ -43,7 +43,7 @@ export class UserResolver {
     description:
       'Update the base user information. Note: email address cannot be updated.',
   })
-  @Measure.api
+  @Profiling.api
   async updateUser(
     @Args('userID') userID: number,
     @Args('userData') userData: UserInput
@@ -62,7 +62,7 @@ export class UserResolver {
     nullable: false,
     description: 'The currently logged in user',
   })
-  @Measure.api
+  @Profiling.api
   async me(@CurrentUser() email: string): Promise<IUser> {
     const user = await this.userService.getUserByEmail(email);
     return user as IUser;

@@ -14,7 +14,7 @@ import { OrganisationInput } from './organisation.dto';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
-import { Measure } from '../../utils/logging/logging.profile.decorator';
+import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -32,7 +32,7 @@ export class OrganisationResolverMutations {
     description:
       'Creates a new user group for the organisation with the given id',
   })
-  @Measure.api
+  @Profiling.api
   async createGroupOnOrganisation(
     @Args({ name: 'orgID', type: () => Float }) orgID: number,
     @Args({ name: 'groupName', type: () => String }) groupName: string
@@ -46,7 +46,7 @@ export class OrganisationResolverMutations {
   @Mutation(() => Organisation, {
     description: 'Updates the organisation with the given data',
   })
-  @Measure.api
+  @Profiling.api
   async updateOrganisation(
     @Args('orgID') orgID: number,
     @Args('organisationData') organisationData: OrganisationInput

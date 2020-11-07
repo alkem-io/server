@@ -4,7 +4,7 @@ import { Roles } from '../decorators/roles.decorator';
 import { GqlAuthGuard } from '../authentication/graphql.guard';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
 import { AccountService } from './account.service';
-import { Measure } from '../logging/logging.profile.decorator';
+import { Profiling } from '../logging/logging.profiling.decorator';
 
 @Resolver()
 export class AccountResolver {
@@ -19,7 +19,7 @@ export class AccountResolver {
     description:
       'Creates a new account on the identity provider for the user profile with the given ID and with the given one time password',
   })
-  @Measure.api
+  @Profiling.api
   async createUserAccount(
     @Args('userID') userID: number,
     @Args('password') password: string

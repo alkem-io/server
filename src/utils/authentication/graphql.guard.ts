@@ -9,7 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../logging/logging-framework';
+import { LogContexts } from '../logging/logging.contexts';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {

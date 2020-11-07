@@ -1,8 +1,8 @@
 import { Logger } from '@nestjs/common';
 import { performance } from 'perf_hooks';
-import { LogContexts } from './logging-framework';
+import { LogContexts } from './logging.contexts';
 
-export class Measure {
+export class Profiling {
   static logger: Logger;
   static profilingEnabled = false;
   static api = (
@@ -14,13 +14,16 @@ export class Measure {
     const originalMethod = descriptor.value;
 
     descriptor.value = function(...args: any) {
-      if (!Measure.profilingEnabled) originalMethod.apply(this, args);
+      if (!Profiling.profilingEnabled) {
+        // just execute the wrapped function
+        return originalMethod.apply(this, args);
+      }
       // profiling is enabled
       const start = performance.now();
       const result = originalMethod.apply(this, args);
       const elapsed = (performance.now() - start).toFixed(3);
       const msg = `${target.constructor.name}-${propertyKey}: Execution time: ${elapsed} milliseconds`;
-      Measure.logger.verbose(msg, LogContexts.API);
+      Profiling.logger.verbose(msg, LogContexts.API);
 
       return result;
     };
