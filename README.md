@@ -122,7 +122,7 @@ CORS_ORIGIN=[your CORS origin value]
 To configure logging levels, use:
 
 ```conf
-LOGGING_LEVEL=Error|Warn|Info|Http|Verbose|Debug|Silly. Defaults to Error if no value is set.
+LOGGING_LEVEL=Error|Warn|Verbose|Debug. Defaults to Error if no value is set.
 ```
 
 ### Install dependencies
