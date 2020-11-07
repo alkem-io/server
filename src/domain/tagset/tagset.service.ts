@@ -9,6 +9,7 @@ import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TagsetInput } from './tagset.dto';
+import { LogContexts } from '../../utils/logging/logging-framework';
 
 @Injectable()
 export class TagsetService {
@@ -175,7 +176,8 @@ export class TagsetService {
 
     if (tagsetable.restrictedTagsetNames?.includes(name)) {
       this.logger.verbose(
-        `Attempted to create a tagset using a restricted name: ${name}`
+        `Attempted to create a tagset using a restricted name: ${name}`,
+        LogContexts.CHALLENGES
       );
       throw new Error(
         'Unable to create tagset with restricted name: ' + { name }

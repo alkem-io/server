@@ -15,6 +15,7 @@ import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContexts } from '../../utils/logging/logging-framework';
 
 @Injectable()
 export class UserGroupService {
@@ -68,14 +69,14 @@ export class UserGroupService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
 
     const group = (await this.getGroupByID(groupID)) as UserGroup;
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
 
@@ -144,7 +145,8 @@ export class UserGroupService {
 
     if (rawData.length > 0) {
       this.logger.verbose(
-        `User ${user.email} already exists in group ${group.name}!`
+        `User ${user.email} already exists in group ${group.name}!`,
+        LogContexts.COMMUNITY
       );
       return false;
     }
@@ -170,7 +172,7 @@ export class UserGroupService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
 
@@ -179,7 +181,7 @@ export class UserGroupService {
     });
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
 
@@ -211,7 +213,7 @@ export class UserGroupService {
     const group = (await this.getGroupByID(groupID)) as UserGroup;
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
     // Set focalPoint to NULL will remove the relation.
@@ -302,14 +304,16 @@ export class UserGroupService {
     const alreadyExists = this.hasGroupWithName(groupable, name);
     if (alreadyExists) {
       this.logger.verbose(
-        `Attempting to add group that already exists: ${name}`
+        `Attempting to add group that already exists: ${name}`,
+        LogContexts.COMMUNITY
       );
       return await this.getGroupByName(groupable, name);
     }
 
     if (groupable.restrictedGroupNames?.includes(name)) {
       this.logger.verbose(
-        `Attempted to create a usergroup using a restricted name: ${name}`
+        `Attempted to create a usergroup using a restricted name: ${name}`,
+        LogContexts.COMMUNITY
       );
       throw new Error(
         'Unable to create user group with restricted name: ' + { name }

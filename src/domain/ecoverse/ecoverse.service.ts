@@ -28,6 +28,7 @@ import { ITemplate } from '../template/template.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { UserService } from '../user/user.service';
 import { AccountService } from '../../utils/account/account.service';
+import { LogContexts } from '../../utils/logging/logging-framework';
 
 @Injectable()
 export class EcoverseService {
@@ -185,7 +186,10 @@ export class EcoverseService {
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
-    this.logger.verbose(`Adding userGroup (${groupName}) to ecoverse`);
+    this.logger.verbose(
+      `Adding userGroup (${groupName}) to ecoverse`,
+      LogContexts.CHALLENGES
+    );
 
     const ecoverse = (await this.getEcoverse({
       join: {

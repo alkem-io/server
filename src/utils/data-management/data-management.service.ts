@@ -16,6 +16,7 @@ import { UserService } from '../../domain/user/user.service';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContexts } from '../logging/logging-framework';
 
 @Injectable()
 export class DataManagementService {
@@ -52,7 +53,7 @@ export class DataManagementService {
 
   addLogMsg(msgs: string[], msg: string) {
     msgs.push(msg);
-    this.logger.verbose(msg);
+    this.logger.verbose(msg, LogContexts.DATA_MGMT);
   }
 
   async load_sample_data(): Promise<string> {
@@ -240,7 +241,7 @@ export class DataManagementService {
       await this.connection.synchronize();
       this.addLogMsg(msgs, '.....dropped. Completed successfully.');
     } catch (error) {
-      this.logger.verbose(error.message);
+      this.logger.verbose(error.message, LogContexts.DATA_MGMT);
     }
     return msgs.toString();
   }
@@ -252,7 +253,7 @@ export class DataManagementService {
       ecoverseName = ecoverse.name;
     } catch (e) {
       // ecoverse not yet initialised so just skip the name
-      this.logger.verbose(e);
+      this.logger.verbose(e.message, LogContexts.DATA_MGMT);
     }
     const content = `<!DOCTYPE html>
     <html>
