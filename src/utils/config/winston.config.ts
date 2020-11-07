@@ -12,7 +12,9 @@ export class WinstonConfigService {
             winston.format.timestamp(),
             nestWinstonModuleUtilities.format.nestLike()
           ),
-          level: process.env.LOGGING_LEVEL || LOGGING_LEVEL.Error.toString(),
+          level:
+            process.env.LOGGING_LEVEL?.toLowerCase() ||
+            LOGGING_LEVEL.Error.toString().toLowerCase(),
         }),
         // other transports...
       ],

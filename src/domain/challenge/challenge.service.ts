@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { LogContexts } from '../../utils/logging/logging-framework';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
 import { OpportunityInput } from '../opportunity/opportunity.dto';
@@ -62,7 +63,8 @@ export class ChallengeService {
   ): Promise<IUserGroup> {
     // First find the Challenge
     this.logger.verbose(
-      `Adding userGroup (${groupName}) to challenge (${challengeID})`
+      `Adding userGroup (${groupName}) to challenge (${challengeID})`,
+      LogContexts.CHALLENGES
     );
     // Check a valid ID was passed
     if (!challengeID)
@@ -125,7 +127,10 @@ export class ChallengeService {
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
     // First find the Challenge
-    this.logger.verbose(`Adding opportunity to challenge (${challengeID})`);
+    this.logger.verbose(
+      `Adding opportunity to challenge (${challengeID})`,
+      LogContexts.CHALLENGES
+    );
     // Try to find the challenge
     const challenge = await this.challengeRepository.findOne({
       where: { id: challengeID },
@@ -133,7 +138,7 @@ export class ChallengeService {
     });
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.CHALLENGES);
       throw new Error(msg);
     }
 
@@ -222,14 +227,14 @@ export class ChallengeService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.verbose(msg);
+      this.logger.warn(msg, LogContexts.CHALLENGES);
       throw new Error(msg);
     }
 
     const challenge = (await this.getChallengeByID(challengeID)) as Challenge;
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
-      this.logger.verbose(msg);
+      this.logger.warn(msg, LogContexts.CHALLENGES);
       throw new Error(msg);
     }
 
