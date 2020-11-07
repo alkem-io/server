@@ -206,7 +206,7 @@ export class ChallengeService {
       if (!(newName === challenge.name)) {
         // challenge is being renamed...
         const otherChallenge = await this.challengeRepository.findOne({
-          where: { name: name },
+          where: { name: newName },
         });
         // already have a challenge with the given name, not allowed
         if (otherChallenge)

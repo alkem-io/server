@@ -224,7 +224,6 @@ export class EcoverseService {
       throw new Error('Challenges must be defined');
     }
     // First check if the challenge already exists on not...
-    // TODO: Inform the user that the entity already exists instead of returning it.
     let challenge = ecoverse.challenges.find(
       c => c.name === challengeData.name
     );
