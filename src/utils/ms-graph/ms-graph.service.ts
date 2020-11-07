@@ -5,6 +5,7 @@ import 'isomorphic-fetch';
 import { UserInput } from '../../domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContexts } from '../logging/logging-framework';
 
 @Injectable()
 export class MsGraphService {
@@ -73,7 +74,7 @@ export class MsGraphService {
     try {
       res = await client.api(`/users/${accountUpn}`).get();
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(error.msg, error, LogContexts.AUTH);
     }
     return res;
   }
@@ -86,7 +87,7 @@ export class MsGraphService {
     try {
       user = await this.getUser(client, accountUpn);
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(error.msg, error, LogContexts.AUTH);
     }
 
     if (user) return true;
@@ -103,7 +104,7 @@ export class MsGraphService {
       const org = await this.getOrganisation(client);
       tenantName = org.value[0]['verifiedDomains'][0]['name'];
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(error.msg, error, LogContexts.AUTH);
     }
 
     return tenantName;
