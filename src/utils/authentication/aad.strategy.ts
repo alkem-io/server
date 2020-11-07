@@ -16,7 +16,7 @@ import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../logging/logging-framework';
+import { LogContexts } from '../logging/logging.contexts';
 
 @Injectable()
 export class AzureADStrategy

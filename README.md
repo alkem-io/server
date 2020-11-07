@@ -125,6 +125,13 @@ To configure logging levels, use:
 LOGGING_LEVEL=Error|Warn|Verbose|Debug. Defaults to Error if no value is set.
 ```
 
+To configure profiling of the graphql api usage and performance, use:
+
+```conf
+LOGGING_PROFILING_ENABLED=true|false. Defaults to false if no value is set for performance reasons.
+```
+Note that profiling messages are set at Verbose level so the logging level does need to be at least at that level for the messages to be visible.
+
 ### Install dependencies
 
 ```bash

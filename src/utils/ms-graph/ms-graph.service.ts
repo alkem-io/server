@@ -5,7 +5,7 @@ import 'isomorphic-fetch';
 import { UserInput } from '../../domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../logging/logging-framework';
+import { LogContexts } from '../logging/logging.contexts';
 
 @Injectable()
 export class MsGraphService {

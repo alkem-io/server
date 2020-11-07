@@ -12,6 +12,7 @@ import { User } from '../user/user.entity';
 import { UserGroupService } from '../user-group/user-group.service';
 import { ChallengeService } from './challenge.service';
 import { Opportunity } from '../opportunity/opportunity.entity';
+import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -29,6 +30,7 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'Groups of users related to a challenge.',
   })
+  @Profiling.api
   async groups(@Parent() challenge: Challenge) {
     const groups = await this.challengeService.loadGroups(challenge);
     return groups;
@@ -43,6 +45,7 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'The set of opportunities within this challenge.',
   })
+  @Profiling.api
   async opportunities(@Parent() challenge: Challenge) {
     const opportunities = await this.challengeService.loadOpportunities(
       challenge
@@ -59,6 +62,7 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'All users that are contributing to this challenge.',
   })
+  @Profiling.api
   async contributors(@Parent() challenge: Challenge) {
     const group = await this.userGroupService.getGroupByName(
       challenge,

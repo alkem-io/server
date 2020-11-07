@@ -5,7 +5,7 @@ import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
 import { IAzureADConfig } from '../../interfaces/aad.config.interface';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
-import { LogContexts } from '../logging/logging-framework';
+import { LogContexts } from '../logging/logging.contexts';
 import { MsGraphService } from '../ms-graph/ms-graph.service';
 
 @Injectable()

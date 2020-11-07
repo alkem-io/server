@@ -28,7 +28,7 @@ import { ITemplate } from '../template/template.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { UserService } from '../user/user.service';
 import { AccountService } from '../../utils/account/account.service';
-import { LogContexts } from '../../utils/logging/logging-framework';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 
 @Injectable()
 export class EcoverseService {
