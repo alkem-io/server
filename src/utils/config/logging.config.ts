@@ -4,7 +4,8 @@ export default registerAs('logging', () => ({
   loggingLevel:
     process.env.LOGGING_LEVEL?.toLowerCase() ||
     LOGGING_LEVEL.Error.toString().toLowerCase(),
-  profilingEnabled: process.env.LOGGING_PROFILING_ENABLED === 'true',
+  profilingEnabled:
+    process.env.LOGGING_PROFILING_ENABLED?.toLocaleLowerCase() === 'true',
 }));
 
 export enum LOGGING_LEVEL {
