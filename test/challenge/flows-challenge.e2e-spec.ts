@@ -132,8 +132,7 @@ describe('Create Challenge', () => {
     ).toHaveLength(0);
   });
 
-  // Enable the test after the bug is fixed: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/406
-  test.skip('should not be able to modify challenge name to allready existing challenge name', async () => {
+  test('should not be able to modify challenge name to allready existing challenge name', async () => {
     // Arrange
 
     // Create first challenge and get its id and name
@@ -163,7 +162,7 @@ describe('Create Challenge', () => {
     // Assert
     expect(responseUpdateChallenge.status).toBe(200);
     expect(responseUpdateChallenge.text).toContain(
-      `Unable to create challenge: already have a challenge with the provided name (${secondchallengeName})`
+      `Unable to update challenge: already have a challenge with the provided name (${secondchallengeName})`
     );
   });
 
