@@ -42,7 +42,6 @@ afterAll(async () => {
 });
 
 describe('Create Challenge', () => {
-  // Enable the test after bug fix: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/398
   test('should add "user" to "group" as focal point', async () => {
     // Arrange
 
@@ -133,8 +132,7 @@ describe('Create Challenge', () => {
     ).toHaveLength(0);
   });
 
-  // Enable the test after the bug is fixed: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/406
-  test.skip('should not be able to modify challenge name to allready existing challenge name', async () => {
+  test('should not be able to modify challenge name to allready existing challenge name', async () => {
     // Arrange
 
     // Create first challenge and get its id and name
@@ -164,24 +162,21 @@ describe('Create Challenge', () => {
     // Assert
     expect(responseUpdateChallenge.status).toBe(200);
     expect(responseUpdateChallenge.text).toContain(
-      `Challenge with such name: '${secondchallengeName}' already exists.`
+      `Unable to update challenge: already have a challenge with the provided name (${secondchallengeName})`
     );
   });
 
-  // Enable the test after the bug is fixed: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/406
-  test.skip('should thow error - creating 2 challenges with same name', async () => {
-    // Act
+  test('should thow error - creating 2 challenges with same name', async () => {
+    // Arrange
     await createChallangeMutation(challengeName, uniqueTextId);
-    const response = await createChallangeMutation('1', uniqueTextId);
-    challengeId = response.body.data.createChallenge.id;
-    console.log(response.body);
-    console.log(challengeName);
-    console.log(response.text);
+
+    // Act
+    const response = await createChallangeMutation(challengeName, uniqueTextId);
 
     // Assert
     expect(response.status).toBe(200);
-    // expect(response.body.data.createChallenge.name).toEqual(
-    //   `Challenge with name: ${challengeName} is already created`
-    // );
+    expect(response.text).toContain(
+      `Unable to create challenge: already have a challenge with the provided name (${challengeName})`
+    );
   });
 });
