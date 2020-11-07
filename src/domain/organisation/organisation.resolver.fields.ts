@@ -10,6 +10,7 @@ import {
 import { Organisation } from './organisation.entity';
 import { User } from '../user/user.entity';
 import { UserGroupService } from '../user-group/user-group.service';
+import { Measure } from '../../utils/logging/logging.profile.decorator';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
@@ -24,6 +25,7 @@ export class OrganisationResolverFields {
     nullable: true,
     description: 'Groups defined on this organisation.',
   })
+  @Measure.api
   async groups(@Parent() organisation: Organisation) {
     const groups = await organisation.groups;
     if (!groups)
@@ -40,6 +42,7 @@ export class OrganisationResolverFields {
     nullable: true,
     description: 'Users that are contributing to this organisation.',
   })
+  @Measure.api
   async contributors(@Parent() organisation: Organisation) {
     const group = await this.userGroupService.getGroupByName(
       organisation,

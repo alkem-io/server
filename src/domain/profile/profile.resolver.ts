@@ -11,6 +11,7 @@ import { ITagset } from '../tagset/tagset.interface';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { ProfileService } from './profile.service';
 import { ProfileInput } from './profile.dto';
+import { Measure } from '../../utils/logging/logging.profile.decorator';
 
 @Resolver()
 export class ProfileResolver {
@@ -25,6 +26,7 @@ export class ProfileResolver {
     description:
       'Creates a new tagset with the specified name for the profile with given id',
   })
+  @Measure.api
   async createTagsetOnProfile(
     @Args('profileID') profileID: number,
     @Args('tagsetName') tagsetName: string
@@ -45,6 +47,7 @@ export class ProfileResolver {
     description:
       'Creates a new reference with the specified name for the profile with given id',
   })
+  @Measure.api
   async createReferenceOnProfile(
     @Args('profileID') profileID: number,
     @Args('referenceInput') referenceInput: ReferenceInput
@@ -62,6 +65,7 @@ export class ProfileResolver {
     description:
       'Updates the fields on the Profile, such as avatar location or description',
   })
+  @Measure.api
   async updateProfile(
     @Args('ID') profileID: number,
     @Args('profileData') profileData: ProfileInput

@@ -24,6 +24,7 @@ import { TagsetService } from '../../domain/tagset/tagset.service';
 import { ReferenceInput } from '../../domain/reference/reference.dto';
 import { Measure } from '../logging/logging.profile.decorator';
 import { LogContexts } from '../logging/logging-framework';
+import { ILoggingConfig } from '../../interfaces/logging.config.interface';
 
 @Injectable()
 export class BootstrapService {
@@ -43,8 +44,15 @@ export class BootstrapService {
   async bootstrapEcoverse() {
     try {
       this.logger.verbose('Bootstrapping Ecoverse...');
+
+      // Setup the profiling
       Measure.logger = this.logger;
+      const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
+        ?.profilingEnabled;
+      if (profilingEnabled) Measure.profilingEnabled = profilingEnabled;
       this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
+
+      // Now setup the rest...
       await this.ensureEcoverseSingleton();
       await this.validateAccountManagementSetup();
       await this.bootstrapProfiles();

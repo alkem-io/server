@@ -31,6 +31,7 @@ import { WinstonModule } from 'nest-winston';
 import aadClientConfig from './utils/config/aad.client.config';
 import { CherrytwistConfigModule } from './utils/cherrytwist-config/cherrytwist-config.module';
 import { WinstonConfigService } from './utils/logging/winston.config';
+import loggingConfig from './utils/config/logging.config';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { WinstonConfigService } from './utils/logging/winston.config';
         serviceConfig,
         msGraphConfig,
         aadClientConfig,
+        loggingConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({

@@ -14,6 +14,7 @@ import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
 import { OpportunityInput } from '../opportunity/opportunity.dto';
 import { Opportunity } from '../opportunity/opportunity.entity';
+import { Measure } from '../../utils/logging/logging.profile.decorator';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -29,6 +30,7 @@ export class ChallengeResolverMutations {
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group for the challenge with the given id',
   })
+  @Measure.api
   async createGroupOnChallenge(
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args({ name: 'groupName', type: () => String }) groupName: string
@@ -49,6 +51,7 @@ export class ChallengeResolverMutations {
     description:
       'Creates a new Opportunity for the challenge with the given id',
   })
+  @Measure.api
   async createOpportunityOnChallenge(
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args({ name: 'opportunityData', type: () => OpportunityInput })
@@ -67,6 +70,7 @@ export class ChallengeResolverMutations {
     description:
       'Updates the specified Challenge with the provided data (merge)',
   })
+  @Measure.api
   async updateChallenge(
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args('challengeData') challengeData: ChallengeInput
@@ -87,6 +91,7 @@ export class ChallengeResolverMutations {
     description:
       'Adds the user with the given identifier as a member of the specified challenge',
   })
+  @Measure.api
   async addUserToChallenge(
     @Args('userID') userID: number,
     @Args('challengeID') challengeID: number

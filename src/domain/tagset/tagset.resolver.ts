@@ -6,6 +6,7 @@ import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { Tagset } from './tagset.entity';
 import { TagsetService } from './tagset.service';
 import { ITagset } from './tagset.interface';
+import { Measure } from '../../utils/logging/logging.profile.decorator';
 
 @Resolver(() => Tagset)
 export class TagsetResolver {
@@ -19,6 +20,7 @@ export class TagsetResolver {
   @Mutation(() => Tagset, {
     description: 'Replace the set of tags in a tagset with the provided tags',
   })
+  @Measure.api
   async replaceTagsOnTagset(
     @Args('tagsetID') tagsetID: number,
     @Args({ name: 'tags', type: () => [String] }) newTags: string[]
@@ -37,6 +39,7 @@ export class TagsetResolver {
   @Mutation(() => Tagset, {
     description: 'Add the provided tag to the tagset with the given ID',
   })
+  @Measure.api
   async addTagToTagset(
     @Args('tagsetID') tagsetID: number,
     @Args({ name: 'tag', type: () => String }) newTag: string
