@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
+import { LogContexts } from '../../utils/logging/logging-framework';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
@@ -69,13 +70,17 @@ export class UserService {
     );
 
     if (!user) {
-      this.logger.verbose(`No user with email ${email} exists!`);
+      this.logger.verbose(
+        `No user with email ${email} exists!`,
+        LogContexts.COMMUNITY
+      );
       return undefined;
     }
 
     if (!user.userGroups) {
       this.logger.verbose(
-        `User with email ${email} doesn't belong to any groups!`
+        `User with email ${email} doesn't belong to any groups!`,
+        LogContexts.COMMUNITY
       );
     }
 
@@ -92,14 +97,16 @@ export class UserService {
 
     if (!user) {
       this.logger.verbose(
-        `No user with provided account UPN ${accountUpn} exists!`
+        `No user with provided account UPN ${accountUpn} exists!`,
+        LogContexts.COMMUNITY
       );
       return undefined;
     }
 
     if (!user.userGroups) {
       this.logger.verbose(
-        `User with provided account UPN ${accountUpn} doesn't belong to any groups!`
+        `User with provided account UPN ${accountUpn} doesn't belong to any groups!`,
+        LogContexts.COMMUNITY
       );
     }
 
@@ -203,7 +210,10 @@ export class UserService {
     const populatedUser = await this.getUserByID(user.id);
     if (!populatedUser) throw new Error(`Unable to locate user: ${user.id}`);
 
-    this.logger.verbose(`User ${userData.email} was created!`);
+    this.logger.verbose(
+      `User ${userData.email} was created!`,
+      LogContexts.COMMUNITY
+    );
 
     return populatedUser;
   }

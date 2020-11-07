@@ -9,6 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContexts } from '../logging/logging-framework';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {
@@ -59,7 +60,7 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
     if (err) throw err;
 
     if (!user) {
-      this.logger.error(info);
+      this.logger.error(info, LogContexts.AUTH);
       throw new AuthenticationError(
         'You are not authorized to access this resource.'
       );

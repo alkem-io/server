@@ -23,6 +23,7 @@ import { ProfileService } from '../../domain/profile/profile.service';
 import { TagsetService } from '../../domain/tagset/tagset.service';
 import { ReferenceInput } from '../../domain/reference/reference.dto';
 import { Measure } from '../logging/logging.profile.decorator';
+import { LogContexts } from '../logging/logging-framework';
 
 @Injectable()
 export class BootstrapService {
@@ -43,12 +44,13 @@ export class BootstrapService {
     try {
       this.logger.verbose('Bootstrapping Ecoverse...');
       Measure.logger = this.logger;
+      this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
       await this.ensureEcoverseSingleton();
       await this.validateAccountManagementSetup();
       await this.bootstrapProfiles();
       await this.bootstrapTemplates();
     } catch (error) {
-      this.logger.error(error, undefined, 'Bootstrap');
+      this.logger.error(error, undefined, LogContexts.BOOTSTRAP);
     }
   }
 
@@ -66,25 +68,32 @@ export class BootstrapService {
       fs.statSync(bootstrapFilePath).isFile()
     ) {
       this.logger.verbose(
-        `Authorisation bootstrap: configuration being loaded from '${bootstrapFilePath}'`
+        `Authorisation bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
+        LogContexts.BOOTSTRAP
       );
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
       this.logger.verbose(bootstratDataStr);
       if (!bootstratDataStr) {
-        this.logger.error('Specified authorisation bootstrap file not found!');
+        this.logger.error(
+          'Specified authorisation bootstrap file not found!',
+          undefined,
+          LogContexts.BOOTSTRAP
+        );
         return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
     } else {
       this.logger.verbose(
-        'Authorisation bootstrap: default configuration being loaded'
+        'Authorisation bootstrap: default configuration being loaded',
+        LogContexts.BOOTSTRAP
       );
     }
 
     const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
     if (!ecoverseAdmins)
       this.logger.verbose(
-        'No ecoverse admins section in the authorisation bootstrap file!'
+        'No ecoverse admins section in the authorisation bootstrap file!',
+        LogContexts.BOOTSTRAP
       );
     else {
       await this.createGroupProfiles(
@@ -95,7 +104,8 @@ export class BootstrapService {
     const globalAdmins = bootstrapJson.globalAdmins;
     if (!globalAdmins) {
       this.logger.verbose(
-        'No global admins section in the authorisation bootstrap file!'
+        'No global admins section in the authorisation bootstrap file!',
+        LogContexts.BOOTSTRAP
       );
     } else {
       await this.createGroupProfiles(
@@ -106,7 +116,8 @@ export class BootstrapService {
     const communityAdmins = bootstrapJson.communityAdmins;
     if (!communityAdmins) {
       this.logger.verbose(
-        'No community admins section in the authorisation bootstrap file!'
+        'No community admins section in the authorisation bootstrap file!',
+        LogContexts.BOOTSTRAP
       );
     } else {
       await this.createGroupProfiles(
@@ -149,48 +160,68 @@ export class BootstrapService {
           await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
         else
           this.logger.verbose(
-            `User ${userInput.email} already exists in group ${groupName}`
+            `User ${userInput.email} already exists in group ${groupName}`,
+            LogContexts.BOOTSTRAP
           );
       }
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(
+        `Unable to create profiles ${error.message}`,
+        error,
+        LogContexts.BOOTSTRAP
+      );
     }
   }
 
   async validateAccountManagementSetup(): Promise<boolean> {
-    this.logger.verbose('=== Validating Account Management configuration ===');
+    this.logger.verbose(
+      '=== Validating Account Management configuration ===',
+      LogContexts.BOOTSTRAP
+    );
     const accountsEnabled = this.accountService.accountUsageEnabled();
     if (accountsEnabled) {
-      this.logger.verbose('...usage of Accounts is enabled');
+      this.logger.verbose(
+        '...usage of Accounts is enabled',
+        LogContexts.BOOTSTRAP
+      );
       return true;
     } else {
-      this.logger.warn('...usage of Accounts is DISABLED');
+      this.logger.warn(
+        '...usage of Accounts is DISABLED',
+        LogContexts.BOOTSTRAP
+      );
       return false;
     }
   }
 
   async ensureEcoverseSingleton(): Promise<IEcoverse> {
-    this.logger.verbose('=== Ensuring single ecoverse is present ===');
+    this.logger.verbose(
+      '=== Ensuring single ecoverse is present ===',
+      LogContexts.BOOTSTRAP
+    );
     const [
       ecoverseArray,
       ecoverseCount,
     ] = await this.ecoverseRepository.findAndCount();
     if (ecoverseCount == 0) {
-      this.logger.verbose('...No ecoverse present...');
-      this.logger.verbose('........creating...');
+      this.logger.verbose('...No ecoverse present...', LogContexts.BOOTSTRAP);
+      this.logger.verbose('........creating...', LogContexts.BOOTSTRAP);
       // Create a new ecoverse
       const ecoverse = new Ecoverse();
       this.ecoverseService.initialiseMembers(ecoverse);
       // Save is needed so that the ecoverse is there for other methods
       await this.ecoverseRepository.save(ecoverse);
 
-      this.logger.verbose('........populating...');
+      this.logger.verbose('........populating...', LogContexts.BOOTSTRAP);
       await this.populateEmptyEcoverse(ecoverse);
       await this.ecoverseRepository.save(ecoverse);
       return ecoverse as IEcoverse;
     }
     if (ecoverseCount == 1) {
-      this.logger.verbose('...single ecoverse - verified');
+      this.logger.verbose(
+        '...single ecoverse - verified',
+        LogContexts.BOOTSTRAP
+      );
       return ecoverseArray[0] as IEcoverse;
     }
 
@@ -219,7 +250,8 @@ export class BootstrapService {
     );
     if (existingTemplates && existingTemplates.length > 0) {
       this.logger.verbose(
-        'Ecoverse already has at least one template; skipping loading of templates'
+        'Ecoverse already has at least one template; skipping loading of templates',
+        LogContexts.BOOTSTRAP
       );
       return;
     }
@@ -237,18 +269,23 @@ export class BootstrapService {
       fs.statSync(bootstrapFilePath).isFile()
     ) {
       this.logger.warn(
-        `Templates bootstrap: configuration being loaded from '${bootstrapFilePath}'`
+        `Templates bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
+        LogContexts.BOOTSTRAP
       );
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
       this.logger.verbose(bootstratDataStr);
       if (!bootstratDataStr) {
-        this.logger.error('Specified templates bootstrap file not found!');
+        this.logger.error(
+          'Specified templates bootstrap file not found!',
+          LogContexts.BOOTSTRAP
+        );
         return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
     } else {
       this.logger.verbose(
-        'Templates bootstrap: default configuration being loaded'
+        'Templates bootstrap: default configuration being loaded',
+        LogContexts.BOOTSTRAP
       );
     }
 
@@ -283,7 +320,8 @@ export class BootstrapService {
           );
           await this.tagsetService.replaceTags(tagset.id, tagsetJson.tags);
           this.logger.verbose(
-            `Templates bootstrap: added tagset with name ${tagset.name}`
+            `Templates bootstrap: added tagset with name ${tagset.name}`,
+            LogContexts.BOOTSTRAP
           );
         }
 
@@ -299,13 +337,15 @@ export class BootstrapService {
             refData
           );
           this.logger.verbose(
-            `Templates bootstrap: added reference with name ${reference.name}`
+            `Templates bootstrap: added reference with name ${reference.name}`,
+            LogContexts.BOOTSTRAP
           );
         }
       }
 
       this.logger.verbose(
-        `Templates bootstrap: created a new template with name: '${template.name}'`
+        `Templates bootstrap: created a new template with name: '${template.name}'`,
+        LogContexts.BOOTSTRAP
       );
     }
   }
