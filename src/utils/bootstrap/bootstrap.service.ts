@@ -45,7 +45,6 @@ export class BootstrapService {
     try {
       this.logger.verbose('Bootstrapping Ecoverse...');
 
-      // Setup the profiling
       Measure.logger = this.logger;
       const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
         ?.profilingEnabled;
