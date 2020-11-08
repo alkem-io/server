@@ -189,7 +189,7 @@ export class UserGroupService {
     // Check that the group being removed from is not the ecoverse members group, would leave the ecoverse in an inconsistent state
     if (group.name === RestrictedGroupNames.Members) {
       // Check if ecoverse members
-      if ((group as UserGroup).ecoverse)
+      if (group.ecoverse)
         throw new Error(
           `Attempting to remove a user from the ecoverse members group: ${groupID}`
         );
