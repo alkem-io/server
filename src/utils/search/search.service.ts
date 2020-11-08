@@ -44,7 +44,7 @@ export class SearchService {
     // By default search all entity types
     let searchUsers = true;
     let searchGroups = true;
-    const entityTypesFilter = searchData.entityTypes;
+    const entityTypesFilter = searchData.typesFilter;
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.User))
         searchUsers = false;
@@ -104,11 +104,11 @@ export class SearchService {
         `Maximum number of tagset names is ${TAGSET_NAMES_LIMIT}; supplied: ${tagsetNames.length}`
       );
     // Check only allowed entity types supplied
-    const entityTypes = searchData.entityTypes;
+    const entityTypes = searchData.typesFilter;
     if (entityTypes) {
       entityTypes.forEach(entityType => {
         if (!SEARCH_ENTITIES.includes(entityType))
-          throw new Error(`Not allowed entityType encountered: ${entityType}`);
+          throw new Error(`Not allowed typeFilter encountered: ${entityType}`);
       });
     }
   }

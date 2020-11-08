@@ -10,21 +10,22 @@ export class SearchInput {
 
   @Field(() => [String], {
     nullable: true,
-    description: 'The names of tagsets to also be searched. Max 2.',
+    description:
+      'Expand the search to includes Tagsets with the provided names. Max 2.',
   })
   tagsetNames?: string[];
 
   @Field(() => [String], {
     nullable: true,
     description:
-      'The entity types that are requrested to be returned. Values allowed: User, UserGroup. Default is both.',
+      'Restrict the search to only the specified entity types. Values allowed: user, group. Default is both.',
   })
-  entityTypes?: string[];
+  typesFilter?: string[];
 
   @Field(() => [Number], {
     nullable: true,
     description:
-      'The IDs of the challenges to restrict the search to. Default is all Challenges.',
+      'Restrict the search to only the specified challenges. Default is all Challenges.',
   })
   challengesFilter?: number[];
 }

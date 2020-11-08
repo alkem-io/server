@@ -59,4 +59,18 @@ export class ReferenceService {
 
     return true;
   }
+
+  async getReference(referenceID: number): Promise<IReference | undefined> {
+    return await this.referenceRepository.findOne({ id: referenceID });
+  }
+
+  async removeReference(referenceID: number): Promise<boolean> {
+    const reference = await this.getReference(referenceID);
+    if (!reference)
+      throw new Error(
+        `Not able to locate reference with the specified ID: ${referenceID}`
+      );
+    await this.referenceRepository.remove(reference as Reference);
+    return true;
+  }
 }
