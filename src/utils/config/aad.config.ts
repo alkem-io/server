@@ -17,8 +17,7 @@ export default registerAs('aad', () => ({
 }));
 
 export enum AAD_LOGGING_LEVEL {
-  Error = 'Error',
-  Warning = 'Warning',
-  Info = 'Info',
-  Verbose = 'Verbose',
+  Error = 'error',
+  Warning = 'warn',
+  Info = 'info',
 }
