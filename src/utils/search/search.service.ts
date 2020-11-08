@@ -1,12 +1,12 @@
 import { Inject, Logger } from '@nestjs/common';
-import { ISearchResult } from './search-result.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './search-input.dto';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserGroup } from '../../domain/user-group/user-group.entity';
 import { User } from '../../domain/user/user.entity';
-import { SearchResult } from './search-result.dto';
+import { SearchResultEntry } from './search-result-entry.dto';
+import { ISearchResultEntry } from './search-result-entry.interface';
 
 enum SearchEntityTypes {
   User = 'user',
@@ -29,7 +29,7 @@ export class SearchService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
-  async search(searchData: SearchInput): Promise<ISearchResult[]> {
+  async search(searchData: SearchInput): Promise<ISearchResultEntry[]> {
     this.validateSearchParameters(searchData);
 
     // Only support certain features for now
@@ -39,7 +39,7 @@ export class SearchService {
       throw new Error('Searching on tagsets not yet implemented');
 
     // Ok - do the search!
-    const results: ISearchResult[] = [];
+    const results: ISearchResultEntry[] = [];
     const terms = searchData.terms;
     // By default search all entity types
     let searchUsers = true;
@@ -63,9 +63,9 @@ export class SearchService {
         // Create results for each match
         for (let i = 0; i < userMatches.length; i++) {
           const matchedUser = userMatches[i];
-          const result = new SearchResult();
-          result.user = matchedUser;
-          results.push(result);
+          const resultEntry = new SearchResultEntry();
+          resultEntry.result = matchedUser;
+          results.push(resultEntry);
         }
       }
 
@@ -78,9 +78,9 @@ export class SearchService {
         // Create results for each match
         for (let i = 0; i < groupMatches.length; i++) {
           const matchedGroup = groupMatches[i];
-          const result = new SearchResult();
-          result.group = matchedGroup;
-          results.push(result);
+          const resultEntry = new SearchResultEntry();
+          resultEntry.result = matchedGroup;
+          results.push(resultEntry);
         }
       }
     }
