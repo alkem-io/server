@@ -122,7 +122,7 @@ CORS_ORIGIN=[your CORS origin value]
 To configure logging levels, use:
 
 ```conf
-LOGGING_LEVEL=Error|Warn|Verbose|Debug. Defaults to Error if no value is set.
+LOGGING_LEVEL_CONSOLE=Error|Warn|Verbose|Debug. Defaults to Error if no value is set.
 ```
 
 To configure profiling of the graphql api usage and performance, use:
