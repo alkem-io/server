@@ -10,7 +10,7 @@ import { ProfileService } from '../profile/profile.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
-import { UserGroup } from './user-group.entity';
+import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
@@ -176,13 +176,23 @@ export class UserGroupService {
       throw new Error(msg);
     }
 
+    // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
     const group = await this.getGroupByID(groupID, {
-      relations: ['members'],
+      relations: ['members', 'ecoverse'],
     });
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
       this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
+    }
+
+    // Check that the group being removed from is not the ecoverse members group, would leave the ecoverse in an inconsistent state
+    if (group.name === RestrictedGroupNames.Members) {
+      // Check if ecoverse members
+      if (group.ecoverse)
+        throw new Error(
+          `Attempting to remove a user from the ecoverse members group: ${groupID}`
+        );
     }
 
     // Have both user + group so do the add
