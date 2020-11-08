@@ -20,7 +20,7 @@ export class SearchInput {
     description:
       'Restrict the search to only the specified entity types. Values allowed: user, group. Default is both.',
   })
-  entityTypes?: string[];
+  typesFilter?: string[];
 
   @Field(() => [Number], {
     nullable: true,
