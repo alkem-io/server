@@ -65,7 +65,7 @@ export class Organisation extends BaseEntity
 
   @ManyToMany(
     () => Challenge,
-    challenge => challenge.challengeLeads
+    challenge => challenge.leadOrganisations
   )
   challenges!: Challenge[];
 
