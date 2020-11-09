@@ -29,6 +29,7 @@ The technology stack is as follows:
 - passportjs for authentication
 - Azure Active Directory as an Identity Provider
 - Winston and Nest-Winston for logging
+- Elastic Cloud + Kibana for centralized log management
 
 ## === Interacting with a Cherrytwist server ===
 ### **Graphql API**
@@ -142,6 +143,7 @@ Note that profiling messages are set at Verbose level so the logging level does 
 To configure Elastic Cloud endpoint, use:
 
 ```conf
+LOGGING_ELK_ENABLED=true|false. Default is false. Is logging to Elastic Cloud enabled?
 ELASTIC_CLOUD_ID=Cloud ID of the Elastic Cloud instance.
 ELASTIC_CLOUD_USERNAME=Elastic Cloud username.
 ELASTIC_CLOUD_PASSWORD=Elastic Cloud password.

@@ -10,16 +10,18 @@ export class WinstonConfigService {
   constructor(private configService: ConfigService) {}
 
   async createWinstonModuleOptions() {
-    return {
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            nestWinstonModuleUtilities.format.nestLike()
-          ),
-          level: this.configService.get<ILoggingConfig>('logging')
-            ?.loggingLevel,
-        }),
+    const transports: any[] = [
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          nestWinstonModuleUtilities.format.nestLike()
+        ),
+        level: this.configService.get<ILoggingConfig>('logging')?.loggingLevel,
+      }),
+    ];
+
+    if (this.configService.get<ILoggingConfig>('logging')?.elkConfig?.enabled) {
+      transports.push(
         new WinstonElasticsearch.ElasticsearchTransport({
           level: this.configService.get<ILoggingConfig>('logging')?.elkConfig
             ?.loggingLevel,
@@ -42,8 +44,12 @@ export class WinstonConfigService {
               password: process.env.ELASTIC_CLOUD_PASSWORD || '',
             },
           },
-        }),
-      ],
+        })
+      );
+    }
+
+    return {
+      transports: transports,
     };
   }
 }
