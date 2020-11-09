@@ -16,6 +16,7 @@ import {
 } from 'typeorm';
 import { IUserGroup } from './user-group.interface';
 import { Profile } from '../profile/profile.entity';
+import { Opportunity } from '../opportunity/opportunity.entity';
 
 @Entity()
 @ObjectType()
@@ -79,6 +80,13 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     { eager: false }
   )
   challenge?: Challenge;
+
+  @ManyToOne(
+    () => Opportunity,
+    opportunity => opportunity.groups,
+    { eager: false }
+  )
+  opportunity?: Opportunity;
 
   // Flag to say whether members field should be populated
   membersPopulationEnabled = true;

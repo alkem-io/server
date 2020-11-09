@@ -16,6 +16,7 @@ import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContexts } from '../../utils/logging/logging.contexts';
+import { Opportunity } from '../opportunity/opportunity.entity';
 
 @Injectable()
 export class UserGroupService {
@@ -44,6 +45,12 @@ export class UserGroupService {
     if (groupable instanceof Organisation) {
       return await this.groupRepository.find({
         where: { organisation: { id: groupable.id } },
+        relations: ['members', 'focalPoint'],
+      });
+    }
+    if (groupable instanceof Opportunity) {
+      return await this.groupRepository.find({
+        where: { opportunity: { id: groupable.id } },
         relations: ['members', 'focalPoint'],
       });
     }
@@ -258,6 +265,12 @@ export class UserGroupService {
       return (await this.groupRepository.findOne({
         where: { organisation: { id: groupable.id }, name: name },
         relations: ['organisation', 'members'],
+      })) as IUserGroup;
+    }
+    if (groupable instanceof Opportunity) {
+      return (await this.groupRepository.findOne({
+        where: { opportunity: { id: groupable.id }, name: name },
+        relations: ['opportunity', 'members'],
       })) as IUserGroup;
     }
 
