@@ -21,6 +21,7 @@ import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
 import { Profile } from '../profile/profile.entity';
 import { Project } from '../project/project.entity';
+import { Relation } from '../relation/relation.entity';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IOpportunity } from './opportunity.interface';
 
@@ -96,6 +97,17 @@ export class Opportunity extends BaseEntity
     { eager: true, cascade: true }
   )
   aspects?: Aspect[];
+
+  @Field(() => [Relation], {
+    nullable: true,
+    description: 'The set of relations for this Opportunity',
+  })
+  @OneToMany(
+    () => Relation,
+    relation => relation.opportunity,
+    { eager: true, cascade: true }
+  )
+  relations?: Relation[];
 
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()

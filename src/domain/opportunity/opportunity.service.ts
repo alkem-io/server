@@ -10,6 +10,9 @@ import { AspectInput } from '../aspect/aspect.dto';
 import { IAspect } from '../aspect/aspect.interface';
 import { AspectService } from '../aspect/aspect.service';
 import { ProfileService } from '../profile/profile.service';
+import { RelationInput } from '../relation/relation.dto';
+import { IRelation } from '../relation/relation.interface';
+import { RelationService } from '../relation/relation.service';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
@@ -20,6 +23,7 @@ export class OpportunityService {
     private actorGroupService: ActorGroupService,
     private aspectService: AspectService,
     private profileService: ProfileService,
+    private relationService: RelationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
@@ -28,6 +32,10 @@ export class OpportunityService {
   async initialiseMembers(opportunity: IOpportunity): Promise<IOpportunity> {
     if (!opportunity.projects) {
       opportunity.projects = [];
+    }
+
+    if (!opportunity.relations) {
+      opportunity.relations = [];
     }
 
     if (!opportunity.actorGroups) {
@@ -238,5 +246,21 @@ export class OpportunityService {
     opportunity.actorGroups.push(actorGroup);
     await this.opportunityRepository.save(opportunity);
     return actorGroup;
+  }
+
+  async createRelation(
+    opportunityId: number,
+    relationData: RelationInput
+  ): Promise<IRelation> {
+    const opportunity = await this.getOpportunityByID(opportunityId);
+    if (!opportunity)
+      throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
+    if (!opportunity.relations)
+      throw new Error(`Opportunity (${opportunityId}) not initialised`);
+
+    const relation = await this.relationService.createRelation(relationData);
+    opportunity.relations.push(relation);
+    await this.opportunityRepository.save(opportunity);
+    return relation;
   }
 }
