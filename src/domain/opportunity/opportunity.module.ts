@@ -10,12 +10,14 @@ import { RelationModule } from '../relation/relation.module';
 import { UserGroupModule } from '../user-group/user-group.module';
 import { UserModule } from '../user/user.module';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
+import { ProjectModule } from '../project/project.module';
 
 @Module({
   imports: [
     ActorGroupModule,
     AspectModule,
     ProfileModule,
+    ProjectModule,
     RelationModule,
     UserModule,
     UserGroupModule,

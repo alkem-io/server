@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Opportunity } from '../opportunity/opportunity.entity';
+import { Project } from '../project/project.entity';
 
 @Entity()
 @ObjectType()
@@ -33,6 +34,12 @@ export class Aspect extends BaseEntity implements IAspect {
     opportunity => opportunity.aspects
   )
   opportunity?: Opportunity;
+
+  @ManyToOne(
+    () => Project,
+    project => project.aspects
+  )
+  project?: Project;
 
   constructor(title: string, framing: string, explanation: string) {
     super();

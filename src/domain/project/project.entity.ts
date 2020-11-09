@@ -10,6 +10,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Agreement } from '../agreement/agreement.entity';
+import { Aspect } from '../aspect/aspect.entity';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { Tagset } from '../tagset/tagset.entity';
 import { IProject } from './project.interface';
@@ -44,6 +45,17 @@ export class Project extends BaseEntity implements IProject {
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset?: Tagset;
+
+  @Field(() => [Aspect], {
+    nullable: true,
+    description: 'The set of aspects for this Project. Note: likley to change.',
+  })
+  @OneToMany(
+    () => Aspect,
+    aspect => aspect.project,
+    { eager: true, cascade: true }
+  )
+  aspects?: Aspect[];
 
   //@Field(() => [Agreement])
   @OneToMany(
