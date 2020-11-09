@@ -292,7 +292,8 @@ export class OpportunityService {
     opportunity.relations.push(relation);
     await this.opportunityRepository.save(opportunity);
     return relation;
-}
+  }
+
   async createGroup(
     opportunityID: number,
     groupName: string

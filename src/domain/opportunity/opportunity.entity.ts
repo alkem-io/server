@@ -119,7 +119,6 @@ export class Opportunity extends BaseEntity
   )
   groups?: UserGroup[];
 
-
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
   DID!: DID;

@@ -24,7 +24,6 @@ import { RelationInput } from '../relation/relation.dto';
 import { Relation } from '../relation/relation.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 
-
 @Resolver()
 export class OpportunityResolver {
   constructor(
@@ -125,6 +124,7 @@ export class OpportunityResolver {
       opportunityId,
       relationData
     );
+  }
 
   @Mutation(() => UserGroup, {
     description:
