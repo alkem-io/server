@@ -19,6 +19,9 @@ import { ActorGroupInput } from '../actor-group/actor-group.dto';
 import { IActorGroup } from '../actor-group/actor-group.interface';
 import { ActorGroup } from '../actor-group/actor-group.entity';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
+import { IRelation } from '../relation/relation.interface';
+import { RelationInput } from '../relation/relation.dto';
+import { Relation } from '../relation/relation.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
 
 @Resolver()
@@ -108,6 +111,21 @@ export class OpportunityResolver {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
+  @Mutation(() => Relation, {
+    description:
+      'Create a new relation on the Opportunity identified by the ID',
+  })
+  @Profiling.api
+  async createRelation(
+    @Args('opportunityID') opportunityId: number,
+    @Args('relationData') relationData: RelationInput
+  ): Promise<IRelation> {
+    return await this.opportunityService.createRelation(
+      opportunityId,
+      relationData
+    );
+  }
+
   @Mutation(() => UserGroup, {
     description:
       'Creates a new user group for the opportunity with the given id',

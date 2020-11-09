@@ -6,6 +6,7 @@ import { OpportunityResolver } from './opportunity.resolver';
 import { ProfileModule } from '../profile/profile.module';
 import { AspectModule } from '../aspect/aspect.module';
 import { ActorGroupModule } from '../actor-group/actor-group.module';
+import { RelationModule } from '../relation/relation.module';
 import { UserGroupModule } from '../user-group/user-group.module';
 import { UserModule } from '../user/user.module';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
@@ -15,6 +16,7 @@ import { OpportunityResolverFields } from './opportunity.resolver.fields';
     ActorGroupModule,
     AspectModule,
     ProfileModule,
+    RelationModule,
     UserModule,
     UserGroupModule,
     TypeOrmModule.forFeature([Opportunity]),
