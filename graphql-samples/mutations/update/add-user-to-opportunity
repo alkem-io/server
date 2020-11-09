@@ -1,0 +1,16 @@
+mutation addUserToOpportunity($userID: Float!, $opportunityID: Float!) {
+  addUserToOpportunity(opportunityID: $opportunityID, userID: $userID) {
+    name,
+    id,
+    members {
+      id,
+      name
+    }
+  }
+}
+
+Variables:
+{
+  "userID": 7,
+  "opportunityID": 1
+}
