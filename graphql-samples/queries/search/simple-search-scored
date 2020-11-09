@@ -1,6 +1,7 @@
 query create($searchData: SearchInput!){
   search(searchData: $searchData) {
     score
+    terms
     result {
       __typename
       ... on User {
@@ -16,6 +17,7 @@ query create($searchData: SearchInput!){
 {
   "searchData":
   {
-    "terms": ["Alisha"]
+    "terms": ["Alisha", "Alisha", "Alisha", "Neil", "members"],
+    "typesFilter": ["user", "group"]
   }
 }

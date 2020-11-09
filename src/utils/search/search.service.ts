@@ -7,6 +7,7 @@ import { UserGroup } from '../../domain/user-group/user-group.entity';
 import { User } from '../../domain/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
+import { LogContexts } from '../logging/logging.contexts';
 
 enum SearchEntityTypes {
   User = 'user',
@@ -19,6 +20,14 @@ const SEARCH_ENTITIES: string[] = [
 ];
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
+const SCORE_INCREMENT = 10;
+
+class Match {
+  key = 0;
+  score = 0;
+  terms: string[] = [];
+  entity: User | UserGroup | undefined;
+}
 
 export class SearchService {
   constructor(
@@ -38,8 +47,10 @@ export class SearchService {
     if (searchData.tagsetNames)
       throw new Error('Searching on tagsets not yet implemented');
 
-    // Ok - do the search!
-    const results: ISearchResultEntry[] = [];
+    // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
+    const userResults: Map<number, Match> = new Map();
+    const groupResults: Map<number, Match> = new Map();
+
     const terms = searchData.terms;
     // By default search all entity types
     let searchUsers = true;
@@ -63,9 +74,11 @@ export class SearchService {
         // Create results for each match
         for (let i = 0; i < userMatches.length; i++) {
           const matchedUser = userMatches[i];
-          const resultEntry = new SearchResultEntry();
-          resultEntry.result = matchedUser;
-          results.push(resultEntry);
+          const match = new Match();
+          match.entity = matchedUser;
+          match.terms.push(term);
+          match.key = matchedUser.id;
+          this.addMatchingResult(userResults, match);
         }
       }
 
@@ -78,18 +91,53 @@ export class SearchService {
         // Create results for each match
         for (let i = 0; i < groupMatches.length; i++) {
           const matchedGroup = groupMatches[i];
-          const resultEntry = new SearchResultEntry();
-          resultEntry.result = matchedGroup;
-          results.push(resultEntry);
+          const match = new Match();
+          match.entity = matchedGroup;
+          match.terms.push(term);
+          match.key = matchedGroup.id;
+          this.addMatchingResult(groupResults, match);
         }
       }
     }
 
     this.logger.verbose(
-      `Executed search query: ${results.length} results found`
+      `Executed search query: ${userResults.size} users results and ${groupResults.size} group results found`,
+      LogContexts.API
     );
 
+    const results: ISearchResultEntry[] = [];
+    userResults.forEach(value => {
+      const resultEntry = new SearchResultEntry();
+      resultEntry.score = value.score;
+      resultEntry.terms = value.terms;
+      resultEntry.result = value.entity;
+      results.push(resultEntry);
+    });
+
+    groupResults.forEach(value => {
+      const resultEntry = new SearchResultEntry();
+      resultEntry.score = value.score;
+      resultEntry.terms = value.terms;
+      resultEntry.result = value.entity;
+      results.push(resultEntry);
+    });
+
     return results;
+  }
+
+  // Add a new results entry or append to an existing entry.
+  addMatchingResult(resultsMap: Map<number, Match>, match: Match) {
+    const existingMatch = resultsMap.get(match.key);
+    if (existingMatch) {
+      existingMatch.score = existingMatch.score + SCORE_INCREMENT;
+      // also add the term that was matched
+      if (match.terms.length != 1)
+        throw new Error('Expected exactly one matched term');
+      existingMatch.terms.push(match.terms[0]);
+    } else {
+      match.score = SCORE_INCREMENT;
+      resultsMap.set(match.key, match);
+    }
   }
 
   validateSearchParameters(searchData: SearchInput) {

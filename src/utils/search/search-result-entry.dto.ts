@@ -4,8 +4,18 @@ import { SearchResult } from './search-result.dto';
 
 @ObjectType()
 export class SearchResultEntry implements ISearchResultEntry {
-  @Field(() => Number)
+  @Field(() => Number, {
+    nullable: true,
+    description:
+      'The score for this search result; more matches means a higher score.',
+  })
   score: number;
+
+  @Field(() => [String], {
+    nullable: true,
+    description: 'The terms that were matched for this result',
+  })
+  terms: string[];
 
   @Field(() => SearchResult, {
     nullable: true,
@@ -15,5 +25,6 @@ export class SearchResultEntry implements ISearchResultEntry {
 
   constructor() {
     this.score = 0;
+    this.terms = [];
   }
 }
