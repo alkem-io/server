@@ -3,7 +3,10 @@ import { Resolver } from '@nestjs/graphql';
 import { Float, Mutation } from '@nestjs/graphql/dist';
 import { Roles } from '../../utils/decorators/roles.decorator';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from '../user-group/user-group.entity';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
@@ -19,6 +22,8 @@ import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { IRelation } from '../relation/relation.interface';
 import { RelationInput } from '../relation/relation.dto';
 import { Relation } from '../relation/relation.entity';
+import { IUserGroup } from '../user-group/user-group.interface';
+
 
 @Resolver()
 export class OpportunityResolver {
@@ -120,5 +125,41 @@ export class OpportunityResolver {
       opportunityId,
       relationData
     );
+
+  @Mutation(() => UserGroup, {
+    description:
+      'Creates a new user group for the opportunity with the given id',
+  })
+  @Profiling.api
+  async createGroupOnOpportunity(
+    @Args({ name: 'opportunityID', type: () => Float }) opportunityID: number,
+    @Args({ name: 'groupName', type: () => String }) groupName: string
+  ): Promise<IUserGroup> {
+    const group = await this.opportunityService.createGroup(
+      opportunityID,
+      groupName
+    );
+    return group;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => UserGroup, {
+    description:
+      'Adds the user with the given identifier as a member of the specified opportunity',
+  })
+  @Profiling.api
+  async addUserToOpportunity(
+    @Args('userID') userID: number,
+    @Args('opportunityID') opportunityID: number
+  ): Promise<IUserGroup> {
+    const group = await this.opportunityService.addMember(
+      userID,
+      opportunityID
+    );
+    return group;
   }
 }

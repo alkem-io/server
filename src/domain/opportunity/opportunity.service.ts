@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { ActorGroupInput } from '../actor-group/actor-group.dto';
 import { RestrictedActorGroupNames } from '../actor-group/actor-group.entity';
 import { IActorGroup } from '../actor-group/actor-group.interface';
@@ -13,6 +14,10 @@ import { ProfileService } from '../profile/profile.service';
 import { RelationInput } from '../relation/relation.dto';
 import { IRelation } from '../relation/relation.interface';
 import { RelationService } from '../relation/relation.service';
+import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { IUserGroup } from '../user-group/user-group.interface';
+import { UserGroupService } from '../user-group/user-group.service';
+import { UserService } from '../user/user.service';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
@@ -21,6 +26,8 @@ import { IOpportunity } from './opportunity.interface';
 export class OpportunityService {
   constructor(
     private actorGroupService: ActorGroupService,
+    private userGroupService: UserGroupService,
+    private userService: UserService,
     private aspectService: AspectService,
     private profileService: ProfileService,
     private relationService: RelationService,
@@ -46,6 +53,16 @@ export class OpportunityService {
       opportunity.aspects = [];
     }
 
+    if (!opportunity.groups) {
+      opportunity.groups = [];
+    }
+
+    // Check that the mandatory groups for a Opportunity are created
+    await this.userGroupService.addMandatoryGroups(
+      opportunity,
+      opportunity.restrictedGroupNames
+    );
+
     // Initialise contained objects
     await this.profileService.initialiseMembers(opportunity.profile);
     await this.createRestrictedActorGroups(opportunity);
@@ -60,6 +77,19 @@ export class OpportunityService {
     if (!Opportunity)
       throw new Error(`Unable to find Opportunity with ID: ${OpportunityID}`);
     return Opportunity;
+  }
+
+  // Loads the group into the Opportunity entity if not already present
+  async loadGroups(opportunity: Opportunity): Promise<IUserGroup[]> {
+    if (opportunity.groups && opportunity.groups.length > 0) {
+      // opportunity already has groups loaded
+      return opportunity.groups;
+    }
+    // Opportunity is not populated wih
+    const groups = await this.userGroupService.getGroups(opportunity);
+    if (!groups)
+      throw new Error(`No groups on Opportunity: ${opportunity.name}`);
+    return groups;
   }
 
   async createOpportunity(
@@ -103,9 +133,9 @@ export class OpportunityService {
     return Opportunity;
   }
 
-  async getOpportunites(challengeId: number): Promise<Opportunity[]> {
+  async getOpportunites(OpportunityId: number): Promise<Opportunity[]> {
     const opportunites = await this.opportunityRepository.find({
-      where: { challenge: { id: challengeId } },
+      where: { Opportunity: { id: OpportunityId } },
     });
     return opportunites || [];
   }
@@ -262,5 +292,63 @@ export class OpportunityService {
     opportunity.relations.push(relation);
     await this.opportunityRepository.save(opportunity);
     return relation;
+}
+  async createGroup(
+    opportunityID: number,
+    groupName: string
+  ): Promise<IUserGroup> {
+    // First find the Opportunity
+    this.logger.verbose(
+      `Adding userGroup (${groupName}) to Opportunity (${opportunityID})`,
+      LogContexts.CHALLENGES
+    );
+    // Check a valid ID was passed
+    if (!opportunityID)
+      throw new Error(`Invalid Opportunity id passed in: ${opportunityID}`);
+    // Try to find the Opportunity
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityID },
+      relations: ['groups'],
+    });
+    if (!opportunity) {
+      throw new Error(
+        `Unable to create the group: no opportunity with ID: ${opportunityID}`
+      );
+    }
+    const group = await this.userGroupService.addGroupWithName(
+      opportunity,
+      groupName
+    );
+    await this.opportunityRepository.save(opportunity);
+
+    return group;
+  }
+
+  async addMember(userID: number, opportunityID: number): Promise<IUserGroup> {
+    // Try to find the user + group
+    const user = await this.userService.getUserByID(userID);
+    if (!user) {
+      const msg = `Unable to find exactly one user with ID: ${userID}`;
+      this.logger.warn(msg, LogContexts.CHALLENGES);
+      throw new Error(msg);
+    }
+
+    const opportunity = (await this.getOpportunityByID(
+      opportunityID
+    )) as Opportunity;
+    if (!opportunity) {
+      const msg = `Unable to find opportunity with ID: ${opportunityID}`;
+      this.logger.warn(msg, LogContexts.CHALLENGES);
+      throw new Error(msg);
+    }
+
+    // Get the members group
+    const membersGroup = await this.userGroupService.getGroupByName(
+      opportunity,
+      RestrictedGroupNames.Members
+    );
+    await this.userGroupService.addUserToGroup(user, membersGroup);
+
+    return membersGroup;
   }
 }

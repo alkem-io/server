@@ -22,7 +22,10 @@ import { DID } from '../did/did.entity';
 import { Profile } from '../profile/profile.entity';
 import { Project } from '../project/project.entity';
 import { Relation } from '../relation/relation.entity';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from '../user-group/user-group.entity';
 import { IOpportunity } from './opportunity.interface';
 
 @Entity()
@@ -108,6 +111,14 @@ export class Opportunity extends BaseEntity
     { eager: true, cascade: true }
   )
   relations?: Relation[];
+
+  @OneToMany(
+    () => UserGroup,
+    userGroup => userGroup.opportunity,
+    { eager: false, cascade: true }
+  )
+  groups?: UserGroup[];
+
 
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
