@@ -9,4 +9,5 @@ export interface IUserGroup {
   focalPoint?: IUser | null; // because of https://github.com/typeorm/typeorm/issues/5454
   profile?: IProfile;
   ecoverse?: IEcoverse;
+  includeInSearch: boolean;
 }
