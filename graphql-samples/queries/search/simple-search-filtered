@@ -1,12 +1,14 @@
 query create($searchData: SearchInput!){
-  name
   search(searchData: $searchData) {
     score
-    user {
-      name
-    }
-    group {
-      name
+    result {
+      __typename
+      ... on User {
+        name
+      }
+      ... on UserGroup {
+        name
+      }
     }
   }
 }
