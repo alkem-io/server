@@ -29,6 +29,7 @@ The technology stack is as follows:
 - passportjs for authentication
 - Azure Active Directory as an Identity Provider
 - Winston and Nest-Winston for logging
+- Elastic Cloud + Kibana for centralized log management
 
 ## === Interacting with a Cherrytwist server ===
 ### **Graphql API**
@@ -102,8 +103,7 @@ AUTH_AAD_TENANT=[tenant (directory) ID]
 AUTH_AAD_CHERRYTWIST_API_APP_ID= [client (application) ID]
 AUTH_AAD_MSGRAPH_API_SCOPE= [API Scopes Required for Downstream APIs, in our case Microsoft Graph API]
 AUTH_AAD_MSGRAPH_API_SECRET=[App Client Secret obtained from cherrytwist-api app registration*]
-AUTH_AAD_LOGGING_LEVEL=info|warn|error. Defaults to `error` if no value is set.
-AUTH_AAD_LOGGING_LOG_PII=true|false. Default is false. Specifies whether AAD personal identifiable information can be logged.
+
 AUTH_AAD_UPN_DOMAIN=[Domain name to be used when generating the UPN for accounts created on AAD by the platform]. Defaults to "playgroundcherrytwist.onmicrosoft.com", so a user gets a UPN like "first.last@playgroundcherrytwist.onmicrosoft.com". Note: the domain name specified needs to be either the default domain for the AAD tenant or a configured "verified domain name".
 AUTH_ENABLED=true. Specifies whether authentication should be enabled on the CT Web Client and CT Server.
 AUTH_AAD_CLIENT_APP_ID= The AAD app registrion client id of the Cherrytwist Web Client.
@@ -122,7 +122,12 @@ CORS_ORIGIN=[your CORS origin value]
 To configure logging levels, use:
 
 ```conf
-LOGGING_LEVEL=Error|Warn|Verbose|Debug. Defaults to Error if no value is set.
+LOGGING_LEVEL_CONSOLE=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Winston console transports (logging to console).
+LOGGING_LEVEL_ELK=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Elasticsearch transports (logging to Elastic Cloud).
+AUTH_AAD_LOGGING_LEVEL=info|warn|error. Defaults to `error` if no value is set.
+AUTH_AAD_LOGGING_LOG_PII=true|false. Default is false. Specifies whether AAD personal identifiable information can be logged.
+ENABLE_ORM_LOGGING=true|false. Default is false. Specifies whether ORM logging should be enabled.
+ENVIRONMENT=dev|test|acceptance|production. Current deployment environment. Used for managing / filtering logs on the Elastic Cloud / Kibana.
 ```
 
 To configure profiling of the graphql api usage and performance, use:
@@ -130,7 +135,19 @@ To configure profiling of the graphql api usage and performance, use:
 ```conf
 LOGGING_PROFILING_ENABLED=true|false. Defaults to false if no value is set for performance reasons.
 ```
+
 Note that profiling messages are set at Verbose level so the logging level does need to be at least at that level for the messages to be visible.
+
+### Configure Elastic Cloud endpoint
+
+To configure Elastic Cloud endpoint, use:
+
+```conf
+LOGGING_ELK_ENABLED=true|false. Default is false. Is logging to Elastic Cloud enabled?
+ELASTIC_CLOUD_ID=Cloud ID of the Elastic Cloud instance.
+ELASTIC_CLOUD_USERNAME=Elastic Cloud username.
+ELASTIC_CLOUD_PASSWORD=Elastic Cloud password.
+```
 
 ### Install dependencies
 
