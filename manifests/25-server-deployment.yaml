@@ -27,32 +27,32 @@ spec:
                 key: .env.secrets
           - name: "API"
             valueFrom:
-              secretKeyRef:
+              configMapKeyRef:
                 name: ct-config
                 key: .env.auth.api
           - name: "CLIENT"
             valueFrom:
-              secretKeyRef:
+              configMapKeyRef:
                 name: ct-config
                 key: .env.auth.client
           - name: "common"
             valueFrom:
-              secretKeyRef:
+              configMapKeyRef:
                 name: ct-config
                 key: .env.auth.common
           - name: "logging"
             valueFrom:
-              secretKeyRef:
+              configMapKeyRef:
                 name: ct-config
                 key: .env.logging
           - name: "mysql"
             valueFrom:
-              secretKeyRef:
+              configMapKeyRef:
                 name: ct-config
                 key: .env.mysql
           - name: "waithosts"
             valueFrom:
-              secretKeyRef:
+              configMapKeyRef:
                 name: ct-config
                 key: .env.wait.hosts
           ports:
