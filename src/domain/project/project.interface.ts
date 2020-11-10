@@ -1,4 +1,5 @@
 import { IAgreement } from '../agreement/agreement.interface';
+import { IAspect } from '../aspect/aspect.interface';
 import { ITagset } from '../tagset/tagset.interface';
 
 export interface IProject {
@@ -8,4 +9,5 @@ export interface IProject {
   state: string;
   tagset?: ITagset;
   agreements?: IAgreement[];
+  aspects?: IAspect[];
 }

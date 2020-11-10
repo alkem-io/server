@@ -9,12 +9,16 @@ import { RelationModule } from '../relation/relation.module';
 import { UserGroupModule } from '../user-group/user-group.module';
 import { UserModule } from '../user/user.module';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
+import { ProjectModule } from '../project/project.module';
 import { ContextModule } from '../context/context.module';
+import { ProfileModule } from '../profile/profile.module';
 
 @Module({
   imports: [
     ActorGroupModule,
     AspectModule,
+    ProfileModule,
+    ProjectModule,
     ContextModule,
     RelationModule,
     UserModule,

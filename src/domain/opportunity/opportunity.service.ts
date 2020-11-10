@@ -10,6 +10,10 @@ import { ActorGroupService } from '../actor-group/actor-group.service';
 import { AspectInput } from '../aspect/aspect.dto';
 import { IAspect } from '../aspect/aspect.interface';
 import { AspectService } from '../aspect/aspect.service';
+import { ProfileService } from '../profile/profile.service';
+import { ProjectInput } from '../project/project.dto';
+import { IProject } from '../project/project.interface';
+import { ProjectService } from '../project/project.service';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
 import { RelationInput } from '../relation/relation.dto';
@@ -30,6 +34,8 @@ export class OpportunityService {
     private userGroupService: UserGroupService,
     private userService: UserService,
     private aspectService: AspectService,
+    private profileService: ProfileService,
+    private projectService: ProjectService,
     private contextService: ContextService,
     private relationService: RelationService,
     @InjectRepository(Opportunity)
@@ -227,6 +233,32 @@ export class OpportunityService {
     opportunity.actorGroups?.push(newActorGroup as IActorGroup);
     await this.opportunityRepository.save(opportunity);
     return newActorGroup;
+  }
+
+  async createProject(
+    opportunityId: number,
+    projectData: ProjectInput
+  ): Promise<IProject> {
+    const opportunity = await this.getOpportunityByID(opportunityId);
+    if (!opportunity)
+      throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
+
+    // Check that do not already have an Project with the same name
+    const title = projectData.name;
+    const existingProject = opportunity.projects?.find(
+      project => project.name === name
+    );
+    if (existingProject)
+      throw new Error(
+        `Already have an Project with the provided name: ${title}`
+      );
+
+    const project = await this.projectService.createProject(projectData);
+    if (!opportunity.projects)
+      throw new Error(`Opportunity (${opportunityId}) not initialised`);
+    opportunity.projects.push(project);
+    await this.opportunityRepository.save(opportunity);
+    return project;
   }
 
   async createAspect(

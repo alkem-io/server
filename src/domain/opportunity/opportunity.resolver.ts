@@ -23,6 +23,9 @@ import { IRelation } from '../relation/relation.interface';
 import { RelationInput } from '../relation/relation.dto';
 import { Relation } from '../relation/relation.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
+import { ProjectInput } from '../project/project.dto';
+import { Project } from '../project/project.entity';
+import { IProject } from '../project/project.interface';
 
 @Resolver()
 export class OpportunityResolver {
@@ -58,6 +61,26 @@ export class OpportunityResolver {
       opportunityData
     );
     return Opportunity;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Project, {
+    description: 'Create a new Project on the Opportunity identified by the ID',
+  })
+  @Profiling.api
+  async createProject(
+    @Args('opportunityID') opportunityId: number,
+    @Args('projectData') projectData: ProjectInput
+  ): Promise<IProject> {
+    const project = await this.opportunityService.createProject(
+      opportunityId,
+      projectData
+    );
+    return project;
   }
 
   @Roles(
