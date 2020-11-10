@@ -20,37 +20,37 @@ spec:
         - name: ct-server
           image: ctdev.azurecr.io/ct-server:latest
           env:
-          - name: "SECRETS"
+          - name: secrets
             valueFrom:
               secretKeyRef:
                 name: ct-secrets
                 key: .env.secrets
-          - name: "API"
+          - name: api
             valueFrom:
               configMapKeyRef:
                 name: ct-config
                 key: .env.auth.api
-          - name: "CLIENT"
+          - name: client
             valueFrom:
               configMapKeyRef:
                 name: ct-config
                 key: .env.auth.client
-          - name: "common"
+          - name: common
             valueFrom:
               configMapKeyRef:
                 name: ct-config
                 key: .env.auth.common
-          - name: "logging"
+          - name: logging
             valueFrom:
               configMapKeyRef:
                 name: ct-config
                 key: .env.logging
-          - name: "mysql"
+          - name: mysql
             valueFrom:
               configMapKeyRef:
                 name: ct-config
                 key: .env.mysql
-          - name: "waithosts"
+          - name: waithosts
             valueFrom:
               configMapKeyRef:
                 name: ct-config
