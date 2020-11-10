@@ -31,6 +31,7 @@ export class OrganisationService {
     if (!organisation.groups) {
       organisation.groups = [];
     }
+
     // Check that the mandatory groups for a challenge are created
     await this.userGroupService.addMandatoryGroups(
       organisation,
@@ -80,6 +81,7 @@ export class OrganisationService {
     // Create and initialise a new organisation using the supplied data
     const organisation = Organisation.create(organisationData);
     await this.initialiseMembers(organisation);
+    await this.organisationRepository.save(organisation);
     return organisation;
   }
 
@@ -94,13 +96,6 @@ export class OrganisationService {
     // Merge in the data
     if (organisationData.name) {
       existingOrganisation.name = organisationData.name;
-    }
-
-    if (organisationData.tags) {
-      this.tagsetService.replaceTagsOnEntity(
-        existingOrganisation,
-        organisationData.tags
-      );
     }
 
     // To do - merge in the rest of the organisation update

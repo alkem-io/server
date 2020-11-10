@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ITagsetable } from '../../interfaces/tagsetable.interface';
 import { Repository } from 'typeorm';
 import { Challenge } from '../challenge/challenge.entity';
-import { Organisation } from '../organisation/organisation.entity';
 import { Project } from '../project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
@@ -74,10 +73,7 @@ export class TagsetService {
     return tagset;
   }
 
-  replaceTagsOnEntity(
-    entity: Organisation | Challenge | Project,
-    tags: string[]
-  ) {
+  replaceTagsOnEntity(entity: Challenge | Project, tags: string[]) {
     if (!entity.tagset) {
       entity.tagset = this.createTagset({
         tags: [...tags],

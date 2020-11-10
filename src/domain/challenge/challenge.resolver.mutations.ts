@@ -116,8 +116,8 @@ export class ChallengeResolverMutations {
     @Args('challengeID') challengeID: number
   ): Promise<boolean> {
     return await this.challengeService.addChallengeLead(
-      organisationID,
-      challengeID
+      challengeID,
+      organisationID
     );
   }
 }
