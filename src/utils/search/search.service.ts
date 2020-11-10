@@ -68,7 +68,12 @@ export class SearchService {
       if (searchUsers) {
         const userMatches = await this.userRepository
           .createQueryBuilder('user')
-          .where('user.firstName = :term')
+          .where('user.firstName LIKE %:term%')
+          .orWhere('user.lastName LIKE %:term%')
+          .orWhere('user.email LIKE %:term%')
+          .orWhere('user.country LIKE %:term%')
+          .orWhere('user.city LIKE %:term%')
+          .orWhere('user.description LIKE %:term%')
           .setParameters({ term: `${term}` })
           .getMany();
         // Create results for each match
@@ -85,7 +90,8 @@ export class SearchService {
       if (searchGroups) {
         const groupMatches = await this.groupRepository
           .createQueryBuilder('group')
-          .where('group.name = :term')
+          .where('group.name LIKE %:term%')
+          .orWhere('group.description LIKE %:term%')
           .andWhere('group.includeInSearch = true')
           .setParameters({ term: `${term}` })
           .getMany();
