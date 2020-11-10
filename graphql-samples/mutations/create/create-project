@@ -1,0 +1,20 @@
+mutation CreateProject($projectData: ProjectInput!, $opportunityID: Float!) {
+  createProject(projectData: $projectData, opportunityID: $opportunityID) {
+    name,
+    description,
+    state
+  }
+}
+
+
+query variables:
+{
+  "opportunityID": 1,
+  "projectData":
+  {
+    "name": "TechStack2",
+    "textID": "tech-stack",
+    "description": "How do I handle scalability?",
+    "state": "new"
+  }
+}

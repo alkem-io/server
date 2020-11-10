@@ -25,10 +25,7 @@ spec:
           - secretRef:
               name: server-secret
           - secretRef:
-              name: aad-secret
-          - secretRef:
               name: authentication
           ports:
             - name: graphql
               containerPort: 4000
-

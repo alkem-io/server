@@ -1,0 +1,21 @@
+query create($searchData: SearchInput!){
+  search(searchData: $searchData) {
+    score
+    result {
+      __typename
+      ... on User {
+        name
+      }
+      ... on UserGroup {
+        name
+      }
+    }
+  }
+}
+
+{
+  "searchData":
+  {
+    "terms": ["Alisha"]
+  }
+}

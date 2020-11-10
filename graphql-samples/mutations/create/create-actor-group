@@ -1,0 +1,18 @@
+mutation CreateActorGroup($actorGroupData: ActorGroupInput!, $opportunityID: Float!) {
+  createActorGroup(aspeactorGroupDatactData: $actorGroupData, opportunityID: $opportunityID) {
+    title,
+    framing,
+    explanation
+  }
+}
+
+
+query variables:
+{
+  "opportunityID": 1,
+  "actorGroupData":
+  {
+    "name": "TechStack2",
+    "description": "How do I handle scalability?",
+  }
+}

@@ -10,4 +10,3 @@ spec:
       port: 4000
   selector:
     app: ct-server
-

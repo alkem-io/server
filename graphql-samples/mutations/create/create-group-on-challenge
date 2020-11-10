@@ -1,0 +1,15 @@
+mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
+  createGroupOnChallenge(groupName: $groupName, challengeID: $challengeID) {
+    name,
+    id
+    members {
+      name
+    }
+  }
+}
+
+Variables:
+{
+  "challengeID": 2,
+  "groupName": "testGroup"
+}

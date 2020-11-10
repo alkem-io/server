@@ -8,7 +8,59 @@ Build Status:
 Build Quality
 [![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/)
 
-## Running the server locally (not in a container)
+## === Server architecture ===
+
+Cherrytwist server uses [NestJS](https://nestjs.com/) as framework and complies to its principles. The code is split into Data Layer (entities), Data Access Layer (), Service Layer and an API Layer (GraphQL).
+Interactions between different layers is depicted in the Layer Diagram below:
+
+![Layer Diagram](diagrams/ct-server-layer-diagram.png)
+
+
+The technology stack is as follows:
+
+- GraphQL: for specifying the interactions with the server, using Apollo server
+- Node: for runtime execution - **NB: LTS Node version (12.8.3) is currently used for development, and is required for deployment.**
+- NestJS as a framework
+- TypeScript: for all logic
+- TypeORM: for the orbject relational mapping
+- mySQL: for data persistance
+- docker: for containers
+- docker-compose: for container orchestration
+- passportjs for authentication
+- Azure Active Directory as an Identity Provider
+- Winston and Nest-Winston for logging
+- Elastic Cloud + Kibana for centralized log management
+
+## === Interacting with a Cherrytwist server ===
+### **Graphql API**
+The server primarily interacts via a GraphQL api that it exploses. This api is used by the [Cherrytwist Web Client](http://github.com/cherrytwist/Client.Web), but also by any other clients / integrations that need to interact with the Cherrytwist server.
+
+This can be found at the following location: <http://localhost:4000/graphql>
+(4000 is the default port, see below for information on adjusting this port)
+
+### **Data Management**
+For evaluation / development with the Cherrytwist server, there is also a simple Data Management panel, available at the following URL: <http://localhost:4000/data-management>.
+
+The Data Management panel provides the following capabilities:
+- **Empty Ecoverse**: Resets the database back to an empty state, and ensures there is an empty Ecoverse available. It is triggered by a http request to <http://localhost:4000/data-management/empty-ecoverse>, or alternatively by pressing the relevant button on the main Data Management panel.
+- **Load Sample Data**: Loads a set of sample data into the Ecoverse. It is triggered by a http request to <http://localhost:4000/data-management/seed-data>, or alternatively by pressing the relevant button on the main Data Management panel.
+
+Note: the sample data provided here is basic so users are encouraged to look also at the Demo project where additional and more extensive data loading capabilities are available.
+
+## === Bootstrapping Ecoverse roles ===
+
+In order to bootstrap Ecoverse profiles **first time**, do the following:
+
+1. Set AUTH_ENABLED=false environment variable
+1. If you are running an old version of the application (<0.3.*) do a Reset Ecoverse + Sample Data from the Data Management Panel.
+1. Prepare a bootstrap json. Default json file is provided in src/utils/config/authorisation-bootstrap.json. If you'd like to change the name / location of the bootstrap file, set AUTH_BOOTSTRAP_PATH environment variable with the full path to your file.
+1. Start the CT server. Your users and roles will be updated.
+
+On every application restart afterwards the list of user and roles will be validated and roles will be re-added to the users based on the configuration.
+
+**NB! The bootstrapping process creates only Profiles. It doesn't create accounts!.**
+
+## === Running the server locally (not in a container) ===
 
 To run the server a working MySQL Server is required.
 For **MySQL 8** read [this](#MySQL-Server-specific-configuration-for-version-8).
@@ -21,7 +73,7 @@ Note: Only AAD v2 endpoints and tokens are supported!
 
 Example:
 
-```bash
+```conf
 DATABASE_HOST=localhost
 MYSQL_DATABASE=cherrytwist
 MYSQL_ROOT_PASSWORD=toor
@@ -37,25 +89,64 @@ Optional variables:
 
 Example:
 
-```bash
+```conf
 MYSQL_DB_PORT=55000
 ENABLE_ORM_LOGGING=true
 ```
 
 ### Configure authentication
 
-Define AAD_TENANT, AAD_CLIENT environment variables - e.g. locally in .env environment. Optionally provide AUTHENTICATION_ENABLED=false for dev purposes (default value is TRUE) to test without AAD.
+Define environment variables - e.g. locally in .env environment. Optionally provide AUTH_ENABLED=false for dev purposes (default value is TRUE) to test without AAD.
 
-```bash
-AAD_TENANT=[tenant (directory) ID]
-AAD_CLIENT= [client (application) ID]
-AUTHENTICATION_ENABLED=true
+```conf
+AUTH_AAD_TENANT=[tenant (directory) ID]
+AUTH_AAD_CHERRYTWIST_API_APP_ID= [client (application) ID]
+AUTH_AAD_MSGRAPH_API_SCOPE= [API Scopes Required for Downstream APIs, in our case Microsoft Graph API]
+AUTH_AAD_MSGRAPH_API_SECRET=[App Client Secret obtained from cherrytwist-api app registration*]
+
+AUTH_AAD_UPN_DOMAIN=[Domain name to be used when generating the UPN for accounts created on AAD by the platform]. Defaults to "playgroundcherrytwist.onmicrosoft.com", so a user gets a UPN like "first.last@playgroundcherrytwist.onmicrosoft.com". Note: the domain name specified needs to be either the default domain for the AAD tenant or a configured "verified domain name".
+AUTH_ENABLED=true. Specifies whether authentication should be enabled on the CT Web Client and CT Server.
+AUTH_AAD_CLIENT_APP_ID= The AAD app registrion client id of the Cherrytwist Web Client.
+AUTH_AAD_CHERRYTWIST_API_SCOPE=[Cherrytwist API URI]./default - it is very important to have ./default after the API URI as this scope aggregates all the scopes of the Cherrytwist API and all downstream API scopes.
+AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI=The login redirect for the Cherrytwist Web Client.
 ```
+***Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
 
 Optionally configure CORS origin for improved security with the following env variable (by default the value is *):
 
-```bash
+```conf
 CORS_ORIGIN=[your CORS origin value]
+```
+
+### Configure logging
+To configure logging levels, use:
+
+```conf
+LOGGING_LEVEL_CONSOLE=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Winston console transports (logging to console).
+LOGGING_LEVEL_ELK=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Elasticsearch transports (logging to Elastic Cloud).
+AUTH_AAD_LOGGING_LEVEL=info|warn|error. Defaults to `error` if no value is set.
+AUTH_AAD_LOGGING_LOG_PII=true|false. Default is false. Specifies whether AAD personal identifiable information can be logged.
+ENABLE_ORM_LOGGING=true|false. Default is false. Specifies whether ORM logging should be enabled.
+ENVIRONMENT=dev|test|acceptance|production. Current deployment environment. Used for managing / filtering logs on the Elastic Cloud / Kibana.
+```
+
+To configure profiling of the graphql api usage and performance, use:
+
+```conf
+LOGGING_PROFILING_ENABLED=true|false. Defaults to false if no value is set for performance reasons.
+```
+
+Note that profiling messages are set at Verbose level so the logging level does need to be at least at that level for the messages to be visible.
+
+### Configure Elastic Cloud endpoint
+
+To configure Elastic Cloud endpoint, use:
+
+```conf
+LOGGING_ELK_ENABLED=true|false. Default is false. Is logging to Elastic Cloud enabled?
+ELASTIC_CLOUD_ID=Cloud ID of the Elastic Cloud instance.
+ELASTIC_CLOUD_USERNAME=Elastic Cloud username.
+ELASTIC_CLOUD_PASSWORD=Elastic Cloud password.
 ```
 
 ### Install dependencies
@@ -64,21 +155,15 @@ CORS_ORIGIN=[your CORS origin value]
 npm install
 ```
 
-### Load the database with sample data if you wish
-
-```bash
-npm run data-load-samples
-```
-
 ### Start the server
 
 ```bash
 npm start
 ```
 
-Navigate to <http://localhost:4000/graphql> (4000 is the default port if GRAPHQL_ENDPOINT_PORT is not assigned)
+There should now be a running Cherrytwist server! It is possible to populate sample data into the server using the Data Management panel described above.
 
-## Setup instructions (docker-compose and docker)
+## === Running the server using containers (docker-compose and docker) ===
 
 Prerequisites:
 
@@ -98,29 +183,11 @@ To run this project:
     ```bash
     docker-compose up -d --build
     ```
+2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4000/graphql).
 
-2. Populate database with initial data:
+3. Optionally, populate database with initial data using the Data Management panel described above.
 
-    ```bash
-    docker exec ct_server npm run data-load-samples
-    ```
-
-## Technology Stack
-
-The technology stack is as follows:
-
-- GraphQL: for specifying the interactions with the server, using Apollo server
-- Node: for runtime execution
-- TypeScript: for all logic
-- TypeORM: for the orbject relational mapping
-- mySQL: for data persistance
-- docker: for containers
-- docker-compose: for container orchestration
-- passportjs for authentication
-
-Credit: the setup of this project is inspired by the following article: <https://medium.com/swlh/graphql-orm-with-typescript-implementing-apollo-server-express-and-sqlite-5f16a92968d0>
-
-### MySQL Server specific configuration for version 8
+## === MySQL Server specific configuration for version 8 ===
 
 MySQL version 8 by default use `caching_sha2_password` password validation plugin that is not supported by typeORM. The plugin must be changed to 'mysql_native_password'. It can be done per user or default for the server.
 
@@ -146,11 +213,24 @@ docker run --name some-mysql \
 --default-authentication-plugin=mysql_native_password
 ```
 
-## Pushing code the dockerhub
+## === Pushing code the dockerhub ===
 
 We have automated the creation and deployment of containers to docker hub via a github action. To automaticly trigger the build up to dockerhub the following steps should be taken:
 
 - Ensure that the code that you would like to create the container from is pushed / merged into the `develop` branch.
 - Create a github release and tag it with the appropriate version number ie. `v0.1.3`
-- Go to github actions and view the `push to docker` action to see if everything ran correctly. 
+- Go to github actions and view the `push to docker` action to see if everything ran correctly.
+
+
+## === Testing ===
+
+Initial version of integration tests is in place. To run them, look at the prerequisites, below:
+
+- Used frameworks/packages [jest](https://jestjs.io/) and `supertest`
+- Running `MySQL sql server`
+- Running `Cherrytwist/Server` service.
+- In .env file the flag for `AUTH_ENABLED=false` must be available.
+- In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
+  - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
+- The results of the test, will be displayed at the end of the execution.
 

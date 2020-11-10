@@ -1,0 +1,14 @@
+mutation UpdateChallenge($challengeID: Float! $challengeData: ChallengeInput!) {
+  updateChallenge(challengeID: $challengeID, challengeData: $challengeData) {
+    name,
+    id
+  }
+}
+
+{
+  "challengeID": 4,
+  "challengeData":
+		{
+  	"name": "Balance the grid22"
+		}
+}

@@ -1,0 +1,10 @@
+mutation addTagToTagset($tag: String!, $tagsetID: Float!) {
+  addTagToTagset(tag: $tag, tagsetID: $tagsetID)
+}
+
+
+query variables:
+{
+  "tagsetID": 4,
+  "tag": "tag1"
+}

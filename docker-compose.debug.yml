@@ -5,6 +5,7 @@ networks:
 
 services:
   server.node:
+    container_name: ct_server
     image: server.node
     build: .
     networks:
@@ -18,6 +19,17 @@ services:
       - WAIT_SLEEP_INTERVAL
       - WAIT_HOST_CONNECT_TIMEOUT
       - GRAPHQL_ENDPOINT_PORT
+      - AUTH_AAD_CHERRYTWIST_API_APP_ID
+      - AUTH_AAD_LOGGING_PII
+      - AUTH_AAD_LOGGING_LEVEL
+      - AUTH_AAD_MSGRAPH_API_SECRET
+      - AUTH_AAD_MSGRAPH_API_SCOPE
+      - AUTH_AAD_UPN_DOMAIN
+      - AUTH_AAD_TENANT
+      - AUTH_ENABLED
+      - AUTH_AAD_CLIENT_APP_ID
+      - AUTH_AAD_CHERRYTWIST_API_SCOPE
+      - AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI
     depends_on:
       - db
     restart: always
@@ -32,7 +44,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     ports:
-      - 3306:3306
+      - 3306
     environment:
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
