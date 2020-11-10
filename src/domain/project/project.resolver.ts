@@ -25,7 +25,7 @@ export class ProjectResolver {
     description: 'A particular Project, identified by the ID',
   })
   @Profiling.api
-  async opportunity(@Args('ID') id: number): Promise<IProject> {
+  async project(@Args('ID') id: number): Promise<IProject> {
     const project = await this.projectService.getProject(id);
     if (project) return project;
 
