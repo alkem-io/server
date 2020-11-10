@@ -9,6 +9,7 @@ import { OpportunityInput } from '../opportunity/opportunity.dto';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { IOpportunity } from '../opportunity/opportunity.interface';
 import { OpportunityService } from '../opportunity/opportunity.service';
+import { OrganisationService } from '../organisation/organisation.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
@@ -26,6 +27,7 @@ export class ChallengeService {
     private contextService: ContextService,
     private tagsetService: TagsetService,
     private opportunityService: OpportunityService,
+    private organisationService: OrganisationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
@@ -267,5 +269,35 @@ export class ChallengeService {
       where: { ecoverse: { id: ecoverseId } },
     });
     return challenges || [];
+  }
+
+  async addChallengeLead(
+    challengeID: number,
+    organisationID: number
+  ): Promise<boolean> {
+    const organisation = await this.organisationService.getOrganisationByID(
+      organisationID
+    );
+    if (!organisation)
+      throw new Error(`No organisation with id ${organisationID} was found!`);
+
+    const challenge = await this.getChallengeByID(challengeID);
+    if (!challenge)
+      throw new Error(`No challenge with id ${challengeID} was found!`);
+
+    // Check the org is not already added
+    if (!challenge.leadOrganisations)
+      throw new Error(`Challenge not fully initialised: ${challengeID}`);
+    const existingOrg = challenge.leadOrganisations.find(
+      existingOrg => existingOrg.id === organisationID
+    );
+    if (existingOrg)
+      throw new Error(
+        `Challenge ${challengeID} already has an organisation with the provided organisation ID: ${organisationID}`
+      );
+    // ok to add the org
+    challenge.leadOrganisations.push(organisation);
+    await this.challengeRepository.save(challenge);
+    return true;
   }
 }
