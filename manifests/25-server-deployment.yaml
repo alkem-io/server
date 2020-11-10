@@ -20,7 +20,7 @@ spec:
         - name: ct-server
           image: ctdev.azurecr.io/ct-server:latest
           envFrom:
-            - configMapRef:
+            - secretRef:
                 name: ct-secrets
           envFrom:
             - configMapRef:
