@@ -67,6 +67,9 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   )
   ecoverse?: Ecoverse;
 
+  @Column()
+  includeInSearch: boolean;
+
   @ManyToOne(
     () => Organisation,
     organisation => organisation.groups,
@@ -94,6 +97,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   constructor(name: string) {
     super();
     this.name = name;
+    this.includeInSearch = true;
   }
 }
 

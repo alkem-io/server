@@ -86,6 +86,7 @@ export class SearchService {
         const groupMatches = await this.groupRepository
           .createQueryBuilder('group')
           .where('group.name = :term')
+          .andWhere('group.includeInSearch = true')
           .setParameters({ term: `${term}` })
           .getMany();
         // Create results for each match
