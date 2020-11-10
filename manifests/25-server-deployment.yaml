@@ -55,6 +55,11 @@ spec:
               configMapKeyRef:
                 name: ct-config
                 key: .env.wait.hosts
+          - name: waithosts
+            valueFrom:
+              configMapKeyRef:
+                name: ct-config
+                key: .env.elastic.cloud
           ports:
             - name: graphql
               containerPort: 4000
