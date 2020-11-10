@@ -58,6 +58,8 @@ export class EcoverseService {
       ecoverse,
       ecoverse.restrictedGroupNames
     );
+    // Disable searching on the mandatory platform groups
+    ecoverse.groups.forEach(group => (group.includeInSearch = false));
 
     if (!ecoverse.challenges) {
       ecoverse.challenges = [];

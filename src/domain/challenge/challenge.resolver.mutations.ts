@@ -15,6 +15,7 @@ import { ChallengeService } from './challenge.service';
 import { OpportunityInput } from '../opportunity/opportunity.dto';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
+import { IOpportunity } from '../opportunity/opportunity.interface';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -56,12 +57,12 @@ export class ChallengeResolverMutations {
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args({ name: 'opportunityData', type: () => OpportunityInput })
     opportunityData: OpportunityInput
-  ): Promise<IUserGroup> {
-    const group = await this.challengeService.createOpportunity(
+  ): Promise<IOpportunity> {
+    const opportunity = await this.challengeService.createOpportunity(
       challengeID,
       opportunityData
     );
-    return group;
+    return opportunity;
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)

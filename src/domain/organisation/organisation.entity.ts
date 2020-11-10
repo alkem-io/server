@@ -13,6 +13,7 @@ import { IGroupable } from '../../interfaces/groupable.interface';
 import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
+import { Profile } from '../profile/profile.entity';
 import { Tagset } from '../tagset/tagset.entity';
 import {
   RestrictedGroupNames,
@@ -56,6 +57,14 @@ export class Organisation extends BaseEntity
   @JoinColumn()
   tagset?: Tagset;
 
+  @Field(() => Profile, {
+    nullable: true,
+    description: 'The profile for this organisation',
+  })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @JoinColumn()
+  profile: Profile;
+
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.organisation,
@@ -76,5 +85,6 @@ export class Organisation extends BaseEntity
     super();
     this.name = name;
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
+    this.profile = new Profile();
   }
 }
