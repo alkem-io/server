@@ -13,6 +13,6 @@ export interface IChallenge {
   tagset?: ITagset;
   groups?: IUserGroup[];
   opportunities?: IOpportunity[];
-  challengeLeads?: IOrganisation[];
+  leadOrganisations?: IOrganisation[];
   restrictedGroupNames: string[];
 }

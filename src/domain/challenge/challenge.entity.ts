@@ -66,7 +66,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     { eager: true, cascade: true }
   )
   @JoinTable({ name: 'challenge_lead' })
-  challengeLeads?: Organisation[];
+  leadOrganisations?: Organisation[];
 
   @OneToMany(
     () => UserGroup,

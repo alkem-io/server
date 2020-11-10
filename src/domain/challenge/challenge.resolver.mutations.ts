@@ -100,4 +100,24 @@ export class ChallengeResolverMutations {
     const group = await this.challengeService.addMember(userID, challengeID);
     return group;
   }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Adds the specified organisation as a lead for the specified challenge',
+  })
+  @Profiling.api
+  async addChallengeLead(
+    @Args('organisationID') organisationID: number,
+    @Args('challengeID') challengeID: number
+  ): Promise<boolean> {
+    return await this.challengeService.addChallengeLead(
+      organisationID,
+      challengeID
+    );
+  }
 }
