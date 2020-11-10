@@ -135,25 +135,25 @@ export class BootstrapService {
   }
 
   @Profiling.api
-  async createGroupProfiles(groupName: string, emails: string[]) {
+  async createGroupProfiles(groupName: string, usersData: any[]) {
     try {
-      for await (const email of emails) {
+      for (let i = 0; i < usersData.length; i++) {
+        const userData = usersData[i];
         const userInput = new UserInput();
-        userInput.email = email;
+        userInput.email = userData.email;
         // For bootstrap puroposes also set the upn to the same as the email
-        userInput.accountUpn = email;
-        const parts = email.split('@');
-        userInput.name = parts[0];
-        userInput.firstName = parts[0];
-        userInput.lastName = 'ImportedUser';
+        userInput.accountUpn = userData.email;
+        userInput.name = `${userData.firstName} ${userData.lastName}`;
+        userInput.firstName = userData.firstName;
+        userInput.lastName = userData.lastName;
 
         // Check the user exists
-        let user = await this.userService.getUserByEmail(email);
+        let user = await this.userService.getUserByEmail(userInput.email);
         if (!user) {
           // First create, then ensure groups are loaded - not optimal but only on bootstrap
           user = await this.ecoverseService.createUserProfile(userInput);
         }
-        user = await this.userService.getUserWithGroups(email);
+        user = await this.userService.getUserWithGroups(userInput.email);
 
         if (!user) throw new Error('Unable to create group profiles');
 

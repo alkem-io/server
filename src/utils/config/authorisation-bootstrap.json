@@ -1,13 +1,34 @@
 {
   "globalAdmins": [
-    "admin@cherrytwist.org",
-    "valentin_yanakiev@yahoo.co.uk"
+    {
+      "email": "admin@cherrytwist.org",
+      "firstName": "admin",
+      "lastName": "cherrytwist"
+    },
+
+    {
+      "email": "valentin_yanakiev@yahoo.co.uk",
+      "firstName": "Valentin",
+      "lastName": "Yanakiev"
+    }
   ],
-  "ecoverseAdmins":[
-    "neil@cherrytwist.org",
-    "valentin@cherrytwist.org"
+  "ecoverseAdmins": [
+    {
+      "email": "neil@cherrytwist.org",
+      "firstName": "Neil",
+      "lastName": "Smyth"
+    },
+    {
+      "email": "valentin@cherrytwist.org",
+      "firstName": "Valentin",
+      "lastName": "Yanakiev"
+    }
   ],
-  "communityAdmins":[
-    "evgeni@cherrytwist.org"
+  "communityAdmins": [
+    {
+      "email": "evgeni@cherrytwist.org",
+      "firstName": "Evgeni",
+      "lastName": "Dimitrov"
+    }
   ]
 }
