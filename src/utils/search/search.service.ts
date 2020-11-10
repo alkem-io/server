@@ -69,13 +69,13 @@ export class SearchService {
         const userMatches = await this.userRepository
           .createQueryBuilder('user')
           .leftJoinAndSelect('user.profile', 'profile')
-          .where('user.firstName = :term')
-          .orWhere('user.lastName = :term')
-          .orWhere('user.email = :term')
-          .orWhere('user.country = :term')
-          .orWhere('user.city = :term')
-          .orWhere('profile.description = :term')
-          .setParameters({ term: `${term}` })
+          .where('user.firstName like :term')
+          .orWhere('user.lastName like :term')
+          .orWhere('user.email like :term')
+          .orWhere('user.country like :term')
+          .orWhere('user.city like :term')
+          .orWhere('profile.description like :term')
+          .setParameters({ term: `%${term}%` })
           .getMany();
         // Create results for each match
         for (let i = 0; i < userMatches.length; i++) {
@@ -92,10 +92,10 @@ export class SearchService {
         const groupMatches = await this.groupRepository
           .createQueryBuilder('group')
           .leftJoinAndSelect('group.profile', 'profile')
-          .where('group.name = :term')
-          .orWhere('profile.description = :term')
+          .where('group.name like :term')
+          .orWhere('profile.description like :term')
           .andWhere('group.includeInSearch = true')
-          .setParameters({ term: `${term}` })
+          .setParameters({ term: `%${term}%` })
           .getMany();
         // Create results for each match
         for (let i = 0; i < groupMatches.length; i++) {
