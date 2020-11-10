@@ -68,12 +68,13 @@ export class SearchService {
       if (searchUsers) {
         const userMatches = await this.userRepository
           .createQueryBuilder('user')
-          .where('user.firstName LIKE %:term%')
-          .orWhere('user.lastName LIKE %:term%')
-          .orWhere('user.email LIKE %:term%')
-          .orWhere('user.country LIKE %:term%')
-          .orWhere('user.city LIKE %:term%')
-          .orWhere('user.description LIKE %:term%')
+          .leftJoinAndSelect('user.profile', 'profile')
+          .where('user.firstName = :term')
+          .orWhere('user.lastName = :term')
+          .orWhere('user.email = :term')
+          .orWhere('user.country = :term')
+          .orWhere('user.city = :term')
+          .orWhere('profile.description = :term')
           .setParameters({ term: `${term}` })
           .getMany();
         // Create results for each match
@@ -90,8 +91,9 @@ export class SearchService {
       if (searchGroups) {
         const groupMatches = await this.groupRepository
           .createQueryBuilder('group')
-          .where('group.name LIKE %:term%')
-          .orWhere('group.description LIKE %:term%')
+          .leftJoinAndSelect('group.profile', 'profile')
+          .where('group.name = :term')
+          .orWhere('profile.description = :term')
           .andWhere('group.includeInSearch = true')
           .setParameters({ term: `${term}` })
           .getMany();
