@@ -4,6 +4,7 @@ import { ITagset } from '../tagset/tagset.interface';
 
 export interface IProject {
   id: number;
+  textID: string;
   name: string;
   description?: string;
   state: string;

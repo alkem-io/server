@@ -22,6 +22,13 @@ export class Project extends BaseEntity implements IProject {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'A short text identifier for this Opportunity',
+  })
+  @Column('varchar', { length: 20 })
+  textID: string;
+
   @Field(() => String, { nullable: false, description: '' })
   @Column()
   name: string;
@@ -71,9 +78,10 @@ export class Project extends BaseEntity implements IProject {
   )
   opportunity?: Opportunity;
 
-  constructor(name: string) {
+  constructor(name: string, textID: string) {
     super();
     this.name = name;
+    this.textID = textID;
     this.state = '';
   }
 }

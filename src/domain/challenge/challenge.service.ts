@@ -179,14 +179,19 @@ export class ChallengeService {
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
     // Verify that required textID field is present and that it has the right format
     const textID = challengeData.textID;
-    if (!textID) throw new Error('Required field textID not specified');
+    if (!textID || textID.length < 3)
+      throw new Error(
+        `Required field textID not specified or long enough: ${textID}`
+      );
     const expression = /^[a-zA-Z0-9.\-_]+$/;
-    const textIdCheck = expression.test(String(textID).toLowerCase());
+    const textIdCheck = expression.test(textID);
     if (!textIdCheck)
       throw new Error(
         `Required field textID provided not in the correct format: ${textID}`
       );
 
+    // Ensure lower case
+    challengeData.textID = textID.toLowerCase();
     // reate and initialise a new challenge using the first returned array item
     const challenge = Challenge.create(challengeData);
     await this.initialiseMembers(challenge);

@@ -108,13 +108,17 @@ export class OpportunityService {
   ): Promise<IOpportunity> {
     // Verify that required textID field is present and that it has the right format
     const textID = opportunityData.textID;
-    if (!textID) throw new Error('Required field textID not specified');
+    if (!textID || textID.length < 3)
+      throw new Error(
+        `Required field textID not specified or long enough: ${textID}`
+      );
     const expression = /^[a-zA-Z0-9.\-_]+$/;
-    const textIdCheck = expression.test(String(textID).toLowerCase());
+    const textIdCheck = expression.test(textID);
     if (!textIdCheck)
       throw new Error(
         `Required field textID provided not in the correct format: ${textID}`
-      );
+      ); // Ensure field is lower case
+    opportunityData.textID = textID.toLowerCase();
 
     // reate and initialise a new Opportunity using the first returned array item
     const opportunity = Opportunity.create(opportunityData);
@@ -239,18 +243,24 @@ export class OpportunityService {
     opportunityId: number,
     projectData: ProjectInput
   ): Promise<IProject> {
+    this.logger.verbose(
+      `Adding project to opportunity (${opportunityId})`,
+      LogContexts.CHALLENGES
+    );
+
     const opportunity = await this.getOpportunityByID(opportunityId);
     if (!opportunity)
       throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
 
     // Check that do not already have an Project with the same name
-    const title = projectData.name;
+    const name = projectData.name;
+    const textID = projectData.textID.toLowerCase();
     const existingProject = opportunity.projects?.find(
-      project => project.name === name
+      project => project.name === name || project.textID === textID
     );
     if (existingProject)
       throw new Error(
-        `Already have an Project with the provided name: ${title}`
+        `Already have an Project with the provided name or textID: ${name} - ${projectData.textID}`
       );
 
     const project = await this.projectService.createProject(projectData);
