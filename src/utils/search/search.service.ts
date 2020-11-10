@@ -62,9 +62,7 @@ export class SearchService {
       if (!entityTypesFilter.includes(SearchEntityTypes.Group))
         searchGroups = false;
     }
-    for (let t = 0; t < terms.length; t++) {
-      const term = terms[t];
-
+    for (const term of terms) {
       if (searchUsers) {
         const userMatches = await this.userRepository
           .createQueryBuilder('user')
@@ -77,15 +75,9 @@ export class SearchService {
           .orWhere('profile.description like :term')
           .setParameters({ term: `%${term}%` })
           .getMany();
+
         // Create results for each match
-        for (let i = 0; i < userMatches.length; i++) {
-          const matchedUser = userMatches[i];
-          const match = new Match();
-          match.entity = matchedUser;
-          match.terms.push(term);
-          match.key = matchedUser.id;
-          this.addMatchingResult(userResults, match);
-        }
+        await this.buildMatchingResults(userMatches, userResults);
       }
 
       if (searchGroups) {
@@ -98,14 +90,7 @@ export class SearchService {
           .setParameters({ term: `%${term}%` })
           .getMany();
         // Create results for each match
-        for (let i = 0; i < groupMatches.length; i++) {
-          const matchedGroup = groupMatches[i];
-          const match = new Match();
-          match.entity = matchedGroup;
-          match.terms.push(term);
-          match.key = matchedGroup.id;
-          this.addMatchingResult(groupResults, match);
-        }
+        await this.buildMatchingResults(groupMatches, groupResults);
       }
     }
 
@@ -114,24 +99,39 @@ export class SearchService {
       LogContexts.API
     );
 
-    const results: ISearchResultEntry[] = [];
-    userResults.forEach(value => {
-      const resultEntry = new SearchResultEntry();
-      resultEntry.score = value.score;
-      resultEntry.terms = value.terms;
-      resultEntry.result = value.entity;
-      results.push(resultEntry);
-    });
-
-    groupResults.forEach(value => {
-      const resultEntry = new SearchResultEntry();
-      resultEntry.score = value.score;
-      resultEntry.terms = value.terms;
-      resultEntry.result = value.entity;
-      results.push(resultEntry);
-    });
+    let results: ISearchResultEntry[] = [];
+    results = await this.buildSearchResults(userResults);
+    results.push(...(await this.buildSearchResults(groupResults)));
 
     return results;
+  }
+
+  async buildMatchingResults(
+    rawMatches: any[],
+    resultsMap: Map<number, Match>
+  ) {
+    for (const rawMatch of rawMatches) {
+      const match = new Match();
+      match.entity = rawMatch;
+      match.terms.push(rawMatch);
+      match.key = rawMatch.id;
+      this.addMatchingResult(resultsMap, match);
+    }
+  }
+
+  async buildSearchResults(
+    results: Map<number, Match>
+  ): Promise<ISearchResultEntry[]> {
+    const searchResults: ISearchResultEntry[] = [];
+    results.forEach(value => {
+      const resultEntry = new SearchResultEntry();
+      resultEntry.score = value.score;
+      resultEntry.terms = value.terms;
+      resultEntry.result = value.entity;
+      searchResults.push(resultEntry);
+    });
+
+    return searchResults;
   }
 
   // Add a new results entry or append to an existing entry.
