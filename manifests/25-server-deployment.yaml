@@ -22,7 +22,6 @@ spec:
           envFrom:
             - secretRef:
                 name: ct-secrets
-          envFrom:
             - configMapRef:
                 name: ct-config
           ports:
