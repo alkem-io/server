@@ -33,11 +33,6 @@ export class OpportunityResolver {
     @Inject(OpportunityService) private opportunityService: OpportunityService
   ) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @Query(() => Opportunity, {
     nullable: false,
     description: 'A particular opportunitiy, identified by the ID',

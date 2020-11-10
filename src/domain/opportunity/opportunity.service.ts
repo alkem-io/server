@@ -14,6 +14,8 @@ import { ProfileService } from '../profile/profile.service';
 import { ProjectInput } from '../project/project.dto';
 import { IProject } from '../project/project.interface';
 import { ProjectService } from '../project/project.service';
+import { Context } from '../context/context.entity';
+import { ContextService } from '../context/context.service';
 import { RelationInput } from '../relation/relation.dto';
 import { IRelation } from '../relation/relation.interface';
 import { RelationService } from '../relation/relation.service';
@@ -34,6 +36,7 @@ export class OpportunityService {
     private aspectService: AspectService,
     private profileService: ProfileService,
     private projectService: ProjectService,
+    private contextService: ContextService,
     private relationService: RelationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -61,6 +64,10 @@ export class OpportunityService {
       opportunity.groups = [];
     }
 
+    if (!opportunity.context) {
+      opportunity.context = new Context();
+    }
+
     // Check that the mandatory groups for a Opportunity are created
     await this.userGroupService.addMandatoryGroups(
       opportunity,
@@ -68,7 +75,7 @@ export class OpportunityService {
     );
 
     // Initialise contained objects
-    await this.profileService.initialiseMembers(opportunity.profile);
+    await this.contextService.initialiseMembers(opportunity.context);
     await this.createRestrictedActorGroups(opportunity);
 
     return opportunity;
