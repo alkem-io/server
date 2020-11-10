@@ -19,47 +19,12 @@ spec:
       containers:
         - name: ct-server
           image: ctdev.azurecr.io/ct-server:latest
-          env:
-          - name: secrets
-            valueFrom:
-              secretKeyRef:
+          envFrom:
+            - secretRef:
                 name: ct-secrets
-                key: .env.secrets
-          - name: api
-            valueFrom:
-              configMapKeyRef:
+          envFrom:
+            - configMapRef:
                 name: ct-config
-                key: .env.auth.api
-          - name: client
-            valueFrom:
-              configMapKeyRef:
-                name: ct-config
-                key: .env.auth.client
-          - name: common
-            valueFrom:
-              configMapKeyRef:
-                name: ct-config
-                key: .env.auth.common
-          - name: logging
-            valueFrom:
-              configMapKeyRef:
-                name: ct-config
-                key: .env.logging
-          - name: mysql
-            valueFrom:
-              configMapKeyRef:
-                name: ct-config
-                key: .env.mysql
-          - name: waithosts
-            valueFrom:
-              configMapKeyRef:
-                name: ct-config
-                key: .env.wait.hosts
-          - name: elasticCloud
-            valueFrom:
-              configMapKeyRef:
-                name: ct-config
-                key: .env.elastic.cloud
           ports:
             - name: graphql
               containerPort: 4000
