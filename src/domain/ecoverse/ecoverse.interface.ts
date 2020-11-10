@@ -10,7 +10,7 @@ import { IUser } from '../user/user.interface';
 export interface IEcoverse {
   id: number;
   name: string;
-  host?: IOrganisation;
+  hostID?: number;
   context?: IContext;
   DID: IDID;
   members?: IUser[];

@@ -4,8 +4,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -35,13 +33,8 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @Column('varchar', { length: 100 })
   name: string;
 
-  @Field(() => Organisation, {
-    nullable: true,
-    description: 'The organisation that hosts this Ecoverse instance',
-  })
-  @OneToOne(() => Organisation, { eager: true, cascade: true })
-  @JoinColumn()
-  host?: Organisation;
+  @Column('int')
+  hostID?: number;
 
   @Field(() => Context, {
     nullable: true,
@@ -72,18 +65,11 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
     description:
       'The set of partner organisations associated with this Ecoverse',
   })
-  @ManyToMany(
+  @OneToMany(
     () => Organisation,
-    organisation => organisation.ecoverses,
+    organisation => organisation.ecoverse,
     { eager: false, cascade: true }
   )
-  @JoinTable({
-    name: 'ecoverse_partner',
-    joinColumns: [{ name: 'ecoverseId', referencedColumnName: 'id' }],
-    inverseJoinColumns: [
-      { name: 'organisationId', referencedColumnName: 'id' },
-    ],
-  })
   organisations?: Organisation[];
 
   //
@@ -130,5 +116,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
       RestrictedGroupNames.GlobalAdmins,
       RestrictedGroupNames.CommunityAdmins,
     ];
+    this.hostID = -1;
   }
 }

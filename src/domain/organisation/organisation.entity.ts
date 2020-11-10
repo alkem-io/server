@@ -5,6 +5,7 @@ import {
   Entity,
   JoinColumn,
   ManyToMany,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -36,17 +37,11 @@ export class Organisation extends BaseEntity
   @JoinColumn()
   DID!: DID;
 
-  @OneToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.host
-  )
-  hostedEcoverse?: Ecoverse;
-
-  @ManyToMany(
+  @ManyToOne(
     () => Ecoverse,
     ecoverse => ecoverse.organisations
   )
-  ecoverses?: Ecoverse[];
+  ecoverse?: Ecoverse;
 
   @Field(() => Profile, {
     nullable: true,

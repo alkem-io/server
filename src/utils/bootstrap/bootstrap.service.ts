@@ -5,7 +5,6 @@ import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
 import { Context } from '../../domain/context/context.entity';
 import { IEcoverse } from '../../domain/ecoverse/ecoverse.interface';
 import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
-import { Organisation } from '../../domain/organisation/organisation.entity';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
 import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
@@ -215,7 +214,7 @@ export class BootstrapService {
       this.logger.verbose('........creating...', LogContexts.BOOTSTRAP);
       // Create a new ecoverse
       const ecoverse = new Ecoverse();
-      this.ecoverseService.initialiseMembers(ecoverse);
+      await this.ecoverseService.initialiseMembers(ecoverse);
       // Save is needed so that the ecoverse is there for other methods
       await this.ecoverseRepository.save(ecoverse);
 
@@ -241,10 +240,6 @@ export class BootstrapService {
     ecoverse.name = 'Empty ecoverse';
     if (!ecoverse.context) ecoverse.context = new Context();
     ecoverse.context.tagline = 'An empty ecoverse to be populated';
-
-    // Create the host organisation
-    ecoverse.host = new Organisation('Default host organisation');
-    ecoverse.organisations?.push(ecoverse.host);
 
     return ecoverse;
   }

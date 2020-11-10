@@ -54,6 +54,13 @@ export class OrganisationService {
     return organisation;
   }
 
+  async getOrganisations(ecoverseId: number): Promise<Organisation[]> {
+    const organisations = await this.organisationRepository.find({
+      where: { ecoverse: { id: ecoverseId } },
+    });
+    return organisations || [];
+  }
+
   async createGroup(orgID: number, groupName: string): Promise<IUserGroup> {
     // First find the Challenge
     this.logger.verbose(

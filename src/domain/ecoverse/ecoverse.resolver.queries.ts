@@ -45,15 +45,6 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getName();
   }
 
-  @Query(() => Organisation, {
-    nullable: false,
-    description: 'The host organisation for the ecoverse',
-  })
-  @Profiling.api
-  async host(): Promise<IOrganisation> {
-    return this.ecoverseService.getHost();
-  }
-
   @Query(() => Context, {
     nullable: false,
     description: 'The shared understanding for this ecoverse',
@@ -194,6 +185,15 @@ export class EcoverseResolverQueries {
   async organisations(): Promise<IOrganisation[]> {
     const organisations = await this.ecoverseService.getOrganisations();
     return organisations;
+  }
+
+  @Query(() => Organisation, {
+    nullable: false,
+    description: 'The host organisation for the ecoverse',
+  })
+  @Profiling.api
+  async host(): Promise<IOrganisation> {
+    return this.ecoverseService.getHost();
   }
 
   @Query(() => Organisation, {

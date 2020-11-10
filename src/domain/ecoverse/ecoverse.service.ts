@@ -81,6 +81,15 @@ export class EcoverseService {
     await this.tagsetService.initialiseMembers(ecoverse.tagset);
     await this.contextService.initialiseMembers(ecoverse.context);
 
+    if (!ecoverse.hostID || ecoverse.hostID == -1) {
+      const orgInput = new OrganisationInput();
+      orgInput.name = 'Default host organisation';
+      const hostOrg = await this.organisationService.createOrganisation(
+        orgInput
+      );
+      ecoverse.hostID = hostOrg.id;
+    }
+
     return ecoverse;
   }
 
@@ -161,15 +170,8 @@ export class EcoverseService {
   }
 
   async getOrganisations(): Promise<IOrganisation[]> {
-    try {
-      const ecoverse = await this.getEcoverse({
-        relations: ['organisations', 'organisations.groups'],
-      });
-
-      return ecoverse.organisations || [];
-    } catch (e) {
-      throw e;
-    }
+    const ecoverseId = await this.getEcoverseId();
+    return await this.organisationService.getOrganisations(ecoverseId);
   }
 
   async getContext(): Promise<IContext> {
@@ -183,8 +185,9 @@ export class EcoverseService {
   }
 
   async getHost(): Promise<IOrganisation> {
-    const ecoverse = (await this.getEcoverse()) as Ecoverse;
-    return ecoverse.host as IOrganisation;
+    const ecoverse = await this.getEcoverse();
+    if (!ecoverse.hostID) throw new Error('Unable to locate host organisation');
+    return this.organisationService.getOrganisationByID(ecoverse.hostID);
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
