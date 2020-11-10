@@ -8,6 +8,10 @@ export class ProjectInput {
   name!: string;
 
   @Field({ nullable: true })
+  @MaxLength(20)
+  textID!: string;
+
+  @Field({ nullable: true })
   @MaxLength(300)
   description!: string;
 

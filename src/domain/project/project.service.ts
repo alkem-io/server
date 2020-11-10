@@ -19,11 +19,23 @@ export class ProjectService {
   ) {}
 
   async createProject(projectData: ProjectInput): Promise<IProject> {
-    const project = new Project(projectData.name);
+    const textID = projectData.textID;
+    if (!textID || textID.length < 3)
+      throw new Error(
+        `Text ID for the project is required and has a minimum length of 3: ${textID}`
+      );
+    const expression = /^[a-zA-Z0-9.\-_]+$/;
+    const textIdCheck = expression.test(textID);
+    if (!textIdCheck)
+      throw new Error(
+        `Required field textID provided not in the correct format: ${textID}`
+      );
+
+    const project = new Project(projectData.name, textID.toLowerCase());
     project.description = projectData.description;
     project.state = projectData.state;
 
-    await this.projectRepository.save(Project);
+    await this.projectRepository.save(project);
     return project;
   }
 
@@ -50,8 +62,12 @@ export class ProjectService {
       throw new Error(
         `Not able to locate Project with the specified ID: ${projectID}`
       );
+    // Note: do not update the textID
 
     // Copy over the received data
+    if (projectData.name) {
+      project.name = projectData.name;
+    }
     if (projectData.description) {
       project.description = projectData.description;
     }
