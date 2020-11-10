@@ -88,6 +88,37 @@ export class ProfileService {
 
     profile.avatar = profileData.avatar;
     profile.description = profileData.description;
+
+    // Iterate over the tagsets
+    const tagsetsData = profileData.tagsetsData;
+    if (tagsetsData) {
+      for (let i = 0; i < tagsetsData.length; i++) {
+        const tagsetData = tagsetsData[i];
+        await this.tagsetService.updateOrCreateTagset(profile, tagsetData);
+      }
+    }
+
+    // Iterate over the references
+    const referencesData = profileData.referencesData;
+    if (referencesData) {
+      for (let i = 0; i < referencesData.length; i++) {
+        const referenceData = referencesData[i];
+        const existingReference = profile.references?.find(
+          reference => reference.name === referenceData.name
+        );
+        if (existingReference) {
+          await this.referenceService.updateReference(
+            existingReference,
+            referenceData
+          );
+        } else {
+          const newReference = await this.referenceService.createReference(
+            referenceData
+          );
+          profile.references?.push(newReference as Reference);
+        }
+      }
+    }
     await this.profileRepository.save(profile);
     return true;
   }

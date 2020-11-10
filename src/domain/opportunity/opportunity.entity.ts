@@ -18,10 +18,14 @@ import {
 } from '../actor-group/actor-group.entity';
 import { Aspect } from '../aspect/aspect.entity';
 import { Challenge } from '../challenge/challenge.entity';
+import { Context } from '../context/context.entity';
 import { DID } from '../did/did.entity';
-import { Profile } from '../profile/profile.entity';
 import { Project } from '../project/project.entity';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { Relation } from '../relation/relation.entity';
+import {
+  RestrictedGroupNames,
+  UserGroup,
+} from '../user-group/user-group.entity';
 import { IOpportunity } from './opportunity.interface';
 
 @Entity()
@@ -55,13 +59,13 @@ export class Opportunity extends BaseEntity
   @Column({ nullable: true })
   state: string;
 
-  @Field(() => Profile, {
+  @Field(() => Context, {
     nullable: true,
-    description: 'The profile for this Opportunity',
+    description: 'The shared understanding for the opportunity',
   })
-  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
-  profile: Profile;
+  context?: Context;
 
   @Field(() => [Project], {
     nullable: true,
@@ -73,7 +77,6 @@ export class Opportunity extends BaseEntity
     { eager: true, cascade: true }
   )
   projects?: Project[];
-
 
   @Field(() => [ActorGroup], {
     nullable: true,
@@ -98,6 +101,23 @@ export class Opportunity extends BaseEntity
   )
   aspects?: Aspect[];
 
+  @Field(() => [Relation], {
+    nullable: true,
+    description: 'The set of relations for this Opportunity',
+  })
+  @OneToMany(
+    () => Relation,
+    relation => relation.opportunity,
+    { eager: true, cascade: true }
+  )
+  relations?: Relation[];
+
+  @OneToMany(
+    () => UserGroup,
+    userGroup => userGroup.opportunity,
+    { eager: false, cascade: true }
+  )
+  groups?: UserGroup[];
 
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
@@ -121,6 +141,5 @@ export class Opportunity extends BaseEntity
     this.state = '';
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
     this.restrictedActorGroupNames = [RestrictedActorGroupNames.Collaborators];
-    this.profile = new Profile();
   }
 }

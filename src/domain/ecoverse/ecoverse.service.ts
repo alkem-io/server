@@ -14,7 +14,6 @@ import { TagsetService } from '../tagset/tagset.service';
 import { IUser } from '../user/user.interface';
 import { IChallenge } from '../challenge/challenge.interface';
 import { ITagset } from '../tagset/tagset.interface';
-import { Challenge } from '../challenge/challenge.entity';
 import { ChallengeService } from '../challenge/challenge.service';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { UserInput } from '../user/user.dto';
@@ -29,6 +28,7 @@ import { ITemplate } from '../template/template.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { UserService } from '../user/user.service';
 import { AccountService } from '../../utils/account/account.service';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 
 @Injectable()
 export class EcoverseService {
@@ -186,7 +186,10 @@ export class EcoverseService {
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
-    this.logger.verbose(`Adding userGroup (${groupName}) to ecoverse`);
+    this.logger.verbose(
+      `Adding userGroup (${groupName}) to ecoverse`,
+      LogContexts.CHALLENGES
+    );
 
     const ecoverse = (await this.getEcoverse({
       join: {
@@ -221,21 +224,21 @@ export class EcoverseService {
       throw new Error('Challenges must be defined');
     }
     // First check if the challenge already exists on not...
-    // TODO: Inform the user that the entity already exists instead of returning it.
     let challenge = ecoverse.challenges.find(
       c => c.name === challengeData.name
     );
-    if (!challenge) {
-      // No existing challenge found, create and initialise a new one!
-      challenge = await this.challengeService.createChallenge(challengeData);
-
-      ecoverse.challenges.push(challenge as Challenge);
-      await this.ecoverseRepository.save(ecoverse);
-    } else {
-      // load the whole challenge
-      this.logger.verbose('Creating Challenge: Challenge already exists!');
-      challenge = await this.challengeService.getChallengeByID(challenge.id);
+    if (challenge) {
+      // already have a challenge with the given name, not allowed
+      throw new Error(
+        `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`
+      );
     }
+    // No existing challenge found, create and initialise a new one!
+    challenge = await this.challengeService.createChallenge(challengeData);
+
+    ecoverse.challenges.push(challenge);
+    await this.ecoverseRepository.save(ecoverse);
+
     return challenge;
   }
 
@@ -309,7 +312,16 @@ export class EcoverseService {
     // Ok to proceed to creating profile and optionally account
     const user = await this.createUserProfile(userData);
     if (this.accountService.authenticationEnabled()) {
-      await this.accountService.createUserAccount(userData);
+      try {
+        const result = await this.accountService.createUserAccount(userData);
+        if (!result) throw new Error('Unable to create account for user!');
+      } catch (e) {
+        // Account creation failed; need to remove the user
+        await this.userService.removeUser(user);
+        throw new Error(
+          `Unable to create account for user. Removing created user profile: ${user.name}.  ${e}`
+        );
+      }
     }
     return user;
   }
@@ -419,13 +431,13 @@ export class EcoverseService {
       await this.contextService.update(ecoverse.context, ecoverseData.context);
     }
 
-    if (ecoverseData.tags && ecoverseData.tags.tags) {
+    if (ecoverseData.tags) {
       if (!ecoverse.tagset) {
         ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
       }
-      this.tagsetService.replaceTags(
+      await this.tagsetService.replaceTags(
         ecoverse.tagset.id,
-        ecoverseData.tags.tags
+        ecoverseData.tags
       );
     }
 

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Logger } from 'msal';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { ProfileService } from '../profile/profile.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
 import { IUserGroup } from '../user-group/user-group.interface';
@@ -16,6 +17,7 @@ export class OrganisationService {
   constructor(
     private userGroupService: UserGroupService,
     private tagsetService: TagsetService,
+    private profileService: ProfileService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
@@ -34,6 +36,9 @@ export class OrganisationService {
       organisation,
       organisation.restrictedGroupNames
     );
+
+    // Initialise contained singletons
+    await this.profileService.initialiseMembers(organisation.profile);
 
     return organisation;
   }
@@ -74,7 +79,7 @@ export class OrganisationService {
   ): Promise<IOrganisation> {
     // Create and initialise a new organisation using the supplied data
     const organisation = Organisation.create(organisationData);
-    this.initialiseMembers(organisation);
+    await this.initialiseMembers(organisation);
     return organisation;
   }
 
@@ -91,10 +96,10 @@ export class OrganisationService {
       existingOrganisation.name = organisationData.name;
     }
 
-    if (organisationData.tags && organisationData.tags.tags) {
+    if (organisationData.tags) {
       this.tagsetService.replaceTagsOnEntity(
         existingOrganisation,
-        organisationData.tags.tags
+        organisationData.tags
       );
     }
 

@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
 import { OpportunityInput } from '../opportunity/opportunity.dto';
@@ -62,7 +63,8 @@ export class ChallengeService {
   ): Promise<IUserGroup> {
     // First find the Challenge
     this.logger.verbose(
-      `Adding userGroup (${groupName}) to challenge (${challengeID})`
+      `Adding userGroup (${groupName}) to challenge (${challengeID})`,
+      LogContexts.CHALLENGES
     );
     // Check a valid ID was passed
     if (!challengeID)
@@ -86,10 +88,38 @@ export class ChallengeService {
     return group;
   }
 
-  async getGroups(challenge: Challenge): Promise<IUserGroup[]> {
+  // Loads the group into the challenge entity if not already present
+  async loadGroups(challenge: Challenge): Promise<IUserGroup[]> {
+    if (challenge.groups && challenge.groups.length > 0) {
+      // challenge already has groups loaded
+      return challenge.groups;
+    }
+    // challenge is not populated wih
     const groups = await this.userGroupService.getGroups(challenge);
     if (!groups) throw new Error(`No groups on challenge: ${challenge.name}`);
     return groups;
+  }
+
+  // Loads the challenges into the challenge entity if not already present
+  async loadOpportunities(challenge: Challenge): Promise<IOpportunity[]> {
+    if (challenge.opportunities && challenge.opportunities.length > 0) {
+      // challenge already has groups loaded
+      return challenge.opportunities;
+    }
+
+    const challengeWithOpportunities = await this.challengeRepository.findOne({
+      where: { id: challenge.id },
+      relations: ['opportunities'],
+    });
+    if (
+      !challengeWithOpportunities ||
+      !challengeWithOpportunities.opportunities
+    )
+      throw new Error(
+        `Unable to load opportunities for challenge ${challenge.id} `
+      );
+
+    return challengeWithOpportunities.opportunities;
   }
 
   async createOpportunity(
@@ -97,15 +127,18 @@ export class ChallengeService {
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
     // First find the Challenge
-    this.logger.verbose(`Adding opportunity to challenge (${challengeID})`);
+    this.logger.verbose(
+      `Adding opportunity to challenge (${challengeID})`,
+      LogContexts.CHALLENGES
+    );
     // Try to find the challenge
     const challenge = await this.challengeRepository.findOne({
       where: { id: challengeID },
-      relations: ['groups'],
+      relations: ['opportunities'],
     });
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.CHALLENGES);
       throw new Error(msg);
     }
 
@@ -165,10 +198,24 @@ export class ChallengeService {
     challengeData: ChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.getChallengeByID(challengeID);
-
-    // Copy over the received data
-    if (challengeData.name) {
-      challenge.name = challengeData.name;
+    if (!challenge) {
+      throw new Error(`Unable to locate challenge: ${challengeID}`);
+    }
+    const newName = challengeData.name;
+    if (newName) {
+      if (!(newName === challenge.name)) {
+        // challenge is being renamed...
+        const otherChallenge = await this.challengeRepository.findOne({
+          where: { name: newName },
+        });
+        // already have a challenge with the given name, not allowed
+        if (otherChallenge)
+          throw new Error(
+            `Unable to update challenge: already have a challenge with the provided name (${challengeData.name})`
+          );
+        // Ok to rename
+        challenge.name = newName;
+      }
     }
 
     if (challengeData.state) {
@@ -176,12 +223,12 @@ export class ChallengeService {
     }
 
     if (challengeData.context)
-      this.contextService.update(challenge, challengeData.context);
+      await this.contextService.update(challenge, challengeData.context);
 
-    if (challengeData.tagset && challengeData.tagset.tags)
+    if (challengeData.tags)
       this.tagsetService.replaceTagsOnEntity(
         challenge as Challenge,
-        challengeData.tagset.tags
+        challengeData.tags
       );
 
     await this.challengeRepository.save(challenge);
@@ -194,14 +241,14 @@ export class ChallengeService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.verbose(msg);
+      this.logger.warn(msg, LogContexts.CHALLENGES);
       throw new Error(msg);
     }
 
     const challenge = (await this.getChallengeByID(challengeID)) as Challenge;
     if (!challenge) {
       const msg = `Unable to find challenge with ID: ${challengeID}`;
-      this.logger.verbose(msg);
+      this.logger.warn(msg, LogContexts.CHALLENGES);
       throw new Error(msg);
     }
 

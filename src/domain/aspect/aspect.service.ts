@@ -23,4 +23,44 @@ export class AspectService {
     await this.aspectRepository.save(aspect);
     return aspect;
   }
+
+  async removeAspect(aspectID: number): Promise<boolean> {
+    const aspect = await this.getAspect(aspectID);
+    if (!aspect)
+      throw new Error(
+        `Not able to locate aspect with the specified ID: ${aspectID}`
+      );
+    await this.aspectRepository.remove(aspect as Aspect);
+    return true;
+  }
+
+  async getAspect(aspectID: number): Promise<IAspect | undefined> {
+    return await this.aspectRepository.findOne({ id: aspectID });
+  }
+
+  async updateAspect(
+    aspectID: number,
+    aspectData: AspectInput
+  ): Promise<IAspect> {
+    const aspect = await this.getAspect(aspectID);
+    if (!aspect)
+      throw new Error(
+        `Not able to locate aspect with the specified ID: ${aspectID}`
+      );
+
+    // Copy over the received data
+    if (aspectData.title) {
+      aspect.title = aspectData.title;
+    }
+    if (aspectData.explanation) {
+      aspect.explanation = aspectData.explanation;
+    }
+    if (aspectData.framing) {
+      aspect.framing = aspectData.framing;
+    }
+
+    await this.aspectRepository.save(aspect);
+
+    return aspect;
+  }
 }

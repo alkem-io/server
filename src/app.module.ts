@@ -28,14 +28,31 @@ import { BootstrapModule } from './utils/bootstrap/bootstrap.module';
 import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
 import msGraphConfig from './utils/config/ms-graph.config';
 import { WinstonModule } from 'nest-winston';
+import aadClientConfig from './utils/config/aad.client.config';
+import { CherrytwistConfigModule } from './utils/cherrytwist-config/cherrytwist-config.module';
 import { WinstonConfigService } from './utils/config/winston.config';
+import loggingConfig from './utils/config/logging.config';
+import { SearchModule } from './utils/search/search.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env', '.env.default'],
+      envFilePath: [
+        '.env',
+        '.env.default',
+        '.env.aad.cherrytwist.api.default',
+        '.env.aad.cherrytwist.client.default',
+        '.env.logging.default',
+      ],
       isGlobal: true,
-      load: [aadConfig, databaseConfig, serviceConfig, msGraphConfig],
+      load: [
+        aadConfig,
+        databaseConfig,
+        serviceConfig,
+        msGraphConfig,
+        aadClientConfig,
+        loggingConfig,
+      ],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -67,6 +84,7 @@ import { WinstonConfigService } from './utils/config/winston.config';
     TagsetModule,
     UserModule,
     UserGroupModule,
+    CherrytwistConfigModule,
     GraphQLModule.forRoot({
       autoSchemaFile: true,
       playground: true,
@@ -78,6 +96,7 @@ import { WinstonConfigService } from './utils/config/winston.config';
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],

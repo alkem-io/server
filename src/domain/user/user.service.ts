@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
@@ -45,7 +46,7 @@ export class UserService {
   }
 
   async getUserByID(userID: number): Promise<IUser | undefined> {
-    return this.userRepository.findOne({ id: userID });
+    return await this.userRepository.findOne({ id: userID });
   }
 
   async getUserByEmail(
@@ -69,13 +70,17 @@ export class UserService {
     );
 
     if (!user) {
-      this.logger.verbose(`No user with email ${email} exists!`);
+      this.logger.verbose(
+        `No user with email ${email} exists!`,
+        LogContexts.COMMUNITY
+      );
       return undefined;
     }
 
     if (!user.userGroups) {
       this.logger.verbose(
-        `User with email ${email} doesn't belong to any groups!`
+        `User with email ${email} doesn't belong to any groups!`,
+        LogContexts.COMMUNITY
       );
     }
 
@@ -92,14 +97,16 @@ export class UserService {
 
     if (!user) {
       this.logger.verbose(
-        `No user with provided account UPN ${accountUpn} exists!`
+        `No user with provided account UPN ${accountUpn} exists!`,
+        LogContexts.COMMUNITY
       );
       return undefined;
     }
 
     if (!user.userGroups) {
       this.logger.verbose(
-        `User with provided account UPN ${accountUpn} doesn't belong to any groups!`
+        `User with provided account UPN ${accountUpn} doesn't belong to any groups!`,
+        LogContexts.COMMUNITY
       );
     }
 
@@ -133,27 +140,52 @@ export class UserService {
     memberOf.organisations = [];
 
     if (!membership) return memberOf;
+    if (!membership.userGroups) return memberOf;
 
-    if (membership?.userGroups) {
-      for await (const group of membership?.userGroups) {
-        const ecoverse = group.ecoverse;
-        const challenge = group.challenge;
-        const organisation = group.organisation;
+    // First get the list of challenges + orgs + groups to return
+    for (const group of membership?.userGroups) {
+      // Set flag on the group to block population of the members field
+      group.membersPopulationEnabled = false;
+      const ecoverse = group.ecoverse;
+      const challenge = group.challenge;
+      const organisation = group.organisation;
 
-        if (ecoverse) {
-          // ecoverse group
-          memberOf.groups.push(group);
-        }
-        if (challenge) {
+      if (ecoverse) {
+        // ecoverse group
+        memberOf.groups.push(group);
+      }
+      if (challenge) {
+        // challenge group
+        memberOf.challenges.push(challenge);
+      }
+      if (organisation) {
+        // challenge group
+        memberOf.organisations.push(organisation);
+      }
+    }
+
+    // Also need to only return the groups that the user is a member of
+    for (const challenge of memberOf.challenges) {
+      challenge.groups = [];
+      // add back in the groups for this challenge
+      for (const group of membership?.userGroups) {
+        if (group.challenge) {
           // challenge group
-          memberOf.challenges.push(challenge);
-        }
-        if (organisation) {
-          // challenge group
-          memberOf.organisations.push(organisation);
+          challenge.groups?.push(group);
         }
       }
-      return memberOf;
+    }
+
+    // Also need to only return the groups that the user is a member of
+    for (const organisation of memberOf.organisations) {
+      organisation.groups = [];
+      // add back in the groups for this challenge
+      for (const group of membership?.userGroups) {
+        if (group.challenge) {
+          // challenge group
+          organisation.groups?.push(group);
+        }
+      }
     }
 
     return memberOf;
@@ -166,11 +198,24 @@ export class UserService {
     const user = User.create(userData);
     await this.initialiseMembers(user);
     this.updateLastModified(user);
+    // Need to save to get the object identifiers assigned
     await this.userRepository.save(user);
 
-    this.logger.verbose(`User ${userData.email} was created!`);
+    // Now update the profile if needed
+    const profileData = userData.profileData;
+    if (profileData) {
+      await this.profileService.updateProfile(user.profile.id, profileData);
+    }
+    // reload the user to get it populated
+    const populatedUser = await this.getUserByID(user.id);
+    if (!populatedUser) throw new Error(`Unable to locate user: ${user.id}`);
 
-    return user;
+    this.logger.verbose(
+      `User ${userData.email} was created!`,
+      LogContexts.COMMUNITY
+    );
+
+    return populatedUser;
   }
 
   async validateUserProfileCreationRequest(
@@ -247,7 +292,19 @@ export class UserService {
 
     this.updateLastModified(user);
     await this.userRepository.save(user);
-    return user;
+
+    // Check the tagsets
+    if (userInput.profileData) {
+      await this.profileService.updateProfile(
+        user.profile.id,
+        userInput.profileData
+      );
+    }
+
+    const populatedUser = await this.getUserByID(user.id);
+    if (!populatedUser) throw new Error(`Unable to get user by id: ${user.id}`);
+
+    return populatedUser;
   }
 
   isValidEmail(email: string): boolean {

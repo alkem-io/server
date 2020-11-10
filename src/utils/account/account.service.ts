@@ -5,6 +5,7 @@ import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
 import { IAzureADConfig } from '../../interfaces/aad.config.interface';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
+import { LogContexts } from '../logging/logging.contexts';
 import { MsGraphService } from '../ms-graph/ms-graph.service';
 
 @Injectable()
@@ -52,7 +53,7 @@ export class AccountService {
         );
     } catch (e) {
       const msg = `Unable to complete account creation for ${userData.email}: ${e}`;
-      this.logger.error(msg);
+      this.logger.error(msg, e, LogContexts.AUTH);
       throw e;
     }
     // Update the user to store the upn
@@ -110,7 +111,7 @@ export class AccountService {
     // extra check to remove any blank spaces
     upn = upn.replace(/\s/g, '');
 
-    this.logger.verbose(`Upn: ${upn}`);
+    this.logger.verbose(`Upn: ${upn}`, LogContexts.AUTH);
 
     return upn;
   }

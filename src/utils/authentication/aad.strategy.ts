@@ -16,6 +16,7 @@ import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContexts } from '../logging/logging.contexts';
 
 @Injectable()
 export class AzureADStrategy
@@ -57,12 +58,17 @@ export class AzureADStrategy
       await this.cacheBearerToken(req);
 
       const knownUser = await this.userService.getUserWithGroups(token.email);
-      if (!knownUser) throw new UnauthorizedException();
+      if (!knownUser)
+        throw new UnauthorizedException(
+          `No user with email ${token.email} found!`
+        );
 
       return done(null, knownUser, token);
     } catch (error) {
       this.logger.error(
-        `Failed adding the user to the request object: ${error}`
+        `Failed adding the user to the request object: ${error}`,
+        error,
+        LogContexts.AUTH
       );
       done(new Error(`Failed adding the user to the request object: ${error}`));
     }
@@ -76,7 +82,9 @@ export class AzureADStrategy
       await this.myCache.set('accessToken', parsedHeaders.authorization, 60);
     } catch (error) {
       this.logger.error(
-        `Failed adding the user to the request object: ${error}`
+        `Failed adding the user to the request object: ${error}`,
+        error,
+        LogContexts.AUTH
       );
     }
   }
@@ -92,7 +100,10 @@ export class AzureADStrategy
     const upstreamAccessToken = await this.getCachedBearerToken();
     const response = await this.getDownstreamAccessToken(upstreamAccessToken);
     const downstreamAccessToken = response['access_token'] as string;
-    this.logger.verbose(`Downstream access token: ${downstreamAccessToken}`);
+    this.logger.verbose(
+      `Downstream access token: ${downstreamAccessToken}`,
+      LogContexts.AUTH
+    );
 
     return downstreamAccessToken;
   }
@@ -101,10 +112,13 @@ export class AzureADStrategy
   //Credits to: https://github.com/Azure-Samples/ms-identity-nodejs-webapi-onbehalfof-azurefunctions/blob/master/Function/MyHttpTrigger/index.js
   async getDownstreamAccessToken(userToken: string) {
     const [bearer, tokenValue] = userToken.split(' ');
-    this.logger.verbose(`Upstream access token: ${bearer} ${tokenValue}`);
+    this.logger.verbose(
+      `Upstream access token: ${bearer} ${tokenValue}`,
+      LogContexts.AUTH
+    );
 
     const authority = 'login.microsoftonline.com';
-    const tenant = process.env.AAD_TENANT;
+    const tenant = this.configService.get<IAzureADConfig>('aad')?.tenant;
     const tokenEndpoint = `https://${authority}/${tenant}/oauth2/v2.0/token`;
 
     const myHeaders = new Headers();

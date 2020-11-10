@@ -10,11 +10,13 @@ import { ProfileService } from '../profile/profile.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
 import { UserService } from '../user/user.service';
-import { UserGroup } from './user-group.entity';
+import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContexts } from '../../utils/logging/logging.contexts';
+import { Opportunity } from '../opportunity/opportunity.entity';
 
 @Injectable()
 export class UserGroupService {
@@ -31,19 +33,25 @@ export class UserGroupService {
     if (groupable instanceof Ecoverse) {
       return await this.groupRepository.find({
         where: { ecoverse: { id: groupable.id } },
-        relations: ['members'],
+        relations: ['members', 'focalPoint'],
       });
     }
     if (groupable instanceof Challenge) {
       return await this.groupRepository.find({
         where: { challenge: { id: groupable.id } },
-        relations: ['members'],
+        relations: ['members', 'focalPoint'],
       });
     }
     if (groupable instanceof Organisation) {
       return await this.groupRepository.find({
         where: { organisation: { id: groupable.id } },
-        relations: ['members'],
+        relations: ['members', 'focalPoint'],
+      });
+    }
+    if (groupable instanceof Opportunity) {
+      return await this.groupRepository.find({
+        where: { opportunity: { id: groupable.id } },
+        relations: ['members', 'focalPoint'],
       });
     }
 
@@ -68,14 +76,14 @@ export class UserGroupService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
 
     const group = (await this.getGroupByID(groupID)) as UserGroup;
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
 
@@ -144,7 +152,8 @@ export class UserGroupService {
 
     if (rawData.length > 0) {
       this.logger.verbose(
-        `User ${user.email} already exists in group ${group.name}!`
+        `User ${user.email} already exists in group ${group.name}!`,
+        LogContexts.COMMUNITY
       );
       return false;
     }
@@ -170,17 +179,27 @@ export class UserGroupService {
     const user = await this.userService.getUserByID(userID);
     if (!user) {
       const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
 
+    // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
     const group = await this.getGroupByID(groupID, {
-      relations: ['members'],
+      relations: ['members', 'ecoverse'],
     });
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
+    }
+
+    // Check that the group being removed from is not the ecoverse members group, would leave the ecoverse in an inconsistent state
+    if (group.name === RestrictedGroupNames.Members) {
+      // Check if ecoverse members
+      if (group.ecoverse)
+        throw new Error(
+          `Attempting to remove a user from the ecoverse members group: ${groupID}`
+        );
     }
 
     // Have both user + group so do the add
@@ -211,7 +230,7 @@ export class UserGroupService {
     const group = (await this.getGroupByID(groupID)) as UserGroup;
     if (!group) {
       const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg);
+      this.logger.verbose(msg, LogContexts.COMMUNITY);
       throw new Error(msg);
     }
     // Set focalPoint to NULL will remove the relation.
@@ -246,6 +265,12 @@ export class UserGroupService {
       return (await this.groupRepository.findOne({
         where: { organisation: { id: groupable.id }, name: name },
         relations: ['organisation', 'members'],
+      })) as IUserGroup;
+    }
+    if (groupable instanceof Opportunity) {
+      return (await this.groupRepository.findOne({
+        where: { opportunity: { id: groupable.id }, name: name },
+        relations: ['opportunity', 'members'],
       })) as IUserGroup;
     }
 
@@ -302,14 +327,16 @@ export class UserGroupService {
     const alreadyExists = this.hasGroupWithName(groupable, name);
     if (alreadyExists) {
       this.logger.verbose(
-        `Attempting to add group that already exists: ${name}`
+        `Attempting to add group that already exists: ${name}`,
+        LogContexts.COMMUNITY
       );
       return await this.getGroupByName(groupable, name);
     }
 
     if (groupable.restrictedGroupNames?.includes(name)) {
       this.logger.verbose(
-        `Attempted to create a usergroup using a restricted name: ${name}`
+        `Attempted to create a usergroup using a restricted name: ${name}`,
+        LogContexts.COMMUNITY
       );
       throw new Error(
         'Unable to create user group with restricted name: ' + { name }

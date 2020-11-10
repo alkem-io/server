@@ -1,12 +1,10 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from '../challenge/challenge.entity';
 import { Reference } from '../reference/reference.entity';
 import {
   BaseEntity,
   Column,
   Entity,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IContext } from './context.interface';
@@ -53,12 +51,6 @@ export class Context extends BaseEntity implements IContext {
   @Column('varchar', { length: 2000 })
   who?: string = '';
 
-  @OneToOne(
-    () => Challenge,
-    challenge => challenge.context
-  )
-  context?: Context;
-
   @Field(() => [Reference], {
     nullable: true,
     description: 'A list of URLs to relevant information.',
@@ -73,6 +65,5 @@ export class Context extends BaseEntity implements IContext {
   // Constructor
   constructor() {
     super();
-    //this.references = [];
   }
 }

@@ -14,6 +14,7 @@ import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
 import { OpportunityInput } from '../opportunity/opportunity.dto';
 import { Opportunity } from '../opportunity/opportunity.entity';
+import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -29,6 +30,7 @@ export class ChallengeResolverMutations {
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group for the challenge with the given id',
   })
+  @Profiling.api
   async createGroupOnChallenge(
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args({ name: 'groupName', type: () => String }) groupName: string
@@ -49,6 +51,7 @@ export class ChallengeResolverMutations {
     description:
       'Creates a new Opportunity for the challenge with the given id',
   })
+  @Profiling.api
   async createOpportunityOnChallenge(
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args({ name: 'opportunityData', type: () => OpportunityInput })
@@ -67,6 +70,7 @@ export class ChallengeResolverMutations {
     description:
       'Updates the specified Challenge with the provided data (merge)',
   })
+  @Profiling.api
   async updateChallenge(
     @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
     @Args('challengeData') challengeData: ChallengeInput
@@ -87,11 +91,12 @@ export class ChallengeResolverMutations {
     description:
       'Adds the user with the given identifier as a member of the specified challenge',
   })
+  @Profiling.api
   async addUserToChallenge(
     @Args('userID') userID: number,
     @Args('challengeID') challengeID: number
   ): Promise<IUserGroup> {
-    const group = this.challengeService.addMember(userID, challengeID);
+    const group = await this.challengeService.addMember(userID, challengeID);
     return group;
   }
 }

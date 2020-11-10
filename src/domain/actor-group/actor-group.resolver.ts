@@ -31,4 +31,16 @@ export class ActorGroupResolver {
 
     return result;
   }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description: 'Removes the actor group with the specified ID',
+  })
+  async removeActorGroup(@Args('ID') actorGroupID: number): Promise<boolean> {
+    return await this.actorGroupService.removeActorGroup(actorGroupID);
+  }
 }

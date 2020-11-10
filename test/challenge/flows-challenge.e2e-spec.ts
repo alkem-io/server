@@ -1,0 +1,182 @@
+import {
+  createChallangeMutation,
+  getChallenge,
+  getChallengeUsers,
+  updateChallangeMutation,
+} from './challenge.request.params';
+import { graphqlRequest } from '../utils/graphql.request';
+import '../utils/array.matcher';
+import { appSingleton } from '../utils/app.singleton';
+import { createGroupMutation, getGroup } from '../group/group.request.params';
+import {
+  createUserDetailsMutation,
+  assignGroupFocalPointMutation,
+} from '../user/user.request.params';
+
+let userName = '';
+let userId = '';
+let userPhone = '';
+let userEmail = '';
+let groupName = '';
+
+let challengeName = '';
+let challengeId = '';
+let uniqueTextId = '';
+let uniqueId = Math.random().toString();
+beforeEach(async () => {
+  uniqueTextId = Math.random()
+    .toString(36)
+    .slice(-6);
+  challengeName = `testChallenge ${uniqueTextId}`;
+  userName = `testUser ${uniqueTextId}`;
+  userPhone = `userPhone ${uniqueTextId}`;
+  userEmail = `${uniqueTextId}@test.com`;
+});
+
+beforeAll(async () => {
+  if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+});
+
+afterAll(async () => {
+  if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
+});
+
+describe('Create Challenge', () => {
+  test('should add "user" to "group" as focal point', async () => {
+    // Arrange
+
+    // Create a challenge and get the created GroupId created within it
+    const responseCreateChallenge = await createChallangeMutation(
+      challengeName,
+      uniqueTextId
+    );
+    challengeId = responseCreateChallenge.body.data.createChallenge.id;
+    const challengeGroupId =
+      responseCreateChallenge.body.data.createChallenge.groups[0].id;
+
+    // Create first User
+    const responseCreateUserOne = await createUserDetailsMutation(
+      userName,
+      userPhone,
+      userEmail
+    );
+    const firstUserId = responseCreateUserOne.body.data.createUser.id;
+    const firstUserName = responseCreateUserOne.body.data.createUser.name;
+
+    // Create second User
+    const responseCreateUserTwo = await createUserDetailsMutation(
+      userName + userName,
+      userPhone,
+      userEmail + userEmail
+    );
+    const secondUserName = responseCreateUserTwo.body.data.createUser.name;
+
+    // Act
+
+    // Assign first User as a focal point to the group
+    const responseAddUserToGroup = await assignGroupFocalPointMutation(
+      firstUserId,
+      challengeGroupId
+    );
+
+    // Query focal point through challenge group
+    const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
+    const groupFocalPointFromChallenge =
+      responseChallengeGroupQuery.body.data.challenge.groups[0].focalPoint.name;
+
+    // Query focal point directly from group
+    const responseGroupQuery = await getGroup(challengeGroupId);
+    const groupFocalPoint = responseGroupQuery.body.data.group.focalPoint.name;
+
+    // Assert
+    expect(responseAddUserToGroup.status).toBe(200);
+    expect(
+      responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name
+    ).toEqual(userName);
+
+    expect(groupFocalPointFromChallenge).toEqual(firstUserName);
+    expect(groupFocalPointFromChallenge).not.toEqual(secondUserName);
+    expect(groupFocalPoint).toEqual(firstUserName);
+    expect(groupFocalPoint).not.toEqual(secondUserName);
+  });
+
+  test('should not result unassigned users (contributors) to a challenge', async () => {
+    // Arrange
+
+    // Create a challenge and get its id
+    const responseCreateChallenge = await createChallangeMutation(
+      challengeName,
+      uniqueTextId
+    );
+    const challengeId = responseCreateChallenge.body.data.createChallenge.id;
+
+    // Create a User
+    const responseCreateUserOne = await createUserDetailsMutation(
+      userName,
+      userPhone,
+      userEmail
+    );
+
+    // Get users assossiated with challenge or groups within challenge
+    const responseGroupQuery = await getChallengeUsers(challengeId);
+
+    // Assert
+    expect(responseCreateUserOne.status).toBe(200);
+    expect(responseGroupQuery.status).toBe(200);
+    expect(responseGroupQuery.body.data.challenge.contributors).toHaveLength(0);
+    expect(responseGroupQuery.body.data.challenge.groups[0].focalPoint).toEqual(
+      null
+    );
+    expect(
+      responseGroupQuery.body.data.challenge.groups[0].members
+    ).toHaveLength(0);
+  });
+
+  test('should not be able to modify challenge name to allready existing challenge name', async () => {
+    // Arrange
+
+    // Create first challenge and get its id and name
+    const responseFirstChallenge = await createChallangeMutation(
+      challengeName,
+      uniqueTextId
+    );
+    const firstChallengeId =
+      responseFirstChallenge.body.data.createChallenge.id;
+
+    // Create second challenge and get its id and name
+    const responseSecondChallenge = await createChallangeMutation(
+      challengeName + challengeName,
+      uniqueTextId
+    );
+    const secondchallengeName =
+      responseSecondChallenge.body.data.createChallenge.name;
+
+    // Act
+    // Get users assossiated with challenge or groups within challenge
+    const responseUpdateChallenge = await updateChallangeMutation(
+      firstChallengeId,
+      secondchallengeName
+    );
+    console.log(responseUpdateChallenge.text);
+
+    // Assert
+    expect(responseUpdateChallenge.status).toBe(200);
+    expect(responseUpdateChallenge.text).toContain(
+      `Unable to update challenge: already have a challenge with the provided name (${secondchallengeName})`
+    );
+  });
+
+  test('should thow error - creating 2 challenges with same name', async () => {
+    // Arrange
+    await createChallangeMutation(challengeName, uniqueTextId);
+
+    // Act
+    const response = await createChallangeMutation(challengeName, uniqueTextId);
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(response.text).toContain(
+      `Unable to create challenge: already have a challenge with the provided name (${challengeName})`
+    );
+  });
+});

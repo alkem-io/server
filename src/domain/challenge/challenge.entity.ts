@@ -92,15 +92,10 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @JoinColumn()
   tagset?: Tagset;
 
-  @Field(() => [Opportunity], {
-    nullable: true,
-    description:
-      'The set of opportunities within the context of this challenge',
-  })
   @OneToMany(
     () => Opportunity,
     opportunity => opportunity.challenge,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   opportunities?: Opportunity[];
 

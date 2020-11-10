@@ -1,5 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
+import { ProfileInput } from '../profile/profile.dto';
 
 @InputType()
 export class UserInput {
@@ -45,4 +46,7 @@ export class UserInput {
   @Field({ nullable: true })
   @MaxLength(30)
   aadPassword?: string;
+
+  @Field(() => ProfileInput, { nullable: true })
+  profileData?: ProfileInput;
 }
