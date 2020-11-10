@@ -18,8 +18,8 @@ import {
 } from '../actor-group/actor-group.entity';
 import { Aspect } from '../aspect/aspect.entity';
 import { Challenge } from '../challenge/challenge.entity';
+import { Context } from '../context/context.entity';
 import { DID } from '../did/did.entity';
-import { Profile } from '../profile/profile.entity';
 import { Project } from '../project/project.entity';
 import { Relation } from '../relation/relation.entity';
 import {
@@ -59,13 +59,13 @@ export class Opportunity extends BaseEntity
   @Column({ nullable: true })
   state: string;
 
-  @Field(() => Profile, {
+  @Field(() => Context, {
     nullable: true,
-    description: 'The profile for this Opportunity',
+    description: 'The shared understanding for the opportunity',
   })
-  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
-  profile: Profile;
+  context?: Context;
 
   @Field(() => [Project], {
     nullable: true,
@@ -141,6 +141,5 @@ export class Opportunity extends BaseEntity
     this.state = '';
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
     this.restrictedActorGroupNames = [RestrictedActorGroupNames.Collaborators];
-    this.profile = new Profile();
   }
 }

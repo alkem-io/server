@@ -33,7 +33,7 @@ export class Relation extends BaseEntity implements IRelation {
   actorRole = '';
 
   @Field(() => String)
-  @Column('varchar', { length: 300 })
+  @Column('varchar', { length: 400 })
   description = '';
 
   @ManyToOne(

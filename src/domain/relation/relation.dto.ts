@@ -20,6 +20,6 @@ export class RelationInput {
   actorRole!: string;
 
   @Field({ nullable: true })
-  @MaxLength(300)
+  @MaxLength(400)
   description!: string;
 }

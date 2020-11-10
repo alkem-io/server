@@ -36,11 +36,6 @@ export class ChallengeResolverFields {
     return groups;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @ResolveField('opportunities', () => [Opportunity], {
     nullable: true,
     description: 'The set of opportunities within this challenge.',
