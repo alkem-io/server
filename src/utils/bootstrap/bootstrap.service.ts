@@ -44,6 +44,7 @@ export class BootstrapService {
   async bootstrapEcoverse() {
     try {
       this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
+      this.logConfig();
 
       Profiling.logger = this.logger;
       const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
@@ -59,6 +60,28 @@ export class BootstrapService {
     } catch (error) {
       this.logger.error(error, undefined, LogContexts.BOOTSTRAP);
     }
+  }
+
+  logConfig() {
+    const configs = [
+      'aad',
+      'aad_client',
+      'database',
+      'logging',
+      'ms-graph',
+      'service',
+    ];
+    for (let i = 0; i < configs.length; i++) {
+      const configName = configs[i];
+      this.logger.verbose(`===== Configuration: ${configName}`);
+      const config = this.configService.get<ILoggingConfig>(configName);
+      if (!config)
+        throw new Error('Unable to obtain configuration: $${configName}');
+      for (const [key, value] of Object.entries(config)) {
+        this.logger.verbose(`Variable: ${key}: ${value}`);
+      }
+    }
+    this.logger.verbose(configs);
   }
 
   async bootstrapProfiles() {
