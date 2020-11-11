@@ -5,7 +5,6 @@ import { IGroupable } from '../../interfaces/groupable.interface';
 import { Challenge } from '../challenge/challenge.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
 import { Organisation } from '../organisation/organisation.entity';
-import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
@@ -27,6 +26,28 @@ export class UserGroupService {
     private groupRepository: Repository<UserGroup>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
+
+  async createUserGroup(name: string): Promise<IUserGroup> {
+    const group = new UserGroup(name);
+    await this.initialiseMembers(group);
+    await this.groupRepository.save(group);
+    this.logger.verbose(
+      `Created new group (${group.id}) with name: ${group.name}`,
+      LogContexts.COMMUNITY
+    );
+    return group;
+  }
+
+  async initialiseMembers(group: IUserGroup): Promise<IUserGroup> {
+    if (!group.members) {
+      group.members = [];
+    }
+    if (!group.profile) {
+      group.profile = await this.profileService.createProfile();
+    }
+
+    return group;
+  }
 
   //toDo vyanakiev - fix this
   async getGroups(groupable: IGroupable): Promise<IUserGroup[]> {
@@ -56,19 +77,6 @@ export class UserGroupService {
     }
 
     return [];
-  }
-
-  async initialiseMembers(group: IUserGroup): Promise<IUserGroup> {
-    if (!group.members) {
-      group.members = [];
-    }
-    if (!group.profile) {
-      group.profile = new Profile();
-    }
-    // Initialise the profile
-    await this.profileService.initialiseMembers(group.profile);
-
-    return group;
   }
 
   async assignFocalPoint(userID: number, groupID: number): Promise<IUserGroup> {
@@ -294,8 +302,7 @@ export class UserGroupService {
     );
 
     for (const groupToAdd of newMandatoryGroups) {
-      const newGroup = new UserGroup(groupToAdd);
-      await this.initialiseMembers(newGroup);
+      const newGroup = await this.createUserGroup(groupToAdd);
       groupable.groups.push(newGroup as IUserGroup);
     }
 
@@ -343,8 +350,7 @@ export class UserGroupService {
       );
     }
 
-    const newGroup: IUserGroup = new UserGroup(name);
-    await this.initialiseMembers(newGroup);
+    const newGroup = await this.createUserGroup(name);
     await groupable.groups?.push(newGroup);
     return newGroup;
   }
@@ -358,7 +364,7 @@ export class UserGroupService {
       groupable.restrictedGroupNames = [];
     }
     for (const name of names) {
-      const group = new UserGroup(name) as IUserGroup;
+      const group = await this.createUserGroup(name);
       await this.initialiseMembers(group);
       groupable.groups?.push(group);
       groupable.restrictedGroupNames.push(name);
