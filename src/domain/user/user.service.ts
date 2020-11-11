@@ -23,11 +23,14 @@ export class UserService {
 
     // Ok to create a new user + save
     const user = User.create(userData);
-    this.logger.verbose(`Created a new user with id: ${user.id}`);
     await this.initialiseMembers(user);
     this.updateLastModified(user);
     // Need to save to get the object identifiers assigned
     await this.userRepository.save(user);
+    this.logger.verbose(
+      `Created a new user with id: ${user.id}`,
+      LogContexts.COMMUNITY
+    );
 
     // Now update the profile if needed
     const profileData = userData.profileData;
