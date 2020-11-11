@@ -49,21 +49,13 @@ export class Organisation extends BaseEntity
   )
   ecoverses?: Ecoverse[];
 
-  @Field(() => Tagset, {
-    nullable: true,
-    description: 'The set of tags for the organisation',
-  })
-  @OneToOne(() => Tagset, { eager: true, cascade: true })
-  @JoinColumn()
-  tagset?: Tagset;
-
   @Field(() => Profile, {
     nullable: true,
     description: 'The profile for this organisation',
   })
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
-  profile: Profile;
+  profile?: Profile;
 
   @OneToMany(
     () => UserGroup,
@@ -85,6 +77,5 @@ export class Organisation extends BaseEntity
     super();
     this.name = name;
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
-    this.profile = new Profile();
   }
 }

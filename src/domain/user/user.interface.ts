@@ -14,7 +14,7 @@ export interface IUser {
   country: string;
   gender: string;
   DID: IDID;
-  profile: IProfile;
+  profile?: IProfile;
   userGroups?: IUserGroup[];
   lastModified: number;
 }
