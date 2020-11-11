@@ -1,5 +1,10 @@
 FROM node:12-alpine
 
+
+#install CLI mariadb/mysql client
+RUN apk add --update mariadb-client && rm -rf /var/cache/apk/*
+
+
 # Create app directory
 WORKDIR /usr/src/app
 
@@ -27,5 +32,9 @@ RUN chmod +x /wait
 
 ENV GRAPHQL_ENDPOINT_PORT=${GRAPHQL_ENDPOINT_PORT_ARG}
 
+ADD .scripts/create_db.sh /create_db.sh
+RUN chmod +x /create_db.sh
+
+
 EXPOSE ${GRAPHQL_ENDPOINT_PORT_ARG}
-CMD [ "npm", "start" ]
+CMD ["/bin/sh", "-c", "/create_db.sh && npm start"]
