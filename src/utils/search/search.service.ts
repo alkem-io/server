@@ -85,7 +85,7 @@ export class SearchService {
           .getMany();
 
         // Create results for each match
-        await this.buildMatchingResults(userMatches, userResults);
+        await this.buildMatchingResults(userMatches, userResults, term);
       }
 
       if (searchGroups) {
@@ -98,7 +98,7 @@ export class SearchService {
           .setParameters({ term: `%${term}%` })
           .getMany();
         // Create results for each match
-        await this.buildMatchingResults(groupMatches, groupResults);
+        await this.buildMatchingResults(groupMatches, groupResults, term);
       }
     }
 
@@ -142,7 +142,7 @@ export class SearchService {
           .getMany();
 
         // Create results for each match
-        await this.buildMatchingResults(userMatches, userResults);
+        await this.buildMatchingResults(userMatches, userResults, term);
       }
 
       if (searchGroups) {
@@ -155,19 +155,20 @@ export class SearchService {
           .setParameters({ term: `${term}` })
           .getMany();
         // Create results for each match
-        await this.buildMatchingResults(groupMatches, groupResults);
+        await this.buildMatchingResults(groupMatches, groupResults, term);
       }
     }
   }
 
   async buildMatchingResults(
     rawMatches: any[],
-    resultsMap: Map<number, Match>
+    resultsMap: Map<number, Match>,
+    term: string
   ) {
     for (const rawMatch of rawMatches) {
       const match = new Match();
       match.entity = rawMatch;
-      match.terms.push(rawMatch);
+      match.terms.push(term);
       match.key = rawMatch.id;
       this.addMatchingResult(resultsMap, match);
     }
