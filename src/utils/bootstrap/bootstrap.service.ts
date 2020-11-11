@@ -77,11 +77,24 @@ export class BootstrapService {
       const config = this.configService.get<ILoggingConfig>(configName);
       if (!config)
         throw new Error('Unable to obtain configuration: $${configName}');
-      for (const [key, value] of Object.entries(config)) {
-        this.logger.verbose(`Variable: ${key}: ${value}`);
+      const entries = Object.entries(config);
+      for (const [key, value] of entries) {
+        this.logConfigLevel(key, value, '');
       }
     }
-    this.logger.verbose(configs);
+  }
+
+  logConfigLevel(key: any, value: any, indent: string) {
+    if (typeof value === 'object') {
+      this.logger.verbose(`Variable: ${key}:`);
+      Object.keys(value).forEach(childKey => {
+        const childValue = value[childKey];
+        const newIndent = `${indent}....`;
+        this.logConfigLevel(childKey, childValue, newIndent);
+      });
+    } else {
+      this.logger.verbose(`${indent}Variable: ${key}: ${value}`);
+    }
   }
 
   async bootstrapProfiles() {
