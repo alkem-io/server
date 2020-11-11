@@ -193,7 +193,7 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async host(): Promise<IOrganisation> {
-    return this.ecoverseService.getHost();
+    return await this.ecoverseService.getHost();
   }
 
   @Query(() => Organisation, {
