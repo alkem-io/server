@@ -1,0 +1,23 @@
+query search($searchData: SearchInput!){
+  search(searchData: $searchData) {
+    score
+    result {
+      __typename
+      ... on User {
+        name
+        email
+      }
+      ... on UserGroup {
+        name
+      }
+    }
+  }
+}
+
+{
+  "searchData":
+  {
+    "terms": ["twi", "Java", "architecture"],
+    "tagsetNames": ["skills"]
+  }
+}
