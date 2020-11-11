@@ -23,11 +23,9 @@ export class OrganisationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
-  async createOrganisation(
-    organisationData: OrganisationInput
-  ): Promise<IOrganisation> {
+  async createOrganisation(name: string): Promise<IOrganisation> {
     // Create and initialise a new organisation using the supplied data
-    const organisation = new Organisation(organisationData.name);
+    const organisation = new Organisation(name);
     await this.initialiseMembers(organisation);
     await this.organisationRepository.save(organisation);
     this.logger.verbose(

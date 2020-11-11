@@ -82,10 +82,8 @@ export class EcoverseService {
     await this.contextService.initialiseMembers(ecoverse.context);
 
     if (!ecoverse.hostID || ecoverse.hostID == -1) {
-      const orgInput = new OrganisationInput();
-      orgInput.name = 'Default host organisation';
       const hostOrg = await this.organisationService.createOrganisation(
-        orgInput
+        'Default host organisation'
       );
       ecoverse.hostID = hostOrg.id;
     }
@@ -301,7 +299,7 @@ export class EcoverseService {
 
     // No existing organisation found, create and initialise a new one!
     organisation = await this.organisationService.createOrganisation(
-      organisationData
+      organisationData.name
     );
     ecoverse.organisations.push(organisation as Organisation);
     await this.ecoverseRepository.save(ecoverse);
