@@ -291,14 +291,16 @@ export class EcoverseService {
       o => o.name === organisationData.name
     );
     // First check if the organisation already exists on not...
-    if (!organisation) {
-      // No existing organisation found, create and initialise a new one!
-      organisation = await this.organisationService.createOrganisation(
-        organisationData
+    if (organisation)
+      throw new Error(
+        `Organisation with the provided name already exists: ${organisationData.name}`
       );
-      ecoverse.organisations.push(organisation as Organisation);
-      await this.ecoverseRepository.save(ecoverse);
-    }
+    // No existing organisation found, create and initialise a new one!
+    organisation = await this.organisationService.createOrganisation(
+      organisationData.name
+    );
+    ecoverse.organisations.push(organisation as Organisation);
+    await this.ecoverseRepository.save(ecoverse);
 
     return organisation;
   }

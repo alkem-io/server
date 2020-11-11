@@ -74,10 +74,7 @@ export class TagsetService {
     return tagset;
   }
 
-  replaceTagsOnEntity(
-    entity: Organisation | Challenge | Project,
-    tags: string[]
-  ) {
+  replaceTagsOnEntity(entity: Challenge | Project, tags: string[]) {
     if (!entity.tagset) {
       entity.tagset = this.createTagset({
         tags: [...tags],

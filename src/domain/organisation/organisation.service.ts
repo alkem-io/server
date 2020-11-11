@@ -1,8 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Logger } from 'msal';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { ProfileService } from '../profile/profile.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
@@ -23,6 +23,18 @@ export class OrganisationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
+  async createOrganisation(name: string): Promise<IOrganisation> {
+    // Create and initialise a new organisation using the supplied data
+    const organisation = new Organisation(name);
+    await this.initialiseMembers(organisation);
+    await this.organisationRepository.save(organisation);
+    this.logger.verbose(
+      `Created new organisation with id ${organisation.id}`,
+      LogContexts.COMMUNITY
+    );
+    return organisation;
+  }
+
   async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
     if (!organisation.restrictedGroupNames) {
       organisation.restrictedGroupNames = [RestrictedGroupNames.Members];
@@ -38,7 +50,9 @@ export class OrganisationService {
     );
 
     // Initialise contained singletons
-    await this.profileService.initialiseMembers(organisation.profile);
+    if (!organisation.profile) {
+      organisation.profile = await this.profileService.createProfile();
+    }
 
     return organisation;
   }
@@ -51,6 +65,13 @@ export class OrganisationService {
     if (!organisation)
       throw new Error(`Unable to find organisation with ID: ${organisationID}`);
     return organisation;
+  }
+
+  async getOrganisations(ecoverseId: number): Promise<Organisation[]> {
+    const organisations = await this.organisationRepository.find({
+      where: { ecoverse: { id: ecoverseId } },
+    });
+    return organisations || [];
   }
 
   async createGroup(orgID: number, groupName: string): Promise<IUserGroup> {
@@ -74,15 +95,6 @@ export class OrganisationService {
     return group;
   }
 
-  async createOrganisation(
-    organisationData: OrganisationInput
-  ): Promise<IOrganisation> {
-    // Create and initialise a new organisation using the supplied data
-    const organisation = Organisation.create(organisationData);
-    await this.initialiseMembers(organisation);
-    return organisation;
-  }
-
   async updateOrganisation(
     orgID: number,
     organisationData: OrganisationInput
@@ -94,13 +106,6 @@ export class OrganisationService {
     // Merge in the data
     if (organisationData.name) {
       existingOrganisation.name = organisationData.name;
-    }
-
-    if (organisationData.tags) {
-      this.tagsetService.replaceTagsOnEntity(
-        existingOrganisation,
-        organisationData.tags
-      );
     }
 
     // To do - merge in the rest of the organisation update

@@ -108,6 +108,7 @@ export class DataManagementService {
       );
       bruce.country = ' Netherlands';
       bruce.gender = 'Male';
+      if (!bruce.profile) throw new Error('Non-initalised user');
       const tagset = await this.profileService.createTagset(
         bruce.profile.id,
         'sample2'
@@ -148,7 +149,7 @@ export class DataManagementService {
       await this.userGroupService.addUserToGroup(clint, energyWebMembers);
       await this.userGroupService.addUserToGroup(bruce, energyWebMembers);
       energyWebMembers.focalPoint = jane;
-      if (!energyWeb.context) throw new Error('Contextn not initilised');
+      if (!energyWeb.context) throw new Error('Context not initilised');
       energyWeb.context.references = [ref1, ref2];
 
       const cleanOceans = await this.createChallenge(

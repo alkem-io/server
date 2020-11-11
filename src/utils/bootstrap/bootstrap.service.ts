@@ -43,7 +43,7 @@ export class BootstrapService {
 
   async bootstrapEcoverse() {
     try {
-      this.logger.verbose('Bootstrapping Ecoverse...');
+      this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
 
       Profiling.logger = this.logger;
       const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
@@ -215,7 +215,7 @@ export class BootstrapService {
       this.logger.verbose('........creating...', LogContexts.BOOTSTRAP);
       // Create a new ecoverse
       const ecoverse = new Ecoverse();
-      this.ecoverseService.initialiseMembers(ecoverse);
+      await this.ecoverseService.initialiseMembers(ecoverse);
       // Save is needed so that the ecoverse is there for other methods
       await this.ecoverseRepository.save(ecoverse);
 
@@ -316,6 +316,7 @@ export class BootstrapService {
         template.users?.push(user);
         // save the template again for each user, to reflect user assignment to template
         await this.templateService.save(template);
+        if (!user.profile) throw new Error(`non-initialised user: ${user}`);
         const profileId = user.profile.id;
 
         // Add the tagsets

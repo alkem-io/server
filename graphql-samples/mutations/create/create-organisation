@@ -13,6 +13,6 @@ query variables:
 {
   "organisationData":
   {
-    "name": "Cherrytwist",
+    "name": "Cherrytwist"
   }
 }
