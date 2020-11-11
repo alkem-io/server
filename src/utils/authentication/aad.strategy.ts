@@ -17,6 +17,7 @@ import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContexts } from '../logging/logging.contexts';
+import { AuthenticationError } from 'apollo-server-express';
 
 @Injectable()
 export class AzureADStrategy
@@ -84,7 +85,7 @@ export class AzureADStrategy
       this.logger.error(
         `Failed adding the user to the request object: ${error}`,
         error,
-        LogContexts.AUTH
+        LogContexts.AUTH_TOKEN
       );
     }
   }
@@ -99,10 +100,21 @@ export class AzureADStrategy
   public async getAccessToken(): Promise<string> {
     const upstreamAccessToken = await this.getCachedBearerToken();
     const response = await this.getDownstreamAccessToken(upstreamAccessToken);
-    const downstreamAccessToken = response['access_token'] as string;
+    const downstreamAccessToken = response['access_token'];
+
+    if (!downstreamAccessToken) {
+      const error = new AuthenticationError(response['error_description']);
+      this.logger.error(
+        'No downstream token found in OBO flow. Can not access MS Graph API!',
+        error.message,
+        LogContexts.AUTH_TOKEN
+      );
+      throw error;
+    }
+
     this.logger.verbose(
       `Downstream access token: ${downstreamAccessToken}`,
-      LogContexts.AUTH
+      LogContexts.AUTH_TOKEN
     );
 
     return downstreamAccessToken;
@@ -114,7 +126,7 @@ export class AzureADStrategy
     const [bearer, tokenValue] = userToken.split(' ');
     this.logger.verbose(
       `Upstream access token: ${bearer} ${tokenValue}`,
-      LogContexts.AUTH
+      LogContexts.AUTH_TOKEN
     );
 
     const authority = 'login.microsoftonline.com';
@@ -150,6 +162,15 @@ export class AzureADStrategy
       body: urlencoded,
       redirect: 'follow',
     };
+
+    this.logger.verbose(
+      `OBO token endpoint: ${tokenEndpoint}`,
+      LogContexts.AUTH_TOKEN
+    );
+    this.logger.verbose(
+      `OBO raw request params: ${urlencoded}`,
+      LogContexts.AUTH_TOKEN
+    );
 
     const response = await fetch(tokenEndpoint, options);
     const json = response.json();
