@@ -108,11 +108,13 @@ export class DataManagementService {
       );
       bruce.country = ' Netherlands';
       bruce.gender = 'Male';
-      const tagset = await this.profileService.createTagset(
-        bruce.profile.id,
-        'sample2'
-      );
-      await this.tagsetService.replaceTags(tagset.id, ['java', 'graphql']);
+      if (bruce.profile) {
+        const tagset = await this.profileService.createTagset(
+          bruce.profile.id,
+          'sample2'
+        );
+        await this.tagsetService.replaceTags(tagset.id, ['java', 'graphql']);
+      }
 
       // User Groups
       const jediGroup = await this.ecoverseService.createGroup('jedi');

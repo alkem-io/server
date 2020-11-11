@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { ReferenceInput } from '../reference/reference.dto';
 import { Reference } from '../reference/reference.entity';
 import { IReference } from '../reference/reference.interface';
@@ -17,8 +19,20 @@ export class ProfileService {
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
     @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>
+    private profileRepository: Repository<Profile>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
+
+  async createProfile(): Promise<IProfile> {
+    const profile = new Profile();
+    await this.initialiseMembers(profile);
+    await this.profileRepository.save(profile);
+    this.logger.verbose(
+      `Created new profile with id: ${profile.id}`,
+      LogContexts.COMMUNITY
+    );
+    return profile;
+  }
 
   async initialiseMembers(profile: IProfile): Promise<IProfile> {
     if (!profile.references) {

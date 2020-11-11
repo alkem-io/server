@@ -1,8 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Logger } from 'msal';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { ProfileService } from '../profile/profile.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
@@ -23,6 +23,20 @@ export class OrganisationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
+  async createOrganisation(
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    // Create and initialise a new organisation using the supplied data
+    const organisation = new Organisation(organisationData.name);
+    await this.initialiseMembers(organisation);
+    await this.organisationRepository.save(organisation);
+    this.logger.verbose(
+      `Created new organisation with id ${organisation.id}`,
+      LogContexts.COMMUNITY
+    );
+    return organisation;
+  }
+
   async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
     if (!organisation.restrictedGroupNames) {
       organisation.restrictedGroupNames = [RestrictedGroupNames.Members];
@@ -31,15 +45,14 @@ export class OrganisationService {
     if (!organisation.groups) {
       organisation.groups = [];
     }
-
     // Check that the mandatory groups for a challenge are created
     await this.userGroupService.addMandatoryGroups(
       organisation,
       organisation.restrictedGroupNames
     );
-
-    // Initialise contained singletons
-    await this.profileService.initialiseMembers(organisation.profile);
+    if (!organisation.profile) {
+      organisation.profile = await this.profileService.createProfile();
+    }
 
     return organisation;
   }
@@ -80,16 +93,6 @@ export class OrganisationService {
     await organisation.save();
 
     return group;
-  }
-
-  async createOrganisation(
-    organisationData: OrganisationInput
-  ): Promise<IOrganisation> {
-    // Create and initialise a new organisation using the supplied data
-    const organisation = Organisation.create(organisationData);
-    await this.initialiseMembers(organisation);
-    await this.organisationRepository.save(organisation);
-    return organisation;
   }
 
   async updateOrganisation(

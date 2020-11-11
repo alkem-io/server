@@ -5,5 +5,5 @@ import { MaxLength } from 'class-validator';
 export class OrganisationInput {
   @Field({ nullable: true, description: 'The name for this organisation' })
   @MaxLength(50)
-  name?: string;
+  name!: string;
 }

@@ -49,7 +49,7 @@ export class Organisation extends BaseEntity
   })
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
-  profile: Profile;
+  profile?: Profile;
 
   @OneToMany(
     () => UserGroup,
@@ -71,6 +71,5 @@ export class Organisation extends BaseEntity
     super();
     this.name = name;
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
-    this.profile = new Profile();
   }
 }

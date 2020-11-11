@@ -311,6 +311,7 @@ export class BootstrapService {
         template.users?.push(user);
         // save the template again for each user, to reflect user assignment to template
         await this.templateService.save(template);
+        if (!user.profile) throw new Error(`Non-initialised user: ${user.id}`);
         const profileId = user.profile.id;
 
         // Add the tagsets

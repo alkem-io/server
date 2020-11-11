@@ -7,7 +7,7 @@ export interface IOrganisation {
   id: number;
   name: string;
   DID: IDID;
-  profile: IProfile;
+  profile?: IProfile;
   challenges?: IChallenge[];
   groups?: IUserGroup[];
   restrictedGroupNames?: string[];

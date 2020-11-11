@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { LogContexts } from '../../utils/logging/logging.contexts';
-import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
@@ -19,14 +18,40 @@ export class UserService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
   ) {}
 
+  async createUser(userData: UserInput): Promise<IUser> {
+    await this.validateUserProfileCreationRequest(userData);
+
+    // Ok to create a new user + save
+    const user = User.create(userData);
+    this.logger.verbose(`Created a new user with id: ${user.id}`);
+    await this.initialiseMembers(user);
+    this.updateLastModified(user);
+    // Need to save to get the object identifiers assigned
+    await this.userRepository.save(user);
+
+    // Now update the profile if needed
+    const profileData = userData.profileData;
+    if (profileData && user.profile) {
+      await this.profileService.updateProfile(user.profile.id, profileData);
+    }
+    // reload the user to get it populated
+    const populatedUser = await this.getUserByID(user.id);
+    if (!populatedUser) throw new Error(`Unable to locate user: ${user.id}`);
+
+    this.logger.verbose(
+      `User ${userData.email} was created!`,
+      LogContexts.COMMUNITY
+    );
+
+    return populatedUser;
+  }
+
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(user: IUser): Promise<IUser> {
     if (!user.profile) {
-      user.profile = new Profile();
+      user.profile = await this.profileService.createProfile();
     }
-    // Initialise contained singletons
-    await this.profileService.initialiseMembers(user.profile);
 
     return user;
   }
@@ -191,33 +216,6 @@ export class UserService {
     return memberOf;
   }
 
-  async createUser(userData: UserInput): Promise<IUser> {
-    await this.validateUserProfileCreationRequest(userData);
-
-    // Ok to create a new user + save
-    const user = User.create(userData);
-    await this.initialiseMembers(user);
-    this.updateLastModified(user);
-    // Need to save to get the object identifiers assigned
-    await this.userRepository.save(user);
-
-    // Now update the profile if needed
-    const profileData = userData.profileData;
-    if (profileData) {
-      await this.profileService.updateProfile(user.profile.id, profileData);
-    }
-    // reload the user to get it populated
-    const populatedUser = await this.getUserByID(user.id);
-    if (!populatedUser) throw new Error(`Unable to locate user: ${user.id}`);
-
-    this.logger.verbose(
-      `User ${userData.email} was created!`,
-      LogContexts.COMMUNITY
-    );
-
-    return populatedUser;
-  }
-
   async validateUserProfileCreationRequest(
     userData: UserInput
   ): Promise<boolean> {
@@ -294,7 +292,7 @@ export class UserService {
     await this.userRepository.save(user);
 
     // Check the tagsets
-    if (userInput.profileData) {
+    if (userInput.profileData && user.profile) {
       await this.profileService.updateProfile(
         user.profile.id,
         userInput.profileData
