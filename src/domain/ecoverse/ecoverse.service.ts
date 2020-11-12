@@ -411,7 +411,7 @@ export class EcoverseService {
     const groups = await this.getGroups();
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
-      await this.userGroupService.removeUserFromGroup(user, group);
+      //await this.userGroupService.removeUserFromGroup(user, group);
     }
 
     // And finally remove the user
