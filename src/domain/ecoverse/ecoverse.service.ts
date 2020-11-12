@@ -407,13 +407,7 @@ export class EcoverseService {
   async removeUser(userID: number): Promise<boolean> {
     const user = await this.userService.getUserByID(userID);
     if (!user) throw new Error(`Could not locate specified user: ${userID}`);
-
-    const groups = await this.getGroups();
-    for (const group of groups) {
-      await this.userGroupService.removeUserFromGroup(user, group);
-    }
-
-    // And finally remove the user
+    
     await this.userService.removeUser(user);
     return await this.accountService.removeUserAccount(user.accountUpn);
   }
