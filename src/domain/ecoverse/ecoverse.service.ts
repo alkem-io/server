@@ -407,9 +407,11 @@ export class EcoverseService {
   async removeUser(userID: number): Promise<boolean> {
     const user = await this.userService.getUserByID(userID);
     if (!user) throw new Error(`Could not locate specified user: ${userID}`);
-    
+
     await this.userService.removeUser(user);
-    return await this.accountService.removeUserAccount(user.accountUpn);
+    if (this.accountService.accountUsageEnabled())
+      return await this.accountService.removeUserAccount(user.accountUpn);
+    return true;
   }
 
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
