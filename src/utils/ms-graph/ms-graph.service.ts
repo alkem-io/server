@@ -57,6 +57,16 @@ export class MsGraphService {
     return res;
   }
 
+  async deleteUser(accountUpn: string): Promise<any> {
+    const clientOptions: ClientOptions = {
+      authProvider: this.azureAdStrategy,
+    };
+    const client = Client.initWithMiddleware(clientOptions);
+    const res = await client.api(`/users/${accountUpn}`).delete();
+
+    return res;
+  }
+
   async getOrganisation(client: Client): Promise<any> {
     const res = await client.api('/organization').get();
     return res;

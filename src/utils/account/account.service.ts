@@ -137,4 +137,30 @@ export class AccountService {
         `There already exists an account with UPN (${accountUpn}); please choose another`
       );
   }
+
+  async removeUserAccount(accountUpn: string): Promise<boolean> {
+    if (accountUpn === '') {
+      const error = new Error('Account UPN is missing!');
+      this.logger.error(
+        `Failed to delete account ${accountUpn}`,
+        error.message,
+        LogContexts.COMMUNITY
+      );
+      throw error;
+    }
+
+    let res = false;
+    try {
+      res = await this.msGraphService.deleteUser(accountUpn);
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete account ${accountUpn}`,
+        error.message,
+        LogContexts.COMMUNITY
+      );
+    }
+
+    if (res === undefined) return true;
+    return false;
+  }
 }
