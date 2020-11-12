@@ -244,6 +244,10 @@ export class UserService {
       throw new Error(
         `User profile with the specified email (${userData.email}) already exists`
       );
+    // Trim all values to remove space issues
+    userData.firstName = userData.firstName.trim();
+    userData.lastName = userData.lastName.trim();
+    userData.email = userData.email.trim();
     return true;
   }
 
