@@ -144,6 +144,11 @@ export class OpportunityResolver {
     );
   }
 
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
       'Creates a new user group for the opportunity with the given id',
