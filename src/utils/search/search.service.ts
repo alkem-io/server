@@ -41,12 +41,6 @@ export class SearchService {
   async search(searchData: SearchInput): Promise<ISearchResultEntry[]> {
     this.validateSearchParameters(searchData);
 
-    // Only support certain features for now
-    if (searchData.challengesFilter)
-      throw new Error('Filtering by challenges not yet implemented');
-    if (searchData.tagsetNames)
-      throw new Error('Searching on tagsets not yet implemented');
-
     // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
     const userResults: Map<number, Match> = new Map();
     const groupResults: Map<number, Match> = new Map();
@@ -55,49 +49,56 @@ export class SearchService {
     // By default search all entity types
     let searchUsers = true;
     let searchGroups = true;
+
     const entityTypesFilter = searchData.typesFilter;
+
+    // Only support certain features for now
+    if (searchData.challengesFilter)
+      throw new Error('Filtering by challenges not yet implemented');
+    if (searchData.tagsetNames)
+      await this.searchTagsets(
+        searchData.tagsetNames,
+        terms,
+        userResults,
+        groupResults,
+        entityTypesFilter
+      );
+
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.User))
         searchUsers = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.Group))
         searchGroups = false;
     }
-    for (let t = 0; t < terms.length; t++) {
-      const term = terms[t];
-
+    for (const term of terms) {
       if (searchUsers) {
         const userMatches = await this.userRepository
           .createQueryBuilder('user')
-          .where('user.firstName = :term')
-          .setParameters({ term: `${term}` })
+          .leftJoinAndSelect('user.profile', 'profile')
+          .where('user.firstName like :term')
+          .orWhere('user.lastName like :term')
+          .orWhere('user.email like :term')
+          .orWhere('user.country like :term')
+          .orWhere('user.city like :term')
+          .orWhere('profile.description like :term')
+          .setParameters({ term: `%${term}%` })
           .getMany();
+
         // Create results for each match
-        for (let i = 0; i < userMatches.length; i++) {
-          const matchedUser = userMatches[i];
-          const match = new Match();
-          match.entity = matchedUser;
-          match.terms.push(term);
-          match.key = matchedUser.id;
-          this.addMatchingResult(userResults, match);
-        }
+        await this.buildMatchingResults(userMatches, userResults, term);
       }
 
       if (searchGroups) {
         const groupMatches = await this.groupRepository
           .createQueryBuilder('group')
-          .where('group.name = :term')
+          .leftJoinAndSelect('group.profile', 'profile')
+          .where('group.name like :term')
+          .orWhere('profile.description like :term')
           .andWhere('group.includeInSearch = true')
-          .setParameters({ term: `${term}` })
+          .setParameters({ term: `%${term}%` })
           .getMany();
         // Create results for each match
-        for (let i = 0; i < groupMatches.length; i++) {
-          const matchedGroup = groupMatches[i];
-          const match = new Match();
-          match.entity = matchedGroup;
-          match.terms.push(term);
-          match.key = matchedGroup.id;
-          this.addMatchingResult(groupResults, match);
-        }
+        await this.buildMatchingResults(groupMatches, groupResults, term);
       }
     }
 
@@ -106,24 +107,86 @@ export class SearchService {
       LogContexts.API
     );
 
-    const results: ISearchResultEntry[] = [];
-    userResults.forEach(value => {
-      const resultEntry = new SearchResultEntry();
-      resultEntry.score = value.score;
-      resultEntry.terms = value.terms;
-      resultEntry.result = value.entity;
-      results.push(resultEntry);
-    });
-
-    groupResults.forEach(value => {
-      const resultEntry = new SearchResultEntry();
-      resultEntry.score = value.score;
-      resultEntry.terms = value.terms;
-      resultEntry.result = value.entity;
-      results.push(resultEntry);
-    });
+    let results: ISearchResultEntry[] = [];
+    results = await this.buildSearchResults(userResults);
+    results.push(...(await this.buildSearchResults(groupResults)));
 
     return results;
+  }
+
+  async searchTagsets(
+    tagsets: string[],
+    terms: string[],
+    userResults: Map<number, Match>,
+    groupResults: Map<number, Match>,
+    entityTypesFilter?: string[]
+  ) {
+    let searchUsers = true;
+    let searchGroups = true;
+    if (entityTypesFilter && entityTypesFilter.length > 0) {
+      if (!entityTypesFilter.includes(SearchEntityTypes.User))
+        searchUsers = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.Group))
+        searchGroups = false;
+    }
+
+    for (const term of terms) {
+      if (searchUsers) {
+        const userMatches = await this.userRepository
+          .createQueryBuilder('user')
+          .leftJoinAndSelect('user.profile', 'profile')
+          .leftJoinAndSelect('profile.tagsets', 'tagset')
+          .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
+          .andWhere('find_in_set(:term, tagset.tags)')
+          .setParameters({ term: `${term}` })
+          .getMany();
+
+        // Create results for each match
+        await this.buildMatchingResults(userMatches, userResults, term);
+      }
+
+      if (searchGroups) {
+        const groupMatches = await this.groupRepository
+          .createQueryBuilder('group')
+          .leftJoinAndSelect('group.profile', 'profile')
+          .leftJoinAndSelect('profile.tagsets', 'tagset')
+          .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
+          .andWhere('find_in_set(:term, tagset.tags)')
+          .setParameters({ term: `${term}` })
+          .getMany();
+        // Create results for each match
+        await this.buildMatchingResults(groupMatches, groupResults, term);
+      }
+    }
+  }
+
+  async buildMatchingResults(
+    rawMatches: any[],
+    resultsMap: Map<number, Match>,
+    term: string
+  ) {
+    for (const rawMatch of rawMatches) {
+      const match = new Match();
+      match.entity = rawMatch;
+      match.terms.push(term);
+      match.key = rawMatch.id;
+      this.addMatchingResult(resultsMap, match);
+    }
+  }
+
+  async buildSearchResults(
+    results: Map<number, Match>
+  ): Promise<ISearchResultEntry[]> {
+    const searchResults: ISearchResultEntry[] = [];
+    results.forEach(value => {
+      const resultEntry = new SearchResultEntry();
+      resultEntry.score = value.score;
+      resultEntry.terms = value.terms;
+      resultEntry.result = value.entity;
+      searchResults.push(resultEntry);
+    });
+
+    return searchResults;
   }
 
   // Add a new results entry or append to an existing entry.
