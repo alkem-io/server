@@ -409,15 +409,13 @@ export class EcoverseService {
     if (!user) throw new Error(`Could not locate specified user: ${userID}`);
 
     const groups = await this.getGroups();
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[i];
+    for (const group of groups) {
       await this.userGroupService.removeUserFromGroup(user, group);
     }
 
     // And finally remove the user
     await this.userService.removeUser(user);
-
-    return true;
+    return await this.accountService.removeUserAccount(user.accountUpn);
   }
 
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
