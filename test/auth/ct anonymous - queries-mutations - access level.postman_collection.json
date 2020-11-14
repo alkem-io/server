@@ -1,0 +1,3917 @@
+{
+	"info": {
+		"_postman_id": "968745d0-89c5-4869-a2d5-788e923329ea",
+		"name": "ct anonymous - queries/mutations - access level",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "getChallenges",
+			"item": [
+				{
+					"name": "getAllChallenges-Context",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "90b9f89a-bfb6-40cf-957c-0f20019ec86a",
+								"exec": [
+									"pm.test(\"access 'context id' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.id).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context tagline' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.tagline).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context background' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.background).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context vision' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.vision).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context impact' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.impact).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context who' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.who).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context references id' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.references[0].id).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context references name' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.references[0].name).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context references uri' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.references[0].uri).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context references description' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].context.references[0].description).not.eq(undefined);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  challenges {\n    context {\n      id\n      tagline\n      background\n      vision\n      impact\n      who\n      references {\n        id\n        name\n        uri\n        description\n      }\n    }\n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllChallenges-Opportunities",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "9e20fbb7-25d2-4c83-8b0b-c9ac8e711f27",
+								"exec": [
+									"pm.test(\"access 'challenges Opportunities value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].opportunities[0].name).not.eq(undefined);",
+									"pm.expect(jsonData.data.challenges[0].opportunities[0].textID).not.eq(undefined);",
+									"pm.expect(jsonData.data.challenges[0].opportunities[0].state).not.eq(undefined);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n    challenges {\n        opportunities {\n            name\n            textID\n            state\n            projects {\n                name\n                description\n                state\n                tagset {\n                    tags\n                }\n            }\n            actorGroups {\n                name\n                description\n                actors {\n                    name\n                    description\n                    value\n                    impact\n                }\n            }\n        }\n    }\n}",
+								"variables": ""
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllChallenges -Contributors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "9a2e03a5-a527-42c0-a90c-f9c4082e4476",
+								"exec": [
+									"pm.test(\"access 'challenges Contributors value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].contributors).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'challenges Contributors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"    //pm.expect(pm.response.body.data.challenges[0].name).not.to.be(null);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n    challenges {\n    contributors {\n      id\n      name\n    }\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllChallenges-Leads-GroupsAndMembers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "276509d6-51f3-4247-84c8-7761bb8742b9",
+								"exec": [
+									"pm.test(\"access 'challenges Leads (groups and members)' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n    challenges {  \n      leadOrganisations{\n        groups{\n          name\n        }\n        members{\n          name\n        }\n     }      \n    }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllChallenges-Groups",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "06aa7dd0-afb6-4c6a-8c8e-4ca5f8e9c00c",
+								"exec": [
+									"pm.test(\"access 'challenges Group value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].groups).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'challenges Groups' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"    //pm.expect(pm.response.body.data.challenges[0].name).not.to.be(null);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n    challenges {\n        groups {\n            id\n            focalPoint {\n                name\n            }\n            members {\n                id\n                name\n            }\n        }\n    }\n}",
+								"variables": ""
+							},
+							"options": {
+								"raw": {
+									"language": "javascript"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllChallenges",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "ffde49d0-517c-4d6c-b558-a14b41bc0d42",
+								"exec": [
+									"pm.test(\"access 'challenges Names' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].name).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'challenges ID' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenges[0].id).not.eq(undefined);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  challenges {\n    id\n    name\n    textID\n    state    \n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "getChallenge",
+			"item": [
+				{
+					"name": "getChallenge-Groups",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "e568aeb2-8c49-446b-bcc8-a06ac397662c",
+								"exec": [
+									"pm.test(\"access 'challenges Group value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.groups).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'challenges Groups' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"    //pm.expect(pm.response.body.data.challenges[0].name).not.to.be(null);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n    challenge(ID:1) {\n        groups {\n            id\n            focalPoint {\n                name\n            }\n            members {\n                id\n                name\n            }\n        }\n    }\n}",
+								"variables": ""
+							},
+							"options": {
+								"raw": {
+									"language": "javascript"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getChallenge-Contributors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "a32afe28-9e8f-4d08-8415-72d010e20d82",
+								"exec": [
+									"pm.test(\"access 'challenges Contributors value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.contributors).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'challenges Contributors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"    //pm.expect(pm.response.body.data.challenges[0].name).not.to.be(null);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n    challenge(ID:1) {\n    contributors {\n      id\n      name\n    }\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getChallenge-Opportunities",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "e0281db3-9b8e-42eb-b1a6-e633ccd5511e",
+								"exec": [
+									"pm.test(\"access 'challenge Opportunities value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.opportunities[0].name).not.eq(undefined);",
+									"pm.expect(jsonData.data.challenge.opportunities[0].textID).not.eq(undefined);",
+									"pm.expect(jsonData.data.challenge.opportunities[0].state).not.eq(undefined);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n    challenge(ID:1) {\n        opportunities {\n            name\n            textID\n            state\n            projects {\n                name\n                description\n                state\n                tagset {\n                    tags\n                }\n            }\n            actorGroups {\n                name\n                description\n                actors {\n                    name\n                    description\n                    value\n                    impact\n                }\n            }\n        }\n    }\n}",
+								"variables": ""
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllChallenge-Leads-GroupsAndMembers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "f08575a5-d5d8-48e8-8c1e-9a4f6ff9b89c",
+								"exec": [
+									"pm.test(\"access 'challenge Leads (groups and members)' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n    challenge(ID:1) {  \n        groups{\n          name\n        }    \n    }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getChallenge",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "cb42f6bf-9c50-4396-82f0-ba326b77fc31",
+								"exec": [
+									"pm.test(\"access 'challenges Names' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.name).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'challenges ID' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.id).not.eq(undefined);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  challenge(ID:1) {\n    id\n    name\n    textID\n    state    \n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getChallenge-Context",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "b1835232-169f-490a-b071-aafceac91be3",
+								"exec": [
+									"pm.test(\"access 'context id' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.id).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context tagline' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.tagline).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context background' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.background).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context vision' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.vision).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context impact' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.impact).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context who' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.who).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context references id' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.references[0].id).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context references name' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.references[0].name).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context references uri' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.references[0].uri).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'context references description' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.challenge.context.references[0].description).not.eq(undefined);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  challenge(ID:1) {\n    context {\n      id\n      tagline\n      background\n      vision\n      impact\n      who\n      references {\n        id\n        name\n        uri\n        description\n      }\n    }\n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "getOrganisations",
+			"item": [
+				{
+					"name": "getAllOrganisations Groups- Not -Authorized",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "2d9832f1-04a3-4d28-8bbb-90ce6b47a99f",
+								"exec": [
+									"pm.test(\"access 'organisation Groups value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.organisations[0].groups).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'organisation Groups' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query{\n  organisations {   \n    groups{\n      name\n    }\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getOrganisation Members- Not -Authorized",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "833ad97d-8a76-4dd4-b0f7-f3e7a64a4828",
+								"exec": [
+									"pm.test(\"access 'organisation Members value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.organisation.members).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'organisation Members' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query{\n  organisation(ID:1) {   \n   members{name}\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllOrganisations - Authorized",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "f11a4e4b-8264-4b0a-b50c-540287bc16a7",
+								"exec": [
+									"pm.test(\"access 'organisations Names' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.organisations[0].name).not.eq(undefined);",
+									"});",
+									"",
+									"",
+									"pm.test(\"access 'organisations profile' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.organisations[0].profile).not.eq(undefined);",
+									"});",
+									"",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  organisations {\n    name\n    profile{\n      references{name}\n      tagsets{name}\n      avatar\n      description\n    } \n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getOrganisation - Authorized",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "575187f4-24b0-4934-bc89-b76eb5d3b09c",
+								"exec": [
+									"pm.test(\"access 'organisation Names' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.organisation.name).not.eq(undefined);",
+									"});",
+									"",
+									"pm.test(\"access 'organisation profile' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.organisation.profile).not.eq(undefined);",
+									"});",
+									"",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  organisation(ID:1) {\n    name\n    profile{\n      references{name}\n      tagsets{name}\n      avatar\n      description\n    } \n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllOrganisations Members- Not -Authorized",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "f164f6c4-d4d5-445d-81d5-35c7e4f5c2bf",
+								"exec": [
+									"pm.test(\"access 'challenges Contributors value' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.organisations[0].members).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'challenges Contributors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query{\n  organisations {   \n   members{name}\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllOrganisations Groups- Not -Authorized Copy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "65a9954a-fb50-46bb-82a9-ec40e471b1b1",
+								"exec": [
+									"pm.test(\"access 'organisation Groups value' - null\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data.organisation.groups).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'organisation Groups' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query{\n  organisation(ID: 1) {   \n    groups{\n      name\n    }\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "getUsers",
+			"item": [
+				{
+					"name": "getUsersById",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "baac9853-0ff7-49db-a432-091289b0b85e",
+								"exec": [
+									"pm.test(\"access 'usersById Data' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'usersById Data errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n usersById(IDs:[\"1\",\"2\",\"3\"])\n  {name}\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getUser",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "5290b9b6-aaf6-4124-96cb-320211099b35",
+								"exec": [
+									"pm.test(\"access 'user Data' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'user Data errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  users {\n    id\n    name\n    accountUpn\n    firstName\n    lastName\n    email\n    phone\n    city\n    country\n    gender\n    profile {\n      id\n      references {\n        id\n        name\n        uri\n        description\n      }\n      tagsets {\n        id\n        name\n        tags\n      }\n    }\n    lastModified\n    memberof {\n      organisations {\n        name\n      }\n      groups {\n        name\n      }\n      challenges {\n        name\n      }\n    }\n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllUsers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "69e98f95-c209-4e0c-a9ce-a532648da364",
+								"exec": [
+									"pm.test(\"access 'user Data' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'user Data errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  users {\n    id\n    name\n    accountUpn\n    firstName\n    lastName\n    email\n    phone\n    city\n    country\n    gender\n    profile {\n      id\n      references {\n        id\n        name\n        uri\n        description\n      }\n      tagsets {\n        id\n        name\n        tags\n      }\n    }\n    lastModified\n    memberof {\n      organisations {\n        name\n      }\n      groups {\n        name\n      }\n      challenges {\n        name\n      }\n    }\n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "getGroups",
+			"item": [
+				{
+					"name": "getAllGroups",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "eef8c995-6a96-4fd8-918c-7d27ec9b1aad",
+								"exec": [
+									"pm.test(\"access 'group Data' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'group Data errors' - authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  groups {\n    name\n\n    profile {\n      description\n      tagsets {\n        name\n        tags\n      }\n      avatar\n      references {\n        name\n      }\n    }\n    focalPoint {\n      name\n    }\n    id\n    members {\n      id\n    }\n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAllGroupsWithTag",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "f4f7ad9e-a03d-46a1-ad58-cf73ff3fae56",
+								"exec": [
+									"pm.test(\"access 'groupsWithTag Data' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'groupsWithTag Data errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  groupsWithTag (tag: \"test\") {\n    name\n    profile {\n      description\n      tagsets {\n        name\n        tags\n      }\n      avatar\n      references {\n        name\n      }\n    }\n    focalPoint {\n      name\n    }\n    id\n    members {\n      id\n    }\n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getUser",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "7912bc6c-ff9b-4c00-bb73-e94d848575fb",
+								"exec": [
+									"pm.test(\"access 'group Data' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'group Data errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query {\n  group(ID:1) {\n    name\n\n    profile {\n      description\n      tagsets {\n        name\n        tags\n      }\n      avatar\n      references {\n        name\n      }\n    }\n    focalPoint {\n      name\n    }\n    id\n    members {\n      id\n    }\n  }\n}\n",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "Create",
+			"item": [
+				{
+					"name": "createUser",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "6bc50b3f-9255-4515-811f-90f79d077a91",
+								"exec": [
+									"pm.test(\"create 'user errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "f937bd65-3edb-42a7-a1be-5d9cd832605f",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateUser($userData: UserInput!) {\n  createUser(userData: $userData) {\n    id\n    name\n    firstName\n    lastName\n    email\n    phone\n    city\n    country\n    gender\n    accountUpn\n  }\n}\n",
+								"variables": "{\n  \"userData\":\n  {\n    \"name\": \"user12\",\n    \"firstName\": \"testasaFN\",\n    \"lastName\": \"tessataLN\",\n    \"email\": \"user{{uniqueTextId}}@test.com\",\n    \"phone\": \"092834\",\n    \"city\": \"testCity\",\n    \"country\": \"testCountry\",\n    \"gender\": \"testGender\",\n    \"aadPassword\": \"sjk!!675&^*GAFDGFSsdfh\" ,\n    \"accountUpn\": \"test\",\n    \"profileData\": {\n      \"avatar\": \"test\",\n      \"description\": \"test\"\n    }\n    \n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createTemplate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "2eba2dae-5587-44d4-861c-08882e624b81",
+								"exec": [
+									"pm.test(\"create 'template errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateTemplate($templateData: TemplateInput!) {\n  createTemplate(templateData: $templateData) {\n    name,\n    description\n  }\n}",
+								"variables": "{\n  \"templateData\":\n  {\n    \"name\": \"Test-CherrytwistDefault\",\n    \"description\": \"Test-The default template that comes with Cherrytwist\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create-tagset-on-profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "fbc5c912-0642-4591-b6de-b6a2722c45dd",
+								"exec": [
+									"pm.test(\"create 'tagset on profile errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "d7c5cb98-84f5-43f6-ae00-d92593b9384f",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation createTagsetOnProfile($tagsetName: String!, $profileID: Float!) {\n  createTagsetOnProfile(tagsetName: $tagsetName, profileID: $profileID) {\n    name,\n    id\n    tags\n  }\n}",
+								"variables": "{\n  \"profileID\": 1,\n  \"tagsetName\": \"testTagset\"\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create-relation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "f4abbcbf-e019-42ec-ac70-cbd2cb25faa1",
+								"exec": [
+									"pm.test(\"create 'relations errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "8749ab43-29bd-49de-ad88-f5f13fd884a8",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateRelation($relationData: RelationInput!, $opportunityID: Float!) {\n  createRelation(relationData: $relationData, opportunityID: $opportunityID) {\n    type\n  }\n}",
+								"variables": "{\n  \"opportunityID\": 2,\n  \"relationData\":\n  {\n    \"type\": \"incoming\",\n    \"description\": \"description-How do I handle test?\",\n    \"actorName\": \"actorName-Test\",\n    \"actorType\": \"actorType-Test1\",\n    \"actorRole\": \"actorRole-Test2\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createReferenceOnProfile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "8c071862-2fc1-4f06-8f73-12eab859a5e5",
+								"exec": [
+									"pm.test(\"create 'referenceOnProfile errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "65b8e252-1183-47a8-a006-3527f5b20174",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation createReferenceOnProfile($referenceInput: ReferenceInput!, $profileID: Float!) {\n  createReferenceOnProfile(referenceInput: $referenceInput, profileID: $profileID) {\n    name,\n    uri,\n    description\n  }\n}",
+								"variables": "{\n  \"profileID\": 1,\n  \"referenceInput\":\n                {\n                  \"name\": \"wow\",\n                  \"uri\": \"something\",\n                  \"description\": \"this works\"\n                }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createProject",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "df0efed8-25d1-4abe-b573-5b4fc057d69d",
+								"exec": [
+									"pm.test(\"create 'project errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "00c1b2a3-07f3-4d9b-b74b-ea6f5cb62850",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateProject($projectData: ProjectInput!, $opportunityID: Float!) {\n  createProject(projectData: $projectData, opportunityID: $opportunityID) {\n      id\n    name,\n    description,\n    state\n  }\n}",
+								"variables": "{\n  \"opportunityID\": 2,\n  \"projectData\":\n  {\n    \"name\": \"Test-Name-Project\",\n    \"textID\": \"Test-TextId2\",\n    \"description\": \"Test-Description--Proj-How do I handle scalability?\",\n    \"state\": \"test-status--Proj-new\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createOrganisation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "ec5f1b7c-5e30-458c-878e-f7dfa4ecaac4",
+								"exec": [
+									"pm.test(\"create 'organisation errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "ad2ce96f-b500-42cf-9ef0-6ca296f71673",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateOrganisation($organisationData: OrganisationInput!) {\n  createOrganisation(organisationData: $organisationData) {\n    name,\n    members\n    {\n     \tname\n    }\n  }\n}",
+								"variables": "{\n  \"organisationData\":\n  {\n    \"name\": \"Cherrytwist\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createOpportunityOnChallenge",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "d6b3a3ed-ae0f-468f-8cc4-5243def1a10e",
+								"exec": [
+									"pm.test(\"create 'opportunityOnChallenge errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "65827c3e-a6aa-4452-82f1-2efa43a32625",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation createOpportunityOnChallenge($opportunityData: OpportunityInput!, $challengeID: Float!) {\n  createOpportunityOnChallenge(opportunityData: $opportunityData, challengeID: $challengeID) {\n    name,\n    id\n  }\n}",
+								"variables": "{\n  \"challengeID\": 8,\n  \"opportunityData\":\n  {\n    \"name\": \"Test-AI for good-Test\",\n    \"textID\": \"4-goods\",\n    \"state\": \"reserved\",\n    \"context\": {\n      \"background\": \"test\",\n    \"vision\": \"test vision\",\n      \"tagline\": \"test tagline\",\n      \"who\": \"test who\",\n      \"impact\": \"test impact\",\n      \"references\": {\"name\": \"test name\", \"uri\": \"test uri\", \"description\": \"test description\"} \n    },\n    \"tagset\": \"test tagset\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createGroupOnOpportunity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "a0adbb81-d823-45b7-9b6a-739b4ad339a0",
+								"exec": [
+									"pm.test(\"create 'groupOnOpporunity errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "b3e81438-eb1f-49e4-924c-cfbedf59bbad",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "  \nmutation createGroupOnOpportunity($groupName: String!, $opportunityID: Float!) {\n  createGroupOnOpportunity(groupName: $groupName, opportunityID: $opportunityID) {\n    name,\n    id\n    members {\n      name\n    }\n  }\n}",
+								"variables": "{\n  \"opportunityID\": 2,\n  \"groupName\": \"testOpportunityGroup\"\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createGroupOnEcoverse",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "ce5205b0-1425-4921-8478-6724deabf5cf",
+								"exec": [
+									"pm.test(\"create 'groupOnEcoverse errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "7e79f86f-16b3-4729-9fe2-fbe5cfe51e38",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateGroupOnEcoverse($groupName: String!) {\n  createGroupOnEcoverse(groupName: $groupName) {\n    name,\n    id,\n  }\n}",
+								"variables": "{\n  \"groupName\": \"test Ecoverse Group\"\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createGroupOnChallenge",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "49cdf6e4-c995-49ef-b2e1-bd2d2a8ce5ba",
+								"exec": [
+									"pm.test(\"create 'groupOnChallenge errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "6b7b2e34-2e6a-4e71-b58e-c6c052afe8c9",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {\n  createGroupOnChallenge(groupName: $groupName, challengeID: $challengeID) {\n    name,\n    id\n    members {\n      name\n    }\n  }\n}",
+								"variables": "{\n  \"challengeID\": 2,\n  \"groupName\": \"testGroup\"\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createChallenge",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "eddda2b6-b33e-49ae-8725-30ac52220152",
+								"exec": [
+									"pm.test(\"create 'challenge errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "087ce508-9e49-4840-9f1e-be66f60aea85",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateChallenge($challengeData: ChallengeInput!) {\n  createChallenge(challengeData: $challengeData) {\n    name,\n    id,\n    groups\n    {\n      id,\n      name\n    }\n  }\n}",
+								"variables": "{\n  \"challengeData\":\n  {\n    \"name\": \"Test challenge\",\n    \"textID\": \"balance-grid\",\n    \"context\": {\n        \"tagline\": \"Test tagline - How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?\",\n        \"background\": \"Test background - Our power system is becoming increasingly more decentralized and complex. By using solar PV, consumers have become electricity producers as well, and the number of these ‘prosumers’ is increasing. All the while, the electricity demand is rising due to the electrification of transport and industry. Cities around the world are electrifying their public transport systems, but if all busses would be charged around the time people are in the kitchen preparing dinner, the current grid would not be able to cope. The energy sector is striving to make the best of these developments, but so far the sector remains fragmented with a large number of initiatives and pilots spread over start-ups, scale-ups, countries, DSOs, TSOs, utilities, and regulators. Balancing the power grid is and will be more and more difficult and expensive. While technological advances have already disrupted many areas of the power system and, for example, empowered consumers to become producers and traders of their own electricity, the balancing markets still resemble an exclusive club of the big industry players. How can we enable also small consumers and prosumers to contribute to balancing? \",\n        \"vision\": \"Test vision - Enable the entire energy sector to transition from an ego-system to an eco-system, where everyone and anything is incentivized to share demand AND production of green power. You will co-create the fast and energy efficient digital power market commons by developing a protocol communication layer to power an awesome fossil-free future within one generation.\",\n        \"impact\": \"Test impact - The power grid is one of the most sophisticated infrastructures ever built. By building the energy flexibility ecosystem on a digital protocol layer, the network will become fit for a fossil-free future and will prevent major and costly physical grid investments that will impact the grid and its customers. It will make the power system more robust and transparent, enabling anyone to build an infinite amount of business cases on top of your solution.\",\n        \"who\": \"Test who - Vattenfall is inviting energy specialists throughout the entire sector, from DSOs and TSOs to solar power solution providers, to work with the teams to create the best solutions\",\n        \"references\": [\n            {\n                \"name\": \"Test video\",\n                \"uri\": \"https://youtu.be/-wGlzcjs9CI\",\n                \"description\": \"Test description - Video explainer for the challenge\"\n            },\n            {\n                \"name\": \"Test - visual\",\n                \"uri\": \"https://www.odyssey.org/wp-content/uploads/2020/08/1.-Fossil-Fuel-Free-Future-Vattenfall1-72-scaled.jpg\",\n                \"description\": \"Test - Visual for the challenge\"\n            },\n            {\n                \"name\": \"Test - EnergyWeb2\",\n                \"uri\": \"https://www.energyweb.org/\",\n                \"description\": \"Test - Official site\"\n            }\n        ]\n    }\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createAspectOnProject",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "50db5ee0-2e88-4a76-9874-71b5efcb29c7",
+								"exec": [
+									"pm.test(\"create 'aspectOnProject errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "6cd040b3-1d61-4609-af3d-a14dcd96fc76",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateAspectOnProject($aspectData: AspectInput!, $projectID: Float!) {\n  createAspectOnProject(aspectData: $aspectData, projectID: $projectID) {\n    title,\n    framing,\n    explanation\n  }\n}",
+								"variables": "{\n  \"projectID\": 5,\n  \"aspectData\":\n  {\n    \"title\": \"Test-Title\",\n    \"framing\": \"Test-Framing-How do I handle scalability?\",\n    \"explanation\": \"Test-Explenation-Deployment is via a microservices architecture\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createAspect",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0e3c53c4-9777-4112-a178-a2faccdd0b21",
+								"exec": [
+									"pm.test(\"create 'aspect errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "c409adc3-27af-4ce1-847f-bc0a860461cd",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateAspect($aspectData: AspectInput!, $opportunityID: Float!) {\n  createAspect(aspectData: $aspectData, opportunityID: $opportunityID) {\n    title,\n    framing,\n    explanation\n  }\n}",
+								"variables": "{\n  \"opportunityID\": 2,\n  \"aspectData\":\n  {\n    \"title\": \"Test-Test-TechStack2\",\n    \"framing\": \"Test-Test-How do I handle scalability?\",\n    \"explanation\": \"Test-Test-Deployment is via a microservices architecture\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createActorGroup",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "6abd66ab-aa13-4053-9844-952fe6bcd5e2",
+								"exec": [
+									"pm.test(\"create 'actorGroup errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "f267089a-fe32-4623-af91-cd03af69e74b",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateActorGroup(\n  $actorGroupData: ActorGroupInput!\n  $opportunityID: Float!\n) {\n  createActorGroup(\n    actorGroupData: $actorGroupData\n    opportunityID: $opportunityID\n  ) {\n    name\n    description\n    actors {\n      name\n    }\n  }\n}\n",
+								"variables": "{\n  \"opportunityID\": 2,\n  \"actorGroupData\":\n  {\n    \"name\": \"Test Actor 1\",\n    \"description\": \"Test-How do I handle scalability? - Test\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createActor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "d65c4fc7-31f9-45b7-898f-4cfced0100fc",
+								"exec": [
+									"pm.test(\"create 'actor errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "2429a7d6-bb49-4bb4-8582-03d916874c3a",
+								"exec": [
+									"uniqueTextId = Math.random()",
+									"    .toString(36)",
+									"    .slice(-6);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation createActor($actorData: ActorInput!, $actorGroupID: Float!) {\n  createActor(actorData: $actorData, actorGroupID: $actorGroupID) {\n    id,\n    name,\n    description,\n    value,\n    impact\n  }\n}",
+								"variables": "{\n  \"actorGroupID\": 2,\n  \"actorData\": {\n    \"name\": \"test\",\n    \"description\": \"Test-Main architect for the solution - Test\",\n    \"value\": \"Ensuring a robust design - Test\",\n    \"impact\": \"Time allocated to work on the solution - Test\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "Update",
+			"item": [
+				{
+					"name": "updateUser",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "1f5e2f17-7210-4240-8a5a-983dce282533",
+								"exec": [
+									"pm.test(\"update 'user errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation UpdateUser($userID: Float!, $userData: UserInput!) {\n  updateUser(userID: $userID, userData: $userData) {\n    name,\n  \temail\n  }\n}",
+								"variables": "{\n  \"userID\": 7,\n  \"userData\":\n  {\n    \"name\": \"Valentin\",\n    \"city\": \"Sofia\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateProfile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "4aee6536-0660-49c1-bbbf-e1cd4b22e615",
+								"exec": [
+									"pm.test(\"'updateProfile errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {\n  updateProfile(profileData: $profileData, ID: $ID)\n}",
+								"variables": "{\n  \"ID\": 1,\n  \"profileData\": {\n    \"description\": \"some description\",\n    \"avatar\": \"http://someUri\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateOrganisation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "bdbf7eb2-80c0-4a91-a9f4-e0172c9acc92",
+								"exec": [
+									"pm.test(\"updateOrganisation errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "  \nmutation updateOrganisation($orgID: Float!, $organisationData: OrganisationInput!) {\n  updateOrganisation(orgID: $orgID, organisationData: $organisationData) {\n    name,\n    id\n  }\n}",
+								"variables": "{\n  \"orgID\": 1,\n  \"organisationData\":\n  {\n    \"name\": \"Cherrytwist2\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateOpportunity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "d1351506-0322-46a4-bd44-bc4948375c2f",
+								"exec": [
+									"pm.test(\"updateOpportunity errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {\n  updateOpportunity(opportunityData: $opportunityData, ID: $ID) {\n    name,\n    id\n  }\n}",
+								"variables": "{\n  \"ID\": 1,\n  \"opportunityData\":\n  {\n    \"name\": \"Test Oportunity \"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateChallenge",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "a03377ae-ed2a-4734-814d-8d314e0f7513",
+								"exec": [
+									"pm.test(\"updateChallenge errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "  \nmutation UpdateChallenge($challengeID: Float! $challengeData: ChallengeInput!) {\n  updateChallenge(challengeID: $challengeID, challengeData: $challengeData) {\n    name,\n    id\n  }\n}",
+								"variables": "{\n  \"challengeID\": 4,\n  \"challengeData\":\n\t\t{\n  \t\"name\": \"Challenge with better name\"\n\t\t}\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateAspect",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "cef00078-069c-4843-bb43-495744e9b60f",
+								"exec": [
+									"pm.test(\"updateAspect errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation updateAspect($aspectData: AspectInput!, $ID: Float!) {\n  updateAspect(aspectData: $aspectData, ID: $ID) {\n    title\n  }\n}",
+								"variables": "{\n  \"ID\": 1,\n  \"aspectData\": {\n    \"title\": \"aspect some description\",\n    \"framing\": \"aspect http://someUri\",\n    \"explanation\": \"aspect http://someUri\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateActor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "f6972add-c2d0-411e-a232-f7fb8a99a12c",
+								"exec": [
+									"pm.test(\"updateActor errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "  \nmutation updateActor($actorData: ActorInput!, $ID: Float!) {\n  updateActor(actorData: $actorData, ID: $ID) {    \n    name\n    description\n    value\n    impact\n  }\n}",
+								"variables": "{\n  \"ID\": 1,\n  \"actorData\": {\n    \"name\": \"actor some description\",\n    \"value\": \"actor http://someUri\",\n    \"impact\": \"actor http://someUri\",\n    \"description\": \"actor something\"\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "replaceTagsOnTagset",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "8b1e8418-89ba-4642-8f4b-bc52685ee118",
+								"exec": [
+									"pm.test(\"replaceTagsOnTagset errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation replaceTagsOnTagset($tags: [String!]!, $tagsetID: Float!) {\n  replaceTagsOnTagset(tags: $tags, tagsetID: $tagsetID){\n    name\n    tags\n  }\n}",
+								"variables": "{\n  \"tagsetID\": 4,\n  \"tags\": [\"tag1\", \"tag2\"]\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "removeUserFromGroup",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "00fd6772-0275-4b6c-b8a4-7e942276be8b",
+								"exec": [
+									"pm.test(\"removeUserFromGroup errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {\n  removeUserFromGroup(groupID: $groupID, userID: $userID) {\n    name,\n    id,\n    members {\n      id,\n      name\n    }\n  }\n}",
+								"variables": "{\n  \"userID\": 7,\n  \"groupID\": 1\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "removeGroupFocalPoint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "e13176d8-21d9-456b-a96c-8caa40313ae8",
+								"exec": [
+									"pm.test(\"removeGroupFocalPoint errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation removeGroupFocalPoint($groupID: Float!) {\n  removeGroupFocalPoint(groupID: $groupID) {\n    name,\n    id,\n    focalPoint {\n      name\n    }\n  }\n}",
+								"variables": "{\n  \"groupID\": 1\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "assignGroupFocalPoint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "2f3ef4ab-7228-4a5e-89d3-f6bd27d38f1d",
+								"exec": [
+									"pm.test(\"assignGroupFocalPoint errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {\n  assignGroupFocalPoint(groupID: $groupID, userID: $userID) {\n    name,\n    id,\n    focalPoint {\n      name\n    }\n  }\n}",
+								"variables": "{\n  \"userID\": 1,\n  \"groupID\": 9\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "addUserToOpportunity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "4611ebbd-e8f8-4815-a634-b25bbeab50f6",
+								"exec": [
+									"pm.test(\"addUserToOpportunity errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "  \nmutation addUserToOpportunity($userID: Float!, $opportunityID: Float!) {\n  addUserToOpportunity(opportunityID: $opportunityID, userID: $userID) {\n    name,\n    id,\n    members {\n      id,\n      name\n    }\n  }\n}",
+								"variables": "{\n  \"userID\": 7,\n  \"opportunityID\": 1\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "addUserToGroup",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "2cabbadd-b82c-4f04-baeb-1aaf332bdf40",
+								"exec": [
+									"pm.test(\"addUserToGroup errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation addUserToGroup($userID: Float!, $groupID: Float!) {\n  addUserToGroup(groupID: $groupID, userID: $userID) \n}",
+								"variables": "{\n  \"userID\": 7,\n  \"groupID\": 1\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "addUserToChallenge",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "20d4f455-1fa5-4c95-ab05-8af7595a3d31",
+								"exec": [
+									"pm.test(\"addUserToChallenge errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation addUserToChallenge($userID: Float!, $challengeID: Float!) {\n  addUserToChallenge(challengeID: $challengeID, userID: $userID) {\n    name,\n    id,\n    members {\n      id,\n      name\n    }\n  }\n}",
+								"variables": "{\n  \"userID\": 7,\n  \"challengeID\": 1\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "addTagToTagset",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "84353fab-ef9f-466e-ad62-b770835f24df",
+								"exec": [
+									"pm.test(\"addTagToTagset errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation addTagToTagset($tag: String!, $tagsetID: Float!) {\n  addTagToTagset(tag: $tag, tagsetID: $tagsetID) {\n    name\n    tags\n  }\n}\n",
+								"variables": "{\n  \"tagsetID\": 8,\n  \"tag\": \"tagTest\"\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "addChallengeLead",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "e0ae8bd3-cedd-4617-bec6-513722a068c7",
+								"exec": [
+									"pm.test(\"addChallengeLead errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation addChallengeLead($challengeID: Float!, $organisationID: Float!) {\n  addChallengeLead(organisationID: $organisationID, challengeID: $challengeID)\n}",
+								"variables": "{\n  \"organisationID\": 1,\n  \"challengeID\": 8\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "Remove",
+			"item": [
+				{
+					"name": "removeActor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "30585099-542f-4569-89e6-885a3ec1717d",
+								"exec": [
+									"pm.test(\"removeActor errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation removeActor($ID: Float!) {\n  removeActor(ID: $ID)\n}",
+								"variables": "{\n  \"ID\": 7\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "removeActorGroup",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "13e89087-fc0f-4a73-b77b-c978ad15dd19",
+								"exec": [
+									"pm.test(\"removeActorGroup errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation removeActorGroup($ID: Float!) {\n  removeActorGroup(ID: $ID)\n}",
+								"variables": "{\n  \"ID\": 7\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "removeAspect",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "c8073048-8f04-44f1-aac9-705ce7d2c584",
+								"exec": [
+									"pm.test(\"removeAspect errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation removeAspect($ID: Float!) {\n  removeAspect(ID: $ID)\n}",
+								"variables": "{\n  \"ID\": 7\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "removeUser",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "8b91e158-5ef1-41df-a897-e879417a48ab",
+								"exec": [
+									"pm.test(\"removeUser errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation removeUser($userID: Float!) {\n  removeUser(userID: $userID)\n}",
+								"variables": "{\n  \"userID\": 7\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "getSearch",
+			"item": [
+				{
+					"name": "getSimpleSearch",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "34b8b1a5-2951-46b8-ae40-2172ccf50cb8",
+								"exec": [
+									"pm.test(\"access 'getSimpleSearch Data' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'getSimpleSearch Data errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query create($searchData: SearchInput!){\n  search(searchData: $searchData) {\n    score\n    result {\n      __typename\n      ... on User {\n        name\n      }\n      ... on UserGroup {\n        name\n      }\n    }\n  }\n}",
+								"variables": "{\n  \"searchData\":\n  {\n    \"terms\": [\"Alisha\"]\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getSimpleSearchFiltered",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "202f7f23-5beb-4960-8a35-5ae2a97612fa",
+								"exec": [
+									"pm.test(\"access 'getSimpleSearchFiltered Data' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'getSimpleSearchFiltered Data errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query create($searchData: SearchInput!){\n  search(searchData: $searchData) {\n    score\n    result {\n      __typename\n      ... on User {\n        name\n      }\n      ... on UserGroup {\n        name\n      }\n    }\n  }\n}",
+								"variables": "{\n  \"searchData\":\n  {\n    \"terms\": [\"Alisha\", \"members\"],\n    \"typesFilter\": [\"user\"]\n  }\n}"
+							},
+							"options": {
+								"graphql": {}
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getSimpleSearchScored",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "a42a082c-6f6f-4aec-9896-2112fadf8351",
+								"exec": [
+									"pm.test(\"access 'getSimpleSearchFiltered Data' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.data).eq(null);",
+									"});",
+									"",
+									"pm.test(\"access 'getSimpleSearchFiltered Data errors' - not authorized\", function () {",
+									"    var jsonData = JSON.parse(responseBody);",
+									"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query create($searchData: SearchInput!){\n  search(searchData: $searchData) {\n    score\n    terms\n    result {\n      __typename\n      ... on User {\n        name\n      }\n      ... on UserGroup {\n        name\n      }\n    }\n  }\n}",
+								"variables": "{\n  \"searchData\":\n  {\n    \"terms\": [\"Alisha\", \"Alisha\", \"Alisha\", \"Neil\", \"members\"],\n    \"typesFilter\": [\"user\", \"group\"]\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{dev-url}}",
+							"host": [
+								"{{dev-url}}"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "getName",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "7c172475-e38f-4e3c-82e6-ca38cf8eefa4",
+						"exec": [
+							"pm.test(\"access 'name' - authorized\", function () {",
+							"    var jsonData = JSON.parse(responseBody);",
+							"    console.log(jsonData)",
+							"pm.expect(jsonData.data.name).not.eq(undefined);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query {\n    name\n}",
+						"variables": ""
+					}
+				},
+				"url": {
+					"raw": "{{dev-url}}",
+					"host": [
+						"{{dev-url}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getTagset",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "37afe832-b984-49d4-8066-8ab23f1c8f23",
+						"exec": [
+							"pm.test(\"access 'tagset Name value' - authorized\", function () {",
+							"    var jsonData = JSON.parse(responseBody);",
+							"    console.log(jsonData)",
+							"pm.expect(jsonData.data.tagset.name).not.eq(undefined);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query {\n  tagset {\n    tags\n    name\n  }\n}\n",
+						"variables": ""
+					}
+				},
+				"url": {
+					"raw": "{{dev-url}}",
+					"host": [
+						"{{dev-url}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getMe",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "4585d77a-70f9-416d-8f6d-1d47c9ed076a",
+						"exec": [
+							"pm.test(\"access 'me Data' - not authorized\", function () {",
+							"    var jsonData = JSON.parse(responseBody);",
+							"pm.expect(jsonData.data).eq(null);",
+							"});",
+							"",
+							"pm.test(\"access 'me Data errors' - not authorized\", function () {",
+							"    var jsonData = JSON.parse(responseBody);",
+							"pm.expect(jsonData.errors[0].message).to.include(\"not authorized\");",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query {\n  me {\n    name\n    memberof {\n      groups {\n        name\n      }\n      challenges {\n        name\n      }\n    }\n  }\n}\n",
+						"variables": ""
+					}
+				},
+				"url": {
+					"raw": "{{dev-url}}",
+					"host": [
+						"{{dev-url}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getTemplates",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "08814c5b-9497-4bb0-ae91-3ebebfad84d1",
+						"exec": [
+							"pm.test(\"access 'templates Data' - not authorized\", function () {",
+							"    var jsonData = JSON.parse(responseBody);",
+							"pm.expect(jsonData.data.templates[0].id).not.eq(undefined);",
+							"pm.expect(jsonData.data.templates[0].name).not.eq(undefined);",
+							"pm.expect(jsonData.data.templates[0].description).not.eq(undefined);",
+							"pm.expect(jsonData.data.templates[0].users[0].name).not.eq(undefined);",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query {\n  templates {\n    id\n    name\n    description\n    users{\n      name\n    }\n  }\n}\n",
+						"variables": ""
+					},
+					"options": {
+						"graphql": {}
+					}
+				},
+				"url": {
+					"raw": "{{dev-url}}",
+					"host": [
+						"{{dev-url}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getClientConfig",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "38aca839-bae4-4431-b1c2-67c2438f319d",
+						"exec": [
+							"pm.test(\"access 'clientConfig Data' - authorized\", function () {",
+							"    var jsonData = JSON.parse(responseBody);",
+							"pm.expect(jsonData.data.clientConfig.authEnabled).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.silentRequest.scopes).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.tokenRequest.scopes).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.loginRequest.scopes).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.apiConfig.resourceScope).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.msalConfig.cache.cacheLocation).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.msalConfig.cache.storeAuthStateInCookie).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.msalConfig.auth.clientId).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.msalConfig.auth.authority).not.eq(undefined);",
+							"pm.expect(jsonData.data.clientConfig.msalConfig.auth.redirectUri).not.eq(undefined);",
+							"});",
+							"",
+							"",
+							"",
+							"",
+							"",
+							"",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query {\n  clientConfig {\n    authEnabled\n    silentRequest{scopes}\n    tokenRequest{scopes}\n    loginRequest{scopes}\n    apiConfig{\n      resourceScope\n    }\n    msalConfig {\n      cache {\n        cacheLocation\n        storeAuthStateInCookie\n      }\n      auth {\n        clientId\n        authority\n        redirectUri\n      }\n    }\n  }\n}\n",
+						"variables": ""
+					}
+				},
+				"url": {
+					"raw": "{{dev-url}}",
+					"host": [
+						"{{dev-url}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getOpportunity",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "75090716-99c3-429b-99dd-d85325579fd0",
+						"exec": [
+							"pm.test(\"access 'opportunity Data' - authorized\", function () {",
+							"    var jsonData = JSON.parse(responseBody);",
+							"pm.expect(jsonData.data.opportunity.name).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.textID).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.state).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.projects).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.actorGroups[0].name).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.actorGroups[0].description).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.actorGroups[0].actors).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.aspects).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.relations).not.eq(undefined);",
+							"pm.expect(jsonData.data.opportunity.context).not.eq(undefined);",
+							"",
+							"",
+							"",
+							"});",
+							"",
+							"",
+							"",
+							"",
+							"",
+							"",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query {\n  opportunity(ID: 1) {\n    name\n    textID\n    state\n    projects {\n      name\n      description\n      state\n      tagset {\n        name\n      }\n    }\n    actorGroups{name description actors{name value impact}}\n    aspects{title framing explanation}\n    relations{type actorName actorType actorRole description}\n    context {\n      vision\n    }\n  }\n}\n",
+						"variables": ""
+					}
+				},
+				"url": {
+					"raw": "{{dev-url}}",
+					"host": [
+						"{{dev-url}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "getHost",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "75346624-cec7-4c04-bedf-fafc0ee6d0a8",
+						"exec": [
+							"pm.test(\"access 'host' - authorized\", function () {",
+							"    var jsonData = JSON.parse(responseBody);",
+							"pm.expect(jsonData.data.host.name).not.eq(undefined);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "graphql",
+					"graphql": {
+						"query": "query {\n    host {name}\n}",
+						"variables": ""
+					}
+				},
+				"url": {
+					"raw": "{{dev-url}}",
+					"host": [
+						"{{dev-url}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "afddb1a3-ee01-4093-93db-b14a193378d7",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "87da0c6c-1c6d-4c75-98b3-233651244e3c",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"id": "f9f5311a-1b4e-495b-8015-54132e874f44",
+			"key": "token",
+			"value": "token"
+		},
+		{
+			"id": "01002dfc-941b-4d4b-9ae8-3cfc28a856d9",
+			"key": "dev-url",
+			"value": "https://dev.cherrytwist.org/graphql"
+		},
+		{
+			"id": "0230c25f-f960-4a70-8db7-750942475fe9",
+			"key": "jsonDataVariable",
+			"value": "challenges[0].name"
+		},
+		{
+			"id": "9a3f51ba-ed3b-4117-be79-b8d047d96de9",
+			"key": "inputData",
+			"value": "state"
+		}
+	],
+	"protocolProfileBehavior": {}
+}

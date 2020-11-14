@@ -120,4 +120,24 @@ export class ChallengeResolverMutations {
       organisationID
     );
   }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Remove the specified organisation as a lead for the specified challenge',
+  })
+  @Profiling.api
+  async removeChallengeLead(
+    @Args('organisationID') organisationID: number,
+    @Args('challengeID') challengeID: number
+  ): Promise<boolean> {
+    return await this.challengeService.removeChallengeLead(
+      challengeID,
+      organisationID
+    );
+  }
 }

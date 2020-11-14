@@ -45,7 +45,7 @@ export class MsGraphService {
       displayName: userData.name,
       mailNickname: mailNickname,
       userPrincipalName: accountUpn,
-      mail: userData.email,
+      mail: userData.email.trim(),
       passwordProfile: {
         forceChangePasswordNextSignIn: true,
         password: userData.aadPassword,
@@ -53,6 +53,16 @@ export class MsGraphService {
     };
 
     const res = await client.api('/users').post(user);
+
+    return res;
+  }
+
+  async deleteUser(accountUpn: string): Promise<any> {
+    const clientOptions: ClientOptions = {
+      authProvider: this.azureAdStrategy,
+    };
+    const client = Client.initWithMiddleware(clientOptions);
+    const res = await client.api(`/users/${accountUpn}`).delete();
 
     return res;
   }

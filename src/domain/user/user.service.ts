@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { LogContexts } from '../../utils/logging/logging.contexts';
-import { Profile } from '../profile/profile.entity';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
@@ -244,6 +243,10 @@ export class UserService {
       throw new Error(
         `User profile with the specified email (${userData.email}) already exists`
       );
+    // Trim all values to remove space issues
+    userData.firstName = userData.firstName.trim();
+    userData.lastName = userData.lastName.trim();
+    userData.email = userData.email.trim();
     return true;
   }
 
