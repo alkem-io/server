@@ -305,4 +305,41 @@ export class ChallengeService {
     await this.challengeRepository.save(challenge);
     return true;
   }
+
+  async removeChallengeLead(
+    challengeID: number,
+    organisationID: number
+  ): Promise<boolean> {
+    const organisation = await this.organisationService.getOrganisationByID(
+      organisationID
+    );
+    if (!organisation)
+      throw new Error(`No organisation with id ${organisationID} was found!`);
+
+    const challenge = await this.getChallengeByID(challengeID);
+    if (!challenge)
+      throw new Error(`No challenge with id ${challengeID} was found!`);
+
+    // Check the org is not already added
+    if (!challenge.leadOrganisations)
+      throw new Error(`Challenge not fully initialised: ${challengeID}`);
+    const existingOrg = challenge.leadOrganisations.find(
+      existingOrg => existingOrg.id === organisationID
+    );
+    if (!existingOrg)
+      throw new Error(
+        `Challenge ${challengeID} does not have a lead with the provided organisation ID: ${organisationID}`
+      );
+    // ok to add the org
+    const updatedLeads = [];
+    for (let i = 0; i < challenge.leadOrganisations.length; i++) {
+      const existingOrg = challenge.leadOrganisations[i];
+      if (existingOrg.id != organisationID) {
+        updatedLeads.push(existingOrg);
+      }
+    }
+    challenge.leadOrganisations = updatedLeads;
+    await this.challengeRepository.save(challenge);
+    return true;
+  }
 }
