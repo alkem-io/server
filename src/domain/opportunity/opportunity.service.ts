@@ -81,13 +81,18 @@ export class OpportunityService {
     return opportunity;
   }
 
-  async getOpportunityByID(OpportunityID: number): Promise<IOpportunity> {
-    const Opportunity = await this.opportunityRepository.findOne({
-      where: { id: OpportunityID },
+  async getOpportunityByID(opportunityID: number): Promise<IOpportunity> {
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityID },
     });
-    if (!Opportunity)
-      throw new Error(`Unable to find Opportunity with ID: ${OpportunityID}`);
-    return Opportunity;
+    if (!opportunity)
+      throw new Error(`Unable to find Opportunity with ID: ${opportunityID}`);
+    return opportunity;
+  }
+
+  async getOpportunites(): Promise<Opportunity[]> {
+    const opportunites = await this.opportunityRepository.find();
+    return opportunites || [];
   }
 
   // Loads the group into the Opportunity entity if not already present
@@ -146,13 +151,6 @@ export class OpportunityService {
     await this.opportunityRepository.save(Opportunity);
 
     return Opportunity;
-  }
-
-  async getOpportunites(OpportunityId: number): Promise<Opportunity[]> {
-    const opportunites = await this.opportunityRepository.find({
-      where: { Opportunity: { id: OpportunityId } },
-    });
-    return opportunites || [];
   }
 
   async createRestrictedActorGroups(
