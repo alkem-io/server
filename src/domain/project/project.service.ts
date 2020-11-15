@@ -40,7 +40,7 @@ export class ProjectService {
   }
 
   async removeProject(projectID: number): Promise<boolean> {
-    const Project = await this.getProject(projectID);
+    const Project = await this.getProjectByID(projectID);
     if (!Project)
       throw new Error(
         `Not able to locate Project with the specified ID: ${projectID}`
@@ -49,19 +49,24 @@ export class ProjectService {
     return true;
   }
 
-  async getProject(ProjectID: number): Promise<IProject | undefined> {
-    return await this.projectRepository.findOne({ id: ProjectID });
+  async getProjectByID(projectID: number): Promise<IProject> {
+    const project = await this.projectRepository.findOne({ id: projectID });
+    if (!project)
+      throw new Error(`Unable to find Opportunity with ID: ${projectID}`);
+    return project;
+  }
+
+  async getProjects(): Promise<Project[]> {
+    const projects = await this.projectRepository.find();
+    return projects || [];
   }
 
   async updateProject(
     projectID: number,
     projectData: ProjectInput
   ): Promise<IProject> {
-    const project = await this.getProject(projectID);
-    if (!project)
-      throw new Error(
-        `Not able to locate Project with the specified ID: ${projectID}`
-      );
+    const project = await this.getProjectByID(projectID);
+
     // Note: do not update the textID
 
     // Copy over the received data
@@ -84,9 +89,7 @@ export class ProjectService {
     projectId: number,
     aspectData: AspectInput
   ): Promise<IAspect> {
-    const project = await this.getProject(projectId);
-    if (!project)
-      throw new Error(`Unalbe to locate project with id: ${projectId}`);
+    const project = await this.getProjectByID(projectId);
 
     // Check that do not already have an aspect with the same title
     const title = aspectData.title;
