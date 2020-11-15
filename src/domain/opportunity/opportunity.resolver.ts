@@ -29,9 +29,16 @@ import { IProject } from '../project/project.interface';
 
 @Resolver()
 export class OpportunityResolver {
-  constructor(
-    @Inject(OpportunityService) private opportunityService: OpportunityService
-  ) {}
+  constructor(private opportunityService: OpportunityService) {}
+
+  @Query(() => [Opportunity], {
+    nullable: false,
+    description: 'All opportunities within the ecoverse',
+  })
+  @Profiling.api
+  async opportunities(): Promise<IOpportunity[]> {
+    return await this.opportunityService.getOpportunites();
+  }
 
   @Query(() => Opportunity, {
     nullable: false,

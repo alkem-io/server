@@ -229,9 +229,14 @@ export class ChallengeService {
       challenge.state = challengeData.state;
     }
 
-    if (challengeData.context)
-      await this.contextService.update(challenge, challengeData.context);
-
+    if (challengeData.context) {
+      if (!challenge.context)
+        throw new Error(`Challenge not initialised: ${challengeID}`);
+      await this.contextService.update(
+        challenge.context,
+        challengeData.context
+      );
+    }
     if (challengeData.tags)
       this.tagsetService.replaceTagsOnEntity(
         challenge as Challenge,

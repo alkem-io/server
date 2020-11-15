@@ -15,10 +15,18 @@ import { ProjectService } from './project.service';
 export class ProjectResolver {
   constructor(private projectService: ProjectService) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
+  @UseGuards(GqlAuthGuard)
+  @Query(() => [Project], {
+    nullable: false,
+    description: 'All projects within this ecoverse',
+  })
+  @Profiling.api
+  async projects(): Promise<IProject[]> {
+    return await this.projectService.getProjects();
+  }
+
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => Project, {
     nullable: false,
@@ -26,10 +34,7 @@ export class ProjectResolver {
   })
   @Profiling.api
   async project(@Args('ID') id: number): Promise<IProject> {
-    const project = await this.projectService.getProject(id);
-    if (project) return project;
-
-    throw new Error(`Unable to locate project with given id: ${id}`);
+    return await this.projectService.getProjectByID(id);
   }
 
   @Roles(
