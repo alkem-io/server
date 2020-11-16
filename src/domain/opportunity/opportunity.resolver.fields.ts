@@ -12,6 +12,9 @@ import { UserGroupService } from '../user-group/user-group.service';
 import { Opportunity } from './opportunity.entity';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { OpportunityService } from './opportunity.service';
+import { ActorGroup } from '../actor-group/actor-group.entity';
+import { Aspect } from '../aspect/aspect.entity';
+import { Relation } from '../relation/relation.entity';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
@@ -31,7 +34,7 @@ export class OpportunityResolverFields {
   })
   @Profiling.api
   async groups(@Parent() opportunity: Opportunity) {
-    const groups = await this.opportunityService.loadGroups(opportunity);
+    const groups = await this.opportunityService.loadUserGroups(opportunity);
     return groups;
   }
 
@@ -60,5 +63,48 @@ export class OpportunityResolverFields {
         `Members group not initialised on Opportunity: ${Opportunity.name}`
       );
     return members;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('actorGroups', () => [ActorGroup], {
+    nullable: true,
+    description:
+      'The set of actor groups within the context of this Opportunity.',
+  })
+  @Profiling.api
+  async actorGroups(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.loadActorGroups(opportunity);
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('aspects', () => [Aspect], {
+    nullable: true,
+    description: 'The set of aspects within the context of this Opportunity.',
+  })
+  @Profiling.api
+  async aspects(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.loadAspects(opportunity);
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('relations', () => [Relation], {
+    nullable: true,
+    description: 'The set of relations within the context of this Opportunity.',
+  })
+  @Profiling.api
+  async relations(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.loadRelations(opportunity);
   }
 }
