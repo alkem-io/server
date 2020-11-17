@@ -11,10 +11,17 @@ import { Organisation } from './organisation.entity';
 import { User } from '../user/user.entity';
 import { UserGroupService } from '../user-group/user-group.service';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
+import { Profile } from '../profile/profile.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { OrganisationService } from './organisation.service';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
-  constructor(private userGroupService: UserGroupService) {}
+  constructor(
+    @InjectRepository(Organisation)
+    private organisationService: OrganisationService,
+    private userGroupService: UserGroupService
+  ) {}
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
@@ -58,5 +65,26 @@ export class OrganisationResolverFields {
         `Members group not initialised on organisation: ${organisation.name}`
       );
     return members;
+  }
+
+  @Roles(RestrictedGroupNames.Members)
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('profile', () => Profile, {
+    nullable: false,
+    description: 'The profile for this organisation.',
+  })
+  @Profiling.api
+  async profile(@Parent() organisation: Organisation) {
+    const profile = organisation.profile;
+    if (!profile) {
+      // todo: remove later - working around a bug in a previous version
+      await this.organisationService.initialiseMembers(organisation);
+      await this.organisationService.save(organisation);
+      // throw new Error(
+      //   `Profile not initialised on organisation: ${organisation.name}`
+      // );
+    }
+
+    return organisation.profile;
   }
 }
