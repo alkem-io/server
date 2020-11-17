@@ -71,15 +71,19 @@ export class EcoverseService {
 
     if (!ecoverse.tagset) {
       ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
+      await this.tagsetService.initialiseMembers(ecoverse.tagset);
     }
 
     if (!ecoverse.context) {
       ecoverse.context = new Context();
+      await this.contextService.initialiseMembers(ecoverse.context);
     }
 
-    // Initialise contained singletons
-    await this.tagsetService.initialiseMembers(ecoverse.tagset);
-    await this.contextService.initialiseMembers(ecoverse.context);
+    if (!ecoverse.host) {
+      ecoverse.host = await this.organisationService.createOrganisation(
+        'Default host organisation'
+      );
+    }
 
     return ecoverse;
   }
