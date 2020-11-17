@@ -275,12 +275,8 @@ export class BootstrapService {
   async populateEmptyEcoverse(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Set the default values
     ecoverse.name = 'Empty ecoverse';
-    if (!ecoverse.context) ecoverse.context = new Context();
+    if (!ecoverse.context) throw new Error('Non-initialised ecoverse');
     ecoverse.context.tagline = 'An empty ecoverse to be populated';
-
-    // Create the host organisation
-    ecoverse.host = new Organisation('Default host organisation');
-    ecoverse.organisations?.push(ecoverse.host);
 
     return ecoverse;
   }
