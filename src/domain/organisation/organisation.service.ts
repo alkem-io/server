@@ -42,12 +42,12 @@ export class OrganisationService {
 
     if (!organisation.groups) {
       organisation.groups = [];
+      // Check that the mandatory groups for a challenge are created
+      await this.userGroupService.addMandatoryGroups(
+        organisation,
+        organisation.restrictedGroupNames
+      );
     }
-    // Check that the mandatory groups for a challenge are created
-    await this.userGroupService.addMandatoryGroups(
-      organisation,
-      organisation.restrictedGroupNames
-    );
 
     // Initialise contained singletons
     if (!organisation.profile) {
@@ -112,5 +112,9 @@ export class OrganisationService {
     await this.organisationRepository.save(existingOrganisation);
 
     return existingOrganisation;
+  }
+
+  async save(organisation: IOrganisation) {
+    await this.organisationRepository.save(organisation);
   }
 }
