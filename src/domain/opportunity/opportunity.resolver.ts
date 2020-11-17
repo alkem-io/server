@@ -165,7 +165,7 @@ export class OpportunityResolver {
     @Args({ name: 'opportunityID', type: () => Float }) opportunityID: number,
     @Args({ name: 'groupName', type: () => String }) groupName: string
   ): Promise<IUserGroup> {
-    const group = await this.opportunityService.createGroup(
+    const group = await this.opportunityService.createUserGroup(
       opportunityID,
       groupName
     );

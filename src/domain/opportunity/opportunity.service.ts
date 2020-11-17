@@ -90,13 +90,49 @@ export class OpportunityService {
     return opportunity;
   }
 
+  async getOpportunityByIdWithAspects(
+    opportunityID: number
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityID },
+      relations: ['aspects'],
+    });
+    if (!opportunity)
+      throw new Error(`Unable to find Opportunity with ID: ${opportunityID}`);
+    return opportunity;
+  }
+
+  async getOpportunityByIdWithActorGroups(
+    opportunityID: number
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityID },
+      relations: ['actorGroups'],
+    });
+    if (!opportunity)
+      throw new Error(`Unable to find Opportunity with ID: ${opportunityID}`);
+    return opportunity;
+  }
+
+  async getOpportunityByIdWithRelations(
+    opportunityID: number
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityID },
+      relations: ['relations'],
+    });
+    if (!opportunity)
+      throw new Error(`Unable to find Opportunity with ID: ${opportunityID}`);
+    return opportunity;
+  }
+
   async getOpportunites(): Promise<Opportunity[]> {
     const opportunites = await this.opportunityRepository.find();
     return opportunites || [];
   }
 
   // Loads the group into the Opportunity entity if not already present
-  async loadGroups(opportunity: Opportunity): Promise<IUserGroup[]> {
+  async loadUserGroups(opportunity: Opportunity): Promise<IUserGroup[]> {
     if (opportunity.groups && opportunity.groups.length > 0) {
       // opportunity already has groups loaded
       return opportunity.groups;
@@ -106,6 +142,54 @@ export class OpportunityService {
     if (!groups)
       throw new Error(`No groups on Opportunity: ${opportunity.name}`);
     return groups;
+  }
+
+  // Loads the actorGroups into the Opportunity entity if not already present
+  async loadActorGroups(opportunity: Opportunity): Promise<IActorGroup[]> {
+    if (opportunity.actorGroups && opportunity.actorGroups.length > 0) {
+      // opportunity already has actor groups loaded
+      return opportunity.actorGroups;
+    }
+    // Opportunity is not populated so load it with actorGroups
+    const opportunityLoaded = await this.getOpportunityByIdWithActorGroups(
+      opportunity.id
+    );
+    if (!opportunityLoaded || !opportunityLoaded.actorGroups)
+      throw new Error(`Opportunity not initialised: ${opportunity.id}`);
+
+    return opportunityLoaded.actorGroups;
+  }
+
+  // Loads the aspects into the Opportunity entity if not already present
+  async loadAspects(opportunity: Opportunity): Promise<IAspect[]> {
+    if (opportunity.aspects && opportunity.aspects.length > 0) {
+      // opportunity already has actor groups loaded
+      return opportunity.aspects;
+    }
+    // Opportunity is not populated so load it with actorGroups
+    const opportunityLoaded = await this.getOpportunityByIdWithAspects(
+      opportunity.id
+    );
+    if (!opportunityLoaded || !opportunityLoaded.aspects)
+      throw new Error(`Opportunity not initialised: ${opportunity.id}`);
+
+    return opportunityLoaded.aspects;
+  }
+
+  // Loads the aspects into the Opportunity entity if not already present
+  async loadRelations(opportunity: Opportunity): Promise<IRelation[]> {
+    if (opportunity.relations && opportunity.relations.length > 0) {
+      // opportunity already has relations loaded
+      return opportunity.relations;
+    }
+    // Opportunity is not populated so load it with actorGroups
+    const opportunityLoaded = await this.getOpportunityByIdWithRelations(
+      opportunity.id
+    );
+    if (!opportunityLoaded || !opportunityLoaded.relations)
+      throw new Error(`Opportunity not initialised: ${opportunity.id}`);
+
+    return opportunityLoaded.relations;
   }
 
   async createOpportunity(
@@ -184,59 +268,6 @@ export class OpportunityService {
     return collaboratorsActorGroup;
   }
 
-  hasActorGroupWithName(opportunity: IOpportunity, name: string): boolean {
-    // Double check groups array is initialised
-    if (!opportunity.actorGroups) {
-      throw new Error('Non-initialised Opportunity submitted');
-    }
-
-    // Find the right group
-    const actorGroup = opportunity.actorGroups.find(t => t.name === name);
-    if (actorGroup) {
-      return true;
-    }
-    return false;
-  }
-
-  getActorGroupByName(opportunity: IOpportunity, name: string): IActorGroup {
-    // Double check groups array is initialised
-    if (!opportunity.actorGroups) {
-      throw new Error('Non-initialised Opportunity submitted');
-    }
-
-    const actorGroup = opportunity.actorGroups.find(t => t.name === name);
-    if (!actorGroup)
-      throw new Error(`Unable to find ActorGroup with the name: ${name}`);
-
-    return actorGroup;
-  }
-
-  async addActorGroupWithName(
-    opportunity: IOpportunity,
-    actorGroupData: ActorGroupInput
-  ): Promise<IActorGroup> {
-    const name = actorGroupData.name;
-    // Check if the group already exists, if so log a warning
-    if (this.hasActorGroupWithName(opportunity, name)) {
-      throw new Error(
-        `Unable to add ActorGroup "${name}" as an ActorGroup with that name already exists`
-      );
-    }
-
-    if (opportunity.restrictedActorGroupNames?.includes(name)) {
-      throw new Error(
-        `Attempted to create a ActorGroup using a restricted name: ${name}`
-      );
-    }
-
-    const newActorGroup = await this.actorGroupService.createActorGroup(
-      actorGroupData
-    );
-    opportunity.actorGroups?.push(newActorGroup as IActorGroup);
-    await this.opportunityRepository.save(opportunity);
-    return newActorGroup;
-  }
-
   async createProject(
     opportunityId: number,
     projectData: ProjectInput
@@ -273,9 +304,9 @@ export class OpportunityService {
     opportunityId: number,
     aspectData: AspectInput
   ): Promise<IAspect> {
-    const opportunity = await this.getOpportunityByID(opportunityId);
+    const opportunity = await this.getOpportunityByIdWithAspects(opportunityId);
     if (!opportunity)
-      throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
+      throw new Error(`Unable to locate opportunity with id: ${opportunityId}`);
 
     // Check that do not already have an aspect with the same title
     const title = aspectData.title;
@@ -299,7 +330,9 @@ export class OpportunityService {
     opportunityId: number,
     actorGroupData: ActorGroupInput
   ): Promise<IActorGroup> {
-    const opportunity = await this.getOpportunityByID(opportunityId);
+    const opportunity = await this.getOpportunityByIdWithActorGroups(
+      opportunityId
+    );
     if (!opportunity)
       throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
 
@@ -327,7 +360,9 @@ export class OpportunityService {
     opportunityId: number,
     relationData: RelationInput
   ): Promise<IRelation> {
-    const opportunity = await this.getOpportunityByID(opportunityId);
+    const opportunity = await this.getOpportunityByIdWithRelations(
+      opportunityId
+    );
     if (!opportunity)
       throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
     if (!opportunity.relations)
@@ -339,7 +374,7 @@ export class OpportunityService {
     return relation;
   }
 
-  async createGroup(
+  async createUserGroup(
     opportunityID: number,
     groupName: string
   ): Promise<IUserGroup> {
