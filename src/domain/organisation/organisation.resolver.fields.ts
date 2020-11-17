@@ -12,13 +12,11 @@ import { User } from '../user/user.entity';
 import { UserGroupService } from '../user-group/user-group.service';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { Profile } from '../profile/profile.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { OrganisationService } from './organisation.service';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
   constructor(
-    @InjectRepository(Organisation)
     private organisationService: OrganisationService,
     private userGroupService: UserGroupService
   ) {}
@@ -77,7 +75,8 @@ export class OrganisationResolverFields {
   async profile(@Parent() organisation: Organisation) {
     const profile = organisation.profile;
     if (!profile) {
-      // todo: remove later - working around a bug in a previous version
+      // todo: remove later - working around a bug in a previous version that resulted in an ecoverse
+      // host with no profile.
       await this.organisationService.initialiseMembers(organisation);
       await this.organisationService.save(organisation);
       // throw new Error(
