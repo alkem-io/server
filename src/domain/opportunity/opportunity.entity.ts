@@ -78,37 +78,24 @@ export class Opportunity extends BaseEntity
   )
   projects?: Project[];
 
-  @Field(() => [ActorGroup], {
-    nullable: true,
-    description:
-      'The set of actor groups within the context of this Opportunity',
-  })
   @OneToMany(
     () => ActorGroup,
     actorGroup => actorGroup.opportunity,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   actorGroups?: ActorGroup[];
 
-  @Field(() => [Aspect], {
-    nullable: true,
-    description: 'The set of solution aspects for this Opportunity',
-  })
   @OneToMany(
     () => Aspect,
     aspect => aspect.opportunity,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   aspects?: Aspect[];
 
-  @Field(() => [Relation], {
-    nullable: true,
-    description: 'The set of relations for this Opportunity',
-  })
   @OneToMany(
     () => Relation,
     relation => relation.opportunity,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   relations?: Relation[];
 
