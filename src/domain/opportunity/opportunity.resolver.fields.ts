@@ -65,11 +65,6 @@ export class OpportunityResolverFields {
     return members;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @ResolveField('actorGroups', () => [ActorGroup], {
     nullable: true,
     description:
@@ -80,11 +75,6 @@ export class OpportunityResolverFields {
     return await this.opportunityService.loadActorGroups(opportunity);
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @ResolveField('aspects', () => [Aspect], {
     nullable: true,
     description: 'The set of aspects within the context of this Opportunity.',
@@ -94,11 +84,6 @@ export class OpportunityResolverFields {
     return await this.opportunityService.loadAspects(opportunity);
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @ResolveField('relations', () => [Relation], {
     nullable: true,
     description: 'The set of relations within the context of this Opportunity.',

@@ -65,8 +65,6 @@ export class OrganisationResolverFields {
     return members;
   }
 
-  @Roles(RestrictedGroupNames.Members)
-  @UseGuards(GqlAuthGuard)
   @ResolveField('profile', () => Profile, {
     nullable: false,
     description: 'The profile for this organisation.',
@@ -75,13 +73,9 @@ export class OrganisationResolverFields {
   async profile(@Parent() organisation: Organisation) {
     const profile = organisation.profile;
     if (!profile) {
-      // todo: remove later - working around a bug in a previous version that resulted in an ecoverse
-      // host with no profile.
-      await this.organisationService.initialiseMembers(organisation);
-      await this.organisationService.save(organisation);
-      // throw new Error(
-      //   `Profile not initialised on organisation: ${organisation.name}`
-      // );
+      throw new Error(
+        `Profile not initialised on organisation: ${organisation.name}`
+      );
     }
 
     return organisation.profile;
