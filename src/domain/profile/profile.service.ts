@@ -76,17 +76,18 @@ export class ProfileService {
 
     if (!profile) throw new Error(`Profile with id(${profileID}) not found!`);
 
-    const newReference = await this.referenceService.createReference(
-      referenceInput
-    );
     if (!profile.references) throw new Error('References not defined');
     // check there is not already a reference with the same name
     for (const reference of profile.references) {
-      if (reference.name === newReference.name) {
+      if (reference.name === referenceInput.name) {
         return reference;
       }
     }
     // If get here then no ref with the same name
+    const newReference = await this.referenceService.createReference(
+      referenceInput
+    );
+
     await profile.references.push(newReference as Reference);
     await this.profileRepository.save(profile);
 
