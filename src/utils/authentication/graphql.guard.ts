@@ -48,7 +48,7 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
     );
   }
 
-  handleRequest(err: any, user: any, info: any) {
+  handleRequest(err: any, user: any, _info: any) {
     // Always handle the request if authentication is disabled
     if (
       this.configService.get<IServiceConfig>('service')
@@ -59,12 +59,10 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
 
     if (err) throw err;
 
-    if (!user) {
-      this.logger.error(info, LogContexts.AUTH);
+    if (!user)
       throw new AuthenticationError(
-        'You are not authorized to access this resource.'
+        'You are not authorized to access this resource. '
       );
-    }
 
     if (this.matchRoles(user.userGroups)) return user;
     throw new AuthenticationError(
