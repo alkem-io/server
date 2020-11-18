@@ -60,10 +60,16 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
     if (err) throw err;
 
     if (!user) {
-      this.logger.error(info, LogContexts.AUTH);
-      throw new AuthenticationError(
-        'You are not authorized to access this resource.'
-      );
+      if (err) {
+        const authError = new AuthenticationError(
+          `You are not authorized to access this resource. ${err}`
+        );
+        this.logger.error(err, authError.message, LogContexts.AUTH);
+        throw authError;
+      } else {
+        this.logger.warn(info, LogContexts.AUTH);
+        return;
+      }
     }
 
     if (this.matchRoles(user.userGroups)) return user;

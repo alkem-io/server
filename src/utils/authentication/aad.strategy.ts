@@ -54,7 +54,7 @@ export class AzureADStrategy
     done: CallableFunction
   ): Promise<any> {
     try {
-      if (!token.email) throw new Error('Token email missing!');
+      if (!token.email) throw new AuthenticationError('Token email missing!');
 
       await this.cacheBearerToken(req);
 
@@ -71,7 +71,11 @@ export class AzureADStrategy
         error,
         LogContexts.AUTH
       );
-      done(new Error(`Failed adding the user to the request object: ${error}`));
+      done(
+        new AuthenticationError(
+          `Failed adding the user to the request object: ${error}`
+        )
+      );
     }
   }
 
