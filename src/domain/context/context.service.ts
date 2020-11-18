@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ReferenceInput } from '../reference/reference.dto';
+import { IReference } from '../reference/reference.interface';
 import { ReferenceService } from '../reference/reference.service';
 import { ContextInput } from './context.dto';
 import { Context } from './context.entity';
@@ -19,6 +21,13 @@ export class ContextService {
       context.references = [];
     }
 
+    return context;
+  }
+
+  async getContext(contextID: number): Promise<IContext> {
+    const context = await this.contextRepository.findOne({ id: contextID });
+    if (!context)
+      throw new Error(`No context found with the given id: ${contextID}`);
     return context;
   }
 
@@ -52,5 +61,29 @@ export class ContextService {
     }
     await this.contextRepository.save(context);
     return context;
+  }
+
+  async createReference(
+    contextID: number,
+    referenceInput: ReferenceInput
+  ): Promise<IReference> {
+    const context = await this.getContext(contextID);
+
+    if (!context.references) throw new Error('References not defined');
+    // check there is not already a reference with the same name
+    for (const reference of context.references) {
+      if (reference.name === referenceInput.name) {
+        return reference;
+      }
+    }
+
+    // If get here then no ref with the same name
+    const newReference = await this.referenceService.createReference(
+      referenceInput
+    );
+    await context.references.push(newReference);
+    await this.contextRepository.save(context);
+
+    return newReference;
   }
 }
