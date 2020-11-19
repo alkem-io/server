@@ -237,6 +237,50 @@ export class OpportunityService {
     return Opportunity;
   }
 
+  async removeOpportunity(opportunityID: number): Promise<boolean> {
+    // Note need to load it in with all contained entities so can remove fully
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityID },
+      relations: ['actorGroups', 'aspects', 'relations', 'groups'],
+    });
+    if (!opportunity)
+      throw new Error(
+        `Not able to locate Opportunity with the specified ID: ${opportunityID}`
+      );
+
+    // First remove all groups
+    if (opportunity.groups) {
+      for (let i = 0; i < opportunity.groups.length; i++) {
+        const group = opportunity.groups[i];
+        await this.userGroupService.removeUserGroup(group.id);
+      }
+    }
+
+    if (opportunity.aspects) {
+      for (let i = 0; i < opportunity.aspects.length; i++) {
+        const aspect = opportunity.aspects[i];
+        await this.aspectService.removeAspect(aspect.id);
+      }
+    }
+
+    if (opportunity.relations) {
+      for (let i = 0; i < opportunity.relations.length; i++) {
+        const relation = opportunity.relations[i];
+        await this.relationService.removeRelation(relation.id);
+      }
+    }
+
+    if (opportunity.actorGroups) {
+      for (let i = 0; i < opportunity.actorGroups.length; i++) {
+        const actorGroup = opportunity.actorGroups[i];
+        await this.actorGroupService.removeActorGroup(actorGroup.id);
+      }
+    }
+
+    await this.opportunityRepository.remove(opportunity);
+    return true;
+  }
+
   async createRestrictedActorGroups(
     opportunity: IOpportunity
   ): Promise<boolean> {

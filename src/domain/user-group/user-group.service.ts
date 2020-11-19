@@ -49,6 +49,20 @@ export class UserGroupService {
     return group;
   }
 
+  async removeUserGroup(groupID: number): Promise<boolean> {
+    // Note need to load it in with all contained entities so can remove fully
+    const group = await this.groupRepository.findOne({
+      where: { id: groupID },
+    });
+    if (!group)
+      throw new Error(
+        `Not able to locate User Group with the specified ID: ${group}`
+      );
+
+    await this.groupRepository.remove(group);
+    return true;
+  }
+
   //toDo vyanakiev - fix this
   async getGroups(groupable: IGroupable): Promise<IUserGroup[]> {
     if (groupable instanceof Ecoverse) {
