@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Float, Mutation } from '@nestjs/graphql/dist';
 import { Roles } from '../../utils/decorators/roles.decorator';
@@ -68,6 +68,15 @@ export class OpportunityResolver {
       opportunityData
     );
     return Opportunity;
+  }
+
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description: 'Removes the Opportunity with the specified ID',
+  })
+  async removeOpportunity(@Args('ID') opportunityID: number): Promise<boolean> {
+    return await this.opportunityService.removeOpportunity(opportunityID);
   }
 
   @Roles(
