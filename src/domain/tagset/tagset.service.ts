@@ -93,7 +93,10 @@ export class TagsetService {
       throw new Error(`Tagset with id(${tagsetID}) not initialised!`);
 
     // Check if the tag already exists or not
-    if (tagset.tags.includes(newTag)) {
+    const existingTag = tagset.tags.find(
+      tag => tag.toLowerCase() === newTag.toLowerCase()
+    );
+    if (existingTag) {
       // Tag already exists; just return
       return tagset;
     }
