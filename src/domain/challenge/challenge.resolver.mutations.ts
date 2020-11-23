@@ -83,6 +83,15 @@ export class ChallengeResolverMutations {
     return challenge;
   }
 
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description: 'Removes the Challenge with the specified ID',
+  })
+  async removeChallenge(@Args('ID') challengeID: number): Promise<boolean> {
+    return await this.challengeService.removeChallenge(challengeID);
+  }
+
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins

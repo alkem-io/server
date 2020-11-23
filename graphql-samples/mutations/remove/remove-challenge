@@ -1,0 +1,3 @@
+mutation {
+  removeChallenge(ID: 9999999)
+}

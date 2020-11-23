@@ -248,6 +248,35 @@ export class ChallengeService {
     return challenge;
   }
 
+  async removeChallenge(challengeID: number): Promise<boolean> {
+    // Note need to load it in with all contained entities so can remove fully
+    const challenge = await this.challengeRepository.findOne({
+      where: { id: challengeID },
+      relations: ['opportunities', 'groups'],
+    });
+    if (!challenge)
+      throw new Error(
+        `Not able to locate challenge with the specified ID: ${challengeID}`
+      );
+
+    // Do not remove a challenge that has opporutnities, require these to be individually first removed
+    if (challenge.opportunities && challenge.opportunities.length > 0)
+      throw new Error(
+        `Unable to remove challenge (${challengeID}) as it contains ${challenge.opportunities.length} opportunities`
+      );
+
+    // Remove all groups
+    if (challenge.groups) {
+      for (let i = 0; i < challenge.groups.length; i++) {
+        const group = challenge.groups[i];
+        await this.userGroupService.removeUserGroup(group.id);
+      }
+    }
+
+    await this.challengeRepository.remove(challenge);
+    return true;
+  }
+
   async addMember(userID: number, challengeID: number): Promise<IUserGroup> {
     // Try to find the user + group
     const user = await this.userService.getUserByID(userID);
