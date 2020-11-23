@@ -13,4 +13,10 @@ export default registerAs('database', () => ({
   synchronize: true,
   logging: process.env.ENABLE_ORM_LOGGING === 'true',
   entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+  migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
+  migrationsTableName: 'migrations_typeorm',
+  migrationsRun: true,
+  cli: {
+    migrationsDir: 'src/migrations',
+  },
 }));
