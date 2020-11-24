@@ -1,30 +1,21 @@
-import { join } from 'path';
 import { ConnectionOptions } from 'typeorm';
+import { join } from 'path';
 
-// You can load you .env file here synchronously using dotenv package (not installed here),
-// import * as dotenv from 'dotenv';
-// import * as fs from 'fs';
-// const environment = process.env.NODE_ENV || 'development';
-// const data: any = dotenv.parse(fs.readFileSync(`${environment}.env`));
-// You can also make a singleton service that load and expose the .env file content.
-// ...
+export const typeormConfig: ConnectionOptions = {
 
-// Check typeORM documentation for more information.
-const config: ConnectionOptions = {
   type: 'mysql',
-  // host: process.env.DATABASE_HOST || 'localhost',
-  host: 'localhost',
-  port: 3306,
+  host: process.env.DATABASE_HOST,
+  port: process.env.MYSQL_DB_PORT ? Number(process.env.MYSQL_DB_PORT) : 3306,
   cache: true,
   username: 'root',
-  password: 'toor',
-  database: 'cherrytwist',
+  password: process.env.MYSQL_ROOT_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
   insecureAuth: true,
   synchronize: false,
-  entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-  migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
-  logging: true,
-  logger: 'file',
+  logger: 'advanced-console',
+  logging: process.env.ENABLE_ORM_LOGGING === 'true',
+  entities: [join('src', 'domain', '*', '*.entity.{ts,js}')],
+  migrations: [join('src', 'migrations', '*.{ts,js}')],
   migrationsTableName: 'migrations_typeorm',
   migrationsRun: true,
   cli: {
@@ -32,4 +23,4 @@ const config: ConnectionOptions = {
   },
 };
 
-module.exports = config;
+module.exports = typeormConfig;
