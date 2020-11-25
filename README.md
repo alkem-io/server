@@ -215,6 +215,8 @@ docker run --name some-mysql \
 
 ## === Migrations ===
 
+**NB! Migrations use TypeORM CLI. Dependencies and environment variables are not loaded using nestJs - you will need the mySQL configuration in .env file in order to run the migrations locally.**
+
 Generate new migration with name 'migration_name' after schema change:
 
 ```bash
