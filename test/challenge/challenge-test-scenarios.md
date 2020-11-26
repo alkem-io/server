@@ -2,6 +2,7 @@
 
 - [x] In file: `create-challenge.e2e-spec.ts`
   - [x] create a successfull challenge
+  - [x] remove a challenge
   - [x] create 2 challenges with different names 
   - [x] thow error - creating 2 challenges with same name `skipped for now` 
   - [x] create challenge without reference and context 
@@ -24,15 +25,9 @@
   - [ ] create the same challenge twice - should throw an error - fail
 
 
-- [ ] In file: `other-entities-to-challenge.e2e.ts`
-  - [ ] createGroupOnChallenge
-  - [ ] add group to a challenge   
-  - [ ] add user to a challenge - should return challenge, not group??
-
-  - [ ] add unexisting user to a challenge
-  - [ ] add unexisting group to a challenge
-  - [ ] add user to unexisting challenge
-
-  - [ ] create challenge with tagset
-  - [ ] create a challenge with opportunity (createOpportunityOnChallenge)
-  - [ ] create a challenge with contributors
+- [x] In file: `other-entities-to-challenge.e2e.ts`
+  - [x] createGroupOnChallenge
+  - [x] createOpportunityOnChallenge
+  - [x] addUserToChallenge
+  - [x] add unexisting user to a challenge
+  - [x] add user to unexisting challenge

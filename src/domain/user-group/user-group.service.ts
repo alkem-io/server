@@ -16,6 +16,7 @@ import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContexts } from '../../utils/logging/logging.contexts';
 import { Opportunity } from '../opportunity/opportunity.entity';
+import { UserGroupParent } from './user-group-parent.dto';
 
 @Injectable()
 export class UserGroupService {
@@ -61,6 +62,18 @@ export class UserGroupService {
 
     await this.groupRepository.remove(group);
     return true;
+  }
+
+  async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
+    const groupWithParent = await this.groupRepository.findOne({
+      where: { id: group.id },
+      relations: ['ecoverse', 'challenge', 'organisation', 'opportunity'],
+    });
+    if (groupWithParent?.ecoverse) return groupWithParent?.ecoverse;
+    if (groupWithParent?.challenge) return groupWithParent?.challenge;
+    if (groupWithParent?.opportunity) return groupWithParent?.opportunity;
+    if (groupWithParent?.organisation) return groupWithParent?.organisation;
+    throw new Error(`Unable to locate parent for user group: ${group.name}`);
   }
 
   //toDo vyanakiev - fix this

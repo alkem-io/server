@@ -1,28 +1,22 @@
 import {
   createChallangeMutation,
-  getChallenge,
   getChallengeUsers,
   updateChallangeMutation,
 } from './challenge.request.params';
-import { graphqlRequest } from '../utils/graphql.request';
 import '../utils/array.matcher';
 import { appSingleton } from '../utils/app.singleton';
-import { createGroupMutation, getGroup } from '../group/group.request.params';
+import { getGroup } from '../group/group.request.params';
 import {
   createUserDetailsMutation,
   assignGroupFocalPointMutation,
 } from '../user/user.request.params';
 
 let userName = '';
-let userId = '';
 let userPhone = '';
 let userEmail = '';
-let groupName = '';
-
 let challengeName = '';
 let challengeId = '';
 let uniqueTextId = '';
-let uniqueId = Math.random().toString();
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)

@@ -7,7 +7,7 @@ mutation updateActor($actorData: ActorInput!, $ID: Float!) {
 Variables:
 {
   "ID": 1,
-  "ActorData": {
+  "actorData": {
     "name": "some description",
     "value": "http://someUri",
     "impact": "http://someUri",
