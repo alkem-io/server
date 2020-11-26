@@ -277,6 +277,37 @@ export class ChallengeService {
     return true;
   }
 
+  async addUserToOpportunity(
+    userID: number,
+    opportunityID: number
+  ): Promise<IUserGroup> {
+    // Get the ID of the challenge containing the provided opportunity ID
+    const challengeID = await this.opportunityService.getChallengeID(
+      opportunityID
+    );
+    const isMember = await this.isUserMember(userID, challengeID);
+    if (!isMember)
+      throw new Error(
+        `User (${userID}) is not a member of parent challenge: ${challengeID}`
+      );
+
+    // Get the members group
+    return await this.opportunityService.addMember(userID, opportunityID);
+  }
+
+  async isUserMember(userID: number, challengeID: number): Promise<boolean> {
+    const challenge = await this.getChallengeByID(challengeID);
+    const membersGroup = await this.getMembersGroup(challenge);
+    const members = membersGroup.members;
+    if (!members)
+      throw new Error(
+        `Members group not initialised in challenge: ${challengeID}`
+      );
+    const user = members.find(user => user.id == userID);
+    if (user) return true;
+    return false;
+  }
+
   async addMember(userID: number, challengeID: number): Promise<IUserGroup> {
     // Try to find the user + group
     const user = await this.userService.getUserByID(userID);
@@ -301,6 +332,18 @@ export class ChallengeService {
     await this.userGroupService.addUserToGroup(user, membersGroup);
 
     return membersGroup;
+  }
+
+  async getMembersGroup(challenge: IChallenge): Promise<IUserGroup> {
+    const group = await this.userGroupService.getGroupByName(
+      challenge,
+      RestrictedGroupNames.Members
+    );
+    if (!group)
+      throw new Error(
+        `Unable to locate members group on challenge: ${challenge.name}`
+      );
+    return group;
   }
 
   async getChallenges(ecoverseId: number): Promise<Challenge[]> {
