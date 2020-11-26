@@ -17,6 +17,7 @@ import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContexts } from '../logging/logging.contexts';
+import { EntityNotInitializedException } from '../error-handling/entity.not.initialized.exception';
 
 @Injectable()
 export class DataManagementService {
@@ -108,7 +109,11 @@ export class DataManagementService {
       );
       bruce.country = ' Netherlands';
       bruce.gender = 'Male';
-      if (!bruce.profile) throw new Error('Non-initalised user');
+      if (!bruce.profile)
+        throw new EntityNotInitializedException(
+          'Non-initalised user',
+          LogContexts.DATA_MGMT
+        );
       const tagset = await this.profileService.createTagset(
         bruce.profile.id,
         'sample2'
@@ -149,7 +154,11 @@ export class DataManagementService {
       await this.userGroupService.addUserToGroup(clint, energyWebMembers);
       await this.userGroupService.addUserToGroup(bruce, energyWebMembers);
       energyWebMembers.focalPoint = jane;
-      if (!energyWeb.context) throw new Error('Context not initilised');
+      if (!energyWeb.context)
+        throw new EntityNotInitializedException(
+          'Context not initilised',
+          LogContexts.DATA_MGMT
+        );
       energyWeb.context.references = [ref1, ref2];
 
       const cleanOceans = await this.createChallenge(

@@ -10,6 +10,9 @@ import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TagsetInput } from './tagset.dto';
 import { LogContexts } from '../../utils/logging/logging.contexts';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { ValidationException } from '../../utils/error-handling/validation.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
 
 @Injectable()
 export class TagsetService {
@@ -42,9 +45,16 @@ export class TagsetService {
   async replaceTags(tagsetID: number, newTags: string[]): Promise<ITagset> {
     const tagset = (await this.getTagset(tagsetID)) as Tagset;
 
-    if (!tagset) throw new Error(`Tagset with id(${tagsetID}) not found!`);
+    if (!tagset)
+      throw new EntityNotFoundException(
+        `Tagset with id(${tagsetID}) not found!`,
+        LogContexts.COMMUNITY
+      );
     if (!newTags)
-      throw new Error(`Unable to replace tags on tagset(${tagsetID}`);
+      throw new ValidationException(
+        `Unable to replace tags on tagset(${tagsetID}`,
+        LogContexts.COMMUNITY
+      );
 
     // Check the incoming tags and replace if not null
     tagset.tags = newTags;
@@ -88,9 +98,16 @@ export class TagsetService {
   async addTag(tagsetID: number, newTag: string): Promise<ITagset> {
     const tagset = (await this.getTagset(tagsetID)) as Tagset;
 
-    if (!tagset) throw new Error(`Tagset with id(${tagsetID}) not found!`);
+    if (!tagset)
+      throw new EntityNotFoundException(
+        `Tagset with id(${tagsetID}) not found!`,
+        LogContexts.COMMUNITY
+      );
     if (!tagset.tags)
-      throw new Error(`Tagset with id(${tagsetID}) not initialised!`);
+      throw new EntityNotInitializedException(
+        `Tagset with id(${tagsetID}) not initialised!`,
+        LogContexts.COMMUNITY
+      );
 
     // Check if the tag already exists or not
     const existingTag = tagset.tags.find(
@@ -112,7 +129,10 @@ export class TagsetService {
     names: string[]
   ): Promise<boolean> {
     if (!tagsetable.restrictedTagsetNames) {
-      throw new Error('Non-initialised tagsetable submitted');
+      throw new EntityNotInitializedException(
+        'Non-initialised tagsetable submitted',
+        LogContexts.COMMUNITY
+      );
     }
     for (const name of names) {
       const tagset = new Tagset(name);
@@ -124,7 +144,11 @@ export class TagsetService {
 
   // Get the default tagset
   defaultTagset(tagsetable: ITagsetable): ITagset | undefined {
-    if (!tagsetable.tagsets) throw new Error('Tagsets not initialised');
+    if (!tagsetable.tagsets)
+      throw new EntityNotInitializedException(
+        'Tagsets not initialised',
+        LogContexts.COMMUNITY
+      );
     const defaultTagset = tagsetable.tagsets.find(
       t => t.name === RestrictedTagsetNames.Default
     );

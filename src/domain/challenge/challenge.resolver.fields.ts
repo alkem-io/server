@@ -13,6 +13,8 @@ import { UserGroupService } from '../user-group/user-group.service';
 import { ChallengeService } from './challenge.service';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
+import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -62,8 +64,9 @@ export class ChallengeResolverFields {
     const group = await this.challengeService.getMembersGroup(challenge);
     const members = group.members;
     if (!members)
-      throw new Error(
-        `Members group not initialised on challenge: ${challenge.name}`
+      throw new GroupNotInitializedException(
+        `Members group not initialised on challenge: ${challenge.name}`,
+        LogContexts.CHALLENGES
       );
     return members;
   }

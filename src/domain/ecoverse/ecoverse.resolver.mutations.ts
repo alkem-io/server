@@ -1,8 +1,10 @@
 import { Inject, NotImplementedException, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
+import { Args, Context, Mutation } from '@nestjs/graphql/dist/decorators';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
+import { BaseException } from '../../utils/error-handling/base.exception';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { Challenge } from '../challenge/challenge.entity';
@@ -127,13 +129,17 @@ export class EcoverseResolverMutations {
     description: 'Updates the user account password',
   })
   @Profiling.api
-  async updateUserAccountPassword(@Args('userID') userID: number, @Args('newPassword') newPassword: string): Promise<boolean> {
-
-    throw new NotImplementedException('MS Graph API does not have production support for password update!');
+  async updateUserAccountPassword(
+    @Args('userID') userID: number,
+    @Args('newPassword') newPassword: string
+  ): Promise<boolean> {
+    throw new BaseException(
+      'MS Graph API does not have production support for password update!',
+      LogContexts.API
+    );
 
     //const success = await this.ecoverseService.updateUserAccountPassword(userID, newPassword);
     //return success;
-
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { RelationshipNotFoundException } from '../../utils/error-handling/relationship.not.found.exception';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { RelationInput } from './relation.dto';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
@@ -18,7 +21,10 @@ export class RelationService {
     const relation = new Relation();
     // Check that the relation type is valie
     if (!allowedRelationTypes.includes(relationData.type))
-      throw new Error(`Invalid relation type supplied: ${relationData.type}`);
+      throw new RelationshipNotFoundException(
+        `Invalid relation type supplied: ${relationData.type}`,
+        LogContexts.CHALLENGES
+      );
     relation.type = relationData.type;
     relation.description = relationData.description;
     relation.actorName = relationData.actorName;
@@ -57,8 +63,9 @@ export class RelationService {
   async removeRelation(relationID: number): Promise<boolean> {
     const relation = await this.getRelation(relationID);
     if (!relation)
-      throw new Error(
-        `Not able to locate relation with the specified ID: ${relationID}`
+      throw new EntityNotFoundException(
+        `Not able to locate relation with the specified ID: ${relationID}`,
+        LogContexts.CHALLENGES
       );
     await this.relationRepository.remove(relation as Relation);
     return true;

@@ -2,6 +2,9 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { NotSupportedException } from '../../utils/error-handling/not.supported.exception';
+import { ValidationException } from '../../utils/error-handling/validation.exception';
 import { LogContexts } from '../../utils/logging/logging.contexts';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
@@ -39,7 +42,11 @@ export class UserService {
     }
     // reload the user to get it populated
     const populatedUser = await this.getUserByID(user.id);
-    if (!populatedUser) throw new Error(`Unable to locate user: ${user.id}`);
+    if (!populatedUser)
+      throw new EntityNotFoundException(
+        `Unable to locate user: ${user.id}`,
+        LogContexts.COMMUNITY
+      );
 
     this.logger.verbose(
       `User ${userData.email} was created!`,
@@ -148,7 +155,11 @@ export class UserService {
     } else if (id) {
       if (await this.getUserByID(id)) return true;
       else return false;
-    } else throw new Error('No email or id provided!');
+    } else
+      throw new ValidationException(
+        'No email or id provided!',
+        LogContexts.COMMUNITY
+      );
   }
 
   async getMemberOf(user: User): Promise<MemberOf> {
@@ -223,25 +234,30 @@ export class UserService {
     userData: UserInput
   ): Promise<boolean> {
     if (!this.isValidEmail(userData.email))
-      throw new Error(
-        `Valid email address required to create a user: ${userData.email}`
+      throw new ValidationException(
+        `Valid email address required to create a user: ${userData.email}`,
+        LogContexts.COMMUNITY
       );
     if (!userData.firstName || userData.firstName.length == 0)
-      throw new Error(
-        `User profile creation (${userData.email}) missing required first name`
+      throw new ValidationException(
+        `User profile creation (${userData.email}) missing required first name`,
+        LogContexts.COMMUNITY
       );
     if (!userData.lastName || userData.lastName.length == 0)
-      throw new Error(
-        `User profile creation (${userData.email}) missing required last name`
+      throw new ValidationException(
+        `User profile creation (${userData.email}) missing required last name`,
+        LogContexts.COMMUNITY
       );
     if (!userData.email || userData.email.length == 0)
-      throw new Error(
-        `User profile creation (${userData.firstName}) missing required email`
+      throw new ValidationException(
+        `User profile creation (${userData.firstName}) missing required email`,
+        LogContexts.COMMUNITY
       );
     const userCheck = await this.getUserByEmail(userData.email);
     if (userCheck)
-      throw new Error(
-        `User profile with the specified email (${userData.email}) already exists`
+      throw new ValidationException(
+        `User profile with the specified email (${userData.email}) already exists`,
+        LogContexts.COMMUNITY
       );
     // Trim all values to remove space issues
     userData.firstName = userData.firstName.trim();
@@ -263,7 +279,11 @@ export class UserService {
   // Note: explicitly do not support updating of email addresses
   async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
     const user = await this.getUserByID(userID);
-    if (!user) throw new Error(`Unable to update user with ID: ${userID}`);
+    if (!user)
+      throw new EntityNotFoundException(
+        `Unable to update user with ID: ${userID}`,
+        LogContexts.COMMUNITY
+      );
     // Convert the data to json
     if (userInput.name) {
       user.name = userInput.name;
@@ -290,8 +310,9 @@ export class UserService {
       userInput.email &&
       userInput.email.toLowerCase() !== user.email.toLowerCase()
     ) {
-      throw new Error(
-        `Updating of email addresses is not supported: ${userID}`
+      throw new NotSupportedException(
+        `Updating of email addresses is not supported: ${userID}`,
+        LogContexts.COMMUNITY
       );
     }
 
@@ -307,7 +328,11 @@ export class UserService {
     }
 
     const populatedUser = await this.getUserByID(user.id);
-    if (!populatedUser) throw new Error(`Unable to get user by id: ${user.id}`);
+    if (!populatedUser)
+      throw new EntityNotFoundException(
+        `Unable to get user by id: ${user.id}`,
+        LogContexts.COMMUNITY
+      );
 
     return populatedUser;
   }

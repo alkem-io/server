@@ -8,6 +8,9 @@ import { ActorInput } from '../actor/actor.dto';
 import { ActorGroupInput } from './actor-group.dto';
 import { ActorService } from '../actor/actor.service';
 import { IActor } from '../actor/actor.interface';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { LogContexts } from '../../utils/logging/logging.contexts';
+import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
 
 @Injectable()
 export class ActorGroupService {
@@ -34,11 +37,17 @@ export class ActorGroupService {
   ): Promise<IActor> {
     const actorGroup = await this.getActorGroup(actorGroupID);
     if (!actorGroup)
-      throw new Error(`Unable to locate actor group with id: ${actorGroupID}`);
+      throw new EntityNotFoundException(
+        `Unable to locate actor group with id: ${actorGroupID}`,
+        LogContexts.CHALLENGES
+      );
 
     const actor = await this.actorService.createActor(actorData);
     if (!actorGroup.actors)
-      throw new Error(`Non-initialised ActorGroup: ${actorGroupID}`);
+      throw new GroupNotInitializedException(
+        `Non-initialised ActorGroup: ${actorGroupID}`,
+        LogContexts.CHALLENGES
+      );
     actorGroup.actors.push(actor);
 
     await this.actorGroupRepository.save(actorGroup);
@@ -59,8 +68,9 @@ export class ActorGroupService {
   async removeActorGroup(actorGroupID: number): Promise<boolean> {
     const actorGroup = await this.getActorGroup(actorGroupID);
     if (!actorGroup)
-      throw new Error(
-        `Not able to locate actorGroup with the specified ID: ${actorGroupID}`
+      throw new EntityNotFoundException(
+        `Not able to locate actorGroup with the specified ID: ${actorGroupID}`,
+        LogContexts.CHALLENGES
       );
     await this.actorGroupRepository.remove(actorGroup as ActorGroup);
     return true;

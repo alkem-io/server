@@ -13,6 +13,11 @@ import { UserGroupService } from '../user-group/user-group.service';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { Profile } from '../profile/profile.entity';
 import { OrganisationService } from './organisation.service';
+import { ValidationException } from '../../utils/error-handling/validation.exception';
+import { LogContexts } from '../../utils/logging/logging.contexts';
+import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
@@ -34,7 +39,10 @@ export class OrganisationResolverFields {
   async groups(@Parent() organisation: Organisation) {
     const groups = await organisation.groups;
     if (!groups)
-      throw new Error(`No groups on organisation: ${organisation.name}`);
+      throw new ValidationException(
+        `No groups on organisation: ${organisation.name}`,
+        LogContexts.COMMUNITY
+      );
     return groups;
   }
 
@@ -54,13 +62,15 @@ export class OrganisationResolverFields {
       RestrictedGroupNames.Members
     );
     if (!group)
-      throw new Error(
-        `Unable to locate members group on organisation: ${organisation.name}`
+      throw new GroupNotInitializedException(
+        `Unable to locate members group on organisation: ${organisation.name}`,
+        LogContexts.COMMUNITY
       );
     const members = group.members;
     if (!members)
-      throw new Error(
-        `Members group not initialised on organisation: ${organisation.name}`
+      throw new GroupNotInitializedException(
+        `Members group not initialised on organisation: ${organisation.name}`,
+        LogContexts.COMMUNITY
       );
     return members;
   }
@@ -73,8 +83,9 @@ export class OrganisationResolverFields {
   async profile(@Parent() organisation: Organisation) {
     const profile = organisation.profile;
     if (!profile) {
-      throw new Error(
-        `Profile not initialised on organisation: ${organisation.name}`
+      throw new EntityNotInitializedException(
+        `Profile not initialised on organisation: ${organisation.name}`,
+        LogContexts.COMMUNITY
       );
     }
 

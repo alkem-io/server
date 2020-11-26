@@ -23,6 +23,9 @@ import { ReferenceInput } from '../../domain/reference/reference.dto';
 import { Profiling } from '../logging/logging.profiling.decorator';
 import { LogContexts } from '../logging/logging.contexts';
 import { ILoggingConfig } from '../../interfaces/logging.config.interface';
+import { EntityNotInitializedException } from '../error-handling/entity.not.initialized.exception';
+import { ValidationException } from '../error-handling/validation.exception';
+import { BaseException } from '../error-handling/base.exception';
 
 @Injectable()
 export class BootstrapService {
@@ -74,7 +77,10 @@ export class BootstrapService {
       this.logger.verbose(`===== Configuration: ${configName}`);
       const config = this.configService.get<ILoggingConfig>(configName);
       if (!config)
-        throw new Error('Unable to obtain configuration: $${configName}');
+        throw new BaseException(
+          'Unable to obtain configuration: $${configName}',
+          LogContexts.BOOTSTRAP
+        );
       const entries = Object.entries(config);
       for (const [key, value] of entries) {
         this.logConfigLevel(key, value, '');
@@ -189,12 +195,17 @@ export class BootstrapService {
         }
         user = await this.userService.getUserWithGroups(userInput.email);
 
-        if (!user) throw new Error('Unable to create group profiles');
+        if (!user)
+          throw new EntityNotInitializedException(
+            'Unable to create group profiles. User could not',
+            LogContexts.BOOTSTRAP
+          );
 
         const groups = (user as IUser).userGroups;
         if (!groups)
-          throw new Error(
-            `User ${user.email} isn't initialised properly. The user doesn't belong to any groups!`
+          throw new EntityNotInitializedException(
+            `User ${user.email} isn't initialised properly. The user doesn't belong to any groups!`,
+            LogContexts.BOOTSTRAP
           );
 
         if (!groups.some(({ name }) => groupName === name))
@@ -266,14 +277,21 @@ export class BootstrapService {
       return ecoverseArray[0] as IEcoverse;
     }
 
-    throw new Error('Cannot have more than one ecoverse');
+    throw new ValidationException(
+      'Cannot have more than one ecoverse',
+      LogContexts.BOOTSTRAP
+    );
   }
 
   // Populate an empty ecoverse
   async populateEmptyEcoverse(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Set the default values
     ecoverse.name = 'Empty ecoverse';
-    if (!ecoverse.context) throw new Error('Non-initialised ecoverse');
+    if (!ecoverse.context)
+      throw new EntityNotInitializedException(
+        'Non-initialised ecoverse',
+        LogContexts.BOOTSTRAP
+      );
     ecoverse.context.tagline = 'An empty ecoverse to be populated';
 
     return ecoverse;
@@ -346,7 +364,11 @@ export class BootstrapService {
         template.users?.push(user);
         // save the template again for each user, to reflect user assignment to template
         await this.templateService.save(template);
-        if (!user.profile) throw new Error(`non-initialised user: ${user}`);
+        if (!user.profile)
+          throw new EntityNotInitializedException(
+            `non-initialised user: ${user}`,
+            LogContexts.BOOTSTRAP
+          );
         const profileId = user.profile.id;
 
         // Add the tagsets

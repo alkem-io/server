@@ -1,4 +1,4 @@
-import { Inject, Logger } from '@nestjs/common';
+import { Inject, Logger, NotImplementedException } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './search-input.dto';
 import { Repository } from 'typeorm';
@@ -8,6 +8,8 @@ import { User } from '../../domain/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
 import { LogContexts } from '../logging/logging.contexts';
+import { ValidationException } from '../error-handling/validation.exception';
+import { NotAcceptableException } from '../error-handling/not.acceptable.exception';
 
 enum SearchEntityTypes {
   User = 'user',
@@ -54,7 +56,10 @@ export class SearchService {
 
     // Only support certain features for now
     if (searchData.challengesFilter)
-      throw new Error('Filtering by challenges not yet implemented');
+      throw new NotImplementedException(
+        'Filtering by challenges not yet implemented',
+        LogContexts.SEARCH
+      );
     if (searchData.tagsetNames)
       await this.searchTagsets(
         searchData.tagsetNames,
@@ -196,7 +201,10 @@ export class SearchService {
       existingMatch.score = existingMatch.score + SCORE_INCREMENT;
       // also add the term that was matched
       if (match.terms.length != 1)
-        throw new Error('Expected exactly one matched term');
+        throw new ValidationException(
+          'Expected exactly one matched term',
+          LogContexts.SEARCH
+        );
       existingMatch.terms.push(match.terms[0]);
     } else {
       match.score = SCORE_INCREMENT;
@@ -206,21 +214,26 @@ export class SearchService {
 
   validateSearchParameters(searchData: SearchInput) {
     if (searchData.terms.length > SEARCH_TERM_LIMIT)
-      throw new Error(
-        `Maximum number of search terms is ${SEARCH_TERM_LIMIT}; supplied: ${searchData.terms.length}`
+      throw new ValidationException(
+        `Maximum number of search terms is ${SEARCH_TERM_LIMIT}; supplied: ${searchData.terms.length}`,
+        LogContexts.SEARCH
       );
     // Check limit on tagsets that can be searched
     const tagsetNames = searchData.tagsetNames;
     if (tagsetNames && tagsetNames.length > TAGSET_NAMES_LIMIT)
-      throw new Error(
-        `Maximum number of tagset names is ${TAGSET_NAMES_LIMIT}; supplied: ${tagsetNames.length}`
+      throw new ValidationException(
+        `Maximum number of tagset names is ${TAGSET_NAMES_LIMIT}; supplied: ${tagsetNames.length}`,
+        LogContexts.SEARCH
       );
     // Check only allowed entity types supplied
     const entityTypes = searchData.typesFilter;
     if (entityTypes) {
       entityTypes.forEach(entityType => {
         if (!SEARCH_ENTITIES.includes(entityType))
-          throw new Error(`Not allowed typeFilter encountered: ${entityType}`);
+          throw new NotAcceptableException(
+            `Not allowed typeFilter encountered: ${entityType}`,
+            LogContexts.SEARCH
+          );
       });
     }
   }

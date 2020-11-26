@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { LogContexts } from '../../utils/logging/logging.contexts';
 import { AspectInput } from './aspect.dto';
 import { Aspect } from './aspect.entity';
 import { IAspect } from './aspect.interface';
@@ -27,8 +29,9 @@ export class AspectService {
   async removeAspect(aspectID: number): Promise<boolean> {
     const aspect = await this.getAspect(aspectID);
     if (!aspect)
-      throw new Error(
-        `Not able to locate aspect with the specified ID: ${aspectID}`
+      throw new EntityNotFoundException(
+        `Not able to locate aspect with the specified ID: ${aspectID}`,
+        LogContexts.CHALLENGES
       );
     await this.aspectRepository.remove(aspect as Aspect);
     return true;
@@ -44,8 +47,9 @@ export class AspectService {
   ): Promise<IAspect> {
     const aspect = await this.getAspect(aspectID);
     if (!aspect)
-      throw new Error(
-        `Not able to locate aspect with the specified ID: ${aspectID}`
+      throw new EntityNotFoundException(
+        `Not able to locate aspect with the specified ID: ${aspectID}`,
+        LogContexts.CHALLENGES
       );
 
     // Copy over the received data

@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 import { LogContexts } from '../../utils/logging/logging.contexts';
 import { ProfileService } from '../profile/profile.service';
 import { TagsetService } from '../tagset/tagset.service';
@@ -63,7 +64,10 @@ export class OrganisationService {
       where: [{ id: organisationID }],
     });
     if (!organisation)
-      throw new Error(`Unable to find organisation with ID: ${organisationID}`);
+      throw new EntityNotFoundException(
+        `Unable to find organisation with ID: ${organisationID}`,
+        LogContexts.CHALLENGES
+      );
     return organisation;
   }
 
@@ -82,9 +86,10 @@ export class OrganisationService {
     // Try to find the challenge
     const organisation = await Organisation.findOne(orgID);
     if (!organisation) {
-      const msg = `Unable to find organisation with ID: ${orgID}`;
-      this.logger.verbose(msg);
-      throw new Error(msg);
+      throw new EntityNotFoundException(
+        `Unable to find organisation with ID: ${orgID}`,
+        LogContexts.CHALLENGES
+      );
     }
     const group = await this.userGroupService.addGroupWithName(
       organisation,
@@ -101,7 +106,10 @@ export class OrganisationService {
   ): Promise<IOrganisation> {
     const existingOrganisation = await Organisation.findOne(orgID);
     if (!existingOrganisation)
-      throw new Error(`Oganisation with given ID (${orgID}) not found!`);
+      throw new EntityNotFoundException(
+        `Oganisation with given ID (${orgID}) not found!`,
+        LogContexts.CHALLENGES
+      );
 
     // Merge in the data
     if (organisationData.name) {

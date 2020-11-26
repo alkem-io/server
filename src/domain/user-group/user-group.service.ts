@@ -17,6 +17,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContexts } from '../../utils/logging/logging.contexts';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { UserGroupParent } from './user-group-parent.dto';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { ValidationException } from '../../utils/error-handling/validation.exception';
+import { NotSupportedException } from '../../utils/error-handling/not.supported.exception';
+import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
 
 @Injectable()
 export class UserGroupService {
@@ -56,8 +61,9 @@ export class UserGroupService {
       where: { id: groupID },
     });
     if (!group)
-      throw new Error(
-        `Not able to locate User Group with the specified ID: ${group}`
+      throw new EntityNotFoundException(
+        `Not able to locate User Group with the specified ID: ${group}`,
+        LogContexts.COMMUNITY
       );
 
     await this.groupRepository.remove(group);
@@ -73,7 +79,10 @@ export class UserGroupService {
     if (groupWithParent?.challenge) return groupWithParent?.challenge;
     if (groupWithParent?.opportunity) return groupWithParent?.opportunity;
     if (groupWithParent?.organisation) return groupWithParent?.organisation;
-    throw new Error(`Unable to locate parent for user group: ${group.name}`);
+    throw new EntityNotFoundException(
+      `Unable to locate parent for user group: ${group.name}`,
+      LogContexts.COMMUNITY
+    );
   }
 
   //toDo vyanakiev - fix this
@@ -110,16 +119,18 @@ export class UserGroupService {
     // Try to find the user + group
     const user = await this.userService.getUserByID(userID);
     if (!user) {
-      const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.verbose(msg, LogContexts.COMMUNITY);
-      throw new Error(msg);
+      throw new ValidationException(
+        `Unable to find exactly one user with ID: ${userID}`,
+        LogContexts.COMMUNITY
+      );
     }
 
     const group = (await this.getGroupByID(groupID)) as UserGroup;
     if (!group) {
-      const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg, LogContexts.COMMUNITY);
-      throw new Error(msg);
+      throw new EntityNotFoundException(
+        `Unable to find group with ID: ${groupID}`,
+        LogContexts.COMMUNITY
+      );
     }
 
     // Add the user to the group if not already a member
@@ -143,24 +154,42 @@ export class UserGroupService {
       },
       options
     );
-    if (!group) throw new Error(`Unable to find group with ID: ${groupID}`);
+    if (!group)
+      throw new EntityNotFoundException(
+        `Unable to find group with ID: ${groupID}`,
+        LogContexts.COMMUNITY
+      );
     return group;
   }
 
   async addUser(userID: number, groupID: number): Promise<boolean> {
     const user = (await this.userService.getUserByID(userID)) as IUser;
-    if (!user) throw new Error(`No user with id ${userID} was found!`);
+    if (!user)
+      throw new EntityNotFoundException(
+        `No user with id ${userID} was found!`,
+        LogContexts.COMMUNITY
+      );
 
     const group = (await this.getGroupByID(groupID)) as IUserGroup;
-    if (!group) throw new Error(`No group with id ${groupID} was found!`);
+    if (!group)
+      throw new EntityNotFoundException(
+        `No group with id ${groupID} was found!`,
+        LogContexts.COMMUNITY
+      );
     return await this.addUserToGroup(user, group);
   }
 
   async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
     if (!(await this.userService.userExists(undefined, userID)))
-      throw new Error(`No user with id ${userID} found!`);
+      throw new EntityNotFoundException(
+        `No user with id ${userID} found!`,
+        LogContexts.COMMUNITY
+      );
     if (!(await this.groupExists(groupID)))
-      throw new Error(`No group with id ${groupID} found!`);
+      throw new EntityNotFoundException(
+        `No group with id ${groupID} found!`,
+        LogContexts.COMMUNITY
+      );
 
     const userGroup = (await this.groupRepository.findOne({
       where: { members: { id: userID }, id: groupID },
@@ -204,7 +233,10 @@ export class UserGroupService {
 
     //this is a bit hacky
     if (res.identifiers.length === 0)
-      throw new Error('Unable to add user to groups!');
+      throw new ValidationException(
+        'Unable to add user to groups!',
+        LogContexts.COMMUNITY
+      );
 
     return true;
   }
@@ -213,9 +245,10 @@ export class UserGroupService {
     // Try to find the user + group
     const user = await this.userService.getUserByID(userID);
     if (!user) {
-      const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.verbose(msg, LogContexts.COMMUNITY);
-      throw new Error(msg);
+      throw new ValidationException(
+        `Unable to find exactly one user with ID: ${userID}`,
+        LogContexts.COMMUNITY
+      );
     }
 
     // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
@@ -223,17 +256,19 @@ export class UserGroupService {
       relations: ['members', 'ecoverse'],
     });
     if (!group) {
-      const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg, LogContexts.COMMUNITY);
-      throw new Error(msg);
+      throw new EntityNotFoundException(
+        `Unable to find group with ID: ${groupID}`,
+        LogContexts.COMMUNITY
+      );
     }
 
     // Check that the group being removed from is not the ecoverse members group, would leave the ecoverse in an inconsistent state
     if (group.name === RestrictedGroupNames.Members) {
       // Check if ecoverse members
       if (group.ecoverse)
-        throw new Error(
-          `Attempting to remove a user from the ecoverse members group: ${groupID}`
+        throw new NotSupportedException(
+          `Attempting to remove a user from the ecoverse members group: ${groupID}`,
+          LogContexts.COMMUNITY
         );
     }
 
@@ -247,7 +282,11 @@ export class UserGroupService {
     user: IUser,
     group: IUserGroup
   ): Promise<IUserGroup> {
-    if (!group.members) throw new Error('Members not initialised');
+    if (!group.members)
+      throw new GroupNotInitializedException(
+        'Members not initialised',
+        LogContexts.COMMUNITY
+      );
 
     group.members = group.members.filter(member => !(member.id === user.id));
 
@@ -264,9 +303,10 @@ export class UserGroupService {
   async removeFocalPoint(groupID: number): Promise<IUserGroup> {
     const group = (await this.getGroupByID(groupID)) as UserGroup;
     if (!group) {
-      const msg = `Unable to find group with ID: ${groupID}`;
-      this.logger.verbose(msg, LogContexts.COMMUNITY);
-      throw new Error(msg);
+      throw new EntityNotFoundException(
+        `Unable to find group with ID: ${groupID}`,
+        LogContexts.COMMUNITY
+      );
     }
     // Set focalPoint to NULL will remove the relation.
     // For typeorm 'undefined' means - 'Not changed'
@@ -309,7 +349,10 @@ export class UserGroupService {
       })) as IUserGroup;
     }
 
-    throw new Error('Unrecognized groupabble type!');
+    throw new NotSupportedException(
+      'Unrecognized groupabble type!',
+      LogContexts.COMMUNITY
+    );
   }
 
   async addMandatoryGroups(
@@ -317,7 +360,10 @@ export class UserGroupService {
     mandatoryGroupNames: string[]
   ): Promise<IGroupable> {
     if (!groupable.groups)
-      throw new Error('Non-initialised Groupable submitted');
+      throw new EntityNotInitializedException(
+        'Non-initialised Groupable submitted',
+        LogContexts.COMMUNITY
+      );
 
     const newMandatoryGroups = new Set(
       [...mandatoryGroupNames].filter(
@@ -339,7 +385,10 @@ export class UserGroupService {
   hasGroupWithName(groupable: IGroupable, name: string): boolean {
     // Double check groups array is initialised
     if (!groupable.groups) {
-      throw new Error('Non-initialised Groupable submitted');
+      throw new EntityNotInitializedException(
+        'Non-initialised Groupable submitted',
+        LogContexts.COMMUNITY
+      );
     }
 
     // Find the right group
@@ -368,12 +417,9 @@ export class UserGroupService {
     }
 
     if (groupable.restrictedGroupNames?.includes(name)) {
-      this.logger.verbose(
-        `Attempted to create a usergroup using a restricted name: ${name}`,
+      throw new NotSupportedException(
+        `Unable to create user group with restricted name: ${name}`,
         LogContexts.COMMUNITY
-      );
-      throw new Error(
-        'Unable to create user group with restricted name: ' + { name }
       );
     }
 
@@ -398,7 +444,10 @@ export class UserGroupService {
     }
 
     if (!groupable.groups) {
-      throw new Error('No restricted group names found!');
+      throw new GroupNotInitializedException(
+        'No restricted group names found!',
+        LogContexts.COMMUNITY
+      );
     }
     return groupable.groups;
   }

@@ -5,6 +5,9 @@ import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
 import { IAzureADConfig } from '../../interfaces/aad.config.interface';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
+import { AccountException } from '../error-handling/account.exception';
+import { BaseException } from '../error-handling/base.exception';
+import { ValidationException } from '../error-handling/validation.exception';
 import { LogContexts } from '../logging/logging.contexts';
 import { MsGraphService } from '../ms-graph/ms-graph.service';
 
@@ -34,8 +37,9 @@ export class AccountService {
   async accountExists(accountUpn: string): Promise<boolean> {
     // Should not be called if account usage is disabled
     if (!this.accountUsageEnabled())
-      throw new Error(
-        `Attempting to locate account (${accountUpn}) but account usage is disabled`
+      throw new AccountException(
+        `Attempting to locate account (${accountUpn}) but account usage is disabled`,
+        LogContexts.COMMUNITY
       );
     return await this.msGraphService.userExists(undefined, accountUpn);
   }
@@ -45,20 +49,21 @@ export class AccountService {
     await this.validateAccountCreationRequest(userData);
 
     const accountUpn = this.buildUPN(userData);
-    try {
-      const result = await this.msGraphService.createUser(userData, accountUpn);
-      if (!result)
-        throw new Error(
-          `Unable to complete account creation for ${userData.email} using UPN: ${accountUpn}`
-        );
-    } catch (e) {
-      const msg = `Unable to complete account creation for ${userData.email}: ${e}`;
-      this.logger.error(msg, e, LogContexts.AUTH);
-      throw e;
-    }
+
+    const result = await this.msGraphService.createUser(userData, accountUpn);
+    if (!result)
+      throw new BaseException(
+        `Unable to complete account creation for ${userData.email} using UPN: ${accountUpn}`,
+        LogContexts.AUTH
+      );
+
     // Update the user to store the upn
     const user = await this.userService.getUserByEmail(userData.email);
-    if (!user) throw new Error(`Unable to update user: ${userData.email}`);
+    if (!user)
+      throw new AccountException(
+        `Unable to update user: ${userData.email}`,
+        LogContexts.COMMUNITY
+      );
     user.accountUpn = accountUpn;
     await this.userService.saveUser(user);
     return true;
@@ -70,7 +75,11 @@ export class AccountService {
     password: string
   ): Promise<boolean> {
     const user = await this.userService.getUserByID(userID);
-    if (!user) throw new Error(`Unable to locate user: ${userID}`);
+    if (!user)
+      throw new AccountException(
+        `Unable to locate user: ${userID}`,
+        LogContexts.COMMUNITY
+      );
     const userData = new UserInput();
     userData.accountUpn = user.accountUpn;
     userData.aadPassword = password;
@@ -86,7 +95,10 @@ export class AccountService {
   buildUPN(userData: UserInput): string {
     const upnDomain = this.configService.get<IAzureADConfig>('aad')?.upnDomain;
     if (!upnDomain)
-      throw new Error('Unable to identify the upn domain to be used');
+      throw new AccountException(
+        'Unable to identify the upn domain to be used',
+        LogContexts.COMMUNITY
+      );
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const normalizer = require('normalizer');
@@ -98,9 +110,15 @@ export class AccountService {
     if (!accountUpn || accountUpn.length == 0) {
       // Not specified, create one automatically based on the user profile data
       if (!firstName)
-        throw new Error('Missing first name information for generating UPN');
+        throw new ValidationException(
+          'Missing first name information for generating UPN',
+          LogContexts.COMMUNITY
+        );
       if (!lastName)
-        throw new Error('Missing last name information for generating UPN');
+        throw new ValidationException(
+          'Missing last name information for generating UPN',
+          LogContexts.COMMUNITY
+        );
     }
 
     let upn = `${firstName}.${lastName}@${upnDomain}`;
@@ -118,14 +136,16 @@ export class AccountService {
 
   async validateAccountCreationRequest(userData: UserInput) {
     if (!this.accountUsageEnabled()) {
-      throw new Error(
-        'Not able to create accounts while authentication is disabled'
+      throw new AccountException(
+        'Not able to create accounts while authentication is disabled',
+        LogContexts.COMMUNITY
       );
     }
     const tmpPassword = userData.aadPassword;
     if (!tmpPassword)
-      throw new Error(
-        `Unable to create account for user (${userData.name} as no password provided)`
+      throw new AccountException(
+        `Unable to create account for user (${userData.name} as no password provided)`,
+        LogContexts.COMMUNITY
       );
 
     const accountUpn = this.buildUPN(userData);
@@ -133,20 +153,18 @@ export class AccountService {
     // Check if the account exists already
     const accountExists = await this.accountExists(accountUpn);
     if (accountExists)
-      throw new Error(
-        `There already exists an account with UPN (${accountUpn}); please choose another`
+      throw new AccountException(
+        `There already exists an account with UPN (${accountUpn}); please choose another`,
+        LogContexts.COMMUNITY
       );
   }
 
   async removeUserAccount(accountUpn: string): Promise<boolean> {
     if (accountUpn === '') {
-      const error = new Error('Account UPN is missing!');
-      this.logger.error(
+      throw new BaseException(
         `Failed to delete account ${accountUpn}`,
-        error.message,
         LogContexts.COMMUNITY
       );
-      throw error;
     }
 
     let res = false;
@@ -164,11 +182,14 @@ export class AccountService {
     return false;
   }
 
-  async updateUserAccountPassword(accountUpn: string, newPassword: string): Promise<boolean> {
+  async updateUserAccountPassword(
+    accountUpn: string,
+    newPassword: string
+  ): Promise<boolean> {
     if (accountUpn === '') {
       const error = new Error('Account UPN is missing!');
       this.logger.error(
-        `Failed to reset password for account!`,
+        'Failed to reset password for account!',
         error.message,
         LogContexts.COMMUNITY
       );
@@ -189,5 +210,4 @@ export class AccountService {
     if (res === undefined) return true;
     return false;
   }
-
 }

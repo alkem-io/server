@@ -15,6 +15,9 @@ import { OpportunityService } from './opportunity.service';
 import { ActorGroup } from '../actor-group/actor-group.entity';
 import { Aspect } from '../aspect/aspect.entity';
 import { Relation } from '../relation/relation.entity';
+import { RelationshipNotFoundException } from '../../utils/error-handling/relationship.not.found.exception';
+import { LogContexts } from '../../utils/logging/logging.contexts';
+import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
@@ -54,13 +57,15 @@ export class OpportunityResolverFields {
       RestrictedGroupNames.Members
     );
     if (!group)
-      throw new Error(
-        `Unable to locate members group on Opportunity: ${Opportunity.name}`
+      throw new RelationshipNotFoundException(
+        `Unable to locate members group on Opportunity: ${Opportunity.name}`,
+        LogContexts.COMMUNITY
       );
     const members = group.members;
     if (!members)
-      throw new Error(
-        `Members group not initialised on Opportunity: ${Opportunity.name}`
+      throw new EntityNotInitializedException(
+        `Members group not initialised on Opportunity: ${Opportunity.name}`,
+        LogContexts.COMMUNITY
       );
     return members;
   }

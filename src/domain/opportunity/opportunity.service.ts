@@ -26,6 +26,11 @@ import { UserService } from '../user/user.service';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
+import { ValidationException } from '../../utils/error-handling/validation.exception';
+import { RelationshipNotFoundException } from '../../utils/error-handling/relationship.not.found.exception';
 
 @Injectable()
 export class OpportunityService {
@@ -86,7 +91,10 @@ export class OpportunityService {
       where: { id: opportunityID },
     });
     if (!opportunity)
-      throw new Error(`Unable to find Opportunity with ID: ${opportunityID}`);
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: ${opportunityID}`,
+        LogContexts.CHALLENGES
+      );
     return opportunity;
   }
 
@@ -98,7 +106,10 @@ export class OpportunityService {
       relations: ['aspects'],
     });
     if (!opportunity)
-      throw new Error(`Unable to find Opportunity with ID: ${opportunityID}`);
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: ${opportunityID}`,
+        LogContexts.CHALLENGES
+      );
     return opportunity;
   }
 
@@ -110,7 +121,10 @@ export class OpportunityService {
       relations: ['actorGroups'],
     });
     if (!opportunity)
-      throw new Error(`Unable to find Opportunity with ID: ${opportunityID}`);
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: ${opportunityID}`,
+        LogContexts.CHALLENGES
+      );
     return opportunity;
   }
 
@@ -122,7 +136,10 @@ export class OpportunityService {
       relations: ['relations'],
     });
     if (!opportunity)
-      throw new Error(`Unable to find Opportunity with ID: ${opportunityID}`);
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: ${opportunityID}`,
+        LogContexts.CHALLENGES
+      );
     return opportunity;
   }
 
@@ -140,7 +157,10 @@ export class OpportunityService {
     // Opportunity is not populated wih
     const groups = await this.userGroupService.getGroups(opportunity);
     if (!groups)
-      throw new Error(`No groups on Opportunity: ${opportunity.name}`);
+      throw new GroupNotInitializedException(
+        `No groups on Opportunity: ${opportunity.name}`,
+        LogContexts.CHALLENGES
+      );
     return groups;
   }
 
@@ -155,7 +175,10 @@ export class OpportunityService {
       opportunity.id
     );
     if (!opportunityLoaded || !opportunityLoaded.actorGroups)
-      throw new Error(`Opportunity not initialised: ${opportunity.id}`);
+      throw new EntityNotInitializedException(
+        `Opportunity not initialised: ${opportunity.id}`,
+        LogContexts.CHALLENGES
+      );
 
     return opportunityLoaded.actorGroups;
   }
@@ -171,7 +194,10 @@ export class OpportunityService {
       opportunity.id
     );
     if (!opportunityLoaded || !opportunityLoaded.aspects)
-      throw new Error(`Opportunity not initialised: ${opportunity.id}`);
+      throw new EntityNotFoundException(
+        `Opportunity not initialised: ${opportunity.id}`,
+        LogContexts.CHALLENGES
+      );
 
     return opportunityLoaded.aspects;
   }
@@ -187,7 +213,10 @@ export class OpportunityService {
       opportunity.id
     );
     if (!opportunityLoaded || !opportunityLoaded.relations)
-      throw new Error(`Opportunity not initialised: ${opportunity.id}`);
+      throw new EntityNotInitializedException(
+        `Opportunity not initialised: ${opportunity.id}`,
+        LogContexts.CHALLENGES
+      );
 
     return opportunityLoaded.relations;
   }
@@ -198,14 +227,16 @@ export class OpportunityService {
     // Verify that required textID field is present and that it has the right format
     const textID = opportunityData.textID;
     if (!textID || textID.length < 3)
-      throw new Error(
-        `Required field textID not specified or long enough: ${textID}`
+      throw new ValidationException(
+        `Required field textID not specified or long enough: ${textID}`,
+        LogContexts.CHALLENGES
       );
     const expression = /^[a-zA-Z0-9.\-_]+$/;
     const textIdCheck = expression.test(textID);
     if (!textIdCheck)
-      throw new Error(
-        `Required field textID provided not in the correct format: ${textID}`
+      throw new ValidationException(
+        `Required field textID provided not in the correct format: ${textID}`,
+        LogContexts.CHALLENGES
       ); // Ensure field is lower case
     opportunityData.textID = textID.toLowerCase();
 
@@ -244,8 +275,9 @@ export class OpportunityService {
       relations: ['actorGroups', 'aspects', 'relations', 'groups'],
     });
     if (!opportunity)
-      throw new Error(
-        `Not able to locate Opportunity with the specified ID: ${opportunityID}`
+      throw new EntityNotFoundException(
+        `Not able to locate Opportunity with the specified ID: ${opportunityID}`,
+        LogContexts.CHALLENGES
       );
 
     // First remove all groups
@@ -287,12 +319,14 @@ export class OpportunityService {
       relations: ['challenge'],
     });
     if (!opportunity)
-      throw new Error(
-        `Unable to locate opportunity with the given ID: ${opportunityID}`
+      throw new EntityNotFoundException(
+        `Unable to locate opportunity with the given ID: ${opportunityID}`,
+        LogContexts.CHALLENGES
       );
     if (!opportunity.challenge)
-      throw new Error(
-        `Opportunity with given ID is not in a challenge: ${opportunityID}`
+      throw new ValidationException(
+        `Opportunity with given ID is not in a challenge: ${opportunityID}`,
+        LogContexts.CHALLENGES
       );
     return opportunity.challenge.id;
   }
@@ -301,7 +335,10 @@ export class OpportunityService {
     opportunity: IOpportunity
   ): Promise<boolean> {
     if (!opportunity.restrictedActorGroupNames) {
-      throw new Error('Non-initialised Opportunity submitted');
+      throw new EntityNotInitializedException(
+        'Non-initialised Opportunity submitted',
+        LogContexts.CHALLENGES
+      );
     }
     for (const name of opportunity.restrictedActorGroupNames) {
       const actorGroupData = new ActorGroupInput();
@@ -321,7 +358,10 @@ export class OpportunityService {
     opportunity: IOpportunity
   ): IActorGroup | undefined {
     if (!opportunity.actorGroups)
-      throw new Error('actorGroups not initialised');
+      throw new EntityNotInitializedException(
+        'actorGroups not initialised',
+        LogContexts.CHALLENGES
+      );
     const collaboratorsActorGroup = opportunity.actorGroups.find(
       t => t.name === RestrictedActorGroupNames.Collaborators
     );
@@ -339,7 +379,10 @@ export class OpportunityService {
 
     const opportunity = await this.getOpportunityByID(opportunityId);
     if (!opportunity)
-      throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
+      throw new EntityNotFoundException(
+        `Unalbe to locate opportunity with id: ${opportunityId}`,
+        LogContexts.CHALLENGES
+      );
 
     // Check that do not already have an Project with the same name
     const name = projectData.name;
@@ -348,13 +391,17 @@ export class OpportunityService {
       project => project.name === name || project.textID === textID
     );
     if (existingProject)
-      throw new Error(
-        `Already have an Project with the provided name or textID: ${name} - ${projectData.textID}`
+      throw new ValidationException(
+        `Already have an Project with the provided name or textID: ${name} - ${projectData.textID}`,
+        LogContexts.CHALLENGES
       );
 
     const project = await this.projectService.createProject(projectData);
     if (!opportunity.projects)
-      throw new Error(`Opportunity (${opportunityId}) not initialised`);
+      throw new EntityNotInitializedException(
+        `Opportunity (${opportunityId}) not initialised`,
+        LogContexts.CHALLENGES
+      );
     opportunity.projects.push(project);
     await this.opportunityRepository.save(opportunity);
     return project;
@@ -366,7 +413,10 @@ export class OpportunityService {
   ): Promise<IAspect> {
     const opportunity = await this.getOpportunityByIdWithAspects(opportunityId);
     if (!opportunity)
-      throw new Error(`Unable to locate opportunity with id: ${opportunityId}`);
+      throw new EntityNotFoundException(
+        `Unable to locate opportunity with id: ${opportunityId}`,
+        LogContexts.CHALLENGES
+      );
 
     // Check that do not already have an aspect with the same title
     const title = aspectData.title;
@@ -374,13 +424,17 @@ export class OpportunityService {
       aspect => aspect.title === title
     );
     if (existingAspect)
-      throw new Error(
-        `Already have an aspect with the provided title: ${title}`
+      throw new ValidationException(
+        `Already have an aspect with the provided title: ${title}`,
+        LogContexts.CHALLENGES
       );
 
     const aspect = await this.aspectService.createAspect(aspectData);
     if (!opportunity.aspects)
-      throw new Error(`Opportunity (${opportunityId}) not initialised`);
+      throw new EntityNotInitializedException(
+        `Opportunity (${opportunityId}) not initialised`,
+        LogContexts.CHALLENGES
+      );
     opportunity.aspects.push(aspect);
     await this.opportunityRepository.save(opportunity);
     return aspect;
@@ -394,7 +448,10 @@ export class OpportunityService {
       opportunityId
     );
     if (!opportunity)
-      throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
+      throw new EntityNotFoundException(
+        `Unalbe to locate opportunity with id: ${opportunityId}`,
+        LogContexts.CHALLENGES
+      );
 
     // Check that do not already have an aspect with the same title
     const name = actorGroupData.name;
@@ -402,15 +459,19 @@ export class OpportunityService {
       actorGroup => actorGroup.name === name
     );
     if (existingActorGroup)
-      throw new Error(
-        `Already have an actor group with the provided name: ${name}`
+      throw new ValidationException(
+        `Already have an actor group with the provided name: ${name}`,
+        LogContexts.CHALLENGES
       );
 
     const actorGroup = await this.actorGroupService.createActorGroup(
       actorGroupData
     );
     if (!opportunity.actorGroups)
-      throw new Error(`Opportunity (${opportunityId}) not initialised`);
+      throw new EntityNotInitializedException(
+        `Opportunity (${opportunityId}) not initialised`,
+        LogContexts.CHALLENGES
+      );
     opportunity.actorGroups.push(actorGroup);
     await this.opportunityRepository.save(opportunity);
     return actorGroup;
@@ -424,9 +485,15 @@ export class OpportunityService {
       opportunityId
     );
     if (!opportunity)
-      throw new Error(`Unalbe to locate opportunity with id: ${opportunityId}`);
+      throw new EntityNotFoundException(
+        `Unalbe to locate opportunity with id: ${opportunityId}`,
+        LogContexts.CHALLENGES
+      );
     if (!opportunity.relations)
-      throw new Error(`Opportunity (${opportunityId}) not initialised`);
+      throw new EntityNotInitializedException(
+        `Opportunity (${opportunityId}) not initialised`,
+        LogContexts.CHALLENGES
+      );
 
     const relation = await this.relationService.createRelation(relationData);
     opportunity.relations.push(relation);
@@ -445,15 +512,19 @@ export class OpportunityService {
     );
     // Check a valid ID was passed
     if (!opportunityID)
-      throw new Error(`Invalid Opportunity id passed in: ${opportunityID}`);
+      throw new ValidationException(
+        `Invalid Opportunity id passed in: ${opportunityID}`,
+        LogContexts.CHALLENGES
+      );
     // Try to find the Opportunity
     const opportunity = await this.opportunityRepository.findOne({
       where: { id: opportunityID },
       relations: ['groups'],
     });
     if (!opportunity) {
-      throw new Error(
-        `Unable to create the group: no opportunity with ID: ${opportunityID}`
+      throw new EntityNotFoundException(
+        `Unable to create the group: no opportunity with ID: ${opportunityID}`,
+        LogContexts.CHALLENGES
       );
     }
     const group = await this.userGroupService.addGroupWithName(
@@ -469,9 +540,10 @@ export class OpportunityService {
     // Try to find the user + group
     const user = await this.userService.getUserByID(userID);
     if (!user) {
-      const msg = `Unable to find exactly one user with ID: ${userID}`;
-      this.logger.warn(msg, LogContexts.CHALLENGES);
-      throw new Error(msg);
+      throw new ValidationException(
+        `Unable to find exactly one user with ID: ${userID}`,
+        LogContexts.CHALLENGES
+      );
     }
 
     const opportunity = await this.getOpportunityByID(opportunityID);

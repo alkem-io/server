@@ -120,27 +120,26 @@ export class MsGraphService {
     return tenantName;
   }
 
-  async resetPassword(accountUpn: string, newPassword: string) : Promise<any>
-  {
+  async resetPassword(accountUpn: string, newPassword: string): Promise<any> {
     const clientOptions: ClientOptions = {
       authProvider: this.azureAdStrategy,
     };
 
-    const passwordResetResponse =
-    {
+    const passwordResetResponse = {
       newPassword: newPassword,
     };
 
     const client = Client.initWithMiddleware(clientOptions);
-    const userId = (await client.api(`/users/${accountUpn}?$select=id`).get()).id;
+    const userId = (await client.api(`/users/${accountUpn}?$select=id`).get())
+      .id;
     //https://docs.microsoft.com/en-us/graph/api/authentication-list-passwordmethods?view=graph-rest-beta&tabs=http
     //we are parking this until the api call is moved to the production version of ms graph API
     const req = `/users/${userId}/authentication/passwordMethods/${userId}/resetPassword`;
-    let res = await client.api(req)
-    .version('beta')
-    .post(passwordResetResponse);
+    const res = await client
+      .api(req)
+      .version('beta')
+      .post(passwordResetResponse);
 
     return res;
   }
-
 }

@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
 import { LogContexts } from '../../utils/logging/logging.contexts';
 import { ReferenceInput } from '../reference/reference.dto';
 import { Reference } from '../reference/reference.entity';
@@ -57,7 +59,11 @@ export class ProfileService {
   async createTagset(profileID: number, tagsetName: string): Promise<ITagset> {
     const profile = (await this.getProfile(profileID)) as Profile;
 
-    if (!profile) throw new Error(`Profile with id(${profileID}) not found!`);
+    if (!profile)
+      throw new EntityNotFoundException(
+        `Profile with id(${profileID}) not found!`,
+        LogContexts.COMMUNITY
+      );
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
@@ -74,9 +80,17 @@ export class ProfileService {
   ): Promise<IReference> {
     const profile = (await this.getProfile(profileID)) as Profile;
 
-    if (!profile) throw new Error(`Profile with id(${profileID}) not found!`);
+    if (!profile)
+      throw new EntityNotFoundException(
+        `Profile with id(${profileID}) not found!`,
+        LogContexts.COMMUNITY
+      );
 
-    if (!profile.references) throw new Error('References not defined');
+    if (!profile.references)
+      throw new EntityNotInitializedException(
+        'References not defined',
+        LogContexts.COMMUNITY
+      );
     // check there is not already a reference with the same name
     for (const reference of profile.references) {
       if (reference.name === referenceInput.name) {
@@ -99,7 +113,11 @@ export class ProfileService {
     profileData: ProfileInput
   ): Promise<boolean> {
     const profile = (await this.getProfile(profileID)) as Profile;
-    if (!profile) throw new Error(`Profile with id (${profileID}) not found!`);
+    if (!profile)
+      throw new EntityNotFoundException(
+        `Profile with id (${profileID}) not found!`,
+        LogContexts.CHALLENGES
+      );
 
     profile.avatar = profileData.avatar;
     profile.description = profileData.description;
