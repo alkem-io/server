@@ -281,6 +281,22 @@ export class OpportunityService {
     return true;
   }
 
+  async getChallengeID(opportunityID: number): Promise<number> {
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { id: opportunityID },
+      relations: ['challenge'],
+    });
+    if (!opportunity)
+      throw new Error(
+        `Unable to locate opportunity with the given ID: ${opportunityID}`
+      );
+    if (!opportunity.challenge)
+      throw new Error(
+        `Opportunity with given ID is not in a challenge: ${opportunityID}`
+      );
+    return opportunity.challenge.id;
+  }
+
   async createRestrictedActorGroups(
     opportunity: IOpportunity
   ): Promise<boolean> {
@@ -458,14 +474,7 @@ export class OpportunityService {
       throw new Error(msg);
     }
 
-    const opportunity = (await this.getOpportunityByID(
-      opportunityID
-    )) as Opportunity;
-    if (!opportunity) {
-      const msg = `Unable to find opportunity with ID: ${opportunityID}`;
-      this.logger.warn(msg, LogContexts.CHALLENGES);
-      throw new Error(msg);
-    }
+    const opportunity = await this.getOpportunityByID(opportunityID);
 
     // Get the members group
     const membersGroup = await this.userGroupService.getGroupByName(
