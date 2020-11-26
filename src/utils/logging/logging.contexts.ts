@@ -6,4 +6,5 @@ export enum LogContexts {
   BOOTSTRAP = 'bootstrap',
   DATA_MGMT = 'data-mgmt',
   CHALLENGES = 'challenges',
+  SEARCH = 'search',
 }
