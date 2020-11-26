@@ -418,6 +418,17 @@ export class EcoverseService {
     return true;
   }
 
+
+  // Removes the user and deletes the profile
+  async updateUserAccountPassword(userID: number, newPassword: string): Promise<boolean> {
+    const user = await this.userService.getUserByID(userID);
+    if (!user) throw new Error(`Could not locate specified user: ${userID}`);
+
+    if (this.accountService.accountUsageEnabled())
+      return await this.accountService.updateUserAccountPassword(user.accountUpn, newPassword);
+    return true;
+  }
+
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
     const ecoverse = await this.getEcoverse();
 

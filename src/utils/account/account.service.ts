@@ -163,4 +163,31 @@ export class AccountService {
     if (res === undefined) return true;
     return false;
   }
+
+  async updateUserAccountPassword(accountUpn: string, newPassword: string): Promise<boolean> {
+    if (accountUpn === '') {
+      const error = new Error('Account UPN is missing!');
+      this.logger.error(
+        `Failed to reset password for account!`,
+        error.message,
+        LogContexts.COMMUNITY
+      );
+      throw error;
+    }
+
+    let res = false;
+    try {
+      res = await this.msGraphService.resetPassword(accountUpn, newPassword);
+    } catch (error) {
+      this.logger.error(
+        `Failed to reset password for account ${accountUpn}`,
+        error.message,
+        LogContexts.COMMUNITY
+      );
+    }
+
+    if (res === undefined) return true;
+    return false;
+  }
+
 }
