@@ -1,15 +1,13 @@
 import {
   createChallangeMutation,
-  getChallenge,
+  removeChallangeMutation,
 } from './challenge.request.params';
 import { graphqlRequest } from '../utils/graphql.request';
 import '../utils/array.matcher';
 import { appSingleton } from '../utils/app.singleton';
 
 let challengeName = '';
-let challengeId = '';
 let uniqueTextId = '';
-let uniqueId = Math.random().toString();
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
@@ -35,6 +33,18 @@ describe('Create Challenge', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(response.body.data.createChallenge.name).toEqual(challengeName);
+  });
+  test('should remove a challenge', async () => {
+    // Arrange
+    const response = await createChallangeMutation(challengeName, uniqueTextId);
+    const challengeId = response.body.data.createChallenge.id;
+
+    // Act
+    const removeChallengeResponse = await removeChallangeMutation(challengeId);
+
+    // Assert
+    expect(removeChallengeResponse.status).toBe(200);
+    expect(removeChallengeResponse.body.data.removeChallenge).toBe(true);
   });
 
   test('should create 2 challenges with different names', async () => {
