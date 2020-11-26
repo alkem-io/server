@@ -115,6 +115,27 @@ export class ChallengeResolverMutations {
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
+  @Mutation(() => UserGroup, {
+    description:
+      'Adds the user with the given identifier as a member of the specified opportunity',
+  })
+  @Profiling.api
+  async addUserToOpportunity(
+    @Args('userID') userID: number,
+    @Args('opportunityID') opportunityID: number
+  ): Promise<IUserGroup> {
+    const group = await this.challengeService.addUserToOpportunity(
+      userID,
+      opportunityID
+    );
+    return group;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:
       'Adds the specified organisation as a lead for the specified challenge',

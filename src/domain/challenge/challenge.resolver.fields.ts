@@ -59,14 +59,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async contributors(@Parent() challenge: Challenge) {
-    const group = await this.userGroupService.getGroupByName(
-      challenge,
-      RestrictedGroupNames.Members
-    );
-    if (!group)
-      throw new Error(
-        `Unable to locate members group on challenge: ${challenge.name}`
-      );
+    const group = await this.challengeService.getMembersGroup(challenge);
     const members = group.members;
     if (!members)
       throw new Error(

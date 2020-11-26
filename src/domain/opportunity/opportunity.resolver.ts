@@ -180,25 +180,4 @@ export class OpportunityResolver {
     );
     return group;
   }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
-    description:
-      'Adds the user with the given identifier as a member of the specified opportunity',
-  })
-  @Profiling.api
-  async addUserToOpportunity(
-    @Args('userID') userID: number,
-    @Args('opportunityID') opportunityID: number
-  ): Promise<IUserGroup> {
-    const group = await this.opportunityService.addMember(
-      userID,
-      opportunityID
-    );
-    return group;
-  }
 }
