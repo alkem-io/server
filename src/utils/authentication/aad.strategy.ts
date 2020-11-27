@@ -1,10 +1,4 @@
-import {
-  forwardRef,
-  Inject,
-  Injectable,
-  LoggerService,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy, AuthGuard } from '@nestjs/passport';
 import { BearerStrategy } from 'passport-azure-ad';
@@ -17,7 +11,8 @@ import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
-import { AuthenticationError } from 'apollo-server-express';
+import { AuthenticationException } from '../error-handling/exceptions/authentication.exception';
+import { TokenException } from '../error-handling/exceptions/token.exception';
 
 @Injectable()
 export class AzureADStrategy
@@ -54,13 +49,14 @@ export class AzureADStrategy
     done: CallableFunction
   ): Promise<any> {
     try {
-      if (!token.email) throw new AuthenticationError('Token email missing!');
+      if (!token.email)
+        throw new AuthenticationException('Token email missing!');
 
       await this.cacheBearerToken(req);
 
       const knownUser = await this.userService.getUserWithGroups(token.email);
       if (!knownUser)
-        throw new UnauthorizedException(
+        throw new AuthenticationException(
           `No user with email ${token.email} found!`
         );
 
@@ -72,7 +68,7 @@ export class AzureADStrategy
         LogContext.AUTH
       );
       done(
-        new AuthenticationError(
+        new AuthenticationException(
           `Failed adding the user to the request object: ${error}`
         )
       );
@@ -86,10 +82,8 @@ export class AzureADStrategy
       const parsedHeaders = JSON.parse(headers);
       await this.myCache.set('accessToken', parsedHeaders.authorization, 60);
     } catch (error) {
-      this.logger.error(
-        `Failed adding the user to the request object: ${error}`,
-        error,
-        LogContext.AUTH_TOKEN
+      throw new TokenException(
+        `Failed adding the user to the request object: ${error}`
       );
     }
   }
@@ -107,13 +101,11 @@ export class AzureADStrategy
     const downstreamAccessToken = response['access_token'];
 
     if (!downstreamAccessToken) {
-      const error = new AuthenticationError(response['error_description']);
       this.logger.error(
         'No downstream token found in OBO flow. Can not access MS Graph API!',
-        error.message,
         LogContext.AUTH_TOKEN
       );
-      throw error;
+      throw new TokenException(response['error_description']);
     }
 
     this.logger.verbose?.(

@@ -3,11 +3,11 @@ import {
   ExecutionContext,
   Inject,
   LoggerService,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
-import { AuthenticationError } from 'apollo-server-core';
 import { ConfigService } from '@nestjs/config';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
@@ -15,6 +15,7 @@ import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
+import { AuthenticationException } from '../error-handling/exceptions/authentication.exception';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {
@@ -65,13 +66,14 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
     if (err) throw err;
 
     if (!user)
-      throw new AuthenticationError(
+      throw new AuthenticationException(
         'You are not authorized to access this resource. '
       );
 
     if (this.matchRoles(user.userGroups)) return user;
-    throw new AuthenticationError(
-      `User '${user.email}' doesn't have any roles in this ecoverse.`
+    throw new ForbiddenException(
+      `User '${user.email}' doesn't have any roles in this ecoverse.`,
+      LogContext.AUTH
     );
   }
 }

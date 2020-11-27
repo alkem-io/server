@@ -6,7 +6,6 @@ import { UserService } from '../../domain/user/user.service';
 import { IAzureADConfig } from '../../interfaces/aad.config.interface';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { AccountException } from '../error-handling/exceptions/account.exception';
-import { BaseException } from '../error-handling/exceptions/base.exception';
 import { ValidationException } from '../error-handling/exceptions/validation.exception';
 import { LogContext } from '../logging/logging.contexts';
 import { MsGraphService } from '../ms-graph/ms-graph.service';
@@ -52,7 +51,7 @@ export class AccountService {
 
     const result = await this.msGraphService.createUser(userData, accountUpn);
     if (!result)
-      throw new BaseException(
+      throw new AccountException(
         `Unable to complete account creation for ${userData.email} using UPN: ${accountUpn}`,
         LogContext.AUTH
       );
@@ -161,7 +160,7 @@ export class AccountService {
 
   async removeUserAccount(accountUpn: string): Promise<boolean> {
     if (accountUpn === '') {
-      throw new BaseException(
+      throw new AccountException(
         `Failed to delete account ${accountUpn}`,
         LogContext.COMMUNITY
       );
@@ -187,13 +186,10 @@ export class AccountService {
     newPassword: string
   ): Promise<boolean> {
     if (accountUpn === '') {
-      const error = new Error('Account UPN is missing!');
-      this.logger.error(
-        'Failed to reset password for account!',
-        error.message,
+      throw new ValidationException(
+        'Account UPN is missing! Failed to reset password for account!',
         LogContext.COMMUNITY
       );
-      throw error;
     }
 
     let res = false;

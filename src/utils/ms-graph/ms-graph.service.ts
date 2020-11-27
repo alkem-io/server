@@ -6,6 +6,7 @@ import { UserInput } from '../../domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
+import { AccountException } from '../error-handling/exceptions/account.exception';
 
 @Injectable()
 export class MsGraphService {
@@ -84,7 +85,7 @@ export class MsGraphService {
     try {
       res = await client.api(`/users/${accountUpn}`).get();
     } catch (error) {
-      this.logger.error(error.msg, error, LogContext.AUTH);
+      throw new AccountException(error.msg, LogContext.COMMUNITY);
     }
     return res;
   }
@@ -97,7 +98,7 @@ export class MsGraphService {
     try {
       user = await this.getUser(client, accountUpn);
     } catch (error) {
-      this.logger.error(error.msg, error, LogContext.AUTH);
+      throw new AccountException(error.msg, LogContext.COMMUNITY);
     }
 
     if (user) return true;
@@ -114,7 +115,7 @@ export class MsGraphService {
       const org = await this.getOrganisation(client);
       tenantName = org.value[0]['verifiedDomains'][0]['name'];
     } catch (error) {
-      this.logger.error(error.msg, error, LogContext.AUTH);
+      throw new AccountException(error.msg, LogContext.COMMUNITY);
     }
 
     return tenantName;
