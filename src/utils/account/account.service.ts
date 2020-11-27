@@ -5,9 +5,9 @@ import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
 import { IAzureADConfig } from '../../interfaces/aad.config.interface';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
-import { AccountException } from '../error-handling/account.exception';
-import { BaseException } from '../error-handling/base.exception';
-import { ValidationException } from '../error-handling/validation.exception';
+import { AccountException } from '../error-handling/exceptions/account.exception';
+import { BaseException } from '../error-handling/exceptions/base.exception';
+import { ValidationException } from '../error-handling/exceptions/validation.exception';
 import { LogContext } from '../logging/logging.contexts';
 import { MsGraphService } from '../ms-graph/ms-graph.service';
 

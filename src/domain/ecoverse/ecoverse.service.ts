@@ -29,10 +29,10 @@ import { OrganisationService } from '../organisation/organisation.service';
 import { UserService } from '../user/user.service';
 import { AccountService } from '../../utils/account/account.service';
 import { LogContext } from '../../utils/logging/logging.contexts';
-import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
-import { AccountException } from '../../utils/error-handling/account.exception';
-import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import { AccountException } from '../../utils/error-handling/exceptions/account.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
 
 @Injectable()
 export class EcoverseService {

@@ -13,11 +13,11 @@ import { UserGroupService } from '../user-group/user-group.service';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { Profile } from '../profile/profile.entity';
 import { OrganisationService } from './organisation.service';
-import { ValidationException } from '../../utils/error-handling/validation.exception';
+import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
 import { LogContext } from '../../utils/logging/logging.contexts';
-import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
-import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
+import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {

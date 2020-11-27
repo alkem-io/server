@@ -26,7 +26,7 @@ import { IUserGroup } from '../user-group/user-group.interface';
 import { ProjectInput } from '../project/project.dto';
 import { Project } from '../project/project.entity';
 import { IProject } from '../project/project.interface';
-import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
 import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver()

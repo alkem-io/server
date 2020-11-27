@@ -1,5 +1,5 @@
 import { ApolloError } from 'apollo-server-express';
-import { LogContext } from '../logging/logging.contexts';
+import { LogContext } from '../../logging/logging.contexts';
 
 export class BaseException extends ApolloError {
   private context: LogContext;

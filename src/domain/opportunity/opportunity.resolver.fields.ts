@@ -15,9 +15,9 @@ import { OpportunityService } from './opportunity.service';
 import { ActorGroup } from '../actor-group/actor-group.entity';
 import { Aspect } from '../aspect/aspect.entity';
 import { Relation } from '../relation/relation.entity';
-import { RelationshipNotFoundException } from '../../utils/error-handling/relationship.not.found.exception';
+import { RelationshipNotFoundException } from '../../utils/error-handling/exceptions/relationship.not.found.exception';
 import { LogContext } from '../../utils/logging/logging.contexts';
-import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {

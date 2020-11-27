@@ -17,11 +17,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { UserGroupParent } from './user-group-parent.dto';
-import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
-import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { NotSupportedException } from '../../utils/error-handling/not.supported.exception';
-import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import { NotSupportedException } from '../../utils/error-handling/exceptions/not.supported.exception';
+import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 
 @Injectable()
 export class UserGroupService {

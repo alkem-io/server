@@ -9,7 +9,7 @@ import {
 import { GqlArgumentsHost } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
-import { BaseException } from './base.exception';
+import { BaseException } from './exceptions/base.exception';
 
 @Injectable()
 @Catch()

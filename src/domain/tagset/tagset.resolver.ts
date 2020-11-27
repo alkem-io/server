@@ -7,7 +7,7 @@ import { Tagset } from './tagset.entity';
 import { TagsetService } from './tagset.service';
 import { ITagset } from './tagset.interface';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { ValidationException } from '../../utils/error-handling/validation.exception';
+import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
 import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver(() => Tagset)

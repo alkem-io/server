@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { LogContext } from '../logging/logging.contexts';
+import { LogContext } from '../../logging/logging.contexts';
 import { BaseException } from './base.exception';
 
 export class RelationshipNotFoundException extends BaseException {

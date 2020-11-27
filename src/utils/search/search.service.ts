@@ -8,8 +8,8 @@ import { User } from '../../domain/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
 import { LogContext } from '../logging/logging.contexts';
-import { ValidationException } from '../error-handling/validation.exception';
-import { NotAcceptableException } from '../error-handling/not.acceptable.exception';
+import { ValidationException } from '../error-handling/exceptions/validation.exception';
+import { NotAcceptableException } from '../error-handling/exceptions/not.acceptable.exception';
 
 enum SearchEntityTypes {
   User = 'user',

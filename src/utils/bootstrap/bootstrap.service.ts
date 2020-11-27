@@ -23,9 +23,9 @@ import { ReferenceInput } from '../../domain/reference/reference.dto';
 import { Profiling } from '../logging/logging.profiling.decorator';
 import { LogContext } from '../logging/logging.contexts';
 import { ILoggingConfig } from '../../interfaces/logging.config.interface';
-import { EntityNotInitializedException } from '../error-handling/entity.not.initialized.exception';
-import { ValidationException } from '../error-handling/validation.exception';
-import { BaseException } from '../error-handling/base.exception';
+import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
+import { ValidationException } from '../error-handling/exceptions/validation.exception';
+import { BaseException } from '../error-handling/exceptions/base.exception';
 
 @Injectable()
 export class BootstrapService {

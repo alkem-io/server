@@ -13,7 +13,7 @@ import { UserGroupService } from '../user-group/user-group.service';
 import { ChallengeService } from './challenge.service';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
+import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
 import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver(() => Challenge)

@@ -26,11 +26,11 @@ import { UserService } from '../user/user.service';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
-import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
-import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
-import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { RelationshipNotFoundException } from '../../utils/error-handling/relationship.not.found.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import { RelationshipNotFoundException } from '../../utils/error-handling/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class OpportunityService {

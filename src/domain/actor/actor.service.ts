@@ -5,9 +5,9 @@ import { Actor } from './actor.entity';
 import { IActor } from './actor.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorInput } from './actor.dto';
-import { ValidationException } from '../../utils/error-handling/validation.exception';
+import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
 import { LogContext } from '../../utils/logging/logging.contexts';
-import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
 
 @Injectable()
 export class ActorService {

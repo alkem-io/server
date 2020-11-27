@@ -17,7 +17,7 @@ import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
-import { EntityNotInitializedException } from '../error-handling/entity.not.initialized.exception';
+import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
 
 @Injectable()
 export class DataManagementService {
