@@ -16,7 +16,6 @@ import { OrganisationService } from './organisation.service';
 import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 
 @Resolver(() => Organisation)

@@ -30,7 +30,6 @@ import { EntityNotFoundException } from '../../utils/error-handling/exceptions/e
 import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { RelationshipNotFoundException } from '../../utils/error-handling/exceptions/relationship.not.found.exception';
 
 @Injectable()
 export class OpportunityService {
