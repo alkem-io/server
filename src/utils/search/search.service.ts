@@ -110,8 +110,15 @@ export class SearchService {
     let results: ISearchResultEntry[] = [];
     results = await this.buildSearchResults(userResults);
     results.push(...(await this.buildSearchResults(groupResults)));
-
+    this.ensureUniqueTermsPerResult(results);
     return results;
+  }
+
+  ensureUniqueTermsPerResult(results: ISearchResultEntry[]) {
+    results.forEach(
+      result =>
+        (result.terms = result.terms.filter((v, i, a) => a.indexOf(v) === i))
+    );
   }
 
   async searchTagsets(
