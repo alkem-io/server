@@ -1,10 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { ReferenceInput } from '../reference/reference.dto';
 import { Reference } from '../reference/reference.entity';
 import { IReference } from '../reference/reference.interface';
@@ -22,16 +22,16 @@ export class ProfileService {
     private referenceService: ReferenceService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createProfile(): Promise<IProfile> {
     const profile = new Profile();
     await this.initialiseMembers(profile);
     await this.profileRepository.save(profile);
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Created new profile with id: ${profile.id}`,
-      LogContexts.COMMUNITY
+      LogContext.COMMUNITY
     );
     return profile;
   }
@@ -62,7 +62,7 @@ export class ProfileService {
     if (!profile)
       throw new EntityNotFoundException(
         `Profile with id(${profileID}) not found!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     const tagset = await this.tagsetService.addTagsetWithName(
@@ -83,13 +83,13 @@ export class ProfileService {
     if (!profile)
       throw new EntityNotFoundException(
         `Profile with id(${profileID}) not found!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     if (!profile.references)
       throw new EntityNotInitializedException(
         'References not defined',
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     // check there is not already a reference with the same name
     for (const reference of profile.references) {
@@ -116,7 +116,7 @@ export class ProfileService {
     if (!profile)
       throw new EntityNotFoundException(
         `Profile with id (${profileID}) not found!`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     profile.avatar = profileData.avatar;

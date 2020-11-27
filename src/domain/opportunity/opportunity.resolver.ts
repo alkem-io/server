@@ -27,7 +27,7 @@ import { ProjectInput } from '../project/project.dto';
 import { Project } from '../project/project.entity';
 import { IProject } from '../project/project.interface';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver()
 export class OpportunityResolver {
@@ -53,7 +53,7 @@ export class OpportunityResolver {
 
     throw new EntityNotFoundException(
       `Unable to locate opportunity with given id: ${id}`,
-      LogContexts.CHALLENGES
+      LogContext.CHALLENGES
     );
   }
 

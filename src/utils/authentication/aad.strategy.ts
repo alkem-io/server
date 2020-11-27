@@ -2,7 +2,7 @@ import {
   forwardRef,
   Inject,
   Injectable,
-  Logger,
+  LoggerService,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
@@ -16,7 +16,7 @@ import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../logging/logging.contexts';
+import { LogContext } from '../logging/logging.contexts';
 import { AuthenticationError } from 'apollo-server-express';
 
 @Injectable()
@@ -29,7 +29,7 @@ export class AzureADStrategy
     private configService: ConfigService,
     @Inject(forwardRef(() => UserService))
     private userService: UserService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super({
       identityMetadata: configService.get<IAzureADConfig>('aad')
@@ -69,7 +69,7 @@ export class AzureADStrategy
       this.logger.error(
         `Failed adding the user to the request object: ${error}`,
         error,
-        LogContexts.AUTH
+        LogContext.AUTH
       );
       done(
         new AuthenticationError(
@@ -89,7 +89,7 @@ export class AzureADStrategy
       this.logger.error(
         `Failed adding the user to the request object: ${error}`,
         error,
-        LogContexts.AUTH_TOKEN
+        LogContext.AUTH_TOKEN
       );
     }
   }
@@ -111,14 +111,14 @@ export class AzureADStrategy
       this.logger.error(
         'No downstream token found in OBO flow. Can not access MS Graph API!',
         error.message,
-        LogContexts.AUTH_TOKEN
+        LogContext.AUTH_TOKEN
       );
       throw error;
     }
 
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Downstream access token: ${downstreamAccessToken}`,
-      LogContexts.AUTH_TOKEN
+      LogContext.AUTH_TOKEN
     );
 
     return downstreamAccessToken;
@@ -128,9 +128,9 @@ export class AzureADStrategy
   //Credits to: https://github.com/Azure-Samples/ms-identity-nodejs-webapi-onbehalfof-azurefunctions/blob/master/Function/MyHttpTrigger/index.js
   async getDownstreamAccessToken(userToken: string) {
     const [bearer, tokenValue] = userToken.split(' ');
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Upstream access token: ${bearer} ${tokenValue}`,
-      LogContexts.AUTH_TOKEN
+      LogContext.AUTH_TOKEN
     );
 
     const authority = 'login.microsoftonline.com';
@@ -167,13 +167,13 @@ export class AzureADStrategy
       redirect: 'follow',
     };
 
-    this.logger.verbose(
+    this.logger.verbose?.(
       `OBO token endpoint: ${tokenEndpoint}`,
-      LogContexts.AUTH_TOKEN
+      LogContext.AUTH_TOKEN
     );
-    this.logger.verbose(
+    this.logger.verbose?.(
       `OBO raw request params: ${urlencoded}`,
-      LogContexts.AUTH_TOKEN
+      LogContext.AUTH_TOKEN
     );
 
     const response = await fetch(tokenEndpoint, options);

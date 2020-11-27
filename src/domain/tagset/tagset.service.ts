@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ITagsetable } from '../../interfaces/tagsetable.interface';
 import { Repository } from 'typeorm';
@@ -9,7 +9,7 @@ import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TagsetInput } from './tagset.dto';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 import { ValidationException } from '../../utils/error-handling/validation.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
@@ -19,7 +19,7 @@ export class TagsetService {
   constructor(
     @InjectRepository(Tagset)
     private tagsetRepository: Repository<Tagset>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   // Helper method to ensure all members are initialised properly.
@@ -48,12 +48,12 @@ export class TagsetService {
     if (!tagset)
       throw new EntityNotFoundException(
         `Tagset with id(${tagsetID}) not found!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     if (!newTags)
       throw new ValidationException(
         `Unable to replace tags on tagset(${tagsetID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     // Check the incoming tags and replace if not null
@@ -101,12 +101,12 @@ export class TagsetService {
     if (!tagset)
       throw new EntityNotFoundException(
         `Tagset with id(${tagsetID}) not found!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     if (!tagset.tags)
       throw new EntityNotInitializedException(
         `Tagset with id(${tagsetID}) not initialised!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     // Check if the tag already exists or not
@@ -131,7 +131,7 @@ export class TagsetService {
     if (!tagsetable.restrictedTagsetNames) {
       throw new EntityNotInitializedException(
         'Non-initialised tagsetable submitted',
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
     for (const name of names) {
@@ -147,7 +147,7 @@ export class TagsetService {
     if (!tagsetable.tagsets)
       throw new EntityNotInitializedException(
         'Tagsets not initialised',
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     const defaultTagset = tagsetable.tagsets.find(
       t => t.name === RestrictedTagsetNames.Default
@@ -199,9 +199,9 @@ export class TagsetService {
     }
 
     if (tagsetable.restrictedTagsetNames?.includes(name)) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         `Attempted to create a tagset using a restricted name: ${name}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
       throw new Error(
         'Unable to create tagset with restricted name: ' + { name }

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChallengeInput } from '../../domain/challenge/challenge.dto';
 import { IChallenge } from '../../domain/challenge/challenge.interface';
@@ -16,7 +16,7 @@ import { UserService } from '../../domain/user/user.service';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../logging/logging.contexts';
+import { LogContext } from '../logging/logging.contexts';
 import { EntityNotInitializedException } from '../error-handling/entity.not.initialized.exception';
 
 @Injectable()
@@ -31,7 +31,7 @@ export class DataManagementService {
     private connection: Connection,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async reset_to_empty_ecoverse(): Promise<string> {
@@ -54,7 +54,7 @@ export class DataManagementService {
 
   addLogMsg(msgs: string[], msg: string) {
     msgs.push(msg);
-    this.logger.verbose(msg, LogContexts.DATA_MGMT);
+    this.logger.verbose?.(msg, LogContext.DATA_MGMT);
   }
 
   async load_sample_data(): Promise<string> {
@@ -112,7 +112,7 @@ export class DataManagementService {
       if (!bruce.profile)
         throw new EntityNotInitializedException(
           'Non-initalised user',
-          LogContexts.DATA_MGMT
+          LogContext.DATA_MGMT
         );
       const tagset = await this.profileService.createTagset(
         bruce.profile.id,
@@ -157,7 +157,7 @@ export class DataManagementService {
       if (!energyWeb.context)
         throw new EntityNotInitializedException(
           'Context not initilised',
-          LogContexts.DATA_MGMT
+          LogContext.DATA_MGMT
         );
       energyWeb.context.references = [ref1, ref2];
 
@@ -251,7 +251,7 @@ export class DataManagementService {
       await this.connection.synchronize();
       this.addLogMsg(msgs, '.....dropped. Completed successfully.');
     } catch (error) {
-      this.logger.verbose(error.message, LogContexts.DATA_MGMT);
+      this.logger.verbose?.(error.message, LogContext.DATA_MGMT);
     }
     return msgs.toString();
   }
@@ -263,7 +263,7 @@ export class DataManagementService {
       ecoverseName = ecoverse.name;
     } catch (e) {
       // ecoverse not yet initialised so just skip the name
-      this.logger.verbose(e.message, LogContexts.DATA_MGMT);
+      this.logger.verbose?.(e.message, LogContext.DATA_MGMT);
     }
     const content = `<!DOCTYPE html>
     <html>

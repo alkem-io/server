@@ -14,7 +14,7 @@ import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { Profile } from '../profile/profile.entity';
 import { OrganisationService } from './organisation.service';
 import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
@@ -41,7 +41,7 @@ export class OrganisationResolverFields {
     if (!groups)
       throw new ValidationException(
         `No groups on organisation: ${organisation.name}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     return groups;
   }
@@ -64,13 +64,13 @@ export class OrganisationResolverFields {
     if (!group)
       throw new GroupNotInitializedException(
         `Unable to locate members group on organisation: ${organisation.name}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     const members = group.members;
     if (!members)
       throw new GroupNotInitializedException(
         `Members group not initialised on organisation: ${organisation.name}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     return members;
   }
@@ -85,7 +85,7 @@ export class OrganisationResolverFields {
     if (!profile) {
       throw new EntityNotInitializedException(
         `Profile not initialised on organisation: ${organisation.name}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
 

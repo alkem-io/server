@@ -1,9 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { ProfileService } from '../profile/profile.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
@@ -21,7 +21,7 @@ export class OrganisationService {
     private profileService: ProfileService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createOrganisation(name: string): Promise<IOrganisation> {
@@ -29,9 +29,9 @@ export class OrganisationService {
     const organisation = new Organisation(name);
     await this.initialiseMembers(organisation);
     await this.organisationRepository.save(organisation);
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Created new organisation with id ${organisation.id}`,
-      LogContexts.COMMUNITY
+      LogContext.COMMUNITY
     );
     return organisation;
   }
@@ -66,7 +66,7 @@ export class OrganisationService {
     if (!organisation)
       throw new EntityNotFoundException(
         `Unable to find organisation with ID: ${organisationID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     return organisation;
   }
@@ -80,7 +80,7 @@ export class OrganisationService {
 
   async createGroup(orgID: number, groupName: string): Promise<IUserGroup> {
     // First find the Challenge
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Adding userGroup (${groupName}) to organisation (${orgID})`
     );
     // Try to find the challenge
@@ -88,7 +88,7 @@ export class OrganisationService {
     if (!organisation) {
       throw new EntityNotFoundException(
         `Unable to find organisation with ID: ${orgID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
     const group = await this.userGroupService.addGroupWithName(
@@ -108,7 +108,7 @@ export class OrganisationService {
     if (!existingOrganisation)
       throw new EntityNotFoundException(
         `Oganisation with given ID (${orgID}) not found!`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     // Merge in the data

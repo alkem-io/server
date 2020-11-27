@@ -4,28 +4,29 @@ import {
   ArgumentsHost,
   Injectable,
   Inject,
-  Logger,
+  LoggerService,
 } from '@nestjs/common';
 import { GqlArgumentsHost } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '../logging/logging.contexts';
+import { BaseException } from './base.exception';
 
 @Injectable()
 @Catch()
 export class HttpExceptionsFilter implements ExceptionFilter {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  catch(exception: any, host: ArgumentsHost) {
+  catch(exception: BaseException, host: ArgumentsHost) {
     const gqlHost = GqlArgumentsHost.create(host);
     const req = gqlHost.getContext().req;
     const url = req.originalUrl;
+    let context = LogContext.UNSPECIFIED;
 
-    this.logger.error(
-      exception.message,
-      exception.stack,
-      exception.getContext()
-    );
+    if (exception.getContext) context = exception.getContext();
+
+    this.logger.error(exception.message, exception.stack, context);
 
     return exception;
   }

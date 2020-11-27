@@ -1,11 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
 import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { AspectInput } from '../aspect/aspect.dto';
 import { IAspect } from '../aspect/aspect.interface';
 import { AspectService } from '../aspect/aspect.service';
@@ -19,7 +19,7 @@ export class ProjectService {
     private aspectService: AspectService,
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createProject(projectData: ProjectInput): Promise<IProject> {
@@ -27,14 +27,14 @@ export class ProjectService {
     if (!textID || textID.length < 3)
       throw new ValidationException(
         `Text ID for the project is required and has a minimum length of 3: ${textID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     const expression = /^[a-zA-Z0-9.\-_]+$/;
     const textIdCheck = expression.test(textID);
     if (!textIdCheck)
       throw new ValidationException(
         `Required field textID provided not in the correct format: ${textID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     const project = new Project(projectData.name, textID.toLowerCase());
@@ -50,7 +50,7 @@ export class ProjectService {
     if (!Project)
       throw new EntityNotFoundException(
         `Not able to locate Project with the specified ID: ${projectID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     await this.projectRepository.remove(Project as Project);
     return true;
@@ -61,7 +61,7 @@ export class ProjectService {
     if (!project)
       throw new EntityNotFoundException(
         `Unable to find Opportunity with ID: ${projectID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     return project;
   }
@@ -109,14 +109,14 @@ export class ProjectService {
     if (existingAspect)
       throw new ValidationException(
         `Already have an aspect with the provided title: ${title}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     const aspect = await this.aspectService.createAspect(aspectData);
     if (!project.aspects)
       throw new EntityNotInitializedException(
         `Project (${projectId}) not initialised`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     project.aspects.push(aspect);
     await this.projectRepository.save(project);

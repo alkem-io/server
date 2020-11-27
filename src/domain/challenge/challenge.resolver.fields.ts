@@ -14,7 +14,7 @@ import { ChallengeService } from './challenge.service';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -66,7 +66,7 @@ export class ChallengeResolverFields {
     if (!members)
       throw new GroupNotInitializedException(
         `Members group not initialised on challenge: ${challenge.name}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     return members;
   }

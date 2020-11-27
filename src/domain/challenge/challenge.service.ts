@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Entity, Repository } from 'typeorm';
@@ -7,7 +7,7 @@ import { EntityNotInitializedException } from '../../utils/error-handling/entity
 import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
 import { RelationshipNotFoundException } from '../../utils/error-handling/relationship.not.found.exception';
 import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
 import { OpportunityInput } from '../opportunity/opportunity.dto';
@@ -35,7 +35,7 @@ export class ChallengeService {
     private organisationService: OrganisationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async initialiseMembers(challenge: IChallenge): Promise<IChallenge> {
@@ -69,15 +69,16 @@ export class ChallengeService {
     groupName: string
   ): Promise<IUserGroup> {
     // First find the Challenge
-    this.logger.verbose(
+
+    this.logger.verbose?.(
       `Adding userGroup (${groupName}) to challenge (${challengeID})`,
-      LogContexts.CHALLENGES
+      LogContext.CHALLENGES
     );
     // Check a valid ID was passed
     if (!challengeID)
       throw new ValidationException(
         `Invalid challenge id passed in: ${challengeID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     // Try to find the challenge
     const challenge = await this.challengeRepository.findOne({
@@ -87,7 +88,7 @@ export class ChallengeService {
     if (!challenge) {
       throw new EntityNotFoundException(
         `Unable to create the group: no challenge with ID: ${challengeID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
     const group = await this.userGroupService.addGroupWithName(
@@ -110,7 +111,7 @@ export class ChallengeService {
     if (!groups)
       throw new GroupNotInitializedException(
         `No groups on challenge: ${challenge.name}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     return groups;
   }
@@ -132,7 +133,7 @@ export class ChallengeService {
     )
       throw new RelationshipNotFoundException(
         `Unable to load opportunities for challenge ${challenge.id} `,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     return challengeWithOpportunities.opportunities;
@@ -143,9 +144,10 @@ export class ChallengeService {
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
     // First find the Challenge
-    this.logger.verbose(
+
+    this.logger.verbose?.(
       `Adding opportunity to challenge (${challengeID})`,
-      LogContexts.CHALLENGES
+      LogContext.CHALLENGES
     );
     // Try to find the challenge
     const challenge = await this.challengeRepository.findOne({
@@ -155,7 +157,7 @@ export class ChallengeService {
     if (!challenge) {
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
 
@@ -163,7 +165,7 @@ export class ChallengeService {
     if (!opportunities)
       throw new EntityNotInitializedException(
         `Challenge without initialised Opportunities encountered ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     const existingOpportunity = opportunities.find(
       opportunity => opportunity.textID === opportunityData.textID
@@ -172,7 +174,7 @@ export class ChallengeService {
     if (existingOpportunity)
       throw new ValidationException(
         `Trying to create an opportunity but one with the given textID already exists: ${opportunityData.textID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     const opportunity = await this.opportunityService.createOpportunity(
@@ -191,7 +193,7 @@ export class ChallengeService {
     if (!challenge)
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     return challenge;
   }
@@ -202,14 +204,14 @@ export class ChallengeService {
     if (!textID || textID.length < 3)
       throw new ValidationException(
         `Required field textID not specified or long enough: ${textID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     const expression = /^[a-zA-Z0-9.\-_]+$/;
     const textIdCheck = expression.test(textID);
     if (!textIdCheck)
       throw new ValidationException(
         `Required field textID provided not in the correct format: ${textID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     // Ensure lower case
@@ -230,7 +232,7 @@ export class ChallengeService {
     if (!challenge) {
       throw new EntityNotFoundException(
         `Unable to locate challenge: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
     const newName = challengeData.name;
@@ -244,7 +246,7 @@ export class ChallengeService {
         if (otherChallenge)
           throw new ValidationException(
             `Unable to update challenge: already have a challenge with the provided name (${challengeData.name})`,
-            LogContexts.CHALLENGES
+            LogContext.CHALLENGES
           );
         // Ok to rename
         challenge.name = newName;
@@ -259,7 +261,7 @@ export class ChallengeService {
       if (!challenge.context)
         throw new EntityNotInitializedException(
           `Challenge not initialised: ${challengeID}`,
-          LogContexts.CHALLENGES
+          LogContext.CHALLENGES
         );
       await this.contextService.update(
         challenge.context,
@@ -286,14 +288,14 @@ export class ChallengeService {
     if (!challenge)
       throw new EntityNotFoundException(
         `Not able to locate challenge with the specified ID: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     // Do not remove a challenge that has opporutnities, require these to be individually first removed
     if (challenge.opportunities && challenge.opportunities.length > 0)
       throw new ValidationException(
         `Unable to remove challenge (${challengeID}) as it contains ${challenge.opportunities.length} opportunities`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     // Remove all groups
@@ -320,7 +322,7 @@ export class ChallengeService {
     if (!isMember)
       throw new ValidationException(
         `User (${userID}) is not a member of parent challenge: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     // Get the members group
@@ -334,7 +336,7 @@ export class ChallengeService {
     if (!members)
       throw new GroupNotInitializedException(
         `Members group not initialised in challenge: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     const user = members.find(user => user.id == userID);
     if (user) return true;
@@ -347,7 +349,7 @@ export class ChallengeService {
     if (!user) {
       throw new ValidationException(
         `Unable to find exactly one user with ID: ${userID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
 
@@ -355,7 +357,7 @@ export class ChallengeService {
     if (!challenge) {
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
 
@@ -377,7 +379,7 @@ export class ChallengeService {
     if (!group)
       throw new RelationshipNotFoundException(
         `Unable to locate members group on challenge: ${challenge.name}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     return group;
   }
@@ -399,21 +401,21 @@ export class ChallengeService {
     if (!organisation)
       throw new EntityNotFoundException(
         `No organisation with id ${organisationID} was found!`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     const challenge = await this.getChallengeByID(challengeID);
     if (!challenge)
       throw new EntityNotFoundException(
         `No challenge with id ${challengeID} was found!`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     // Check the org is not already added
     if (!challenge.leadOrganisations)
       throw new EntityNotInitializedException(
         `Challenge not fully initialised: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     const existingOrg = challenge.leadOrganisations.find(
       existingOrg => existingOrg.id === organisationID
@@ -421,7 +423,7 @@ export class ChallengeService {
     if (existingOrg)
       throw new ValidationException(
         `Challenge ${challengeID} already has an organisation with the provided organisation ID: ${organisationID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     // ok to add the org
     challenge.leadOrganisations.push(organisation);
@@ -439,21 +441,21 @@ export class ChallengeService {
     if (!organisation)
       throw new EntityNotFoundException(
         `No organisation with id ${organisationID} was found!`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     const challenge = await this.getChallengeByID(challengeID);
     if (!challenge)
       throw new EntityNotFoundException(
         `No challenge with id ${challengeID} was found!`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     // Check the org is not already added
     if (!challenge.leadOrganisations)
       throw new EntityNotInitializedException(
         `Challenge not fully initialised: ${challengeID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     const existingOrg = challenge.leadOrganisations.find(
       existingOrg => existingOrg.id === organisationID
@@ -461,7 +463,7 @@ export class ChallengeService {
     if (!existingOrg)
       throw new EntityNotInitializedException(
         `Challenge ${challengeID} does not have a lead with the provided organisation ID: ${organisationID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     // ok to add the org
     const updatedLeads = [];

@@ -1,11 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 import { NotSupportedException } from '../../utils/error-handling/not.supported.exception';
 import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
@@ -18,7 +18,7 @@ export class UserService {
     private profileService: ProfileService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createUser(userData: UserInput): Promise<IUser> {
@@ -30,9 +30,9 @@ export class UserService {
     this.updateLastModified(user);
     // Need to save to get the object identifiers assigned
     await this.userRepository.save(user);
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Created a new user with id: ${user.id}`,
-      LogContexts.COMMUNITY
+      LogContext.COMMUNITY
     );
 
     // Now update the profile if needed
@@ -45,12 +45,12 @@ export class UserService {
     if (!populatedUser)
       throw new EntityNotFoundException(
         `Unable to locate user: ${user.id}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
-    this.logger.verbose(
+    this.logger.verbose?.(
       `User ${userData.email} was created!`,
-      LogContexts.COMMUNITY
+      LogContext.COMMUNITY
     );
 
     return populatedUser;
@@ -105,17 +105,17 @@ export class UserService {
     );
 
     if (!user) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         `No user with email ${email} exists!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
       return undefined;
     }
 
     if (!user.userGroups) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         `User with email ${email} doesn't belong to any groups!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
 
@@ -131,17 +131,17 @@ export class UserService {
     );
 
     if (!user) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         `No user with provided account UPN ${accountUpn} exists!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
       return undefined;
     }
 
     if (!user.userGroups) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         `User with provided account UPN ${accountUpn} doesn't belong to any groups!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
 
@@ -158,7 +158,7 @@ export class UserService {
     } else
       throw new ValidationException(
         'No email or id provided!',
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
   }
 
@@ -236,28 +236,28 @@ export class UserService {
     if (!this.isValidEmail(userData.email))
       throw new ValidationException(
         `Valid email address required to create a user: ${userData.email}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     if (!userData.firstName || userData.firstName.length == 0)
       throw new ValidationException(
         `User profile creation (${userData.email}) missing required first name`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     if (!userData.lastName || userData.lastName.length == 0)
       throw new ValidationException(
         `User profile creation (${userData.email}) missing required last name`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     if (!userData.email || userData.email.length == 0)
       throw new ValidationException(
         `User profile creation (${userData.firstName}) missing required email`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     const userCheck = await this.getUserByEmail(userData.email);
     if (userCheck)
       throw new ValidationException(
         `User profile with the specified email (${userData.email}) already exists`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     // Trim all values to remove space issues
     userData.firstName = userData.firstName.trim();
@@ -282,7 +282,7 @@ export class UserService {
     if (!user)
       throw new EntityNotFoundException(
         `Unable to update user with ID: ${userID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     // Convert the data to json
     if (userInput.name) {
@@ -312,7 +312,7 @@ export class UserService {
     ) {
       throw new NotSupportedException(
         `Updating of email addresses is not supported: ${userID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
 
@@ -331,7 +331,7 @@ export class UserService {
     if (!populatedUser)
       throw new EntityNotFoundException(
         `Unable to get user by id: ${user.id}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     return populatedUser;

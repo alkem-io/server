@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { ReferenceInput } from '../reference/reference.dto';
 import { IReference } from '../reference/reference.interface';
 import { ReferenceService } from '../reference/reference.service';
@@ -32,7 +32,7 @@ export class ContextService {
     if (!context)
       throw new EntityNotFoundException(
         `No context found with the given id: ${contextID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     return context;
   }
@@ -78,7 +78,7 @@ export class ContextService {
     if (!context.references)
       throw new EntityNotInitializedException(
         'References not defined',
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     // check there is not already a reference with the same name
     for (const reference of context.references) {

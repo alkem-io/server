@@ -1,13 +1,14 @@
 import { ApolloError } from 'apollo-server-express';
+import { LogContext } from '../logging/logging.contexts';
 
 export class BaseException extends ApolloError {
-  private context: string;
-  constructor(error: string, context: string, code?: string) {
+  private context: LogContext;
+  constructor(error: string, context: LogContext, code?: string) {
     super(error, code);
     this.context = context;
   }
 
-  getContext(): string {
+  getContext(): LogContext {
     return this.context;
   }
 }

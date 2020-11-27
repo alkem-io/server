@@ -1,8 +1,9 @@
 import { UserInputError } from 'apollo-server-express';
+import { LogContext } from '../logging/logging.contexts';
 
 export class ValidationException extends UserInputError {
-  private context: string;
-  constructor(error: string, context: string) {
+  private context: LogContext;
+  constructor(error: string, context: LogContext) {
     super(error);
     this.context = context;
   }

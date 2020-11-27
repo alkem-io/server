@@ -1,9 +1,9 @@
-import { Logger } from '@nestjs/common';
+import { LoggerService } from '@nestjs/common';
 import { performance } from 'perf_hooks';
-import { LogContexts } from './logging.contexts';
+import { LogContext } from './logging.contexts';
 
 export class Profiling {
-  static logger: Logger;
+  static logger: LoggerService;
   static profilingEnabled = false;
   static api = (
     // eslint-disable-next-line @typescript-eslint/ban-types
@@ -23,7 +23,7 @@ export class Profiling {
       const result = originalMethod.apply(this, args);
       const elapsed = (performance.now() - start).toFixed(3);
       const msg = `${target.constructor.name}-${propertyKey}: Execution time: ${elapsed} milliseconds`;
-      Profiling.logger.verbose(msg, LogContexts.API);
+      Profiling.logger.verbose?.(msg, LogContext.API);
 
       return result;
     };

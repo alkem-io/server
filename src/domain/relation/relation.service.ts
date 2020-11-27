@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 import { RelationshipNotFoundException } from '../../utils/error-handling/relationship.not.found.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { RelationInput } from './relation.dto';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
@@ -23,7 +23,7 @@ export class RelationService {
     if (!allowedRelationTypes.includes(relationData.type))
       throw new RelationshipNotFoundException(
         `Invalid relation type supplied: ${relationData.type}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     relation.type = relationData.type;
     relation.description = relationData.description;
@@ -65,7 +65,7 @@ export class RelationService {
     if (!relation)
       throw new EntityNotFoundException(
         `Not able to locate relation with the specified ID: ${relationID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     await this.relationRepository.remove(relation as Relation);
     return true;

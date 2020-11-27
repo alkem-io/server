@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IContext } from '../context/context.interface';
 import { IOrganisation } from '../organisation/organisation.interface';
@@ -28,7 +28,7 @@ import { ITemplate } from '../template/template.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { UserService } from '../user/user.service';
 import { AccountService } from '../../utils/account/account.service';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { ValidationException } from '../../utils/error-handling/validation.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/entity.not.initialized.exception';
 import { AccountException } from '../../utils/error-handling/account.exception';
@@ -47,7 +47,7 @@ export class EcoverseService {
     private templateService: TemplateService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   // Helper method to ensure all members that are arrays are initialised properly.
@@ -110,7 +110,7 @@ export class EcoverseService {
     if (!ecoverse) {
       throw new ValidationException(
         'Ecoverse is missing!',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
     }
     return ecoverse.id;
@@ -199,9 +199,9 @@ export class EcoverseService {
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Adding userGroup (${groupName}) to ecoverse`,
-      LogContexts.CHALLENGES
+      LogContext.CHALLENGES
     );
 
     const ecoverse = (await this.getEcoverse({
@@ -236,7 +236,7 @@ export class EcoverseService {
     if (!ecoverse.challenges) {
       throw new EntityNotInitializedException(
         'Challenges must be defined',
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
     // First check if the challenge already exists on not...
@@ -247,7 +247,7 @@ export class EcoverseService {
       // already have a challenge with the given name, not allowed
       throw new ValidationException(
         `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
     // No existing challenge found, create and initialise a new one!
@@ -272,7 +272,7 @@ export class EcoverseService {
     if (!ecoverse.templates) {
       throw new EntityNotInitializedException(
         'Templates must be defined',
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
     // First check if the challenge already exists on not...
@@ -280,7 +280,7 @@ export class EcoverseService {
     if (template)
       throw new ValidationException(
         `Template with the provided name already exists: ${templateData.name}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     // No existing challenge found, create and initialise a new one!
     template = await this.templateService.createTemplate(templateData);
@@ -305,7 +305,7 @@ export class EcoverseService {
     if (!ecoverse.organisations) {
       throw new EntityNotInitializedException(
         'Organisations must be defined',
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     }
 
@@ -316,7 +316,7 @@ export class EcoverseService {
     if (organisation)
       throw new ValidationException(
         `Organisation with the provided name already exists: ${organisationData.name}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     // No existing organisation found, create and initialise a new one!
     organisation = await this.organisationService.createOrganisation(
@@ -344,7 +344,7 @@ export class EcoverseService {
         await this.userService.removeUser(user);
         throw new AccountException(
           'Unable to create account for user!',
-          LogContexts.COMMUNITY
+          LogContext.COMMUNITY
         );
       }
     }
@@ -357,7 +357,7 @@ export class EcoverseService {
     if (!ctUser)
       throw new ValidationException(
         `User ${userData.email} could not be created!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     const ecoverse = await this.getEcoverse({
@@ -401,7 +401,7 @@ export class EcoverseService {
     if (!(await this.groupIsRestricted(groupName)))
       throw new ValidationException(
         `${groupName} is not a restricted group name!`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     const ctverse = await this.getEcoverse({ relations: ['groups'] });
@@ -436,7 +436,7 @@ export class EcoverseService {
     if (!user)
       throw new EntityNotFoundException(
         `Could not locate specified user: ${userID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     await this.userService.removeUser(user);
@@ -454,7 +454,7 @@ export class EcoverseService {
     if (!user)
       throw new EntityNotFoundException(
         `Could not locate specified user: ${userID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     if (this.accountService.accountUsageEnabled())

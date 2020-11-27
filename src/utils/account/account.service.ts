@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserInput } from '../../domain/user/user.dto';
@@ -8,7 +8,7 @@ import { IServiceConfig } from '../../interfaces/service.config.interface';
 import { AccountException } from '../error-handling/account.exception';
 import { BaseException } from '../error-handling/base.exception';
 import { ValidationException } from '../error-handling/validation.exception';
-import { LogContexts } from '../logging/logging.contexts';
+import { LogContext } from '../logging/logging.contexts';
 import { MsGraphService } from '../ms-graph/ms-graph.service';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class AccountService {
     private configService: ConfigService,
     private userService: UserService,
     private msGraphService: MsGraphService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   authenticationEnabled(): boolean {
@@ -39,7 +39,7 @@ export class AccountService {
     if (!this.accountUsageEnabled())
       throw new AccountException(
         `Attempting to locate account (${accountUpn}) but account usage is disabled`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     return await this.msGraphService.userExists(undefined, accountUpn);
   }
@@ -54,7 +54,7 @@ export class AccountService {
     if (!result)
       throw new BaseException(
         `Unable to complete account creation for ${userData.email} using UPN: ${accountUpn}`,
-        LogContexts.AUTH
+        LogContext.AUTH
       );
 
     // Update the user to store the upn
@@ -62,7 +62,7 @@ export class AccountService {
     if (!user)
       throw new AccountException(
         `Unable to update user: ${userData.email}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     user.accountUpn = accountUpn;
     await this.userService.saveUser(user);
@@ -78,7 +78,7 @@ export class AccountService {
     if (!user)
       throw new AccountException(
         `Unable to locate user: ${userID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     const userData = new UserInput();
     userData.accountUpn = user.accountUpn;
@@ -97,7 +97,7 @@ export class AccountService {
     if (!upnDomain)
       throw new AccountException(
         'Unable to identify the upn domain to be used',
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -112,12 +112,12 @@ export class AccountService {
       if (!firstName)
         throw new ValidationException(
           'Missing first name information for generating UPN',
-          LogContexts.COMMUNITY
+          LogContext.COMMUNITY
         );
       if (!lastName)
         throw new ValidationException(
           'Missing last name information for generating UPN',
-          LogContexts.COMMUNITY
+          LogContext.COMMUNITY
         );
     }
 
@@ -129,7 +129,7 @@ export class AccountService {
     // extra check to remove any blank spaces
     upn = upn.replace(/\s/g, '');
 
-    this.logger.verbose(`Upn: ${upn}`, LogContexts.AUTH);
+    this.logger.verbose?.(`Upn: ${upn}`, LogContext.AUTH);
 
     return upn;
   }
@@ -138,14 +138,14 @@ export class AccountService {
     if (!this.accountUsageEnabled()) {
       throw new AccountException(
         'Not able to create accounts while authentication is disabled',
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
     const tmpPassword = userData.aadPassword;
     if (!tmpPassword)
       throw new AccountException(
         `Unable to create account for user (${userData.name} as no password provided)`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     const accountUpn = this.buildUPN(userData);
@@ -155,7 +155,7 @@ export class AccountService {
     if (accountExists)
       throw new AccountException(
         `There already exists an account with UPN (${accountUpn}); please choose another`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
   }
 
@@ -163,7 +163,7 @@ export class AccountService {
     if (accountUpn === '') {
       throw new BaseException(
         `Failed to delete account ${accountUpn}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
 
@@ -174,7 +174,7 @@ export class AccountService {
       this.logger.error(
         `Failed to delete account ${accountUpn}`,
         error.message,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
 
@@ -191,7 +191,7 @@ export class AccountService {
       this.logger.error(
         'Failed to reset password for account!',
         error.message,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
       throw error;
     }
@@ -203,7 +203,7 @@ export class AccountService {
       this.logger.error(
         `Failed to reset password for account ${accountUpn}`,
         error.message,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
     }
 

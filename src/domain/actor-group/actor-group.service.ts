@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActorGroup } from './actor-group.entity';
@@ -9,7 +9,7 @@ import { ActorGroupInput } from './actor-group.dto';
 import { ActorService } from '../actor/actor.service';
 import { IActor } from '../actor/actor.interface';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { GroupNotInitializedException } from '../../utils/error-handling/group.not.initialized.exception';
 
 @Injectable()
@@ -18,7 +18,7 @@ export class ActorGroupService {
     private actorService: ActorService,
     @InjectRepository(ActorGroup)
     private actorGroupRepository: Repository<ActorGroup>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   // Helper method to ensure all members are initialised properly.
@@ -39,14 +39,14 @@ export class ActorGroupService {
     if (!actorGroup)
       throw new EntityNotFoundException(
         `Unable to locate actor group with id: ${actorGroupID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     const actor = await this.actorService.createActor(actorData);
     if (!actorGroup.actors)
       throw new GroupNotInitializedException(
         `Non-initialised ActorGroup: ${actorGroupID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     actorGroup.actors.push(actor);
 
@@ -70,7 +70,7 @@ export class ActorGroupService {
     if (!actorGroup)
       throw new EntityNotFoundException(
         `Not able to locate actorGroup with the specified ID: ${actorGroupID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     await this.actorGroupRepository.remove(actorGroup as ActorGroup);
     return true;

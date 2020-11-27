@@ -8,7 +8,7 @@ import { TagsetService } from './tagset.service';
 import { ITagset } from './tagset.interface';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver(() => Tagset)
 export class TagsetResolver {
@@ -30,7 +30,7 @@ export class TagsetResolver {
     if (!newTags)
       throw new ValidationException(
         `Unable to replace tags on tagset(${tagsetID}`,
-        LogContexts.COMMUNITY
+        LogContext.COMMUNITY
       );
 
     return await this.tagsetService.replaceTags(tagsetID, newTags);

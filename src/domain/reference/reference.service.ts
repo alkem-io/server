@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { ReferenceInput } from './reference.dto';
 import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';
@@ -71,7 +71,7 @@ export class ReferenceService {
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate reference with the specified ID: ${referenceID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     await this.referenceRepository.remove(reference as Reference);
     return true;

@@ -1,4 +1,4 @@
-import { Inject, Logger, NotImplementedException } from '@nestjs/common';
+import { Inject, LoggerService, NotImplementedException } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './search-input.dto';
 import { Repository } from 'typeorm';
@@ -7,7 +7,7 @@ import { UserGroup } from '../../domain/user-group/user-group.entity';
 import { User } from '../../domain/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
-import { LogContexts } from '../logging/logging.contexts';
+import { LogContext } from '../logging/logging.contexts';
 import { ValidationException } from '../error-handling/validation.exception';
 import { NotAcceptableException } from '../error-handling/not.acceptable.exception';
 
@@ -37,7 +37,7 @@ export class SearchService {
     private userRepository: Repository<User>,
     @InjectRepository(UserGroup)
     private groupRepository: Repository<UserGroup>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async search(searchData: SearchInput): Promise<ISearchResultEntry[]> {
@@ -58,7 +58,7 @@ export class SearchService {
     if (searchData.challengesFilter)
       throw new NotImplementedException(
         'Filtering by challenges not yet implemented',
-        LogContexts.SEARCH
+        LogContext.SEARCH
       );
     if (searchData.tagsetNames)
       await this.searchTagsets(
@@ -107,9 +107,9 @@ export class SearchService {
       }
     }
 
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Executed search query: ${userResults.size} users results and ${groupResults.size} group results found`,
-      LogContexts.API
+      LogContext.API
     );
 
     let results: ISearchResultEntry[] = [];
@@ -203,7 +203,7 @@ export class SearchService {
       if (match.terms.length != 1)
         throw new ValidationException(
           'Expected exactly one matched term',
-          LogContexts.SEARCH
+          LogContext.SEARCH
         );
       existingMatch.terms.push(match.terms[0]);
     } else {
@@ -216,14 +216,14 @@ export class SearchService {
     if (searchData.terms.length > SEARCH_TERM_LIMIT)
       throw new ValidationException(
         `Maximum number of search terms is ${SEARCH_TERM_LIMIT}; supplied: ${searchData.terms.length}`,
-        LogContexts.SEARCH
+        LogContext.SEARCH
       );
     // Check limit on tagsets that can be searched
     const tagsetNames = searchData.tagsetNames;
     if (tagsetNames && tagsetNames.length > TAGSET_NAMES_LIMIT)
       throw new ValidationException(
         `Maximum number of tagset names is ${TAGSET_NAMES_LIMIT}; supplied: ${tagsetNames.length}`,
-        LogContexts.SEARCH
+        LogContext.SEARCH
       );
     // Check only allowed entity types supplied
     const entityTypes = searchData.typesFilter;
@@ -232,7 +232,7 @@ export class SearchService {
         if (!SEARCH_ENTITIES.includes(entityType))
           throw new NotAcceptableException(
             `Not allowed typeFilter encountered: ${entityType}`,
-            LogContexts.SEARCH
+            LogContext.SEARCH
           );
       });
     }

@@ -3,8 +3,9 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Context, Mutation } from '@nestjs/graphql/dist/decorators';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
+import { AccountException } from '../../utils/error-handling/account.exception';
 import { BaseException } from '../../utils/error-handling/base.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { Challenge } from '../challenge/challenge.entity';
@@ -133,9 +134,9 @@ export class EcoverseResolverMutations {
     @Args('userID') userID: number,
     @Args('newPassword') newPassword: string
   ): Promise<boolean> {
-    throw new BaseException(
+    throw new AccountException(
       'MS Graph API does not have production support for password update!',
-      LogContexts.API
+      LogContext.API
     );
 
     //const success = await this.ecoverseService.updateUserAccountPassword(userID, newPassword);

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Actor } from './actor.entity';
@@ -6,7 +6,7 @@ import { IActor } from './actor.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorInput } from './actor.dto';
 import { ValidationException } from '../../utils/error-handling/validation.exception';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { EntityNotFoundException } from '../../utils/error-handling/entity.not.found.exception';
 
 @Injectable()
@@ -14,14 +14,14 @@ export class ActorService {
   constructor(
     @InjectRepository(Actor)
     private actorRepository: Repository<Actor>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createActor(actorData: ActorInput): Promise<IActor> {
     if (!actorData.name)
       throw new ValidationException(
         'A name is required to create an Actor',
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     const actor = new Actor(actorData.name);
@@ -43,7 +43,7 @@ export class ActorService {
     if (!actor)
       throw new EntityNotFoundException(
         `Not able to locate actor with the specified ID: ${actorID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
     await this.actorRepository.remove(actor as Actor);
     return true;
@@ -54,7 +54,7 @@ export class ActorService {
     if (!actor)
       throw new EntityNotFoundException(
         `Not able to locate actor with the specified ID: ${actorID}`,
-        LogContexts.CHALLENGES
+        LogContext.CHALLENGES
       );
 
     // Copy over the received data
