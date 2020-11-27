@@ -16,7 +16,7 @@ let userPhone = '';
 let userEmail = '';
 let groupName = '';
 
-let uniqueId = Math.random().toString();
+const uniqueId = Math.random().toString();
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -202,10 +202,15 @@ describe('Users and Groups', () => {
     userId = responseCreateUser.body.data.createUser.id;
 
     // Act
-    const responseAddUserToGroup = await assignGroupFocalPointMutation(userId, groupId);
+    const responseAddUserToGroup = await assignGroupFocalPointMutation(
+      userId,
+      groupId
+    );
 
     // Assert
     expect(responseAddUserToGroup.status).toBe(200);
-    expect(responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name).toEqual(userName);
+    expect(
+      responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name
+    ).toEqual(userName);
   });
 });

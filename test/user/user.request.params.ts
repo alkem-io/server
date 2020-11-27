@@ -104,7 +104,10 @@ export const addUserToGroup = async (userId: any, groupId: string) => {
   return await graphqlRequest(requestParams);
 };
 
-export const assignGroupFocalPointMutation = async (userId: any, groupId: string) => {
+export const assignGroupFocalPointMutation = async (
+  userId: any,
+  groupId: string
+) => {
   const requestParams = {
     operationName: null,
     query: `mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
