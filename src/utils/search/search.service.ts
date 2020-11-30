@@ -114,8 +114,16 @@ export class SearchService {
     let results: ISearchResultEntry[] = [];
     results = await this.buildSearchResults(userResults);
     results.push(...(await this.buildSearchResults(groupResults)));
-
+    this.ensureUniqueTermsPerResult(results);
     return results;
+  }
+
+  ensureUniqueTermsPerResult(results: ISearchResultEntry[]) {
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const uniqueTerms = [...new Set(result.terms)];
+      result.terms = uniqueTerms;
+    }
   }
 
   async searchTagsets(
