@@ -33,6 +33,7 @@ import { ValidationException } from '../../utils/error-handling/exceptions/valid
 import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 import { AccountException } from '../../utils/error-handling/exceptions/account.exception';
 import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { CherrytwistErrorStatus } from '../../utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class EcoverseService {
@@ -344,7 +345,8 @@ export class EcoverseService {
         await this.userService.removeUser(user);
         throw new AccountException(
           'Unable to create account for user!',
-          LogContext.COMMUNITY
+          LogContext.COMMUNITY,
+          CherrytwistErrorStatus.ACCOUNT_CREATION_FAILED
         );
       }
     }

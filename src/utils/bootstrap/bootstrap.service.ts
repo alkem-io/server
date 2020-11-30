@@ -26,6 +26,8 @@ import { ILoggingConfig } from '../../interfaces/logging.config.interface';
 import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '../error-handling/exceptions/validation.exception';
 import { BaseException } from '../error-handling/exceptions/base.exception';
+import { EntityNotFoundException } from '../error-handling/exceptions/entity.not.found.exception';
+import { CherrytwistErrorStatus } from '../error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class BootstrapService {
@@ -196,9 +198,10 @@ export class BootstrapService {
         user = await this.userService.getUserWithGroups(userInput.email);
 
         if (!user)
-          throw new EntityNotInitializedException(
-            'Unable to create group profiles. User could not',
-            LogContext.BOOTSTRAP
+          throw new EntityNotFoundException(
+            'Unable to create group profiles.',
+            LogContext.BOOTSTRAP,
+            CherrytwistErrorStatus.USER_PROFILE_NOT_FOUND
           );
 
         const groups = (user as IUser).userGroups;

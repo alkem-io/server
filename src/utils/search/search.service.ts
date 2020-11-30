@@ -9,7 +9,6 @@ import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
 import { LogContext } from '../logging/logging.contexts';
 import { ValidationException } from '../error-handling/exceptions/validation.exception';
-import { NotAcceptableException } from '../error-handling/exceptions/not.acceptable.exception';
 
 enum SearchEntityTypes {
   User = 'user',
@@ -230,7 +229,7 @@ export class SearchService {
     if (entityTypes) {
       entityTypes.forEach(entityType => {
         if (!SEARCH_ENTITIES.includes(entityType))
-          throw new NotAcceptableException(
+          throw new ValidationException(
             `Not allowed typeFilter encountered: ${entityType}`,
             LogContext.SEARCH
           );

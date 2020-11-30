@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Entity, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';

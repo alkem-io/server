@@ -5,6 +5,7 @@ import { UserInput } from '../../domain/user/user.dto';
 import { UserService } from '../../domain/user/user.service';
 import { IAzureADConfig } from '../../interfaces/aad.config.interface';
 import { IServiceConfig } from '../../interfaces/service.config.interface';
+import { CherrytwistErrorStatus } from '../error-handling/enums/cherrytwist.error.status';
 import { AccountException } from '../error-handling/exceptions/account.exception';
 import { ValidationException } from '../error-handling/exceptions/validation.exception';
 import { LogContext } from '../logging/logging.contexts';
@@ -38,7 +39,8 @@ export class AccountService {
     if (!this.accountUsageEnabled())
       throw new AccountException(
         `Attempting to locate account (${accountUpn}) but account usage is disabled`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_USAGE_DISABLED
       );
     return await this.msGraphService.userExists(undefined, accountUpn);
   }
@@ -53,7 +55,8 @@ export class AccountService {
     if (!result)
       throw new AccountException(
         `Unable to complete account creation for ${userData.email} using UPN: ${accountUpn}`,
-        LogContext.AUTH
+        LogContext.AUTH,
+        CherrytwistErrorStatus.ACCOUNT_CREATION_FAILED
       );
 
     // Update the user to store the upn
@@ -61,7 +64,8 @@ export class AccountService {
     if (!user)
       throw new AccountException(
         `Unable to update user: ${userData.email}`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_CREATION_FAILED
       );
     user.accountUpn = accountUpn;
     await this.userService.saveUser(user);
@@ -96,7 +100,8 @@ export class AccountService {
     if (!upnDomain)
       throw new AccountException(
         'Unable to identify the upn domain to be used',
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_UPN_DOMAIN_NOT_FOUND
       );
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -137,14 +142,16 @@ export class AccountService {
     if (!this.accountUsageEnabled()) {
       throw new AccountException(
         'Not able to create accounts while authentication is disabled',
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_USAGE_DISABLED
       );
     }
     const tmpPassword = userData.aadPassword;
     if (!tmpPassword)
       throw new AccountException(
         `Unable to create account for user (${userData.name} as no password provided)`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_CREATION_FAILED
       );
 
     const accountUpn = this.buildUPN(userData);
@@ -154,7 +161,8 @@ export class AccountService {
     if (accountExists)
       throw new AccountException(
         `There already exists an account with UPN (${accountUpn}); please choose another`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_CREATION_FAILED
       );
   }
 
@@ -162,7 +170,8 @@ export class AccountService {
     if (accountUpn === '') {
       throw new AccountException(
         `Failed to delete account ${accountUpn}`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_DELETION_FAILED
       );
     }
 
@@ -170,10 +179,10 @@ export class AccountService {
     try {
       res = await this.msGraphService.deleteUser(accountUpn);
     } catch (error) {
-      this.logger.error(
-        `Failed to delete account ${accountUpn}`,
-        error.message,
-        LogContext.COMMUNITY
+      throw new AccountException(
+        `Failed to delete account ${accountUpn}. ${error}`,
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_DELETION_FAILED
       );
     }
 
@@ -196,10 +205,10 @@ export class AccountService {
     try {
       res = await this.msGraphService.resetPassword(accountUpn, newPassword);
     } catch (error) {
-      this.logger.error(
-        `Failed to reset password for account ${accountUpn}`,
-        error.message,
-        LogContext.COMMUNITY
+      throw new AccountException(
+        `Failed to reset password for account ${accountUpn} ${error}`,
+        LogContext.COMMUNITY,
+        CherrytwistErrorStatus.ACCOUNT_DELETION_FAILED
       );
     }
 
