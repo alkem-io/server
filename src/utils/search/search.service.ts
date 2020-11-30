@@ -115,10 +115,11 @@ export class SearchService {
   }
 
   ensureUniqueTermsPerResult(results: ISearchResultEntry[]) {
-    results.forEach(
-      result =>
-        (result.terms = result.terms.filter((v, i, a) => a.indexOf(v) === i))
-    );
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const uniqueTerms = [...new Set(result.terms)];
+      result.terms = uniqueTerms;
+    }
   }
 
   async searchTagsets(
