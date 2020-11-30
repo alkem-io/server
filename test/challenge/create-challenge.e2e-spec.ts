@@ -141,7 +141,7 @@ describe('Create Challenge', () => {
       ${'..-- '}            | ${'Required field textID provided not in the correct format: ..-- '}
       ${'toooo-long-texId'} | ${"ER_DATA_TOO_LONG: Data too long for column 'textID' at row 1"}
     `(
-      `should throw error: '$expected' for textId value: '$textId'`,
+      "should throw error: '$expected' for textId value: '$textId'",
       async ({ textId, expected }) => {
         // Act
         const requestParamsCreateChallenge = {

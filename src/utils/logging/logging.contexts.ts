@@ -1,4 +1,4 @@
-export enum LogContexts {
+export enum LogContext {
   COMMUNITY = 'community',
   API = 'api',
   AUTH = 'auth',
@@ -6,4 +6,7 @@ export enum LogContexts {
   BOOTSTRAP = 'bootstrap',
   DATA_MGMT = 'data-mgmt',
   CHALLENGES = 'challenges',
+  SEARCH = 'search',
+  OPPORTUNITY = 'opportunity',
+  UNSPECIFIED = 'not_specified',
 }

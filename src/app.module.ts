@@ -33,6 +33,8 @@ import { CherrytwistConfigModule } from './utils/cherrytwist-config/cherrytwist-
 import { WinstonConfigService } from './utils/config/winston.config';
 import loggingConfig from './utils/config/logging.config';
 import { SearchModule } from './utils/search/search.module';
+import { APP_FILTER } from '@nestjs/core';
+import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
 
 @Module({
   imports: [
@@ -99,6 +101,12 @@ import { SearchModule } from './utils/search/search.module';
     SearchModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER, //you have to use this custom provider
+      useClass: HttpExceptionsFilter, //this is your custom exception filter
+    },
+  ],
 })
 export class AppModule {}

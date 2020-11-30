@@ -1,6 +1,6 @@
 import { graphqlRequest } from '../utils/graphql.request';
 
-let uniqueId = (Date.now() + Math.random()).toString();
+const uniqueId = (Date.now() + Math.random()).toString();
 
 export const createChallangeMutation = async (
   challengeName: string,

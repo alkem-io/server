@@ -152,7 +152,7 @@ describe('Other entities to Challenge', () => {
     // Assert
     expect(responseAddUserToChallenge.status).toBe(200);
     expect(responseErrorMessage).toEqual(
-      `Unable to find exactly one user with ID: 777`
+      'Unable to find exactly one user with ID: 777'
     );
   });
 
@@ -174,7 +174,7 @@ describe('Other entities to Challenge', () => {
     // Assert
     expect(responseAddUserToChallenge.status).toBe(200);
     expect(responseErrorMessage).toEqual(
-      `Unable to find challenge with ID: 777`
+      'Unable to find challenge with ID: 777'
     );
   });
 });
