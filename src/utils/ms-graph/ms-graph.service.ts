@@ -1,18 +1,19 @@
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
 import { UserInput } from '../../domain/user/user.dto';
 import { AzureADStrategy } from '../authentication/aad.strategy';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../logging/logging.contexts';
+import { LogContext } from '../logging/logging.contexts';
+import { AccountException } from '../error-handling/exceptions/account.exception';
 
 @Injectable()
 export class MsGraphService {
   constructor(
     @Inject(forwardRef(() => AzureADStrategy))
     private azureAdStrategy: AzureADStrategy,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async callResourceAPI(accessToken: string, resourceURI: string) {
@@ -84,7 +85,7 @@ export class MsGraphService {
     try {
       res = await client.api(`/users/${accountUpn}`).get();
     } catch (error) {
-      this.logger.error(error.msg, error, LogContexts.AUTH);
+      throw new AccountException(error.msg, LogContext.COMMUNITY);
     }
     return res;
   }
@@ -97,7 +98,7 @@ export class MsGraphService {
     try {
       user = await this.getUser(client, accountUpn);
     } catch (error) {
-      this.logger.error(error.msg, error, LogContexts.AUTH);
+      throw new AccountException(error.msg, LogContext.COMMUNITY);
     }
 
     if (user) return true;
@@ -114,33 +115,32 @@ export class MsGraphService {
       const org = await this.getOrganisation(client);
       tenantName = org.value[0]['verifiedDomains'][0]['name'];
     } catch (error) {
-      this.logger.error(error.msg, error, LogContexts.AUTH);
+      throw new AccountException(error.msg, LogContext.COMMUNITY);
     }
 
     return tenantName;
   }
 
-  async resetPassword(accountUpn: string, newPassword: string) : Promise<any>
-  {
+  async resetPassword(accountUpn: string, newPassword: string): Promise<any> {
     const clientOptions: ClientOptions = {
       authProvider: this.azureAdStrategy,
     };
 
-    const passwordResetResponse =
-    {
+    const passwordResetResponse = {
       newPassword: newPassword,
     };
 
     const client = Client.initWithMiddleware(clientOptions);
-    const userId = (await client.api(`/users/${accountUpn}?$select=id`).get()).id;
+    const userId = (await client.api(`/users/${accountUpn}?$select=id`).get())
+      .id;
     //https://docs.microsoft.com/en-us/graph/api/authentication-list-passwordmethods?view=graph-rest-beta&tabs=http
     //we are parking this until the api call is moved to the production version of ms graph API
     const req = `/users/${userId}/authentication/passwordMethods/${userId}/resetPassword`;
-    let res = await client.api(req)
-    .version('beta')
-    .post(passwordResetResponse);
+    const res = await client
+      .api(req)
+      .version('beta')
+      .post(passwordResetResponse);
 
     return res;
   }
-
 }

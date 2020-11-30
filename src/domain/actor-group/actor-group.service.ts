@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActorGroup } from './actor-group.entity';
@@ -8,6 +8,9 @@ import { ActorInput } from '../actor/actor.dto';
 import { ActorGroupInput } from './actor-group.dto';
 import { ActorService } from '../actor/actor.service';
 import { IActor } from '../actor/actor.interface';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
+import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
 
 @Injectable()
 export class ActorGroupService {
@@ -15,7 +18,7 @@ export class ActorGroupService {
     private actorService: ActorService,
     @InjectRepository(ActorGroup)
     private actorGroupRepository: Repository<ActorGroup>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   // Helper method to ensure all members are initialised properly.
@@ -34,11 +37,17 @@ export class ActorGroupService {
   ): Promise<IActor> {
     const actorGroup = await this.getActorGroup(actorGroupID);
     if (!actorGroup)
-      throw new Error(`Unable to locate actor group with id: ${actorGroupID}`);
+      throw new EntityNotFoundException(
+        `Unable to locate actor group with id: ${actorGroupID}`,
+        LogContext.CHALLENGES
+      );
 
     const actor = await this.actorService.createActor(actorData);
     if (!actorGroup.actors)
-      throw new Error(`Non-initialised ActorGroup: ${actorGroupID}`);
+      throw new GroupNotInitializedException(
+        `Non-initialised ActorGroup: ${actorGroupID}`,
+        LogContext.CHALLENGES
+      );
     actorGroup.actors.push(actor);
 
     await this.actorGroupRepository.save(actorGroup);
@@ -59,8 +68,9 @@ export class ActorGroupService {
   async removeActorGroup(actorGroupID: number): Promise<boolean> {
     const actorGroup = await this.getActorGroup(actorGroupID);
     if (!actorGroup)
-      throw new Error(
-        `Not able to locate actorGroup with the specified ID: ${actorGroupID}`
+      throw new EntityNotFoundException(
+        `Not able to locate actorGroup with the specified ID: ${actorGroupID}`,
+        LogContext.CHALLENGES
       );
     await this.actorGroupRepository.remove(actorGroup as ActorGroup);
     return true;

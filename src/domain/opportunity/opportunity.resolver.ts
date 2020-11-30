@@ -26,6 +26,8 @@ import { IUserGroup } from '../user-group/user-group.interface';
 import { ProjectInput } from '../project/project.dto';
 import { Project } from '../project/project.entity';
 import { IProject } from '../project/project.interface';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver()
 export class OpportunityResolver {
@@ -49,7 +51,10 @@ export class OpportunityResolver {
     const opportunity = await this.opportunityService.getOpportunityByID(id);
     if (opportunity) return opportunity;
 
-    throw new Error(`Unable to locate opportunity with given id: ${id}`);
+    throw new EntityNotFoundException(
+      `Unable to locate opportunity with given id: ${id}`,
+      LogContext.CHALLENGES
+    );
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)

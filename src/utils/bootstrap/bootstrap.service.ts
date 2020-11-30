@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
@@ -21,8 +21,13 @@ import { ProfileService } from '../../domain/profile/profile.service';
 import { TagsetService } from '../../domain/tagset/tagset.service';
 import { ReferenceInput } from '../../domain/reference/reference.dto';
 import { Profiling } from '../logging/logging.profiling.decorator';
-import { LogContexts } from '../logging/logging.contexts';
+import { LogContext } from '../logging/logging.contexts';
 import { ILoggingConfig } from '../../interfaces/logging.config.interface';
+import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
+import { ValidationException } from '../error-handling/exceptions/validation.exception';
+import { BaseException } from '../error-handling/exceptions/base.exception';
+import { EntityNotFoundException } from '../error-handling/exceptions/entity.not.found.exception';
+import { CherrytwistErrorStatus } from '../error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class BootstrapService {
@@ -36,19 +41,19 @@ export class BootstrapService {
     private templateService: TemplateService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async bootstrapEcoverse() {
     try {
-      this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
+      this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
       this.logConfig();
 
       Profiling.logger = this.logger;
       const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
         ?.profilingEnabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
-      this.logger.verbose('Bootstrapping Ecoverse...', LogContexts.BOOTSTRAP);
+      this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
 
       // Now setup the rest...
       await this.ensureEcoverseSingleton();
@@ -56,7 +61,7 @@ export class BootstrapService {
       await this.bootstrapProfiles();
       await this.bootstrapTemplates();
     } catch (error) {
-      this.logger.error(error, undefined, LogContexts.BOOTSTRAP);
+      this.logger.error(error, undefined, LogContext.BOOTSTRAP);
     }
   }
 
@@ -71,10 +76,13 @@ export class BootstrapService {
     ];
     for (let i = 0; i < configs.length; i++) {
       const configName = configs[i];
-      this.logger.verbose(`===== Configuration: ${configName}`);
+      this.logger.verbose?.(`===== Configuration: ${configName}`);
       const config = this.configService.get<ILoggingConfig>(configName);
       if (!config)
-        throw new Error('Unable to obtain configuration: $${configName}');
+        throw new BaseException(
+          'Unable to obtain configuration: $${configName}',
+          LogContext.BOOTSTRAP
+        );
       const entries = Object.entries(config);
       for (const [key, value] of entries) {
         this.logConfigLevel(key, value, '');
@@ -84,14 +92,14 @@ export class BootstrapService {
 
   logConfigLevel(key: any, value: any, indent: string) {
     if (typeof value === 'object') {
-      this.logger.verbose(`Variable: ${key}:`);
+      this.logger.verbose?.(`Variable: ${key}:`);
       Object.keys(value).forEach(childKey => {
         const childValue = value[childKey];
         const newIndent = `${indent}....`;
         this.logConfigLevel(childKey, childValue, newIndent);
       });
     } else {
-      this.logger.verbose(`${indent}Variable: ${key}: ${value}`);
+      this.logger.verbose?.(`${indent}Variable: ${key}: ${value}`);
     }
   }
 
@@ -108,33 +116,33 @@ export class BootstrapService {
       fs.existsSync(bootstrapFilePath) &&
       fs.statSync(bootstrapFilePath).isFile()
     ) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         `Authorisation bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
-      this.logger.verbose(bootstratDataStr);
+      this.logger.verbose?.(bootstratDataStr);
       if (!bootstratDataStr) {
         this.logger.error(
           'Specified authorisation bootstrap file not found!',
           undefined,
-          LogContexts.BOOTSTRAP
+          LogContext.BOOTSTRAP
         );
         return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
     } else {
-      this.logger.verbose(
+      this.logger.verbose?.(
         'Authorisation bootstrap: default configuration being loaded',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
     }
 
     const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
     if (!ecoverseAdmins)
-      this.logger.verbose(
+      this.logger.verbose?.(
         'No ecoverse admins section in the authorisation bootstrap file!',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
     else {
       await this.createGroupProfiles(
@@ -144,9 +152,9 @@ export class BootstrapService {
     }
     const globalAdmins = bootstrapJson.globalAdmins;
     if (!globalAdmins) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         'No global admins section in the authorisation bootstrap file!',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
     } else {
       await this.createGroupProfiles(
@@ -156,9 +164,9 @@ export class BootstrapService {
     }
     const communityAdmins = bootstrapJson.communityAdmins;
     if (!communityAdmins) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         'No community admins section in the authorisation bootstrap file!',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
     } else {
       await this.createGroupProfiles(
@@ -189,91 +197,104 @@ export class BootstrapService {
         }
         user = await this.userService.getUserWithGroups(userInput.email);
 
-        if (!user) throw new Error('Unable to create group profiles');
+        if (!user)
+          throw new EntityNotFoundException(
+            'Unable to create group profiles.',
+            LogContext.BOOTSTRAP,
+            CherrytwistErrorStatus.USER_PROFILE_NOT_FOUND
+          );
 
         const groups = (user as IUser).userGroups;
         if (!groups)
-          throw new Error(
-            `User ${user.email} isn't initialised properly. The user doesn't belong to any groups!`
+          throw new EntityNotInitializedException(
+            `User ${user.email} isn't initialised properly. The user doesn't belong to any groups!`,
+            LogContext.BOOTSTRAP
           );
 
         if (!groups.some(({ name }) => groupName === name))
           await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
         else
-          this.logger.verbose(
+          this.logger.verbose?.(
             `User ${userInput.email} already exists in group ${groupName}`,
-            LogContexts.BOOTSTRAP
+            LogContext.BOOTSTRAP
           );
       }
     } catch (error) {
       this.logger.error(
         `Unable to create profiles ${error.message}`,
         error,
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
     }
   }
 
   async validateAccountManagementSetup(): Promise<boolean> {
-    this.logger.verbose(
+    this.logger.verbose?.(
       '=== Validating Account Management configuration ===',
-      LogContexts.BOOTSTRAP
+      LogContext.BOOTSTRAP
     );
     const accountsEnabled = this.accountService.accountUsageEnabled();
     if (accountsEnabled) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         '...usage of Accounts is enabled',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
       return true;
     } else {
       this.logger.warn(
         '...usage of Accounts is DISABLED',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
       return false;
     }
   }
 
   async ensureEcoverseSingleton(): Promise<IEcoverse> {
-    this.logger.verbose(
+    this.logger.verbose?.(
       '=== Ensuring single ecoverse is present ===',
-      LogContexts.BOOTSTRAP
+      LogContext.BOOTSTRAP
     );
     const [
       ecoverseArray,
       ecoverseCount,
     ] = await this.ecoverseRepository.findAndCount();
     if (ecoverseCount == 0) {
-      this.logger.verbose('...No ecoverse present...', LogContexts.BOOTSTRAP);
-      this.logger.verbose('........creating...', LogContexts.BOOTSTRAP);
+      this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
+      this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // Create a new ecoverse
       const ecoverse = new Ecoverse();
       await this.ecoverseService.initialiseMembers(ecoverse);
       // Save is needed so that the ecoverse is there for other methods
       await this.ecoverseRepository.save(ecoverse);
 
-      this.logger.verbose('........populating...', LogContexts.BOOTSTRAP);
+      this.logger.verbose?.('........populating...', LogContext.BOOTSTRAP);
       await this.populateEmptyEcoverse(ecoverse);
       await this.ecoverseRepository.save(ecoverse);
       return ecoverse as IEcoverse;
     }
     if (ecoverseCount == 1) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         '...single ecoverse - verified',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
       return ecoverseArray[0] as IEcoverse;
     }
 
-    throw new Error('Cannot have more than one ecoverse');
+    throw new ValidationException(
+      'Cannot have more than one ecoverse',
+      LogContext.BOOTSTRAP
+    );
   }
 
   // Populate an empty ecoverse
   async populateEmptyEcoverse(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Set the default values
     ecoverse.name = 'Empty ecoverse';
-    if (!ecoverse.context) throw new Error('Non-initialised ecoverse');
+    if (!ecoverse.context)
+      throw new EntityNotInitializedException(
+        'Non-initialised ecoverse',
+        LogContext.BOOTSTRAP
+      );
     ecoverse.context.tagline = 'An empty ecoverse to be populated';
 
     return ecoverse;
@@ -286,9 +307,9 @@ export class BootstrapService {
       ecoverseID
     );
     if (existingTemplates && existingTemplates.length > 0) {
-      this.logger.verbose(
+      this.logger.verbose?.(
         'Ecoverse already has at least one template; skipping loading of templates',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
       return;
     }
@@ -307,22 +328,22 @@ export class BootstrapService {
     ) {
       this.logger.warn(
         `Templates bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
-      this.logger.verbose(bootstratDataStr);
+      this.logger.verbose?.(bootstratDataStr);
       if (!bootstratDataStr) {
         this.logger.error(
           'Specified templates bootstrap file not found!',
-          LogContexts.BOOTSTRAP
+          LogContext.BOOTSTRAP
         );
         return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
     } else {
-      this.logger.verbose(
+      this.logger.verbose?.(
         'Templates bootstrap: default configuration being loaded',
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
     }
 
@@ -346,7 +367,11 @@ export class BootstrapService {
         template.users?.push(user);
         // save the template again for each user, to reflect user assignment to template
         await this.templateService.save(template);
-        if (!user.profile) throw new Error(`non-initialised user: ${user}`);
+        if (!user.profile)
+          throw new EntityNotInitializedException(
+            `non-initialised user: ${user}`,
+            LogContext.BOOTSTRAP
+          );
         const profileId = user.profile.id;
 
         // Add the tagsets
@@ -357,9 +382,9 @@ export class BootstrapService {
             tagsetJson.name
           );
           await this.tagsetService.replaceTags(tagset.id, tagsetJson.tags);
-          this.logger.verbose(
+          this.logger.verbose?.(
             `Templates bootstrap: added tagset with name ${tagset.name}`,
-            LogContexts.BOOTSTRAP
+            LogContext.BOOTSTRAP
           );
         }
 
@@ -374,16 +399,16 @@ export class BootstrapService {
             profileId,
             refData
           );
-          this.logger.verbose(
+          this.logger.verbose?.(
             `Templates bootstrap: added reference with name ${reference.name}`,
-            LogContexts.BOOTSTRAP
+            LogContext.BOOTSTRAP
           );
         }
       }
 
-      this.logger.verbose(
+      this.logger.verbose?.(
         `Templates bootstrap: created a new template with name: '${template.name}'`,
-        LogContexts.BOOTSTRAP
+        LogContext.BOOTSTRAP
       );
     }
   }
