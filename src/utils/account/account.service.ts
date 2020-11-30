@@ -208,7 +208,7 @@ export class AccountService {
       throw new AccountException(
         `Failed to reset password for account ${accountUpn} ${error}`,
         LogContext.COMMUNITY,
-        CherrytwistErrorStatus.ACCOUNT_DELETION_FAILED
+        CherrytwistErrorStatus.ACCOUNT_UPDATE_FAILED
       );
     }
 
