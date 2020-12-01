@@ -262,10 +262,6 @@ export class OpportunityService {
       Opportunity.state = opportunityData.state;
     }
 
-    if (opportunityData.tagset) {
-      Opportunity.tagset = opportunityData.tagset;
-    }
-
     await this.opportunityRepository.save(Opportunity);
 
     return Opportunity;
