@@ -300,8 +300,7 @@ export class ChallengeService {
 
     // Remove all groups
     if (challenge.groups) {
-      for (let i = 0; i < challenge.groups.length; i++) {
-        const group = challenge.groups[i];
+      for (const group of challenge.groups) {
         await this.userGroupService.removeUserGroup(group.id);
       }
     }
@@ -467,8 +466,7 @@ export class ChallengeService {
       );
     // ok to add the org
     const updatedLeads = [];
-    for (let i = 0; i < challenge.leadOrganisations.length; i++) {
-      const existingOrg = challenge.leadOrganisations[i];
+    for (const existingOrg of challenge.leadOrganisations) {
       if (existingOrg.id != organisationID) {
         updatedLeads.push(existingOrg);
       }

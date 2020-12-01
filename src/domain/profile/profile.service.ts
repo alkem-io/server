@@ -125,8 +125,7 @@ export class ProfileService {
     // Iterate over the tagsets
     const tagsetsData = profileData.tagsetsData;
     if (tagsetsData) {
-      for (let i = 0; i < tagsetsData.length; i++) {
-        const tagsetData = tagsetsData[i];
+      for (const tagsetData of tagsetsData) {
         await this.tagsetService.updateOrCreateTagset(profile, tagsetData);
       }
     }
@@ -134,8 +133,7 @@ export class ProfileService {
     // Iterate over the references
     const referencesData = profileData.referencesData;
     if (referencesData) {
-      for (let i = 0; i < referencesData.length; i++) {
-        const referenceData = referencesData[i];
+      for (const referenceData of referencesData) {
         const existingReference = profile.references?.find(
           reference => reference.name === referenceData.name
         );

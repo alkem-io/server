@@ -74,8 +74,7 @@ export class BootstrapService {
       'ms-graph',
       'service',
     ];
-    for (let i = 0; i < configs.length; i++) {
-      const configName = configs[i];
+    for (const configName of configs) {
       this.logger.verbose?.(`===== Configuration: ${configName}`);
       const config = this.configService.get<ILoggingConfig>(configName);
       if (!config)
@@ -179,8 +178,7 @@ export class BootstrapService {
   @Profiling.api
   async createGroupProfiles(groupName: string, usersData: any[]) {
     try {
-      for (let i = 0; i < usersData.length; i++) {
-        const userData = usersData[i];
+      for (const userData of usersData) {
         const userInput = new UserInput();
         userInput.email = userData.email;
         // For bootstrap puroposes also set the upn to the same as the email

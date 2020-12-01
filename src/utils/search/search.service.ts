@@ -119,8 +119,7 @@ export class SearchService {
   }
 
   ensureUniqueTermsPerResult(results: ISearchResultEntry[]) {
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
+    for (const result of results) {
       const uniqueTerms = [...new Set(result.terms)];
       result.terms = uniqueTerms;
     }
