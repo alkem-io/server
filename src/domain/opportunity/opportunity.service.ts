@@ -262,6 +262,10 @@ export class OpportunityService {
       Opportunity.state = opportunityData.state;
     }
 
+    if (opportunityData.tagset) {
+      Opportunity.tagset = opportunityData.tagset;
+    }
+
     await this.opportunityRepository.save(Opportunity);
 
     return Opportunity;
@@ -281,29 +285,25 @@ export class OpportunityService {
 
     // First remove all groups
     if (opportunity.groups) {
-      for (let i = 0; i < opportunity.groups.length; i++) {
-        const group = opportunity.groups[i];
+      for (const group of opportunity.groups) {
         await this.userGroupService.removeUserGroup(group.id);
       }
     }
 
     if (opportunity.aspects) {
-      for (let i = 0; i < opportunity.aspects.length; i++) {
-        const aspect = opportunity.aspects[i];
+      for (const aspect of opportunity.aspects) {
         await this.aspectService.removeAspect(aspect.id);
       }
     }
 
     if (opportunity.relations) {
-      for (let i = 0; i < opportunity.relations.length; i++) {
-        const relation = opportunity.relations[i];
+      for (const relation of opportunity.relations) {
         await this.relationService.removeRelation(relation.id);
       }
     }
 
     if (opportunity.actorGroups) {
-      for (let i = 0; i < opportunity.actorGroups.length; i++) {
-        const actorGroup = opportunity.actorGroups[i];
+      for (const actorGroup of opportunity.actorGroups) {
         await this.actorGroupService.removeActorGroup(actorGroup.id);
       }
     }
