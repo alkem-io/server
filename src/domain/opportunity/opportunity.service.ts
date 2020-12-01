@@ -30,6 +30,8 @@ import { EntityNotFoundException } from '../../utils/error-handling/exceptions/e
 import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import { ReferenceInput } from '../reference/reference.dto';
+import { Reference } from '../reference/reference.entity';
 
 @Injectable()
 export class OpportunityService {
@@ -251,20 +253,51 @@ export class OpportunityService {
     opportunityID: number,
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
-    const Opportunity = await this.getOpportunityByID(opportunityID);
+    const opportunity = await this.getOpportunityByID(opportunityID);
 
     // Copy over the received data
     if (opportunityData.name) {
-      Opportunity.name = opportunityData.name;
+      opportunity.name = opportunityData.name;
     }
 
     if (opportunityData.state) {
-      Opportunity.state = opportunityData.state;
+      opportunity.state = opportunityData.state;
     }
 
-    await this.opportunityRepository.save(Opportunity);
+    if (opportunityData.context && opportunity.context) {
+      if (opportunityData.context.background)
+        opportunity.context.background = opportunityData.context.background;
 
-    return Opportunity;
+      if (opportunityData.context.impact)
+        opportunity.context.impact = opportunityData.context.impact;
+
+      if (opportunityData.context.references) {
+        for (const referenceInput of opportunityData.context.references) {
+          if (
+            !opportunity.context.references?.some(
+              ({ name }) => name === referenceInput.name
+            )
+          )
+            opportunity.context.references?.push(
+              new Reference(
+                referenceInput.name,
+                referenceInput.uri,
+                referenceInput?.description
+              )
+            );
+        }
+      }
+
+      if (opportunityData.context.tagline)
+        opportunity.context.tagline = opportunityData.context.tagline;
+
+      if (opportunityData.context.vision)
+        opportunity.context.vision = opportunityData.context.vision;
+    }
+
+    await this.opportunityRepository.save(opportunity);
+
+    return opportunity;
   }
 
   async removeOpportunity(opportunityID: number): Promise<boolean> {
