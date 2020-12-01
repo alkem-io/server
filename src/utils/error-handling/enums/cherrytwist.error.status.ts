@@ -1,4 +1,4 @@
-export declare enum CherrytwistErrorStatus {
+export enum CherrytwistErrorStatus {
   BAD_USER_INPUT = 100,
   GROUP_NOT_INITIALIZED = 101,
   ENTITY_NOT_INITIALIZED = 102,
