@@ -3,7 +3,6 @@ import {
   ExecutionContext,
   Inject,
   LoggerService,
-  ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
@@ -16,9 +15,13 @@ import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity'
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
 import { AuthenticationException } from '../error-handling/exceptions/authentication.exception';
+import { TokenException } from '../error-handling/exceptions/token.exception';
+import { ForbiddenException } from '../error-handling/exceptions/forbidden.exception';
+import { CherrytwistErrorStatus } from '../error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {
+  JWT_EXPIRED = 'jwt is expired';
   private _roles!: string[];
   public get roles(): string[] {
     return this._roles;
@@ -54,7 +57,7 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
     );
   }
 
-  handleRequest(err: any, user: any, _info: any) {
+  handleRequest(err: any, user: any, info: any) {
     // Always handle the request if authentication is disabled
     if (
       this.configService.get<IServiceConfig>('service')
@@ -63,11 +66,17 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
       return user;
     }
 
-    if (err) throw err;
+    if (info === this.JWT_EXPIRED)
+      throw new TokenException(
+        'Access token has expired!',
+        CherrytwistErrorStatus.TOKEN_EXPIRED
+      );
+
+    if (err) throw new AuthenticationException(err);
 
     if (!user)
       throw new AuthenticationException(
-        'You are not authorized to access this resource. '
+        'Failed to retrieve user from the graphql context! '
       );
 
     if (this.matchRoles(user.userGroups)) return user;
