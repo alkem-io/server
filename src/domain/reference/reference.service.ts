@@ -43,7 +43,7 @@ export class ReferenceService {
   async updateReference(
     reference: IReference,
     referenceData: ReferenceInput
-  ): Promise<boolean> {
+  ): Promise<IReference> {
     // Copy over the received data
     if (referenceData.uri) {
       reference.uri = referenceData.uri;
@@ -57,9 +57,9 @@ export class ReferenceService {
       reference.description = '';
     }
 
-    await this.referenceRepository.save(reference);
+    const updatedReference = await this.referenceRepository.save(reference);
 
-    return true;
+    return updatedReference;
   }
 
   async getReference(referenceID: number): Promise<IReference | undefined> {
@@ -91,9 +91,9 @@ export class ReferenceService {
           )
         );
       else {
-        const reference = await this.referenceRepository.findOne({
-          name: referenceDTO.name,
-        });
+        const reference = await references.find(
+          e => e.name === referenceDTO.name
+        );
         await this.updateReference(reference as IReference, referenceDTO);
       }
     }
