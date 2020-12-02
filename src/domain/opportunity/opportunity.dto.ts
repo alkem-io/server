@@ -18,7 +18,4 @@ export class OpportunityInput {
 
   @Field(() => ContextInput, { nullable: true })
   context?: ContextInput;
-
-  @Field(() => [String], { nullable: true })
-  tagset?: string[];
 }

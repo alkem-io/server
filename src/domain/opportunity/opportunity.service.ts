@@ -10,7 +10,6 @@ import { ActorGroupService } from '../actor-group/actor-group.service';
 import { AspectInput } from '../aspect/aspect.dto';
 import { IAspect } from '../aspect/aspect.interface';
 import { AspectService } from '../aspect/aspect.service';
-import { ProfileService } from '../profile/profile.service';
 import { ProjectInput } from '../project/project.dto';
 import { IProject } from '../project/project.interface';
 import { ProjectService } from '../project/project.service';
@@ -38,7 +37,6 @@ export class OpportunityService {
     private userGroupService: UserGroupService,
     private userService: UserService,
     private aspectService: AspectService,
-    private profileService: ProfileService,
     private projectService: ProjectService,
     private contextService: ContextService,
     private relationService: RelationService,
@@ -251,20 +249,27 @@ export class OpportunityService {
     opportunityID: number,
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
-    const Opportunity = await this.getOpportunityByID(opportunityID);
+    const opportunity = await this.getOpportunityByID(opportunityID);
 
     // Copy over the received data
     if (opportunityData.name) {
-      Opportunity.name = opportunityData.name;
+      opportunity.name = opportunityData.name;
     }
 
     if (opportunityData.state) {
-      Opportunity.state = opportunityData.state;
+      opportunity.state = opportunityData.state;
     }
 
-    await this.opportunityRepository.save(Opportunity);
+    if (opportunityData.context && opportunity.context) {
+      await this.contextService.update(
+        opportunity.context,
+        opportunityData.context
+      );
+    }
 
-    return Opportunity;
+    await this.opportunityRepository.save(opportunity);
+
+    return opportunity;
   }
 
   async removeOpportunity(opportunityID: number): Promise<boolean> {
