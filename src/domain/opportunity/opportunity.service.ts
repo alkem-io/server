@@ -263,34 +263,7 @@ export class OpportunityService {
     }
 
     if (opportunityData.context && opportunity.context) {
-      if (opportunityData.context.background)
-        opportunity.context.background = opportunityData.context.background;
-
-      if (opportunityData.context.impact)
-        opportunity.context.impact = opportunityData.context.impact;
-
-      if (opportunityData.context.references) {
-        for (const referenceInput of opportunityData.context.references) {
-          if (
-            !opportunity.context.references?.some(
-              ({ name }) => name === referenceInput.name
-            )
-          )
-            opportunity.context.references?.push(
-              new Reference(
-                referenceInput.name,
-                referenceInput.uri,
-                referenceInput?.description
-              )
-            );
-        }
-      }
-
-      if (opportunityData.context.tagline)
-        opportunity.context.tagline = opportunityData.context.tagline;
-
-      if (opportunityData.context.vision)
-        opportunity.context.vision = opportunityData.context.vision;
+      this.contextService.update(opportunity.context, opportunityData.context);
     }
 
     await this.opportunityRepository.save(opportunity);
