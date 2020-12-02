@@ -10,10 +10,6 @@ import {
 let opportunityName = '';
 let opportunityTextId = '';
 let opportunityId = '';
-let userName = '';
-let userPhone = '';
-let userEmail = '';
-let groupName = '';
 let challengeName = '';
 let challengeId = '';
 let uniqueTextId = '';
@@ -22,10 +18,6 @@ beforeEach(async () => {
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
-  userName = `testUser ${uniqueTextId}`;
-  userPhone = `userPhone ${uniqueTextId}`;
-  userEmail = `${uniqueTextId}@test.com`;
-  groupName = `groupName ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
   opportunityTextId = `${uniqueTextId}`;
 });

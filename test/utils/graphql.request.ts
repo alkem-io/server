@@ -16,3 +16,13 @@ export const graphqlRequest = async (
     .send({ ...requestParams })
     .set('Accept', 'application/json');
 };
+
+export const graphqlRequestAuth = async (
+  requestParams: any
+  // app: INestApplication
+) => {
+  return request("https://dev.cherrytwist.org")
+    .post('/graphql')
+    .send({ ...requestParams })
+    .set('Accept', 'application/json');
+};
