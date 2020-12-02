@@ -30,7 +30,6 @@ import { EntityNotFoundException } from '../../utils/error-handling/exceptions/e
 import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { ReferenceInput } from '../reference/reference.dto';
 import { Reference } from '../reference/reference.entity';
 
 @Injectable()
@@ -40,7 +39,6 @@ export class OpportunityService {
     private userGroupService: UserGroupService,
     private userService: UserService,
     private aspectService: AspectService,
-    private profileService: ProfileService,
     private projectService: ProjectService,
     private contextService: ContextService,
     private relationService: RelationService,
