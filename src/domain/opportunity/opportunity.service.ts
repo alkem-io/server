@@ -10,7 +10,6 @@ import { ActorGroupService } from '../actor-group/actor-group.service';
 import { AspectInput } from '../aspect/aspect.dto';
 import { IAspect } from '../aspect/aspect.interface';
 import { AspectService } from '../aspect/aspect.service';
-import { ProfileService } from '../profile/profile.service';
 import { ProjectInput } from '../project/project.dto';
 import { IProject } from '../project/project.interface';
 import { ProjectService } from '../project/project.service';
@@ -30,7 +29,6 @@ import { EntityNotFoundException } from '../../utils/error-handling/exceptions/e
 import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
 import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { Reference } from '../reference/reference.entity';
 
 @Injectable()
 export class OpportunityService {
@@ -260,6 +258,10 @@ export class OpportunityService {
 
     if (opportunityData.state) {
       opportunity.state = opportunityData.state;
+    }
+
+    if (opportunityData.textID) {
+      opportunity.textID = opportunityData.textID;
     }
 
     if (opportunityData.context && opportunity.context) {
