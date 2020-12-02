@@ -58,13 +58,19 @@ export class ContextService {
       context.who = contextInput.who;
     }
 
-    // If references are supplied then replace the current references
-    if (!context.references) context.references = [];
     if (contextInput.references) {
-      context.references = this.referenceService.convertReferences(
+      if (!context.references)
+        throw new EntityNotInitializedException(
+          `References for contex with id: ${context.id} not initialized properly!`,
+          LogContext.CHALLENGES
+        );
+
+      await this.referenceService.updateReferences(
+        context.references,
         contextInput.references
       );
     }
+
     await this.contextRepository.save(context);
     return context;
   }

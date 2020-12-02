@@ -41,7 +41,7 @@ export class ReferenceService {
   }
 
   async updateReference(
-    reference: Reference,
+    reference: IReference,
     referenceData: ReferenceInput
   ): Promise<boolean> {
     // Copy over the received data
@@ -75,5 +75,27 @@ export class ReferenceService {
       );
     await this.referenceRepository.remove(reference as Reference);
     return true;
+  }
+
+  async updateReferences(
+    references: IReference[],
+    referenceDTOs: ReferenceInput[]
+  ) {
+    for (const referenceDTO of referenceDTOs) {
+      if (!references.some(({ name }) => name === referenceDTO.name))
+        references.push(
+          new Reference(
+            referenceDTO.name,
+            referenceDTO.uri,
+            referenceDTO?.description
+          )
+        );
+      else {
+        const reference = await this.referenceRepository.findOne({
+          name: referenceDTO.name,
+        });
+        await this.updateReference(reference as IReference, referenceDTO);
+      }
+    }
   }
 }

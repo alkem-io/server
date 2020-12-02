@@ -260,12 +260,11 @@ export class OpportunityService {
       opportunity.state = opportunityData.state;
     }
 
-    if (opportunityData.textID) {
-      opportunity.textID = opportunityData.textID;
-    }
-
     if (opportunityData.context && opportunity.context) {
-      this.contextService.update(opportunity.context, opportunityData.context);
+      await this.contextService.update(
+        opportunity.context,
+        opportunityData.context
+      );
     }
 
     await this.opportunityRepository.save(opportunity);
