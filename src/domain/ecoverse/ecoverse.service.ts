@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IContext } from '../context/context.interface';
 import { IOrganisation } from '../organisation/organisation.interface';
@@ -28,7 +28,12 @@ import { ITemplate } from '../template/template.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { UserService } from '../user/user.service';
 import { AccountService } from '../../utils/account/account.service';
-import { LogContexts } from '../../utils/logging/logging.contexts';
+import { LogContext } from '../../utils/logging/logging.contexts';
+import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import { AccountException } from '../../utils/error-handling/exceptions/account.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { CherrytwistErrorStatus } from '../../utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class EcoverseService {
@@ -43,7 +48,7 @@ export class EcoverseService {
     private templateService: TemplateService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   // Helper method to ensure all members that are arrays are initialised properly.
@@ -104,7 +109,10 @@ export class EcoverseService {
       .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
 
     if (!ecoverse) {
-      throw new Error('Ecoverse is missing!');
+      throw new ValidationException(
+        'Ecoverse is missing!',
+        LogContext.BOOTSTRAP
+      );
     }
     return ecoverse.id;
   }
@@ -192,9 +200,9 @@ export class EcoverseService {
   }
 
   async createGroup(groupName: string): Promise<IUserGroup> {
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Adding userGroup (${groupName}) to ecoverse`,
-      LogContexts.CHALLENGES
+      LogContext.CHALLENGES
     );
 
     const ecoverse = (await this.getEcoverse({
@@ -227,7 +235,10 @@ export class EcoverseService {
     });
 
     if (!ecoverse.challenges) {
-      throw new Error('Challenges must be defined');
+      throw new EntityNotInitializedException(
+        'Challenges must be defined',
+        LogContext.CHALLENGES
+      );
     }
     // First check if the challenge already exists on not...
     let challenge = ecoverse.challenges.find(
@@ -235,8 +246,9 @@ export class EcoverseService {
     );
     if (challenge) {
       // already have a challenge with the given name, not allowed
-      throw new Error(
-        `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`
+      throw new ValidationException(
+        `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`,
+        LogContext.CHALLENGES
       );
     }
     // No existing challenge found, create and initialise a new one!
@@ -259,13 +271,17 @@ export class EcoverseService {
     });
 
     if (!ecoverse.templates) {
-      throw new Error('Templates must be defined');
+      throw new EntityNotInitializedException(
+        'Templates must be defined',
+        LogContext.CHALLENGES
+      );
     }
     // First check if the challenge already exists on not...
     let template = ecoverse.templates.find(c => c.name === templateData.name);
     if (template)
-      throw new Error(
-        `Template with the provided name already exists: ${templateData.name}`
+      throw new ValidationException(
+        `Template with the provided name already exists: ${templateData.name}`,
+        LogContext.CHALLENGES
       );
     // No existing challenge found, create and initialise a new one!
     template = await this.templateService.createTemplate(templateData);
@@ -288,7 +304,10 @@ export class EcoverseService {
       },
     });
     if (!ecoverse.organisations) {
-      throw new Error('Organisations must be defined');
+      throw new EntityNotInitializedException(
+        'Organisations must be defined',
+        LogContext.CHALLENGES
+      );
     }
 
     let organisation = ecoverse.organisations.find(
@@ -296,8 +315,9 @@ export class EcoverseService {
     );
     // First check if the organisation already exists on not...
     if (organisation)
-      throw new Error(
-        `Organisation with the provided name already exists: ${organisationData.name}`
+      throw new ValidationException(
+        `Organisation with the provided name already exists: ${organisationData.name}`,
+        LogContext.CHALLENGES
       );
     // No existing organisation found, create and initialise a new one!
     organisation = await this.organisationService.createOrganisation(
@@ -320,14 +340,13 @@ export class EcoverseService {
     // Ok to proceed to creating profile and optionally account
     const user = await this.createUserProfile(userData);
     if (this.accountService.authenticationEnabled()) {
-      try {
-        const result = await this.accountService.createUserAccount(userData);
-        if (!result) throw new Error('Unable to create account for user!');
-      } catch (e) {
-        // Account creation failed; need to remove the user
+      const result = await this.accountService.createUserAccount(userData);
+      if (!result) {
         await this.userService.removeUser(user);
-        throw new Error(
-          `Unable to create account for user. Removing created user profile: ${user.name}.  ${e}`
+        throw new AccountException(
+          'Unable to create account for user!',
+          LogContext.COMMUNITY,
+          CherrytwistErrorStatus.ACCOUNT_CREATION_FAILED
         );
       }
     }
@@ -338,7 +357,10 @@ export class EcoverseService {
   async createUserProfile(userData: UserInput): Promise<IUser> {
     const ctUser = await this.userService.createUser(userData);
     if (!ctUser)
-      throw new Error(`User ${userData.email} could not be created!`);
+      throw new ValidationException(
+        `User ${userData.email} could not be created!`,
+        LogContext.COMMUNITY
+      );
 
     const ecoverse = await this.getEcoverse({
       relations: ['groups'],
@@ -379,7 +401,10 @@ export class EcoverseService {
     groupName: string
   ): Promise<boolean> {
     if (!(await this.groupIsRestricted(groupName)))
-      throw new Error(`${groupName} is not a restricted group name!`);
+      throw new ValidationException(
+        `${groupName} is not a restricted group name!`,
+        LogContext.COMMUNITY
+      );
 
     const ctverse = await this.getEcoverse({ relations: ['groups'] });
     const adminsGroup = await this.userGroupService.getGroupByName(
@@ -410,7 +435,11 @@ export class EcoverseService {
   // Removes the user and deletes the profile
   async removeUser(userID: number): Promise<boolean> {
     const user = await this.userService.getUserByID(userID);
-    if (!user) throw new Error(`Could not locate specified user: ${userID}`);
+    if (!user)
+      throw new EntityNotFoundException(
+        `Could not locate specified user: ${userID}`,
+        LogContext.COMMUNITY
+      );
 
     await this.userService.removeUser(user);
     if (this.accountService.accountUsageEnabled())
@@ -418,14 +447,23 @@ export class EcoverseService {
     return true;
   }
 
-
   // Removes the user and deletes the profile
-  async updateUserAccountPassword(userID: number, newPassword: string): Promise<boolean> {
+  async updateUserAccountPassword(
+    userID: number,
+    newPassword: string
+  ): Promise<boolean> {
     const user = await this.userService.getUserByID(userID);
-    if (!user) throw new Error(`Could not locate specified user: ${userID}`);
+    if (!user)
+      throw new EntityNotFoundException(
+        `Could not locate specified user: ${userID}`,
+        LogContext.COMMUNITY
+      );
 
     if (this.accountService.accountUsageEnabled())
-      return await this.accountService.updateUserAccountPassword(user.accountUpn, newPassword);
+      return await this.accountService.updateUserAccountPassword(
+        user.accountUpn,
+        newPassword
+      );
     return true;
   }
 

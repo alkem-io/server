@@ -1,4 +1,4 @@
-import { Inject, Logger } from '@nestjs/common';
+import { Inject, LoggerService, NotImplementedException } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './search-input.dto';
 import { Repository } from 'typeorm';
@@ -7,7 +7,8 @@ import { UserGroup } from '../../domain/user-group/user-group.entity';
 import { User } from '../../domain/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
-import { LogContexts } from '../logging/logging.contexts';
+import { LogContext } from '../logging/logging.contexts';
+import { ValidationException } from '../error-handling/exceptions/validation.exception';
 
 enum SearchEntityTypes {
   User = 'user',
@@ -35,7 +36,7 @@ export class SearchService {
     private userRepository: Repository<User>,
     @InjectRepository(UserGroup)
     private groupRepository: Repository<UserGroup>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async search(searchData: SearchInput): Promise<ISearchResultEntry[]> {
@@ -54,7 +55,10 @@ export class SearchService {
 
     // Only support certain features for now
     if (searchData.challengesFilter)
-      throw new Error('Filtering by challenges not yet implemented');
+      throw new NotImplementedException(
+        'Filtering by challenges not yet implemented',
+        LogContext.SEARCH
+      );
     if (searchData.tagsetNames)
       await this.searchTagsets(
         searchData.tagsetNames,
@@ -102,16 +106,23 @@ export class SearchService {
       }
     }
 
-    this.logger.verbose(
+    this.logger.verbose?.(
       `Executed search query: ${userResults.size} users results and ${groupResults.size} group results found`,
-      LogContexts.API
+      LogContext.API
     );
 
     let results: ISearchResultEntry[] = [];
     results = await this.buildSearchResults(userResults);
     results.push(...(await this.buildSearchResults(groupResults)));
-
+    this.ensureUniqueTermsPerResult(results);
     return results;
+  }
+
+  ensureUniqueTermsPerResult(results: ISearchResultEntry[]) {
+    for (const result of results) {
+      const uniqueTerms = [...new Set(result.terms)];
+      result.terms = uniqueTerms;
+    }
   }
 
   async searchTagsets(
@@ -196,7 +207,10 @@ export class SearchService {
       existingMatch.score = existingMatch.score + SCORE_INCREMENT;
       // also add the term that was matched
       if (match.terms.length != 1)
-        throw new Error('Expected exactly one matched term');
+        throw new ValidationException(
+          'Expected exactly one matched term',
+          LogContext.SEARCH
+        );
       existingMatch.terms.push(match.terms[0]);
     } else {
       match.score = SCORE_INCREMENT;
@@ -206,21 +220,26 @@ export class SearchService {
 
   validateSearchParameters(searchData: SearchInput) {
     if (searchData.terms.length > SEARCH_TERM_LIMIT)
-      throw new Error(
-        `Maximum number of search terms is ${SEARCH_TERM_LIMIT}; supplied: ${searchData.terms.length}`
+      throw new ValidationException(
+        `Maximum number of search terms is ${SEARCH_TERM_LIMIT}; supplied: ${searchData.terms.length}`,
+        LogContext.SEARCH
       );
     // Check limit on tagsets that can be searched
     const tagsetNames = searchData.tagsetNames;
     if (tagsetNames && tagsetNames.length > TAGSET_NAMES_LIMIT)
-      throw new Error(
-        `Maximum number of tagset names is ${TAGSET_NAMES_LIMIT}; supplied: ${tagsetNames.length}`
+      throw new ValidationException(
+        `Maximum number of tagset names is ${TAGSET_NAMES_LIMIT}; supplied: ${tagsetNames.length}`,
+        LogContext.SEARCH
       );
     // Check only allowed entity types supplied
     const entityTypes = searchData.typesFilter;
     if (entityTypes) {
       entityTypes.forEach(entityType => {
         if (!SEARCH_ENTITIES.includes(entityType))
-          throw new Error(`Not allowed typeFilter encountered: ${entityType}`);
+          throw new ValidationException(
+            `Not allowed typeFilter encountered: ${entityType}`,
+            LogContext.SEARCH
+          );
       });
     }
   }

@@ -18,7 +18,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-let uniqueId = Math.random().toString();
+const uniqueId = Math.random().toString();
 
 beforeEach(() => {
   userName = `testUser ${uniqueId}`;

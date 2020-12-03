@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { ReferenceInput } from '../reference/reference.dto';
 import { IReference } from '../reference/reference.interface';
 import { ReferenceService } from '../reference/reference.service';
@@ -27,7 +30,10 @@ export class ContextService {
   async getContext(contextID: number): Promise<IContext> {
     const context = await this.contextRepository.findOne({ id: contextID });
     if (!context)
-      throw new Error(`No context found with the given id: ${contextID}`);
+      throw new EntityNotFoundException(
+        `No context found with the given id: ${contextID}`,
+        LogContext.CHALLENGES
+      );
     return context;
   }
 
@@ -52,13 +58,19 @@ export class ContextService {
       context.who = contextInput.who;
     }
 
-    // If references are supplied then replace the current references
-    if (!context.references) context.references = [];
     if (contextInput.references) {
-      context.references = this.referenceService.convertReferences(
+      if (!context.references)
+        throw new EntityNotInitializedException(
+          `References for contex with id: ${context.id} not initialized properly!`,
+          LogContext.CHALLENGES
+        );
+
+      await this.referenceService.updateReferences(
+        context.references,
         contextInput.references
       );
     }
+
     await this.contextRepository.save(context);
     return context;
   }
@@ -69,7 +81,11 @@ export class ContextService {
   ): Promise<IReference> {
     const context = await this.getContext(contextID);
 
-    if (!context.references) throw new Error('References not defined');
+    if (!context.references)
+      throw new EntityNotInitializedException(
+        'References not defined',
+        LogContext.CHALLENGES
+      );
     // check there is not already a reference with the same name
     for (const reference of context.references) {
       if (reference.name === referenceInput.name) {

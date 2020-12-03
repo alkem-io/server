@@ -8,7 +8,7 @@ let userId = '';
 let userPhone = '';
 let userEmail = '';
 
-let uniqueId = Math.random().toString();
+const uniqueId = Math.random().toString();
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();

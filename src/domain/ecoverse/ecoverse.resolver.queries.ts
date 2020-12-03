@@ -2,6 +2,8 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { Challenge } from '../challenge/challenge.entity';
 import { IChallenge } from '../challenge/challenge.interface';
@@ -92,7 +94,10 @@ export class EcoverseResolverQueries {
     const user = await this.userService.getUser(id);
     if (user) return user;
 
-    throw new Error(`Unable to locate user with given id: ${id}`);
+    throw new EntityNotFoundException(
+      `Unable to locate user with given id: ${id}`,
+      LogContext.COMMUNITY
+    );
   }
 
   @Roles(
