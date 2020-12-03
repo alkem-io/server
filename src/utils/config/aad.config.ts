@@ -10,9 +10,7 @@ export default registerAs('aad', () => ({
   allowMultiAudiencesInToken: false,
   loggingLevel: process.env.AUTH_AAD_LOGGING_LEVEL || AAD_LOGGING_LEVEL.Error,
   scope: ['Cherrytwist-GraphQL'],
-  loggingNoPII: !(
-    process.env.AUTH_AAD_LOGGING_PII?.toString().toLocaleLowerCase() === 'true'
-  ),
+  loggingNoPII: false,
   upnDomain:
     process.env.AUTH_AAD_UPN_DOMAIN || 'playgroundcherrytwist.onmicrosoft.com',
   tenant: process.env.AUTH_AAD_TENANT || '',
