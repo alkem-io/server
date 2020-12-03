@@ -24,6 +24,7 @@ import {
   userMemberofGroupsId,
   userMemberofChallengesId,
   userMemberofOrganisationsId,
+  usersById,
   groupsId,
   groupsFocalPointId,
   groupsProfileId,
@@ -31,6 +32,13 @@ import {
   groupsParentChallenge,
   groupsParentEcoverse,
   groupsParentOpportunity,
+  groupsWithTagId,
+  groupsWithTagFocalPointId,
+  groupsWithTagProfileId,
+  groupsWithTagMembersId,
+  groupsWithTagParentChallenge,
+  groupsWithTagParentEcoverse,
+  groupsWithTagParentOpportunity,
   challengesId,
   challengesTextId,
   challengesState,
@@ -51,6 +59,27 @@ import {
   challengeGroups,
   challengeContributors,
   challengeOpportunities,
+  opportunitiesId,
+  opportunitiesTextId,
+  opportunitiesState,
+  opportunitiesContexId,
+  opportunitiesGroups,
+  opportunitiesContributors,
+  opportunitiesProjectsId,
+  opportunitiesProjectsAspectsId,
+  opportunitiesActorGroupsId,
+  opportunitiesActorGroupsActorsId,
+  opportunitiesAspectsId,
+  opportunitiesRelationsId,
+  projectsId,
+  projectsTextId,
+  projectsDescription,
+  projectsState,
+  projectsTagset,
+  projectsAspects,
+  templatesId,
+  templatesDescription,
+  templatesUsersId,
 } from '../utils/queries';
 
 let profileId = '6';
@@ -91,6 +120,7 @@ describe('DDT anonymous user - queries', () => {
     ${userMemberofGroupsId}             | ${notAuthorizedCode}
     ${userMemberofChallengesId}         | ${notAuthorizedCode}
     ${userMemberofOrganisationsId}      | ${notAuthorizedCode}
+    ${usersById}                        | ${notAuthorizedCode}
     ${groupsId}                         | ${notAuthorizedCode}
     ${groupsFocalPointId}               | ${notAuthorizedCode}
     ${groupsProfileId}                  | ${notAuthorizedCode}
@@ -98,6 +128,13 @@ describe('DDT anonymous user - queries', () => {
     ${groupsParentChallenge}            | ${notAuthorizedCode}
     ${groupsParentEcoverse}             | ${notAuthorizedCode}
     ${groupsParentOpportunity}          | ${notAuthorizedCode}
+    ${groupsWithTagId}                  | ${notAuthorizedCode}
+    ${groupsWithTagFocalPointId}        | ${notAuthorizedCode}
+    ${groupsWithTagProfileId}           | ${notAuthorizedCode}
+    ${groupsWithTagMembersId}           | ${notAuthorizedCode}
+    ${groupsWithTagParentChallenge}     | ${notAuthorizedCode}
+    ${groupsWithTagParentEcoverse}      | ${notAuthorizedCode}
+    ${groupsWithTagParentOpportunity}   | ${notAuthorizedCode}
     ${challengesId}                     | ${`{"data":{"challenges":[{"id":"1"}`}
     ${challengesTextId}                 | ${`{"data":{"challenges":[{"textID":"balance`}
     ${challengesState}                  | ${`{"data":{"challenges":[{"state":"Defined`}
@@ -108,16 +145,34 @@ describe('DDT anonymous user - queries', () => {
     ${challengesTagsets}                | ${`{"data":{"challenges":[{"tagset":{"id":"2`}
     ${challengesGroups}                 | ${notAuthorizedCode}
     ${challengesOpportunities}          | ${`{"data":{"challenges":[{"opportunities":[{"id":"2"}`}
-    ${challengeId}                     | ${`{"data":{"challenge":{"id":"1"}`}
-    ${challengeTextId}                 | ${`{"data":{"challenge":{"textID":"balance`}
-    ${challengeState}                  | ${`{"data":{"challenge":{"state":"Defined`}
-    ${challengeContexId}               | ${`{"data":{"challenge":{"context":{"id":"2"}`}
-    ${challengeLeadOrganisation}       | ${`{"data":{"challenge":{"leadOrganisations":[{"id":"1"}`}
-    ${challengeLeadOrganisationGroups} | ${notAuthorizedCode}
-    ${challengeContributors}           | ${notAuthorizedCode}
-    ${challengeTagsets}                | ${`{"data":{"challenge":{"tagset":{"id":"2`}
-    ${challengeGroups}                 | ${notAuthorizedCode}
-    ${challengeOpportunities}          | ${`{"data":{"challenge":{"opportunities":[{"id":"2"}`}
+    ${challengeId}                      | ${`{"data":{"challenge":{"id":"1"}`}
+    ${challengeTextId}                  | ${`{"data":{"challenge":{"textID":"balance`}
+    ${challengeState}                   | ${`{"data":{"challenge":{"state":"Defined`}
+    ${challengeContexId}                | ${`{"data":{"challenge":{"context":{"id":"2"}`}
+    ${challengeLeadOrganisation}        | ${`{"data":{"challenge":{"leadOrganisations":[{"id":"1"}`}
+    ${challengeLeadOrganisationGroups}  | ${notAuthorizedCode}
+    ${challengeContributors}            | ${notAuthorizedCode}
+    ${challengeTagsets}                 | ${`{"data":{"challenge":{"tagset":{"id":"2`}
+    ${challengeGroups}                  | ${notAuthorizedCode}
+    ${challengeOpportunities}           | ${`{"data":{"challenge":{"opportunities":[{"id":"2"}`}
+    ${opportunitiesId}                  | ${`{"data":{"opportunities":[{"id":"1"}`}
+    ${opportunitiesTextId}              | ${`{"data":{"opportunities":[{"textID":"team`}
+    ${opportunitiesState}               | ${`{"data":{"opportunities":[{"state":""`}
+    ${opportunitiesContexId}            | ${`{"data":{"opportunities":[{"context":{"id":"22"}`}
+    ${opportunitiesContributors}        | ${notAuthorizedCode}
+    ${opportunitiesGroups}              | ${notAuthorizedCode}
+    ${opportunitiesActorGroupsId}       | ${`{"data":{"opportunities":[{"actorGroups":[{"id":"1`}
+    ${opportunitiesActorGroupsActorsId} | ${`{"data":{"opportunities":[{"actorGroups":[{"actors":[]},{"actors":[{"id":"1"}`}
+    ${opportunitiesAspectsId}           | ${`{"data":{"opportunities":[{"aspects":[{"id":"1`}
+    ${opportunitiesRelationsId}         | ${`{"data":{"opportunities":[{"relations":[{"id":"1"}`}
+    ${projectsId}                       | ${notAuthorizedCode}
+    ${projectsTextId}                   | ${notAuthorizedCode}
+    ${projectsDescription}              | ${notAuthorizedCode}
+    ${projectsState}                    | ${notAuthorizedCode}
+    ${projectsTagset}                   | ${notAuthorizedCode}
+    ${projectsAspects}                  | ${notAuthorizedCode}
+    ${templatesId}                      | ${`{"data":{"templates":[{"id":"1"}`}
+    ${templatesDescription}             | ${`{"data":{"templates":[{"description":"Default template"}`}
   `(
     "should expect: '$expected' for query: '$query'",
     async ({ query, expected }) => {
@@ -137,3 +192,7 @@ describe('DDT anonymous user - queries', () => {
     }
   );
 });
+
+// Failing scenarios BUG: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/578
+// ${opportunitiesProjectsId}          | ${notAuthorizedCode}
+// ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
