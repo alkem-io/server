@@ -17,6 +17,30 @@ export const createGroupMutation = async (testGroup: string) => {
   return await graphqlRequest(requestParams);
 };
 
+export const createGroupOnChallengeMutation = async (
+  testGroup: string,
+  challengeId: any
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
+      createGroupOnChallenge(groupName: $groupName, challengeID: $challengeID) {
+        name,
+        id
+        members {
+          name
+        }
+      }
+    }`,
+    variables: {
+      challengeID: parseFloat(challengeId),
+      groupName: testGroup,
+    },
+  };
+
+  return await graphqlRequest(requestParams);
+};
+
 export const getGroups = async () => {
   const requestParams = {
     operationName: null,

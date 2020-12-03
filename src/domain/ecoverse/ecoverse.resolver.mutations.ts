@@ -3,6 +3,9 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
+import { CherrytwistErrorStatus } from '../../utils/error-handling/enums/cherrytwist.error.status';
+import { AccountException } from '../../utils/error-handling/exceptions/account.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { ChallengeInput } from '../challenge/challenge.dto';
 import { Challenge } from '../challenge/challenge.entity';
@@ -116,6 +119,26 @@ export class EcoverseResolverMutations {
   async removeUser(@Args('userID') userID: number): Promise<boolean> {
     const success = await this.ecoverseService.removeUser(userID);
     return success;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description: 'Updates the user account password',
+  })
+  @Profiling.api
+  async updateUserAccountPassword(): Promise<boolean> {
+    throw new AccountException(
+      'MS Graph API does not have production support for password update!',
+      LogContext.API,
+      CherrytwistErrorStatus.MS_GRAPH_METHOD_NOT_SUPPORTED
+    );
+
+    //const success = await this.ecoverseService.updateUserAccountPassword(userID, newPassword);
+    //return success;
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)

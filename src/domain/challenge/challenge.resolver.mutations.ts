@@ -83,6 +83,15 @@ export class ChallengeResolverMutations {
     return challenge;
   }
 
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description: 'Removes the Challenge with the specified ID',
+  })
+  async removeChallenge(@Args('ID') challengeID: number): Promise<boolean> {
+    return await this.challengeService.removeChallenge(challengeID);
+  }
+
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
@@ -98,6 +107,27 @@ export class ChallengeResolverMutations {
     @Args('challengeID') challengeID: number
   ): Promise<IUserGroup> {
     const group = await this.challengeService.addMember(userID, challengeID);
+    return group;
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => UserGroup, {
+    description:
+      'Adds the user with the given identifier as a member of the specified opportunity',
+  })
+  @Profiling.api
+  async addUserToOpportunity(
+    @Args('userID') userID: number,
+    @Args('opportunityID') opportunityID: number
+  ): Promise<IUserGroup> {
+    const group = await this.challengeService.addUserToOpportunity(
+      userID,
+      opportunityID
+    );
     return group;
   }
 

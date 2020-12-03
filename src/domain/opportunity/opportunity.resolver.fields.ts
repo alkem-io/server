@@ -12,6 +12,12 @@ import { UserGroupService } from '../user-group/user-group.service';
 import { Opportunity } from './opportunity.entity';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { OpportunityService } from './opportunity.service';
+import { ActorGroup } from '../actor-group/actor-group.entity';
+import { Aspect } from '../aspect/aspect.entity';
+import { Relation } from '../relation/relation.entity';
+import { RelationshipNotFoundException } from '../../utils/error-handling/exceptions/relationship.not.found.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
+import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
@@ -31,7 +37,7 @@ export class OpportunityResolverFields {
   })
   @Profiling.api
   async groups(@Parent() opportunity: Opportunity) {
-    const groups = await this.opportunityService.loadGroups(opportunity);
+    const groups = await this.opportunityService.loadUserGroups(opportunity);
     return groups;
   }
 
@@ -51,14 +57,44 @@ export class OpportunityResolverFields {
       RestrictedGroupNames.Members
     );
     if (!group)
-      throw new Error(
-        `Unable to locate members group on Opportunity: ${Opportunity.name}`
+      throw new RelationshipNotFoundException(
+        `Unable to locate members group on Opportunity: ${Opportunity.name}`,
+        LogContext.COMMUNITY
       );
     const members = group.members;
     if (!members)
-      throw new Error(
-        `Members group not initialised on Opportunity: ${Opportunity.name}`
+      throw new EntityNotInitializedException(
+        `Members group not initialised on Opportunity: ${Opportunity.name}`,
+        LogContext.COMMUNITY
       );
     return members;
+  }
+
+  @ResolveField('actorGroups', () => [ActorGroup], {
+    nullable: true,
+    description:
+      'The set of actor groups within the context of this Opportunity.',
+  })
+  @Profiling.api
+  async actorGroups(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.loadActorGroups(opportunity);
+  }
+
+  @ResolveField('aspects', () => [Aspect], {
+    nullable: true,
+    description: 'The set of aspects within the context of this Opportunity.',
+  })
+  @Profiling.api
+  async aspects(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.loadAspects(opportunity);
+  }
+
+  @ResolveField('relations', () => [Relation], {
+    nullable: true,
+    description: 'The set of relations within the context of this Opportunity.',
+  })
+  @Profiling.api
+  async relations(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.loadRelations(opportunity);
   }
 }

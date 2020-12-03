@@ -1,22 +1,28 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Actor } from './actor.entity';
 import { IActor } from './actor.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorInput } from './actor.dto';
+import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
 
 @Injectable()
 export class ActorService {
   constructor(
     @InjectRepository(Actor)
     private actorRepository: Repository<Actor>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createActor(actorData: ActorInput): Promise<IActor> {
     if (!actorData.name)
-      throw new Error('A name is required to create an Actor');
+      throw new ValidationException(
+        'A name is required to create an Actor',
+        LogContext.CHALLENGES
+      );
 
     const actor = new Actor(actorData.name);
     if (actorData.description) {
@@ -35,8 +41,9 @@ export class ActorService {
   async removeActor(actorID: number): Promise<boolean> {
     const actor = await this.getActor(actorID);
     if (!actor)
-      throw new Error(
-        `Not able to locate actor with the specified ID: ${actorID}`
+      throw new EntityNotFoundException(
+        `Not able to locate actor with the specified ID: ${actorID}`,
+        LogContext.CHALLENGES
       );
     await this.actorRepository.remove(actor as Actor);
     return true;
@@ -45,8 +52,9 @@ export class ActorService {
   async updateActor(actorID: number, actorData: ActorInput): Promise<IActor> {
     const actor = await this.getActor(actorID);
     if (!actor)
-      throw new Error(
-        `Not able to locate actor with the specified ID: ${actorID}`
+      throw new EntityNotFoundException(
+        `Not able to locate actor with the specified ID: ${actorID}`,
+        LogContext.CHALLENGES
       );
 
     // Copy over the received data

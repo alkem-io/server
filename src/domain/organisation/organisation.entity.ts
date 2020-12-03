@@ -14,7 +14,6 @@ import { Challenge } from '../challenge/challenge.entity';
 import { DID } from '../did/did.entity';
 import { Ecoverse } from '../ecoverse/ecoverse.entity';
 import { Profile } from '../profile/profile.entity';
-import { Tagset } from '../tagset/tagset.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
@@ -49,10 +48,6 @@ export class Organisation extends BaseEntity
   )
   ecoverses?: Ecoverse[];
 
-  @Field(() => Profile, {
-    nullable: true,
-    description: 'The profile for this organisation',
-  })
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
   profile?: Profile;

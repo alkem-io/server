@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { ReferenceInput } from './reference.dto';
 import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';
@@ -39,9 +41,9 @@ export class ReferenceService {
   }
 
   async updateReference(
-    reference: Reference,
+    reference: IReference,
     referenceData: ReferenceInput
-  ): Promise<boolean> {
+  ): Promise<IReference> {
     // Copy over the received data
     if (referenceData.uri) {
       reference.uri = referenceData.uri;
@@ -55,9 +57,9 @@ export class ReferenceService {
       reference.description = '';
     }
 
-    await this.referenceRepository.save(reference);
+    const updatedReference = await this.referenceRepository.save(reference);
 
-    return true;
+    return updatedReference;
   }
 
   async getReference(referenceID: number): Promise<IReference | undefined> {
@@ -67,10 +69,33 @@ export class ReferenceService {
   async removeReference(referenceID: number): Promise<boolean> {
     const reference = await this.getReference(referenceID);
     if (!reference)
-      throw new Error(
-        `Not able to locate reference with the specified ID: ${referenceID}`
+      throw new EntityNotFoundException(
+        `Not able to locate reference with the specified ID: ${referenceID}`,
+        LogContext.CHALLENGES
       );
     await this.referenceRepository.remove(reference as Reference);
     return true;
+  }
+
+  async updateReferences(
+    references: IReference[],
+    referenceDTOs: ReferenceInput[]
+  ) {
+    for (const referenceDTO of referenceDTOs) {
+      if (!references.some(({ name }) => name === referenceDTO.name))
+        references.push(
+          new Reference(
+            referenceDTO.name,
+            referenceDTO.uri,
+            referenceDTO?.description
+          )
+        );
+      else {
+        const reference = await references.find(
+          e => e.name === referenceDTO.name
+        );
+        await this.updateReference(reference as IReference, referenceDTO);
+      }
+    }
   }
 }

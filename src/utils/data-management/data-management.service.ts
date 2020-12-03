@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChallengeInput } from '../../domain/challenge/challenge.dto';
 import { IChallenge } from '../../domain/challenge/challenge.interface';
@@ -16,7 +16,8 @@ import { UserService } from '../../domain/user/user.service';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContexts } from '../logging/logging.contexts';
+import { LogContext } from '../logging/logging.contexts';
+import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
 
 @Injectable()
 export class DataManagementService {
@@ -30,7 +31,7 @@ export class DataManagementService {
     private connection: Connection,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async reset_to_empty_ecoverse(): Promise<string> {
@@ -53,7 +54,7 @@ export class DataManagementService {
 
   addLogMsg(msgs: string[], msg: string) {
     msgs.push(msg);
-    this.logger.verbose(msg, LogContexts.DATA_MGMT);
+    this.logger.verbose?.(msg, LogContext.DATA_MGMT);
   }
 
   async load_sample_data(): Promise<string> {
@@ -108,7 +109,11 @@ export class DataManagementService {
       );
       bruce.country = ' Netherlands';
       bruce.gender = 'Male';
-      if (!bruce.profile) throw new Error('Non-initalised user');
+      if (!bruce.profile)
+        throw new EntityNotInitializedException(
+          'Non-initalised user',
+          LogContext.DATA_MGMT
+        );
       const tagset = await this.profileService.createTagset(
         bruce.profile.id,
         'sample2'
@@ -149,7 +154,11 @@ export class DataManagementService {
       await this.userGroupService.addUserToGroup(clint, energyWebMembers);
       await this.userGroupService.addUserToGroup(bruce, energyWebMembers);
       energyWebMembers.focalPoint = jane;
-      if (!energyWeb.context) throw new Error('Context not initilised');
+      if (!energyWeb.context)
+        throw new EntityNotInitializedException(
+          'Context not initilised',
+          LogContext.DATA_MGMT
+        );
       energyWeb.context.references = [ref1, ref2];
 
       const cleanOceans = await this.createChallenge(
@@ -242,7 +251,7 @@ export class DataManagementService {
       await this.connection.synchronize();
       this.addLogMsg(msgs, '.....dropped. Completed successfully.');
     } catch (error) {
-      this.logger.verbose(error.message, LogContexts.DATA_MGMT);
+      this.logger.verbose?.(error.message, LogContext.DATA_MGMT);
     }
     return msgs.toString();
   }
@@ -254,7 +263,7 @@ export class DataManagementService {
       ecoverseName = ecoverse.name;
     } catch (e) {
       // ecoverse not yet initialised so just skip the name
-      this.logger.verbose(e.message, LogContexts.DATA_MGMT);
+      this.logger.verbose?.(e.message, LogContext.DATA_MGMT);
     }
     const content = `<!DOCTYPE html>
     <html>

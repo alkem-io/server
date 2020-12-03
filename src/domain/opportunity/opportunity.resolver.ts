@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Float, Mutation } from '@nestjs/graphql/dist';
 import { Roles } from '../../utils/decorators/roles.decorator';
@@ -26,6 +26,8 @@ import { IUserGroup } from '../user-group/user-group.interface';
 import { ProjectInput } from '../project/project.dto';
 import { Project } from '../project/project.entity';
 import { IProject } from '../project/project.interface';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver()
 export class OpportunityResolver {
@@ -49,7 +51,10 @@ export class OpportunityResolver {
     const opportunity = await this.opportunityService.getOpportunityByID(id);
     if (opportunity) return opportunity;
 
-    throw new Error(`Unable to locate opportunity with given id: ${id}`);
+    throw new EntityNotFoundException(
+      `Unable to locate opportunity with given id: ${id}`,
+      LogContext.CHALLENGES
+    );
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)
@@ -68,6 +73,15 @@ export class OpportunityResolver {
       opportunityData
     );
     return Opportunity;
+  }
+
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description: 'Removes the Opportunity with the specified ID',
+  })
+  async removeOpportunity(@Args('ID') opportunityID: number): Promise<boolean> {
+    return await this.opportunityService.removeOpportunity(opportunityID);
   }
 
   @Roles(
@@ -165,30 +179,9 @@ export class OpportunityResolver {
     @Args({ name: 'opportunityID', type: () => Float }) opportunityID: number,
     @Args({ name: 'groupName', type: () => String }) groupName: string
   ): Promise<IUserGroup> {
-    const group = await this.opportunityService.createGroup(
+    const group = await this.opportunityService.createUserGroup(
       opportunityID,
       groupName
-    );
-    return group;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
-    description:
-      'Adds the user with the given identifier as a member of the specified opportunity',
-  })
-  @Profiling.api
-  async addUserToOpportunity(
-    @Args('userID') userID: number,
-    @Args('opportunityID') opportunityID: number
-  ): Promise<IUserGroup> {
-    const group = await this.opportunityService.addMember(
-      userID,
-      opportunityID
     );
     return group;
   }

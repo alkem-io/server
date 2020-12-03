@@ -1,9 +1,6 @@
 import { graphqlRequest } from '../utils/graphql.request';
 
-let uniqueId = (Date.now() + Math.random()).toString();
-// let uniqueTextId = Math.random()
-//   .toString(36)
-//   .slice(-6);
+const uniqueId = (Date.now() + Math.random()).toString();
 
 export const createChallangeMutation = async (
   challengeName: string,
@@ -68,6 +65,42 @@ export const updateChallangeMutation = async (
       challengeData: {
         name: challengeName,
       },
+    },
+  };
+
+  return await graphqlRequest(requestParams);
+};
+
+export const removeChallangeMutation = async (challengeId: any) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation {
+      removeChallenge(ID: ${parseFloat(challengeId)})
+    }`,
+  };
+
+  return await graphqlRequest(requestParams);
+};
+
+export const addUserToChallangeMutation = async (
+  challengeId: any,
+  userId: string
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation addUserToChallenge($userID: Float!, $challengeID: Float!) {
+      addUserToChallenge(challengeID: $challengeID, userID: $userID) {
+        name,
+        id,
+        members {
+          id,
+          name
+        }
+      }
+    }`,
+    variables: {
+      challengeID: parseFloat(challengeId),
+      userID: parseFloat(userId),
     },
   };
 

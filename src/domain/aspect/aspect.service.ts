@@ -1,7 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { LogContext } from '../../utils/logging/logging.contexts';
 import { AspectInput } from './aspect.dto';
 import { Aspect } from './aspect.entity';
 import { IAspect } from './aspect.interface';
@@ -11,7 +13,7 @@ export class AspectService {
   constructor(
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createAspect(aspectInput: AspectInput): Promise<IAspect> {
@@ -27,8 +29,9 @@ export class AspectService {
   async removeAspect(aspectID: number): Promise<boolean> {
     const aspect = await this.getAspect(aspectID);
     if (!aspect)
-      throw new Error(
-        `Not able to locate aspect with the specified ID: ${aspectID}`
+      throw new EntityNotFoundException(
+        `Not able to locate aspect with the specified ID: ${aspectID}`,
+        LogContext.CHALLENGES
       );
     await this.aspectRepository.remove(aspect as Aspect);
     return true;
@@ -44,8 +47,9 @@ export class AspectService {
   ): Promise<IAspect> {
     const aspect = await this.getAspect(aspectID);
     if (!aspect)
-      throw new Error(
-        `Not able to locate aspect with the specified ID: ${aspectID}`
+      throw new EntityNotFoundException(
+        `Not able to locate aspect with the specified ID: ${aspectID}`,
+        LogContext.CHALLENGES
       );
 
     // Copy over the received data
