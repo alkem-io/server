@@ -73,7 +73,7 @@ export class MsGraphService {
     return res;
   }
 
-  async getUser(client: Client | undefined, accountUpn: string): Promise<any> {
+  async getAllUsers(client: Client | undefined): Promise<any> {
     if (!client) {
       const clientOptions: ClientOptions = {
         authProvider: this.azureAdStrategy,
@@ -83,25 +83,27 @@ export class MsGraphService {
 
     let res = undefined;
     try {
-      res = await client.api(`/users/${accountUpn}`).get();
+      res = await client.api('/users').get();
     } catch (error) {
-      throw new AccountException(error.msg, LogContext.COMMUNITY);
+      throw new AccountException(error.message, LogContext.COMMUNITY);
     }
-    return res;
+    return res.value;
   }
 
   async userExists(
     client: Client | undefined,
     accountUpn: string
   ): Promise<boolean> {
-    let user;
     try {
-      user = await this.getUser(client, accountUpn);
+      const users = (await this.getAllUsers(client)) as any[];
+      if (
+        users.some(({ userPrincipalName }) => userPrincipalName === accountUpn)
+      )
+        return true;
     } catch (error) {
-      throw new AccountException(error.msg, LogContext.COMMUNITY);
+      throw new AccountException(error.message, LogContext.COMMUNITY);
     }
 
-    if (user) return true;
     return false;
   }
 
@@ -115,7 +117,7 @@ export class MsGraphService {
       const org = await this.getOrganisation(client);
       tenantName = org.value[0]['verifiedDomains'][0]['name'];
     } catch (error) {
-      throw new AccountException(error.msg, LogContext.COMMUNITY);
+      throw new AccountException(error.message, LogContext.COMMUNITY);
     }
 
     return tenantName;
