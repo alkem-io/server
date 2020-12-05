@@ -119,6 +119,41 @@ import {
   createTagsetOnProfileVariables,
 } from '../utils/create-mutations';
 
+import {
+  updateUserMutation,
+  updateUserVariables,
+  updateProfileMutation,
+  updateProfileVariables,
+  updateOrganisationMutation,
+  updateOrganisationVariabls,
+  updateChallengeMutation,
+  updateChallengeVariables,
+  updateOpportunityMutation,
+  updateOpportunityVariables,
+  updateAspectMutation,
+  updateAspectVariable,
+  updateActorMutation,
+  updateActorVariables,
+  addTagsOnTagsetMutation,
+  addTagsOnTagsetVariables,
+  replaceTagsOnTagsetMutation,
+  replaceTagsOnTagsetVariables,
+  addUserToChallengeMutation,
+  addUserToChallengeVariables,
+  addUserToGroupMutation,
+  addUserToGroupVariables,
+  addUserToOpportunityMutation,
+  addUserToOpportunityVariables,
+  assignGroupFocalPointMutation,
+  assignGroupFocalPointVariables,
+  removeGroupFocalPointMutation,
+  removeGroupFocalPointVariables,
+  addChallengeLeadToOrganisationMutation,
+  addChallengeLeadToOrganisationVariables,
+  removeUserFromGroupMutation,
+  removeUserFromGroupVariables,
+} from '../utils/update-mutations';
+
 let profileId = '6';
 
 const notAuthorizedCode = `"code":"UNAUTHENTICATED"`;
@@ -234,7 +269,7 @@ describe('DDT anonymous user - queries', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe.only('DDT anonymous user - create mutations', () => {
+describe('DDT anonymous user - create mutations', () => {
   // Arrange
   test.each`
     mutation                             | variables                             | expected
@@ -266,6 +301,46 @@ describe.only('DDT anonymous user - create mutations', () => {
         variables: `${variables}`,
       };
       const response = await graphqlRequestAuth(requestParamsCreateMutations);
+      let responseData = JSON.stringify(response.body).replace('\\', '');
+      console.log(responseData);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(responseData).toContain(expected);
+    }
+  );
+});
+
+describe('DDT anonymous user - update mutations', () => {
+  // Arrange
+  test.each`
+    mutation                                  | variables                                  | expected
+    ${updateUserMutation}                     | ${updateUserVariables}                     | ${notAuthorizedCode}
+    ${updateProfileMutation}                  | ${updateProfileVariables}                  | ${notAuthorizedCode}
+    ${updateOrganisationMutation}             | ${updateOrganisationVariabls}              | ${notAuthorizedCode}
+    ${updateChallengeMutation}                | ${updateChallengeVariables}                | ${notAuthorizedCode}
+    ${updateOpportunityMutation}              | ${updateOpportunityVariables}              | ${notAuthorizedCode}
+    ${updateAspectMutation}                   | ${updateAspectVariable}                    | ${notAuthorizedCode}
+    ${updateActorMutation}                    | ${updateActorVariables}                    | ${notAuthorizedCode}
+    ${addTagsOnTagsetMutation}                | ${addTagsOnTagsetVariables}                | ${notAuthorizedCode}
+    ${replaceTagsOnTagsetMutation}            | ${replaceTagsOnTagsetVariables}            | ${notAuthorizedCode}
+    ${addUserToChallengeMutation}             | ${addUserToChallengeVariables}             | ${notAuthorizedCode}
+    ${addUserToGroupMutation}                 | ${addUserToGroupVariables}                 | ${notAuthorizedCode}
+    ${addUserToOpportunityMutation}           | ${addUserToOpportunityVariables}           | ${notAuthorizedCode}
+    ${assignGroupFocalPointMutation}          | ${assignGroupFocalPointVariables}          | ${notAuthorizedCode}
+    ${removeGroupFocalPointMutation}          | ${removeGroupFocalPointVariables}          | ${notAuthorizedCode}
+    ${addChallengeLeadToOrganisationMutation} | ${addChallengeLeadToOrganisationVariables} | ${notAuthorizedCode}
+    ${removeUserFromGroupMutation}            | ${removeUserFromGroupVariables}            | ${notAuthorizedCode}
+  `(
+    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, expected }) => {
+      // Act
+      const requestParamsUpdateMutations = {
+        operationName: null,
+        query: `${mutation}`,
+        variables: `${variables}`,
+      };
+      const response = await graphqlRequestAuth(requestParamsUpdateMutations);
       let responseData = JSON.stringify(response.body).replace('\\', '');
       console.log(responseData);
 
