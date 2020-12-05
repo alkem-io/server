@@ -154,6 +154,19 @@ import {
   removeUserFromGroupVariables,
 } from '../utils/update-mutations';
 
+import {
+  removeUserMutation,
+  removeUserVariables,
+  removeChallengeMutation,
+  removeChallengeVariables,
+  removeAspectMutation,
+  removeAspectVariables,
+  removeActorMutation,
+  removeActorVariables,
+  removeActorGroupMutation,
+  removeActorGroupVariables,
+} from '../utils/remove-mutations';
+
 let profileId = '6';
 
 const notAuthorizedCode = `"code":"UNAUTHENTICATED"`;
@@ -341,6 +354,35 @@ describe('DDT anonymous user - update mutations', () => {
         variables: `${variables}`,
       };
       const response = await graphqlRequestAuth(requestParamsUpdateMutations);
+      let responseData = JSON.stringify(response.body).replace('\\', '');
+      console.log(responseData);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(responseData).toContain(expected);
+    }
+  );
+});
+
+describe.only('DDT anonymous user - remove mutations', () => {
+  // Arrange
+  test.each`
+    mutation                    | variables                    | expected
+    ${removeUserMutation}       | ${removeUserVariables}       | ${notAuthorizedCode}
+    ${removeChallengeMutation}  | ${removeChallengeVariables}  | ${notAuthorizedCode}
+    ${removeAspectMutation}     | ${removeAspectVariables}     | ${notAuthorizedCode}
+    ${removeActorMutation}      | ${removeActorVariables}      | ${notAuthorizedCode}
+    ${removeActorGroupMutation} | ${removeActorGroupVariables} | ${notAuthorizedCode}
+  `(
+    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, expected }) => {
+      // Act
+      const requestParamsRemoveMutations = {
+        operationName: null,
+        query: `${mutation}`,
+        variables: `${variables}`,
+      };
+      const response = await graphqlRequestAuth(requestParamsRemoveMutations);
       let responseData = JSON.stringify(response.body).replace('\\', '');
       console.log(responseData);
 
