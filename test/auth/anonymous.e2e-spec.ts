@@ -364,7 +364,7 @@ describe('DDT anonymous user - update mutations', () => {
   );
 });
 
-describe.only('DDT anonymous user - remove mutations', () => {
+describe('DDT anonymous user - remove mutations', () => {
   // Arrange
   test.each`
     mutation                    | variables                    | expected
