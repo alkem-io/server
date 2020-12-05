@@ -82,6 +82,43 @@ import {
   templatesUsersId,
 } from '../utils/queries';
 
+import {
+  createOrganisationMutation,
+  createOrganisationVariables,
+  createGroupOnEcoverseMutation,
+  createGroupOnEcoverseVariables,
+  createUserMutation,
+  createUserVariables,
+  createReferenceOnProfileMutation,
+  createReferenceOnProfileVariable,
+  createTemplateMutation,
+  createTemplateVariables,
+  createChallengeMutation,
+  createChallengeVariables,
+  createGroupOnChallengeMutation,
+  createGroupOnChallengeVariables,
+  createOpportunityMutation,
+  createOpportunityVariables,
+  createGroupOnOpportunityMutations,
+  createGroupOnOpportunityVariables,
+  createProjectMutation,
+  createProjectVariables,
+  createActorGroupMutation,
+  createActorGroupVariables,
+  createActorMutation,
+  createActorVariables,
+  createAspectOnOpportunityMutation,
+  createAspectOnOpportunityVariables,
+  createRelationMutation,
+  createRelationVariables,
+  createAspectOnProjectMutation,
+  createAspectOnProjectVariables,
+  createReferenceOnContextMutation,
+  createReferenceOnContextVariables,
+  createTagsetOnProfileMutation,
+  createTagsetOnProfileVariables,
+} from '../utils/create-mutations';
+
 let profileId = '6';
 
 const notAuthorizedCode = `"code":"UNAUTHENTICATED"`;
@@ -177,12 +214,12 @@ describe('DDT anonymous user - queries', () => {
     "should expect: '$expected' for query: '$query'",
     async ({ query, expected }) => {
       // Act
-      const requestParamsCreateChallenge = {
+      const requestParamsQueryData = {
         operationName: null,
         query: `${query}`,
         variables: null,
       };
-      const response = await graphqlRequestAuth(requestParamsCreateChallenge);
+      const response = await graphqlRequestAuth(requestParamsQueryData);
       let responseData = JSON.stringify(response.body).replace('\\', '');
       // console.log(responseData);
 
@@ -196,3 +233,45 @@ describe('DDT anonymous user - queries', () => {
 // Failing scenarios BUG: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/578
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
+
+describe.only('DDT anonymous user - create mutations', () => {
+  // Arrange
+  test.each`
+    mutation                             | variables                             | expected
+    ${createOrganisationMutation}        | ${createOrganisationVariables}        | ${notAuthorizedCode}
+    ${createGroupOnEcoverseMutation}     | ${createGroupOnEcoverseVariables}     | ${notAuthorizedCode}
+    ${createOrganisationMutation}        | ${createOrganisationVariables}        | ${notAuthorizedCode}
+    ${createUserMutation}                | ${createUserVariables}                | ${notAuthorizedCode}
+    ${createReferenceOnProfileMutation}  | ${createReferenceOnProfileVariable}   | ${notAuthorizedCode}
+    ${createTemplateMutation}            | ${createTemplateVariables}            | ${notAuthorizedCode}
+    ${createChallengeMutation}           | ${createChallengeVariables}           | ${notAuthorizedCode}
+    ${createGroupOnChallengeMutation}    | ${createGroupOnChallengeVariables}    | ${notAuthorizedCode}
+    ${createOpportunityMutation}         | ${createOpportunityVariables}         | ${notAuthorizedCode}
+    ${createGroupOnOpportunityMutations} | ${createGroupOnOpportunityVariables}  | ${notAuthorizedCode}
+    ${createProjectMutation}             | ${createProjectVariables}             | ${notAuthorizedCode}
+    ${createActorGroupMutation}          | ${createActorGroupVariables}          | ${notAuthorizedCode}
+    ${createActorMutation}               | ${createActorVariables}               | ${notAuthorizedCode}
+    ${createAspectOnOpportunityMutation} | ${createAspectOnOpportunityVariables} | ${notAuthorizedCode}
+    ${createRelationMutation}            | ${createRelationVariables}            | ${notAuthorizedCode}
+    ${createAspectOnProjectMutation}     | ${createAspectOnProjectVariables}     | ${notAuthorizedCode}
+    ${createReferenceOnContextMutation}  | ${createReferenceOnContextVariables}  | ${notAuthorizedCode}
+    ${createTagsetOnProfileMutation}     | ${createTagsetOnProfileVariables}     | ${notAuthorizedCode}
+  `(
+    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, expected }) => {
+      // Act
+      const requestParamsCreateMutations = {
+        operationName: null,
+        query: `${mutation}`,
+        variables: `${variables}`,
+      };
+      const response = await graphqlRequestAuth(requestParamsCreateMutations);
+      let responseData = JSON.stringify(response.body).replace('\\', '');
+      console.log(responseData);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(responseData).toContain(expected);
+    }
+  );
+});
