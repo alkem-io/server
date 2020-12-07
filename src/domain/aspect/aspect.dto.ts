@@ -8,10 +8,10 @@ export class AspectInput {
   title!: string;
 
   @Field({ nullable: true })
-  @MaxLength(300)
+  @MaxLength(400)
   framing!: string;
 
   @Field({ nullable: true })
-  @MaxLength(300)
+  @MaxLength(400)
   explanation!: string;
 }
