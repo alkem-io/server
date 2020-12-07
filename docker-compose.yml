@@ -35,7 +35,7 @@ services:
     restart: always
     ports:
       - 4000:4000
-    command: sh -c "/wait && npm start"
+    command: sh -c "/wait && npm run migration:run && npm start"
   db:
     container_name: ct_server_db
     image: mysql:8.0.11
