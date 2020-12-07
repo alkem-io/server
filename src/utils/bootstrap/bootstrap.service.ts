@@ -84,6 +84,15 @@ export class BootstrapService {
         );
       const entries = Object.entries(config);
       for (const [key, value] of entries) {
+        if (
+          key === 'loggingNoPII' &&
+          value === false &&
+          process.env.AUTH_AAD_LOGGING_PII === 'false'
+        )
+          this.logger.warn(
+            'Overriding AUTH_AAD_LOGGING_PII to true due to Microsoft passportJs bearer strategy bug https://github.com/AzureAD/passport-azure-ad/issues/521.',
+            LogContext.BOOTSTRAP
+          );
         this.logConfigLevel(key, value, '');
       }
     }
@@ -98,7 +107,10 @@ export class BootstrapService {
         this.logConfigLevel(childKey, childValue, newIndent);
       });
     } else {
-      this.logger.verbose?.(`${indent}Variable: ${key}: ${value}`);
+      this.logger.verbose?.(
+        `${indent}Variable: ${key}: ${value}`,
+        LogContext.BOOTSTRAP
+      );
     }
   }
 
