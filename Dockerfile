@@ -37,4 +37,4 @@ RUN chmod +x /create_db.sh
 
 
 EXPOSE ${GRAPHQL_ENDPOINT_PORT_ARG}
-CMD ["/bin/sh", "-c", "/create_db.sh && npm start"]
+CMD ["/bin/sh", "-c", "/create_db.sh && npm run migration:run && npm start"]

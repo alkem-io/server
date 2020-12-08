@@ -1,8 +1,7 @@
 import { ConnectionOptions } from 'typeorm';
 import { join } from 'path';
 
-export const typeormConfig: ConnectionOptions = {
-
+export const typeormCliConfig: ConnectionOptions = {
   type: 'mysql',
   host: process.env.DATABASE_HOST,
   port: process.env.MYSQL_DB_PORT ? Number(process.env.MYSQL_DB_PORT) : 3306,
@@ -23,4 +22,4 @@ export const typeormConfig: ConnectionOptions = {
   },
 };
 
-module.exports = typeormConfig;
+module.exports = typeormCliConfig;

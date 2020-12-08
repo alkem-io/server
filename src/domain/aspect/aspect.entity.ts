@@ -22,11 +22,11 @@ export class Aspect extends BaseEntity implements IAspect {
   title: string;
 
   @Field(() => String)
-  @Column()
+  @Column('varchar', { length: 400 })
   framing: string;
 
   @Field(() => String)
-  @Column('varchar', { length: 300 })
+  @Column('varchar', { length: 400 })
   explanation: string;
 
   @ManyToOne(
