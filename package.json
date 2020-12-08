@@ -39,6 +39,8 @@
     "@nestjs/platform-express": "^7.0.0",
     "@nestjs/typeorm": "^7.1.4",
     "apollo-server-express": "^2.18.1",
+    "cd": "^0.3.3",
+    "cherrytwist-lib": "^0.4.2",
     "class-validator": "^0.12.2",
     "elastic-apm-node": "^3.7.0",
     "graphql": "^15.3.0",

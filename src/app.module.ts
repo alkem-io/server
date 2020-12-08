@@ -35,6 +35,7 @@ import loggingConfig from './utils/config/logging.config';
 import { SearchModule } from './utils/search/search.module';
 import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
+import aadRopcConfig from './utils/config/aad.ropc.config';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.fil
         msGraphConfig,
         aadClientConfig,
         loggingConfig,
+        aadRopcConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({

@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+
 import { AppModule } from '../../src/app.module';
+import { RopcStrategy } from '../../src/utils/authentication/ropc.strategy';
 import { TestDataService } from '../../src/utils/data-management/test-data.service';
 
 export class appSingleton {
@@ -13,6 +15,14 @@ export class appSingleton {
   }
   public set app(value: INestApplication) {
     this._app = value;
+  }
+
+  private _accessToken!: string;
+  public get accessToken(): string {
+    return this._accessToken;
+  }
+  public set accessToken(value: string) {
+    this._accessToken = value;
   }
 
   private constructor() {
@@ -32,7 +42,9 @@ export class appSingleton {
     this.app = testModule.createNestApplication();
     await this.app.init();
     appSingleton.testDataService = testModule.get(TestDataService);
+    const ropcStrategy = testModule.get(RopcStrategy);
 
+    this.accessToken = await ropcStrategy.getAccessToken();
     await appSingleton.testDataService.initDB();
     await appSingleton.testDataService.initUsers();
   }

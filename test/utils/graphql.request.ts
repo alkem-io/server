@@ -14,5 +14,6 @@ export const graphqlRequest = async (
   return request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
     .send({ ...requestParams })
-    .set('Accept', 'application/json');
+    .set('Accept', 'application/json')
+    .set('Authorization', `Bearer ${appSingleton.Instance.accessToken}`);
 };
