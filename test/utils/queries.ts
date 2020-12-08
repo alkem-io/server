@@ -1,10 +1,10 @@
 const name = `{ name }`;
 
-const hostMembers = `{ host { members { id }}}`;
+const hostMembers = `{ host { groups { name }}}`;
 
-const hostGroups = `{ host { members { id }}}`;
+const hostGroups = `{ host { members { name }}}`;
 
-const hostProfile = `{ host { profile { id }}}`;
+const hostProfile = `{ host { profile { description }}}`;
 
 const contextTagline = `{ context { tagline }}`;
 
@@ -16,127 +16,127 @@ const contextImpact = `{ context { impact }}`;
 
 const contextWho = `{ context { who }}`;
 
-const contextReferencesId = `{ context { references { id }}}`;
+const contextReferencesName = `{ context { references { name }}}`;
 
-const usersId = `{ users { id }}`;
+const usersName = `{ users { name }}`;
 
 const usersAccountUPN = `{ users { accountUpn }}`;
 
-const usersProfileId = `{ users { profile { id }}}`;
+const usersProfile = `{ users { profile { description }}}`;
 
-const usersMemberofGroupsId = `{ users { memberof { groups { id }}}}`;
+const usersMemberofGroupsName = `{ users { memberof { groups { name }}}}`;
 
-const usersMemberofChallengesId = `{ users { memberof { challenges { id }}}}`;
+const usersMemberofChallengesName = `{ users { memberof { challenges { name }}}}`;
 
-const usersMemberofOrganisationsId = `{ users { memberof { organisations { id }}}}`;
+const usersMemberofOrganisationsName = `{ users { memberof { organisations { name }}}}`;
 
-const userId = `{ user ( ID: "1" ) { id }}`;
+const userName = `{ user ( ID: "13" ) { name }}`;
 
-const userAccountUPN = `{ user ( ID: "1" ){ accountUpn }}`;
+const userAccountUPN = `{ user ( ID: "13" ){ accountUpn }}`;
 
-const userProfileId = `{ user ( ID: "1" ){ profile { id }}}`;
+const userProfile = `{ user ( ID: "13" ){ profile { description }}}`;
 
-const userMemberofGroupsId = `{ user ( ID: "1" ){ memberof { groups { id }}}}`;
+const userMemberofGroupsName = `{ user ( ID: "13" ){ memberof { groups { name }}}}`;
 
-const userMemberofChallengesId = `{ user ( ID: "1" ){ memberof { challenges { id }}}}`;
+const userMemberofChallengesName = `{ user ( ID: "13" ){ memberof { challenges { name }}}}`;
 
-const userMemberofOrganisationsId = `{ user ( ID: "1" ){ memberof { organisations { id }}}}`;
+const userMemberofOrganisationsName = `{ user ( ID: "13" ){ memberof { organisations { name }}}}`;
 
 const usersById = `{ usersById (IDs: ["1", "2"]) { id }}`;
 
-const groupsId = `{ groups { id }}`;
+const groupsName = `{ groups { name }}`;
 
-const groupsFocalPointId = `{ groups { focalPoint { id }}}`;
+const groupsFocalPointName = `{ groups { focalPoint { name }}}`;
 
-const groupsMembersId = `{ groups { members { id }}}`;
+const groupsMembersName = `{ groups { members { name }}}`;
 
-const groupsProfileId = `{ groups { profile { id }}}`;
+const groupsProfile = `{ groups { profile { description }}}`;
 
-const groupsParentChallenge = `{ groups { parent { __typename ... on Challenge { id }}}}`;
+const groupsParentChallenge = `{ groups { parent { __typename ... on Challenge { name }}}}`;
 
-const groupsParentOpportunity = `{ groups { parent { __typename ... on Opportunity { id }}}}`;
+const groupsParentOpportunity = `{ groups { parent { __typename ... on Opportunity { name }}}}`;
 
-const groupsParentEcoverse = `{ groups { parent { __typename ... on Challenge { id }}}}`;
+const groupsParentEcoverse = `{ groups { parent { __typename ... on Challenge { name }}}}`;
 
-const groupsWithTagId = `{ groupsWithTag (tag: ""){ id }}`;
+const groupsWithTagName = `{ groupsWithTag (tag: ""){ name }}`;
 
-const groupsWithTagFocalPointId = `{ groupsWithTag (tag: ""){ focalPoint { id }}}`;
+const groupsWithTagFocalPointName = `{ groupsWithTag (tag: ""){ focalPoint { name }}}`;
 
-const groupsWithTagProfileId = `{ groupsWithTag (tag: ""){ profile { id }}}`;
+const groupsWithTagProfile = `{ groupsWithTag (tag: ""){ profile { description }}}`;
 
-const groupsWithTagMembersId = `{ groupsWithTag (tag: ""){ members { id }}}`;
+const groupsWithTagMembersName = `{ groupsWithTag (tag: ""){ members { name }}}`;
 
-const groupsWithTagParentChallenge = `{ groupsWithTag (tag: ""){ parent { __typename ... on Challenge { id }}}}`;
+const groupsWithTagParentChallenge = `{ groupsWithTag (tag: ""){ parent { __typename ... on Challenge { name }}}}`;
 
-const groupsWithTagParentEcoverse = `{ groupsWithTag (tag: ""){ parent { __typename ... on Opportunity { id }}}}`;
+const groupsWithTagParentEcoverse = `{ groupsWithTag (tag: ""){ parent { __typename ... on Opportunity { name }}}}`;
 
-const groupsWithTagParentOpportunity = `{ groupsWithTag (tag: ""){ parent { __typename ... on Challenge { id }}}}`;
+const groupsWithTagParentOpportunity = `{ groupsWithTag (tag: ""){ parent { __typename ... on Challenge { name }}}}`;
 
-const challengesId = `{ challenges { id }}`;
+const challengesName = `{ challenges { name }}`;
 
 const challengesTextId = `{ challenges { textID }}`;
 
 const challengesState = `{ challenges { state }}`;
 
-const challengesContexId = `{ challenges { context { id }}}`;
+const challengesContext = `{ challenges { context { who }}}`;
 
-const challengesLeadOrganisation = `{ challenges { leadOrganisations { id }}}`;
+const challengesLeadOrganisation = `{ challenges { leadOrganisations { name }}}`;
 
-const challengesLeadOrganisationGroups = `{ challenges { leadOrganisations { id groups { id }}}}`;
+const challengesLeadOrganisationGroups = `{ challenges { leadOrganisations { groups { name }}}}`;
 
-const challengesTagsets = `{ challenges { tagset { id }}}`;
+const challengesTagsets = `{ challenges { tagset { name }}}`;
 
-const challengesGroups = `{ challenges { groups { id }}}`;
+const challengesGroups = `{ challenges { groups { name }}}`;
 
-const challengesContributors = `{ challenges { contributors { id }}}`;
+const challengesContributors = `{ challenges { contributors { name }}}`;
 
-const challengesOpportunities = `{ challenges { opportunities { id }}}`;
+const challengesOpportunities = `{ challenges { opportunities { name }}}`;
 
-const challengeId = `{ challenge(ID: 1) { id }}`;
+const challengeName = `{ challenge(ID: 4) { name }}`;
 
-const challengeTextId = `{ challenge(ID: 1) { textID }}`;
+const challengeTextId = `{ challenge(ID: 4) { textID }}`;
 
-const challengeState = `{ challenge(ID: 1) { state }}`;
+const challengeState = `{ challenge(ID: 4) { state }}`;
 
-const challengeContexId = `{ challenge(ID: 1) { context { id }}}`;
+const challengeContext = `{ challenge(ID: 4) { context { who }}}`;
 
-const challengeLeadOrganisation = `{ challenge(ID: 1) { leadOrganisations { id }}}`;
+const challengeLeadOrganisation = `{ challenge(ID: 4) { leadOrganisations { name }}}`;
 
-const challengeLeadOrganisationGroups = `{ challenge(ID: 1) { leadOrganisations { id groups { id }}}}`;
+const challengeLeadOrganisationGroups = `{ challenge(ID: 4) { leadOrganisations { groups { name }}}}`;
 
-const challengeTagsets = `{ challenge(ID: 1) { tagset { id }}}`;
+const challengeTagsets = `{ challenge(ID: 4) { tagset { name }}}`;
 
-const challengeGroups = `{ challenge(ID: 1) { groups { id }}}`;
+const challengeGroups = `{ challenge(ID: 4) { groups { name }}}`;
 
-const challengeContributors = `{ challenge(ID: 1) { contributors { id }}}`;
+const challengeContributors = `{ challenge(ID: 4) { contributors { name }}}`;
 
-const challengeOpportunities = `{ challenge(ID: 1) { opportunities { id }}}`;
+const challengeOpportunities = `{ challenge(ID: 4) { opportunities { name }}}`;
 
-const opportunitiesId = `{ opportunities { id }}`;
+const opportunitiesName = `{ opportunities { name }}`;
 
 const opportunitiesTextId = `{ opportunities { textID }}`;
 
 const opportunitiesState = `{ opportunities { state }}`;
 
-const opportunitiesContexId = `{ opportunities { context { id }}}`;
+const opportunitiesContext = `{ opportunities { context { who }}}`;
 
-const opportunitiesGroups = `{ opportunities { groups { id }}}`;
+const opportunitiesGroups = `{ opportunities { groups { name }}}`;
 
-const opportunitiesContributors = `{ opportunities { contributors { id }}}`;
+const opportunitiesContributors = `{ opportunities { contributors { name }}}`;
 
-const opportunitiesProjectsId = `{ opportunities { projects { id }}}`;
+const opportunitiesProjectsName = `{ opportunities { projects { name }}}`;
 
-const opportunitiesProjectsAspectsId = `{ opportunities { projects { aspects { id }}}}`;
+const opportunitiesProjectsAspectsName = `{ opportunities { projects { aspects { name }}}}`;
 
-const opportunitiesActorGroupsId = `{ opportunities { actorGroups { id }}}`;
+const opportunitiesActorgroupsName = `{ opportunities { actorGroups { name }}}`;
 
-const opportunitiesActorGroupsActorsId = `{ opportunities { actorGroups { actors { id }}}}`;
+const opportunitiesActorGroupsActorsName = `{ opportunities { actorGroups { actors { name }}}}`;
 
-const opportunitiesAspectsId = `{ opportunities { aspects { id }}}`;
+const opportunitiesAspects = `{ opportunities { aspects { title }}}`;
 
-const opportunitiesRelationsId = `{ opportunities { relations { id }}}`;
+const opportunitiesRelationsName = `{ opportunities { relations { actorName }}}`;
 
-const projectsId = `{ projects { id }}`;
+const projectsName = `{ projects { name }}`;
 
 const projectsTextId = `{ projects { textID }}`;
 
@@ -144,15 +144,15 @@ const projectsDescription = `{ projects { description }}`;
 
 const projectsState = `{ projects { state }}`;
 
-const projectsTagset = `{ projects { tagset { id }}}`;
+const projectsTagset = `{ projects { tagset { name }}}`;
 
-const projectsAspects = `{ projects { aspects { id }}}`;
+const projectsAspects = `{ projects { aspects { title }}}`;
 
-const templatesId = `{ templates { id }}`;
+const templatesName = `{ templates { name }}`;
 
 const templatesDescription = `{ templates { description }}`;
 
-const templatesUsersId = `{ templates { users { id }}}`;
+const templatesUsersName = `{ templates { users { Name }}}`;
 
 export {
   name,
@@ -164,73 +164,73 @@ export {
   contextVision,
   contextImpact,
   contextWho,
-  contextReferencesId,
-  usersId,
+  contextReferencesName,
+  usersName,
   usersAccountUPN,
-  usersProfileId,
-  usersMemberofGroupsId,
-  usersMemberofChallengesId,
-  usersMemberofOrganisationsId,
-  userId,
+  usersProfile,
+  usersMemberofGroupsName,
+  usersMemberofChallengesName,
+  usersMemberofOrganisationsName,
+  userName,
   userAccountUPN,
-  userProfileId,
-  userMemberofGroupsId,
-  userMemberofChallengesId,
-  userMemberofOrganisationsId,
+  userProfile,
+  userMemberofGroupsName,
+  userMemberofChallengesName,
+  userMemberofOrganisationsName,
   usersById,
-  groupsId,
-  groupsFocalPointId,
-  groupsProfileId,
-  groupsMembersId,
+  groupsName,
+  groupsFocalPointName,
+  groupsProfile,
+  groupsMembersName,
   groupsParentChallenge,
   groupsParentEcoverse,
   groupsParentOpportunity,
-  groupsWithTagId,
-  groupsWithTagFocalPointId,
-  groupsWithTagProfileId,
-  groupsWithTagMembersId,
+  groupsWithTagName,
+  groupsWithTagFocalPointName,
+  groupsWithTagProfile,
+  groupsWithTagMembersName,
   groupsWithTagParentChallenge,
   groupsWithTagParentEcoverse,
   groupsWithTagParentOpportunity,
-  challengesId,
+  challengesName,
   challengesTextId,
   challengesState,
-  challengesContexId,
+  challengesContext,
   challengesLeadOrganisation,
   challengesLeadOrganisationGroups,
   challengesContributors,
   challengesTagsets,
   challengesGroups,
   challengesOpportunities,
-  challengeId,
+  challengeName,
   challengeTextId,
   challengeState,
-  challengeContexId,
+  challengeContext,
   challengeLeadOrganisation,
   challengeLeadOrganisationGroups,
   challengeTagsets,
   challengeGroups,
   challengeContributors,
   challengeOpportunities,
-  opportunitiesId,
+  opportunitiesName,
   opportunitiesTextId,
   opportunitiesState,
-  opportunitiesContexId,
+  opportunitiesContext,
   opportunitiesGroups,
   opportunitiesContributors,
-  opportunitiesProjectsId,
-  opportunitiesProjectsAspectsId,
-  opportunitiesActorGroupsId,
-  opportunitiesActorGroupsActorsId,
-  opportunitiesAspectsId,
-  opportunitiesRelationsId,
-  projectsId,
+  opportunitiesProjectsName,
+  opportunitiesProjectsAspectsName,
+  opportunitiesActorgroupsName,
+  opportunitiesActorGroupsActorsName,
+  opportunitiesAspects,
+  opportunitiesRelationsName,
+  projectsName,
   projectsTextId,
   projectsDescription,
   projectsState,
   projectsTagset,
   projectsAspects,
-  templatesId,
+  templatesName,
   templatesDescription,
-  templatesUsersId,
+  templatesUsersName,
 };
