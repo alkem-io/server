@@ -12,6 +12,7 @@ import { OpportunityService } from '../../domain/opportunity/opportunity.service
 import { ProjectInput } from '../../domain/project/project.dto';
 import { ProjectService } from '../../domain/project/project.service';
 import { RelationInput } from '../../domain/relation/relation.dto';
+import { IUserGroup } from '../../domain/user-group/user-group.interface';
 import { UserGroupService } from '../../domain/user-group/user-group.service';
 import { UserInput } from '../../domain/user/user.dto';
 import { IUser } from '../../domain/user/user.interface';
@@ -137,7 +138,10 @@ export class TestDataService {
   }
 
   async initAddUserToOpportunity() {
-    await this.opportunityService.addMember(1, 1);
+    const createdTestUser = (await this.userService.getUserByEmail(
+      'testuser@test.com'
+    )) as IUser;
+    await this.opportunityService.addMember(createdTestUser?.id, 1);
   }
 
   async initAddChallengeLead() {
@@ -153,13 +157,17 @@ export class TestDataService {
   }
 
   async initAssignGroupFocalPoint() {
-    await this.userGroupService.assignFocalPoint(13, 13);
+    const createdTestUser = (await this.userService.getUserByEmail(
+      'testuser@test.com'
+    )) as IUser;
+    await this.userGroupService.assignFocalPoint(createdTestUser?.id, 13);
   }
 
- 
-
   async initAddUserToChallengeGroup() {
-    await this.userGroupService.addUser(13, 14);
+    const createdTestUser = (await this.userService.getUserByEmail(
+      'testuser@test.com'
+    )) as IUser;
+    await this.userGroupService.addUser(createdTestUser?.id, 14);
   }
 
   async initActorGroup() {
@@ -179,25 +187,25 @@ export class TestDataService {
   }
 
   async initAddAdmin() {
-    const batGergi = (await this.userService.getUserByEmail(
+    const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as any;
     const testGroup = await this.ecoverseService.createGroup('test');
-    await this.userGroupService.addUserToGroup(batGergi?.id, testGroup);
+    await this.userGroupService.addUserToGroup(createdTestUser?.id, testGroup);
   }
 
   async teardownRemoveGroupFocalPoint() {
-    const batGergi = (await this.userService.getUserByEmail(
+    const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as IUser;
-    await this.userGroupService.removeFocalPoint(batGergi?.id);
+    await this.userGroupService.removeFocalPoint(13);
   }
 
   async teardownUsers() {
-    const batGergi = (await this.userService.getUserByEmail(
+    const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as IUser;
-    await this.ecoverseService.removeUser(batGergi?.id);
+    await this.ecoverseService.removeUser(createdTestUser?.id);
   }
 
   async teardownChallenges() {
@@ -207,9 +215,7 @@ export class TestDataService {
     await this.challengeService.removeChallenge(challengeToRemove?.id);
   }
 
-
-
-  async initFunctions(){
+  async initFunctions() {
     await this.initUsers();
     await this.initChallenge();
     await this.initOpportunity();
@@ -224,13 +230,12 @@ export class TestDataService {
     await this.initCreateGroupOnEcoverse();
     await this.initCreateGroupOnChallenge();
     await this.initAddUserToChallengeGroup();
-    await this.initAssignGroupFocalPoint();    
+    await this.initAssignGroupFocalPoint();
   }
 
-  async teardownFunctions(){
+  async teardownFunctions() {
     await this.teardownRemoveGroupFocalPoint();
     await this.teardownUsers();
-   // await this.teardownChallenges();
-    
+    // await this.teardownChallenges();
   }
 }
