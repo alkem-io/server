@@ -156,6 +156,8 @@ export class TestDataService {
     await this.userGroupService.assignFocalPoint(13, 13);
   }
 
+ 
+
   async initAddUserToChallengeGroup() {
     await this.userGroupService.addUser(13, 14);
   }
@@ -184,6 +186,13 @@ export class TestDataService {
     await this.userGroupService.addUserToGroup(batGergi?.id, testGroup);
   }
 
+  async teardownRemoveGroupFocalPoint() {
+    const batGergi = (await this.userService.getUserByEmail(
+      'testuser@test.com'
+    )) as IUser;
+    await this.userGroupService.removeFocalPoint(batGergi?.id);
+  }
+
   async teardownUsers() {
     const batGergi = (await this.userService.getUserByEmail(
       'testuser@test.com'
@@ -196,5 +205,32 @@ export class TestDataService {
       1
     )) as IChallenge;
     await this.challengeService.removeChallenge(challengeToRemove?.id);
+  }
+
+
+
+  async initFunctions(){
+    await this.initUsers();
+    await this.initChallenge();
+    await this.initOpportunity();
+    await this.initProject();
+    await this.initAspect();
+    await this.initAspectOnProject();
+    await this.initRelation();
+    await this.initActorGroup();
+    await this.initActor();
+    await this.initAddUserToOpportunity();
+    await this.initAddChallengeLead();
+    await this.initCreateGroupOnEcoverse();
+    await this.initCreateGroupOnChallenge();
+    await this.initAddUserToChallengeGroup();
+    await this.initAssignGroupFocalPoint();    
+  }
+
+  async teardownFunctions(){
+    await this.teardownRemoveGroupFocalPoint();
+    await this.teardownUsers();
+   // await this.teardownChallenges();
+    
   }
 }
