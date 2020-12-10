@@ -31,14 +31,29 @@ export class appSingleton {
 
     this.app = testModule.createNestApplication();
     await this.app.init();
-    appSingleton.testDataService = testModule.get(TestDataService);
+    appSingleton.testDataService = await testModule.get(TestDataService);
 
     await appSingleton.testDataService.initDB();
     await appSingleton.testDataService.initUsers();
+    await appSingleton.testDataService.initChallenge();
+    await appSingleton.testDataService.initOpportunity();
+    await appSingleton.testDataService.initProject();
+    await appSingleton.testDataService.initAspect();
+    await appSingleton.testDataService.initAspectOnProject();
+    await appSingleton.testDataService.initRelation();
+    await appSingleton.testDataService.initActorGroup();
+    await appSingleton.testDataService.initActor();
+    await appSingleton.testDataService.initAddUserToOpportunity();
+    await appSingleton.testDataService.initAddChallengeLead();
+    await appSingleton.testDataService.initCreateGroupOnEcoverse();
+    await appSingleton.testDataService.initCreateGroupOnChallenge();
+    await appSingleton.testDataService.initAddUserToChallengeGroup();
+    await appSingleton.testDataService.initAssignGroupFocalPoint();
   }
 
   async teardownServer() {
-    await appSingleton.testDataService.teardownUsers();
+    // await appSingleton.testDataService.teardownUsers();
+    // await appSingleton.testDataService.teardownChallenges();
     await appSingleton.testDataService.teardownDB();
     await this.app.close();
   }

@@ -36,7 +36,7 @@ services:
     ports:
       - 4000:4000
       - 9330:9330
-    command: sh -c "/wait && npm --inspect=0.0.0.0:9330 start"
+    command: sh -c "/wait && npm run migration:run && npm --inspect=0.0.0.0:9330 start"
   db:
     image: mysql:8.0.11
     networks:

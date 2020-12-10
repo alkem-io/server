@@ -22,7 +22,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --detectOpenHandles --runInBand --config ./test/jest-e2e.json",
-    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/utils/config/typeorm.config.ts",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/utils/config/typeorm.cli.config.ts",
     "migration:create": "npm run typeorm migration:create -- -n",
     "migration:generate": "npm run typeorm migration:generate -- -n",
     "migration:run": "npm run typeorm migration:run",
