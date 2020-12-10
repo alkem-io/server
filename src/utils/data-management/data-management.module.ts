@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ActorGroupModule } from '../../domain/actor-group/actor-group.module';
 import { ChallengeModule } from '../../domain/challenge/challenge.module';
 import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
 import { EcoverseModule } from '../../domain/ecoverse/ecoverse.module';
+import { OpportunityModule } from '../../domain/opportunity/opportunity.module';
 import { ProfileModule } from '../../domain/profile/profile.module';
+import { ProjectModule } from '../../domain/project/project.module';
 import { TagsetModule } from '../../domain/tagset/tagset.module';
 import { UserGroupModule } from '../../domain/user-group/user-group.module';
 import { UserModule } from '../../domain/user/user.module';
@@ -16,6 +19,9 @@ import { TestDataService } from './test-data.service';
   imports: [
     BootstrapModule,
     ChallengeModule,
+    OpportunityModule,
+    ActorGroupModule,
+    ProjectModule,
     EcoverseModule,
     UserModule,
     TagsetModule,

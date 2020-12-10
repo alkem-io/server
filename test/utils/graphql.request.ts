@@ -17,3 +17,13 @@ export const graphqlRequest = async (
     .set('Accept', 'application/json')
     .set('Authorization', `Bearer ${appSingleton.Instance.accessToken}`);
 };
+
+export const graphqlRequestAuth = async (
+  requestParams: any
+  // app: INestApplication
+) => {
+  return request("https://dev.cherrytwist.org")
+    .post('/graphql')
+    .send({ ...requestParams })
+    .set('Accept', 'application/json');
+};
