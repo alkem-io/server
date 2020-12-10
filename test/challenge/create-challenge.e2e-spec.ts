@@ -2,9 +2,10 @@ import {
   createChallangeMutation,
   removeChallangeMutation,
 } from './challenge.request.params';
-import { graphqlRequest } from '../utils/graphql.request';
+import { graphqlRequestAuth } from '../utils/graphql.request';
 import '../utils/array.matcher';
 import { appSingleton } from '../utils/app.singleton';
+import { TestUser } from '../utils/token.helper';
 
 let challengeName = '';
 let uniqueTextId = '';
@@ -14,8 +15,6 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
 });
-
-//let challengeNames ='';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -84,7 +83,10 @@ describe('Create Challenge', () => {
         },
       },
     };
-    const response = await graphqlRequest(requestParamsCreateChallenge);
+    const response = await graphqlRequestAuth(
+      requestParamsCreateChallenge,
+      TestUser.GLOBAL_ADMIN
+    );
 
     // Assert
     expect(response.status).toBe(200);
@@ -105,7 +107,10 @@ describe('Create Challenge', () => {
         },
       },
     };
-    const response = await graphqlRequest(requestParamsCreateChallenge);
+    const response = await graphqlRequestAuth(
+      requestParamsCreateChallenge,
+      TestUser.GLOBAL_ADMIN
+    );
 
     // Assert
     expect(response.status).toBe(200);
@@ -155,8 +160,9 @@ describe('Create Challenge', () => {
             },
           },
         };
-        const responseInvalidTextId = await graphqlRequest(
-          requestParamsCreateChallenge
+        const responseInvalidTextId = await graphqlRequestAuth(
+          requestParamsCreateChallenge,
+          TestUser.GLOBAL_ADMIN
         );
 
         // Assert

@@ -1,4 +1,5 @@
-import { graphqlRequest } from '../utils/graphql.request';
+import { TestUser } from '../utils/token.helper';
+import { graphqlRequest, graphqlRequestAuth } from '../utils/graphql.request';
 
 export const createOpportunityOnChallengeMutation = async (
   challengeId: string,
@@ -51,7 +52,7 @@ export const createOpportunityOnChallengeMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
 };
 
 export const updateOpportunityOnChallengeMutation = async (
@@ -103,7 +104,7 @@ export const updateOpportunityOnChallengeMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
 };
 
 export const queryOpportunity = async (opportunityId: any) => {
@@ -133,5 +134,5 @@ export const queryOpportunity = async (opportunityId: any) => {
     }`,
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
 };

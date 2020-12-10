@@ -1,4 +1,5 @@
-import { graphqlRequest } from '../utils/graphql.request';
+import { TestUser } from '../utils/token.helper';
+import { graphqlRequestAuth } from '../utils/graphql.request';
 
 const uniqueId = (Date.now() + Math.random()).toString();
 
@@ -45,7 +46,7 @@ export const createChallangeMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const updateChallangeMutation = async (
@@ -68,7 +69,7 @@ export const updateChallangeMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const removeChallangeMutation = async (challengeId: any) => {
@@ -79,7 +80,7 @@ export const removeChallangeMutation = async (challengeId: any) => {
     }`,
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const addUserToChallangeMutation = async (
@@ -104,7 +105,7 @@ export const addUserToChallangeMutation = async (
     },
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const getChallenges = async () => {
@@ -114,7 +115,7 @@ export const getChallenges = async () => {
     query: 'query{challenges {name id}}',
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const getChallenge = async (challengeId: any) => {
@@ -124,7 +125,7 @@ export const getChallenge = async (challengeId: any) => {
     query: `query{challenges (ID: ${challengeId}) {name id}}`,
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const getChallengeUsers = async (challengeId: any) => {
@@ -151,5 +152,5 @@ export const getChallengeUsers = async (challengeId: any) => {
     }`,
   };
 
-  return await graphqlRequest(requestParams);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
