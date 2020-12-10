@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { appSingleton } from './app.singleton';
+import { TestUser } from './token.helper';
 
 // ToDo
 // Add support for connection to the DB and drop/populate DB
@@ -14,16 +15,22 @@ export const graphqlRequest = async (
   return request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
     .send({ ...requestParams })
-    .set('Accept', 'application/json')
-    .set('Authorization', `Bearer ${appSingleton.Instance.accessToken}`);
+    .set('Accept', 'application/json');
 };
 
 export const graphqlRequestAuth = async (
-  requestParams: any
+  requestParams: any,
+  user?: string
   // app: INestApplication
 ) => {
-  return request("https://dev.cherrytwist.org")
+  return request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
     .send({ ...requestParams })
-    .set('Accept', 'application/json');
+    .set('Accept', 'application/json')
+    .set(
+      'Authorization',
+      `Bearer ${appSingleton.Instance.userTokenMap.get(
+        user ?? TestUser.GLOBAL_ADMIN
+      )}`
+    );
 };

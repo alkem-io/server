@@ -1,9 +1,11 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { mapAsyncIterator } from 'graphql-tools';
 
 import { AppModule } from '../../src/app.module';
 import { RopcStrategy } from '../../src/utils/authentication/ropc.strategy';
 import { TestDataService } from '../../src/utils/data-management/test-data.service';
+import { TestUser, TokenHelper } from './token.helper';
 
 export class appSingleton {
   private static _instance: appSingleton;
@@ -17,12 +19,12 @@ export class appSingleton {
     this._app = value;
   }
 
-  private _accessToken!: string;
-  public get accessToken(): string {
-    return this._accessToken;
+  private _userTokenMap!: Map<string, string>;
+  public get userTokenMap(): Map<string, string> {
+    return this._userTokenMap;
   }
-  public set accessToken(value: string) {
-    this._accessToken = value;
+  public set userTokenMap(value: Map<string, string>) {
+    this._userTokenMap = value;
   }
 
   private constructor() {
@@ -43,8 +45,8 @@ export class appSingleton {
     await this.app.init();
     appSingleton.testDataService = await testModule.get(TestDataService);
     const ropcStrategy = await testModule.get(RopcStrategy);
+    await this.getTokensForAllTestUsers(ropcStrategy);
 
-    this.accessToken = await ropcStrategy.getAccessToken();
     await appSingleton.testDataService.initDB();
     await appSingleton.testDataService.initUsers();
     await appSingleton.testDataService.initChallenge();
@@ -68,5 +70,10 @@ export class appSingleton {
     // await appSingleton.testDataService.teardownChallenges();
     await appSingleton.testDataService.teardownDB();
     await this.app.close();
+  }
+
+  private async getTokensForAllTestUsers(ropcStrategy: RopcStrategy) {
+    const tokenHelper = new TokenHelper(ropcStrategy);
+    this.userTokenMap = await tokenHelper.buildUserTokenMap();
   }
 }

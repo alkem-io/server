@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.6.2",
+  "version": "0.6.7",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -40,7 +40,7 @@
     "@nestjs/typeorm": "^7.1.4",
     "apollo-server-express": "^2.18.1",
     "cd": "^0.3.3",
-    "cherrytwist-lib": "^0.4.2",
+    "cherrytwist-lib": "^0.4.3",
     "class-validator": "^0.12.2",
     "elastic-apm-node": "^3.7.0",
     "graphql": "^15.3.0",
