@@ -259,8 +259,12 @@ Initial version of integration tests is in place. To run them, look at the prere
 - Used frameworks/packages [jest](https://jestjs.io/) and `supertest`
 - Running `MySQL sql server`
 - Running `Cherrytwist/Server` service.
-- In .env file the flag for `AUTH_ENABLED=false` must be available.
+- `AUTH_AAD_TEST_HARNESS_PASSWORD` and `AUTH_AAD_UPN_DOMAIN` env variables  must be provided for authenticated scenarios.
+- `AUTH_ENABLED` env variable must be set to `true`.
 - In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
   - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.
 
+To debug tests in VS Code:
+- Use `Debug Jest e2e Tests` configuration for API tests
+- Use `Debug Jest CI Tests` configuration for CI tests

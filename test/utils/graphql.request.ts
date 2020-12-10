@@ -8,20 +8,27 @@ import { TestUser } from './token.helper';
 // Add configurations file for environment against which, the tests are going to be run
 // Add support for authentication
 
-export const graphqlRequest = async (
-  requestParams: any
-  // app: INestApplication
-) => {
+/**
+ * GraphQL request wrapper for unauthenticated scenarios.
+ * @param requestParams GraphQL request parameters
+ * @api public
+ */
+export const graphqlRequest = async (requestParams: any) => {
   return request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
     .send({ ...requestParams })
     .set('Accept', 'application/json');
 };
 
+/**
+ * GraphQL request wrapper for authenticated scenarios.
+ * @param requestParams GraphQL request parameters
+ * @param {TestUser} user impersonated user in the authentication scenario
+ * @api public
+ */
 export const graphqlRequestAuth = async (
   requestParams: any,
-  user?: string
-  // app: INestApplication
+  user?: TestUser
 ) => {
   return request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
