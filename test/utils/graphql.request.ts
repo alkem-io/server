@@ -1,3 +1,4 @@
+import { AuthenticationError } from 'apollo-server-express';
 import request from 'supertest';
 import { appSingleton } from './app.singleton';
 import { TestUser } from './token.helper';
@@ -30,14 +31,20 @@ export const graphqlRequestAuth = async (
   requestParams: any,
   user?: TestUser
 ) => {
+  let auth_token = '';
+
+  if (!user) {
+    return await graphqlRequest(requestParams);
+  } else {
+    const res = appSingleton.Instance.userTokenMap.get(user);
+    if (!res)
+      throw new AuthenticationError(`Could not authenticate user ${user}`);
+    else auth_token = res as string;
+  }
+
   return request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
     .send({ ...requestParams })
     .set('Accept', 'application/json')
-    .set(
-      'Authorization',
-      `Bearer ${appSingleton.Instance.userTokenMap.get(
-        user ?? TestUser.GLOBAL_ADMIN
-      )}`
-    );
+    .set('Authorization', `Bearer ${auth_token}`);
 };
