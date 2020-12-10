@@ -1,18 +1,22 @@
 language: node_js
 node_js:
-  - v12.18.3
+- v12.18.3
 cache:
   directories:
-      - "node_modules"
+  - node_modules
 env:
-  - DATABASE_HOST=localhost MYSQL_DATABASE=cherrytwist MYSQL_ROOT_PASSWORD=toor AUTH_ENABLED=false
+  matrix:
+  - DATABASE_HOST=localhost MYSQL_DATABASE=cherrytwist MYSQL_ROOT_PASSWORD=toor AUTH_ENABLED=true AUTH_AAD_UPN_DOMAIN=devcherrytwist.onmicrosoft.com AUTH_AAD_CLIENT_APP_ID=6f4fcdb2-5792-4e17-bbdc-14ac0cf78496 AUTH_AAD_CHERRYTWIST_API_SCOPE=api://869e0dc2-907e-45fe-841f-34cc93beee63/.default AUTH_AAD_TENANT=22e3aada-5a09-4e2b-9e0e-dc4f02328b29
+  global:
+    secure: b8mIOCsd8Jy69tcOcGIh4GPUwabCuuoYuwcXWd4W6L/Thiax8AbqIG2mxcRzX6pCp4xv2jfFDkG86/ZRyt4PIHBxBfAXPRMFn2f5g9lObliS7UB0CNM4Kd9rtruap7T+7ZgOoYnLSK+ip5w/Tcox+aJpYcmHmuj+ucQBYeKPgIJoA5XuZjwijRJKbuxVHwzXgnHpnUj6RyOvRWVrpHbFmxTYOSU1pDrlGiBIeojYwQQdY9S3FJhroDu/174iXoz5pU2bCaVgO419pcGxQq49HoUTfxKLQEhH1cWGGjSrZo9AW1gSjc930dEg5mMoRq6Mu/lMi7dsHFg1kWX3A4LQ00fmpFQYvntdr/rlodPA3pWCp29BvMtQrLA2Lf5kr0sXYQ9pB8FNykro1hynAMjV45Ik2ODmLkmZQiZEm0sjB9y31jdscWOi2o6p0dymk+uh3uZSVVx8U6LISf0/RrINU1V7dhTBuUPyPwVRO7BQPv2LKDPO9pFAXpHiGu8uby+lA0phx619rogI6fdsmChzmzj6ayFVQHJ8AhT2NyGsP2W08imRLD5lnqfaF+qFjDn0khZbIPjb1WgNonPqwRNrUIXArc36T0YSUztEfDRmTuQQsPpFTZe+Qb6A2Rn2/sP0oyZ1VrxB8xwWFNvD6Sue+r2GoR/fuYTRwqUE3VxsWC8=
 install:
-  - npm install
+- npm install
 services:
-  - mysql
+- mysql
 before_install:
-  - mysql -e 'CREATE DATABASE IF NOT EXISTS cherrytwist;'
+- mysql -e 'CREATE DATABASE IF NOT EXISTS cherrytwist;'
 before_script:
-  - echo "USE mysql;ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'toor';;\nFLUSH PRIVILEGES;\n" | mysql -u root
+- echo "USE mysql;ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password
+  BY 'toor';;\nFLUSH PRIVILEGES;\n" | mysql -u root
 script:
-  - npm run-script test:e2e
+- npm run-script test:e2e

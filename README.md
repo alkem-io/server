@@ -259,7 +259,7 @@ Initial version of integration tests is in place. To run them, look at the prere
 - Used frameworks/packages [jest](https://jestjs.io/) and `supertest`
 - Running `MySQL sql server`
 - Running `Cherrytwist/Server` service.
-- `AUTH_AAD_TEST_HARNESS_PASSWORD` and `AUTH_AAD_UPN_DOMAIN` env variables  must be provided for authenticated scenarios.
+- `AUTH_AAD_CLIENT_APP_ID`, `AUTH_AAD_CHERRYTWIST_API_SCOPE`, `AUTH_AAD_TENANT`, `AUTH_AAD_TEST_HARNESS_PASSWORD` and `AUTH_AAD_UPN_DOMAIN` env variables  must be provided for authenticated scenarios.
 - `AUTH_ENABLED` env variable must be set to `true`.
 - In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
   - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
