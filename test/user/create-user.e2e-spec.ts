@@ -28,7 +28,7 @@ beforeEach(() => {
   userEmail = `${uniqueId}@test.com`;
 });
 
-describe('Create User', () => {
+describe.skip('Create User', () => {
   afterEach(async () => {
     await removeUserMutation(userId);
   });
@@ -214,7 +214,7 @@ describe('Create User', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      "ER_DATA_TOO_LONG: Data too long for column 'name' at row 1"
+      'ER_DATA_TOO_LONG: Data too long for column \'name\' at row 1'
     );
   });
 
