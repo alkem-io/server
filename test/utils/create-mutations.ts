@@ -12,7 +12,7 @@ mutation CreateOrganisation($organisationData: OrganisationInput!) {
 const createOrganisationVariables = `
 {
     "organisationData": {
-        "name": "Cherrytwist"
+        "name": "Cherrytwist7"
     }
 }`;
 
@@ -121,7 +121,7 @@ const createChallengeVariables = `
 {
     "challengeData": {
         "name": "test challenge name",
-        "textID": "testChall-textId",
+        "textID": "testCha-textId",
         "context": {
             "tagline": "Test tagline - How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?",
             "background": "Test background - Our power system is becoming increasingly more decentralized and complex. By using solar PV, consumers have become electricity producers as well, and the number of these ‘prosumers’ is increasing. All the while, the electricity demand is rising due to the electrification of transport and industry. Cities around the world are electrifying their public transport systems, but if all busses would be charged around the time people are in the kitchen preparing dinner, the current grid would not be able to cope. The energy sector is striving to make the best of these developments, but so far the sector remains fragmented with a large number of initiatives and pilots spread over start-ups, scale-ups, countries, DSOs, TSOs, utilities, and regulators. Balancing the power grid is and will be more and more difficult and expensive. While technological advances have already disrupted many areas of the power system and, for example, empowered consumers to become producers and traders of their own electricity, the balancing markets still resemble an exclusive club of the big industry players. How can we enable also small consumers and prosumers to contribute to balancing? ",
@@ -150,31 +150,21 @@ const createChallengeVariables = `
 }`;
 
 const createGroupOnChallengeMutation = `
-mutation createOpportunityOnChallenge($opportunityData: OpportunityInput!, $challengeID: Float!) {
-    createOpportunityOnChallenge(opportunityData: $opportunityData, challengeID: $challengeID) {
-      name,
-      id
+mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
+  createGroupOnChallenge(groupName: $groupName, challengeID: $challengeID) {
+    name,
+    id
+    members {
+      name
     }
-  }`;
+  }
+}`;
 
 const createGroupOnChallengeVariables = `
 {
-    "challengeID": 1,
-    "opportunityData":
-    {
-      "name": "Test-AI for good-Test",
-      "textID": "4-goods",
-      "state": "reserved",
-      "context": {
-        "background": "test",
-      "vision": "test vision",
-        "tagline": "test tagline",
-        "who": "test who",
-        "impact": "test impact",
-        "references": {"name": "test name", "uri": "test uri", "description": "test description"} 
-      }
-    }
-  }`;
+  "challengeID": 1,
+  "groupName": "testGroup"
+}`;
 
 const createOpportunityMutation = `
 mutation createOpportunityOnChallenge($opportunityData: OpportunityInput!, $challengeID: Float!) {
@@ -188,8 +178,8 @@ const createOpportunityVariables = `
 {
     "challengeID": 1,
     "opportunityData": {
-        "name": "Test-AI for good-Test",
-        "textID": "4-goods",
+        "name": "Test opportunity",
+        "textID": "test-opp",
         "state": "reserved",
         "context": {
             "background": "test",
@@ -238,7 +228,7 @@ const createProjectVariables = `
     "opportunityID": 1,
     "projectData": {
         "name": "Test-Name-Project",
-        "textID": "Test-TextId2asddsa",
+        "textID": "Test-TextId2",
         "description": "Test-Description--Proj-How do I handle scalability?",
         "state": "test-status--Proj-new"
     }
