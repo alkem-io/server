@@ -47,6 +47,7 @@ export class TestDataService {
     user.email = 'testuser@test.com';
     user.name = 'Bat Georgi';
     user.accountUpn = 'testAccountUpn@test.com';
+    user.aadPassword = '687sd7ds&*';
     user.profileData = {
       avatar: 'test profile avatar',
       description: 'test profile description',
@@ -55,7 +56,7 @@ export class TestDataService {
     await this.ecoverseService.createUser(user);
   }
 
-  async initChallenge() {
+  async initChallenge(): Promise<number> {
     const challenge = new ChallengeInput();
     OpportunityInput;
     challenge.name = 'init challenege name';
@@ -76,10 +77,36 @@ export class TestDataService {
       who: 'test challenge who',
     };
     challenge.tags = ['test1', 'test2'];
-    await this.ecoverseService.createChallenge(challenge);
+    const response = await this.ecoverseService.createChallenge(challenge);
+    return response.id;
   }
 
-  async initOpportunity() {
+  async initChallengeLeadOrganisation(): Promise<number> {
+    const challenge = new ChallengeInput();
+    OpportunityInput;
+    challenge.name = 'init challenege name 2';
+    challenge.state = 'init challenge state 2';
+    challenge.textID = 'init-challenge2';
+    challenge.context = {
+      background: 'test challenge background 2',
+      impact: 'test challenge impact 2',
+      references: [
+        {
+          name: 'test ref challenge name 2',
+          uri: 'test ref challenge uri 2',
+          description: 'test ref challenge description 2',
+        },
+      ],
+      tagline: 'test challenge tagline 2',
+      vision: 'test challenge vision 2',
+      who: 'test challenge who 2',
+    };
+    challenge.tags = ['test3', 'test4'];
+    const response = await this.ecoverseService.createChallenge(challenge);
+    return response.id;
+  }
+
+  async initOpportunity(challengeId: number): Promise<number> {
     const opportunity = new OpportunityInput();
     opportunity.name = 'init opportunity name';
     opportunity.state = 'init opportunity state';
@@ -98,7 +125,11 @@ export class TestDataService {
       vision: 'test opportunity vision',
       who: 'test opportunity who',
     };
-    await this.challengeService.createOpportunity(4, opportunity);
+    let response = await this.challengeService.createOpportunity(
+      challengeId,
+      opportunity
+    );
+    return response.id;
   }
 
   async initProject() {
@@ -137,11 +168,14 @@ export class TestDataService {
   }
 
   async initAddUserToOpportunity() {
-    await this.opportunityService.addMember(1, 1);
+    const createdTestUser = (await this.userService.getUserByEmail(
+      'testuser@test.com'
+    )) as IUser;
+    await this.opportunityService.addMember(createdTestUser?.id, 1);
   }
 
-  async initAddChallengeLead() {
-    await this.challengeService.addChallengeLead(4, 1);
+  async initAddChallengeLead(challengeId: number) {
+    await this.challengeService.addChallengeLead(challengeId, 1);
   }
 
   async initCreateGroupOnEcoverse() {
@@ -153,11 +187,17 @@ export class TestDataService {
   }
 
   async initAssignGroupFocalPoint() {
-    await this.userGroupService.assignFocalPoint(13, 13);
+    const createdTestUser = (await this.userService.getUserByEmail(
+      'testuser@test.com'
+    )) as IUser;
+    await this.userGroupService.assignFocalPoint(createdTestUser?.id, 13);
   }
 
   async initAddUserToChallengeGroup() {
-    await this.userGroupService.addUser(13, 14);
+    const createdTestUser = (await this.userService.getUserByEmail(
+      'testuser@test.com'
+    )) as IUser;
+    await this.userGroupService.addUser(createdTestUser?.id, 14);
   }
 
   async initActorGroup() {
@@ -177,18 +217,25 @@ export class TestDataService {
   }
 
   async initAddAdmin() {
-    const batGergi = (await this.userService.getUserByEmail(
+    const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as any;
     const testGroup = await this.ecoverseService.createGroup('test');
-    await this.userGroupService.addUserToGroup(batGergi?.id, testGroup);
+    await this.userGroupService.addUserToGroup(createdTestUser?.id, testGroup);
+  }
+
+  async teardownRemoveGroupFocalPoint() {
+    const createdTestUser = (await this.userService.getUserByEmail(
+      'testuser@test.com'
+    )) as IUser;
+    await this.userGroupService.removeFocalPoint(13);
   }
 
   async teardownUsers() {
-    const batGergi = (await this.userService.getUserByEmail(
+    const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as IUser;
-    await this.ecoverseService.removeUser(batGergi?.id);
+    await this.ecoverseService.removeUser(createdTestUser?.id);
   }
 
   async teardownChallenges() {
@@ -196,5 +243,30 @@ export class TestDataService {
       1
     )) as IChallenge;
     await this.challengeService.removeChallenge(challengeToRemove?.id);
+  }
+
+  async initFunctions() {
+    // await this.initUsers();
+    // await this.initChallenge();
+    await this.initOpportunity(await this.initChallenge());
+    // await this.initProject();
+    // await this.initAspect();
+    // await this.initAspectOnProject();
+    // await this.initRelation();
+    // await this.initActorGroup();
+    // await this.initActor();
+    // await this.initAddUserToOpportunity();
+    await this.initAddChallengeLead(await this.initChallengeLeadOrganisation());
+    await this.initAddChallengeLead(1);
+    // await this.initCreateGroupOnEcoverse();
+    // await this.initCreateGroupOnChallenge();
+    // await this.initAddUserToChallengeGroup();
+    // await this.initAssignGroupFocalPoint();
+  }
+
+  async teardownFunctions() {
+    // await this.teardownRemoveGroupFocalPoint();
+    // await this.teardownUsers();
+    // await this.teardownChallenges();
   }
 }

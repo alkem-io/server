@@ -5,7 +5,7 @@ mutation removeUser($userID: Float!) {
 
 const removeUserVariables = `
 {
-    "userID": 1
+    "userID": 4
   }`;
 
 const removeChallengeMutation = `
@@ -15,7 +15,7 @@ mutation removeChallenge($ID: Float!) {
 
 const removeChallengeVariables = `
 {
-    "ID": 1
+    "ID": 2
   }`;
 
 const removeAspectMutation = `

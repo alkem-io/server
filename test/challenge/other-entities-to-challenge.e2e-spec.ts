@@ -5,15 +5,12 @@ import {
 import '../utils/array.matcher';
 import { appSingleton } from '../utils/app.singleton';
 import { createGroupOnChallengeMutation } from '../group/group.request.params';
-import { createUserMutation } from '../user/user.request.params';
 import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';
-let userName = '';
-let userId = '';
-let userPhone = '';
-let userEmail = '';
+let userName = 'Evgeni Dimitrov';
+let userId = '6';
 let groupName = '';
 let challengeName = '';
 let challengeId = '';
@@ -23,9 +20,6 @@ beforeEach(async () => {
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
-  userName = `testUser ${uniqueTextId}`;
-  userPhone = `userPhone ${uniqueTextId}`;
-  userEmail = `${uniqueTextId}@test.com`;
   groupName = `groupName ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
   opportunityTextId = `${uniqueTextId}`;
@@ -110,10 +104,6 @@ describe('Other entities to Challenge', () => {
     );
     challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
-    // Create a user
-    const response = await createUserMutation(userName);
-    userId = response.body.data.createUser.id;
-
     // Act
     // Add user to a challenge
     const responseAddUserToChallenge = await addUserToChallangeMutation(
@@ -157,11 +147,6 @@ describe('Other entities to Challenge', () => {
   });
 
   test('should throw error for adding "user" to unexisting "challenge"', async () => {
-    // Arrange
-    // Create a user
-    const response = await createUserMutation(userName);
-    userId = response.body.data.createUser.id;
-
     // Act
     // Add user to a challenge
     const responseAddUserToChallenge = await addUserToChallangeMutation(

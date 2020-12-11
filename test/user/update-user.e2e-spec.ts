@@ -32,7 +32,7 @@ beforeEach(() => {
   userEmail = `${uniqueId}@test.com`;
 });
 
-describe('Update user', () => {
+describe.skip('Update user', () => {
   beforeEach(() => {
     userNameAfterUpdate = `testUserAfterUpdate-Name_${uniqueId}`;
     phoneAfterUpdate = `testUserAfterUpdate-Phone_${uniqueId}`;
