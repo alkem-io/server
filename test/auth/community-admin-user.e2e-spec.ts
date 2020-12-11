@@ -316,7 +316,7 @@ describe.skip('DDT community admin user - Create mutations - authorized', () => 
   );
 });
 
-describe.skip('DDT community admin user - Create mutations - NOT authorized', () => {
+describe.only('DDT community admin user - Create mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                             | variables                             | expected
@@ -394,7 +394,7 @@ describe.skip('DDT community admin user - Update mutations - authorized', () => 
   );
 });
 
-describe.skip('DDT community admin user - Update mutations - NOT authorized', () => {
+describe.only('DDT community admin user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                     | variables                     | expected
@@ -448,12 +448,12 @@ describe('DDT community admin user - Remove mutations - authorized', () => {
 
       // Assert
       expect(response.status).toBe(200);
-      expect(responseData).toContain(expected);
+      expect(responseData).not.toContain(expected);
     }
   );
 });
 
-describe.skip('DDT community admin user - Remove mutations - NOT authorized', () => {
+describe.only('DDT community admin user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                    | variables                    | expected
