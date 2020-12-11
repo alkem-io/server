@@ -13,7 +13,6 @@ export class ActorResolver {
   constructor(private actorService: ActorService) {}
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
@@ -25,7 +24,6 @@ export class ActorResolver {
   }
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)

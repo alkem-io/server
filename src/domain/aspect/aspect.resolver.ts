@@ -12,10 +12,7 @@ import { AspectService } from './aspect.service';
 export class AspectResolver {
   constructor(private aspectService: AspectService) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the aspect with the specified ID',
@@ -25,7 +22,6 @@ export class AspectResolver {
   }
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
