@@ -1,7 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+
 import { AppModule } from '../../src/app.module';
+import { RopcStrategy } from '../../src/utils/authentication/ropc.strategy';
 import { TestDataService } from '../../src/utils/data-management/test-data.service';
+import { TokenHelper } from './token.helper';
 
 export class appSingleton {
   private static _instance: appSingleton;
@@ -13,6 +16,14 @@ export class appSingleton {
   }
   public set app(value: INestApplication) {
     this._app = value;
+  }
+
+  private _userTokenMap!: Map<string, string>;
+  public get userTokenMap(): Map<string, string> {
+    return this._userTokenMap;
+  }
+  public set userTokenMap(value: Map<string, string>) {
+    this._userTokenMap = value;
   }
 
   private constructor() {
@@ -32,29 +43,21 @@ export class appSingleton {
     this.app = testModule.createNestApplication();
     await this.app.init();
     appSingleton.testDataService = await testModule.get(TestDataService);
+    const ropcStrategy = await testModule.get(RopcStrategy);
+    await this.getTokensForAllTestUsers(ropcStrategy);
 
     await appSingleton.testDataService.initDB();
-    await appSingleton.testDataService.initUsers();
-    await appSingleton.testDataService.initChallenge();
-    await appSingleton.testDataService.initOpportunity();
-    await appSingleton.testDataService.initProject();
-    await appSingleton.testDataService.initAspect();
-    await appSingleton.testDataService.initAspectOnProject();
-    await appSingleton.testDataService.initRelation();
-    await appSingleton.testDataService.initActorGroup();
-    await appSingleton.testDataService.initActor();
-    await appSingleton.testDataService.initAddUserToOpportunity();
-    await appSingleton.testDataService.initAddChallengeLead();
-    await appSingleton.testDataService.initCreateGroupOnEcoverse();
-    await appSingleton.testDataService.initCreateGroupOnChallenge();
-    await appSingleton.testDataService.initAddUserToChallengeGroup();
-    await appSingleton.testDataService.initAssignGroupFocalPoint();
+    await appSingleton.testDataService.initFunctions();
   }
 
   async teardownServer() {
-    // await appSingleton.testDataService.teardownUsers();
-    // await appSingleton.testDataService.teardownChallenges();
+    await appSingleton.testDataService.teardownFunctions();
     await appSingleton.testDataService.teardownDB();
     await this.app.close();
+  }
+
+  private async getTokensForAllTestUsers(ropcStrategy: RopcStrategy) {
+    const tokenHelper = new TokenHelper(ropcStrategy);
+    this.userTokenMap = await tokenHelper.buildUserTokenMap();
   }
 }

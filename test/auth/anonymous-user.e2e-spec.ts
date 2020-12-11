@@ -177,85 +177,53 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe.skip('DDT anonymous user - queries', () => {
+describe('DDT anonymous user - queries - Not authorized', () => {
   // Arrange
   test.each`
-    query                                 | expected
-    ${name}                               | ${`{"data":{"name":"Cherrytwist dogfood"}`}
-    ${hostGroups}                         | ${notAuthorizedCode}
-    ${hostMembers}                        | ${notAuthorizedCode}
-    ${hostProfile}                        | ${`{"host":{"profile":{"description":""}`}
-    ${contextTagline}                     | ${`{"context":{"tagline":"Powering multi-stakeholder collaboration!"}`}
-    ${contextBackground}                  | ${`{"context":{"background":""}`}
-    ${contextVision}                      | ${`{"context":{"vision":""}`}
-    ${contextWho}                         | ${`{"context":{"who":""}`}
-    ${contextImpact}                      | ${`{"context":{"impact":""}`}
-    ${contextReferencesName}              | ${`{"context":{"references":[]`}
-    ${usersName}                          | ${notAuthorizedCode}
-    ${usersAccountUPN}                    | ${notAuthorizedCode}
-    ${usersProfile}                       | ${notAuthorizedCode}
-    ${usersMemberofGroupsName}            | ${notAuthorizedCode}
-    ${usersMemberofChallengesName}        | ${notAuthorizedCode}
-    ${usersMemberofOrganisationsName}     | ${notAuthorizedCode}
-    ${userName}                           | ${notAuthorizedCode}
-    ${userAccountUPN}                     | ${notAuthorizedCode}
-    ${userProfile}                        | ${notAuthorizedCode}
-    ${userMemberofGroupsName}             | ${notAuthorizedCode}
-    ${userMemberofChallengesName}         | ${notAuthorizedCode}
-    ${userMemberofOrganisationsName}      | ${notAuthorizedCode}
-    ${usersById}                          | ${notAuthorizedCode}
-    ${groupsName}                         | ${notAuthorizedCode}
-    ${groupsFocalPointName}               | ${notAuthorizedCode}
-    ${groupsProfile}                      | ${notAuthorizedCode}
-    ${groupsMembersName}                  | ${notAuthorizedCode}
-    ${groupsParentChallenge}              | ${notAuthorizedCode}
-    ${groupsParentEcoverse}               | ${notAuthorizedCode}
-    ${groupsParentOpportunity}            | ${notAuthorizedCode}
-    ${groupsWithTagName}                  | ${notAuthorizedCode}
-    ${groupsWithTagFocalPointName}        | ${notAuthorizedCode}
-    ${groupsWithTagProfile}               | ${notAuthorizedCode}
-    ${groupsWithTagMembersName}           | ${notAuthorizedCode}
-    ${groupsWithTagParentChallenge}       | ${notAuthorizedCode}
-    ${groupsWithTagParentEcoverse}        | ${notAuthorizedCode}
-    ${groupsWithTagParentOpportunity}     | ${notAuthorizedCode}
-    ${challengesName}                     | ${`{"name":"init challenege name"}`}
-    ${challengesTextId}                   | ${`{"textID":"init-challenge"}`}
-    ${challengesState}                    | ${`{"state":"init challenge state"}`}
-    ${challengesContext}                  | ${`{"who":"test challenge who"}`}
-    ${challengesLeadOrganisation}         | ${`{"leadOrganisations":[{"name":"Default host organisation"}`}
-    ${challengesLeadOrganisationGroups}   | ${notAuthorizedCode}
-    ${challengesContributors}             | ${notAuthorizedCode}
-    ${challengesTagsets}                  | ${`{"challenges":[{"tagset":{"name":"default"}`}
-    ${challengesGroups}                   | ${notAuthorizedCode}
-    ${challengesOpportunities}            | ${`{"name":"init opportunity name"}`}
-    ${challengeName}                      | ${`{"challenge":{"name":"init challenege name"}`}
-    ${challengeTextId}                    | ${`{"challenge":{"textID":"init-challenge"}`}
-    ${challengeState}                     | ${`{"challenge":{"state":"init challenge state"}`}
-    ${challengeContext}                   | ${`{"challenge":{"context":{"who":"test challenge who"}`}
-    ${challengeLeadOrganisation}          | ${`{"challenge":{"leadOrganisations":[{"name":"Default host organisation"}`}
-    ${challengeLeadOrganisationGroups}    | ${notAuthorizedCode}
-    ${challengeContributors}              | ${notAuthorizedCode}
-    ${challengeTagsets}                   | ${`{"challenge":{"tagset":{"name":"default"}`}
-    ${challengeGroups}                    | ${notAuthorizedCode}
-    ${challengeOpportunities}             | ${`{"challenge":{"opportunities":[{"name":"init opportunity name"}`}
-    ${opportunitiesName}                  | ${`{"opportunities":[{"name":"init opportunity name"}`}
-    ${opportunitiesTextId}                | ${`{"opportunities":[{"textID":"init-opport"}`}
-    ${opportunitiesState}                 | ${`{"opportunities":[{"state":"init opportunity state"}`}
-    ${opportunitiesContext}               | ${`{"opportunities":[{"context":{"who":"test opportunity who"}`}
-    ${opportunitiesContributors}          | ${notAuthorizedCode}
-    ${opportunitiesGroups}                | ${notAuthorizedCode}
-    ${opportunitiesActorgroupsName}       | ${`{"name":"init actorGroup name"}`}
-    ${opportunitiesActorGroupsActorsName} | ${`{"name":"init actor name"}`}
-    ${opportunitiesAspects}               | ${`{"aspects":[{"title":"init aspect title"}`}
-    ${opportunitiesRelationsName}         | ${`{"relations":[{"actorName":"init relation actor name"}`}
-    ${projectsName}                       | ${notAuthorizedCode}
-    ${projectsTextId}                     | ${notAuthorizedCode}
-    ${projectsDescription}                | ${notAuthorizedCode}
-    ${projectsState}                      | ${notAuthorizedCode}
-    ${projectsTagset}                     | ${notAuthorizedCode}
-    ${projectsAspects}                    | ${notAuthorizedCode}
-    ${templatesName}                      | ${`{"templates":[{"name":"default"}`}
-    ${templatesDescription}               | ${`{"templates":[{"description":"Default template"}`}
+    query                               | expected
+    ${hostGroups}                       | ${notAuthorizedCode}
+    ${hostMembers}                      | ${notAuthorizedCode}
+    ${usersName}                        | ${notAuthorizedCode}
+    ${usersAccountUPN}                  | ${notAuthorizedCode}
+    ${usersProfile}                     | ${notAuthorizedCode}
+    ${usersMemberofGroupsName}          | ${notAuthorizedCode}
+    ${usersMemberofChallengesName}      | ${notAuthorizedCode}
+    ${usersMemberofOrganisationsName}   | ${notAuthorizedCode}
+    ${userName}                         | ${notAuthorizedCode}
+    ${userAccountUPN}                   | ${notAuthorizedCode}
+    ${userProfile}                      | ${notAuthorizedCode}
+    ${userMemberofGroupsName}           | ${notAuthorizedCode}
+    ${userMemberofChallengesName}       | ${notAuthorizedCode}
+    ${userMemberofOrganisationsName}    | ${notAuthorizedCode}
+    ${usersById}                        | ${notAuthorizedCode}
+    ${groupsName}                       | ${notAuthorizedCode}
+    ${groupsFocalPointName}             | ${notAuthorizedCode}
+    ${groupsProfile}                    | ${notAuthorizedCode}
+    ${groupsMembersName}                | ${notAuthorizedCode}
+    ${groupsParentChallenge}            | ${notAuthorizedCode}
+    ${groupsParentEcoverse}             | ${notAuthorizedCode}
+    ${groupsParentOpportunity}          | ${notAuthorizedCode}
+    ${groupsWithTagName}                | ${notAuthorizedCode}
+    ${groupsWithTagFocalPointName}      | ${notAuthorizedCode}
+    ${groupsWithTagProfile}             | ${notAuthorizedCode}
+    ${groupsWithTagMembersName}         | ${notAuthorizedCode}
+    ${groupsWithTagParentChallenge}     | ${notAuthorizedCode}
+    ${groupsWithTagParentEcoverse}      | ${notAuthorizedCode}
+    ${groupsWithTagParentOpportunity}   | ${notAuthorizedCode}
+    ${challengesLeadOrganisationGroups} | ${notAuthorizedCode}
+    ${challengesContributors}           | ${notAuthorizedCode}
+    ${challengesGroups}                 | ${notAuthorizedCode}
+    ${challengeLeadOrganisationGroups}  | ${notAuthorizedCode}
+    ${challengeContributors}            | ${notAuthorizedCode}
+    ${challengeGroups}                  | ${notAuthorizedCode}
+    ${opportunitiesContributors}        | ${notAuthorizedCode}
+    ${opportunitiesGroups}              | ${notAuthorizedCode}
+    ${projectsName}                     | ${notAuthorizedCode}
+    ${projectsTextId}                   | ${notAuthorizedCode}
+    ${projectsDescription}              | ${notAuthorizedCode}
+    ${projectsState}                    | ${notAuthorizedCode}
+    ${projectsTagset}                   | ${notAuthorizedCode}
+    ${projectsAspects}                  | ${notAuthorizedCode}
   `(
     "should expect: '$expected' for query: '$query'",
     async ({ query, expected }) => {
@@ -280,7 +248,63 @@ describe.skip('DDT anonymous user - queries', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT anonymous user - create mutations', () => {
+describe('DDT anonymous user - queries - authorized', () => {
+  // Arrange
+  test.each`
+    query                                 | expected
+    ${name}                               | ${notAuthorizedCode}
+    ${hostProfile}                        | ${notAuthorizedCode}
+    ${contextTagline}                     | ${notAuthorizedCode}
+    ${contextBackground}                  | ${notAuthorizedCode}
+    ${contextVision}                      | ${notAuthorizedCode}
+    ${contextWho}                         | ${notAuthorizedCode}
+    ${contextImpact}                      | ${notAuthorizedCode}
+    ${contextReferencesName}              | ${notAuthorizedCode}
+    ${challengesName}                     | ${notAuthorizedCode}
+    ${challengesTextId}                   | ${notAuthorizedCode}
+    ${challengesState}                    | ${notAuthorizedCode}
+    ${challengesContext}                  | ${notAuthorizedCode}
+    ${challengesLeadOrganisation}         | ${notAuthorizedCode}
+    ${challengesTagsets}                  | ${notAuthorizedCode}
+    ${challengesOpportunities}            | ${notAuthorizedCode}
+    ${challengeName}                      | ${notAuthorizedCode}
+    ${challengeTextId}                    | ${notAuthorizedCode}
+    ${challengeState}                     | ${notAuthorizedCode}
+    ${challengeContext}                   | ${notAuthorizedCode}
+    ${challengeLeadOrganisation}          | ${notAuthorizedCode}
+    ${challengeTagsets}                   | ${notAuthorizedCode}
+    ${challengeOpportunities}             | ${notAuthorizedCode}
+    ${opportunitiesName}                  | ${notAuthorizedCode}
+    ${opportunitiesTextId}                | ${notAuthorizedCode}
+    ${opportunitiesState}                 | ${notAuthorizedCode}
+    ${opportunitiesContext}               | ${notAuthorizedCode}
+    ${opportunitiesActorgroupsName}       | ${notAuthorizedCode}
+    ${opportunitiesActorGroupsActorsName} | ${notAuthorizedCode}
+    ${opportunitiesAspects}               | ${notAuthorizedCode}
+    ${opportunitiesRelationsName}         | ${notAuthorizedCode}
+    ${templatesName}                      | ${notAuthorizedCode}
+    ${templatesDescription}               | ${notAuthorizedCode}
+  `(
+    "should expect: '$expected' for query: '$query'",
+    async ({ query, expected }) => {
+      // Act
+      const requestParamsQueryData = {
+        operationName: null,
+        query: `${query}`,
+        variables: null,
+      };
+      const response = await graphqlRequest(requestParamsQueryData);
+      let responseData = JSON.stringify(response.body).replace('\\', '');
+      // console.log(responseData);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(responseData).not.toContain(expected);
+    }
+  );
+});
+
+describe('DDT anonymous user - Create mutations - Not authorized', () => {
   // Arrange
   test.each`
     mutation                             | variables                             | expected
@@ -311,7 +335,7 @@ describe('DDT anonymous user - create mutations', () => {
         query: `${mutation}`,
         variables: `${variables}`,
       };
-      const response = await graphqlRequestAuth(requestParamsCreateMutations);
+      const response = await graphqlRequest(requestParamsCreateMutations);
       let responseData = JSON.stringify(response.body).replace('\\', '');
       console.log(responseData);
 
@@ -322,7 +346,7 @@ describe('DDT anonymous user - create mutations', () => {
   );
 });
 
-describe('DDT anonymous user - update mutations', () => {
+describe('DDT anonymous user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                                  | variables                                  | expected
@@ -351,7 +375,7 @@ describe('DDT anonymous user - update mutations', () => {
         query: `${mutation}`,
         variables: `${variables}`,
       };
-      const response = await graphqlRequestAuth(requestParamsUpdateMutations);
+      const response = await graphqlRequest(requestParamsUpdateMutations);
       let responseData = JSON.stringify(response.body).replace('\\', '');
       console.log(responseData);
 
@@ -362,7 +386,7 @@ describe('DDT anonymous user - update mutations', () => {
   );
 });
 
-describe.only('DDT anonymous user - remove mutations', () => {
+describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                    | variables                    | expected
@@ -380,7 +404,7 @@ describe.only('DDT anonymous user - remove mutations', () => {
         query: `${mutation}`,
         variables: `${variables}`,
       };
-      const response = await graphqlRequestAuth(requestParamsRemoveMutations);
+      const response = await graphqlRequest(requestParamsRemoveMutations);
       let responseData = JSON.stringify(response.body).replace('\\', '');
       console.log(responseData);
 

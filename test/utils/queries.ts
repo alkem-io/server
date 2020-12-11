@@ -92,25 +92,25 @@ const challengesContributors = `{ challenges { contributors { name }}}`;
 
 const challengesOpportunities = `{ challenges { opportunities { name }}}`;
 
-const challengeName = `{ challenge(ID: 4) { name }}`;
+const challengeName = `{ challenge(ID: 1) { name }}`;
 
-const challengeTextId = `{ challenge(ID: 4) { textID }}`;
+const challengeTextId = `{ challenge(ID: 1) { textID }}`;
 
-const challengeState = `{ challenge(ID: 4) { state }}`;
+const challengeState = `{ challenge(ID: 1) { state }}`;
 
-const challengeContext = `{ challenge(ID: 4) { context { who }}}`;
+const challengeContext = `{ challenge(ID: 1) { context { who }}}`;
 
-const challengeLeadOrganisation = `{ challenge(ID: 4) { leadOrganisations { name }}}`;
+const challengeLeadOrganisation = `{ challenge(ID: 1) { leadOrganisations { name }}}`;
 
-const challengeLeadOrganisationGroups = `{ challenge(ID: 4) { leadOrganisations { groups { name }}}}`;
+const challengeLeadOrganisationGroups = `{ challenge(ID: 1) { leadOrganisations { groups { name }}}}`;
 
-const challengeTagsets = `{ challenge(ID: 4) { tagset { name }}}`;
+const challengeTagsets = `{ challenge(ID: 1) { tagset { name }}}`;
 
-const challengeGroups = `{ challenge(ID: 4) { groups { name }}}`;
+const challengeGroups = `{ challenge(ID: 1) { groups { name }}}`;
 
-const challengeContributors = `{ challenge(ID: 4) { contributors { name }}}`;
+const challengeContributors = `{ challenge(ID: 1) { contributors { name }}}`;
 
-const challengeOpportunities = `{ challenge(ID: 4) { opportunities { name }}}`;
+const challengeOpportunities = `{ challenge(ID: 1) { opportunities { name }}}`;
 
 const opportunitiesName = `{ opportunities { name }}`;
 

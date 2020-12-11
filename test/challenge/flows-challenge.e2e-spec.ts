@@ -6,12 +6,11 @@ import {
 import '../utils/array.matcher';
 import { appSingleton } from '../utils/app.singleton';
 import { getGroup } from '../group/group.request.params';
-import {
-  createUserDetailsMutation,
-  assignGroupFocalPointMutation,
-} from '../user/user.request.params';
+import { assignGroupFocalPointMutation } from '../user/user.request.params';
 
-let userName = '';
+let userNameOne = 'Evgeni Dimitrov';
+let userIdOne = '6';
+let userNameTwo = 'Valntin Yanakiev';
 let userPhone = '';
 let userEmail = '';
 let challengeName = '';
@@ -22,7 +21,6 @@ beforeEach(async () => {
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
-  userName = `testUser ${uniqueTextId}`;
   userPhone = `userPhone ${uniqueTextId}`;
   userEmail = `${uniqueTextId}@test.com`;
 });
@@ -48,28 +46,11 @@ describe('Create Challenge', () => {
     const challengeGroupId =
       responseCreateChallenge.body.data.createChallenge.groups[0].id;
 
-    // Create first User
-    const responseCreateUserOne = await createUserDetailsMutation(
-      userName,
-      userPhone,
-      userEmail
-    );
-    const firstUserId = responseCreateUserOne.body.data.createUser.id;
-    const firstUserName = responseCreateUserOne.body.data.createUser.name;
-
-    // Create second User
-    const responseCreateUserTwo = await createUserDetailsMutation(
-      userName + userName,
-      userPhone,
-      userEmail + userEmail
-    );
-    const secondUserName = responseCreateUserTwo.body.data.createUser.name;
-
     // Act
 
     // Assign first User as a focal point to the group
     const responseAddUserToGroup = await assignGroupFocalPointMutation(
-      firstUserId,
+      userIdOne,
       challengeGroupId
     );
 
@@ -86,12 +67,12 @@ describe('Create Challenge', () => {
     expect(responseAddUserToGroup.status).toBe(200);
     expect(
       responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name
-    ).toEqual(userName);
+    ).toEqual(userNameOne);
 
-    expect(groupFocalPointFromChallenge).toEqual(firstUserName);
-    expect(groupFocalPointFromChallenge).not.toEqual(secondUserName);
-    expect(groupFocalPoint).toEqual(firstUserName);
-    expect(groupFocalPoint).not.toEqual(secondUserName);
+    expect(groupFocalPointFromChallenge).toEqual(userNameOne);
+    expect(groupFocalPointFromChallenge).not.toEqual(userNameTwo);
+    expect(groupFocalPoint).toEqual(userNameOne);
+    expect(groupFocalPoint).not.toEqual(userNameTwo);
   });
 
   test('should not result unassigned users (contributors) to a challenge', async () => {
@@ -104,18 +85,11 @@ describe('Create Challenge', () => {
     );
     const challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
-    // Create a User
-    const responseCreateUserOne = await createUserDetailsMutation(
-      userName,
-      userPhone,
-      userEmail
-    );
-
     // Get users assossiated with challenge or groups within challenge
     const responseGroupQuery = await getChallengeUsers(challengeId);
 
     // Assert
-    expect(responseCreateUserOne.status).toBe(200);
+    //expect(responseCreateUserOne.status).toBe(200);
     expect(responseGroupQuery.status).toBe(200);
     expect(responseGroupQuery.body.data.challenge.contributors).toHaveLength(0);
     expect(responseGroupQuery.body.data.challenge.groups[0].focalPoint).toEqual(

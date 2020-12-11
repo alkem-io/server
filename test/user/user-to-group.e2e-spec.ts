@@ -32,7 +32,7 @@ beforeEach(() => {
   userEmail = `${uniqueId}@test.com`;
 });
 
-describe('Users and Groups', () => {
+describe.skip('Users and Groups', () => {
   beforeEach(() => {
     groupName = 'groupName ' + Math.random().toString();
   });
