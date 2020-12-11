@@ -6,7 +6,6 @@ import {
   Inject,
   LoggerService,
 } from '@nestjs/common';
-import { GqlArgumentsHost } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
 import { BaseException } from './exceptions/base.exception';
@@ -18,10 +17,11 @@ export class HttpExceptionsFilter implements ExceptionFilter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  catch(exception: BaseException, host: ArgumentsHost) {
-    const gqlHost = GqlArgumentsHost.create(host);
-    const req = gqlHost.getContext().req;
-    const url = req.originalUrl;
+  catch(exception: BaseException, _host: ArgumentsHost) {
+    // toDo vyanakiev - discuss the contextual information provided in the logged unhandled exceptions
+    // const gqlHost = GqlArgumentsHost.create(host);
+    // const req = gqlHost.getContext().req;
+    // const url = req.originalUrl;
     let context = LogContext.UNSPECIFIED;
 
     if (exception.getContext) context = exception.getContext();
