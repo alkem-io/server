@@ -15,7 +15,7 @@ mutation removeChallenge($ID: Float!) {
 
 const removeChallengeVariables = `
 {
-    "ID": 2
+    "ID": 7
   }`;
 
 const removeAspectMutation = `
@@ -45,7 +45,7 @@ mutation removeActorGroup($ID: Float!) {
 
 const removeActorGroupVariables = `
   {
-      "ID": 1
+      "ID": 6
     }`;
 
 export {

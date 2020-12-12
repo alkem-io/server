@@ -61,8 +61,7 @@ export class ProjectResolver {
     return await this.projectService.updateProject(projectID, projectData);
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
+  @Roles(    
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)

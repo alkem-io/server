@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-
 import { AppModule } from '../../src/app.module';
 import { RopcStrategy } from '../../src/utils/authentication/ropc.strategy';
 import { TestDataService } from '../../src/utils/data-management/test-data.service';
@@ -51,7 +50,7 @@ export class appSingleton {
   }
 
   async teardownServer() {
-    await appSingleton.testDataService.teardownFunctions();
+    //await appSingleton.testDataService.teardownFunctions();
     await appSingleton.testDataService.teardownDB();
     await this.app.close();
   }

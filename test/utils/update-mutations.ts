@@ -162,7 +162,7 @@ mutation addUserToChallenge($userID: Float!, $challengeID: Float!) {
 const addUserToChallengeVariables = `
 {
     "userID": 1,
-    "challengeID": 1
+    "challengeID": 4
   }`;
 
 const addUserToGroupMutation = `
@@ -234,8 +234,8 @@ mutation addChallengeLead($challengeID: Float!, $organisationID: Float!) {
 
 const addChallengeLeadToOrganisationVariables = `
 {
-    "organisationID": 1,
-    "challengeID": 1
+    "organisationID": 2,
+    "challengeID": 2
   }`;
 
 const removeUserFromGroupMutation = `

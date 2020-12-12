@@ -22,6 +22,11 @@
       "email": "valentin@cherrytwist.org",
       "firstName": "Valentin",
       "lastName": "Yanakiev"
+    },
+    {
+      "email": "ecoverse.admin@cherrytwist.org",
+      "firstName": "Ecoverse",
+      "lastName": "Admin"
     }
   ],
   "communityAdmins": [
@@ -34,6 +39,11 @@
       "email": "comoque@gmail.com",
       "firstName": "Evgeni",
       "lastName": "Dimitrov"
+    },
+    {
+      "email": "community.admin@cherrytwist.org",
+      "firstName": "Community",
+      "lastName": "Admin"
     }
   ]
 }

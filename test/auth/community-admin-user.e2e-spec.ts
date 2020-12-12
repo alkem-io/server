@@ -169,6 +169,7 @@ import {
 } from '../utils/remove-mutations';
 
 const notAuthorizedCode = `"code":"UNAUTHENTICATED"`;
+const forbiddenCode = `"code":"FORBIDDEN"`;
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -178,7 +179,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe.skip('DDT community admin user - queries - authorized', () => {
+describe('DDT community admin user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                 | expected
@@ -271,7 +272,6 @@ describe.skip('DDT community admin user - queries - authorized', () => {
         TestUser.COMMUNITY_ADMIN
       );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);
@@ -284,7 +284,7 @@ describe.skip('DDT community admin user - queries - authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe.skip('DDT community admin user - Create mutations - authorized', () => {
+describe('DDT community admin user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                            | variables                            | expected
@@ -307,7 +307,6 @@ describe.skip('DDT community admin user - Create mutations - authorized', () => 
         TestUser.COMMUNITY_ADMIN
       );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);
@@ -316,22 +315,22 @@ describe.skip('DDT community admin user - Create mutations - authorized', () => 
   );
 });
 
-describe.only('DDT community admin user - Create mutations - NOT authorized', () => {
+describe('DDT community admin user - Create mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                             | variables                             | expected
-    ${createGroupOnEcoverseMutation}     | ${createGroupOnEcoverseVariables}     | ${notAuthorizedCode}
-    ${createTemplateMutation}            | ${createTemplateVariables}            | ${notAuthorizedCode}
-    ${createChallengeMutation}           | ${createChallengeVariables}           | ${notAuthorizedCode}
-    ${createGroupOnChallengeMutation}    | ${createGroupOnChallengeVariables}    | ${notAuthorizedCode}
-    ${createOpportunityMutation}         | ${createOpportunityVariables}         | ${notAuthorizedCode}
-    ${createGroupOnOpportunityMutations} | ${createGroupOnOpportunityVariables}  | ${notAuthorizedCode}
-    ${createProjectMutation}             | ${createProjectVariables}             | ${notAuthorizedCode}
-    ${createActorGroupMutation}          | ${createActorGroupVariables}          | ${notAuthorizedCode}
-    ${createActorMutation}               | ${createActorVariables}               | ${notAuthorizedCode}
-    ${createAspectOnOpportunityMutation} | ${createAspectOnOpportunityVariables} | ${notAuthorizedCode}
-    ${createRelationMutation}            | ${createRelationVariables}            | ${notAuthorizedCode}
-    ${createAspectOnProjectMutation}     | ${createAspectOnProjectVariables}     | ${notAuthorizedCode}
+    ${createGroupOnEcoverseMutation}     | ${createGroupOnEcoverseVariables}     | ${forbiddenCode}
+    ${createTemplateMutation}            | ${createTemplateVariables}            | ${forbiddenCode}
+    ${createChallengeMutation}           | ${createChallengeVariables}           | ${forbiddenCode}
+    ${createGroupOnChallengeMutation}    | ${createGroupOnChallengeVariables}    | ${forbiddenCode}
+    ${createOpportunityMutation}         | ${createOpportunityVariables}         | ${forbiddenCode}
+    ${createGroupOnOpportunityMutations} | ${createGroupOnOpportunityVariables}  | ${forbiddenCode}
+    ${createProjectMutation}             | ${createProjectVariables}             | ${forbiddenCode}
+    ${createActorGroupMutation}          | ${createActorGroupVariables}          | ${forbiddenCode}
+    ${createActorMutation}               | ${createActorVariables}               | ${forbiddenCode}
+    ${createAspectOnOpportunityMutation} | ${createAspectOnOpportunityVariables} | ${forbiddenCode}
+    ${createRelationMutation}            | ${createRelationVariables}            | ${forbiddenCode}
+    ${createAspectOnProjectMutation}     | ${createAspectOnProjectVariables}     | ${forbiddenCode}
   `(
     "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
@@ -346,7 +345,6 @@ describe.only('DDT community admin user - Create mutations - NOT authorized', ()
         TestUser.COMMUNITY_ADMIN
       );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);
@@ -355,7 +353,7 @@ describe.only('DDT community admin user - Create mutations - NOT authorized', ()
   );
 });
 
-describe.skip('DDT community admin user - Update mutations - authorized', () => {
+describe('DDT community admin user - Update mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                                  | variables                                  | expected
@@ -385,7 +383,6 @@ describe.skip('DDT community admin user - Update mutations - authorized', () => 
         TestUser.COMMUNITY_ADMIN
       );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);
@@ -394,14 +391,14 @@ describe.skip('DDT community admin user - Update mutations - authorized', () => 
   );
 });
 
-describe.only('DDT community admin user - Update mutations - NOT authorized', () => {
+describe('DDT community admin user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                     | variables                     | expected
-    ${updateChallengeMutation}   | ${updateChallengeVariables}   | ${notAuthorizedCode}
-    ${updateOpportunityMutation} | ${updateOpportunityVariables} | ${notAuthorizedCode}
-    ${updateAspectMutation}      | ${updateAspectVariable}       | ${notAuthorizedCode}
-    ${updateActorMutation}       | ${updateActorVariables}       | ${notAuthorizedCode}
+    ${updateChallengeMutation}   | ${updateChallengeVariables}   | ${forbiddenCode}
+    ${updateOpportunityMutation} | ${updateOpportunityVariables} | ${forbiddenCode}
+    ${updateAspectMutation}      | ${updateAspectVariable}       | ${forbiddenCode}
+    ${updateActorMutation}       | ${updateActorVariables}       | ${forbiddenCode}
   `(
     "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
@@ -416,7 +413,6 @@ describe.only('DDT community admin user - Update mutations - NOT authorized', ()
         TestUser.COMMUNITY_ADMIN
       );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);
@@ -444,7 +440,6 @@ describe('DDT community admin user - Remove mutations - authorized', () => {
         TestUser.COMMUNITY_ADMIN
       );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);
@@ -453,14 +448,14 @@ describe('DDT community admin user - Remove mutations - authorized', () => {
   );
 });
 
-describe.only('DDT community admin user - Remove mutations - NOT authorized', () => {
+describe('DDT community admin user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                    | variables                    | expected
-    ${removeChallengeMutation}  | ${removeChallengeVariables}  | ${notAuthorizedCode}
-    ${removeAspectMutation}     | ${removeAspectVariables}     | ${notAuthorizedCode}
-    ${removeActorMutation}      | ${removeActorVariables}      | ${notAuthorizedCode}
-    ${removeActorGroupMutation} | ${removeActorGroupVariables} | ${notAuthorizedCode}
+    ${removeChallengeMutation}  | ${removeChallengeVariables}  | ${forbiddenCode}
+    ${removeAspectMutation}     | ${removeAspectVariables}     | ${forbiddenCode}
+    ${removeActorGroupMutation} | ${removeActorGroupVariables} | ${forbiddenCode}
+    ${removeActorMutation}      | ${removeActorVariables}      | ${forbiddenCode}
   `(
     "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
@@ -475,7 +470,6 @@ describe.only('DDT community admin user - Remove mutations - NOT authorized', ()
         TestUser.COMMUNITY_ADMIN
       );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);

@@ -1,4 +1,5 @@
 import { graphqlRequest, graphqlRequestAuth } from '../utils/graphql.request';
+import { TestUser } from '../utils/token.helper';
 import '../utils/array.matcher';
 import { appSingleton } from '../utils/app.singleton';
 import {
@@ -177,82 +178,13 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT anonymous user - queries - Not authorized', () => {
-  // Arrange
-  test.each`
-    query                               | expected
-    ${hostGroups}                       | ${notAuthorizedCode}
-    ${hostMembers}                      | ${notAuthorizedCode}
-    ${usersName}                        | ${notAuthorizedCode}
-    ${usersAccountUPN}                  | ${notAuthorizedCode}
-    ${usersProfile}                     | ${notAuthorizedCode}
-    ${usersMemberofGroupsName}          | ${notAuthorizedCode}
-    ${usersMemberofChallengesName}      | ${notAuthorizedCode}
-    ${usersMemberofOrganisationsName}   | ${notAuthorizedCode}
-    ${userName}                         | ${notAuthorizedCode}
-    ${userAccountUPN}                   | ${notAuthorizedCode}
-    ${userProfile}                      | ${notAuthorizedCode}
-    ${userMemberofGroupsName}           | ${notAuthorizedCode}
-    ${userMemberofChallengesName}       | ${notAuthorizedCode}
-    ${userMemberofOrganisationsName}    | ${notAuthorizedCode}
-    ${usersById}                        | ${notAuthorizedCode}
-    ${groupsName}                       | ${notAuthorizedCode}
-    ${groupsFocalPointName}             | ${notAuthorizedCode}
-    ${groupsProfile}                    | ${notAuthorizedCode}
-    ${groupsMembersName}                | ${notAuthorizedCode}
-    ${groupsParentChallenge}            | ${notAuthorizedCode}
-    ${groupsParentEcoverse}             | ${notAuthorizedCode}
-    ${groupsParentOpportunity}          | ${notAuthorizedCode}
-    ${groupsWithTagName}                | ${notAuthorizedCode}
-    ${groupsWithTagFocalPointName}      | ${notAuthorizedCode}
-    ${groupsWithTagProfile}             | ${notAuthorizedCode}
-    ${groupsWithTagMembersName}         | ${notAuthorizedCode}
-    ${groupsWithTagParentChallenge}     | ${notAuthorizedCode}
-    ${groupsWithTagParentEcoverse}      | ${notAuthorizedCode}
-    ${groupsWithTagParentOpportunity}   | ${notAuthorizedCode}
-    ${challengesLeadOrganisationGroups} | ${notAuthorizedCode}
-    ${challengesContributors}           | ${notAuthorizedCode}
-    ${challengesGroups}                 | ${notAuthorizedCode}
-    ${challengeLeadOrganisationGroups}  | ${notAuthorizedCode}
-    ${challengeContributors}            | ${notAuthorizedCode}
-    ${challengeGroups}                  | ${notAuthorizedCode}
-    ${opportunitiesContributors}        | ${notAuthorizedCode}
-    ${opportunitiesGroups}              | ${notAuthorizedCode}
-    ${projectsName}                     | ${notAuthorizedCode}
-    ${projectsTextId}                   | ${notAuthorizedCode}
-    ${projectsDescription}              | ${notAuthorizedCode}
-    ${projectsState}                    | ${notAuthorizedCode}
-    ${projectsTagset}                   | ${notAuthorizedCode}
-    ${projectsAspects}                  | ${notAuthorizedCode}
-  `(
-    "should expect: '$expected' for query: '$query'",
-    async ({ query, expected }) => {
-      // Act
-      const requestParamsQueryData = {
-        operationName: null,
-        query: `${query}`,
-        variables: null,
-      };
-      const response = await graphqlRequest(requestParamsQueryData);
-      let responseData = JSON.stringify(response.body).replace('\\', '');
-      // 
-
-      // Assert
-      expect(response.status).toBe(200);
-      expect(responseData).toContain(expected);
-    }
-  );
-});
-
-// Failing scenarios BUG: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/578
-// ${opportunitiesProjectsId}          | ${notAuthorizedCode}
-// ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
-
-describe('DDT anonymous user - queries - authorized', () => {
+describe('DDT ecoverse admin user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                 | expected
     ${name}                               | ${notAuthorizedCode}
+    ${hostGroups}                         | ${notAuthorizedCode}
+    ${hostMembers}                        | ${notAuthorizedCode}
     ${hostProfile}                        | ${notAuthorizedCode}
     ${contextTagline}                     | ${notAuthorizedCode}
     ${contextBackground}                  | ${notAuthorizedCode}
@@ -260,28 +192,69 @@ describe('DDT anonymous user - queries - authorized', () => {
     ${contextWho}                         | ${notAuthorizedCode}
     ${contextImpact}                      | ${notAuthorizedCode}
     ${contextReferencesName}              | ${notAuthorizedCode}
+    ${usersName}                          | ${notAuthorizedCode}
+    ${usersAccountUPN}                    | ${notAuthorizedCode}
+    ${usersProfile}                       | ${notAuthorizedCode}
+    ${usersMemberofGroupsName}            | ${notAuthorizedCode}
+    ${usersMemberofChallengesName}        | ${notAuthorizedCode}
+    ${usersMemberofOrganisationsName}     | ${notAuthorizedCode}
+    ${userName}                           | ${notAuthorizedCode}
+    ${userAccountUPN}                     | ${notAuthorizedCode}
+    ${userProfile}                        | ${notAuthorizedCode}
+    ${userMemberofGroupsName}             | ${notAuthorizedCode}
+    ${userMemberofChallengesName}         | ${notAuthorizedCode}
+    ${userMemberofOrganisationsName}      | ${notAuthorizedCode}
+    ${usersById}                          | ${notAuthorizedCode}
+    ${groupsName}                         | ${notAuthorizedCode}
+    ${groupsFocalPointName}               | ${notAuthorizedCode}
+    ${groupsProfile}                      | ${notAuthorizedCode}
+    ${groupsMembersName}                  | ${notAuthorizedCode}
+    ${groupsParentChallenge}              | ${notAuthorizedCode}
+    ${groupsParentEcoverse}               | ${notAuthorizedCode}
+    ${groupsParentOpportunity}            | ${notAuthorizedCode}
+    ${groupsWithTagName}                  | ${notAuthorizedCode}
+    ${groupsWithTagFocalPointName}        | ${notAuthorizedCode}
+    ${groupsWithTagProfile}               | ${notAuthorizedCode}
+    ${groupsWithTagMembersName}           | ${notAuthorizedCode}
+    ${groupsWithTagParentChallenge}       | ${notAuthorizedCode}
+    ${groupsWithTagParentEcoverse}        | ${notAuthorizedCode}
+    ${groupsWithTagParentOpportunity}     | ${notAuthorizedCode}
     ${challengesName}                     | ${notAuthorizedCode}
     ${challengesTextId}                   | ${notAuthorizedCode}
     ${challengesState}                    | ${notAuthorizedCode}
     ${challengesContext}                  | ${notAuthorizedCode}
     ${challengesLeadOrganisation}         | ${notAuthorizedCode}
+    ${challengesLeadOrganisationGroups}   | ${notAuthorizedCode}
+    ${challengesContributors}             | ${notAuthorizedCode}
     ${challengesTagsets}                  | ${notAuthorizedCode}
+    ${challengesGroups}                   | ${notAuthorizedCode}
     ${challengesOpportunities}            | ${notAuthorizedCode}
     ${challengeName}                      | ${notAuthorizedCode}
     ${challengeTextId}                    | ${notAuthorizedCode}
     ${challengeState}                     | ${notAuthorizedCode}
     ${challengeContext}                   | ${notAuthorizedCode}
     ${challengeLeadOrganisation}          | ${notAuthorizedCode}
+    ${challengeLeadOrganisationGroups}    | ${notAuthorizedCode}
+    ${challengeContributors}              | ${notAuthorizedCode}
     ${challengeTagsets}                   | ${notAuthorizedCode}
+    ${challengeGroups}                    | ${notAuthorizedCode}
     ${challengeOpportunities}             | ${notAuthorizedCode}
     ${opportunitiesName}                  | ${notAuthorizedCode}
     ${opportunitiesTextId}                | ${notAuthorizedCode}
     ${opportunitiesState}                 | ${notAuthorizedCode}
     ${opportunitiesContext}               | ${notAuthorizedCode}
+    ${opportunitiesContributors}          | ${notAuthorizedCode}
+    ${opportunitiesGroups}                | ${notAuthorizedCode}
     ${opportunitiesActorgroupsName}       | ${notAuthorizedCode}
     ${opportunitiesActorGroupsActorsName} | ${notAuthorizedCode}
     ${opportunitiesAspects}               | ${notAuthorizedCode}
     ${opportunitiesRelationsName}         | ${notAuthorizedCode}
+    ${projectsName}                       | ${notAuthorizedCode}
+    ${projectsTextId}                     | ${notAuthorizedCode}
+    ${projectsDescription}                | ${notAuthorizedCode}
+    ${projectsState}                      | ${notAuthorizedCode}
+    ${projectsTagset}                     | ${notAuthorizedCode}
+    ${projectsAspects}                    | ${notAuthorizedCode}
     ${templatesName}                      | ${notAuthorizedCode}
     ${templatesDescription}               | ${notAuthorizedCode}
   `(
@@ -293,9 +266,11 @@ describe('DDT anonymous user - queries - authorized', () => {
         query: `${query}`,
         variables: null,
       };
-      const response = await graphqlRequest(requestParamsQueryData);
+      const response = await graphqlRequestAuth(
+        requestParamsQueryData,
+        TestUser.ECOVERSE_ADMIN
+      );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      // 
 
       // Assert
       expect(response.status).toBe(200);
@@ -304,15 +279,20 @@ describe('DDT anonymous user - queries - authorized', () => {
   );
 });
 
-describe('DDT anonymous user - Create mutations - Not authorized', () => {
+// Failing scenarios BUG: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/578
+// ${opportunitiesProjectsId}          | ${notAuthorizedCode}
+// ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
+
+describe('DDT ecoverse admin user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                             | variables                             | expected
     ${createOrganisationMutation}        | ${createOrganisationVariables}        | ${notAuthorizedCode}
-    ${createGroupOnEcoverseMutation}     | ${createGroupOnEcoverseVariables}     | ${notAuthorizedCode}
-    ${createOrganisationMutation}        | ${createOrganisationVariables}        | ${notAuthorizedCode}
     ${createUserMutation}                | ${createUserVariables}                | ${notAuthorizedCode}
     ${createReferenceOnProfileMutation}  | ${createReferenceOnProfileVariable}   | ${notAuthorizedCode}
+    ${createReferenceOnContextMutation}  | ${createReferenceOnContextVariables}  | ${notAuthorizedCode}
+    ${createTagsetOnProfileMutation}     | ${createTagsetOnProfileVariables}     | ${notAuthorizedCode}
+    ${createGroupOnEcoverseMutation}     | ${createGroupOnEcoverseVariables}     | ${notAuthorizedCode}
     ${createTemplateMutation}            | ${createTemplateVariables}            | ${notAuthorizedCode}
     ${createChallengeMutation}           | ${createChallengeVariables}           | ${notAuthorizedCode}
     ${createGroupOnChallengeMutation}    | ${createGroupOnChallengeVariables}    | ${notAuthorizedCode}
@@ -324,8 +304,6 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
     ${createAspectOnOpportunityMutation} | ${createAspectOnOpportunityVariables} | ${notAuthorizedCode}
     ${createRelationMutation}            | ${createRelationVariables}            | ${notAuthorizedCode}
     ${createAspectOnProjectMutation}     | ${createAspectOnProjectVariables}     | ${notAuthorizedCode}
-    ${createReferenceOnContextMutation}  | ${createReferenceOnContextVariables}  | ${notAuthorizedCode}
-    ${createTagsetOnProfileMutation}     | ${createTagsetOnProfileVariables}     | ${notAuthorizedCode}
   `(
     "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
@@ -335,28 +313,26 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
         query: `${mutation}`,
         variables: `${variables}`,
       };
-      const response = await graphqlRequest(requestParamsCreateMutations);
+      const response = await graphqlRequestAuth(
+        requestParamsCreateMutations,
+        TestUser.ECOVERSE_ADMIN
+      );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      
 
       // Assert
       expect(response.status).toBe(200);
-      expect(responseData).toContain(expected);
+      expect(responseData).not.toContain(expected);
     }
   );
 });
 
-describe('DDT anonymous user - Update mutations - NOT authorized', () => {
+describe('DDT ecoverse admin user - Update mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                                  | variables                                  | expected
     ${updateUserMutation}                     | ${updateUserVariables}                     | ${notAuthorizedCode}
     ${updateProfileMutation}                  | ${updateProfileVariables}                  | ${notAuthorizedCode}
     ${updateOrganisationMutation}             | ${updateOrganisationVariabls}              | ${notAuthorizedCode}
-    ${updateChallengeMutation}                | ${updateChallengeVariables}                | ${notAuthorizedCode}
-    ${updateOpportunityMutation}              | ${updateOpportunityVariables}              | ${notAuthorizedCode}
-    ${updateAspectMutation}                   | ${updateAspectVariable}                    | ${notAuthorizedCode}
-    ${updateActorMutation}                    | ${updateActorVariables}                    | ${notAuthorizedCode}
     ${addTagsOnTagsetMutation}                | ${addTagsOnTagsetVariables}                | ${notAuthorizedCode}
     ${replaceTagsOnTagsetMutation}            | ${replaceTagsOnTagsetVariables}            | ${notAuthorizedCode}
     ${addUserToChallengeMutation}             | ${addUserToChallengeVariables}             | ${notAuthorizedCode}
@@ -366,6 +342,10 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
     ${removeGroupFocalPointMutation}          | ${removeGroupFocalPointVariables}          | ${notAuthorizedCode}
     ${addChallengeLeadToOrganisationMutation} | ${addChallengeLeadToOrganisationVariables} | ${notAuthorizedCode}
     ${removeUserFromGroupMutation}            | ${removeUserFromGroupVariables}            | ${notAuthorizedCode}
+    ${updateChallengeMutation}                | ${updateChallengeVariables}                | ${notAuthorizedCode}
+    ${updateOpportunityMutation}              | ${updateOpportunityVariables}              | ${notAuthorizedCode}
+    ${updateAspectMutation}                   | ${updateAspectVariable}                    | ${notAuthorizedCode}
+    ${updateActorMutation}                    | ${updateActorVariables}                    | ${notAuthorizedCode}
   `(
     "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
@@ -375,26 +355,28 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
         query: `${mutation}`,
         variables: `${variables}`,
       };
-      const response = await graphqlRequest(requestParamsUpdateMutations);
+      const response = await graphqlRequestAuth(
+        requestParamsUpdateMutations,
+        TestUser.ECOVERSE_ADMIN
+      );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      
 
       // Assert
       expect(response.status).toBe(200);
-      expect(responseData).toContain(expected);
+      expect(responseData).not.toContain(expected);
     }
   );
 });
 
-describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
+describe('DDT ecoverse admin user - Remove mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                    | variables                    | expected
-    ${removeUserMutation}       | ${removeUserVariables}       | ${notAuthorizedCode}
-    ${removeChallengeMutation}  | ${removeChallengeVariables}  | ${notAuthorizedCode}
-    ${removeAspectMutation}     | ${removeAspectVariables}     | ${notAuthorizedCode}
-    ${removeActorMutation}      | ${removeActorVariables}      | ${notAuthorizedCode}
     ${removeActorGroupMutation} | ${removeActorGroupVariables} | ${notAuthorizedCode}
+    ${removeActorMutation}      | ${removeActorVariables}      | ${notAuthorizedCode}
+    ${removeAspectMutation}     | ${removeAspectVariables}     | ${notAuthorizedCode}
+    ${removeChallengeMutation}  | ${removeChallengeVariables}  | ${notAuthorizedCode}
+    ${removeUserMutation}       | ${removeUserVariables}       | ${notAuthorizedCode}
   `(
     "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
@@ -404,13 +386,15 @@ describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
         query: `${mutation}`,
         variables: `${variables}`,
       };
-      const response = await graphqlRequest(requestParamsRemoveMutations);
+      const response = await graphqlRequestAuth(
+        requestParamsRemoveMutations,
+        TestUser.ECOVERSE_ADMIN
+      );
       let responseData = JSON.stringify(response.body).replace('\\', '');
-      
 
       // Assert
       expect(response.status).toBe(200);
-      expect(responseData).toContain(expected);
+      expect(responseData).not.toContain(expected);
     }
   );
 });

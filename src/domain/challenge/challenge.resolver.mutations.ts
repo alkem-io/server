@@ -24,7 +24,6 @@ export class ChallengeResolverMutations {
   ) {}
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
@@ -44,7 +43,6 @@ export class ChallengeResolverMutations {
   }
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)

@@ -85,7 +85,6 @@ export class OpportunityResolver {
   }
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
@@ -105,7 +104,6 @@ export class OpportunityResolver {
   }
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
@@ -125,7 +123,6 @@ export class OpportunityResolver {
   }
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
@@ -146,7 +143,6 @@ export class OpportunityResolver {
   }
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
@@ -166,7 +162,6 @@ export class OpportunityResolver {
   }
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
   @UseGuards(GqlAuthGuard)
