@@ -22,7 +22,11 @@ export class HttpExceptionsFilter implements ExceptionFilter {
     // const gqlHost = GqlArgumentsHost.create(host);
     // const req = gqlHost.getContext().req;
     // const url = req.originalUrl;
+
     let context = LogContext.UNSPECIFIED;
+
+    //short-circuit favicon. We don't serve static content. Once data-management is removed from this server, remove this.
+    if (exception.message.includes('favicon')) return exception;
 
     if (exception.getContext) context = exception.getContext();
 
