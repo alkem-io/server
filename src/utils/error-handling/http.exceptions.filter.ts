@@ -25,9 +25,6 @@ export class HttpExceptionsFilter implements ExceptionFilter {
 
     let context = LogContext.UNSPECIFIED;
 
-    //short-circuit favicon. We don't serve static content. Once data-management is removed from this server, remove this.
-    if (exception.message.includes('favicon')) return exception;
-
     if (exception.getContext) context = exception.getContext();
 
     this.logger.error(exception.message, exception.stack, context);

@@ -5,7 +5,7 @@ import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.fil
 import { IServiceConfig } from './interfaces/service.config.interface';
 import { BootstrapService } from './utils/bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { dataManagementMiddleware } from './utils/middleware/data-management.middleware';
+import { faviconMiddleware } from './utils/middleware/favicon.middleware';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -20,7 +20,7 @@ const bootstrap = async () => {
     origin: configService.get<IServiceConfig>('service')?.corsOrigin,
   });
 
-  app.use(dataManagementMiddleware);
+  app.use(faviconMiddleware);
 
   await app.listen(
     configService.get<IServiceConfig>('service')?.graphqlEndpointPort as number
