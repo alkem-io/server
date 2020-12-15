@@ -2,8 +2,8 @@ import {
   addUserToChallangeMutation,
   createChallangeMutation,
 } from './challenge.request.params';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
+import '../../utils/array.matcher';
+import { appSingleton } from '../../utils/app.singleton';
 import { createGroupOnChallengeMutation } from '../group/group.request.params';
 import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
 

@@ -1,7 +1,7 @@
 import { createUserMutation, removeUserMutation } from './user.request.params';
-import { graphqlRequest } from '../utils/graphql.request';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
+import { graphqlRequest } from '../../utils/graphql.request';
+import '../../utils/array.matcher';
+import { appSingleton } from '../../utils/app.singleton';
 
 let userFirstName = '';
 let userLastName = '';

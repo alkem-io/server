@@ -2,10 +2,10 @@ import {
   createChallangeMutation,
   removeChallangeMutation,
 } from './challenge.request.params';
-import { graphqlRequestAuth } from '../utils/graphql.request';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
-import { TestUser } from '../utils/token.helper';
+import { graphqlRequestAuth } from '../../utils/graphql.request';
+import '../../utils/array.matcher';
+import { appSingleton } from '../../utils/app.singleton';
+import { TestUser } from '../../utils/token.helper';
 
 let challengeName = '';
 let uniqueTextId = '';

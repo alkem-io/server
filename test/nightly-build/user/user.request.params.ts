@@ -1,5 +1,5 @@
-import { TestUser } from '../utils/token.helper';
-import { graphqlRequestAuth } from '../utils/graphql.request';
+import { TestUser } from '../../utils/token.helper';
+import { graphqlRequestAuth } from '../../utils/graphql.request';
 
 export const createUserMutation = async (userName: string) => {
   const requestParams = {

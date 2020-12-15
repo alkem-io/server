@@ -1,5 +1,5 @@
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
+import '../../utils/array.matcher';
+import { appSingleton } from '../../utils/app.singleton';
 import { createChallangeMutation } from '../challenge/challenge.request.params';
 import {
   createOpportunityOnChallengeMutation,
