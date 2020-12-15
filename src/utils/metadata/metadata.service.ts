@@ -6,6 +6,7 @@ import { IClientMetadata } from './client-metadata/client.metadata.interface';
 import { IUxTemplate } from './client-metadata/template/template.interface';
 import { IMetadata } from './metadata.interface';
 import { IServerMetadata } from './server-metadata/server.metadata.interface';
+import * as uxTemplate from '../../templates/ux-template.json';
 
 @Injectable()
 export class MetadataService {
@@ -41,34 +42,10 @@ export class MetadataService {
   }
 
   async getTemplate(): Promise<IUxTemplate> {
-    return {
-      name: 'default-ux-template',
-      description:
-        'sample ecoverse template based on Odyssey ecoverse setup; used by CT Web Client to configure the display / options to end users',
-      users: [
-        {
-          name: 'default',
-          tagsets: ['skills', 'keywords'],
-        },
-      ],
-      opportunities: [
-        {
-          name: 'default',
-          actorGroups: ['keyUsers', 'stakeholders'],
-          aspects: [
-            'prototype',
-            'economic-win',
-            'board_member_feedback',
-            'building_blocks',
-            'legal_aspects',
-            'opensource_license',
-            'identity_role',
-            'cso',
-            'international_standards',
-          ],
-          relations: ['members', 'groups'],
-        },
-      ],
+    const template = {
+      ...uxTemplate,
     };
+
+    return template as IUxTemplate;
   }
 }
