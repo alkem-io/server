@@ -29,13 +29,13 @@ import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
 import msGraphConfig from './utils/config/ms-graph.config';
 import { WinstonModule } from 'nest-winston';
 import aadClientConfig from './utils/config/aad.client.config';
-import { CherrytwistConfigModule } from './utils/cherrytwist-config/cherrytwist-config.module';
 import { WinstonConfigService } from './utils/config/winston.config';
 import loggingConfig from './utils/config/logging.config';
 import { SearchModule } from './utils/search/search.module';
 import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
 import aadRopcConfig from './utils/config/aad.ropc.config';
+import { MetadataModule } from './utils/metadata/metadata.module';
 
 @Module({
   imports: [
@@ -88,7 +88,7 @@ import aadRopcConfig from './utils/config/aad.ropc.config';
     TagsetModule,
     UserModule,
     UserGroupModule,
-    CherrytwistConfigModule,
+    MetadataModule,
     GraphQLModule.forRoot({
       autoSchemaFile: true,
       playground: true,
