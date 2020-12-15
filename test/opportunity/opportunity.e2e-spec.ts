@@ -3,7 +3,9 @@ import { appSingleton } from '../utils/app.singleton';
 import { createChallangeMutation } from '../challenge/challenge.request.params';
 import {
   createOpportunityOnChallengeMutation,
+  queryOpportunities,
   queryOpportunity,
+  removeOpportunityMutation,
   updateOpportunityOnChallengeMutation,
 } from './opportunity.request.params';
 
@@ -32,15 +34,16 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
+beforeEach(async () => {
+  const responseCreateChallenge = await createChallangeMutation(
+    challengeName,
+    uniqueTextId
+  );
+  challengeId = responseCreateChallenge.body.data.createChallenge.id;
+});
+
 describe('Opportunities', () => {
   test('should create opportunity and query the data', async () => {
-    // Arrange
-    const responseCreateChallenge = await createChallangeMutation(
-      challengeName,
-      uniqueTextId
-    );
-    challengeId = responseCreateChallenge.body.data.createChallenge.id;
-
     // Act
     // Create Opportunity
     const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
@@ -69,13 +72,6 @@ describe('Opportunities', () => {
 
   test('should update opportunity and query the data', async () => {
     // Arrange
-    // Create a Challenge
-    const responseCreateChallenge = await createChallangeMutation(
-      challengeName,
-      uniqueTextId
-    );
-    challengeId = responseCreateChallenge.body.data.createChallenge.id;
-
     // Create Opportunity on Challenge
     const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
       challengeId,
@@ -103,5 +99,59 @@ describe('Opportunities', () => {
     // Assert
     expect(responseUpdateOpportunity.status).toBe(200);
     expect(updateOpportunityData).toEqual(requestOpportunityData);
+  });
+
+  test('should remove opportunity and query the data', async () => {
+    // Arrange
+    // Create Opportunity
+    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+      challengeId,
+      opportunityName,
+      opportunityTextId
+    );
+
+    opportunityId =
+      responseCreateOpportunityOnChallenge.body.data
+        .createOpportunityOnChallenge.id;
+
+    // Act
+    // Remove opportunity
+    const removeOpportunityResponse = await removeOpportunityMutation(
+      opportunityId
+    );
+
+    // Query Opportunity data
+    const requestQueryOpportunity = await queryOpportunity(opportunityId);
+
+    // Assert
+    expect(responseCreateOpportunityOnChallenge.status).toBe(200);
+    expect(removeOpportunityResponse.body.data.removeOpportunity).toEqual(true);
+    expect(requestQueryOpportunity.body.errors[0].message).toEqual(
+      `Unable to find Opportunity with ID: ${opportunityId}`
+    );
+  });
+
+  test('should get all opportunities', async () => {
+    // Arrange
+    // Create Opportunity
+    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+      challengeId,
+      opportunityName,
+      opportunityTextId
+    );
+
+    opportunityName =
+      responseCreateOpportunityOnChallenge.body.data
+        .createOpportunityOnChallenge.name;
+
+    // Act
+    // Get all opportunities
+    const getAllOpportunityResponse = await queryOpportunities();
+
+    // Assert
+    expect(responseCreateOpportunityOnChallenge.status).toBe(200);
+    expect(getAllOpportunityResponse.body.data.opportunities).toContainObject({
+      name: `${opportunityName}`,
+    });
   });
 });
