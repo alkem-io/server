@@ -22,6 +22,7 @@ export class HttpExceptionsFilter implements ExceptionFilter {
     // const gqlHost = GqlArgumentsHost.create(host);
     // const req = gqlHost.getContext().req;
     // const url = req.originalUrl;
+
     let context = LogContext.UNSPECIFIED;
 
     if (exception.getContext) context = exception.getContext();
