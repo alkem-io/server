@@ -77,9 +77,6 @@ import {
   projectsState,
   projectsTagset,
   projectsAspects,
-  templatesName,
-  templatesDescription,
-  templatesUsersName,
 } from '../utils/queries';
 
 import {
@@ -91,8 +88,6 @@ import {
   createUserVariables,
   createReferenceOnProfileMutation,
   createReferenceOnProfileVariable,
-  createTemplateMutation,
-  createTemplateVariables,
   createChallengeMutation,
   createChallengeVariables,
   createGroupOnChallengeMutation,
@@ -167,7 +162,7 @@ import {
   removeActorGroupVariables,
 } from '../utils/remove-mutations';
 
-const notAuthorizedCode = `"code":"UNAUTHENTICATED"`;
+const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -234,8 +229,8 @@ describe('DDT anonymous user - queries - Not authorized', () => {
         variables: null,
       };
       const response = await graphqlRequest(requestParamsQueryData);
-      let responseData = JSON.stringify(response.body).replace('\\', '');
-      // 
+      const responseData = JSON.stringify(response.body).replace('\\', '');
+      //
 
       // Assert
       expect(response.status).toBe(200);
@@ -282,8 +277,6 @@ describe('DDT anonymous user - queries - authorized', () => {
     ${opportunitiesActorGroupsActorsName} | ${notAuthorizedCode}
     ${opportunitiesAspects}               | ${notAuthorizedCode}
     ${opportunitiesRelationsName}         | ${notAuthorizedCode}
-    ${templatesName}                      | ${notAuthorizedCode}
-    ${templatesDescription}               | ${notAuthorizedCode}
   `(
     "should expect: '$expected' for query: '$query'",
     async ({ query, expected }) => {
@@ -294,8 +287,8 @@ describe('DDT anonymous user - queries - authorized', () => {
         variables: null,
       };
       const response = await graphqlRequest(requestParamsQueryData);
-      let responseData = JSON.stringify(response.body).replace('\\', '');
-      // 
+      const responseData = JSON.stringify(response.body).replace('\\', '');
+      //
 
       // Assert
       expect(response.status).toBe(200);
@@ -313,7 +306,6 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
     ${createOrganisationMutation}        | ${createOrganisationVariables}        | ${notAuthorizedCode}
     ${createUserMutation}                | ${createUserVariables}                | ${notAuthorizedCode}
     ${createReferenceOnProfileMutation}  | ${createReferenceOnProfileVariable}   | ${notAuthorizedCode}
-    ${createTemplateMutation}            | ${createTemplateVariables}            | ${notAuthorizedCode}
     ${createChallengeMutation}           | ${createChallengeVariables}           | ${notAuthorizedCode}
     ${createGroupOnChallengeMutation}    | ${createGroupOnChallengeVariables}    | ${notAuthorizedCode}
     ${createOpportunityMutation}         | ${createOpportunityVariables}         | ${notAuthorizedCode}
@@ -336,8 +328,7 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
         variables: `${variables}`,
       };
       const response = await graphqlRequest(requestParamsCreateMutations);
-      let responseData = JSON.stringify(response.body).replace('\\', '');
-      
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);
@@ -376,8 +367,7 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
         variables: `${variables}`,
       };
       const response = await graphqlRequest(requestParamsUpdateMutations);
-      let responseData = JSON.stringify(response.body).replace('\\', '');
-      
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);
@@ -405,8 +395,7 @@ describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
         variables: `${variables}`,
       };
       const response = await graphqlRequest(requestParamsRemoveMutations);
-      let responseData = JSON.stringify(response.body).replace('\\', '');
-      
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);

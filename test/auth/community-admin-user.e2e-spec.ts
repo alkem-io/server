@@ -78,9 +78,6 @@ import {
   projectsState,
   projectsTagset,
   projectsAspects,
-  templatesName,
-  templatesDescription,
-  templatesUsersName,
 } from '../utils/queries';
 
 import {
@@ -92,8 +89,6 @@ import {
   createUserVariables,
   createReferenceOnProfileMutation,
   createReferenceOnProfileVariable,
-  createTemplateMutation,
-  createTemplateVariables,
   createChallengeMutation,
   createChallengeVariables,
   createGroupOnChallengeMutation,
@@ -168,8 +163,8 @@ import {
   removeActorGroupVariables,
 } from '../utils/remove-mutations';
 
-const notAuthorizedCode = `"code":"UNAUTHENTICATED"`;
-const forbiddenCode = `"code":"FORBIDDEN"`;
+const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
+const forbiddenCode = '"code":"FORBIDDEN"';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -256,10 +251,8 @@ describe('DDT community admin user - queries - authorized', () => {
     ${projectsState}                      | ${notAuthorizedCode}
     ${projectsTagset}                     | ${notAuthorizedCode}
     ${projectsAspects}                    | ${notAuthorizedCode}
-    ${templatesName}                      | ${notAuthorizedCode}
-    ${templatesDescription}               | ${notAuthorizedCode}
   `(
-    "should expect: '$expected' for query: '$query'",
+    'should expect: \'$expected\' for query: \'$query\'',
     async ({ query, expected }) => {
       // Act
       const requestParamsQueryData = {
@@ -271,7 +264,7 @@ describe('DDT community admin user - queries - authorized', () => {
         requestParamsQueryData,
         TestUser.COMMUNITY_ADMIN
       );
-      let responseData = JSON.stringify(response.body).replace('\\', '');
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);
@@ -294,7 +287,7 @@ describe('DDT community admin user - Create mutations - authorized', () => {
     ${createReferenceOnContextMutation} | ${createReferenceOnContextVariables} | ${notAuthorizedCode}
     ${createTagsetOnProfileMutation}    | ${createTagsetOnProfileVariables}    | ${notAuthorizedCode}
   `(
-    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -306,7 +299,7 @@ describe('DDT community admin user - Create mutations - authorized', () => {
         requestParamsCreateMutations,
         TestUser.COMMUNITY_ADMIN
       );
-      let responseData = JSON.stringify(response.body).replace('\\', '');
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);
@@ -320,7 +313,6 @@ describe('DDT community admin user - Create mutations - NOT authorized', () => {
   test.each`
     mutation                             | variables                             | expected
     ${createGroupOnEcoverseMutation}     | ${createGroupOnEcoverseVariables}     | ${forbiddenCode}
-    ${createTemplateMutation}            | ${createTemplateVariables}            | ${forbiddenCode}
     ${createChallengeMutation}           | ${createChallengeVariables}           | ${forbiddenCode}
     ${createGroupOnChallengeMutation}    | ${createGroupOnChallengeVariables}    | ${forbiddenCode}
     ${createOpportunityMutation}         | ${createOpportunityVariables}         | ${forbiddenCode}
@@ -332,7 +324,7 @@ describe('DDT community admin user - Create mutations - NOT authorized', () => {
     ${createRelationMutation}            | ${createRelationVariables}            | ${forbiddenCode}
     ${createAspectOnProjectMutation}     | ${createAspectOnProjectVariables}     | ${forbiddenCode}
   `(
-    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -344,7 +336,7 @@ describe('DDT community admin user - Create mutations - NOT authorized', () => {
         requestParamsCreateMutations,
         TestUser.COMMUNITY_ADMIN
       );
-      let responseData = JSON.stringify(response.body).replace('\\', '');
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);
@@ -370,7 +362,7 @@ describe('DDT community admin user - Update mutations - authorized', () => {
     ${addChallengeLeadToOrganisationMutation} | ${addChallengeLeadToOrganisationVariables} | ${notAuthorizedCode}
     ${removeUserFromGroupMutation}            | ${removeUserFromGroupVariables}            | ${notAuthorizedCode}
   `(
-    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -382,7 +374,7 @@ describe('DDT community admin user - Update mutations - authorized', () => {
         requestParamsUpdateMutations,
         TestUser.COMMUNITY_ADMIN
       );
-      let responseData = JSON.stringify(response.body).replace('\\', '');
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);
@@ -400,7 +392,7 @@ describe('DDT community admin user - Update mutations - NOT authorized', () => {
     ${updateAspectMutation}      | ${updateAspectVariable}       | ${forbiddenCode}
     ${updateActorMutation}       | ${updateActorVariables}       | ${forbiddenCode}
   `(
-    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -412,7 +404,7 @@ describe('DDT community admin user - Update mutations - NOT authorized', () => {
         requestParamsUpdateMutations,
         TestUser.COMMUNITY_ADMIN
       );
-      let responseData = JSON.stringify(response.body).replace('\\', '');
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);
@@ -427,7 +419,7 @@ describe('DDT community admin user - Remove mutations - authorized', () => {
     mutation              | variables              | expected
     ${removeUserMutation} | ${removeUserVariables} | ${notAuthorizedCode}
   `(
-    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsRemoveMutations = {
@@ -439,7 +431,7 @@ describe('DDT community admin user - Remove mutations - authorized', () => {
         requestParamsRemoveMutations,
         TestUser.COMMUNITY_ADMIN
       );
-      let responseData = JSON.stringify(response.body).replace('\\', '');
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);
@@ -457,7 +449,7 @@ describe('DDT community admin user - Remove mutations - NOT authorized', () => {
     ${removeActorGroupMutation} | ${removeActorGroupVariables} | ${forbiddenCode}
     ${removeActorMutation}      | ${removeActorVariables}      | ${forbiddenCode}
   `(
-    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsRemoveMutations = {
@@ -469,7 +461,7 @@ describe('DDT community admin user - Remove mutations - NOT authorized', () => {
         requestParamsRemoveMutations,
         TestUser.COMMUNITY_ADMIN
       );
-      let responseData = JSON.stringify(response.body).replace('\\', '');
+      const responseData = JSON.stringify(response.body).replace('\\', '');
 
       // Assert
       expect(response.status).toBe(200);

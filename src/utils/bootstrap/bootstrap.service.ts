@@ -14,8 +14,6 @@ import fs from 'fs';
 import * as defaultRoles from '../../templates/authorisation-bootstrap.json';
 import { IUser } from '../../domain/user/user.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ProfileService } from '../../domain/profile/profile.service';
-import { TagsetService } from '../../domain/tagset/tagset.service';
 import { Profiling } from '../logging/logging.profiling.decorator';
 import { LogContext } from '../logging/logging.contexts';
 import { ILoggingConfig } from '../../interfaces/logging.config.interface';
