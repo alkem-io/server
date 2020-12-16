@@ -17,25 +17,26 @@ import { ProfileModule } from './domain/profile/profile.module';
 import { UserGroupModule } from './domain/user-group/user-group.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
-import aadConfig from './utils/config/aad.config';
+import aadConfig from './config/aad.config';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
-import databaseConfig from './utils/config/database.config';
+import databaseConfig from './config/database.config';
 import { IDatabaseConfig } from './interfaces/database.config.interface';
 import { DataManagementModule } from './utils/data-management/data-management.module';
-import serviceConfig from './utils/config/service.config';
+import serviceConfig from './config/service.config';
 import { BootstrapModule } from './utils/bootstrap/bootstrap.module';
 import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
-import msGraphConfig from './utils/config/ms-graph.config';
+import msGraphConfig from './config/ms-graph.config';
 import { WinstonModule } from 'nest-winston';
-import aadClientConfig from './utils/config/aad.client.config';
-import { WinstonConfigService } from './utils/config/winston.config';
-import loggingConfig from './utils/config/logging.config';
+import aadClientConfig from './config/aad.client.config';
+import { WinstonConfigService } from './config/winston.config';
+import loggingConfig from './config/logging.config';
 import { SearchModule } from './utils/search/search.module';
 import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
-import aadRopcConfig from './utils/config/aad.ropc.config';
+import aadRopcConfig from './config/aad.ropc.config';
 import { MetadataModule } from './utils/metadata/metadata.module';
+import { KonfigModule } from './utils/config/config.module';
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { MetadataModule } from './utils/metadata/metadata.module';
       useClass: WinstonConfigService,
     }),
     SearchModule,
+    KonfigModule,
   ],
   controllers: [AppController],
   providers: [

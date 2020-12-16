@@ -52,7 +52,7 @@ export const createOpportunityOnChallengeMutation = async (
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const updateOpportunityOnChallengeMutation = async (
@@ -104,7 +104,21 @@ export const updateOpportunityOnChallengeMutation = async (
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const removeOpportunityMutation = async (opportunityId: any) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation removeOpportunity($ID: Float!) {
+      removeOpportunity(ID: $ID)
+    }`,
+    variables: {
+      ID: parseFloat(opportunityId),
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const queryOpportunity = async (opportunityId: any) => {
@@ -134,5 +148,35 @@ export const queryOpportunity = async (opportunityId: any) => {
     }`,
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const queryOpportunities = async () => {
+  const requestParams = {
+    operationName: null,
+    query: `query {
+      opportunities {
+        id
+        name
+        textID
+        state    
+        context {
+          id
+          tagline
+          background
+          vision
+          impact
+          who
+          references {
+            id
+            name
+            uri
+            description
+          }
+        }
+      }
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
