@@ -1,21 +1,13 @@
 import { ObjectType, Field } from '@nestjs/graphql';
-import { ClientMetadata } from './client-metadata/client.metadata.entity';
-import { IClientMetadata } from './client-metadata/client.metadata.interface';
 import { IMetadata } from './metadata.interface';
-import { ServerMetadata } from './server-metadata/server.metadata.entity';
-import { IServerMetadata } from './server-metadata/server.metadata.interface';
+import { ServiceMetadata } from './service/service.metadata.entity';
+import { IServiceMetadata } from './service/service.metadata.interface';
 
 @ObjectType()
 export class Metadata implements IMetadata {
-  @Field(() => ServerMetadata, {
+  @Field(() => [ServiceMetadata], {
     nullable: false,
-    description: 'Cherrytwist API Server Metadata.',
+    description: 'Collection of metadata about Cherrytwist services.',
   })
-  serverMetadata?: IServerMetadata;
-
-  @Field(() => ClientMetadata, {
-    nullable: false,
-    description: 'Cherrytwist Web Client Metadata.',
-  })
-  clientMetadata?: IClientMetadata;
+  services?: IServiceMetadata[];
 }

@@ -1,7 +1,5 @@
-import { IClientMetadata } from './client-metadata/client.metadata.interface';
-import { IServerMetadata } from './server-metadata/server.metadata.interface';
+import { IServiceMetadata } from './service/service.metadata.interface';
 
 export interface IMetadata {
-  clientMetadata?: IClientMetadata;
-  serverMetadata?: IServerMetadata;
+  services?: IServiceMetadata[];
 }
