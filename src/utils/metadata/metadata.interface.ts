@@ -1,4 +1,4 @@
-import { IServiceMetadata } from './server/service.metadata.interface';
+import { IServiceMetadata } from './service/service.metadata.interface';
 
 export interface IMetadata {
   services?: IServiceMetadata[];

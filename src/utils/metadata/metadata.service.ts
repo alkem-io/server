@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IMetadata } from './metadata.interface';
-import { IServiceMetadata } from './server/service.metadata.interface';
+import { IServiceMetadata } from './service/service.metadata.interface';
 
 @Injectable()
 export class MetadataService {
