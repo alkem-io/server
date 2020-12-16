@@ -36,6 +36,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
 import aadRopcConfig from './config/aad.ropc.config';
 import { MetadataModule } from './utils/metadata/metadata.module';
+import { KonfigModule } from './utils/config/config.module';
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { MetadataModule } from './utils/metadata/metadata.module';
       useClass: WinstonConfigService,
     }),
     SearchModule,
+    KonfigModule,
   ],
   controllers: [AppController],
   providers: [
