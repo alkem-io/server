@@ -2,8 +2,8 @@ import { ObjectType, Field } from '@nestjs/graphql';
 import { IWebClientConfig } from './client/web.client.config.interface';
 import { WebClientConfig } from './client/web.client.config.entity';
 import { IConfig } from './config.interface';
-import { IUxTemplate } from './template/template.interface';
-import { UxTemplate } from './template/template.entity';
+import { ITemplate } from './template/template.interface';
+import { Template } from './template/template.entity';
 
 @ObjectType()
 export class Config implements IConfig {
@@ -13,9 +13,9 @@ export class Config implements IConfig {
   })
   webClient?: IWebClientConfig;
 
-  @Field(() => UxTemplate, {
+  @Field(() => Template, {
     nullable: false,
     description: 'Cherrytwist Template.',
   })
-  template?: IUxTemplate;
+  template?: ITemplate;
 }
