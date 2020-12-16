@@ -5,13 +5,12 @@ import { IServiceMetadata } from './service.metadata.interface';
 export class ServiceMetadata implements IServiceMetadata {
   @Field(() => String, {
     nullable: true,
-    description: 'Service name.',
+    description: 'Service name e.g. CT Server',
   })
   name: string;
   @Field(() => String, {
     nullable: true,
-    description:
-      'Cherrytwist Server version in the format {major.minor.patch} - using SemVer.',
+    description: 'Version in the format {major.minor.patch} - using SemVer.',
   })
   version?: string;
 
