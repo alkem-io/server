@@ -369,21 +369,6 @@ export class OpportunityService {
     return true;
   }
 
-  // Get the default ActorGroup
-  getCollaboratorsActorGroup(
-    opportunity: IOpportunity
-  ): IActorGroup | undefined {
-    if (!opportunity.actorGroups)
-      throw new EntityNotInitializedException(
-        'actorGroups not initialised',
-        LogContext.CHALLENGES
-      );
-    const collaboratorsActorGroup = opportunity.actorGroups.find(
-      t => t.name === RestrictedActorGroupNames.Collaborators
-    );
-    return collaboratorsActorGroup;
-  }
-
   async createProject(
     opportunityId: number,
     projectData: ProjectInput

@@ -11,7 +11,7 @@
   "opportunities": [
     {
       "name": "default",
-      "actorGroups": ["keyUsers", "stakeholders"],
+      "actorGroups": ["key_users", "stakeholders"],
       "aspects": [
         "prototype",
         "economic-win",
