@@ -12,10 +12,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IGroupable } from '../../interfaces/groupable.interface';
-import {
-  ActorGroup,
-  RestrictedActorGroupNames,
-} from '../actor-group/actor-group.entity';
+import { ActorGroup } from '../actor-group/actor-group.entity';
 import { Aspect } from '../aspect/aspect.entity';
 import { Challenge } from '../challenge/challenge.entity';
 import { Context } from '../context/context.entity';
@@ -127,6 +124,6 @@ export class Opportunity extends BaseEntity
     this.textID = textID;
     this.state = '';
     this.restrictedGroupNames = [RestrictedGroupNames.Members];
-    this.restrictedActorGroupNames = [RestrictedActorGroupNames.Collaborators];
+    this.restrictedActorGroupNames = [];
   }
 }
