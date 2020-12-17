@@ -250,7 +250,7 @@ export class OpportunityService {
         LogContext.CHALLENGES
       ); // Ensure field is lower case
 
-    const opportunity = await this.opportunityRepository.find({
+    const opportunity = await this.opportunityRepository.findOne({
       where: { name: opportunityData.name },
     });
 

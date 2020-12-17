@@ -227,7 +227,7 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    const challenge = await this.challengeRepository.find({
+    const challenge = await this.challengeRepository.findOne({
       where: { textID: challengeData.textID },
     });
     if (challenge)
