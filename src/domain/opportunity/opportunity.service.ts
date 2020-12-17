@@ -249,16 +249,6 @@ export class OpportunityService {
         `Required field textID provided not in the correct format: ${textID}`,
         LogContext.CHALLENGES
       ); // Ensure field is lower case
-
-    const opportunity = await this.opportunityRepository.findOne({
-      where: { name: opportunityData.name },
-    });
-
-    if (opportunity)
-      throw new ValidationException(
-        `Opportunity with name: ${opportunityData.name} already exists!`,
-        LogContext.OPPORTUNITY
-      );
   }
 
   async updateOpportunity(

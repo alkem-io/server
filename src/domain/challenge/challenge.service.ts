@@ -161,29 +161,48 @@ export class ChallengeService {
       );
     }
 
-    const opportunities = challenge.opportunities;
-    if (!opportunities)
-      throw new EntityNotInitializedException(
-        `Challenge without initialised Opportunities encountered ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    const existingOpportunity = opportunities.find(
-      opportunity => opportunity.textID === opportunityData.textID
-    );
-    // check if the opportunity already exists with the textID
-    if (existingOpportunity)
-      throw new ValidationException(
-        `Trying to create an opportunity but one with the given textID already exists: ${opportunityData.textID}`,
-        LogContext.CHALLENGES
-      );
+    await this.validateOpportunity(challenge, opportunityData);
 
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData
     );
-    opportunities.push(opportunity as Opportunity);
+
+    challenge.opportunities?.push(opportunity as Opportunity);
     await this.challengeRepository.save(challenge);
 
     return opportunity;
+  }
+
+  async validateOpportunity(
+    challenge: IChallenge,
+    opportunityData: OpportunityInput
+  ) {
+    const opportunities = challenge.opportunities;
+    if (!opportunities)
+      throw new EntityNotInitializedException(
+        `Challenge without initialised Opportunities encountered ${challenge.id}`,
+        LogContext.CHALLENGES
+      );
+
+    let opportunity = opportunities.find(
+      opportunity => opportunity.name === opportunityData.name
+    );
+
+    if (opportunity)
+      throw new ValidationException(
+        `Opportunity with name: ${opportunityData.name} already exists!`,
+        LogContext.OPPORTUNITY
+      );
+
+    opportunity = opportunities.find(
+      opportunity => opportunity.textID === opportunityData.textID
+    );
+    // check if the opportunity already exists with the textID
+    if (opportunity)
+      throw new ValidationException(
+        `Trying to create an opportunity but one with the given textID already exists: ${opportunityData.textID}`,
+        LogContext.CHALLENGES
+      );
   }
 
   async getChallengeByID(challengeID: number): Promise<IChallenge> {
