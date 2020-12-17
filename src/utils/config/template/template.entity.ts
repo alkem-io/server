@@ -1,12 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { OpportunityTemplate } from './opportunity.template.entity';
 import { IOpportunityTemplate } from './opportunity.template.interface';
-import { IUxTemplate } from './template.interface';
+import { ITemplate } from './template.interface';
 import { UserTemplate } from './user.template.entity';
 import { IUserTemplate } from './user.template.interface';
 
 @ObjectType()
-export class UxTemplate implements IUxTemplate {
+export class Template implements ITemplate {
   @Field(() => String, {
     nullable: false,
     description: 'Template name.',

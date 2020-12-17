@@ -1,7 +1,7 @@
 import { IOpportunityTemplate } from './opportunity.template.interface';
 import { IUserTemplate } from './user.template.interface';
 
-export interface IUxTemplate {
+export interface ITemplate {
   name: string;
   description?: string;
   users?: IUserTemplate[];

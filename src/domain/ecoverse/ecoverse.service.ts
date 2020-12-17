@@ -22,9 +22,6 @@ import { Organisation } from '../organisation/organisation.entity';
 import { Context } from '../context/context.entity';
 import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { TemplateService } from '../template/template.service';
-import { TemplateInput } from '../template/template.dto';
-import { ITemplate } from '../template/template.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { UserService } from '../user/user.service';
 import { AccountService } from '../../utils/account/account.service';
@@ -45,7 +42,6 @@ export class EcoverseService {
     private contextService: ContextService,
     private tagsetService: TagsetService,
     private accountService: AccountService,
-    private templateService: TemplateService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -166,12 +162,6 @@ export class EcoverseService {
     return challanges;
   }
 
-  async getTemplates(): Promise<ITemplate[]> {
-    const ecoverseId = await this.getEcoverseId();
-    const templates = await this.templateService.getTemplates(ecoverseId);
-    return templates;
-  }
-
   async getOrganisations(): Promise<IOrganisation[]> {
     try {
       const ecoverse = await this.getEcoverse({
@@ -258,38 +248,6 @@ export class EcoverseService {
     await this.ecoverseRepository.save(ecoverse);
 
     return challenge;
-  }
-
-  async createTemplate(templateData: TemplateInput): Promise<ITemplate> {
-    const ecoverse = await this.getEcoverse({
-      join: {
-        alias: 'ecoverse',
-        leftJoinAndSelect: {
-          challenges: 'ecoverse.templates',
-        },
-      },
-    });
-
-    if (!ecoverse.templates) {
-      throw new EntityNotInitializedException(
-        'Templates must be defined',
-        LogContext.CHALLENGES
-      );
-    }
-    // First check if the challenge already exists on not...
-    let template = ecoverse.templates.find(c => c.name === templateData.name);
-    if (template)
-      throw new ValidationException(
-        `Template with the provided name already exists: ${templateData.name}`,
-        LogContext.CHALLENGES
-      );
-    // No existing challenge found, create and initialise a new one!
-    template = await this.templateService.createTemplate(templateData);
-
-    ecoverse.templates.push(template);
-    await this.ecoverseRepository.save(ecoverse);
-
-    return template;
   }
 
   async createOrganisation(

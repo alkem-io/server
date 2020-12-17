@@ -11,7 +11,6 @@ import { ChallengeModule } from '../challenge/challenge.module';
 import { UserModule } from '../user/user.module';
 import { OrganisationModule } from '../organisation/organisation.module';
 import { AccountModule } from '../../utils/account/account.module';
-import { TemplateModule } from '../template/template.module';
 
 @Module({
   imports: [
@@ -26,7 +25,6 @@ import { TemplateModule } from '../template/template.module';
     TypeOrmModule.forFeature([Ecoverse]),
     UserModule,
     AccountModule,
-    TemplateModule,
   ],
   providers: [
     EcoverseService,

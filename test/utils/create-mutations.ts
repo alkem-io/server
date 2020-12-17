@@ -29,7 +29,7 @@ const createGroupOnEcoverseVariables = `
     "groupName": "test Ecoverse Group"
   }`;
 
-const createUserMutation = ` 
+const createUserMutation = `
 mutation CreateUser($userData: UserInput!) {
     createUser(userData: $userData) {
       id
@@ -84,22 +84,6 @@ const createReferenceOnProfileVariable = `
             "description": "this works"
         }
   }`;
-
-const createTemplateMutation = `
-mutation CreateTemplate($templateData: TemplateInput!) {
-    createTemplate(templateData: $templateData) {
-      name,
-      description
-      }
-  }`;
-
-const createTemplateVariables = `
-{
-    "templateData": {
-        "name": "Test-CherrytwistDefault",
-        "description": "Test-The default template that comes with Cherrytwist"
-    }
-}`;
 
 const createChallengeMutation = `
 mutation CreateChallenge($challengeData: ChallengeInput!) {
@@ -196,7 +180,7 @@ const createOpportunityVariables = `
     }
 }`;
 
-const createGroupOnOpportunityMutations = `  
+const createGroupOnOpportunityMutations = `
 mutation createGroupOnOpportunity($groupName: String!, $opportunityID: Float!) {
     createGroupOnOpportunity(groupName: $groupName, opportunityID: $opportunityID) {
       name,
@@ -384,8 +368,6 @@ export {
   createUserVariables,
   createReferenceOnProfileMutation,
   createReferenceOnProfileVariable,
-  createTemplateMutation,
-  createTemplateVariables,
   createChallengeMutation,
   createChallengeVariables,
   createGroupOnChallengeMutation,
