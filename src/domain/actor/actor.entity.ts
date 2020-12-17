@@ -10,10 +10,6 @@ import {
 import { ActorGroup } from '../actor-group/actor-group.entity';
 import { IActor } from './actor.interface';
 
-export enum RestrictedActorGroupNames {
-  Collaborators = 'collaborators',
-}
-
 @Entity()
 @ObjectType()
 export class Actor extends BaseEntity implements IActor {
