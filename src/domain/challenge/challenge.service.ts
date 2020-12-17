@@ -199,7 +199,20 @@ export class ChallengeService {
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    // Verify that required textID field is present and that it has the right format
+    await this.validateChallenge(challengeData);
+
+    const textID = challengeData.textID;
+    // Ensure lower case
+    challengeData.textID = textID?.toLowerCase();
+    // reate and initialise a new challenge using the first returned array item
+    const challenge = Challenge.create(challengeData);
+    await this.initialiseMembers(challenge);
+    await this.challengeRepository.save(challenge);
+
+    return challenge;
+  }
+
+  async validateChallenge(challengeData: ChallengeInput) {
     const textID = challengeData.textID;
     if (!textID || textID.length < 3)
       throw new ValidationException(
@@ -214,14 +227,14 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    // Ensure lower case
-    challengeData.textID = textID.toLowerCase();
-    // reate and initialise a new challenge using the first returned array item
-    const challenge = Challenge.create(challengeData);
-    await this.initialiseMembers(challenge);
-    await this.challengeRepository.save(challenge);
-
-    return challenge;
+    const challenge = await this.challengeRepository.find({
+      where: { textID: challengeData.textID },
+    });
+    if (challenge)
+      throw new ValidationException(
+        `Challenge with the textID: ${challengeData.textID} already exists!`,
+        LogContext.CHALLENGES
+      );
   }
 
   async updateChallenge(

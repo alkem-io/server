@@ -221,6 +221,20 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
+    await this.validateOpportunity(opportunityData);
+
+    const textID = opportunityData.textID;
+    opportunityData.textID = textID?.toLowerCase();
+
+    // reate and initialise a new Opportunity using the first returned array item
+    const opportunity = Opportunity.create(opportunityData);
+    await this.initialiseMembers(opportunity);
+    await this.opportunityRepository.save(opportunity);
+
+    return opportunity;
+  }
+
+  async validateOpportunity(opportunityData: OpportunityInput) {
     // Verify that required textID field is present and that it has the right format
     const textID = opportunityData.textID;
     if (!textID || textID.length < 3)
@@ -235,14 +249,16 @@ export class OpportunityService {
         `Required field textID provided not in the correct format: ${textID}`,
         LogContext.CHALLENGES
       ); // Ensure field is lower case
-    opportunityData.textID = textID.toLowerCase();
 
-    // reate and initialise a new Opportunity using the first returned array item
-    const opportunity = Opportunity.create(opportunityData);
-    await this.initialiseMembers(opportunity);
-    await this.opportunityRepository.save(opportunity);
+    const opportunity = await this.opportunityRepository.find({
+      where: { name: opportunityData.name },
+    });
 
-    return opportunity;
+    if (opportunity)
+      throw new ValidationException(
+        `Opportunity with name: ${opportunityData.name} already exists!`,
+        LogContext.OPPORTUNITY
+      );
   }
 
   async updateOpportunity(
