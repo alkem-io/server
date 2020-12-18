@@ -46,7 +46,7 @@ describe('Create Challenge', () => {
     expect(removeChallengeResponse.body.data.removeChallenge).toBe(true);
   });
 
-  test('should create 2 challenges with different names', async () => {
+  test('should create 2 challenges with different names and textIDs', async () => {
     // Act
     const responseChallengeOne = await createChallangeMutation(
       challengeName,
@@ -55,7 +55,7 @@ describe('Create Challenge', () => {
 
     const responseChallengeTwo = await createChallangeMutation(
       `${challengeName}change`,
-      uniqueTextId
+      `${uniqueTextId}c`
     );
 
     // Assert

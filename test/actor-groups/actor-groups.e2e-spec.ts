@@ -76,7 +76,7 @@ describe('Actor groups', () => {
     );
   });
 
-  test.skip('should create 2 actor groups for the same opportunity', async () => {
+  test('should create 2 actor groups for the same opportunity', async () => {
     // Act
     // Create 2 Actor Groups with different names
     await createActorGroupMutation(
@@ -97,7 +97,7 @@ describe('Actor groups', () => {
     expect(responseQuery.body.data.opportunity.actorGroups).toHaveLength(2);
   });
 
-  test.skip('should NOT create 2 actor groups for the same opportunity with same name', async () => {
+  test('should NOT create 2 actor groups for the same opportunity with same name', async () => {
     // Act
     // Create 2 Actor Groups with same names
     await createActorGroupMutation(
@@ -121,7 +121,7 @@ describe('Actor groups', () => {
     );
   });
 
-  test.skip('should remove created actor group', async () => {
+  test('should remove created actor group', async () => {
     // Arrange
     // Create 2 Actor Groups with same names
     const responseCreateActorGroup = await createActorGroupMutation(

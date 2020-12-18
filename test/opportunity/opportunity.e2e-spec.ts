@@ -154,4 +154,76 @@ describe('Opportunities', () => {
       name: `${opportunityName}`,
     });
   });
+
+  test('should create opportunity with same name/textId on different challenges', async () => {
+    // Arrange
+    const responseCreateChallengeTwo = await createChallangeMutation(
+      `${challengeName}ch`,
+      `${uniqueTextId}ch`
+    );
+    const secondChallengeId =
+      responseCreateChallengeTwo.body.data.createChallenge.id;
+
+    // Act
+    // Create Opportunity on Challange One
+    const responseCreateOpportunityOnChallengeOne = await createOpportunityOnChallengeMutation(
+      challengeId,
+      opportunityName,
+      opportunityTextId
+    );
+
+    const responseCreateOpportunityOnChallengeTwo = await createOpportunityOnChallengeMutation(
+      secondChallengeId,
+      opportunityName,
+      opportunityTextId
+    );
+
+    // Assert
+    expect(responseCreateOpportunityOnChallengeOne.status).toBe(200);
+    expect(responseCreateOpportunityOnChallengeTwo.status).toBe(200);
+    expect(
+      responseCreateOpportunityOnChallengeOne.body.data
+        .createOpportunityOnChallenge.name
+    ).toEqual(
+      responseCreateOpportunityOnChallengeTwo.body.data
+        .createOpportunityOnChallenge.name
+    );
+    expect(
+      responseCreateOpportunityOnChallengeOne.body.data
+        .createOpportunityOnChallenge.textID
+    ).toEqual(
+      responseCreateOpportunityOnChallengeTwo.body.data
+        .createOpportunityOnChallenge.textID
+    );
+  });
+});
+
+describe('DDT should not create opportunities with same name or textId within the same challenge', () => {
+  // Arrange
+  test.each`
+    opportunityNameD | opportunityTextIdD | expected
+    ${'opp name a'}  | ${'opp-textid-a'}  | ${'opp name a'}
+    ${'opp name b'}  | ${'opp-textid-a'}  | ${'Trying to create an opportunity but one with the given textID already exists: opp-textid-a'}
+    ${'opp name a'}  | ${'opp-textid-b'}  | ${'Opportunity with name: opp name a already exists!'}
+    ${'opp name b'}  | ${'opp-textid-b'}  | ${'opp name b'}
+  `(
+    "should expect: '$expected' for opportunity creation with name: '$opportunityNameD' and textId: '$opportunityTextIdD'",
+    async ({ opportunityNameD, opportunityTextIdD, expected }) => {
+      // Act
+      // Create Opportunity
+      const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+        "1",
+        opportunityNameD,
+        opportunityTextIdD
+      );
+      const responseData = JSON.stringify(
+        responseCreateOpportunityOnChallenge.body
+      ).replace('\\', '');
+      console.log(responseData);
+
+      // Assert
+      expect(responseCreateOpportunityOnChallenge.status).toBe(200);
+      expect(responseData).toContain(expected);
+    }
+  );
 });

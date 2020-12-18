@@ -138,7 +138,10 @@ export class EcoverseResolverMutations {
     return challenge;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description:

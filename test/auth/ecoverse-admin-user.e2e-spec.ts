@@ -251,7 +251,7 @@ describe('DDT ecoverse admin user - queries - authorized', () => {
     ${projectsTagset}                     | ${notAuthorizedCode}
     ${projectsAspects}                    | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for query: \'$query\'',
+    "should expect: '$expected' for query: '$query'",
     async ({ query, expected }) => {
       // Act
       const requestParamsQueryData = {
@@ -281,7 +281,6 @@ describe('DDT ecoverse admin user - Create mutations - authorized', () => {
   test.each`
     mutation                             | variables                             | expected
     ${createOrganisationMutation}        | ${createOrganisationVariables}        | ${notAuthorizedCode}
-    ${createUserMutation}                | ${createUserVariables}                | ${notAuthorizedCode}
     ${createReferenceOnProfileMutation}  | ${createReferenceOnProfileVariable}   | ${notAuthorizedCode}
     ${createReferenceOnContextMutation}  | ${createReferenceOnContextVariables}  | ${notAuthorizedCode}
     ${createTagsetOnProfileMutation}     | ${createTagsetOnProfileVariables}     | ${notAuthorizedCode}
@@ -297,7 +296,7 @@ describe('DDT ecoverse admin user - Create mutations - authorized', () => {
     ${createRelationMutation}            | ${createRelationVariables}            | ${notAuthorizedCode}
     ${createAspectOnProjectMutation}     | ${createAspectOnProjectVariables}     | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
+    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -317,6 +316,8 @@ describe('DDT ecoverse admin user - Create mutations - authorized', () => {
     }
   );
 });
+
+//  Scenario excluded not to load with fake data the AAD   ${createUserMutation}   | ${createUserVariables}  | ${notAuthorizedCode}
 
 describe('DDT ecoverse admin user - Update mutations - authorized', () => {
   // Arrange
@@ -339,7 +340,7 @@ describe('DDT ecoverse admin user - Update mutations - authorized', () => {
     ${updateAspectMutation}                   | ${updateAspectVariable}                    | ${notAuthorizedCode}
     ${updateActorMutation}                    | ${updateActorVariables}                    | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
+    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -370,7 +371,7 @@ describe('DDT ecoverse admin user - Remove mutations - authorized', () => {
     ${removeChallengeMutation}  | ${removeChallengeVariables}  | ${notAuthorizedCode}
     ${removeUserMutation}       | ${removeUserVariables}       | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
+    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsRemoveMutations = {
