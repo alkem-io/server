@@ -100,7 +100,7 @@ describe('Create Challenge', () => {
     ).toHaveLength(0);
   });
 
-  test('should not be able to modify challenge name to allready existing challenge name', async () => {
+  test('should not be able to modify challenge name to allready existing challenge name and/or textId', async () => {
     // Arrange
 
     // Create first challenge and get its id and name
@@ -114,7 +114,7 @@ describe('Create Challenge', () => {
     // Create second challenge and get its id and name
     const responseSecondChallenge = await createChallangeMutation(
       challengeName + challengeName,
-      uniqueTextId
+      uniqueTextId + uniqueTextId
     );
     const secondchallengeName =
       responseSecondChallenge.body.data.createChallenge.name;
@@ -125,7 +125,6 @@ describe('Create Challenge', () => {
       firstChallengeId,
       secondchallengeName
     );
-    console.log(responseUpdateChallenge.text);
 
     // Assert
     expect(responseUpdateChallenge.status).toBe(200);
@@ -134,7 +133,7 @@ describe('Create Challenge', () => {
     );
   });
 
-  test('should thow error - creating 2 challenges with same name', async () => {
+  test('should throw error - creating 2 challenges with same name', async () => {
     // Arrange
     await createChallangeMutation(challengeName, uniqueTextId);
 
@@ -145,6 +144,20 @@ describe('Create Challenge', () => {
     expect(response.status).toBe(200);
     expect(response.text).toContain(
       `Unable to create challenge: already have a challenge with the provided name (${challengeName})`
+    );
+  });
+
+  test('should throw error - creating 2 challenges with different name and same textId', async () => {
+    // Arrange
+    await createChallangeMutation(challengeName, uniqueTextId);
+
+    // Act
+    const response = await createChallangeMutation(challengeName+challengeName, uniqueTextId);
+
+    // Assert
+    expect(response.status).toBe(200);
+    expect(response.body.errors[0].message).toEqual(
+      `Challenge with the textID: ${uniqueTextId} already exists!`
     );
   });
 });

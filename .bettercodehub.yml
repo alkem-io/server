@@ -1,4 +1,4 @@
-component_depth: 2
+component_depth: 3
 default_excludes: true
 languages:
 - typescript

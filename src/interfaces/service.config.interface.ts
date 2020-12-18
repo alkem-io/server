@@ -3,5 +3,4 @@ export interface IServiceConfig {
   corsOrigin: string;
   authenticationEnabled: string;
   authorisationBootstrapPath: string;
-  templatesBootstrapPath: string;
 }

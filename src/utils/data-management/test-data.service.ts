@@ -58,7 +58,7 @@ export class TestDataService {
 
   async initChallenge(): Promise<number> {
     const challenge = new ChallengeInput();
-    OpportunityInput;
+
     challenge.name = 'init challenege name';
     challenge.state = 'init challenge state';
     challenge.textID = 'init-challenge';
@@ -83,7 +83,6 @@ export class TestDataService {
 
   async initChallengeLeadOrganisation(): Promise<number> {
     const challenge = new ChallengeInput();
-    OpportunityInput;
     challenge.name = 'init challenege name 2';
     challenge.state = 'init challenge state 2';
     challenge.textID = 'init-challenge2';
@@ -106,6 +105,39 @@ export class TestDataService {
     return response.id;
   }
 
+  async initChallengeActor(): Promise<number> {
+    const challenge = new ChallengeInput();
+    challenge.name = 'init challenege name 3';
+    challenge.state = 'init challenge state 3';
+    challenge.textID = 'init-challenge3';
+    challenge.context = {
+      background: 'test challenge background 3',
+      impact: 'test challenge impact 3',
+      references: [
+        {
+          name: 'test ref challenge name 3',
+          uri: 'test ref challenge uri 3',
+          description: 'test ref challenge description 3',
+        },
+      ],
+      tagline: 'test challenge tagline 3',
+      vision: 'test challenge vision 3',
+      who: 'test challenge who 3',
+    };
+    challenge.tags = ['test5', 'test6'];
+    const response = await this.ecoverseService.createChallenge(challenge);
+    return response.id;
+  }
+
+  async initChallengeDelete(): Promise<number> {
+    const challenge = new ChallengeInput();
+    challenge.name = 'init challenege name 4';
+    challenge.state = 'init challenge state 4';
+    challenge.textID = 'init-challenge4';
+    const response = await this.ecoverseService.createChallenge(challenge);
+    return response.id;
+  }
+
   async initOpportunity(challengeId: number): Promise<number> {
     const opportunity = new OpportunityInput();
     opportunity.name = 'init opportunity name';
@@ -124,6 +156,32 @@ export class TestDataService {
       tagline: 'test opportunity tagline',
       vision: 'test opportunity vision',
       who: 'test opportunity who',
+    };
+    let response = await this.challengeService.createOpportunity(
+      challengeId,
+      opportunity
+    );
+    return response.id;
+  }
+
+  async initOpportunityActor(challengeId: number): Promise<number> {
+    const opportunity = new OpportunityInput();
+    opportunity.name = 'init opportunity name2';
+    opportunity.state = 'init opportunity state2';
+    opportunity.textID = 'init-opport2';
+    opportunity.context = {
+      background: 'test opportunity background2',
+      impact: 'test opportunity impact2',
+      references: [
+        {
+          name: 'test ref opp name2',
+          uri: 'test ref opp uri2',
+          description: 'test ref opp description2',
+        },
+      ],
+      tagline: 'test opportunity tagline2',
+      vision: 'test opportunity vision2',
+      who: 'test opportunity who2',
     };
     let response = await this.challengeService.createOpportunity(
       challengeId,
@@ -200,20 +258,24 @@ export class TestDataService {
     await this.userGroupService.addUser(createdTestUser?.id, 14);
   }
 
-  async initActorGroup() {
+  async initActorGroup(opportunityId: number): Promise<number> {
     const actorGroup = new ActorGroupInput();
     actorGroup.name = 'init actorGroup name';
     actorGroup.description = 'init actorGroup description';
-    await this.opportunityService.createActorGroup(1, actorGroup);
+    const response = await this.opportunityService.createActorGroup(
+      opportunityId,
+      actorGroup
+    );
+    return response.id;
   }
 
-  async initActor() {
+  async initActor(actorGroupId: number) {
     const actorGroup = new ActorInput();
     actorGroup.name = 'init actor name';
     actorGroup.impact = 'init actor impact';
     actorGroup.value = 'init actor value';
     actorGroup.description = 'init actor description';
-    await this.actorGroupService.createActor(1, actorGroup);
+    await this.actorGroupService.createActor(actorGroupId, actorGroup);
   }
 
   async initAddAdmin() {
@@ -247,26 +309,30 @@ export class TestDataService {
 
   async initFunctions() {
     // await this.initUsers();
-    // await this.initChallenge();
     await this.initOpportunity(await this.initChallenge());
     // await this.initProject();
     // await this.initAspect();
     // await this.initAspectOnProject();
     // await this.initRelation();
     // await this.initActorGroup();
-    // await this.initActor();
+    await this.initActor(
+      await this.initActorGroup(
+        await this.initOpportunityActor(await this.initChallengeActor())
+      )
+    );
     // await this.initAddUserToOpportunity();
     await this.initAddChallengeLead(await this.initChallengeLeadOrganisation());
     await this.initAddChallengeLead(1);
+    await this.initChallengeDelete();
     // await this.initCreateGroupOnEcoverse();
     // await this.initCreateGroupOnChallenge();
     // await this.initAddUserToChallengeGroup();
     // await this.initAssignGroupFocalPoint();
   }
 
-  async teardownFunctions() {
-    // await this.teardownRemoveGroupFocalPoint();
-    // await this.teardownUsers();
-    // await this.teardownChallenges();
-  }
+  // async teardownFunctions() {
+  //   // await this.teardownRemoveGroupFocalPoint();
+  //   // await this.teardownUsers();
+  //   // await this.teardownChallenges();
+  // }
 }

@@ -1,4 +1,4 @@
-import { AAD_LOGGING_LEVEL } from '../utils/config/aad.config';
+import { AAD_LOGGING_LEVEL } from '../config/aad.config';
 
 export interface IAzureADConfig {
   identityMetadata: string;
