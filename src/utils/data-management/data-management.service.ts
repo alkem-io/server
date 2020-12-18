@@ -42,21 +42,23 @@ export class DataManagementService {
       await this.connection.dropDatabase();
       this.addLogMsg(msgs, '.....dropped.');
 
-      await new Promise<void>((resolve, reject) => {
-        exec('npm run migration:run', function(error, stdout, stderr) {
-          console.log('Running Migrations...');
-          console.log('stdout: ' + stdout);
-          console.log('stderr: ' + stderr);
-          if (error !== null) {
-            console.log('exec error: ' + error);
-            // Reject if there is an error:
-            return reject(error);
-          }
-
-          // Otherwise resolve the promise:
-          resolve();
+      try {
+        await new Promise<void>((resolve, reject) => {
+          exec('npm run migration:run', (error, _stdout, _stderr) => {
+            this.addLogMsg(msgs, 'Running Migrations...');
+            if (error !== null) {
+              // Reject if there is an error:
+              return reject(error);
+            }
+            // Otherwise resolve the promise:
+            resolve();
+          });
         });
-      });
+      } catch (error) {
+        //Gracefully handling the error if you start spamming the button as it will try creating multiple migrations.
+        //only one migration will succeed as they are transactional, the rest will return an error. No need to show it to the client.
+        console.log(`exec error: ${error}`);
+      }
 
       // Create new Ecoverse
       this.addLogMsg(msgs, 'Populating empty ecoverse... ');
