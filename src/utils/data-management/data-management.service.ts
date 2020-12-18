@@ -18,6 +18,7 @@ import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
 import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
+import { exec } from 'child_process';
 
 @Injectable()
 export class DataManagementService {
@@ -39,8 +40,25 @@ export class DataManagementService {
     try {
       this.addLogMsg(msgs, 'Dropping existing database... ');
       await this.connection.dropDatabase();
-      await this.connection.synchronize();
       this.addLogMsg(msgs, '.....dropped.');
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          exec('npm run migration:run', (error, _stdout, _stderr) => {
+            this.addLogMsg(msgs, 'Running Migrations...');
+            if (error !== null) {
+              // Reject if there is an error:
+              return reject(error);
+            }
+            // Otherwise resolve the promise:
+            resolve();
+          });
+        });
+      } catch (error) {
+        //Gracefully handling the error if you start spamming the button as it will try creating multiple migrations.
+        //only one migration will succeed as they are transactional, the rest will return an error. No need to show it to the client.
+        console.log(`exec error: ${error}`);
+      }
 
       // Create new Ecoverse
       this.addLogMsg(msgs, 'Populating empty ecoverse... ');
