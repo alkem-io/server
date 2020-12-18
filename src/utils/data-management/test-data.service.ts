@@ -317,9 +317,7 @@ export class TestDataService {
     // await this.initActorGroup();
     await this.initActor(
       await this.initActorGroup(
-        await this.initOpportunity(
-          await this.initOpportunityActor(await this.initChallengeActor())
-        )
+        await this.initOpportunityActor(await this.initChallengeActor())
       )
     );
     // await this.initAddUserToOpportunity();

@@ -234,7 +234,7 @@ mutation addChallengeLead($challengeID: Float!, $organisationID: Float!) {
 
 const addChallengeLeadToOrganisationVariables = `
 {
-    "organisationID": 2,
+    "organisationID": 1,
     "challengeID": 2
   }`;
 

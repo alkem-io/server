@@ -281,7 +281,6 @@ describe('DDT global admin user - Create mutations - authorized', () => {
   test.each`
     mutation                             | variables                             | expected
     ${createOrganisationMutation}        | ${createOrganisationVariables}        | ${notAuthorizedCode}
-    ${createUserMutation}                | ${createUserVariables}                | ${notAuthorizedCode}
     ${createReferenceOnProfileMutation}  | ${createReferenceOnProfileVariable}   | ${notAuthorizedCode}
     ${createReferenceOnContextMutation}  | ${createReferenceOnContextVariables}  | ${notAuthorizedCode}
     ${createTagsetOnProfileMutation}     | ${createTagsetOnProfileVariables}     | ${notAuthorizedCode}
@@ -317,6 +316,8 @@ describe('DDT global admin user - Create mutations - authorized', () => {
     }
   );
 });
+
+//  Scenario excluded not to load with fake data the AAD   ${createUserMutation}   | ${createUserVariables}  | ${notAuthorizedCode}
 
 describe('DDT global admin user - Update mutations - authorized', () => {
   // Arrange

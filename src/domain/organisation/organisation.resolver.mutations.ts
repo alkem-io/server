@@ -41,7 +41,10 @@ export class OrganisationResolverMutations {
     return group;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description: 'Updates the organisation with the given data',
