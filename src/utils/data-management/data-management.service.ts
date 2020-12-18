@@ -18,6 +18,7 @@ import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../logging/logging.contexts';
 import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
+import { exec } from 'child_process';
 
 @Injectable()
 export class DataManagementService {
@@ -39,8 +40,23 @@ export class DataManagementService {
     try {
       this.addLogMsg(msgs, 'Dropping existing database... ');
       await this.connection.dropDatabase();
-      await this.connection.synchronize();
       this.addLogMsg(msgs, '.....dropped.');
+
+      await new Promise<void>((resolve, reject) => {
+        exec('npm run migration:run', function(error, stdout, stderr) {
+          console.log('Running Migrations...');
+          console.log('stdout: ' + stdout);
+          console.log('stderr: ' + stderr);
+          if (error !== null) {
+            console.log('exec error: ' + error);
+            // Reject if there is an error:
+            return reject(error);
+          }
+
+          // Otherwise resolve the promise:
+          resolve();
+        });
+      });
 
       // Create new Ecoverse
       this.addLogMsg(msgs, 'Populating empty ecoverse... ');
