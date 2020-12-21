@@ -46,13 +46,11 @@ export const removeActorGroupMutation = async (actorGroupId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-
-
 export const getActorGroupsPerOpportunity = async (opportunityId: any) => {
   const requestParams = {
     operationName: null,
     query: `query {opportunity(ID: ${parseFloat(opportunityId)}) {
-        actorGroups { id name description}}}`,
+        actorGroups { id name description actors { name }}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
