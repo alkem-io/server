@@ -15,7 +15,8 @@ lerna-debug.log*
 
 # Tests
 /coverage
-/src/coverage
+/coverage-e2e
+/src/test/coverage
 /test/coverage-e2e
 /.nyc_output
 
