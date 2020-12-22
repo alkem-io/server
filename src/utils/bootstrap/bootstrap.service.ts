@@ -175,6 +175,18 @@ export class BootstrapService {
         communityAdmins
       );
     }
+    const members = bootstrapJson.members;
+    if (!members) {
+      this.logger.verbose?.(
+        'No coverse members section in the authorisation bootstrap file!',
+        LogContext.BOOTSTRAP
+      );
+    } else {
+      await this.createGroupProfiles(
+        RestrictedGroupNames.Members,
+        members
+      );
+    }
   }
 
   @Profiling.api
