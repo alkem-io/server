@@ -266,6 +266,9 @@ Initial version of integration tests is in place. To run them, look at the prere
   - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.
 
+To run e2e tests with coverage:
+- Use `npm run test:e2e-cov`
+
 To debug tests in VS Code:
 - Use `Debug Jest e2e Tests` configuration for API tests
 - Use `Debug Jest CI Tests` configuration for CI tests
