@@ -2,11 +2,9 @@
 
 Represents the core back-end server that manages the representation of the ecoverse and all the entities stored wthin it.
 
-Build Status:
-![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
+[![Build Status](https://travis-ci.com/cherrytwist/Server.svg?branch=develop)](https://travis-ci.com/cherrytwist/Server) [![Coverage Status](https://coveralls.io/repos/github/cherrytwist/Server/badge.svg?branch=develop)](https://coveralls.io/github/cherrytwist/Server?branch=server-627) [![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/) ![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
 
-Build Quality
-[![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/)
+
 
 ## === Server architecture ===
 
@@ -265,6 +263,9 @@ Initial version of integration tests is in place. To run them, look at the prere
 - In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
   - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.
+
+To run e2e tests with coverage:
+- Use `npm run test:e2e-cov`
 
 To debug tests in VS Code:
 - Use `Debug Jest e2e Tests` configuration for API tests

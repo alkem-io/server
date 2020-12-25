@@ -45,5 +45,12 @@
       "firstName": "Community",
       "lastName": "Admin"
     }
+  ],
+  "members": [
+    {
+      "email": "ecoverse-member@cherrytwist.com",
+      "firstName": "Ecoverse",
+      "lastName": "Member"
+    }
   ]
 }

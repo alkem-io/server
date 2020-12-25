@@ -15,6 +15,7 @@ import { Opportunity } from '../opportunity/opportunity.entity';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
 import { LogContext } from '../../utils/logging/logging.contexts';
+import { CurrentUser } from '../user/user.decorator';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -25,7 +26,8 @@ export class ChallengeResolverFields {
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
+    RestrictedGroupNames.EcoverseAdmins,
+    RestrictedGroupNames.Members
   )
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
@@ -52,7 +54,8 @@ export class ChallengeResolverFields {
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
+    RestrictedGroupNames.EcoverseAdmins,
+    RestrictedGroupNames.Members
   )
   @UseGuards(GqlAuthGuard)
   @ResolveField('contributors', () => [User], {

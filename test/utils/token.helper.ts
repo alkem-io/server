@@ -56,4 +56,5 @@ export enum TestUser {
   GLOBAL_ADMIN = 'admin',
   ECOVERSE_ADMIN = 'ecoverse.admin',
   COMMUNITY_ADMIN = 'community.admin',
+  ECOVERSE_MEMBER = 'ecoverse.member',
 }
