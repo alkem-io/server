@@ -16,3 +16,4 @@ exclude:
 - /src/config/.*
 - /.scripts/.*
 - /src/templates/.*
+- .*/*.resolver.*
