@@ -1,5 +1,8 @@
 component_depth: 3
-default_excludes: true
+languages:
+- typescript
+- javascript
+- script
 exclude:
 - /src/migrations/.*
 - /src/domain/did/.*
@@ -12,7 +15,3 @@ exclude:
 - /src/config/.*
 - /.scripts/.*
 - /src/templates/.*
-languages:
-- typescript
-- javascript
-- script
