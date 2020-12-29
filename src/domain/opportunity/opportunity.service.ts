@@ -4,7 +4,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { ActorGroupInput } from '../actor-group/actor-group.dto';
-import { RestrictedActorGroupNames } from '../actor-group/actor-group.entity';
 import { IActorGroup } from '../actor-group/actor-group.interface';
 import { ActorGroupService } from '../actor-group/actor-group.service';
 import { AspectInput } from '../aspect/aspect.dto';
@@ -25,10 +24,12 @@ import { UserService } from '../user/user.service';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import {
+  EntityNotFoundException,
+  GroupNotInitializedException,
+  EntityNotInitializedException,
+  ValidationException,
+} from '../../utils/error-handling/exceptions';
 
 @Injectable()
 export class OpportunityService {

@@ -26,7 +26,7 @@ import { IUserGroup } from '../user-group/user-group.interface';
 import { ProjectInput } from '../project/project.dto';
 import { Project } from '../project/project.entity';
 import { IProject } from '../project/project.interface';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import { EntityNotFoundException } from '../../utils/error-handling/exceptions';
 import { LogContext } from '../../utils/logging/logging.contexts';
 
 @Resolver()
@@ -84,9 +84,7 @@ export class OpportunityResolver {
     return await this.opportunityService.removeOpportunity(opportunityID);
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Project, {
     description: 'Create a new Project on the Opportunity identified by the ID',
@@ -103,9 +101,7 @@ export class OpportunityResolver {
     return project;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new aspect on the Opportunity identified by the ID',
@@ -122,9 +118,7 @@ export class OpportunityResolver {
     return aspect;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => ActorGroup, {
     description:
@@ -142,9 +136,7 @@ export class OpportunityResolver {
     return actorGroup;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Relation, {
     description:
@@ -161,9 +153,7 @@ export class OpportunityResolver {
     );
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:

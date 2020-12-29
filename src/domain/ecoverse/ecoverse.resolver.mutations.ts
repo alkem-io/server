@@ -4,7 +4,7 @@ import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
 import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
 import { Roles } from '../../utils/decorators/roles.decorator';
 import { CherrytwistErrorStatus } from '../../utils/error-handling/enums/cherrytwist.error.status';
-import { AccountException } from '../../utils/error-handling/exceptions/account.exception';
+import { AccountException } from '../../utils/error-handling/exceptions';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { Profiling } from '../../utils/logging/logging.profiling.decorator';
 import { ChallengeInput } from '../challenge/challenge.dto';

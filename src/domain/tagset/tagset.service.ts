@@ -9,9 +9,11 @@ import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TagsetInput } from './tagset.dto';
 import { LogContext } from '../../utils/logging/logging.contexts';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import {
+  EntityNotFoundException,
+  ValidationException,
+  EntityNotInitializedException,
+} from '../../utils/error-handling/exceptions';
 
 @Injectable()
 export class TagsetService {
