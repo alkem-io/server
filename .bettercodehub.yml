@@ -1,5 +1,17 @@
 component_depth: 3
 default_excludes: true
+exclude:
+- /src/migrations/.*
+- /src/domain/did/.*
+- /src/domain/agreement/.*
+- /src/utils/bootstrap/.*
+- /src/utils/middleware/.*
+- /src/utils/decorators/.*
+- /src/utils/logging/.*
+- /src/interfaces/.*
+- /src/config/.*
+- /.scripts/.*
+- /src/templates/.*
 languages:
 - typescript
 - javascript
