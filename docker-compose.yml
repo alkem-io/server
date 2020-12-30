@@ -30,13 +30,12 @@ services:
       - AUTH_AAD_CLIENT_APP_ID
       - AUTH_AAD_CHERRYTWIST_API_SCOPE
       - AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI
-      - NODE_ENV
     depends_on:
       - db
     restart: always
     ports:
       - 4000:4000
-    command: sh -c "/wait && npm run migration:run && npm run start:prod"
+    command: sh -c "/wait && npm run migration:run && npm start"
   db:
     container_name: ct_server_db
     image: mysql:8.0.11
