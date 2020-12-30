@@ -12,7 +12,6 @@ import {
   removeActorMutation,
   updateActorMutation,
 } from './actor.request.params';
-import { response } from 'express';
 
 let opportunityName = '';
 let opportunityTextId = '';
