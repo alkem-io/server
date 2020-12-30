@@ -323,20 +323,31 @@ export class UserGroupService {
     groupable: IGroupable,
     name: string
   ): Promise<IUserGroup> {
-    const groupableType = await this.getGroupableTypeName(groupable);
-
-    const userGroup = (await this.groupRepository.findOne({
-      where: { ecoverse: { id: groupable.id }, name: name },
-      relations: [groupableType, 'members'],
-    })) as IUserGroup;
-    return userGroup;
-  }
-
-  async getGroupableTypeName(groupable: IGroupable): Promise<string> {
-    if (groupable instanceof Ecoverse) return 'ecoverse';
-    if (groupable instanceof Challenge) return 'challenge';
-    if (groupable instanceof Organisation) return 'organisation';
-    if (groupable instanceof Opportunity) return 'opportunity';
+    if (groupable instanceof Ecoverse) {
+      const userGroup = (await this.groupRepository.findOne({
+        where: { ecoverse: { id: groupable.id }, name: name },
+        relations: ['ecoverse', 'members'],
+      })) as IUserGroup;
+      return userGroup;
+    }
+    if (groupable instanceof Challenge) {
+      return (await this.groupRepository.findOne({
+        where: { challenge: { id: groupable.id }, name: name },
+        relations: ['challenge', 'members'],
+      })) as IUserGroup;
+    }
+    if (groupable instanceof Organisation) {
+      return (await this.groupRepository.findOne({
+        where: { organisation: { id: groupable.id }, name: name },
+        relations: ['organisation', 'members'],
+      })) as IUserGroup;
+    }
+    if (groupable instanceof Opportunity) {
+      return (await this.groupRepository.findOne({
+        where: { opportunity: { id: groupable.id }, name: name },
+        relations: ['opportunity', 'members'],
+      })) as IUserGroup;
+    }
 
     throw new NotSupportedException(
       'Unrecognized groupabble type!',
