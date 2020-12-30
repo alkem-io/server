@@ -59,7 +59,7 @@ export class ProfileService {
   }
 
   async createTagset(profileID: number, tagsetName: string): Promise<ITagset> {
-    const profile = (await this.getProfile(profileID)) as Profile;
+    const profile = await this.getProfile(profileID);
 
     if (!profile)
       throw new EntityNotFoundException(
@@ -80,7 +80,7 @@ export class ProfileService {
     profileID: number,
     referenceInput: ReferenceInput
   ): Promise<IReference> {
-    const profile = (await this.getProfile(profileID)) as Profile;
+    const profile = await this.getProfile(profileID);
 
     if (!profile)
       throw new EntityNotFoundException(
@@ -114,7 +114,7 @@ export class ProfileService {
     profileID: number,
     profileData: ProfileInput
   ): Promise<boolean> {
-    const profile = (await this.getProfile(profileID)) as Profile;
+    const profile = await this.getProfile(profileID);
     if (!profile)
       throw new EntityNotFoundException(
         `Profile with id (${profileID}) not found!`,
