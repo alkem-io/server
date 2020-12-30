@@ -37,6 +37,7 @@ import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.fil
 import aadRopcConfig from './config/aad.ropc.config';
 import { MetadataModule } from './utils/metadata/metadata.module';
 import { KonfigModule } from './utils/config/config.module';
+import aadOboConfig from './config/aad.obo.config';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { KonfigModule } from './utils/config/config.module';
         aadClientConfig,
         loggingConfig,
         aadRopcConfig,
+        aadOboConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({
