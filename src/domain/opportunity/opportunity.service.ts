@@ -1,10 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { ActorGroupInput } from '../actor-group/actor-group.dto';
-import { RestrictedActorGroupNames } from '../actor-group/actor-group.entity';
 import { IActorGroup } from '../actor-group/actor-group.interface';
 import { ActorGroupService } from '../actor-group/actor-group.service';
 import { AspectInput } from '../aspect/aspect.dto';
@@ -25,10 +24,12 @@ import { UserService } from '../user/user.service';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import {
+  EntityNotFoundException,
+  GroupNotInitializedException,
+  EntityNotInitializedException,
+  ValidationException,
+} from '../../utils/error-handling/exceptions';
 
 @Injectable()
 export class OpportunityService {
@@ -83,10 +84,14 @@ export class OpportunityService {
     return opportunity;
   }
 
-  async getOpportunityByID(opportunityID: number): Promise<IOpportunity> {
-    const opportunity = await this.opportunityRepository.findOne({
-      where: { id: opportunityID },
-    });
+  async getOpportunityByID(
+    opportunityID: number,
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityRepository.findOne(
+      { id: opportunityID },
+      options
+    );
     if (!opportunity)
       throw new EntityNotFoundException(
         `Unable to find Opportunity with ID: ${opportunityID}`,
@@ -98,45 +103,29 @@ export class OpportunityService {
   async getOpportunityByIdWithAspects(
     opportunityID: number
   ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityRepository.findOne({
-      where: { id: opportunityID },
+    const opportunity = await this.getOpportunityByID(opportunityID, {
       relations: ['aspects'],
     });
-    if (!opportunity)
-      throw new EntityNotFoundException(
-        `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.CHALLENGES
-      );
+
     return opportunity;
   }
 
   async getOpportunityByIdWithActorGroups(
     opportunityID: number
   ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityRepository.findOne({
-      where: { id: opportunityID },
+    const opportunity = await this.getOpportunityByID(opportunityID, {
       relations: ['actorGroups'],
     });
-    if (!opportunity)
-      throw new EntityNotFoundException(
-        `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.CHALLENGES
-      );
+
     return opportunity;
   }
 
   async getOpportunityByIdWithRelations(
     opportunityID: number
   ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityRepository.findOne({
-      where: { id: opportunityID },
+    const opportunity = await this.getOpportunityByID(opportunityID, {
       relations: ['relations'],
     });
-    if (!opportunity)
-      throw new EntityNotFoundException(
-        `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.CHALLENGES
-      );
     return opportunity;
   }
 

@@ -8,9 +8,11 @@ import { ActorInput } from '../actor/actor.dto';
 import { ActorGroupInput } from './actor-group.dto';
 import { ActorService } from '../actor/actor.service';
 import { IActor } from '../actor/actor.interface';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import {
+  EntityNotFoundException,
+  GroupNotInitializedException,
+} from '../../utils/error-handling/exceptions';
 import { LogContext } from '../../utils/logging/logging.contexts';
-import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
 
 @Injectable()
 export class ActorGroupService {

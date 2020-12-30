@@ -17,3 +17,6 @@ exclude:
 - /.scripts/.*
 - /src/templates/.*
 - .*/*.resolver.*
+- .*/*.entity.*
+- .*/*.dto.*
+- .*/*.exception.*

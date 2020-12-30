@@ -2,9 +2,11 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { NotSupportedException } from '../../utils/error-handling/exceptions/not.supported.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import {
+  EntityNotFoundException,
+  NotSupportedException,
+  ValidationException,
+} from '../../utils/error-handling/exceptions';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { ProfileService } from '../profile/profile.service';
 import { MemberOf } from './memberof.composite';

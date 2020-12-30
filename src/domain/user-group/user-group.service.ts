@@ -17,11 +17,13 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { UserGroupParent } from './user-group-parent.dto';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { NotSupportedException } from '../../utils/error-handling/exceptions/not.supported.exception';
-import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import {
+  EntityNotFoundException,
+  ValidationException,
+  NotSupportedException,
+  GroupNotInitializedException,
+  EntityNotInitializedException,
+} from '../../utils/error-handling/exceptions';
 
 @Injectable()
 export class UserGroupService {
@@ -85,7 +87,6 @@ export class UserGroupService {
     );
   }
 
-  //toDo vyanakiev - fix this
   async getGroups(groupable: IGroupable): Promise<IUserGroup[]> {
     if (groupable instanceof Ecoverse) {
       return await this.groupRepository.find({
@@ -318,7 +319,6 @@ export class UserGroupService {
     return group;
   }
 
-  //toDo vyanakiev - fix this
   async getGroupByName(
     groupable: IGroupable,
     name: string
