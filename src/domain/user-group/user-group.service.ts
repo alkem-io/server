@@ -126,7 +126,7 @@ export class UserGroupService {
       );
     }
 
-    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    const group = await this.getGroupByID(groupID);
     if (!group) {
       throw new EntityNotFoundException(
         `Unable to find group with ID: ${groupID}`,
@@ -138,7 +138,7 @@ export class UserGroupService {
     await this.addUserToGroup(user, group);
 
     // Have both user + group so do the add
-    group.focalPoint = user as User;
+    group.focalPoint = user;
     await this.groupRepository.save(group);
 
     return group;
@@ -164,14 +164,14 @@ export class UserGroupService {
   }
 
   async addUser(userID: number, groupID: number): Promise<boolean> {
-    const user = (await this.userService.getUserByID(userID)) as IUser;
+    const user = await this.userService.getUserByID(userID);
     if (!user)
       throw new EntityNotFoundException(
         `No user with id ${userID} was found!`,
         LogContext.COMMUNITY
       );
 
-    const group = (await this.getGroupByID(groupID)) as IUserGroup;
+    const group = await this.getGroupByID(groupID);
     if (!group)
       throw new EntityNotFoundException(
         `No group with id ${groupID} was found!`,
@@ -192,10 +192,10 @@ export class UserGroupService {
         LogContext.COMMUNITY
       );
 
-    const userGroup = (await this.groupRepository.findOne({
+    const userGroup = await this.groupRepository.findOne({
       where: { members: { id: userID }, id: groupID },
       relations: ['members'],
-    })) as IUserGroup;
+    });
 
     const members = userGroup?.members;
     if (!members || members.length === 0) return false;
@@ -302,7 +302,7 @@ export class UserGroupService {
   }
 
   async removeFocalPoint(groupID: number): Promise<IUserGroup> {
-    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    const group = await this.getGroupByID(groupID);
     if (!group) {
       throw new EntityNotFoundException(
         `Unable to find group with ID: ${groupID}`,
@@ -376,7 +376,7 @@ export class UserGroupService {
 
     for (const groupToAdd of newMandatoryGroups) {
       const newGroup = await this.createUserGroup(groupToAdd);
-      groupable.groups.push(newGroup as IUserGroup);
+      groupable.groups.push(newGroup);
     }
 
     return groupable;
