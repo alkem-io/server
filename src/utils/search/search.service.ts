@@ -9,7 +9,6 @@ import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
 import { LogContext } from '../logging/logging.contexts';
 import { ValidationException } from '../error-handling/exceptions/validation.exception';
-import { group } from 'console';
 
 enum SearchEntityTypes {
   User = 'user',
