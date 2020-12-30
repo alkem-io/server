@@ -387,7 +387,7 @@ export class ChallengeService {
       );
     }
 
-    const challenge = (await this.getChallengeByID(challengeID)) as Challenge;
+    const challenge = await this.getChallengeByID(challengeID);
     if (!challenge) {
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: ${challengeID}`,

@@ -33,7 +33,7 @@ export class AspectService {
         `Not able to locate aspect with the specified ID: ${aspectID}`,
         LogContext.CHALLENGES
       );
-    await this.aspectRepository.remove(aspect as Aspect);
+    await this.aspectRepository.delete(aspectID);
     return true;
   }
 

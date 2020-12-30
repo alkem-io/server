@@ -69,7 +69,7 @@ export class RelationService {
         `Not able to locate relation with the specified ID: ${relationID}`,
         LogContext.CHALLENGES
       );
-    await this.relationRepository.remove(relation as Relation);
+    await this.relationRepository.delete(relationID);
     return true;
   }
 }
