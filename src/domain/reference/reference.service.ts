@@ -73,7 +73,7 @@ export class ReferenceService {
         `Not able to locate reference with the specified ID: ${referenceID}`,
         LogContext.CHALLENGES
       );
-    await this.referenceRepository.remove(reference as Reference);
+    await this.referenceRepository.delete(referenceID);
     return true;
   }
 

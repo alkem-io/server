@@ -47,7 +47,7 @@ export class ActorService {
         `Not able to locate actor with the specified ID: ${actorID}`,
         LogContext.CHALLENGES
       );
-    await this.actorRepository.remove(actor as Actor);
+    await this.actorRepository.delete(actorID);
     return true;
   }
 
