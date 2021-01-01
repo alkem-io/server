@@ -3,6 +3,10 @@ version: '3.4'
 networks:
   ct:
 
+volumes:
+  ct_server:
+  ct_server_db:
+
 services:
   server.node:
     container_name: ct_server
@@ -37,6 +41,9 @@ services:
     ports:
       - 4000:4000
     command: sh -c "/wait && npm run migration:run && npm run start:prod"
+    volumes:
+      - ct_server:/usr/src/app/config
+
   db:
     container_name: ct_server_db
     image: mysql:8.0.11
@@ -49,3 +56,5 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
+    volumes:
+      - ct_server_db:/var/lib/mysql
