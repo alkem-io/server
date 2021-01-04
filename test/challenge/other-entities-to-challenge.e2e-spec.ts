@@ -2,10 +2,10 @@ import {
   addUserToChallangeMutation,
   createChallangeMutation,
 } from './challenge.request.params';
-import '@utils/array.matcher';
-import { appSingleton } from '@utils/app.singleton';
-import { createGroupOnChallengeMutation } from '@domain/group/group.request.params';
-import { createOpportunityOnChallengeMutation } from '@domain/opportunity/opportunity.request.params';
+import '@testing/utils/array.matcher';
+import { appSingleton } from '@testing/utils/app.singleton';
+import { createGroupOnChallengeMutation } from '@testing/group/group.request.params';
+import { createOpportunityOnChallengeMutation } from '@testing/opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';

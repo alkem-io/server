@@ -5,10 +5,10 @@ import {
   removeUserFromGroup,
   removeUserMutation,
 } from './user.request.params';
-import { graphqlRequest } from '@utils/graphql.request';
-import '@utils/array.matcher';
-import { createGroupMutation } from '@domain/group/group.request.params';
-import { appSingleton } from '@utils/app.singleton';
+import { graphqlRequest } from '@testing/utils/graphql.request';
+import '@testing/utils/array.matcher';
+import { createGroupMutation } from '@testing/group/group.request.params';
+import { appSingleton } from '@testing/utils/app.singleton';
 
 let userName = '';
 let userId = '';

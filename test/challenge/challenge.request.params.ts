@@ -1,5 +1,5 @@
-import { TestUser } from '@utils/token.helper';
-import { graphqlRequestAuth } from '@utils/graphql.request';
+import { TestUser } from '@testing/utils/token.helper';
+import { graphqlRequestAuth } from '@testing/utils/graphql.request';
 
 const uniqueId = (Date.now() + Math.random()).toString();
 
