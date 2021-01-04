@@ -2,8 +2,10 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '../../utils/error-handling/exceptions';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { ReferenceInput } from '../reference/reference.dto';
 import { Reference } from '../reference/reference.entity';
@@ -57,7 +59,7 @@ export class ProfileService {
   }
 
   async createTagset(profileID: number, tagsetName: string): Promise<ITagset> {
-    const profile = (await this.getProfile(profileID)) as Profile;
+    const profile = await this.getProfile(profileID);
 
     if (!profile)
       throw new EntityNotFoundException(
@@ -78,7 +80,7 @@ export class ProfileService {
     profileID: number,
     referenceInput: ReferenceInput
   ): Promise<IReference> {
-    const profile = (await this.getProfile(profileID)) as Profile;
+    const profile = await this.getProfile(profileID);
 
     if (!profile)
       throw new EntityNotFoundException(
@@ -112,7 +114,7 @@ export class ProfileService {
     profileID: number,
     profileData: ProfileInput
   ): Promise<boolean> {
-    const profile = (await this.getProfile(profileID)) as Profile;
+    const profile = await this.getProfile(profileID);
     if (!profile)
       throw new EntityNotFoundException(
         `Profile with id (${profileID}) not found!`,

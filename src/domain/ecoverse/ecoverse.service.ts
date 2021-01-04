@@ -26,10 +26,12 @@ import { OrganisationService } from '../organisation/organisation.service';
 import { UserService } from '../user/user.service';
 import { AccountService } from '../../utils/account/account.service';
 import { LogContext } from '../../utils/logging/logging.contexts';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
-import { AccountException } from '../../utils/error-handling/exceptions/account.exception';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import {
+  ValidationException,
+  EntityNotInitializedException,
+  AccountException,
+  EntityNotFoundException,
+} from '../../utils/error-handling/exceptions';
 import { CherrytwistErrorStatus } from '../../utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
@@ -115,9 +117,9 @@ export class EcoverseService {
 
   async getUsers(): Promise<IUser[]> {
     try {
-      const ecoverse = (await this.getEcoverse({
+      const ecoverse = await this.getEcoverse({
         relations: ['groups'],
-      })) as IEcoverse;
+      });
       const membersGroup = await this.userGroupService.getGroupByName(
         ecoverse,
         RestrictedGroupNames.Members
@@ -175,7 +177,7 @@ export class EcoverseService {
   }
 
   async getContext(): Promise<IContext> {
-    const ecoverse = (await this.getEcoverse()) as IEcoverse;
+    const ecoverse = await this.getEcoverse();
     return ecoverse.context as IContext;
   }
 
@@ -185,7 +187,7 @@ export class EcoverseService {
   }
 
   async getHost(): Promise<IOrganisation> {
-    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    const ecoverse = await this.getEcoverse();
     return ecoverse.host as IOrganisation;
   }
 
@@ -195,14 +197,14 @@ export class EcoverseService {
       LogContext.CHALLENGES
     );
 
-    const ecoverse = (await this.getEcoverse({
+    const ecoverse = await this.getEcoverse({
       join: {
         alias: 'ecoverse',
         leftJoinAndSelect: {
           groups: 'ecoverse.groups',
         },
       },
-    })) as Ecoverse;
+    });
 
     const group = await this.userGroupService.addGroupWithName(
       ecoverse,

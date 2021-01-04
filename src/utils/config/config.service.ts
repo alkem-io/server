@@ -28,7 +28,7 @@ export class KonfigService {
       ...uxTemplate,
     };
 
-    return template as ITemplate;
+    return template;
   }
 
   async getAadConfig(): Promise<IAadConfig> {

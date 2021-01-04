@@ -2,11 +2,13 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
-import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
-import { RelationshipNotFoundException } from '../../utils/error-handling/exceptions/relationship.not.found.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+  GroupNotInitializedException,
+  RelationshipNotFoundException,
+  ValidationException,
+} from '../../utils/error-handling/exceptions';
 import { LogContext } from '../../utils/logging/logging.contexts';
 import { Context } from '../context/context.entity';
 import { ContextService } from '../context/context.service';
@@ -14,6 +16,7 @@ import { OpportunityInput } from '../opportunity/opportunity.dto';
 import { Opportunity } from '../opportunity/opportunity.entity';
 import { IOpportunity } from '../opportunity/opportunity.interface';
 import { OpportunityService } from '../opportunity/opportunity.service';
+import { IOrganisation } from '../organisation/organisation.interface';
 import { OrganisationService } from '../organisation/organisation.service';
 import { TagsetService } from '../tagset/tagset.service';
 import { RestrictedGroupNames } from '../user-group/user-group.entity';
@@ -384,7 +387,7 @@ export class ChallengeService {
       );
     }
 
-    const challenge = (await this.getChallengeByID(challengeID)) as Challenge;
+    const challenge = await this.getChallengeByID(challengeID);
     if (!challenge) {
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: ${challengeID}`,
@@ -426,29 +429,14 @@ export class ChallengeService {
     challengeID: number,
     organisationID: number
   ): Promise<boolean> {
-    const organisation = await this.organisationService.getOrganisationByID(
+    let challenge, organisation;
+    // eslint-disable-next-line prefer-const
+    [challenge, organisation] = await this.getChallengeAndOrganisation(
+      challengeID,
       organisationID
     );
-    if (!organisation)
-      throw new EntityNotFoundException(
-        `No organisation with id ${organisationID} was found!`,
-        LogContext.CHALLENGES
-      );
 
-    const challenge = await this.getChallengeByID(challengeID);
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `No challenge with id ${challengeID} was found!`,
-        LogContext.CHALLENGES
-      );
-
-    // Check the org is not already added
-    if (!challenge.leadOrganisations)
-      throw new EntityNotInitializedException(
-        `Challenge not fully initialised: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    const existingOrg = challenge.leadOrganisations.find(
+    const existingOrg = challenge.leadOrganisations?.find(
       existingOrg => existingOrg.id === organisationID
     );
     if (existingOrg)
@@ -457,38 +445,22 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
     // ok to add the org
-    challenge.leadOrganisations.push(organisation);
+    challenge.leadOrganisations?.push(organisation);
     await this.challengeRepository.save(challenge);
     return true;
   }
-
   async removeChallengeLead(
     challengeID: number,
     organisationID: number
   ): Promise<boolean> {
-    const organisation = await this.organisationService.getOrganisationByID(
+    let challenge;
+    // eslint-disable-next-line prefer-const
+    [challenge, {}] = await this.getChallengeAndOrganisation(
+      challengeID,
       organisationID
     );
-    if (!organisation)
-      throw new EntityNotFoundException(
-        `No organisation with id ${organisationID} was found!`,
-        LogContext.CHALLENGES
-      );
 
-    const challenge = await this.getChallengeByID(challengeID);
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `No challenge with id ${challengeID} was found!`,
-        LogContext.CHALLENGES
-      );
-
-    // Check the org is not already added
-    if (!challenge.leadOrganisations)
-      throw new EntityNotInitializedException(
-        `Challenge not fully initialised: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    const existingOrg = challenge.leadOrganisations.find(
+    const existingOrg = challenge.leadOrganisations?.find(
       existingOrg => existingOrg.id === organisationID
     );
     if (!existingOrg)
@@ -498,7 +470,7 @@ export class ChallengeService {
       );
     // ok to add the org
     const updatedLeads = [];
-    for (const existingOrg of challenge.leadOrganisations) {
+    for (const existingOrg of challenge.leadOrganisations as IOrganisation[]) {
       if (existingOrg.id != organisationID) {
         updatedLeads.push(existingOrg);
       }
@@ -506,5 +478,36 @@ export class ChallengeService {
     challenge.leadOrganisations = updatedLeads;
     await this.challengeRepository.save(challenge);
     return true;
+  }
+
+  async getChallengeAndOrganisation(
+    challengeID: number,
+    organisationID: number
+  ): Promise<[IChallenge, IOrganisation]> {
+    const organisation = await this.organisationService.getOrganisationByID(
+      organisationID
+    );
+    if (!organisation)
+      throw new EntityNotFoundException(
+        `No organisation with id ${organisationID} was found!`,
+        LogContext.CHALLENGES
+      );
+
+    const challenge = await this.getChallengeByID(challengeID);
+
+    if (!challenge)
+      throw new EntityNotFoundException(
+        `No challenge with id ${challengeID} was found!`,
+        LogContext.CHALLENGES
+      );
+
+    // Check the org is not already added
+    if (!challenge.leadOrganisations)
+      throw new EntityNotInitializedException(
+        `Challenge not fully initialised: ${challengeID}`,
+        LogContext.CHALLENGES
+      );
+
+    return [challenge, organisation];
   }
 }
