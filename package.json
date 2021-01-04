@@ -21,8 +21,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --detectOpenHandles --runInBand --config ./jest-config.json",
-    "test:e2e-cov": "jest --detectOpenHandles --runInBand --config ./jest-config.json && cat ./coverage-e2e/lcov.info | coveralls",
+    "test:e2e": "jest --detectOpenHandles --runInBand --config ./jest.config.e2e.js",
+    "test:e2e-cov": "jest --detectOpenHandles --runInBand --config ./jest.config.e2e.js && cat ./coverage-e2e/lcov.info | coveralls",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/typeorm.cli.config.ts",
     "migration:create": "npm run typeorm migration:create -- -n",
     "migration:generate": "npm run typeorm migration:generate -- -n",
@@ -92,40 +92,6 @@
     "ts-node": "9.0.0",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.7.4"
-  },
-  "jest": {
-    "moduleNameMapper": {
-      "@intefaces/(.*)": [
-        "<rootDir>/src/interfaces/$1"
-      ],
-      "@domain/(.*)": [
-        "<rootDir>/src/domain/$1"
-      ],
-      "@config/(.*)": [
-        "<rootDir>/src/config/$1"
-      ],
-      "@utils/(.*)": [
-        "<rootDir>/src/utils/$1"
-      ],
-      "@src/(.*)": [
-        "<rootDir>/src/$1"
-      ],
-      "@testing/(.*)": [
-        "<rootDir>/test/$1"
-      ]
-    },
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": ".",
-    "testRegex": ".spec.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
   },
   "_moduleAliases": {
     "@src": "./dist"
