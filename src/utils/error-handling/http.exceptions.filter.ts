@@ -6,7 +6,9 @@ import {
   Inject,
   LoggerService,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ILoggingConfig } from '../../interfaces/logging.config.interface';
 import { LogContext } from '../logging/logging.contexts';
 import { BaseException } from './exceptions/base.exception';
 
@@ -14,7 +16,9 @@ import { BaseException } from './exceptions/base.exception';
 @Catch()
 export class HttpExceptionsFilter implements ExceptionFilter {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private configService: ConfigService
   ) {}
 
   catch(exception: BaseException, _host: ArgumentsHost) {
@@ -26,8 +30,12 @@ export class HttpExceptionsFilter implements ExceptionFilter {
     let context = LogContext.UNSPECIFIED;
 
     if (exception.getContext) context = exception.getContext();
+    const loggingExceptionsEnabled = this.configService.get<ILoggingConfig>(
+      'logging'
+    )?.loggingExceptionsEnabled as boolean;
 
-    this.logger.error(exception.message, exception.stack, context);
+    if (loggingExceptionsEnabled)
+      this.logger.error(exception.message, exception.stack, context);
 
     return exception;
   }

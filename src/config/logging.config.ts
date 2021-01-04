@@ -1,6 +1,8 @@
 import { registerAs } from '@nestjs/config/dist/utils/register-as.util';
 
 export default registerAs('logging', () => ({
+  loggingExceptionsEnabled:
+    process.env.LOGGING_EXCEPTIONS_ENABLED?.toLocaleLowerCase() !== 'false',
   loggingLevel:
     process.env.LOGGING_LEVEL_CONSOLE?.toLowerCase() ||
     LOGGING_LEVEL.Error.toString().toLowerCase(),

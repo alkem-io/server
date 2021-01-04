@@ -9,13 +9,13 @@ import { faviconMiddleware } from './utils/middleware/favicon.middleware';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
-  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
-  app.useLogger(logger);
-
-  app.useGlobalFilters(new HttpExceptionsFilter(logger));
-  const bootstrapService: BootstrapService = app.get(BootstrapService);
-  await bootstrapService.bootstrapEcoverse();
   const configService: ConfigService = app.get(ConfigService);
+  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+  const bootstrapService: BootstrapService = app.get(BootstrapService);
+
+  app.useLogger(logger);
+  app.useGlobalFilters(new HttpExceptionsFilter(logger, configService));
+  await bootstrapService.bootstrapEcoverse();
   app.enableCors({
     origin: configService.get<IServiceConfig>('service')?.corsOrigin,
   });
