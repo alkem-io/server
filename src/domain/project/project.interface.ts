@@ -1,6 +1,6 @@
-import { IAgreement } from '../agreement/agreement.interface';
-import { IAspect } from '../aspect/aspect.interface';
-import { ITagset } from '../tagset/tagset.interface';
+import { IAgreement } from '@domain/agreement/agreement.interface';
+import { IAspect } from '@domain/aspect/aspect.interface';
+import { ITagset } from '@domain/tagset/tagset.interface';
 
 export interface IProject {
   id: number;

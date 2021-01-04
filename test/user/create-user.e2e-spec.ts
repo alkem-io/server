@@ -1,7 +1,7 @@
 import { createUserMutation, removeUserMutation } from './user.request.params';
-import { graphqlRequest } from '../utils/graphql.request';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
+import { graphqlRequest } from '@utils/graphql.request';
+import '@utils/array.matcher';
+import { appSingleton } from '@utils/app.singleton';
 
 let userFirstName = '';
 let userLastName = '';
@@ -214,7 +214,7 @@ describe.skip('Create User', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'ER_DATA_TOO_LONG: Data too long for column \'name\' at row 1'
+      "ER_DATA_TOO_LONG: Data too long for column 'name' at row 1"
     );
   });
 

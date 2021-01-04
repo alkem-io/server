@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { IAadConfig } from './client/aad-config/aad.config.interface';
 import { IWebClientConfig } from './client/web.client.config.interface';
 import { ITemplate } from './template/template.interface';
-import * as uxTemplate from '../../templates/ux-template.json';
+import * as uxTemplate from '@templates/ux-template.json';
 import { IConfig } from './config.interface';
 
 @Injectable()

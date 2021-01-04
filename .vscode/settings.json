@@ -4,5 +4,4 @@
     "source.fixAll.eslint": true
   },
   "files.eol": "\n"
-  // "typescript.preferences.importModuleSpecifier": "relative"
 }

@@ -6,11 +6,11 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
-} from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { AspectInput } from '../aspect/aspect.dto';
-import { IAspect } from '../aspect/aspect.interface';
-import { AspectService } from '../aspect/aspect.service';
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { AspectInput } from '@domain/aspect/aspect.dto';
+import { IAspect } from '@domain/aspect/aspect.interface';
+import { AspectService } from '@domain/aspect/aspect.service';
 import { ProjectInput } from './project.dto';
 import { Project } from './project.entity';
 import { IProject } from './project.interface';

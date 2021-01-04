@@ -3,7 +3,7 @@ import path from 'path';
 
 const rootPath = path.resolve(__dirname, '..', '..', 'dist');
 moduleAlias.addAliases({
-  '@intefaces': path.join(rootPath, 'interfaces'),
+  '@interfaces': path.join(rootPath, 'interfaces'),
   '@domain': path.join(rootPath, 'domain'),
   '@config': path.join(rootPath, 'config'),
   '@utils': path.join(rootPath, 'utils'),

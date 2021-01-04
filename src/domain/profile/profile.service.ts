@@ -5,14 +5,14 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-} from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ReferenceInput } from '../reference/reference.dto';
-import { Reference } from '../reference/reference.entity';
-import { IReference } from '../reference/reference.interface';
-import { ReferenceService } from '../reference/reference.service';
-import { ITagset } from '../tagset/tagset.interface';
-import { TagsetService } from '../tagset/tagset.service';
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ReferenceInput } from '@domain/reference/reference.dto';
+import { Reference } from '@domain/reference/reference.entity';
+import { IReference } from '@domain/reference/reference.interface';
+import { ReferenceService } from '@domain/reference/reference.service';
+import { ITagset } from '@domain/tagset/tagset.interface';
+import { TagsetService } from '@domain/tagset/tagset.service';
 import { ProfileInput } from './profile.dto';
 import { Profile } from './profile.entity';
 import { IProfile } from './profile.interface';

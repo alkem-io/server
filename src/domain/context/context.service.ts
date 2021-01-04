@@ -4,11 +4,11 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-} from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ReferenceInput } from '../reference/reference.dto';
-import { IReference } from '../reference/reference.interface';
-import { ReferenceService } from '../reference/reference.service';
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ReferenceInput } from '@domain/reference/reference.dto';
+import { IReference } from '@domain/reference/reference.interface';
+import { ReferenceService } from '@domain/reference/reference.service';
 import { ContextInput } from './context.dto';
 import { Context } from './context.entity';
 import { IContext } from './context.interface';

@@ -1,8 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AppModule } from '../../src/app.module';
-import { RopcStrategy } from '../../src/utils/authentication/ropc.strategy';
-import { TestDataService } from '../../src/utils/data-management/test-data.service';
+import { AppModule } from '@domain/@domain/src/app.module';
+import { RopcStrategy } from '@domain/@domain/src/utils/authentication/ropc.strategy';
+import { TestDataService } from '@domain/@domain/src/utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
 export class appSingleton {

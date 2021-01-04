@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ITagset } from './tagset.interface';
-import { Profile } from '../profile/profile.entity';
+import { Profile } from '@domain/profile/profile.entity';
 
 export enum RestrictedTagsetNames {
   Default = 'default',

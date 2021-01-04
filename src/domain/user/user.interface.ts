@@ -1,6 +1,6 @@
-import { IDID } from '../did/did.interface';
-import { IProfile } from '../profile/profile.interface';
-import { IUserGroup } from '../user-group/user-group.interface';
+import { IDID } from '@domain/did/did.interface';
+import { IProfile } from '@domain/profile/profile.interface';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
 
 export interface IUser {
   id: number;

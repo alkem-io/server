@@ -2,17 +2,17 @@ import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy, AuthGuard } from '@nestjs/passport';
 import { BearerStrategy } from 'passport-azure-ad';
-import { IExtendedTokenPayload } from '../../interfaces/extended-token-payload.interface';
-import { UserService } from '../../domain/user/user.service';
-import { IAzureADConfig } from '../../interfaces/aad.config.interface';
+import { IExtendedTokenPayload } from '@interfaces/extended-token-payload.interface';
+import { UserService } from '@domain/user/user.service';
+import { IAzureADConfig } from '@interfaces/aad.config.interface';
 import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import fetch, { RequestInit, Headers } from 'node-fetch';
 import { URLSearchParams } from 'url';
 import NodeCache from 'node-cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '../logging/logging.contexts';
-import { AuthenticationException } from '../error-handling/exceptions/authentication.exception';
-import { TokenException } from '../error-handling/exceptions/token.exception';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { AuthenticationException } from '@utils/error-handling/exceptions/authentication.exception';
+import { TokenException } from '@utils/error-handling/exceptions/token.exception';
 
 @Injectable()
 export class AzureADStrategy

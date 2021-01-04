@@ -1,15 +1,15 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserInput } from '../../domain/user/user.dto';
-import { UserService } from '../../domain/user/user.service';
-import { IAzureADConfig } from '../../interfaces/aad.config.interface';
-import { IServiceConfig } from '../../interfaces/service.config.interface';
-import { CherrytwistErrorStatus } from '../error-handling/enums/cherrytwist.error.status';
-import { AccountException } from '../error-handling/exceptions/account.exception';
-import { ValidationException } from '../error-handling/exceptions/validation.exception';
-import { LogContext } from '../logging/logging.contexts';
-import { MsGraphService } from '../ms-graph/ms-graph.service';
+import { UserInput } from '@domain/user/user.dto';
+import { UserService } from '@domain/user/user.service';
+import { IAzureADConfig } from '@interfaces/aad.config.interface';
+import { IServiceConfig } from '@interfaces/service.config.interface';
+import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
+import { AccountException } from '@utils/error-handling/exceptions/account.exception';
+import { ValidationException } from '@utils/error-handling/exceptions/validation.exception';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { MsGraphService } from '@utils/ms-graph/ms-graph.service';
 
 @Injectable()
 export class AccountService {

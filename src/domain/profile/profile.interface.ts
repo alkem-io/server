@@ -1,5 +1,5 @@
-import { IReference } from '../reference/reference.interface';
-import { ITagset } from '../tagset/tagset.interface';
+import { IReference } from '@domain/reference/reference.interface';
+import { ITagset } from '@domain/tagset/tagset.interface';
 
 export interface IProfile {
   id: number;

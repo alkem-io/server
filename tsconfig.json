@@ -19,7 +19,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "paths": {
-      "@intefaces/*": [
+      "@interfaces/*": [
         "src/interfaces/*"
       ],
       "@domain/*": [
@@ -30,6 +30,9 @@
       ],
       "@utils/*": [
         "src/utils/*"
+      ],
+      "@templates/*": [
+        "src/templates/*"
       ],
       "@src/*": [
         "src/*"

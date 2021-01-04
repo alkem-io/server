@@ -1,9 +1,10 @@
 module.exports = {
   moduleNameMapper: {
-    '@intefaces/(.*)': ['<rootDir>/src/interfaces/$1'],
+    '@interfaces/(.*)': ['<rootDir>/src/interfaces/$1'],
     '@domain/(.*)': ['<rootDir>/src/domain/$1'],
     '@config/(.*)': ['<rootDir>/src/config/$1'],
     '@utils/(.*)': ['<rootDir>/src/utils/$1'],
+    '@templates/(.*)': ['<rootDir>/src/templates/$1'],
     '@src/(.*)': ['<rootDir>/src/$1'],
     '@testing/(.*)': ['<rootDir>/test/$1'],
   },

@@ -2,10 +2,10 @@ import {
   createChallangeMutation,
   removeChallangeMutation,
 } from './challenge.request.params';
-import { graphqlRequestAuth } from '../utils/graphql.request';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
-import { TestUser } from '../utils/token.helper';
+import { graphqlRequestAuth } from '@utils/graphql.request';
+import '@utils/array.matcher';
+import { appSingleton } from '@utils/app.singleton';
+import { TestUser } from '@utils/token.helper';
 
 let challengeName = '';
 let uniqueTextId = '';
@@ -144,9 +144,9 @@ describe('Create Challenge', () => {
       ${''}                 | ${'Required field textID not specified'}
       ${'vvv,vv'}           | ${'Required field textID provided not in the correct format: vvv,vv'}
       ${'..-- '}            | ${'Required field textID provided not in the correct format: ..-- '}
-      ${'toooo-long-texId'} | ${"ER_DATA_TOO_LONG: Data too long for column 'textID' at row 1"}
+      ${'toooo-long-texId'} | ${'ER_DATA_TOO_LONG: Data too long for column \'textID\' at row 1'}
     `(
-      "should throw error: '$expected' for textId value: '$textId'",
+      'should throw error: \'$expected\' for textId value: \'$textId\'',
       async ({ textId, expected }) => {
         // Act
         const requestParamsCreateChallenge = {

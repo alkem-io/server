@@ -2,15 +2,15 @@ import {
   addUserToChallangeMutation,
   createChallangeMutation,
 } from './challenge.request.params';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
-import { createGroupOnChallengeMutation } from '../group/group.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
+import '@utils/array.matcher';
+import { appSingleton } from '@utils/app.singleton';
+import { createGroupOnChallengeMutation } from '@domain/group/group.request.params';
+import { createOpportunityOnChallengeMutation } from '@domain/opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';
-let userName = 'Evgeni Dimitrov';
-let userId = '6';
+const userName = 'Evgeni Dimitrov';
+const userId = '6';
 let groupName = '';
 let challengeName = '';
 let challengeId = '';

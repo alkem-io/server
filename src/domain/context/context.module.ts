@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ReferenceModule } from '../reference/reference.module';
+import { ReferenceModule } from '@domain/reference/reference.module';
 import { Context } from './context.entity';
 import { ContextResolver } from './context.resolver';
 import { ContextService } from './context.service';

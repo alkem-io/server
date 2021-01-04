@@ -1,4 +1,4 @@
-import { IActor } from '../actor/actor.interface';
+import { IActor } from '@domain/actor/actor.interface';
 
 export interface IActorGroup {
   id: number;

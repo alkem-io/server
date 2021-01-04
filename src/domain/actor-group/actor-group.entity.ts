@@ -8,8 +8,8 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Actor } from '../actor/actor.entity';
-import { Opportunity } from '../opportunity/opportunity.entity';
+import { Actor } from '@domain/actor/actor.entity';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
 import { IActorGroup } from './actor-group.interface';
 
 export enum RestrictedActorGroupNames {

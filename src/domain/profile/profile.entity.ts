@@ -6,8 +6,8 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Reference } from '../reference/reference.entity';
-import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
+import { Reference } from '@domain/reference/reference.entity';
+import { RestrictedTagsetNames, Tagset } from '@domain/tagset/tagset.entity';
 import { IProfile } from './profile.interface';
 
 @Entity()

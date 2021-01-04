@@ -3,9 +3,9 @@ import {
   removeUserMutation,
   updateUserMutation,
 } from './user.request.params';
-import { graphqlRequest } from '../utils/graphql.request';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
+import { graphqlRequest } from '@utils/graphql.request';
+import '@utils/array.matcher';
+import { appSingleton } from '@utils/app.singleton';
 
 let userName = '';
 let userId = '';

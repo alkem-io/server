@@ -6,13 +6,13 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
-import { User } from '../user/user.entity';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
+import { User } from '@domain/user/user.entity';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolver {

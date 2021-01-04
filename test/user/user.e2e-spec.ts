@@ -1,6 +1,6 @@
 import { getUserMemberships, getUsers } from './user.request.params';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
+import '@utils/array.matcher';
+import { appSingleton } from '@utils/app.singleton';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();

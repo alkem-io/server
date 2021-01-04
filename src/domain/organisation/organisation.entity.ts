@@ -9,15 +9,15 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IGroupable } from '../../interfaces/groupable.interface';
-import { Challenge } from '../challenge/challenge.entity';
-import { DID } from '../did/did.entity';
-import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { Profile } from '../profile/profile.entity';
+import { IGroupable } from '@interfaces/groupable.interface';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { DID } from '@domain/did/did.entity';
+import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
+import { Profile } from '@domain/profile/profile.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
+} from '@domain/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 
 @Entity()

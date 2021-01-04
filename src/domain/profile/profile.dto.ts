@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
-import { ReferenceInput } from '../reference/reference.dto';
-import { TagsetInput } from '../tagset/tagset.dto';
+import { ReferenceInput } from '@domain/reference/reference.dto';
+import { TagsetInput } from '@domain/tagset/tagset.dto';
 
 @InputType()
 export class ProfileInput {

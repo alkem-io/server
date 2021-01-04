@@ -1,4 +1,4 @@
-import { IReference } from '../reference/reference.interface';
+import { IReference } from '@domain/reference/reference.interface';
 
 export interface IContext {
   id: number;

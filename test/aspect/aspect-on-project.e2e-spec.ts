@@ -1,14 +1,14 @@
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
-import { createChallangeMutation } from '../challenge/challenge.request.params';
+import '@utils/array.matcher';
+import { appSingleton } from '@utils/app.singleton';
+import { createChallangeMutation } from '@domain/challenge/challenge.request.params';
 import {
   createAspectOnProjectMutation,
   removeAspectMutation,
   updateAspectMutation,
   getAspectPerProject,
 } from './aspect.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
-import { createProjectMutation } from '../project/project.request.params';
+import { createOpportunityOnChallengeMutation } from '@domain/opportunity/opportunity.request.params';
+import { createProjectMutation } from '@domain/project/project.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';
@@ -18,7 +18,7 @@ let projectTextId = '';
 let projectId = '';
 let challengeName = '';
 let challengeId = '';
-let aspectId = ``;
+let aspectId = '';
 let aspectTitle = '';
 let aspectFrame = '';
 let aspectExplanation = '';

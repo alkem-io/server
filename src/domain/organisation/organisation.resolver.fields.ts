@@ -1,24 +1,24 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
+} from '@domain/user-group/user-group.entity';
 import { Organisation } from './organisation.entity';
-import { User } from '../user/user.entity';
-import { UserGroupService } from '../user-group/user-group.service';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { Profile } from '../profile/profile.entity';
+import { User } from '@domain/user/user.entity';
+import { UserGroupService } from '@domain/user-group/user-group.service';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { Profile } from '@domain/profile/profile.entity';
 import { OrganisationService } from './organisation.service';
 import {
   ValidationException,
   GroupNotInitializedException,
   EntityNotInitializedException,
-} from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {

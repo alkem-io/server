@@ -1,17 +1,17 @@
 import { UseGuards } from '@nestjs/common';
 import { Mutation, Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
-import { ReferenceInput } from '../reference/reference.dto';
-import { Reference } from '../reference/reference.entity';
-import { IReference } from '../reference/reference.interface';
-import { Tagset } from '../tagset/tagset.entity';
-import { ITagset } from '../tagset/tagset.interface';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { ReferenceInput } from '@domain/reference/reference.dto';
+import { Reference } from '@domain/reference/reference.entity';
+import { IReference } from '@domain/reference/reference.interface';
+import { Tagset } from '@domain/tagset/tagset.entity';
+import { ITagset } from '@domain/tagset/tagset.interface';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { ProfileService } from './profile.service';
 import { ProfileInput } from './profile.dto';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
 
 @Resolver()
 export class ProfileResolver {

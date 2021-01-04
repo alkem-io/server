@@ -2,11 +2,11 @@ import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
-import { UserInput } from '../../domain/user/user.dto';
-import { AzureADStrategy } from '../authentication/aad.strategy';
+import { UserInput } from '@domain/user/user.dto';
+import { AzureADStrategy } from '@utils/authentication/aad.strategy';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '../logging/logging.contexts';
-import { AccountException } from '../error-handling/exceptions/account.exception';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { AccountException } from '@utils/error-handling/exceptions/account.exception';
 
 @Injectable()
 export class MsGraphService {
