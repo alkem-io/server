@@ -7,5 +7,6 @@ moduleAlias.addAliases({
   '@domain': path.join(rootPath, 'domain'),
   '@config': path.join(rootPath, 'config'),
   '@utils': path.join(rootPath, 'utils'),
+  '@templates': path.join(rootPath, 'templates'),
   '@src': rootPath,
 });
