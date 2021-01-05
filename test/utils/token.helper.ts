@@ -1,4 +1,4 @@
-import { RopcStrategy } from '@utils/authentication/ropc.strategy';
+import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
 
 export class TokenHelper {
   private users = Object.values(TestUser);

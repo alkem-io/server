@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { RopcStrategy } from '@utils/authentication/ropc.strategy';
+import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
 import { TestDataService } from '@utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
