@@ -3,10 +3,10 @@ import {
   getChallengeUsers,
   updateChallangeMutation,
 } from './challenge.request.params';
-import '@testing/utils/array.matcher';
-import { appSingleton } from '@testing/utils/app.singleton';
-import { getGroup } from '@testing/group/group.request.params';
-import { assignGroupFocalPointMutation } from '@testing/user/user.request.params';
+import '@test/utils/array.matcher';
+import { appSingleton } from '@test/utils/app.singleton';
+import { getGroup } from '@test/group/group.request.params';
+import { assignGroupFocalPointMutation } from '@test/user/user.request.params';
 
 const userNameOne = 'Evgeni Dimitrov';
 const userIdOne = '6';

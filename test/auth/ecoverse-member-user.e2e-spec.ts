@@ -1,7 +1,7 @@
-import { graphqlRequest, graphqlRequestAuth } from '@testing/utils/graphql.request';
-import { TestUser } from '@testing/utils/token.helper';
-import '@testing/utils/array.matcher';
-import { appSingleton } from '@testing/utils/app.singleton';
+import { graphqlRequest, graphqlRequestAuth } from '@test/utils/graphql.request';
+import { TestUser } from '@test/utils/token.helper';
+import '@test/utils/array.matcher';
+import { appSingleton } from '@test/utils/app.singleton';
 import {
   name,
   hostMembers,
@@ -78,7 +78,7 @@ import {
   projectsState,
   projectsTagset,
   projectsAspects,
-} from '@testing/utils/queries';
+} from '@test/utils/queries';
 
 import {
   createOrganisationMutation,
@@ -113,7 +113,7 @@ import {
   createReferenceOnContextVariables,
   createTagsetOnProfileMutation,
   createTagsetOnProfileVariables,
-} from '@testing/utils/create-mutations';
+} from '@test/utils/create-mutations';
 
 import {
   updateUserMutation,
@@ -148,7 +148,7 @@ import {
   addChallengeLeadToOrganisationVariables,
   removeUserFromGroupMutation,
   removeUserFromGroupVariables,
-} from '@testing/utils/update-mutations';
+} from '@test/utils/update-mutations';
 
 import {
   removeUserMutation,
@@ -161,7 +161,7 @@ import {
   removeActorVariables,
   removeActorGroupMutation,
   removeActorGroupVariables,
-} from '@testing/utils/remove-mutations';
+} from '@test/utils/remove-mutations';
 
 const notAuthorizedCode = '"code":"FORBIDDEN"';
 

@@ -6,7 +6,7 @@ module.exports = {
     '@utils/(.*)': ['<rootDir>/src/utils/$1'],
     '@templates/(.*)': ['<rootDir>/src/templates/$1'],
     '@src/(.*)': ['<rootDir>/src/$1'],
-    '@testing/(.*)': ['<rootDir>/test/$1'],
+    '@test/(.*)': ['<rootDir>/test/$1'],
   },
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: null,
