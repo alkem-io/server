@@ -62,6 +62,7 @@ export class OrganisationService {
     //const t1 = performance.now()
     const organisation = await Organisation.findOne({
       where: [{ id: organisationID }],
+      relations: ['groups'],
     });
     if (!organisation)
       throw new EntityNotFoundException(
@@ -84,7 +85,11 @@ export class OrganisationService {
       `Adding userGroup (${groupName}) to organisation (${orgID})`
     );
     // Try to find the challenge
-    const organisation = await Organisation.findOne(orgID);
+    const organisation = await Organisation.findOne({
+      where: [{ id: orgID }],
+      relations: ['groups'],
+    });
+
     if (!organisation) {
       throw new EntityNotFoundException(
         `Unable to find organisation with ID: ${orgID}`,

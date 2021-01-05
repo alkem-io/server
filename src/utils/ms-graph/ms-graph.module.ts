@@ -4,7 +4,7 @@ import { AuthenticationModule } from '@utils/authentication/authentication.modul
 import { MsGraphService } from './ms-graph.service';
 
 @Module({
-  imports: [forwardRef(() => AuthenticationModule)],
+  imports: [AuthenticationModule],
   providers: [MsGraphService],
   exports: [MsGraphService],
 })

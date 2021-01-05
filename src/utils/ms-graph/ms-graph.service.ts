@@ -1,9 +1,8 @@
-import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
-import fetch from 'node-fetch';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
 import { UserInput } from '@domain/user/user.dto';
-import { AzureADStrategy } from '@utils/authentication/aad.strategy';
+import { AadOboStrategy } from '@utils/authentication/aad.obo.strategy';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { AccountException } from '@utils/error-handling/exceptions/account.exception';
@@ -11,30 +10,13 @@ import { AccountException } from '@utils/error-handling/exceptions/account.excep
 @Injectable()
 export class MsGraphService {
   constructor(
-    @Inject(forwardRef(() => AzureADStrategy))
-    private azureAdStrategy: AzureADStrategy,
+    private oboStrategy: AadOboStrategy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async callResourceAPI(accessToken: string, resourceURI: string) {
-    const options = {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-type': 'application/json',
-        Accept: 'application/json',
-        'Accept-Charset': 'utf-8',
-      },
-    };
-
-    const response = await fetch(resourceURI, options);
-    const json = await response.json();
-    return json;
-  }
-
   async createUser(userData: UserInput, accountUpn: string): Promise<any> {
     const clientOptions: ClientOptions = {
-      authProvider: this.azureAdStrategy,
+      authProvider: this.oboStrategy,
     };
     const client = Client.initWithMiddleware(clientOptions);
 
@@ -60,7 +42,7 @@ export class MsGraphService {
 
   async deleteUser(accountUpn: string): Promise<any> {
     const clientOptions: ClientOptions = {
-      authProvider: this.azureAdStrategy,
+      authProvider: this.oboStrategy,
     };
     const client = Client.initWithMiddleware(clientOptions);
     const res = await client.api(`/users/${accountUpn}`).delete();
@@ -76,7 +58,7 @@ export class MsGraphService {
   async getAllUsers(client: Client | undefined): Promise<any> {
     if (!client) {
       const clientOptions: ClientOptions = {
-        authProvider: this.azureAdStrategy,
+        authProvider: this.oboStrategy,
       };
       client = Client.initWithMiddleware(clientOptions);
     }
@@ -125,7 +107,7 @@ export class MsGraphService {
 
   async resetPassword(accountUpn: string, newPassword: string): Promise<any> {
     const clientOptions: ClientOptions = {
-      authProvider: this.azureAdStrategy,
+      authProvider: this.oboStrategy,
     };
 
     const passwordResetResponse = {
