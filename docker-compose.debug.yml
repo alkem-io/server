@@ -30,6 +30,7 @@ services:
       - AUTH_AAD_CLIENT_APP_ID
       - AUTH_AAD_CHERRYTWIST_API_SCOPE
       - AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI
+      - NODE_ENV
     depends_on:
       - db
     restart: always

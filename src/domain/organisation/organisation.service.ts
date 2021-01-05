@@ -62,6 +62,7 @@ export class OrganisationService {
     //const t1 = performance.now()
     const organisation = await Organisation.findOne({
       where: [{ id: organisationID }],
+      relations: ['groups'],
     });
     if (!organisation)
       throw new EntityNotFoundException(

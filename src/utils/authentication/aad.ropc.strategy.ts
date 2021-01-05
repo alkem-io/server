@@ -8,7 +8,7 @@ import {
 } from 'cherrytwist-lib';
 
 @Injectable()
-export class RopcStrategy {
+export class AadRopcStrategy {
   constructor(private configService: ConfigService) {}
 
   async getAccessToken(): Promise<string> {
