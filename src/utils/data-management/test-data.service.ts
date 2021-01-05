@@ -1,21 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { ActorGroupInput } from '../../domain/actor-group/actor-group.dto';
-import { ActorGroupService } from '../../domain/actor-group/actor-group.service';
-import { ActorInput } from '../../domain/actor/actor.dto';
-import { AspectInput } from '../../domain/aspect/aspect.dto';
-import { ChallengeInput } from '../../domain/challenge/challenge.dto';
-import { IChallenge } from '../../domain/challenge/challenge.interface';
-import { ChallengeService } from '../../domain/challenge/challenge.service';
-import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
-import { OpportunityInput } from '../../domain/opportunity/opportunity.dto';
-import { OpportunityService } from '../../domain/opportunity/opportunity.service';
-import { ProjectInput } from '../../domain/project/project.dto';
-import { ProjectService } from '../../domain/project/project.service';
-import { RelationInput } from '../../domain/relation/relation.dto';
-import { UserGroupService } from '../../domain/user-group/user-group.service';
-import { UserInput } from '../../domain/user/user.dto';
-import { IUser } from '../../domain/user/user.interface';
-import { UserService } from '../../domain/user/user.service';
+import { ActorGroupInput } from '@domain/actor-group/actor-group.dto';
+import { ActorGroupService } from '@domain/actor-group/actor-group.service';
+import { ActorInput } from '@domain/actor/actor.dto';
+import { AspectInput } from '@domain/aspect/aspect.dto';
+import { ChallengeInput } from '@domain/challenge/challenge.dto';
+import { IChallenge } from '@domain/challenge/challenge.interface';
+import { ChallengeService } from '@domain/challenge/challenge.service';
+import { EcoverseService } from '@domain/ecoverse/ecoverse.service';
+import { OpportunityInput } from '@domain/opportunity/opportunity.dto';
+import { OpportunityService } from '@domain/opportunity/opportunity.service';
+import { ProjectInput } from '@domain/project/project.dto';
+import { ProjectService } from '@domain/project/project.service';
+import { RelationInput } from '@domain/relation/relation.dto';
+import { UserGroupService } from '@domain/user-group/user-group.service';
+import { UserInput } from '@domain/user/user.dto';
+import { IUser } from '@domain/user/user.interface';
+import { UserService } from '@domain/user/user.service';
 import { DataManagementService } from './data-management.service';
 
 @Injectable()
@@ -157,7 +157,7 @@ export class TestDataService {
       vision: 'test opportunity vision',
       who: 'test opportunity who',
     };
-    let response = await this.challengeService.createOpportunity(
+    const response = await this.challengeService.createOpportunity(
       challengeId,
       opportunity
     );
@@ -183,7 +183,7 @@ export class TestDataService {
       vision: 'test opportunity vision2',
       who: 'test opportunity who2',
     };
-    let response = await this.challengeService.createOpportunity(
+    const response = await this.challengeService.createOpportunity(
       challengeId,
       opportunity
     );

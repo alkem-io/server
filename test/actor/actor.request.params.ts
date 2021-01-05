@@ -1,5 +1,5 @@
-import { TestUser } from '../utils/token.helper';
-import { graphqlRequestAuth } from '../utils/graphql.request';
+import { TestUser } from '@test/utils/token.helper';
+import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
 export const createActorMutation = async (
   actorGroupId: any,
@@ -43,7 +43,7 @@ export const updateActorMutation = async (
   const requestParams = {
     operationName: null,
     query: `mutation updateActor($actorData: ActorInput!, $ID: Float!) {
-        updateActor(actorData: $actorData, ID: $ID) {    
+        updateActor(actorData: $actorData, ID: $ID) {
           name
           description
           value

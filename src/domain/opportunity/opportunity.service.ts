@@ -2,25 +2,25 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ActorGroupInput } from '../actor-group/actor-group.dto';
-import { IActorGroup } from '../actor-group/actor-group.interface';
-import { ActorGroupService } from '../actor-group/actor-group.service';
-import { AspectInput } from '../aspect/aspect.dto';
-import { IAspect } from '../aspect/aspect.interface';
-import { AspectService } from '../aspect/aspect.service';
-import { ProjectInput } from '../project/project.dto';
-import { IProject } from '../project/project.interface';
-import { ProjectService } from '../project/project.service';
-import { Context } from '../context/context.entity';
-import { ContextService } from '../context/context.service';
-import { RelationInput } from '../relation/relation.dto';
-import { IRelation } from '../relation/relation.interface';
-import { RelationService } from '../relation/relation.service';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
-import { UserGroupService } from '../user-group/user-group.service';
-import { UserService } from '../user/user.service';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ActorGroupInput } from '@domain/actor-group/actor-group.dto';
+import { IActorGroup } from '@domain/actor-group/actor-group.interface';
+import { ActorGroupService } from '@domain/actor-group/actor-group.service';
+import { AspectInput } from '@domain/aspect/aspect.dto';
+import { IAspect } from '@domain/aspect/aspect.interface';
+import { AspectService } from '@domain/aspect/aspect.service';
+import { ProjectInput } from '@domain/project/project.dto';
+import { IProject } from '@domain/project/project.interface';
+import { ProjectService } from '@domain/project/project.service';
+import { Context } from '@domain/context/context.entity';
+import { ContextService } from '@domain/context/context.service';
+import { RelationInput } from '@domain/relation/relation.dto';
+import { IRelation } from '@domain/relation/relation.interface';
+import { RelationService } from '@domain/relation/relation.service';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { UserGroupService } from '@domain/user-group/user-group.service';
+import { UserService } from '@domain/user/user.service';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
@@ -29,7 +29,7 @@ import {
   GroupNotInitializedException,
   EntityNotInitializedException,
   ValidationException,
-} from '../../utils/error-handling/exceptions';
+} from '@utils/error-handling/exceptions';
 
 @Injectable()
 export class OpportunityService {

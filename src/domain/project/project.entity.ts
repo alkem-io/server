@@ -9,10 +9,10 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Agreement } from '../agreement/agreement.entity';
-import { Aspect } from '../aspect/aspect.entity';
-import { Opportunity } from '../opportunity/opportunity.entity';
-import { Tagset } from '../tagset/tagset.entity';
+import { Agreement } from '@domain/agreement/agreement.entity';
+import { Aspect } from '@domain/aspect/aspect.entity';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
+import { Tagset } from '@domain/tagset/tagset.entity';
 import { IProject } from './project.interface';
 
 @Entity()

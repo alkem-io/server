@@ -2,13 +2,13 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ProfileService } from '../profile/profile.service';
-import { TagsetService } from '../tagset/tagset.service';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
-import { UserGroupService } from '../user-group/user-group.service';
+import { EntityNotFoundException } from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ProfileService } from '@domain/profile/profile.service';
+import { TagsetService } from '@domain/tagset/tagset.service';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { UserGroupService } from '@domain/user-group/user-group.service';
 import { OrganisationInput } from './organisation.dto';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
@@ -62,6 +62,7 @@ export class OrganisationService {
     //const t1 = performance.now()
     const organisation = await Organisation.findOne({
       where: [{ id: organisationID }],
+      relations: ['groups'],
     });
     if (!organisation)
       throw new EntityNotFoundException(
@@ -84,7 +85,11 @@ export class OrganisationService {
       `Adding userGroup (${groupName}) to organisation (${orgID})`
     );
     // Try to find the challenge
-    const organisation = await Organisation.findOne(orgID);
+    const organisation = await Organisation.findOne({
+      where: [{ id: orgID }],
+      relations: ['groups'],
+    });
+
     if (!organisation) {
       throw new EntityNotFoundException(
         `Unable to find organisation with ID: ${orgID}`,

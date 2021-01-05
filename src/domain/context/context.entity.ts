@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Reference } from '../reference/reference.entity';
+import { Reference } from '@domain/reference/reference.entity';
 import {
   BaseEntity,
   Column,

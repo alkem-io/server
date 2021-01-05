@@ -1,5 +1,5 @@
-import { TestUser } from '../utils/token.helper';
-import { graphqlRequestAuth } from '../utils/graphql.request';
+import { TestUser } from '@test/utils/token.helper';
+import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
 export const createUserMutation = async (userName: string) => {
   const requestParams = {
@@ -16,7 +16,7 @@ export const createUserMutation = async (userName: string) => {
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const createUserDetailsMutation = async (
@@ -48,7 +48,7 @@ export const createUserDetailsMutation = async (
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const updateUserMutation = async (
@@ -75,7 +75,7 @@ export const updateUserMutation = async (
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const removeUserMutation = async (removeUserID: any) => {
@@ -87,7 +87,7 @@ export const removeUserMutation = async (removeUserID: any) => {
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const addUserToGroup = async (userId: any, groupId: string) => {
@@ -102,7 +102,7 @@ export const addUserToGroup = async (userId: any, groupId: string) => {
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const assignGroupFocalPointMutation = async (
@@ -126,7 +126,7 @@ export const assignGroupFocalPointMutation = async (
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const createGroupMutation = async (testGroup: string) => {
@@ -143,7 +143,7 @@ export const createGroupMutation = async (testGroup: string) => {
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const removeUserFromGroup = async (userId: any, groupId: string) => {
@@ -165,7 +165,7 @@ export const removeUserFromGroup = async (userId: any, groupId: string) => {
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const addUserToOrganisation = async (
@@ -183,7 +183,7 @@ export const addUserToOrganisation = async (
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const getUserMemberships = async () => {
@@ -207,7 +207,7 @@ export const getUserMemberships = async () => {
     }`,
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const getUsers = async () => {
@@ -217,5 +217,5 @@ export const getUsers = async () => {
     query: 'query{users {name}}',
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };

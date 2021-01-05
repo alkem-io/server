@@ -3,18 +3,18 @@ import { Mutation } from '@nestjs/graphql';
 import { Float } from '@nestjs/graphql';
 import { Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
+} from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { OrganisationInput } from './organisation.dto';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {

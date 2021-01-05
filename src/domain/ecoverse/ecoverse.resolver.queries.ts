@@ -1,29 +1,29 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { Challenge } from '../challenge/challenge.entity';
-import { IChallenge } from '../challenge/challenge.interface';
-import { ChallengeService } from '../challenge/challenge.service';
-import { Context } from '../context/context.entity';
-import { IContext } from '../context/context.interface';
-import { Organisation } from '../organisation/organisation.entity';
-import { IOrganisation } from '../organisation/organisation.interface';
-import { OrganisationService } from '../organisation/organisation.service';
-import { Tagset } from '../tagset/tagset.entity';
-import { ITagset } from '../tagset/tagset.interface';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { EntityNotFoundException } from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { IChallenge } from '@domain/challenge/challenge.interface';
+import { ChallengeService } from '@domain/challenge/challenge.service';
+import { Context } from '@domain/context/context.entity';
+import { IContext } from '@domain/context/context.interface';
+import { Organisation } from '@domain/organisation/organisation.entity';
+import { IOrganisation } from '@domain/organisation/organisation.interface';
+import { OrganisationService } from '@domain/organisation/organisation.service';
+import { Tagset } from '@domain/tagset/tagset.entity';
+import { ITagset } from '@domain/tagset/tagset.interface';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
-import { UserGroupService } from '../user-group/user-group.service';
-import { User } from '../user/user.entity';
-import { IUser } from '../user/user.interface';
-import { UserService } from '../user/user.service';
+} from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { UserGroupService } from '@domain/user-group/user-group.service';
+import { User } from '@domain/user/user.entity';
+import { IUser } from '@domain/user/user.interface';
+import { UserService } from '@domain/user/user.service';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()

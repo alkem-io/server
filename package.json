@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -21,8 +21,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --detectOpenHandles --runInBand --config ./jest-config.json",
-    "test:e2e-cov": "jest --detectOpenHandles --runInBand --config ./jest-config.json && cat ./coverage-e2e/lcov.info | coveralls",
+    "test:e2e": "jest --detectOpenHandles --runInBand --config ./jest.config.e2e.js",
+    "test:e2e-cov": "jest --detectOpenHandles --runInBand --config ./jest.config.e2e.js && cat ./coverage-e2e/lcov.info | coveralls",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/typeorm.cli.config.ts",
     "migration:create": "npm run typeorm migration:create -- -n",
     "migration:generate": "npm run typeorm migration:generate -- -n",
@@ -41,12 +41,13 @@
     "@nestjs/typeorm": "^7.1.4",
     "apollo-server-express": "^2.18.1",
     "cd": "^0.3.3",
-    "cherrytwist-lib": "^0.4.4",
+    "cherrytwist-lib": "^0.4.8",
     "class-validator": "^0.12.2",
     "elastic-apm-node": "^3.7.0",
     "graphql": "^15.3.0",
     "graphql-tools": "^6.2.4",
     "isomorphic-fetch": "^3.0.0",
+    "module-alias": "^2.2.2",
     "msal": "^1.4.1",
     "mysql": "^2.18.1",
     "nest-winston": "^1.4.0",
@@ -70,6 +71,7 @@
     "@nestjs/testing": "^7.0.0",
     "@types/express": "^4.17.3",
     "@types/jest": "^26.0.10",
+    "@types/module-alias": "^2.0.0",
     "@types/node": "^13.9.1",
     "@types/node-fetch": "^2.5.7",
     "@types/passport-azure-ad": "^4.0.7",
@@ -91,18 +93,7 @@
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.7.4"
   },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": ".",
-    "testRegex": ".spec.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+  "_moduleAliases": {
+    "@src": "./dist"
   }
 }

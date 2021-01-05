@@ -1,5 +1,8 @@
-import { TestUser } from '../utils/token.helper';
-import { graphqlRequest, graphqlRequestAuth } from '../utils/graphql.request';
+import { TestUser } from '@test/utils/token.helper';
+import {
+  graphqlRequest,
+  graphqlRequestAuth,
+} from '@test/utils/graphql.request';
 
 export const createOpportunityOnChallengeMutation = async (
   challengeId: string,
@@ -13,7 +16,7 @@ export const createOpportunityOnChallengeMutation = async (
         id
         name
         textID
-        state    
+        state
         context {
           id
           tagline
@@ -65,7 +68,7 @@ export const updateOpportunityOnChallengeMutation = async (
         id
         name
         textID
-        state    
+        state
         context {
           id
           tagline
@@ -129,7 +132,7 @@ export const queryOpportunity = async (opportunityId: any) => {
         id
         name
         textID
-        state    
+        state
         context {
           id
           tagline
@@ -159,7 +162,7 @@ export const queryOpportunities = async () => {
         id
         name
         textID
-        state    
+        state
         context {
           id
           tagline

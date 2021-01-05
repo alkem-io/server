@@ -4,15 +4,15 @@ import { Repository } from 'typeorm';
 import { ActorGroup } from './actor-group.entity';
 import { IActorGroup } from './actor-group.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ActorInput } from '../actor/actor.dto';
+import { ActorInput } from '@domain/actor/actor.dto';
 import { ActorGroupInput } from './actor-group.dto';
-import { ActorService } from '../actor/actor.service';
-import { IActor } from '../actor/actor.interface';
+import { ActorService } from '@domain/actor/actor.service';
+import { IActor } from '@domain/actor/actor.interface';
 import {
   EntityNotFoundException,
   GroupNotInitializedException,
-} from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Injectable()
 export class ActorGroupService {

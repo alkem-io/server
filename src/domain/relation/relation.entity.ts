@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IRelation } from './relation.interface';
-import { Opportunity } from '../opportunity/opportunity.entity';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
 
 @Entity()
 @ObjectType()

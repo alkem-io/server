@@ -8,8 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ILoggingConfig } from '../../interfaces/logging.config.interface';
-import { LogContext } from '../logging/logging.contexts';
+import { LogContext } from '@utils/logging/logging.contexts';
 import { BaseException } from './exceptions/base.exception';
 
 @Injectable()

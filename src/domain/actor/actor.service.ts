@@ -8,8 +8,8 @@ import { ActorInput } from './actor.dto';
 import {
   ValidationException,
   EntityNotFoundException,
-} from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Injectable()
 export class ActorService {

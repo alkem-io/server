@@ -6,9 +6,9 @@ import {
   EntityNotFoundException,
   NotSupportedException,
   ValidationException,
-} from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ProfileService } from '../profile/profile.service';
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ProfileService } from '@domain/profile/profile.service';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';

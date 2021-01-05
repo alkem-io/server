@@ -1,8 +1,8 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from '../challenge/challenge.entity';
-import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { Organisation } from '../organisation/organisation.entity';
-import { User } from '../user/user.entity';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
+import { Organisation } from '@domain/organisation/organisation.entity';
+import { User } from '@domain/user/user.entity';
 import {
   BaseEntity,
   Column,
@@ -15,8 +15,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IUserGroup } from './user-group.interface';
-import { Profile } from '../profile/profile.entity';
-import { Opportunity } from '../opportunity/opportunity.entity';
+import { Profile } from '@domain/profile/profile.entity';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
 
 @Entity()
 @ObjectType()

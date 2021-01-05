@@ -13,17 +13,17 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IGroupable } from '../../interfaces/groupable.interface';
-import { Context } from '../context/context.entity';
-import { DID } from '../did/did.entity';
-import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { Opportunity } from '../opportunity/opportunity.entity';
-import { Organisation } from '../organisation/organisation.entity';
-import { Tagset } from '../tagset/tagset.entity';
+import { IGroupable } from '@interfaces/groupable.interface';
+import { Context } from '@domain/context/context.entity';
+import { DID } from '@domain/did/did.entity';
+import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
+import { Organisation } from '@domain/organisation/organisation.entity';
+import { Tagset } from '@domain/tagset/tagset.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
+} from '@domain/user-group/user-group.entity';
 import { IChallenge } from './challenge.interface';
 
 @Entity()

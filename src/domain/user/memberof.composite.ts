@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Challenge } from '../challenge/challenge.entity';
-import { Organisation } from '../organisation/organisation.entity';
-import { UserGroup } from '../user-group/user-group.entity';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { Organisation } from '@domain/organisation/organisation.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 
 @ObjectType()
 export class MemberOf {

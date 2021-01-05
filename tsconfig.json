@@ -10,13 +10,36 @@
     "outDir": "./dist",
     "removeComments": true,
     "strict": true,
-    "baseUrl": "./",
+    "baseUrl": ".",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "@interfaces/*": [
+        "src/interfaces/*"
+      ],
+      "@domain/*": [
+        "src/domain/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@utils/*": [
+        "src/utils/*"
+      ],
+      "@templates/*": [
+        "src/templates/*"
+      ],
+      "@src/*": [
+        "src/*"
+      ],
+      "@test/*": [
+        "test/*"
+      ]
+    }
   }
 }

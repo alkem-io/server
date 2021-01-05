@@ -1,8 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AppModule } from '../../src/app.module';
-import { RopcStrategy } from '../../src/utils/authentication/ropc.strategy';
-import { TestDataService } from '../../src/utils/data-management/test-data.service';
+import { AppModule } from '@src/app.module';
+import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
+import { TestDataService } from '@utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
 export class appSingleton {
@@ -42,7 +42,7 @@ export class appSingleton {
     this.app = testModule.createNestApplication();
     await this.app.init();
     appSingleton.testDataService = await testModule.get(TestDataService);
-    const ropcStrategy = await testModule.get(RopcStrategy);
+    const ropcStrategy = await testModule.get(AadRopcStrategy);
     await this.getTokensForAllTestUsers(ropcStrategy);
 
     await appSingleton.testDataService.initDB();
@@ -55,7 +55,7 @@ export class appSingleton {
     await this.app.close();
   }
 
-  private async getTokensForAllTestUsers(ropcStrategy: RopcStrategy) {
+  private async getTokensForAllTestUsers(ropcStrategy: AadRopcStrategy) {
     const tokenHelper = new TokenHelper(ropcStrategy);
     this.userTokenMap = await tokenHelper.buildUserTokenMap();
   }

@@ -1,23 +1,23 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ChallengeInput } from '../../domain/challenge/challenge.dto';
-import { IChallenge } from '../../domain/challenge/challenge.interface';
-import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
-import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
-import { ProfileService } from '../../domain/profile/profile.service';
-import { Reference } from '../../domain/reference/reference.entity';
-import { Context } from '../../domain/context/context.entity';
-import { TagsetService } from '../../domain/tagset/tagset.service';
-import { IUserGroup } from '../../domain/user-group/user-group.interface';
-import { UserGroupService } from '../../domain/user-group/user-group.service';
-import { UserInput } from '../../domain/user/user.dto';
-import { IUser } from '../../domain/user/user.interface';
-import { UserService } from '../../domain/user/user.service';
+import { ChallengeInput } from '@domain/challenge/challenge.dto';
+import { IChallenge } from '@domain/challenge/challenge.interface';
+import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
+import { EcoverseService } from '@domain/ecoverse/ecoverse.service';
+import { ProfileService } from '@domain/profile/profile.service';
+import { Reference } from '@domain/reference/reference.entity';
+import { Context } from '@domain/context/context.entity';
+import { TagsetService } from '@domain/tagset/tagset.service';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { UserGroupService } from '@domain/user-group/user-group.service';
+import { UserInput } from '@domain/user/user.dto';
+import { IUser } from '@domain/user/user.interface';
+import { UserService } from '@domain/user/user.service';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '../logging/logging.contexts';
-import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { EntityNotInitializedException } from '@utils/error-handling/exceptions/entity.not.initialized.exception';
 import { exec } from 'child_process';
 
 @Injectable()

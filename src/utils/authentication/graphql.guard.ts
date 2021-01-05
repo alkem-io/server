@@ -8,16 +8,16 @@ import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import { ConfigService } from '@nestjs/config';
-import { IServiceConfig } from '../../interfaces/service.config.interface';
+import { IServiceConfig } from '@interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
-import { IUserGroup } from '../../domain/user-group/user-group.interface';
-import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '../logging/logging.contexts';
-import { AuthenticationException } from '../error-handling/exceptions/authentication.exception';
-import { TokenException } from '../error-handling/exceptions/token.exception';
-import { ForbiddenException } from '../error-handling/exceptions/forbidden.exception';
-import { CherrytwistErrorStatus } from '../error-handling/enums/cherrytwist.error.status';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { AuthenticationException } from '@utils/error-handling/exceptions/authentication.exception';
+import { TokenException } from '@utils/error-handling/exceptions/token.exception';
+import { ForbiddenException } from '@utils/error-handling/exceptions/forbidden.exception';
+import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard('azure-ad') {
