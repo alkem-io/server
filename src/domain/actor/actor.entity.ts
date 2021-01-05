@@ -1,5 +1,6 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-
+import { ActorGroup } from '@domain/actor-group/actor-group.entity';
+import { IActor } from '@domain/actor/actor.interface';
 import {
   BaseEntity,
   Column,
@@ -7,8 +8,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ActorGroup } from '../actor-group/actor-group.entity';
-import { IActor } from './actor.interface';
 
 @Entity()
 @ObjectType()

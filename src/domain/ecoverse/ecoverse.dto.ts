@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
-import { ContextInput } from '../context/context.dto';
+import { ContextInput } from '@domain/context/context.dto';
 
 @InputType()
 export class EcoverseInput {

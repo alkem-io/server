@@ -1,19 +1,20 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ITagsetable } from '../../interfaces/tagsetable.interface';
+
 import { Repository } from 'typeorm';
-import { Challenge } from '../challenge/challenge.entity';
-import { Project } from '../project/project.entity';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { Project } from '@domain/project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TagsetInput } from './tagset.dto';
-import { LogContext } from '../../utils/logging/logging.contexts';
+import { LogContext } from '@utils/logging/logging.contexts';
 import {
   EntityNotFoundException,
   ValidationException,
   EntityNotInitializedException,
-} from '../../utils/error-handling/exceptions';
+} from '@utils/error-handling/exceptions';
+import { ITagsetable } from '@interfaces/tagsetable.interface';
 
 @Injectable()
 export class TagsetService {

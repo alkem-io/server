@@ -3,12 +3,12 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './search-input.dto';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserGroup } from '../../domain/user-group/user-group.entity';
-import { User } from '../../domain/user/user.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
+import { User } from '@domain/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
-import { LogContext } from '../logging/logging.contexts';
-import { ValidationException } from '../error-handling/exceptions/validation.exception';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ValidationException } from '@utils/error-handling/exceptions/validation.exception';
 
 enum SearchEntityTypes {
   User = 'user',

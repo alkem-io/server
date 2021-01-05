@@ -8,21 +8,21 @@ import {
   GroupNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
-} from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { Context } from '../context/context.entity';
-import { ContextService } from '../context/context.service';
-import { OpportunityInput } from '../opportunity/opportunity.dto';
-import { Opportunity } from '../opportunity/opportunity.entity';
-import { IOpportunity } from '../opportunity/opportunity.interface';
-import { OpportunityService } from '../opportunity/opportunity.service';
-import { IOrganisation } from '../organisation/organisation.interface';
-import { OrganisationService } from '../organisation/organisation.service';
-import { TagsetService } from '../tagset/tagset.service';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
-import { UserGroupService } from '../user-group/user-group.service';
-import { UserService } from '../user/user.service';
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { Context } from '@domain/context/context.entity';
+import { ContextService } from '@domain/context/context.service';
+import { OpportunityInput } from '@domain/opportunity/opportunity.dto';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
+import { IOpportunity } from '@domain/opportunity/opportunity.interface';
+import { OpportunityService } from '@domain/opportunity/opportunity.service';
+import { IOrganisation } from '@domain/organisation/organisation.interface';
+import { OrganisationService } from '@domain/organisation/organisation.service';
+import { TagsetService } from '@domain/tagset/tagset.service';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { UserGroupService } from '@domain/user-group/user-group.service';
+import { UserService } from '@domain/user/user.service';
 import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';

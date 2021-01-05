@@ -7,10 +7,10 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { MemberOf } from './memberof.composite';
 import { CurrentUser } from './user.decorator';
 import { UserInput } from './user.dto';

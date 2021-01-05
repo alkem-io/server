@@ -1,21 +1,21 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { IGroupable } from '../../interfaces/groupable.interface';
-import { Challenge } from '../challenge/challenge.entity';
-import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { Organisation } from '../organisation/organisation.entity';
-import { ProfileService } from '../profile/profile.service';
-import { User } from '../user/user.entity';
-import { IUser } from '../user/user.interface';
-import { UserService } from '../user/user.service';
+import { IGroupable } from '@interfaces/groupable.interface';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
+import { Organisation } from '@domain/organisation/organisation.entity';
+import { ProfileService } from '@domain/profile/profile.service';
+import { User } from '@domain/user/user.entity';
+import { IUser } from '@domain/user/user.interface';
+import { UserService } from '@domain/user/user.service';
 import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { Opportunity } from '../opportunity/opportunity.entity';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
 import { UserGroupParent } from './user-group-parent.dto';
 import {
   EntityNotFoundException,
@@ -23,7 +23,7 @@ import {
   NotSupportedException,
   GroupNotInitializedException,
   EntityNotInitializedException,
-} from '../../utils/error-handling/exceptions';
+} from '@utils/error-handling/exceptions';
 
 @Injectable()
 export class UserGroupService {

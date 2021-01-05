@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { UserGroupModule } from '../user-group/user-group.module';
+import { UserGroupModule } from '@domain/user-group/user-group.module';
 import { OrganisationService } from './organisation.service';
 import { OrganisationResolverMutations } from './organisation.resolver.mutations';
-import { TagsetModule } from '../tagset/tagset.module';
+import { TagsetModule } from '@domain/tagset/tagset.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organisation } from './organisation.entity';
 import { OrganisationResolverFields } from './organisation.resolver.fields';
-import { ProfileModule } from '../profile/profile.module';
+import { ProfileModule } from '@domain/profile/profile.module';
 
 @Module({
   imports: [

@@ -1,20 +1,20 @@
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
-import { createChallangeMutation } from '../challenge/challenge.request.params';
+import '@test/utils/array.matcher';
+import { appSingleton } from '@test/utils/app.singleton';
+import { createChallangeMutation } from '@test/challenge/challenge.request.params';
 import {
   createAspectOnOpportunityMutation,
   removeAspectMutation,
   getAspectPerOpportunity,
   updateAspectMutation,
 } from './aspect.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
+import { createOpportunityOnChallengeMutation } from '@test/opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';
 let opportunityId = '';
 let challengeName = '';
 let challengeId = '';
-let aspectId = ``;
+let aspectId = '';
 let aspectTitle = '';
 let aspectFrame = '';
 let aspectExplanation = '';
@@ -46,7 +46,7 @@ beforeEach(async () => {
     uniqueTextId
   );
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
-  
+
   // Create Opportunity
   const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
     challengeId,

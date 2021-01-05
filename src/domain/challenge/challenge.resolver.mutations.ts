@@ -1,21 +1,21 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Float, Mutation } from '@nestjs/graphql';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
+} from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
-import { OpportunityInput } from '../opportunity/opportunity.dto';
-import { Opportunity } from '../opportunity/opportunity.entity';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { IOpportunity } from '../opportunity/opportunity.interface';
+import { OpportunityInput } from '@domain/opportunity/opportunity.dto';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { IOpportunity } from '@domain/opportunity/opportunity.interface';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -23,9 +23,7 @@ export class ChallengeResolverMutations {
     @Inject(ChallengeService) private challengeService: ChallengeService
   ) {}
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group for the challenge with the given id',
@@ -42,9 +40,7 @@ export class ChallengeResolverMutations {
     return group;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
     description:

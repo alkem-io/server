@@ -1,6 +1,6 @@
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
-import { createChallangeMutation } from '../challenge/challenge.request.params';
+import '@test/utils/array.matcher';
+import { appSingleton } from '@test/utils/app.singleton';
+import { createChallangeMutation } from '@test/challenge/challenge.request.params';
 import {
   createOpportunityOnChallengeMutation,
   queryOpportunities,
@@ -212,7 +212,7 @@ describe('DDT should not create opportunities with same name or textId within th
       // Act
       // Create Opportunity
       const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-        "1",
+        '1',
         opportunityNameD,
         opportunityTextIdD
       );

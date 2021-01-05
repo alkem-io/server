@@ -11,18 +11,18 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IGroupable } from '../../interfaces/groupable.interface';
-import { ActorGroup } from '../actor-group/actor-group.entity';
-import { Aspect } from '../aspect/aspect.entity';
-import { Challenge } from '../challenge/challenge.entity';
-import { Context } from '../context/context.entity';
-import { DID } from '../did/did.entity';
-import { Project } from '../project/project.entity';
-import { Relation } from '../relation/relation.entity';
+import { IGroupable } from '@interfaces/groupable.interface';
+import { ActorGroup } from '@domain/actor-group/actor-group.entity';
+import { Aspect } from '@domain/aspect/aspect.entity';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { Context } from '@domain/context/context.entity';
+import { DID } from '@domain/did/did.entity';
+import { Project } from '@domain/project/project.entity';
+import { Relation } from '@domain/relation/relation.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
+} from '@domain/user-group/user-group.entity';
 import { IOpportunity } from './opportunity.interface';
 
 @Entity()

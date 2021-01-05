@@ -1,7 +1,7 @@
-import { IChallenge } from '../challenge/challenge.interface';
-import { IDID } from '../did/did.interface';
-import { IProfile } from '../profile/profile.interface';
-import { IUserGroup } from '../user-group/user-group.interface';
+import { IChallenge } from '@domain/challenge/challenge.interface';
+import { IDID } from '@domain/did/did.interface';
+import { IProfile } from '@domain/profile/profile.interface';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
 
 export interface IOrganisation {
   id: number;

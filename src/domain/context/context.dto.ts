@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
-import { ReferenceInput } from '../reference/reference.dto';
+import { ReferenceInput } from '@domain/reference/reference.dto';
 
 @InputType()
 export class ContextInput {

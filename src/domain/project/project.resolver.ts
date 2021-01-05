@@ -1,12 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { AspectInput } from '../aspect/aspect.dto';
-import { Aspect } from '../aspect/aspect.entity';
-import { IAspect } from '../aspect/aspect.interface';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { AspectInput } from '@domain/aspect/aspect.dto';
+import { Aspect } from '@domain/aspect/aspect.entity';
+import { IAspect } from '@domain/aspect/aspect.interface';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { ProjectInput } from './project.dto';
 import { Project } from './project.entity';
 import { IProject } from './project.interface';
@@ -61,9 +61,7 @@ export class ProjectResolver {
     return await this.projectService.updateProject(projectID, projectData);
   }
 
-  @Roles(    
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new aspect on the Project identified by the ID',

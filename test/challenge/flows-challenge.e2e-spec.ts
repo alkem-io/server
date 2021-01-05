@@ -3,14 +3,14 @@ import {
   getChallengeUsers,
   updateChallangeMutation,
 } from './challenge.request.params';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
-import { getGroup } from '../group/group.request.params';
-import { assignGroupFocalPointMutation } from '../user/user.request.params';
+import '@test/utils/array.matcher';
+import { appSingleton } from '@test/utils/app.singleton';
+import { getGroup } from '@test/group/group.request.params';
+import { assignGroupFocalPointMutation } from '@test/user/user.request.params';
 
-let userNameOne = 'Evgeni Dimitrov';
-let userIdOne = '6';
-let userNameTwo = 'Valntin Yanakiev';
+const userNameOne = 'Evgeni Dimitrov';
+const userIdOne = '6';
+const userNameTwo = 'Valntin Yanakiev';
 let userPhone = '';
 let userEmail = '';
 let challengeName = '';
@@ -152,7 +152,10 @@ describe('Create Challenge', () => {
     await createChallangeMutation(challengeName, uniqueTextId);
 
     // Act
-    const response = await createChallangeMutation(challengeName+challengeName, uniqueTextId);
+    const response = await createChallangeMutation(
+      challengeName + challengeName,
+      uniqueTextId
+    );
 
     // Assert
     expect(response.status).toBe(200);

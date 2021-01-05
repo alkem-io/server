@@ -1,5 +1,8 @@
-import { TestUser } from '../utils/token.helper';
-import { graphqlRequest, graphqlRequestAuth } from '../utils/graphql.request';
+import { TestUser } from '@test/utils/token.helper';
+import {
+  graphqlRequest,
+  graphqlRequestAuth,
+} from '@test/utils/graphql.request';
 
 export const createGroupMutation = async (testGroup: string) => {
   const requestParams = {
@@ -15,7 +18,7 @@ export const createGroupMutation = async (testGroup: string) => {
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const createGroupOnChallengeMutation = async (
@@ -39,7 +42,7 @@ export const createGroupOnChallengeMutation = async (
     },
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const getGroups = async () => {
@@ -49,7 +52,7 @@ export const getGroups = async () => {
     query: 'query{groups {name id}}',
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
 export const getGroup = async (groupId: any) => {
@@ -71,5 +74,5 @@ export const getGroup = async (groupId: any) => {
     `,
   };
 
-  return await graphqlRequestAuth(requestParams,  TestUser.GLOBAL_ADMIN);
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };

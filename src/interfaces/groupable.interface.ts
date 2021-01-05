@@ -1,4 +1,4 @@
-import { IUserGroup } from '../domain/user-group/user-group.interface';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
 
 export interface IGroupable {
   id: number;

@@ -1,20 +1,20 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
+} from '@domain/user-group/user-group.entity';
 import { Challenge } from './challenge.entity';
-import { User } from '../user/user.entity';
-import { UserGroupService } from '../user-group/user-group.service';
+import { User } from '@domain/user/user.entity';
+import { UserGroupService } from '@domain/user-group/user-group.service';
 import { ChallengeService } from './challenge.service';
-import { Opportunity } from '../opportunity/opportunity.entity';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { GroupNotInitializedException } from '../../utils/error-handling/exceptions';
-import { LogContext } from '../../utils/logging/logging.contexts';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { GroupNotInitializedException } from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {

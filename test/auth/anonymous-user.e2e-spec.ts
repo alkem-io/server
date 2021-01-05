@@ -1,6 +1,9 @@
-import { graphqlRequest, graphqlRequestAuth } from '../utils/graphql.request';
-import '../utils/array.matcher';
-import { appSingleton } from '../utils/app.singleton';
+import {
+  graphqlRequest,
+  graphqlRequestAuth,
+} from '@test/utils/graphql.request';
+import '@test/utils/array.matcher';
+import { appSingleton } from '@test/utils/app.singleton';
 import {
   name,
   hostMembers,
@@ -77,7 +80,7 @@ import {
   projectsState,
   projectsTagset,
   projectsAspects,
-} from '../utils/queries';
+} from '@test/utils/queries';
 
 import {
   createOrganisationMutation,
@@ -112,7 +115,7 @@ import {
   createReferenceOnContextVariables,
   createTagsetOnProfileMutation,
   createTagsetOnProfileVariables,
-} from '../utils/create-mutations';
+} from '@test/utils/create-mutations';
 
 import {
   updateUserMutation,
@@ -147,7 +150,7 @@ import {
   addChallengeLeadToOrganisationVariables,
   removeUserFromGroupMutation,
   removeUserFromGroupVariables,
-} from '../utils/update-mutations';
+} from '@test/utils/update-mutations';
 
 import {
   removeUserMutation,
@@ -160,7 +163,7 @@ import {
   removeActorVariables,
   removeActorGroupMutation,
   removeActorGroupVariables,
-} from '../utils/remove-mutations';
+} from '@test/utils/remove-mutations';
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 

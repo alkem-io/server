@@ -7,8 +7,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IReference } from './reference.interface';
-import { Context } from '../context/context.entity';
-import { Profile } from '../profile/profile.entity';
+import { Context } from '@domain/context/context.entity';
+import { Profile } from '@domain/profile/profile.entity';
 
 @Entity()
 @ObjectType()
