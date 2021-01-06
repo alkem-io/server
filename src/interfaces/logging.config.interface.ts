@@ -1,6 +1,6 @@
 export interface ILoggingConfig {
   loggingLevel: string;
-  loggingExceptionsEnabled: boolean;
+  consoleLoggingEnabled: boolean;
   profilingEnabled: boolean;
   elkConfig?: IElkConfig;
 }

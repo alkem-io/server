@@ -15,7 +15,7 @@ const bootstrap = async () => {
   const bootstrapService: BootstrapService = app.get(BootstrapService);
 
   app.useLogger(logger);
-  app.useGlobalFilters(new HttpExceptionsFilter(logger, configService));
+  app.useGlobalFilters(new HttpExceptionsFilter(logger));
   await bootstrapService.bootstrapEcoverse();
   app.enableCors({
     origin: configService.get<IServiceConfig>('service')?.corsOrigin,
