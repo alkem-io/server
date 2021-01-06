@@ -17,7 +17,7 @@ export class WinstonConfigService {
           nestWinstonModuleUtilities.format.nestLike()
         ),
         level: this.configService.get<ILoggingConfig>('logging')?.loggingLevel,
-        silent: this.configService.get<ILoggingConfig>('logging')
+        silent: !this.configService.get<ILoggingConfig>('logging')
           ?.consoleLoggingEnabled,
       }),
     ];
