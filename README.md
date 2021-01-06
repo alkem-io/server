@@ -120,6 +120,7 @@ CORS_ORIGIN=[your CORS origin value]
 To configure logging levels, use:
 
 ```conf
+LOGGING_CONSOLE_ENABLED=true|false. Defaults to true. Determines if logging messages (apart from NestJS messages) are sent to the console.
 LOGGING_LEVEL_CONSOLE=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Winston console transports (logging to console).
 LOGGING_LEVEL_ELK=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Elasticsearch transports (logging to Elastic Cloud).
 AUTH_AAD_LOGGING_LEVEL=info|warn|error. Defaults to `error` if no value is set.
