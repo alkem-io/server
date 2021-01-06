@@ -108,13 +108,11 @@ describe('Relations', () => {
       `${relationActorType} + change`,
       `${relationActorRole} + change`
     );
-console.log(responseUpdateRelation.body)
     const responseUpdateRelationData =
-    responseUpdateRelation.body.data.updateRelation;
+      responseUpdateRelation.body.data.updateRelation;
 
     const getRelation = await getRelationsPerOpportunity(opportunityId);
     const relationData = getRelation.body.data.opportunity.relations[0];
-    console.log(relationData)
 
     // Assert
     expect(getRelation.body.data.opportunity.aspects).toHaveLength(1);
@@ -212,6 +210,8 @@ console.log(responseUpdateRelation.body)
 
     // Assert
     expect(responseQuery.body.data.opportunity.relations).toHaveLength(0);
-    expect(responseRemoveRelation.body.errors[0].message).toEqual(`Not able to locate relation with the specified ID: ${relationId}`);
+    expect(responseRemoveRelation.body.errors[0].message).toEqual(
+      `Not able to locate relation with the specified ID: ${relationId}`
+    );
   });
 });

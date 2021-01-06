@@ -219,7 +219,6 @@ describe('DDT should not create opportunities with same name or textId within th
       const responseData = JSON.stringify(
         responseCreateOpportunityOnChallenge.body
       ).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(responseCreateOpportunityOnChallenge.status).toBe(200);
