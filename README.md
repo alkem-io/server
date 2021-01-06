@@ -120,6 +120,7 @@ CORS_ORIGIN=[your CORS origin value]
 To configure logging levels, use:
 
 ```conf
+LOGGING_CONSOLE_ENABLED=true|false. Defaults to true. Determines if logging messages (apart from NestJS messages) are sent to the console.
 LOGGING_LEVEL_CONSOLE=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Winston console transports (logging to console).
 LOGGING_LEVEL_ELK=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Elasticsearch transports (logging to Elastic Cloud).
 AUTH_AAD_LOGGING_LEVEL=info|warn|error. Defaults to `error` if no value is set.
@@ -260,6 +261,7 @@ Initial version of integration tests is in place. To run them, look at the prere
 - `AUTH_AAD_CLIENT_APP_ID`, `AUTH_AAD_CHERRYTWIST_API_SCOPE`, `AUTH_AAD_TENANT`, `AUTH_AAD_TEST_HARNESS_PASSWORD`, `AUTH_AAD_CHERRYTWIST_API_APP_ID`, `AUTH_AAD_MSGRAPH_API_SCOPE` and `AUTH_AAD_UPN_DOMAIN` env variables  must be provided for authenticated scenarios.
 - `AUTH_ENABLED` env variable must be set to `true`.
 - `AUTH_AAD_TEST_HARNESS_PASSWORD` and `AUTH_AAD_MSGRAPH_API_SECRET` secrets (also env variables) need to be provided
+- `LOGGING_CONSOLE_ENABLED=false` can be used to disable logging the exceptions (exceptions are quite verbose and will pollute the test results log).
 - In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
   - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.
