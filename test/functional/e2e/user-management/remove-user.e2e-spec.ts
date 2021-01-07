@@ -24,7 +24,7 @@ beforeEach(() => {
   userEmail = `${uniqueId}@test.com`;
 });
 
-describe.skip('Remove user', () => {
+describe('Remove user', () => {
   test('should remove created user', async () => {
     // Arrange
     const response = await createUserMutation(userName);

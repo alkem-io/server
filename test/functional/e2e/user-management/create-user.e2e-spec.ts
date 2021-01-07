@@ -21,14 +21,14 @@ afterAll(async () => {
 const uniqueId = Math.random().toString();
 
 beforeEach(() => {
-  userName = `testUser ${uniqueId}`;
+  userName = `testUser${uniqueId}`;
   userFirstName = `testUserFirstName ${uniqueId}`;
   userLastName = `testUserLastName ${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
   userEmail = `${uniqueId}@test.com`;
 });
 
-describe.skip('Create User', () => {
+describe('Create User', () => {
   afterEach(async () => {
     await removeUserMutation(userId);
   });
@@ -36,6 +36,7 @@ describe.skip('Create User', () => {
   test('should create a user', async () => {
     // Act
     const response = await createUserMutation(userName);
+    console.log(response.body);
     userId = response.body.data.createUser.id;
 
     // Assert
@@ -214,7 +215,7 @@ describe.skip('Create User', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'ER_DATA_TOO_LONG: Data too long for column \'name\' at row 1'
+      "ER_DATA_TOO_LONG: Data too long for column 'name' at row 1"
     );
   });
 

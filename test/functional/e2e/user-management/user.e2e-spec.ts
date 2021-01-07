@@ -10,7 +10,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe.skip('Query all users', () => {
+describe('Query all users', () => {
   it('should get users', async () => {
     const response = await getUsers();
     expect(response.status).toBe(200);
