@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { OrganisationResolverMutations } from './organisation.resolver.mutations';
 
 describe('OrganisationResolver', () => {
@@ -6,7 +7,7 @@ describe('OrganisationResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [OrganisationResolverMutations],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<OrganisationResolverMutations>(

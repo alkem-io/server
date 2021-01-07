@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { ChallengeResolverMutations } from './challenge.resolver.mutations';
 
 describe('ChallengeResolver', () => {
@@ -6,7 +7,7 @@ describe('ChallengeResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ChallengeResolverMutations],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<ChallengeResolverMutations>(
