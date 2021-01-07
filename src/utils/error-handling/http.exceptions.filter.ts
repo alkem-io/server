@@ -14,7 +14,8 @@ import { BaseException } from './exceptions/base.exception';
 @Catch()
 export class HttpExceptionsFilter implements ExceptionFilter {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   catch(exception: BaseException, _host: ArgumentsHost) {
