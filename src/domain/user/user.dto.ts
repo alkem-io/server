@@ -1,4 +1,4 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Directive, Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 import { ProfileInput } from '@domain/profile/profile.dto';
 
@@ -20,6 +20,7 @@ export class UserInput {
   @MaxLength(60)
   lastName?: string;
 
+  @Directive('@constraint(format: "email", maxLength: 255)')
   @Field({
     nullable: true,
     description: 'Email address is required for creating a new user',

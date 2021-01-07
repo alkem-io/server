@@ -1,43 +1,47 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config/dist/config.module';
+import { APP_FILTER } from '@nestjs/core';
+import { GraphQLModule } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  ConstraintDirective,
+  transformSchema,
+} from '@src/directives/constraint/constraint';
+import { WinstonModule } from 'nest-winston';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthenticationModule } from './utils/authentication/authentication.module';
+import aadClientConfig from './config/aad.client.config';
+import aadConfig from './config/aad.config';
+import aadOboConfig from './config/aad.obo.config';
+import aadRopcConfig from './config/aad.ropc.config';
+import databaseConfig from './config/database.config';
+import loggingConfig from './config/logging.config';
+import msGraphConfig from './config/ms-graph.config';
+import serviceConfig from './config/service.config';
+import { WinstonConfigService } from './config/winston.config';
 import { AgreementModule } from './domain/agreement/agreement.module';
-import { UserModule } from './domain/user/user.module';
 import { ChallengeModule } from './domain/challenge/challenge.module';
 import { ContextModule } from './domain/context/context.module';
 import { DidModule } from './domain/did/did.module';
 import { EcoverseModule } from './domain/ecoverse/ecoverse.module';
 import { OrganisationModule } from './domain/organisation/organisation.module';
+import { ProfileModule } from './domain/profile/profile.module';
 import { ProjectModule } from './domain/project/project.module';
 import { ReferenceModule } from './domain/reference/reference.module';
 import { TagsetModule } from './domain/tagset/tagset.module';
-import { ProfileModule } from './domain/profile/profile.module';
 import { UserGroupModule } from './domain/user-group/user-group.module';
-import { GraphQLModule } from '@nestjs/graphql';
-import { ConfigModule } from '@nestjs/config/dist/config.module';
-import aadConfig from './config/aad.config';
-import { join } from 'path';
-import { ConfigService } from '@nestjs/config';
-import databaseConfig from './config/database.config';
+import { UserModule } from './domain/user/user.module';
 import { IDatabaseConfig } from './interfaces/database.config.interface';
-import { DataManagementModule } from './utils/data-management/data-management.module';
-import serviceConfig from './config/service.config';
+import { AuthenticationModule } from './utils/authentication/authentication.module';
 import { BootstrapModule } from './utils/bootstrap/bootstrap.module';
-import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
-import msGraphConfig from './config/ms-graph.config';
-import { WinstonModule } from 'nest-winston';
-import aadClientConfig from './config/aad.client.config';
-import { WinstonConfigService } from './config/winston.config';
-import loggingConfig from './config/logging.config';
-import { SearchModule } from './utils/search/search.module';
-import { APP_FILTER } from '@nestjs/core';
-import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
-import aadRopcConfig from './config/aad.ropc.config';
-import { MetadataModule } from './utils/metadata/metadata.module';
 import { KonfigModule } from './utils/config/config.module';
-import aadOboConfig from './config/aad.obo.config';
+import { DataManagementModule } from './utils/data-management/data-management.module';
+import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
+import { MetadataModule } from './utils/metadata/metadata.module';
+import { MsGraphModule } from './utils/ms-graph/ms-graph.module';
+import { SearchModule } from './utils/search/search.module';
 
 @Module({
   imports: [
@@ -94,8 +98,14 @@ import aadOboConfig from './config/aad.obo.config';
     MetadataModule,
     GraphQLModule.forRoot({
       autoSchemaFile: true,
+      sortSchema: true,
       playground: true,
       fieldResolverEnhancers: ['guards'],
+      schemaDirectives: {
+        constraint: ConstraintDirective,
+      },
+      transformSchema,
+      transformAutoSchemaFile: true,
     }),
     DataManagementModule,
     BootstrapModule,

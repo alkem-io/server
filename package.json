@@ -61,6 +61,7 @@
     "rimraf": "^3.0.2",
     "rxjs": "^6.6.3",
     "typeorm": "^0.2.28",
+    "validator": "^13.5.2",
     "winston": "^3.3.3",
     "winston-elasticsearch": "^0.12.0"
   },
