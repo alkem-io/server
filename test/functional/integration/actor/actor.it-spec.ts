@@ -1,12 +1,12 @@
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import { createChallangeMutation } from '@test/challenge/challenge.request.params';
+import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 
-import { createOpportunityOnChallengeMutation } from '@test/opportunity/opportunity.request.params';
+import { createOpportunityOnChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 import {
   createActorGroupMutation,
   getActorGroupsPerOpportunity,
-} from '@test/actor-groups/actor-groups.request.params';
+} from '@test/functional/integration/actor-groups/actor-groups.request.params';
 import {
   createActorMutation,
   removeActorMutation,

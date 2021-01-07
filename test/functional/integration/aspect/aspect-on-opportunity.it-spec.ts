@@ -1,13 +1,13 @@
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import { createChallangeMutation } from '@test/challenge/challenge.request.params';
+import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 import {
   createAspectOnOpportunityMutation,
   removeAspectMutation,
   getAspectPerOpportunity,
   updateAspectMutation,
 } from './aspect.request.params';
-import { createOpportunityOnChallengeMutation } from '@test/opportunity/opportunity.request.params';
+import { createOpportunityOnChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';

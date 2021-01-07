@@ -2,10 +2,10 @@ import {
   createChallangeMutation,
   removeChallangeMutation,
 } from './challenge.request.params';
-import { graphqlRequestAuth } from '@test/utils/graphql.request';
-import '@test/utils/array.matcher';
-import { appSingleton } from '@test/utils/app.singleton';
-import { TestUser } from '@test/utils/token.helper';
+import { graphqlRequestAuth } from '../../../utils/graphql.request';
+import '../../../utils/array.matcher';
+import { appSingleton } from '../../../utils/app.singleton';
+import { TestUser } from '../../../utils/token.helper';
 
 let challengeName = '';
 let uniqueTextId = '';
@@ -33,6 +33,20 @@ describe('Create Challenge', () => {
     expect(response.status).toBe(200);
     expect(response.body.data.createChallenge.name).toEqual(challengeName);
   });
+
+  test('should update a challenge', async () => {
+    // Arrange
+    const response = await createChallangeMutation(challengeName, uniqueTextId);
+    const challengeId = response.body.data.createChallenge.id;
+
+    // Act
+    const removeChallengeResponse = await removeChallangeMutation(challengeId);
+
+    // Assert
+    expect(removeChallengeResponse.status).toBe(200);
+    expect(removeChallengeResponse.body.data.removeChallenge).toBe(true);
+  });
+
   test('should remove a challenge', async () => {
     // Arrange
     const response = await createChallangeMutation(challengeName, uniqueTextId);
@@ -144,9 +158,9 @@ describe('Create Challenge', () => {
       ${''}                 | ${'Required field textID not specified'}
       ${'vvv,vv'}           | ${'Required field textID provided not in the correct format: vvv,vv'}
       ${'..-- '}            | ${'Required field textID provided not in the correct format: ..-- '}
-      ${'toooo-long-texId'} | ${'ER_DATA_TOO_LONG: Data too long for column \'textID\' at row 1'}
+      ${'toooo-long-texId'} | ${"ER_DATA_TOO_LONG: Data too long for column 'textID' at row 1"}
     `(
-      'should throw error: \'$expected\' for textId value: \'$textId\'',
+      "should throw error: '$expected' for textId value: '$textId'",
       async ({ textId, expected }) => {
         // Act
         const requestParamsCreateChallenge = {

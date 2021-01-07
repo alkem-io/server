@@ -5,8 +5,8 @@ import {
 } from './challenge.request.params';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import { getGroup } from '@test/group/group.request.params';
-import { assignGroupFocalPointMutation } from '@test/user/user.request.params';
+import { getGroup } from '@test/functional/integration/group/group.request.params';
+import { assignGroupFocalPointMutation } from '@test/functional/e2e/user-management/user.request.params';
 
 const userNameOne = 'Evgeni Dimitrov';
 const userIdOne = '6';

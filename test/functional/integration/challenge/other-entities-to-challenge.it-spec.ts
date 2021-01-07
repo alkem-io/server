@@ -4,8 +4,8 @@ import {
 } from './challenge.request.params';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import { createGroupOnChallengeMutation } from '@test/group/group.request.params';
-import { createOpportunityOnChallengeMutation } from '@test/opportunity/opportunity.request.params';
+import { createGroupOnChallengeMutation } from '@test/functional/integration/group/group.request.params';
+import { createOpportunityOnChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';

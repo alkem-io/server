@@ -1,8 +1,7 @@
-import { TestUser } from '@test/utils/token.helper';
-import {
-  graphqlRequest,
-  graphqlRequestAuth,
-} from '@test/utils/graphql.request';
+import { graphqlRequestAuth } from "../../../utils/graphql.request";
+import { TestUser } from "../../../utils/token.helper";
+
+
 
 export const createOpportunityOnChallengeMutation = async (
   challengeId: string,
