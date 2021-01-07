@@ -1,4 +1,4 @@
-import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
+import { Directive, Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { DID } from '@domain/did/did.entity';
 import { Profile } from '@domain/profile/profile.entity';
 import { UserGroup } from '@domain/user-group/user-group.entity';
@@ -41,6 +41,7 @@ export class User extends BaseEntity implements IUser {
   @Column()
   lastName: string = '';
 
+  @Directive('@constraint(format: "email", maxLength: 255)')
   @Field(() => String)
   @Column()
   email: string = '';
