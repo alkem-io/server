@@ -7,7 +7,7 @@ import {
 } from './user.request.params';
 import { graphqlRequest } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
-import { createGroupMutation } from '@test/group/group.request.params';
+import { createGroupMutation } from '@test/functional/integration/group/group.request.params';
 import { appSingleton } from '@test/utils/app.singleton';
 
 let userName = '';

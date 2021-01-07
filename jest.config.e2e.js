@@ -1,6 +1,6 @@
 module.exports = {
   ...require('./jest.config'),
-  testMatch: ['**/?(*.)+(e2e-spec).ts'],
+  testMatch: ['**/?(*.)+(e2e-spec).ts','**/?(*.)+(it-spec).ts'],
   coverageDirectory: './coverage-e2e',
   testTimeout: 90000,
   collectCoverage: true,
