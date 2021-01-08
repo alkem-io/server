@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { ProfileResolver } from './profile.resolver';
 
 describe('Profile3Resolver', () => {
@@ -6,7 +7,7 @@ describe('Profile3Resolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ProfileResolver],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<ProfileResolver>(ProfileResolver);

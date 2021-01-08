@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { RelationResolver } from './relation.resolver';
 
 describe('RelationResolver', () => {
@@ -6,7 +7,7 @@ describe('RelationResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [RelationResolver],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<RelationResolver>(RelationResolver);

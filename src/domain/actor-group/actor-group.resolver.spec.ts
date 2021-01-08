@@ -1,4 +1,7 @@
+import { ActorModule } from '@domain/actor/actor.module';
+import { ProfileModule } from '@domain/profile/profile.module';
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { ActorGroupResolver } from './actor-group.resolver';
 
 describe('ActorGroupResolver', () => {
@@ -6,7 +9,7 @@ describe('ActorGroupResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ActorGroupResolver],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<ActorGroupResolver>(ActorGroupResolver);
