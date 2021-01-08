@@ -10,6 +10,7 @@ let userName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
+let uniqueId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -19,9 +20,10 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-const uniqueId = Math.random().toString();
-
 beforeEach(() => {
+  uniqueId = Math.random()
+    .toString(36)
+    .slice(-6);
   userName = `testUser${uniqueId}`;
   userFirstName = `FirstName ${uniqueId}`;
   userLastName = `LastName ${uniqueId}`;
