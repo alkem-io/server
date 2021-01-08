@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { ReferenceResolver } from './reference.resolver';
 
 describe('ReferenceResolver', () => {
@@ -6,7 +7,7 @@ describe('ReferenceResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ReferenceResolver],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<ReferenceResolver>(ReferenceResolver);

@@ -24,5 +24,4 @@ before_install:
 before_script:
 - echo "USE mysql;ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password
   BY 'toor';;\nFLUSH PRIVILEGES;\n" | mysql -u root
-script:
-- npm run-script test:e2e-cov
+script: .scripts/run-tests.sh
