@@ -3,9 +3,10 @@ import {
   removeUserMutation,
   updateUserMutation,
 } from './user.request.params';
-import { graphqlRequest } from '@test/utils/graphql.request';
+import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
+import { TestUser } from '../../../utils/token.helper';
 
 let userName = '';
 let userId = '';
@@ -27,7 +28,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  userName = `testUser ${uniqueId}`;
+  userName = `testUser${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
   userEmail = `${uniqueId}@test.com`;
 });
@@ -67,8 +68,9 @@ describe('Update user', () => {
           phone
         }}`,
     };
-    const responseParamsQueryUser = await graphqlRequest(
-      requestParamsQueryUser
+    const responseParamsQueryUser = await graphqlRequestAuth(
+      requestParamsQueryUser,
+      TestUser.GLOBAL_ADMIN
     );
 
     // Assert
@@ -105,8 +107,9 @@ describe('Update user', () => {
           phone
         }}`,
     };
-    const responseParamsQueryUser = await graphqlRequest(
-      requestParamsQueryUser
+    const responseParamsQueryUser = await graphqlRequestAuth(
+      requestParamsQueryUser,
+      TestUser.GLOBAL_ADMIN
     );
 
     // Assert
@@ -148,7 +151,10 @@ describe('Update user', () => {
         },
       },
     };
-    const responseUpdateUser = await graphqlRequest(updateUserRequestParams);
+    const responseUpdateUser = await graphqlRequestAuth(
+      updateUserRequestParams,
+      TestUser.GLOBAL_ADMIN
+    );
 
     // Assert
     expect(responseUpdateUser.status).toBe(200);
@@ -181,8 +187,9 @@ describe('Update user', () => {
           phone
         }}`,
     };
-    const responseParamsQueryUsers = await graphqlRequest(
-      requestParamsQueryUsers
+    const responseParamsQueryUsers = await graphqlRequestAuth(
+      requestParamsQueryUsers,
+      TestUser.GLOBAL_ADMIN
     );
 
     // Assert

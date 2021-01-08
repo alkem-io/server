@@ -1,21 +1,20 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
-export const createUserMutation = async (userName: string) => {
-  const firstName = 'firstName' + Math.random().toString();
-  const lastName = 'lastName' + Math.random().toString();
+const uniqueId = Math.random().toString();
 
+export const createUserMutation = async (userName: string) => {
   const requestParams = {
     operationName: 'CreateUser',
     query:
       'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email }}',
     variables: {
       userData: {
-        firstName: `${firstName}`,
-        lastName: `${lastName}`,
+        firstName: `firstName'${uniqueId}`,
+        lastName: `lastName${uniqueId}`,
         name: userName,
         email: `${userName}@test.com`,
-        aadPassword: 'Kilim@ndj@r0!',
+        aadPassword: `90!ds${uniqueId}`,
       },
     },
   };
@@ -48,6 +47,7 @@ export const createUserDetailsMutation = async (
         city: 'testCity',
         country: 'testCountry',
         gender: 'testGender',
+        aadPassword: `90!ds${uniqueId}`,
       },
     },
   };

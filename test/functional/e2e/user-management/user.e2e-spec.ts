@@ -15,7 +15,7 @@ describe('Query all users', () => {
     const response = await getUsers();
     expect(response.status).toBe(200);
     expect(response.body.data.users).toContainObject({
-      name: 'Bat Georgi',
+      name: 'admin cherrytwist',
     });
   });
 

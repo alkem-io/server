@@ -5,10 +5,11 @@ import {
   removeUserFromGroup,
   removeUserMutation,
 } from './user.request.params';
-import { graphqlRequest } from '@test/utils/graphql.request';
+import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
 import { createGroupMutation } from '@test/functional/integration/group/group.request.params';
 import { appSingleton } from '@test/utils/app.singleton';
+import { TestUser } from '../../../utils/token.helper';
 
 let userName = '';
 let userId = '';
@@ -27,7 +28,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  userName = `testUser ${uniqueId}`;
+  userName = `testUser${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
   userEmail = `${uniqueId}@test.com`;
 });
@@ -56,12 +57,29 @@ describe('Users and Groups', () => {
     // Act
     const responseAddUserToGroup = await addUserToGroup(userId, groupId);
 
+    const responseQueryGroups = await graphqlRequestAuth(
+      {
+        query: `{
+          group(ID: ${parseFloat(groupId)}){
+            name,
+            id,
+            members{
+              name,
+              id
+            }
+          }
+        }`,
+      },
+      TestUser.GLOBAL_ADMIN
+    );
+
     // Assert
     expect(responseAddUserToGroup.status).toBe(200);
     expect(responseAddUserToGroup.body.data.addUserToGroup).toEqual(true);
+    expect(responseQueryGroups.body.data.group.members.id).toEqual(userId);
   });
 
-  test('should throw error whem add same "user", twice to same "group"', async () => {
+  test('should throw error when add same "user", twice to same "group"', async () => {
     // Arrange
     const responseCreate = await createGroupMutation(groupName);
     const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
@@ -151,7 +169,7 @@ describe('Users and Groups', () => {
     );
   });
 
-  test('should remove/delete a "user" after added in a "group"', async () => {
+  test.only('should remove/delete a "user" after added in a "group"', async () => {
     // Arrange
     const responseCreate = await createGroupMutation(groupName);
     const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
@@ -168,9 +186,10 @@ describe('Users and Groups', () => {
     // Act
     const responseRemoveUser = await removeUserMutation(userId);
 
-    const responseQueryGroups = await graphqlRequest({
-      query: `{
-          groups{
+    const responseQueryGroups = await graphqlRequestAuth(
+      {
+        query: `{
+          group(ID: ${parseFloat(groupId)}){
             name,
             id,
             members{
@@ -179,14 +198,14 @@ describe('Users and Groups', () => {
             }
           }
         }`,
-    });
+      },
+      TestUser.GLOBAL_ADMIN
+    );
 
     // Assert
     expect(responseRemoveUser.status).toBe(200);
     expect(responseRemoveUser.body.data.removeUser).toBe(true);
-    expect(responseQueryGroups.body.data.groups).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: userId })])
-    );
+    expect(responseQueryGroups.body.data.group.members).toHaveLength(0);
   });
 
   test('should add "user" to "group" as focal point', async () => {

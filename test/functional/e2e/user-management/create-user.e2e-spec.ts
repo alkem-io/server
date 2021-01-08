@@ -1,7 +1,8 @@
 import { createUserMutation, removeUserMutation } from './user.request.params';
-import { graphqlRequest } from '@test/utils/graphql.request';
+import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
+import { TestUser } from '../../../utils/token.helper';
 
 let userFirstName = '';
 let userLastName = '';
@@ -22,8 +23,8 @@ const uniqueId = Math.random().toString();
 
 beforeEach(() => {
   userName = `testUser${uniqueId}`;
-  userFirstName = `testUserFirstName ${uniqueId}`;
-  userLastName = `testUserLastName ${uniqueId}`;
+  userFirstName = `FirstName ${uniqueId}`;
+  userLastName = `LastName ${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
   userEmail = `${uniqueId}@test.com`;
 });
@@ -36,7 +37,6 @@ describe('Create User', () => {
   test('should create a user', async () => {
     // Act
     const response = await createUserMutation(userName);
-    console.log(response.body);
     userId = response.body.data.createUser.id;
 
     // Assert
@@ -72,7 +72,10 @@ describe('Create User', () => {
           id
         }}`,
     };
-    const responseQuery = await graphqlRequest(requestParamsQueryUser);
+    const responseQuery = await graphqlRequestAuth(
+      requestParamsQueryUser,
+      TestUser.GLOBAL_ADMIN
+    );
 
     // Assert
     expect(responseQuery.status).toBe(200);
@@ -116,11 +119,15 @@ describe('Create User', () => {
           city: 'testCity',
           country: 'testCountry',
           gender: 'testGender',
+          aadPassword: `90!ds${uniqueId}`,
         },
       },
     };
 
-    const responseQuery = await graphqlRequest(requestParams);
+    const responseQuery = await graphqlRequestAuth(
+      requestParams,
+      TestUser.GLOBAL_ADMIN
+    );
     userId = responseQuery.body.data.createUser.id;
     // Act
     const requestParamsQueryUser = {
@@ -147,8 +154,9 @@ describe('Create User', () => {
                   }
                 }`,
     };
-    const responseParamsQueryUser = await graphqlRequest(
-      requestParamsQueryUser
+    const responseParamsQueryUser = await graphqlRequestAuth(
+      requestParamsQueryUser,
+      TestUser.GLOBAL_ADMIN
     );
 
     // Assert
@@ -186,7 +194,10 @@ describe('Create User', () => {
     };
 
     // Act
-    const responseQuery = await graphqlRequest(requestParams);
+    const responseQuery = await graphqlRequestAuth(
+      requestParams,
+      TestUser.GLOBAL_ADMIN
+    );
 
     // Assert
     expect(responseQuery.status).toBe(400);
@@ -210,13 +221,14 @@ describe('Create User', () => {
     };
 
     // Act
-    const responseQuery = await graphqlRequest(requestParams);
+    const responseQuery = await graphqlRequestAuth(
+      requestParams,
+      TestUser.GLOBAL_ADMIN
+    );
 
     // Assert
     expect(responseQuery.status).toBe(200);
-    expect(responseQuery.text).toContain(
-      "ER_DATA_TOO_LONG: Data too long for column 'name' at row 1"
-    );
+    expect(responseQuery.text).toContain('Unable to create account for user');
   });
 
   test('should throw error - create user with invalid email', async () => {
@@ -231,12 +243,16 @@ describe('Create User', () => {
           firstName: 'name',
           lastName: 'name',
           email: 'testEmail',
+          aadPassword: `90!ds${uniqueId}`,
         },
       },
     };
 
     // Act
-    const responseQuery = await graphqlRequest(requestParams);
+    const responseQuery = await graphqlRequestAuth(
+      requestParams,
+      TestUser.GLOBAL_ADMIN
+    );
 
     // Assert
     expect(responseQuery.status).toBe(200);
