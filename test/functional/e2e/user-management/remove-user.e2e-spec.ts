@@ -8,8 +8,7 @@ let userName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
-
-const uniqueId = Math.random().toString();
+let uniqueId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -20,6 +19,9 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  uniqueId = Math.random()
+    .toString(36)
+    .slice(-6);
   userName = `testUser${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
   userEmail = `${uniqueId}@test.com`;
