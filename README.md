@@ -262,8 +262,9 @@ Initial version of integration tests is in place. To run them, look at the prere
 - `AUTH_ENABLED` env variable must be set to `true`.
 - `AUTH_AAD_TEST_HARNESS_PASSWORD` and `AUTH_AAD_MSGRAPH_API_SECRET` secrets (also env variables) need to be provided
 - `LOGGING_CONSOLE_ENABLED=false` can be used to disable logging the exceptions (exceptions are quite verbose and will pollute the test results log).
-- In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
-  - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
+- In order to run the unit, integration and end-to-end, navigate to the `/Server` repository, and execute the following command: `npm run test:[TEST_TYPE]` where TEST_TYPE is `e2e` for end-to-end, `it` for
+integration tests and `ut` for unit tests
+  - To run specific suite: `npm run-script test:[TEST_TYPE] jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.
 
 To run e2e tests with coverage:
