@@ -24,6 +24,8 @@ export const createUserMutation = async (userName: string) => {
 
 export const createUserDetailsMutation = async (
   userName: string,
+  firstName: string,
+  lastName: string,
   phone: string,
   email: string
 ) => {
@@ -40,8 +42,8 @@ export const createUserDetailsMutation = async (
     variables: {
       userData: {
         name: userName,
-        firstName: 'testFN',
-        lastName: 'testLN',
+        firstName: firstName,
+        lastName: lastName,
         email: email,
         phone: phone,
         city: 'testCity',
