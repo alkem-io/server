@@ -9,6 +9,8 @@ import { appSingleton } from '@test/utils/app.singleton';
 import { TestUser } from '../../../utils/token.helper';
 
 let userName = '';
+let userFirstName = '';
+let userLastName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
@@ -17,7 +19,7 @@ let userNameAfterUpdate = '';
 let phoneAfterUpdate = '';
 let emailAfterUpdate = '';
 
-const uniqueId = Math.random().toString();
+let uniqueId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -27,14 +29,16 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-beforeEach(() => {
-  userName = `testUser${uniqueId}`;
-  userPhone = `userPhone ${uniqueId}`;
-  userEmail = `${uniqueId}@test.com`;
-});
-
 describe('Update user', () => {
   beforeEach(() => {
+    uniqueId = Math.random()
+      .toString(36)
+      .slice(-6);
+    userName = `testUser${uniqueId}`;
+    userFirstName = `userFirstName${uniqueId}`;
+    userLastName = `userLastName${uniqueId}`;
+    userPhone = `userPhone ${uniqueId}`;
+    userEmail = `${uniqueId}@test.com`;
     userNameAfterUpdate = `testUserAfterUpdate-Name_${uniqueId}`;
     phoneAfterUpdate = `testUserAfterUpdate-Phone_${uniqueId}`;
     emailAfterUpdate = `testUserAfterUpdate-Email_${uniqueId}@test.com`;
@@ -48,6 +52,8 @@ describe('Update user', () => {
     // Arrange
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
@@ -87,6 +93,8 @@ describe('Update user', () => {
     // Arrange
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
@@ -126,6 +134,8 @@ describe('Update user', () => {
     // Arrange
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
@@ -167,6 +177,8 @@ describe('Update user', () => {
     // Arrange
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );

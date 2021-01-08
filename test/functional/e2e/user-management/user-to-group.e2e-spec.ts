@@ -12,12 +12,14 @@ import { appSingleton } from '@test/utils/app.singleton';
 import { TestUser } from '../../../utils/token.helper';
 
 let userName = '';
+let userFirstName = '';
+let userLastName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
 let groupName = '';
 
-const uniqueId = Math.random().toString();
+let uniqueId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -28,7 +30,12 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  uniqueId = Math.random()
+    .toString(36)
+    .slice(-6);
   userName = `testUser${uniqueId}`;
+  userFirstName = `userFirstName${uniqueId}`;
+  userLastName = `userLastName${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
   userEmail = `${uniqueId}@test.com`;
 });
@@ -49,6 +56,8 @@ describe('Users and Groups', () => {
 
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
@@ -86,6 +95,8 @@ describe('Users and Groups', () => {
 
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
@@ -115,6 +126,8 @@ describe('Users and Groups', () => {
 
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
@@ -140,6 +153,8 @@ describe('Users and Groups', () => {
 
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
@@ -176,6 +191,8 @@ describe('Users and Groups', () => {
 
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
@@ -215,6 +232,8 @@ describe('Users and Groups', () => {
 
     const responseCreateUser = await createUserDetailsMutation(
       userName,
+      userFirstName,
+      userLastName,
       userPhone,
       userEmail
     );
