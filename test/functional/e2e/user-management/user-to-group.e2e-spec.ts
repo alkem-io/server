@@ -76,7 +76,7 @@ describe('Users and Groups', () => {
     // Assert
     expect(responseAddUserToGroup.status).toBe(200);
     expect(responseAddUserToGroup.body.data.addUserToGroup).toEqual(true);
-    expect(responseQueryGroups.body.data.group.members.id).toEqual(userId);
+    expect(responseQueryGroups.body.data.group.members[0].id).toEqual(userId);
   });
 
   test('should throw error when add same "user", twice to same "group"', async () => {
@@ -169,7 +169,7 @@ describe('Users and Groups', () => {
     );
   });
 
-  test.only('should remove/delete a "user" after added in a "group"', async () => {
+  test('should remove/delete a "user" after added in a "group"', async () => {
     // Arrange
     const responseCreate = await createGroupMutation(groupName);
     const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
