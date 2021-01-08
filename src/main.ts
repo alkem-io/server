@@ -19,6 +19,9 @@ const bootstrap = async () => {
   await bootstrapService.bootstrapEcoverse();
   app.enableCors({
     origin: configService.get<IServiceConfig>('service')?.corsOrigin,
+    allowedHeaders: configService.get<IServiceConfig>('service')
+      ?.corsAllowedHeaders,
+    methods: configService.get<IServiceConfig>('service')?.corsMethods,
   });
 
   app.use(faviconMiddleware);

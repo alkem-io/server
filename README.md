@@ -110,10 +110,12 @@ AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI=The login redirect for the Cherrytwist Web Cl
 ```
 ***Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
 
-Optionally configure CORS origin for improved security with the following env variable (by default the value is *):
+Optionally configure CORS  for improved security with the following env variables (by default the value is *):
 
 ```conf
-CORS_ORIGIN=[your CORS origin value]
+CORS_ORIGIN=[your CORS origin value]. Default value is '*'.
+CORS_ALLOWED_HEADERS=[CORS allowed headers]. Default value is 'Origin, X-Requested-With, Content-Type, Accept'.
+CORS_METHODS=[CORS methods allowed]. Default value is 'GET,HEAD,PUT,PATCH,POST,DELETE'.
 ```
 
 ### Configure logging
