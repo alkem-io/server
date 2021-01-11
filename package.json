@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -49,6 +49,7 @@
     "elastic-apm-node": "^3.7.0",
     "graphql": "^15.3.0",
     "graphql-tools": "^6.2.4",
+    "helmet": "^4.3.1",
     "isomorphic-fetch": "^3.0.0",
     "module-alias": "^2.2.2",
     "msal": "^1.4.1",
