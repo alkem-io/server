@@ -7,6 +7,7 @@ import { IServiceConfig } from './interfaces/service.config.interface';
 import { BootstrapService } from './utils/bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { faviconMiddleware } from './utils/middleware/favicon.middleware';
+import helmet from 'helmet';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +26,7 @@ const bootstrap = async () => {
   });
 
   app.use(faviconMiddleware);
+  app.use(helmet());
 
   await app.listen(
     configService.get<IServiceConfig>('service')?.graphqlEndpointPort as number
