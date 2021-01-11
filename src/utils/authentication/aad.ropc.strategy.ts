@@ -2,17 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AuthConfig,
-  AuthenticationClient,
+  AadAuthenticationClient,
   Token,
   TokenError,
-} from 'cherrytwist-lib';
+} from '@cmdbg/tokenator';
 
 @Injectable()
 export class AadRopcStrategy {
   constructor(private configService: ConfigService) {}
 
   async getAccessToken(): Promise<string> {
-    const authClient = new AuthenticationClient(
+    const authClient = new AadAuthenticationClient(
       () => this.configService.get<AuthConfig>('aad_ropc') as AuthConfig
     );
     const res = await authClient.authenticateROPC();
@@ -38,7 +38,7 @@ export class AadRopcStrategy {
       password: password,
     };
 
-    const authClient = new AuthenticationClient(() => authConfig);
+    const authClient = new AadAuthenticationClient(() => authConfig);
     const res = await authClient.authenticateROPC();
     const token = res as Token;
 
