@@ -3,10 +3,10 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AuthConfig,
-  AuthenticationClient,
+  AadAuthenticationClient,
   Token,
   TokenError,
-} from 'cherrytwist-lib';
+} from '@cmdbg/tokenator';
 import { TokenException } from '../error-handling/exceptions';
 import { AadBearerStrategy } from './aad.bearer.strategy';
 
@@ -18,7 +18,7 @@ export class AadOboStrategy implements AuthenticationProvider {
   ) {}
 
   async getAccessToken(): Promise<string> {
-    const authClient = new AuthenticationClient(
+    const authClient = new AadAuthenticationClient(
       () => this.configService.get<AuthConfig>('aad_obo') as AuthConfig
     );
 
