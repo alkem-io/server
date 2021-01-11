@@ -34,19 +34,6 @@ describe('Create Challenge', () => {
     expect(response.body.data.createChallenge.name).toEqual(challengeName);
   });
 
-  test('should update a challenge', async () => {
-    // Arrange
-    const response = await createChallangeMutation(challengeName, uniqueTextId);
-    const challengeId = response.body.data.createChallenge.id;
-
-    // Act
-    const removeChallengeResponse = await removeChallangeMutation(challengeId);
-
-    // Assert
-    expect(removeChallengeResponse.status).toBe(200);
-    expect(removeChallengeResponse.body.data.removeChallenge).toBe(true);
-  });
-
   test('should remove a challenge', async () => {
     // Arrange
     const response = await createChallangeMutation(challengeName, uniqueTextId);

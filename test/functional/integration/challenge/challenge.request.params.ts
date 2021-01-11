@@ -51,20 +51,35 @@ export const createChallangeMutation = async (
 
 export const updateChallangeMutation = async (
   challengeId: any,
-  challengeName: string
+  challengeName: string,
+  challengeState?: string,
+  taglineText?: string,
+  tagsArrey?: any
 ) => {
   const requestParams = {
     operationName: null,
     query: `mutation UpdateChallenge($challengeID: Float! $challengeData: ChallengeInput!) {
       updateChallenge(challengeID: $challengeID, challengeData: $challengeData) {
         name,
-        id
+        id,
+        state,
+        context {
+          tagline
+        }
+        tagset{
+          tags 
+        }
       }
     }`,
     variables: {
       challengeID: parseFloat(challengeId),
       challengeData: {
         name: challengeName,
+        state: challengeState,
+        context: {
+          tagline: taglineText,
+        },
+        tags: tagsArrey
       },
     },
   };
@@ -108,6 +123,42 @@ export const addUserToChallangeMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+export const addChallengeChallengeLeadToOrganisationMutation = async (
+  organisationId: any,
+  challengeId: any
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation addChallengeLead($challengeID: Float!, $organisationID: Float!) {
+      addChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
+    }`,
+    variables: {
+      organisationID: parseFloat(organisationId),
+      challengeID: parseFloat(challengeId),
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const removeChallengeChallengeLeadFromOrganisationMutation = async (
+  organisationId: any,
+  challengeId: any
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation removeChallengeLead($challengeID: Float!, $organisationID: Float!) {
+      removeChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
+    }`,
+    variables: {
+      organisationID: parseFloat(organisationId),
+      challengeID: parseFloat(challengeId),
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
 export const getChallenges = async () => {
   const requestParams = {
     operationName: null,
@@ -122,7 +173,10 @@ export const getChallenge = async (challengeId: any) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{challenges (ID: ${challengeId}) {name id}}`,
+    query: `query{challenge (ID: ${challengeId}) {name id state context {tagline}  
+    tagset{
+      tags 
+    }}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -150,6 +204,34 @@ export const getChallengeUsers = async (challengeId: any) => {
         }
       }
     }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getChallengeOpportunity = async (challengeId: any) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query {
+      challenge(ID: ${challengeId}) {
+        id
+        name
+        opportunities{id name textID state}}}`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getChallengeGroups = async (challengeId: any) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query {
+      challenge(ID: ${challengeId}) {
+        id
+        name
+        groups{id name}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
