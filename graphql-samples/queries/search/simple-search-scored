@@ -10,6 +10,9 @@ query create($searchData: SearchInput!){
       ... on UserGroup {
         name
       }
+      ... on Organisation {
+        name
+      }
     }
   }
 }
@@ -18,6 +21,6 @@ query create($searchData: SearchInput!){
   "searchData":
   {
     "terms": ["Alisha", "Alisha", "Alisha", "Neil", "members"],
-    "typesFilter": ["user", "group"]
+    "typesFilter": ["user", "group", "organisation"]
   }
 }

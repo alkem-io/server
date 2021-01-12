@@ -10,6 +10,9 @@ query search($searchData: SearchInput!){
       ... on UserGroup {
         name
       }
+      ... on Organisation {
+        name
+      }
     }
   }
 }
