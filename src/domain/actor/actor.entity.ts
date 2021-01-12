@@ -17,29 +17,29 @@ export class Actor extends BaseEntity implements IActor {
   id!: number;
 
   @Field(() => String)
-  @Column('varchar', { length: 100 })
+  @Column()
   name: string;
 
   @Field(() => String, {
     nullable: true,
     description: 'A description of this actor',
   })
-  @Column('varchar', { length: 250 })
-  description: string;
+  @Column('text', { nullable: true })
+  description?: string;
 
   @Field(() => String, {
     nullable: true,
     description: 'A value derived by this actor',
   })
-  @Column('varchar', { length: 250 })
-  value: string;
+  @Column('text', { nullable: true })
+  value?: string;
 
   @Field(() => String, {
     nullable: true,
     description: 'The change / effort required of this actor',
   })
-  @Column('varchar', { length: 250 })
-  impact: string;
+  @Column('varchar')
+  impact?: string;
 
   @ManyToOne(
     () => ActorGroup,
@@ -50,8 +50,5 @@ export class Actor extends BaseEntity implements IActor {
   constructor(name: string) {
     super();
     this.name = name;
-    this.description = '';
-    this.value = '';
-    this.impact = '';
   }
 }

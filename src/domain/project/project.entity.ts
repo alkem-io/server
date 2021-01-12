@@ -26,7 +26,7 @@ export class Project extends BaseEntity implements IProject {
     nullable: false,
     description: 'A short text identifier for this Opportunity',
   })
-  @Column('varchar', { length: 20 })
+  @Column('varchar')
   textID: string;
 
   @Field(() => String, { nullable: false, description: '' })
@@ -34,7 +34,7 @@ export class Project extends BaseEntity implements IProject {
   name: string;
 
   @Field(() => String, { nullable: true, description: '' })
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   description?: string;
 
   @Field(() => String, {
@@ -43,7 +43,7 @@ export class Project extends BaseEntity implements IProject {
       'The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc',
   })
   @Column({ nullable: true })
-  state: string;
+  state?: string;
 
   @Field(() => Tagset, {
     nullable: true,

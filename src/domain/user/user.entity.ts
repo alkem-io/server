@@ -23,42 +23,42 @@ export class User extends BaseEntity implements IUser {
   id!: number;
 
   @Field(() => String)
-  @Column()
+  @Column('varchar')
   name: string;
 
   @Field(() => String, {
     description:
       'The unique personal identifier (upn) for the account associated with this user profile',
   })
-  @Column()
+  @Column('varchar')
   accountUpn: string = '';
 
   @Field(() => String)
-  @Column()
+  @Column('varchar')
   firstName: string = '';
 
   @Field(() => String)
-  @Column()
+  @Column('varchar')
   lastName: string = '';
 
   @Field(() => String)
-  @Column()
+  @Column('varchar')
   email: string = '';
 
   @Field(() => String)
-  @Column()
+  @Column('varchar')
   phone: string = '';
 
   @Field(() => String)
-  @Column()
+  @Column('varchar')
   city: string = '';
 
   @Field(() => String)
-  @Column()
+  @Column('varchar')
   country: string = '';
 
   @Field(() => String)
-  @Column()
+  @Column('varchar')
   gender: string = '';
 
   @OneToOne(() => DID)

@@ -44,7 +44,7 @@ export class Opportunity extends BaseEntity
     nullable: false,
     description: 'A short text identifier for this Opportunity',
   })
-  @Column('varchar', { length: 15 })
+  @Column('varchar')
   textID: string;
 
   // Other
@@ -54,7 +54,7 @@ export class Opportunity extends BaseEntity
       'The maturity phase of the Opportunity i.e. new, being refined, ongoing etc',
   })
   @Column({ nullable: true })
-  state: string;
+  state?: string;
 
   @Field(() => Context, {
     nullable: true,
