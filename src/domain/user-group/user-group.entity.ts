@@ -26,7 +26,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   id!: number;
 
   @Field(() => String)
-  @Column('varchar')
+  @Column()
   name: string;
 
   @Field(() => [User], {

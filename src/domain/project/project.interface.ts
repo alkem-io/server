@@ -7,7 +7,7 @@ export interface IProject {
   textID: string;
   name: string;
   description?: string;
-  state?: string;
+  state: string;
   tagset?: ITagset;
   agreements?: IAgreement[];
   aspects?: IAspect[];

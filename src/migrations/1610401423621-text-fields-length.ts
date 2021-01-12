@@ -5,211 +5,249 @@ export class textFieldsLength1610401423621 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      'ALTER TABLE `actor` MODIFY COLUMN`name` varchar(255) NOT NULL'
+      'ALTER TABLE `project` MODIFY `state` varchar(255) NOT NULL'
     );
-
-    await queryRunner.query('ALTER TABLE `actor` MODIFY COLUMN `description` text NULL');
-
-    await queryRunner.query('ALTER TABLE `actor` MODIFY COLUMN `value` text NULL');
-
     await queryRunner.query(
-      'ALTER TABLE `actor` MODIFY COLUMN `impact` varchar(255) NOT NULL'
+      'ALTER TABLE `aspect` MODIFY `explanation` text NOT NULL'
     );
-
     await queryRunner.query(
-      'ALTER TABLE `context` MODIFY COLUMN `tagline` varchar(255) NULL'
+      'ALTER TABLE `challenge` MODIFY `state` varchar(255) NOT NULL'
     );
-
-    await queryRunner.query('ALTER TABLE `context` MODIFY COLUMN `background` text NULL');
-
-    await queryRunner.query('ALTER TABLE `context` MODIFY COLUMN `vision` text NULL');
-
-    await queryRunner.query('ALTER TABLE `context` MODIFY COLUMN `impact` text NULL');
-
-    await queryRunner.query('ALTER TABLE `context` MODIFY COLUMN `who` text NULL');
-
-    await queryRunner.query('ALTER TABLE `reference` MODIFY COLUMN `uri` text NOT NULL');
-
     await queryRunner.query(
-      'ALTER TABLE `reference` MODIFY COLUMN `description` text NULL'
+      'ALTER TABLE `opportunity` MODIFY `name` varchar(255) NOT NULL'
     );
-
-    await queryRunner.query('ALTER TABLE `profile` MODIFY COLUMN `avatar` text NULL');
-
     await queryRunner.query(
-      'ALTER TABLE `profile` MODIFY COLUMN `description` text NULL'
+      'ALTER TABLE `opportunity` MODIFY `state` varchar(255) NOT NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `actor` MODIFY `name` varchar(255) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `agreement` MODIFY COLUMN `description` text NULL'
+      'ALTER TABLE `actor` MODIFY `description` text NULL'
+    );
+
+    await queryRunner.query('ALTER TABLE `actor` MODIFY `value` text NULL');
+
+    await queryRunner.query(
+      'ALTER TABLE `actor` MODIFY `impact` varchar(255) NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `project` MODIFY COLUMN `textID` varchar(255) NOT NULL'
+      'ALTER TABLE `context` MODIFY `tagline` varchar(255) NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `project` MODIFY COLUMN `description` text NULL'
+      'ALTER TABLE `context` MODIFY `background` text NULL'
     );
 
-    await queryRunner.query('ALTER TABLE `aspect` MODIFY COLUMN `framing` text NOT NULL');
+    await queryRunner.query('ALTER TABLE `context` MODIFY `vision` text NULL');
+
+    await queryRunner.query('ALTER TABLE `context` MODIFY `impact` text NULL');
+
+    await queryRunner.query('ALTER TABLE `context` MODIFY `who` text NULL');
 
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` MODIFY COLUMN `name` varchar(255) NOT NULL'
-    );
-
-    await queryRunner.query(
-      'ALTER TABLE `challenge` MODIFY COLUMN `name` varchar(255) NOT NULL'
-    );
-
-    await queryRunner.query(
-      'ALTER TABLE `challenge` MODIFY COLUMN `textID` varchar(255) NOT NULL'
+      'ALTER TABLE `reference` MODIFY `uri` text NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `type` varchar(255) NOT NULL'
+      'ALTER TABLE `reference` MODIFY `description` text NULL'
+    );
+
+    await queryRunner.query('ALTER TABLE `profile` MODIFY `avatar` text NULL');
+
+    await queryRunner.query(
+      'ALTER TABLE `profile` MODIFY `description` text NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `actorName` varchar(255) NOT NULL'
+      'ALTER TABLE `agreement` MODIFY `description` text NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `actorType` varchar(255) NOT NULL'
+      'ALTER TABLE `project` MODIFY `textID` varchar(255) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `actorRole` varchar(255) NOT NULL'
+      'ALTER TABLE `project` MODIFY `description` text NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `description` text NULL'
+      'ALTER TABLE `aspect` MODIFY `framing` text NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `opportunity` MODIFY COLUMN `textID` varchar(255) NOT NULL'
+      'ALTER TABLE `ecoverse` MODIFY `name` varchar(255) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `actor_group` MODIFY COLUMN `name` varchar(255) NOT NULL'
+      'ALTER TABLE `challenge` MODIFY `name` varchar(255) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `actor_group` MODIFY COLUMN `description` text NULL'
+      'ALTER TABLE `challenge` MODIFY `textID` varchar(255) NOT NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `relation` MODIFY `type` varchar(255) NOT NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `relation` MODIFY `actorName` varchar(255) NOT NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `relation` MODIFY `actorType` varchar(255) NOT NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `relation` MODIFY `actorRole` varchar(255) NOT NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `relation` MODIFY `description` text NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` MODIFY `textID` varchar(255) NOT NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `actor_group` MODIFY `name` varchar(255) NOT NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `actor_group` MODIFY `description` text NULL'
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      'ALTER TABLE `actor_group` MODIFY COLUMN `description` varchar(250) NOT NULL'
+      'ALTER TABLE `actor_group` MODIFY `description` varchar(250) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `actor_group` MODIFY COLUMN `name` varchar(100) NOT NULL'
+      'ALTER TABLE `actor_group` MODIFY `name` varchar(100) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `opportunity` MODIFY COLUMN `textID` varchar(15) NOT NULL'
+      'ALTER TABLE `opportunity` MODIFY `textID` varchar(15) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `description` varchar(400) NOT NULL'
+      'ALTER TABLE `relation` MODIFY `description` varchar(400) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `actorRole` varchar(100) NOT NULL'
+      'ALTER TABLE `relation` MODIFY `actorRole` varchar(100) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `actorType` varchar(100) NOT NULL'
+      'ALTER TABLE `relation` MODIFY `actorType` varchar(100) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `actorName` varchar(100) NOT NULL'
+      'ALTER TABLE `relation` MODIFY `actorName` varchar(100) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `relation` MODIFY COLUMN `type` varchar(20) NOT NULL'
+      'ALTER TABLE `relation` MODIFY `type` varchar(20) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `challenge` MODIFY COLUMN `textID` varchar(15) NOT NULL'
+      'ALTER TABLE `challenge` MODIFY `textID` varchar(15) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `challenge` MODIFY COLUMN `name` varchar(100) NOT NULL'
+      'ALTER TABLE `challenge` MODIFY `name` varchar(100) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` MODIFY COLUMN `name` varchar(100) NOT NULL'
+      'ALTER TABLE `ecoverse` MODIFY `name` varchar(100) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `aspect` MODIFY COLUMN `framing` varchar(400) NOT NULL'
+      'ALTER TABLE `aspect` MODIFY `framing` varchar(400) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `project` MODIFY COLUMN `description` varchar(255) NULL'
+      'ALTER TABLE `project` MODIFY `description` varchar(255) NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `project` MODIFY COLUMN `textID` varchar(20) NOT NULL'
+      'ALTER TABLE `project` MODIFY `textID` varchar(20) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `agreement` MODIFY COLUMN `description` varchar(255) NOT NULL'
+      'ALTER TABLE `agreement` MODIFY `description` varchar(255) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `profile` MODIFY COLUMN `description` varchar(400) NOT NULL'
+      'ALTER TABLE `profile` MODIFY `description` varchar(400) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `profile` MODIFY COLUMN `avatar` varchar(250) NOT NULL'
+      'ALTER TABLE `profile` MODIFY `avatar` varchar(250) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `reference` MODIFY COLUMN `description` varchar(300) NOT NULL'
+      'ALTER TABLE `reference` MODIFY `description` varchar(300) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `reference` MODIFY COLUMN `uri` varchar(255) NOT NULL'
+      'ALTER TABLE `reference` MODIFY `uri` varchar(255) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `context` MODIFY COLUMN `who` varchar(2000) NOT NULL'
+      'ALTER TABLE `context` MODIFY `who` varchar(2000) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `context` MODIFY COLUMN `impact` varchar(2000) NOT NULL'
+      'ALTER TABLE `context` MODIFY `impact` varchar(2000) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `context` MODIFY COLUMN `vision` varchar(2000) NOT NULL'
+      'ALTER TABLE `context` MODIFY `vision` varchar(2000) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `context` MODIFY COLUMN `background` varchar(2000) NOT NULL'
+      'ALTER TABLE `context` MODIFY `background` varchar(2000) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `context` MODIFY COLUMN `tagline` varchar(250) NOT NULL'
+      'ALTER TABLE `context` MODIFY `tagline` varchar(250) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `actor` MODIFY COLUMN `impact` varchar(250) NOT NULL'
+      'ALTER TABLE `actor` MODIFY `impact` varchar(250) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `actor` MODIFY COLUMN `value` varchar(250) NOT NULL'
+      'ALTER TABLE `actor` MODIFY `value` varchar(250) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `actor` MODIFY COLUMN `description` varchar(250) NOT NULL'
+      'ALTER TABLE `actor` MODIFY `description` varchar(250) NOT NULL'
     );
 
     await queryRunner.query(
-      'ALTER TABLE `actor` MODIFY COLUMN `name` varchar(100) NOT NULL'
+      'ALTER TABLE `actor` MODIFY `name` varchar(100) NOT NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` MODIFY `state` varchar(255) NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` MODIFY `name` varchar(100) NOT NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` MODIFY `state` varchar(255) NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `aspect` MODIFY `explanation` varchar(400) NOT NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` MODIFY `state` varchar(255) NULL'
     );
   }
 }

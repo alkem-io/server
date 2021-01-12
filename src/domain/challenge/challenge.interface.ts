@@ -8,7 +8,7 @@ export interface IChallenge {
   id: number;
   name: string;
   textID: string;
-  state?: string | null;
+  state: string;
   context?: IContext;
   tagset?: ITagset;
   groups?: IUserGroup[];

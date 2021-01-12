@@ -9,7 +9,7 @@ export interface IOpportunity {
   id: number;
   name: string;
   textID: string;
-  state?: string;
+  state: string;
   context?: IContext;
   projects?: IProject[];
   actorGroups?: IActorGroup[];

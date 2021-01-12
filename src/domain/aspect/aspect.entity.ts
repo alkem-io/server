@@ -26,7 +26,7 @@ export class Aspect extends BaseEntity implements IAspect {
   framing: string;
 
   @Field(() => String)
-  @Column('varchar', { length: 400 })
+  @Column('text')
   explanation: string;
 
   @ManyToOne(

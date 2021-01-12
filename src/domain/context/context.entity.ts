@@ -20,7 +20,7 @@ export class Context extends BaseEntity implements IContext {
     nullable: true,
     description: 'A one line description',
   })
-  @Column('varchar', { nullable: true })
+  @Column('varchar', { length: 255, nullable: true })
   tagline?: string = '';
 
   @Field(() => String, {

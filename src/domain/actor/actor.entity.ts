@@ -38,7 +38,7 @@ export class Actor extends BaseEntity implements IActor {
     nullable: true,
     description: 'The change / effort required of this actor',
   })
-  @Column('varchar')
+  @Column('varchar', { length: 255, nullable: true })
   impact?: string;
 
   @ManyToOne(
