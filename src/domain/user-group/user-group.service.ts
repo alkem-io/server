@@ -36,6 +36,11 @@ export class UserGroupService {
   ) {}
 
   async createUserGroup(name: string): Promise<IUserGroup> {
+    if (name.length == 0)
+      throw new ValidationException(
+        'Unable to create a group with an empty name',
+        LogContext.COMMUNITY
+      );
     const group = new UserGroup(name);
     await this.initialiseMembers(group);
     await this.groupRepository.save(group);
