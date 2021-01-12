@@ -22,7 +22,6 @@ import {
   NotSupportedException,
   GroupNotInitializedException,
   EntityNotInitializedException,
-  ForbiddenException,
 } from '@utils/error-handling/exceptions';
 import { UserGroupInput } from './user-group.dto';
 
@@ -76,7 +75,7 @@ export class UserGroupService {
 
     // Cannot remove restricted groups
     if (await this.isRestricted(group))
-      throw new ForbiddenException(
+      throw new ValidationException(
         `Unable to remove User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
         LogContext.COMMUNITY
       );
@@ -95,7 +94,7 @@ export class UserGroupService {
     });
     if (!group)
       throw new EntityNotFoundException(
-        `Unable to update group with ID: ${groupID}`,
+        `Unable to update User Group with ID: ${groupID}`,
         LogContext.COMMUNITY
       );
     // Cannot rename restricted groups
@@ -103,7 +102,7 @@ export class UserGroupService {
     if (newName && newName.length > 0 && newName !== group.name) {
       // group being renamed; check if allowed
       if (await this.isRestricted(group)) {
-        throw new ForbiddenException(
+        throw new ValidationException(
           `Unable to rename User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
           LogContext.COMMUNITY
         );
@@ -124,7 +123,7 @@ export class UserGroupService {
     const populatedUserGroup = await this.getGroupByID(group.id);
     if (!populatedUserGroup)
       throw new EntityNotFoundException(
-        `Unable to get usergroup by id: ${group.id}`,
+        `Unable to get User Group by id: ${group.id}`,
         LogContext.COMMUNITY
       );
 
