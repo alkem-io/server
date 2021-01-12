@@ -8,6 +8,7 @@ import { BootstrapService } from './utils/bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { faviconMiddleware } from './utils/middleware/favicon.middleware';
 import helmet from 'helmet';
+import { ValidationPipe } from '@nestjs/common';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -17,6 +18,7 @@ const bootstrap = async () => {
 
   app.useLogger(logger);
   app.useGlobalFilters(new HttpExceptionsFilter(logger));
+  app.useGlobalPipes(new ValidationPipe());
   await bootstrapService.bootstrapEcoverse();
   app.enableCors({
     origin: configService.get<IServiceConfig>('service')?.corsOrigin,
