@@ -519,11 +519,10 @@ export class UserGroupService {
   }
 
   async getMembers(groupID: number): Promise<IUser[]> {
-    return (
-      await this.groupRepository.findOne({
-        where: { id: groupID },
-        relations: ['members'],
-      })
-    )?.members as IUser[];
+    const group = await this.groupRepository.findOne({
+      where: { id: groupID },
+      relations: ['members', 'profile'],
+    });
+    return group?.members as IUser[];
   }
 }
