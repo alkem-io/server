@@ -7,7 +7,7 @@ export default registerAs('service', () => ({
   corsOrigin: process.env.CORS_ORIGIN ?? '*',
   corsAllowedHeaders:
     process.env.CORS_ALLOWED_HEADERS ??
-    'Origin, X-Requested-With, Content-Type, Accept',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization',
   corsMethods: process.env.CORS_METHODS ?? 'GET,HEAD,PUT,PATCH,POST,DELETE',
   authenticationEnabled: process.env.AUTH_ENABLED ?? true,
   authorisationBootstrapPath: process.env.AUTH_BOOTSTRAP_PATH,
