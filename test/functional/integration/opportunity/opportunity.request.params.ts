@@ -109,6 +109,31 @@ export const updateOpportunityOnChallengeMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+export const addUserToOpportunityMutation = async (
+  opportunityId: any,
+  userId: any
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation addUserToOpportunity($userID: Float!, $opportunityID: Float!) {
+      addUserToOpportunity(opportunityID: $opportunityID, userID: $userID) {
+        name,
+        id,
+        members {
+          id,
+          name
+        }
+      }
+    }`,
+    variables: {
+      userID: parseFloat(userId),
+      opportunityID: parseFloat(opportunityId)
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
 export const removeOpportunityMutation = async (opportunityId: any) => {
   const requestParams = {
     operationName: null,
@@ -176,6 +201,20 @@ export const queryOpportunities = async () => {
             description
           }
         }
+      }
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+
+export const queryOpportunityGroups = async (opportunityId: any) => {
+  const requestParams = {
+    operationName: null,
+    query: `query {
+      opportunity(ID: ${parseFloat(opportunityId)}) {
+        groups{id name members{id name}}
       }
     }`,
   };
