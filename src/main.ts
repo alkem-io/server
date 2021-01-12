@@ -26,7 +26,11 @@ const bootstrap = async () => {
   });
 
   app.use(faviconMiddleware);
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+    })
+  );
 
   await app.listen(
     configService.get<IServiceConfig>('service')?.graphqlEndpointPort as number
