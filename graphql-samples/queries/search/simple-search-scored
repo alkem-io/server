@@ -20,6 +20,7 @@ query create($searchData: SearchInput!){
 {
   "searchData":
   {
+    "tagsetNames": ["Keywords"],
     "terms": ["Alisha", "Alisha", "Alisha", "Neil", "members"],
     "typesFilter": ["user", "group", "organisation"]
   }
