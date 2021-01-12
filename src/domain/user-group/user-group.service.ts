@@ -458,10 +458,9 @@ export class UserGroupService {
   }
 
   async getMembers(groupID: number): Promise<IUser[]> {
-    // Todo: members need to be loaded with full data, not just the member object. Currently missing profile.
     const group = await this.groupRepository.findOne({
       where: { id: groupID },
-      relations: ['members'],
+      relations: ['members', 'profile'],
     });
     return group?.members as IUser[];
   }
