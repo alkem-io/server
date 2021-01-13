@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import { IsDataURI, MaxLength } from 'class-validator';
 
 @InputType()
 export class ReferenceInput {
@@ -8,7 +8,7 @@ export class ReferenceInput {
   name!: string;
 
   @Field({ nullable: true })
-  @MaxLength(300)
+  @IsDataURI()
   uri!: string;
 
   @Field({ nullable: true })

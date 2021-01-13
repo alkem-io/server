@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import { IsEmail, MaxLength } from 'class-validator';
 import { ProfileInput } from '@domain/profile/profile.dto';
 
 @InputType()
@@ -24,7 +24,7 @@ export class UserInput {
     nullable: true,
     description: 'Email address is required for creating a new user',
   })
-  @MaxLength(120)
+  @IsEmail()
   email!: string;
 
   @Field({ nullable: true })
