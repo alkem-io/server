@@ -6,6 +6,8 @@ import {
   registerDecorator,
   ValidationArguments,
   ValidationOptions,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 import { getRepository } from 'typeorm';
 
@@ -16,37 +18,36 @@ export enum TextIdType {
   opportunity,
   project,
 }
+@ValidatorConstraint({ async: true })
+export class IsUniqTextIdConstraint implements ValidatorConstraintInterface {
+  validate(textId: any, args: ValidationArguments): boolean | Promise<boolean> {
+    const [target] = args.constraints;
 
-export async function IsUniqTextIdConstraint(
-  textId: any,
-  args: ValidationArguments
-) {
-  const [target] = args.constraints;
-
-  if (target === TextIdType.challenge) {
-    const repo = getRepository(Challenge);
-    const item = repo.findOne({
-      where: { textID: textId },
-    });
-    return item === undefined;
-  } else if (target === TextIdType.opportunity) {
-    const repo = getRepository(Opportunity);
-    const item = repo.findOne({
-      where: { textID: textId },
-    });
-    return item === undefined;
-  } else if (target === TextIdType.project) {
-    const repo = getRepository(Project);
-    const item = repo.findOne({
-      where: { textID: textId },
-    });
-    return item === undefined;
+    if (target === TextIdType.challenge) {
+      const repo = getRepository(Challenge);
+      const item = repo.findOne({
+        where: { textID: textId },
+      });
+      return item === undefined;
+    } else if (target === TextIdType.opportunity) {
+      const repo = getRepository(Opportunity);
+      const item = repo.findOne({
+        where: { textID: textId },
+      });
+      return item === undefined;
+    } else if (target === TextIdType.project) {
+      const repo = getRepository(Project);
+      const item = repo.findOne({
+        where: { textID: textId },
+      });
+      return item === undefined;
+    }
+    return true;
   }
-  return true;
-}
 
-function defaultMessage(args: ValidationArguments) {
-  return `TextID '${args.value}' already exists!`;
+  defaultMessage(args: ValidationArguments) {
+    return `TextID '${args.value}' already exists!`;
+  }
 }
 
 export function IsUniqTextId(
@@ -61,9 +62,6 @@ export function IsUniqTextId(
       propertyName: propertyName,
       options: validationOptions,
       constraints: [target],
-      validator: {
-        validate: IsUniqTextIdConstraint,
-        defaultMessage: defaultMessage,
-      },
+      validator: IsUniqTextIdConstraint,
     });
 }
