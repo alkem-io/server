@@ -17,24 +17,24 @@ export class Relation extends BaseEntity implements IRelation {
   id!: number;
 
   @Field(() => String)
-  @Column('varchar', { length: 20 })
+  @Column('varchar')
   type = '';
 
   @Field(() => String)
-  @Column('varchar', { length: 100 })
+  @Column('varchar')
   actorName = '';
 
   @Field(() => String)
-  @Column('varchar', { length: 100 })
+  @Column('varchar')
   actorType = '';
 
   @Field(() => String)
-  @Column('varchar', { length: 100 })
+  @Column('varchar')
   actorRole = '';
 
-  @Field(() => String)
-  @Column('varchar', { length: 400 })
-  description = '';
+  @Field(() => String, { nullable: true })
+  @Column('text', { nullable: true })
+  description? = '';
 
   @ManyToOne(
     () => Opportunity,

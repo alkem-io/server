@@ -22,12 +22,12 @@ export class Reference extends BaseEntity implements IReference {
   name: string;
 
   @Field(() => String)
-  @Column()
+  @Column('text')
   uri: string;
 
   @Field(() => String)
-  @Column('varchar', { length: 300 })
-  description: string;
+  @Column('text', { nullable: true })
+  description?: string;
 
   @ManyToOne(
     () => Context,

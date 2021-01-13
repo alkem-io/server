@@ -37,14 +37,14 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     nullable: false,
     description: 'The name of the challenge',
   })
-  @Column('varchar', { length: 100 })
+  @Column()
   name: string;
 
   @Field(() => String, {
     nullable: false,
     description: 'A short text identifier for this challenge',
   })
-  @Column('varchar', { length: 15 })
+  @Column()
   textID: string;
 
   @Field(() => Context, {
@@ -81,7 +81,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     description:
       'The maturity phase of the challenge i.e. new, being refined, ongoing etc',
   })
-  @Column({ nullable: true })
+  @Column()
   state: string;
 
   @Field(() => Tagset, {
