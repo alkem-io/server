@@ -95,6 +95,7 @@ import aadOboConfig from './config/aad.obo.config';
     GraphQLModule.forRoot({
       autoSchemaFile: true,
       playground: true,
+      sortSchema: true,
       fieldResolverEnhancers: ['guards'],
     }),
     DataManagementModule,

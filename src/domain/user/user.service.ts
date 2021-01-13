@@ -13,7 +13,7 @@ import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
-
+import validator from 'validator';
 @Injectable()
 export class UserService {
   constructor(
@@ -71,8 +71,8 @@ export class UserService {
   //Find a user either by id or email
   //toDo - review that
   async getUser(userID: string): Promise<IUser | undefined> {
-    const idInt: number = parseInt(userID);
-    if (!isNaN(idInt)) {
+    if (validator.isNumeric(userID)) {
+      const idInt = parseInt(userID);
       const user = await this.getUserByID(idInt);
       if (user) return user;
     }
@@ -82,15 +82,29 @@ export class UserService {
     }
   }
 
-  async getUserByID(userID: number): Promise<IUser | undefined> {
-    return await this.userRepository.findOne({ id: userID });
+  async getUserByID(userID: number): Promise<IUser> {
+    const result = await this.userRepository.findOne({ id: userID });
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to find user with ID: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return result;
   }
 
   async getUserByEmail(
     email: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | undefined> {
-    return await this.userRepository.findOne({ email: email }, options);
+    const result = await this.userRepository.findOne({ email: email }, options);
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to find user with email: '${email}'`,
+        LogContext.COMMUNITY
+      );
+    }
+    return result;
   }
 
   async findUser(
