@@ -26,7 +26,7 @@ export class Agreement extends BaseEntity implements IAgreement {
   name: string;
 
   @Field(() => String)
-  @Column()
+  @Column('text', { nullable: true })
   description?: string;
 
   @ManyToOne(
