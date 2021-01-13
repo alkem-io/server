@@ -1,6 +1,7 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
+
 const uniqueId = Math.random().toString();
 
 export const createUserMutation = async (userName: string) => {
@@ -15,6 +16,16 @@ export const createUserMutation = async (userName: string) => {
         name: userName,
         email: `${userName}@test.com`,
         aadPassword: `90!ds${uniqueId}`,
+        profileData: {
+          description: "x",
+          avatar: "http://xProf.com",
+          tagsetsData: {"tags": ["x1", "x2"], "name": "x"},
+          referencesData: {
+            name: "x",
+            description: "x",
+            uri: "https://xRef.com"
+          }
+        }
       },
     },
   };
@@ -221,6 +232,71 @@ export const getUsers = async () => {
     operationName: null,
     variables: {},
     query: 'query{users {name}}',
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const updateProfileMutation = async (
+  userId: any,
+  descritpion: string,
+  avatar?: string,
+  tagsetDataName?: string,
+  tags?: any,
+  nameRef?: string,
+  uriRef?: string,
+  descriptionRef?: string,
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
+      updateProfile(profileData: $profileData, ID: $ID)}`,
+    variables: {
+      ID: parseFloat(userId),
+      profileData: {
+        description: descritpion,
+        avatar: avatar,
+        tagsetsData: {
+          name: tagsetDataName,
+          tags: tags
+        },
+        referencesData:{
+          name: nameRef,
+          uri: uriRef,
+          description: descriptionRef,
+        }
+      },
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getUsersProfile = async (userId: string) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query {
+      user(ID: "${userId}") {
+        id
+        profile {
+          id
+          description
+          avatar
+          tagsets {
+            id
+            tags
+            name
+          }
+          references {
+            id
+            name
+            uri
+            description
+          }
+        }
+      }
+    }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
