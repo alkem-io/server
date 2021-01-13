@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
-import { OpportunityHandler } from './handlers/opportunity.handler';
 import { Handler } from './handlers/base/handler.interface';
-import { ActorHandler } from './handlers/actor.handler';
 import { BaseHandler } from './handlers/base/base.handler';
 
 @Injectable()
@@ -13,11 +11,11 @@ export class ValidationPipe implements PipeTransform<any> {
       return value;
     }
     const object = plainToClass(metatype, value);
-    const opportunityHandler = new OpportunityHandler();
-    const actorHandler = new ActorHandler();
+    // const opportunityHandler = new OpportunityHandler();
+    // const actorHandler = new ActorHandler();
     const baseHandler = new BaseHandler();
-    opportunityHandler.setNext(actorHandler).setNext(baseHandler);
-    await this.validate(opportunityHandler, object, metatype);
+    // opportunityHandler.setNext(actorHandler).setNext(baseHandler);
+    await this.validate(baseHandler, object, metatype);
 
     return value;
   }
