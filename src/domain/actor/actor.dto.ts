@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class ActorInput {
@@ -8,6 +8,7 @@ export class ActorInput {
   name!: string;
 
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(200)
   description?: string;
 

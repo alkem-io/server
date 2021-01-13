@@ -1,24 +1,29 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import { IsOptional, MaxLength } from 'class-validator';
 import { ContextInput } from '@domain/context/context.dto';
 
 @InputType()
 export class ChallengeInput {
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(100)
   name?: string;
 
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(15)
   textID?: string;
 
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(255)
   state?: string;
 
   @Field(() => ContextInput, { nullable: true })
+  @IsOptional()
   context?: ContextInput;
 
   @Field(() => [String], { nullable: true })
+  @IsOptional()
   tags?: string[];
 }

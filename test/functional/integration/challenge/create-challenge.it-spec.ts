@@ -145,9 +145,9 @@ describe('Create Challenge', () => {
       ${''}                 | ${'Required field textID not specified'}
       ${'vvv,vv'}           | ${'Required field textID provided not in the correct format: vvv,vv'}
       ${'..-- '}            | ${'Required field textID provided not in the correct format: ..-- '}
-      ${'toooo-long-texId'} | ${"ER_DATA_TOO_LONG: Data too long for column 'textID' at row 1"}
+      ${'toooo-long-texId'} | ${'property textID has failed the following constraints: maxLength'}
     `(
-      "should throw error: '$expected' for textId value: '$textId'",
+      'should throw error: \'$expected\' for textId value: \'$textId\'',
       async ({ textId, expected }) => {
         // Act
         const requestParamsCreateChallenge = {

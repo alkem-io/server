@@ -1,34 +1,13 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, MaxLength } from 'class-validator';
 import { ProfileInput } from '@domain/profile/profile.dto';
 
 @InputType()
-export class UserInput {
-  @Field({ nullable: true })
-  @MaxLength(50)
-  accountUpn!: string;
-
+export class BaseUserDto {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(30)
   name?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(60)
-  firstName?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(60)
-  lastName?: string;
-
-  @Field({
-    nullable: true,
-    description: 'Email address is required for mutations!',
-  })
-  @IsEmail()
-  email!: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -50,12 +29,7 @@ export class UserInput {
   @MaxLength(20)
   gender?: string;
 
-  @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(30)
-  aadPassword?: string;
-
   @Field(() => ProfileInput, { nullable: true })
-  @IsOptional()
   profileData?: ProfileInput;
 }

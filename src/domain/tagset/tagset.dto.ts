@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class TagsetInput {
@@ -8,5 +8,6 @@ export class TagsetInput {
   name!: string;
 
   @Field(() => [String], { nullable: true })
+  @IsOptional()
   tags?: string[];
 }

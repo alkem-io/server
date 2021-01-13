@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import { IsOptional, MaxLength } from 'class-validator';
 import { ReferenceInput } from '@domain/reference/reference.dto';
 import { TagsetInput } from '@domain/tagset/tagset.dto';
 
@@ -14,8 +14,10 @@ export class ProfileInput {
   description!: string;
 
   @Field(() => [TagsetInput], { nullable: true })
+  @IsOptional()
   tagsetsData?: TagsetInput[];
 
   @Field(() => [ReferenceInput], { nullable: true })
+  @IsOptional()
   referencesData?: ReferenceInput[];
 }
