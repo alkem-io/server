@@ -28,7 +28,7 @@ export class UserGroupResolver {
     description: 'Removes the user group with the specified ID',
   })
   async removeUserGroup(@Args('ID') groupID: number): Promise<boolean> {
-    return await this.groupService.removeUserGroup(groupID);
+    return await this.groupService.removeUserGroup(groupID, true);
   }
 
   @Roles(

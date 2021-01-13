@@ -62,7 +62,10 @@ export class UserGroupService {
     return group;
   }
 
-  async removeUserGroup(groupID: number): Promise<boolean> {
+  async removeUserGroup(
+    groupID: number,
+    checkForRestricted = false
+  ): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const group = await this.groupRepository.findOne({
       where: { id: groupID },
@@ -74,7 +77,7 @@ export class UserGroupService {
       );
 
     // Cannot remove restricted groups
-    if (await this.isRestricted(group))
+    if (checkForRestricted && (await this.isRestricted(group)))
       throw new ValidationException(
         `Unable to remove User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
         LogContext.COMMUNITY
