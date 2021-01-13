@@ -19,7 +19,8 @@ export class SearchResultEntry implements ISearchResultEntry {
 
   @Field(() => SearchResult, {
     nullable: true,
-    description: 'Each search result contains either a User or UserGroup',
+    description:
+      'Each search result contains either a User, UserGroup or Organisation',
   })
   result?: typeof SearchResult;
 
