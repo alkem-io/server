@@ -9,6 +9,9 @@ query create($searchData: SearchInput!){
       ... on UserGroup {
         name
       }
+      ... on Organisation {
+        name
+      }
     }
   }
 }
@@ -16,6 +19,7 @@ query create($searchData: SearchInput!){
 {
   "searchData":
   {
+    "tagsetNames": ["Keywords"],
     "terms": ["Alisha"]
   }
 }

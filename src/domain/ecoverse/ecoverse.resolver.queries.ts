@@ -74,7 +74,7 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async users(): Promise<IUser[]> {
-    return this.ecoverseService.getUsers();
+    return await this.ecoverseService.getUsers();
   }
 
   @Roles(
