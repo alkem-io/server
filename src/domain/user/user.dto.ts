@@ -6,7 +6,7 @@ import { ProfileInput } from '@domain/profile/profile.dto';
 export class UserInput {
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(50)
+  @MaxLength(400)
   accountUpn!: string;
 
   @Field({ nullable: true })
@@ -27,8 +27,9 @@ export class UserInput {
   @Field({
     nullable: true,
     description: 'Email address is required for mutations!',
-  })
+  })  
   @IsEmail()
+  @IsOptional()
   email!: string;
 
   @Field({ nullable: true })

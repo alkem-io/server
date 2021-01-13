@@ -34,7 +34,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   uniqueId = Math.random()
-    .toString(36)
+    .toString(12)
     .slice(-6);
   userName = `testUser${uniqueId}`;
   userFirstName = `FirstName ${uniqueId}`;

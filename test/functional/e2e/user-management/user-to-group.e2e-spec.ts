@@ -31,7 +31,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   uniqueId = Math.random()
-    .toString(36)
+    .toString(12)
     .slice(-6);
   userName = `testUser${uniqueId}`;
   userFirstName = `userFirstName${uniqueId}`;
@@ -196,13 +196,13 @@ describe('Users and Groups', () => {
       userPhone,
       userEmail
     );
+
     userId = responseCreateUser.body.data.createUser.id;
 
     await addUserToGroup(userId, groupId);
 
     // Act
     const responseRemoveUser = await removeUserMutation(userId);
-
     const responseQueryGroups = await graphqlRequestAuth(
       {
         query: `{
@@ -250,5 +250,29 @@ describe('Users and Groups', () => {
     expect(
       responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name
     ).toEqual(userName);
+  });
+
+  test.skip('should remove "user" assigned as focal point', async () => {
+    // Arrange
+    const responseCreate = await createGroupMutation(groupName);
+    const groupId = responseCreate.body.data.createGroupOnEcoverse.id;
+
+    const responseCreateUser = await createUserDetailsMutation(
+      userName,
+      userFirstName,
+      userLastName,
+      userPhone,
+      userEmail
+    );
+    userId = responseCreateUser.body.data.createUser.id;
+
+    await assignGroupFocalPointMutation(userId, groupId);
+
+    // Act
+    const responseDeleteUserFocalPoint = await removeUserMutation(userId);
+
+    // Assert
+    expect(responseDeleteUserFocalPoint.status).toBe(200);
+    expect(responseDeleteUserFocalPoint.body.data.removeUser).toBe(true);
   });
 });
