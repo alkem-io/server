@@ -1,0 +1,19 @@
+mutation UpdateUserGroup($groupID: Float!, $userGroupData: UserGroupInput!) {
+  updateUserGroup(gID: $groupID, userGroupData: $userGroupData) {
+    name
+  }
+}
+
+
+query variables:
+{
+  "groupID": 7,
+  "userGroupData":
+  {
+    "name": "test2",
+    "profileData": {
+      "description": "some description",
+      "avatar": "http://someUri"
+    }
+  }
+}
