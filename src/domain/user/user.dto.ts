@@ -5,6 +5,7 @@ import { ProfileInput } from '@domain/profile/profile.dto';
 @InputType()
 export class UserInput {
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(50)
   accountUpn!: string;
 
