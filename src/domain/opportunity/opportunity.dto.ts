@@ -1,21 +1,17 @@
-import {
-  LONG_TEXT_LENGTH,
-  MID_TEXT_LENGTH,
-  TINY_TEXT_LENGTH,
-} from '@constants';
+import { InputType, Field } from '@nestjs/graphql';
+import { IsOptional, MaxLength } from 'class-validator';
 import { ContextInput } from '@domain/context/context.dto';
-import { Field, InputType } from '@nestjs/graphql';
+import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@constants';
 import {
   IsUniqueTextId,
   TextIdType,
 } from '@utils/validation/constraints/unique.text.id';
-import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class OpportunityInput {
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
   @Field({ nullable: true })
@@ -26,7 +22,7 @@ export class OpportunityInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   state?: string;
 
   @Field(() => ContextInput, { nullable: true })

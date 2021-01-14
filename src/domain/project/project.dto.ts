@@ -1,16 +1,20 @@
-import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@constants';
-import { Field, InputType } from '@nestjs/graphql';
+import { InputType, Field } from '@nestjs/graphql';
+import {
+  LONG_TEXT_LENGTH,
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  TINY_TEXT_LENGTH,
+} from '@constants';
 import {
   IsUniqueTextId,
   TextIdType,
 } from '@utils/validation/constraints/unique.text.id';
 import { MaxLength } from 'class-validator';
-import { TINY_TEXT_LENGTH } from '@constants';
 
 @InputType()
 export class ProjectInput {
   @Field({ nullable: true })
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
   @Field({ nullable: true })

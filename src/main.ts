@@ -8,7 +8,6 @@ import { IServiceConfig } from './interfaces/service.config.interface';
 import { BootstrapService } from './utils/bootstrap/bootstrap.service';
 import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
 import { faviconMiddleware } from './utils/middleware/favicon.middleware';
-import helmet from 'helmet';
 import { useContainer } from 'class-validator';
 
 const bootstrap = async () => {
