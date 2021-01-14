@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { MID_TEXT_LENGTH, VERY_LONG_TEXT_LENGTH } from '@constants';
+import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
@@ -9,10 +9,10 @@ export class AspectInput {
   title!: string;
 
   @Field({ nullable: true })
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  @MaxLength(LONG_TEXT_LENGTH)
   framing!: string;
 
   @Field({ nullable: true })
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  @MaxLength(LONG_TEXT_LENGTH)
   explanation!: string;
 }

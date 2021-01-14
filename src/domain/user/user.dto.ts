@@ -2,22 +2,21 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 import { ProfileInput } from '@domain/profile/profile.dto';
 import {
-  VERY_LONG_TEXT_LENGTH,
+  LONG_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   MID_TEXT_LENGTH,
-  TINY_TEXT_LENGTH,
 } from '@constants';
 
 @InputType()
 export class UserInput {
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  @MaxLength(LONG_TEXT_LENGTH)
   accountUpn!: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
   @Field({ nullable: true })
@@ -36,26 +35,27 @@ export class UserInput {
   })
   @IsEmail()
   @IsOptional()
+  @MaxLength(MID_TEXT_LENGTH)
   email!: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   phone?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   city?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   country?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(TINY_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   gender?: string;
 
   @Field({ nullable: true })
