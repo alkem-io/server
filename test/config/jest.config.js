@@ -7,6 +7,7 @@ module.exports = {
     '@templates/(.*)': ['<rootDir>/src/templates/$1'],
     '@src/(.*)': ['<rootDir>/src/$1'],
     '@test/(.*)': ['<rootDir>/test/$1'],
+    '@constants/(.*)': ['<rootDir>/utils/constants/$1'],
   },
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '../../',

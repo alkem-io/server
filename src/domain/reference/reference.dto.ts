@@ -1,10 +1,11 @@
 import { InputType, Field } from '@nestjs/graphql';
+import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@constants';
 import { IsDataURI, IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class ReferenceInput {
   @Field({ nullable: true })
-  @MaxLength(30)
+  @MaxLength(MID_TEXT_LENGTH)
   name!: string;
 
   @Field({ nullable: true })
@@ -13,6 +14,6 @@ export class ReferenceInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(300)
+  @MaxLength(LONG_TEXT_LENGTH)
   description?: string;
 }

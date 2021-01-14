@@ -39,6 +39,9 @@
       ],
       "@test/*": [
         "test/*"
+      ],
+      "@constants": [
+        "src/utils/constants/index.ts"
       ]
     }
   }

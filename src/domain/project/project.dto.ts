@@ -1,10 +1,11 @@
 import { InputType, Field } from '@nestjs/graphql';
+import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
 export class ProjectInput {
   @Field({ nullable: true })
-  @MaxLength(80)
+  @MaxLength(MID_TEXT_LENGTH)
   name!: string;
 
   @Field({ nullable: true })
@@ -12,10 +13,10 @@ export class ProjectInput {
   textID!: string;
 
   @Field({ nullable: true })
-  @MaxLength(300)
+  @MaxLength(LONG_TEXT_LENGTH)
   description!: string;
 
   @Field({ nullable: true })
-  @MaxLength(100)
+  @MaxLength(MID_TEXT_LENGTH)
   state!: string;
 }
