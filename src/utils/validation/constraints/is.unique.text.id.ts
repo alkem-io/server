@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import { ChallengeService } from '@domain/challenge/challenge.service';
+import { Challenge } from '@domain/challenge/challenge.entity';
 import { Opportunity } from '@domain/opportunity/opportunity.entity';
-import { OpportunityService } from '@domain/opportunity/opportunity.service';
 import { Project } from '@domain/project/project.entity';
-import { ProjectService } from '@domain/project/project.service';
 import {
   registerDecorator,
   ValidationArguments,
@@ -13,42 +11,36 @@ import {
 } from 'class-validator';
 import { getRepository } from 'typeorm';
 
-export const IS_UNIQ_TEXT_ID = 'is-uniq-text-id';
+export const IS_UNIQ_TEXT_ID = 'isUniqueTextId';
 
 export enum TextIdType {
   challenge,
   opportunity,
   project,
 }
-@ValidatorConstraint({ async: true })
+
+@ValidatorConstraint({ name: IS_UNIQ_TEXT_ID, async: true })
 export class IsUniqueTextIdConstraint implements ValidatorConstraintInterface {
-  constructor(
-    protected readonly challengeService: ChallengeService,
-    protected readonly opportunityService: OpportunityService,
-    protected readonly projectService: ProjectService
-  ) {}
-
-  validate(textId: any, args: ValidationArguments): boolean | Promise<boolean> {
+  async validate(textId: any, args: ValidationArguments): Promise<boolean> {
     const [target] = args.constraints;
-
     if (target === TextIdType.challenge) {
-      this.challengeService.getChallengeByID;
-      const item = repo.findOne({
-        where: { textID: textId },
-      });
-      return item === undefined;
+      return (
+        (await getRepository(Challenge).findOne({
+          where: { textID: textId },
+        })) === undefined
+      );
     } else if (target === TextIdType.opportunity) {
-      const repo = getRepository(Opportunity);
-      const item = repo.findOne({
-        where: { textID: textId },
-      });
-      return item === undefined;
+      return (
+        (await getRepository(Opportunity).findOne({
+          where: { textID: textId },
+        })) === undefined
+      );
     } else if (target === TextIdType.project) {
-      const repo = getRepository(Project);
-      const item = repo.findOne({
-        where: { textID: textId },
-      });
-      return item === undefined;
+      return (
+        (await getRepository(Project).findOne({
+          where: { textID: textId },
+        })) === undefined
+      );
     }
     return true;
   }
@@ -59,17 +51,17 @@ export class IsUniqueTextIdConstraint implements ValidatorConstraintInterface {
 }
 
 export function IsUniqueTextId(
-  target: TextIdType,
+  type: TextIdType,
   validationOptions?: ValidationOptions
 ) {
-  return (object: Object, propertyName: string) =>
+  return function(object: Object, propertyName: string) {
     registerDecorator({
-      name: IS_UNIQ_TEXT_ID,
       async: true,
       target: object.constructor,
       propertyName: propertyName,
       options: validationOptions,
-      constraints: [target],
+      constraints: [type],
       validator: IsUniqueTextIdConstraint,
     });
+  };
 }
