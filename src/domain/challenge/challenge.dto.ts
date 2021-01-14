@@ -19,7 +19,9 @@ export class ChallengeInput {
   name?: string;
 
   @Field({ nullable: true })
-  @IsUniqueTextId(TextIdType.challenge)
+  @IsUniqueTextId(TextIdType.challenge, {
+    message: 'Challenge with the textID: $value already exists!',
+  })
   @IsOptional()
   @MaxLength(TINY_TEXT_LENGTH)
   textID?: string;

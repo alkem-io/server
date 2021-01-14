@@ -138,7 +138,10 @@ describe('Create Challenge', () => {
     await createChallangeMutation(challengeName, uniqueTextId);
 
     // Act
-    const response = await createChallangeMutation(challengeName, uniqueTextId);
+    const response = await createChallangeMutation(
+      challengeName,
+      `${uniqueTextId}-2`
+    );
 
     // Assert
     expect(response.status).toBe(200);
