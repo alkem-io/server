@@ -63,11 +63,7 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getContext();
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [User], {
     nullable: false,
@@ -78,11 +74,7 @@ export class EcoverseResolverQueries {
     return await this.ecoverseService.getUsers();
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   //should be in user queries
   @Query(() => User, {
@@ -100,11 +92,7 @@ export class EcoverseResolverQueries {
     );
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   //should be in user queries
   @Query(() => [User], {
@@ -121,11 +109,7 @@ export class EcoverseResolverQueries {
     });
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
@@ -137,11 +121,7 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
@@ -153,11 +133,7 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => UserGroup, {
     nullable: false,
