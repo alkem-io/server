@@ -162,8 +162,8 @@ describe('Create Challenge', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(response.body.errors[0].message).toEqual(
-      `Challenge with the textID: ${uniqueTextId} already exists!`
+    expect(response.text).toContain(
+      'property textID has failed the following constraints: isUniqueTextId'
     );
   });
 });
