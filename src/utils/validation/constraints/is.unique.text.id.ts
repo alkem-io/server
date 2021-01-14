@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import { Challenge } from '@domain/challenge/challenge.entity';
+import { ChallengeService } from '@domain/challenge/challenge.service';
 import { Opportunity } from '@domain/opportunity/opportunity.entity';
+import { OpportunityService } from '@domain/opportunity/opportunity.service';
 import { Project } from '@domain/project/project.entity';
+import { ProjectService } from '@domain/project/project.service';
 import {
   registerDecorator,
   ValidationArguments,
@@ -19,12 +21,18 @@ export enum TextIdType {
   project,
 }
 @ValidatorConstraint({ async: true })
-export class IsUniqTextIdConstraint implements ValidatorConstraintInterface {
+export class IsUniqueTextIdConstraint implements ValidatorConstraintInterface {
+  constructor(
+    protected readonly challengeService: ChallengeService,
+    protected readonly opportunityService: OpportunityService,
+    protected readonly projectService: ProjectService
+  ) {}
+
   validate(textId: any, args: ValidationArguments): boolean | Promise<boolean> {
     const [target] = args.constraints;
 
     if (target === TextIdType.challenge) {
-      const repo = getRepository(Challenge);
+      this.challengeService.getChallengeByID;
       const item = repo.findOne({
         where: { textID: textId },
       });
@@ -50,7 +58,7 @@ export class IsUniqTextIdConstraint implements ValidatorConstraintInterface {
   }
 }
 
-export function IsUniqTextId(
+export function IsUniqueTextId(
   target: TextIdType,
   validationOptions?: ValidationOptions
 ) {
@@ -62,6 +70,6 @@ export function IsUniqTextId(
       propertyName: propertyName,
       options: validationOptions,
       constraints: [target],
-      validator: IsUniqTextIdConstraint,
+      validator: IsUniqueTextIdConstraint,
     });
 }

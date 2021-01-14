@@ -1,7 +1,10 @@
-import { InputType, Field } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
 import { ContextInput } from '@domain/context/context.dto';
-import { IsUniqTextId, TextIdType } from '@utils/validation/is-unique-text-id';
+import { Field, InputType } from '@nestjs/graphql';
+import {
+  IsUniqueTextId,
+  TextIdType,
+} from '@utils/validation/constraints/is.unique.text.id';
+import { MaxLength } from 'class-validator';
 
 @InputType()
 export class ChallengeInput {
@@ -11,7 +14,7 @@ export class ChallengeInput {
 
   @Field({ nullable: true })
   @MaxLength(15)
-  @IsUniqTextId(TextIdType.challenge)
+  @IsUniqueTextId(TextIdType.challenge)
   textID?: string;
 
   @Field({ nullable: true })
