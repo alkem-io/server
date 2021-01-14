@@ -1,9 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import {
-  SMALL_TEXT_LENGTH,
-  MID_TEXT_LENGTH,
-  VERY_LONG_TEXT_LENGTH,
-} from '@constants';
+import { SMALL_TEXT_LENGTH, LONG_TEXT_LENGTH } from '@constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
@@ -13,18 +9,18 @@ export class RelationInput {
   type!: string;
 
   @Field({ nullable: true })
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   actorName!: string;
 
   @Field({ nullable: true })
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   actorType!: string;
 
   @Field({ nullable: true })
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   actorRole!: string;
 
   @Field({ nullable: true })
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  @MaxLength(LONG_TEXT_LENGTH)
   description!: string;
 }
