@@ -5,6 +5,10 @@ import {
   SMALL_TEXT_LENGTH,
   TINY_TEXT_LENGTH,
 } from '@constants';
+import {
+  IsUniqueTextId,
+  TextIdType,
+} from '@utils/validation/constraints/unique.text.id';
 import { MaxLength } from 'class-validator';
 
 @InputType()
@@ -15,6 +19,7 @@ export class ProjectInput {
 
   @Field({ nullable: true })
   @MaxLength(TINY_TEXT_LENGTH)
+  @IsUniqueTextId(TextIdType.project)
   textID!: string;
 
   @Field({ nullable: true })

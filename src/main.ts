@@ -1,13 +1,13 @@
-import './config/aliases';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
-import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
+import './config/aliases';
 import { IServiceConfig } from './interfaces/service.config.interface';
 import { BootstrapService } from './utils/bootstrap/bootstrap.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
 import { faviconMiddleware } from './utils/middleware/favicon.middleware';
-import helmet from 'helmet';
 import { useContainer } from 'class-validator';
 
 const bootstrap = async () => {

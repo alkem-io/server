@@ -2,6 +2,10 @@ import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { ContextInput } from '@domain/context/context.dto';
 import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@constants';
+import {
+  IsUniqueTextId,
+  TextIdType,
+} from '@utils/validation/constraints/unique.text.id';
 
 @InputType()
 export class OpportunityInput {
@@ -11,6 +15,7 @@ export class OpportunityInput {
   name?: string;
 
   @Field({ nullable: true })
+  @IsUniqueTextId(TextIdType.challenge)
   @IsOptional()
   @MaxLength(TINY_TEXT_LENGTH)
   textID?: string;
