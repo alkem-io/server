@@ -27,10 +27,7 @@ export class OrganisationResolverFields {
     private userGroupService: UserGroupService
   ) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -47,10 +44,7 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
