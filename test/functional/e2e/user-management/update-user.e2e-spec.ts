@@ -32,16 +32,16 @@ afterAll(async () => {
 describe('Update user', () => {
   beforeEach(() => {
     uniqueId = Math.random()
-      .toString(36)
+      .toString(12)
       .slice(-6);
     userName = `testUser${uniqueId}`;
     userFirstName = `userFirstName${uniqueId}`;
     userLastName = `userLastName${uniqueId}`;
     userPhone = `userPhone ${uniqueId}`;
-    userEmail = `${uniqueId}@test.com`;
-    userNameAfterUpdate = `testUserAfterUpdate-Name_${uniqueId}`;
-    phoneAfterUpdate = `testUserAfterUpdate-Phone_${uniqueId}`;
-    emailAfterUpdate = `testUserAfterUpdate-Email_${uniqueId}@test.com`;
+    userEmail = `${userName}@test.com`;
+    userNameAfterUpdate = `updateName${uniqueId}`;
+    phoneAfterUpdate = `updatePhone${uniqueId}`;
+    emailAfterUpdate = `updateEmail${uniqueId}@test.com`;
   });
 
   afterEach(async () => {

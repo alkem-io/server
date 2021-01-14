@@ -28,6 +28,12 @@
       "@config/*": [
         "src/config/*"
       ],
+      "@constants": [
+        "src/utils/constants"
+      ],
+      "@constants/*": [
+        "src/utils/constants/*"
+      ],
       "@utils/*": [
         "src/utils/*"
       ],
@@ -39,7 +45,7 @@
       ],
       "@test/*": [
         "test/*"
-      ]
+      ],
     }
   }
 }

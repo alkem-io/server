@@ -22,7 +22,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   uniqueId = Math.random()
-    .toString(36)
+    .toString(12)
     .slice(-6);
   userName = `testUser${uniqueId}`;
   userFirstName = `FirstName ${uniqueId}`;
@@ -230,7 +230,7 @@ describe('Create User', () => {
 
     // Assert
     expect(responseQuery.status).toBe(200);
-    expect(responseQuery.text).toContain('Unable to create account for user');
+    expect(responseQuery.text).toContain('property name has failed the following constraints: maxLength');
   });
 
   test('should throw error - create user with invalid email', async () => {
@@ -259,7 +259,7 @@ describe('Create User', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'Valid email address required to create a user: testEmail'
+      'property email has failed the following constraints: isEmail'
     );
   });
 });
