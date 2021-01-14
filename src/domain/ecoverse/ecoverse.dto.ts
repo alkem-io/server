@@ -1,13 +1,13 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { ContextInput } from '@domain/context/context.dto';
-import { MID_TEXT_LENGTH } from '@constants';
+import { SMALL_TEXT_LENGTH } from '@constants';
 
 @InputType()
 export class EcoverseInput {
   @Field({ nullable: true, description: 'The new name for the ecoverse' })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
   @Field({
