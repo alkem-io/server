@@ -18,6 +18,7 @@ lerna-debug.log*
 /coverage-e2e
 /coverage-nightly
 /coverage-ci
+/coverage-it
 /src/test/coverage
 /test/coverage-e2e
 /.nyc_output

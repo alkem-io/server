@@ -1,20 +1,24 @@
+import { InputType, Field } from '@nestjs/graphql';
+import { IsOptional, MaxLength } from 'class-validator';
 import { ReferenceInput } from '@domain/reference/reference.dto';
 import { TagsetInput } from '@domain/tagset/tagset.dto';
-import { Field, InputType } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import { LONG_TEXT_LENGTH, VERY_LONG_TEXT_LENGTH } from '@constants';
 
 @InputType()
 export class ProfileInput {
   @Field({ nullable: true })
+  @MaxLength(LONG_TEXT_LENGTH)
   avatar!: string;
 
   @Field({ nullable: true })
-  @MaxLength(400)
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
   description!: string;
 
   @Field(() => [TagsetInput], { nullable: true })
+  @IsOptional()
   tagsetsData?: TagsetInput[];
 
   @Field(() => [ReferenceInput], { nullable: true })
+  @IsOptional()
   referencesData?: ReferenceInput[];
 }

@@ -1,38 +1,19 @@
 import { UseGuards } from '@nestjs/common';
-import {
-  Args,
-  Mutation,
-  Parent,
-  Query,
-  ResolveField,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import { Roles } from '@utils/decorators/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
-import { MemberOf } from './memberof.composite';
 import { CurrentUser } from './user.decorator';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { UserService } from './user.service';
+import { AuthenticationException } from '@utils/error-handling/exceptions';
 
 @Resolver(() => User)
 export class UserResolver {
   constructor(private userService: UserService) {}
-
-  @ResolveField('memberof', () => MemberOf, {
-    nullable: true,
-    description:
-      'An overview of the groups this user is a memberof. Note: all groups are returned without members to avoid recursion.',
-  })
-  @Profiling.api
-  async membership(@Parent() user: User) {
-    const memberships = await this.userService.getMemberOf(user);
-    // Find all challenges the user is a member of
-    return memberships;
-  }
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
@@ -52,18 +33,20 @@ export class UserResolver {
     return user;
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => User, {
     nullable: false,
     description: 'The currently logged in user',
   })
   @Profiling.api
-  async me(@CurrentUser() email: string): Promise<IUser> {
+  async me(@CurrentUser() email?: string): Promise<IUser> {
+    // Having a token is mandatory for this method.
+    // When authentication is turned off the authentication check is bypassed,
+    // so if token is missng no error will be thrown.
+    // This will handle that particular case.
+    // https://github.com/cherrytwist/Client.Web/issues/411
+    if (!email) throw new AuthenticationException('User not authenticated!');
     const user = await this.userService.getUserByEmail(email);
     return user as IUser;
   }

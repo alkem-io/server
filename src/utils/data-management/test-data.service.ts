@@ -68,7 +68,7 @@ export class TestDataService {
       references: [
         {
           name: 'test ref challenge name',
-          uri: 'test ref challenge uri',
+          uri: 'https://test_ref_challenge_uri.com',
           description: 'test ref challenge description',
         },
       ],
@@ -92,7 +92,7 @@ export class TestDataService {
       references: [
         {
           name: 'test ref challenge name 2',
-          uri: 'test ref challenge uri 2',
+          uri: 'https://test_ref_challenge_uri_2.com',
           description: 'test ref challenge description 2',
         },
       ],
@@ -116,7 +116,7 @@ export class TestDataService {
       references: [
         {
           name: 'test ref challenge name 3',
-          uri: 'test ref challenge uri 3',
+          uri: 'https://test_ref_challenge_uri_3.com',
           description: 'test ref challenge description 3',
         },
       ],
@@ -149,7 +149,7 @@ export class TestDataService {
       references: [
         {
           name: 'test ref opp name',
-          uri: 'test ref opp uri',
+          uri: 'https://test_ref_opp_uri.com',
           description: 'test ref opp description',
         },
       ],
@@ -175,7 +175,7 @@ export class TestDataService {
       references: [
         {
           name: 'test ref opp name2',
-          uri: 'test ref opp uri2',
+          uri: 'https://test_ref_opp_uri2.com',
           description: 'test ref opp description2',
         },
       ],

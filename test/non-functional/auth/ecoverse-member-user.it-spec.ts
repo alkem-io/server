@@ -1,4 +1,7 @@
-import { graphqlRequest, graphqlRequestAuth } from '@test/utils/graphql.request';
+import {
+  graphqlRequest,
+  graphqlRequestAuth,
+} from '@test/utils/graphql.request';
 import { TestUser } from '@test/utils/token.helper';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
@@ -219,8 +222,39 @@ describe('DDT ecoverse member user - queries - authorized', () => {
     ${projectsState}                      | ${notAuthorizedCode}
     ${projectsTagset}                     | ${notAuthorizedCode}
     ${projectsAspects}                    | ${notAuthorizedCode}
+    ${hostGroups}                         | ${notAuthorizedCode}
+    ${hostMembers}                        | ${notAuthorizedCode}
+    ${usersName}                          | ${notAuthorizedCode}
+    ${usersAccountUPN}                    | ${notAuthorizedCode}
+    ${usersProfile}                       | ${notAuthorizedCode}
+    ${usersMemberofGroupsName}            | ${notAuthorizedCode}
+    ${usersMemberofChallengesName}        | ${notAuthorizedCode}
+    ${usersMemberofOrganisationsName}     | ${notAuthorizedCode}
+    ${userName}                           | ${notAuthorizedCode}
+    ${userAccountUPN}                     | ${notAuthorizedCode}
+    ${userProfile}                        | ${notAuthorizedCode}
+    ${userMemberofGroupsName}             | ${notAuthorizedCode}
+    ${userMemberofChallengesName}         | ${notAuthorizedCode}
+    ${userMemberofOrganisationsName}      | ${notAuthorizedCode}
+    ${usersById}                          | ${notAuthorizedCode}
+    ${groupsName}                         | ${notAuthorizedCode}
+    ${groupsFocalPointName}               | ${notAuthorizedCode}
+    ${groupsProfile}                      | ${notAuthorizedCode}
+    ${groupsMembersName}                  | ${notAuthorizedCode}
+    ${groupsParentChallenge}              | ${notAuthorizedCode}
+    ${groupsParentEcoverse}               | ${notAuthorizedCode}
+    ${groupsParentOpportunity}            | ${notAuthorizedCode}
+    ${groupsWithTagName}                  | ${notAuthorizedCode}
+    ${groupsWithTagFocalPointName}        | ${notAuthorizedCode}
+    ${groupsWithTagProfile}               | ${notAuthorizedCode}
+    ${groupsWithTagMembersName}           | ${notAuthorizedCode}
+    ${groupsWithTagParentChallenge}       | ${notAuthorizedCode}
+    ${groupsWithTagParentEcoverse}        | ${notAuthorizedCode}
+    ${groupsWithTagParentOpportunity}     | ${notAuthorizedCode}
+    ${challengesLeadOrganisationGroups}   | ${notAuthorizedCode}
+    ${challengeLeadOrganisationGroups}    | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for query: \'$query\'',
+    "should not expect: '$expected' for query: '$query'",
     async ({ query, expected }) => {
       // Act
       const requestParamsQueryData = {
@@ -245,63 +279,6 @@ describe('DDT ecoverse member user - queries - authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT ecoverse member user - queries - NOT authorized', () => {
-  // Arrange
-  test.each`
-    query                               | expected
-    ${hostGroups}                       | ${notAuthorizedCode}
-    ${hostMembers}                      | ${notAuthorizedCode}
-    ${usersName}                        | ${notAuthorizedCode}
-    ${usersAccountUPN}                  | ${notAuthorizedCode}
-    ${usersProfile}                     | ${notAuthorizedCode}
-    ${usersMemberofGroupsName}          | ${notAuthorizedCode}
-    ${usersMemberofChallengesName}      | ${notAuthorizedCode}
-    ${usersMemberofOrganisationsName}   | ${notAuthorizedCode}
-    ${userName}                         | ${notAuthorizedCode}
-    ${userAccountUPN}                   | ${notAuthorizedCode}
-    ${userProfile}                      | ${notAuthorizedCode}
-    ${userMemberofGroupsName}           | ${notAuthorizedCode}
-    ${userMemberofChallengesName}       | ${notAuthorizedCode}
-    ${userMemberofOrganisationsName}    | ${notAuthorizedCode}
-    ${usersById}                        | ${notAuthorizedCode}
-    ${groupsName}                       | ${notAuthorizedCode}
-    ${groupsFocalPointName}             | ${notAuthorizedCode}
-    ${groupsProfile}                    | ${notAuthorizedCode}
-    ${groupsMembersName}                | ${notAuthorizedCode}
-    ${groupsParentChallenge}            | ${notAuthorizedCode}
-    ${groupsParentEcoverse}             | ${notAuthorizedCode}
-    ${groupsParentOpportunity}          | ${notAuthorizedCode}
-    ${groupsWithTagName}                | ${notAuthorizedCode}
-    ${groupsWithTagFocalPointName}      | ${notAuthorizedCode}
-    ${groupsWithTagProfile}             | ${notAuthorizedCode}
-    ${groupsWithTagMembersName}         | ${notAuthorizedCode}
-    ${groupsWithTagParentChallenge}     | ${notAuthorizedCode}
-    ${groupsWithTagParentEcoverse}      | ${notAuthorizedCode}
-    ${groupsWithTagParentOpportunity}   | ${notAuthorizedCode}
-    ${challengesLeadOrganisationGroups} | ${notAuthorizedCode}
-    ${challengeLeadOrganisationGroups}  | ${notAuthorizedCode}
-  `(
-    'should expect: \'$expected\' for query: \'$query\'',
-    async ({ query, expected }) => {
-      // Act
-      const requestParamsQueryData = {
-        operationName: null,
-        query: `${query}`,
-        variables: null,
-      };
-      const response = await graphqlRequestAuth(
-        requestParamsQueryData,
-        TestUser.ECOVERSE_MEMBER
-      );
-      const responseData = JSON.stringify(response.body).replace('\\', '');
-
-      // Assert
-      expect(response.status).toBe(200);
-      expect(responseData).toContain(expected);
-    }
-  );
-});
-
 // skipping the test due to requirenments clarifications
 describe.skip('DDT ecoverse member user - Create mutations - authorized', () => {
   // Arrange
@@ -309,7 +286,7 @@ describe.skip('DDT ecoverse member user - Create mutations - authorized', () => 
     mutation                  | variables                  | expected
     ${createRelationMutation} | ${createRelationVariables} | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
+    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -349,7 +326,7 @@ describe('DDT ecoverse member user - Create mutations - NOT authorized', () => {
     ${createAspectOnOpportunityMutation} | ${createAspectOnOpportunityVariables} | ${notAuthorizedCode}
     ${createAspectOnProjectMutation}     | ${createAspectOnProjectVariables}     | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
+    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -395,7 +372,7 @@ describe('DDT ecoverse member user - Update mutations - NOT authorized', () => {
     ${updateAspectMutation}                   | ${updateAspectVariable}                    | ${notAuthorizedCode}
     ${updateActorMutation}                    | ${updateActorVariables}                    | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
+    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -426,7 +403,7 @@ describe('DDT ecoverse member user - Remove mutations - NOT authorized', () => {
     ${removeChallengeMutation}  | ${removeChallengeVariables}  | ${notAuthorizedCode}
     ${removeUserMutation}       | ${removeUserVariables}       | ${notAuthorizedCode}
   `(
-    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
+    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {
       // Act
       const requestParamsRemoveMutations = {

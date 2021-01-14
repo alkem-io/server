@@ -19,6 +19,20 @@ export const createChallangeMutation = async (
                   id
                   name
                 }
+                context {
+                  id
+                  tagline
+                  background
+                  vision
+                  impact
+                  who
+                  references {
+                    id
+                    name
+                    uri
+                    
+                  }
+                }
               }
             }`,
     variables: {
@@ -54,17 +68,39 @@ export const updateChallangeMutation = async (
   challengeName: string,
   challengeState?: string,
   taglineText?: string,
+  background?: string,
+  vision?: string,
+  impact?: string,
+  who?: string,
+  refName?: string,
+  refUri?: string,
   tagsArrey?: any
 ) => {
   const requestParams = {
     operationName: null,
     query: `mutation UpdateChallenge($challengeID: Float! $challengeData: ChallengeInput!) {
       updateChallenge(challengeID: $challengeID, challengeData: $challengeData) {
-        name,
-        id,
-        state,
+        name
+        id
+        textID
+        state
+        groups {
+        id
+        name
+        }
         context {
+          id
           tagline
+          background
+          vision
+          impact
+          who
+          references {
+            id
+            name
+            uri
+            
+            }
         }
         tagset{
           tags 
@@ -78,8 +114,18 @@ export const updateChallangeMutation = async (
         state: challengeState,
         context: {
           tagline: taglineText,
+          background: background,
+          vision: vision,
+          impact: impact,
+          who: who,
+          references: [
+            {
+              name: refName,
+              uri: refUri,
+            },
+          ],
         },
-        tags: tagsArrey
+        tags: tagsArrey,
       },
     },
   };
