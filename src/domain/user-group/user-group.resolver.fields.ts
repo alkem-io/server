@@ -26,7 +26,10 @@ export class UserGroupResolverFields {
 
   @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
-  @ResolveField('members', () => User)
+  @ResolveField('members', () => User, {
+    nullable: true,
+    description: 'The Users that are members of this User Group.',
+  })
   @Profiling.api
   async members(@Parent() group: UserGroup): Promise<User[]> {
     if (!group || !group.membersPopulationEnabled) return [];
