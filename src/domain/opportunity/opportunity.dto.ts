@@ -3,7 +3,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import {
   IsUniqueTextId,
   TextIdType,
-} from '@utils/validation/constraints/is.unique.text.id';
+} from '@utils/validation/constraints/unique.text.id';
 import { MaxLength } from 'class-validator';
 
 @InputType()
