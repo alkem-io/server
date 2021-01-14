@@ -44,7 +44,7 @@ export class Profile extends BaseEntity implements IProfile {
     description:
       'A URI that points to the location of an avatar, either on a shared location or a gravatar',
   })
-  @Column('varchar', { length: 250 })
+  @Column('text', { nullable: true })
   avatar = '';
 
   @Field(() => String, {
@@ -52,7 +52,7 @@ export class Profile extends BaseEntity implements IProfile {
     description:
       'A short description of the entity associated with this profile.',
   })
-  @Column('varchar', { length: 400 })
+  @Column('text', { nullable: true })
   description = '';
 
   restrictedTagsetNames?: string[];

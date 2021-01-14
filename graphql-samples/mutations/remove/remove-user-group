@@ -1,0 +1,8 @@
+mutation removeUserGroup($groupID: Float!) {
+  removeUserGroup(groupID: $groupID)
+}
+
+Variables:
+{
+  "groupID": 7
+}
