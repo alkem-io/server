@@ -28,11 +28,7 @@ export class OpportunityResolverFields {
     private opportunityService: OpportunityService
   ) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.Members
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -44,11 +40,7 @@ export class OpportunityResolverFields {
     return groups;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.Members
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('contributors', () => [User], {
     nullable: true,
