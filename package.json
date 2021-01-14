@@ -1,11 +1,15 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.7.4",
+  "version": "0.8.0",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
-  "license": "EUPL",
+  "license": "EUPL-1.2",
   "main": "src/main.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cherrytwist/Server.git"
+  },
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
