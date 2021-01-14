@@ -1,17 +1,9 @@
 import { UseGuards } from '@nestjs/common';
-import {
-  Args,
-  Mutation,
-  Parent,
-  Query,
-  ResolveField,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import { Roles } from '@utils/decorators/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
-import { MemberOf } from './memberof.composite';
 import { CurrentUser } from './user.decorator';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
@@ -22,18 +14,6 @@ import { AuthenticationException } from '@utils/error-handling/exceptions';
 @Resolver(() => User)
 export class UserResolver {
   constructor(private userService: UserService) {}
-
-  @ResolveField('memberof', () => MemberOf, {
-    nullable: true,
-    description:
-      'An overview of the groups this user is a memberof. Note: all groups are returned without members to avoid recursion.',
-  })
-  @Profiling.api
-  async membership(@Parent() user: User) {
-    const memberships = await this.userService.getMemberOf(user);
-    // Find all challenges the user is a member of
-    return memberships;
-  }
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
@@ -53,11 +33,7 @@ export class UserResolver {
     return user;
   }
 
-  @Roles(
-    RestrictedGroupNames.Members,
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => User, {
     nullable: false,
