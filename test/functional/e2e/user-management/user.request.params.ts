@@ -1,8 +1,9 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
-
-const uniqueId = Math.random().toString();
+const uniqueId = Math.random()
+  .toString(12)
+  .slice(-6);
 
 export const createUserMutation = async (userName: string) => {
   const requestParams = {
@@ -11,21 +12,21 @@ export const createUserMutation = async (userName: string) => {
       'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email }}',
     variables: {
       userData: {
-        firstName: `firstName'${uniqueId}`,
-        lastName: `lastName${uniqueId}`,
+        firstName: `fN${uniqueId}`,
+        lastName: `lN${uniqueId}`,
         name: userName,
         email: `${userName}@test.com`,
         aadPassword: `90!ds${uniqueId}`,
         profileData: {
-          description: "x",
-          avatar: "http://xProf.com",
-          tagsetsData: {"tags": ["x1", "x2"], "name": "x"},
+          description: 'x',
+          avatar: 'http://xProf.com',
+          tagsetsData: { tags: ['x1', 'x2'], name: 'x' },
           referencesData: {
-            name: "x",
-            description: "x",
-            uri: "https://xRef.com"
-          }
-        }
+            name: 'x',
+            description: 'x',
+            uri: 'https://xRef.com',
+          },
+        },
       },
     },
   };
@@ -245,7 +246,7 @@ export const updateProfileMutation = async (
   tags?: any,
   nameRef?: string,
   uriRef?: string,
-  descriptionRef?: string,
+  descriptionRef?: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -258,13 +259,13 @@ export const updateProfileMutation = async (
         avatar: avatar,
         tagsetsData: {
           name: tagsetDataName,
-          tags: tags
+          tags: tags,
         },
-        referencesData:{
+        referencesData: {
           name: nameRef,
           uri: uriRef,
           description: descriptionRef,
-        }
+        },
       },
     },
   };

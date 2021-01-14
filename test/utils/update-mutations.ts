@@ -26,7 +26,7 @@ const updateProfileVariables = `
     "ID": 1,
     "profileData": {
       "description": "some description",
-      "avatar": "http://someUri"
+      "avatar": "https://avatar.com"
     }
   }`;
 
@@ -93,8 +93,8 @@ const updateAspectVariable = `
     "ID": 1,
     "aspectData": {
       "title": "aspect some description",
-      "framing": "aspect http://someUri",
-      "explanation": "aspect http://someUri"
+      "framing": "https://aspect_framing.com",
+      "explanation": "https://aspect_explanation.com"
     }
   }`;
 
@@ -113,8 +113,8 @@ const updateActorVariables = `
     "ID": 1,
     "actorData": {
       "name": "actor some description",
-      "value": "actor http://someUri",
-      "impact": "actor http://someUri",
+      "value": "https://actor_value.com",
+      "impact": "https://actor_impact.com",
       "description": "actor something"
     }
   }`;
