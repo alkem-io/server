@@ -141,13 +141,12 @@ describe('Create Challenge', () => {
   describe('DDT invalid textId', () => {
     // Arrange
     test.each`
-      textId                | expected
-      ${''}                 | ${'Required field textID not specified'}
-      ${'vvv,vv'}           | ${'Required field textID provided not in the correct format: vvv,vv'}
-      ${'..-- '}            | ${'Required field textID provided not in the correct format: ..-- '}
-      ${'toooo-long-texId'} | ${'property textID has failed the following constraints: maxLength'}
+      textId      | expected
+      ${''}       | ${'Required field textID not specified'}
+      ${'vvv,vv'} | ${'Required field textID provided not in the correct format: vvv,vv'}
+      ${'..-- '}  | ${'Required field textID provided not in the correct format: ..-- '}
     `(
-      'should throw error: \'$expected\' for textId value: \'$textId\'',
+      'should throw error: "$expected" for textId value: "$textId"',
       async ({ textId, expected }) => {
         // Act
         const requestParamsCreateChallenge = {

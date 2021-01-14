@@ -4,5 +4,5 @@ export interface IRelation {
   actorName: string;
   actorType: string;
   actorRole: string;
-  description: string;
+  description?: string;
 }
