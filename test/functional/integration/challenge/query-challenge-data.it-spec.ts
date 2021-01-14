@@ -29,6 +29,8 @@ let uniqueTextId = '';
 let challengeState = '';
 let organisationName = '';
 let taglineText = '';
+let refName = 'refName';
+let refUri = 'https://test.com';
 let tagsArray = ['tag1', 'tag2'];
 let groupName = '';
 
@@ -197,13 +199,19 @@ describe('Query Challenge data', () => {
     );
   });
 
-  test('should update a challenge', async () => {
+  test.only('should update a challenge', async () => {
     // Arrange
     const response = await updateChallangeMutation(
       challengeId,
       challengeName + 'change',
       challengeState + 'change',
       taglineText,
+      'background',
+      'vision',
+      'impact',
+      'who',
+      refName,
+      refUri,
       tagsArray
     );
     const updatedChallenge = response.body.data.updateChallenge;
@@ -226,9 +234,7 @@ describe('Query Challenge data', () => {
     expect(getChallengeData.body.data.challenge.context.tagline).toEqual(
       taglineText
     );
-    expect(getChallengeData.body.data.challenge.tagset.tags).toEqual(
-      tagsArray
-    );
+    expect(getChallengeData.body.data.challenge.tagset.tags).toEqual(tagsArray);
   });
 
   test('should add challange lead to organisation', async () => {
