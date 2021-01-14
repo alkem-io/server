@@ -24,15 +24,15 @@ export class ActorGroup extends BaseEntity implements IActorGroup {
   id!: number;
 
   @Field(() => String)
-  @Column('varchar', { length: 100 })
+  @Column()
   name: string;
 
   @Field(() => String, {
     nullable: true,
     description: 'A description of this group of actors',
   })
-  @Column('varchar', { length: 250 })
-  description: string;
+  @Column('text', { nullable: true })
+  description?: string;
 
   @ManyToOne(
     () => Opportunity,
@@ -54,6 +54,5 @@ export class ActorGroup extends BaseEntity implements IActorGroup {
   constructor(name: string) {
     super();
     this.name = name;
-    this.description = '';
   }
 }

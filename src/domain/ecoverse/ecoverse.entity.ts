@@ -31,7 +31,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
 
   // The context and host organisation
   @Field(() => String, { nullable: false, description: '' })
-  @Column('varchar', { length: 100 })
+  @Column()
   name: string;
 
   @Field(() => Organisation, {

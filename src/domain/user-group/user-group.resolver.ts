@@ -6,10 +6,43 @@ import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { UserGroupInput } from './user-group.dto';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolver {
   constructor(private groupService: UserGroupService) {}
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description: 'Removes the user group with the specified ID',
+  })
+  async removeUserGroup(@Args('ID') groupID: number): Promise<boolean> {
+    return await this.groupService.removeUserGroup(groupID, true);
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => UserGroup, {
+    description: 'Update the user group information.',
+  })
+  @Profiling.api
+  async updateUserGroup(
+    @Args('ID') groupID: number,
+    @Args('userGroupData') userGroupData: UserGroupInput
+  ): Promise<IUserGroup> {
+    const group = await this.groupService.updateUserGroup(
+      groupID,
+      userGroupData
+    );
+    return group;
+  }
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
