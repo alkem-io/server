@@ -64,6 +64,7 @@ export class EcoverseResolverQueries {
   }
 
   @Roles(
+    RestrictedGroupNames.Members,
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
@@ -78,6 +79,7 @@ export class EcoverseResolverQueries {
   }
 
   @Roles(
+    RestrictedGroupNames.Members,
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
@@ -99,6 +101,7 @@ export class EcoverseResolverQueries {
   }
 
   @Roles(
+    RestrictedGroupNames.Members,
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
@@ -119,6 +122,7 @@ export class EcoverseResolverQueries {
   }
 
   @Roles(
+    RestrictedGroupNames.Members,
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
@@ -134,6 +138,7 @@ export class EcoverseResolverQueries {
   }
 
   @Roles(
+    RestrictedGroupNames.Members,
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
@@ -149,6 +154,7 @@ export class EcoverseResolverQueries {
   }
 
   @Roles(
+    RestrictedGroupNames.Members,
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )

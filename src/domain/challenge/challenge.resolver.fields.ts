@@ -23,11 +23,7 @@ export class ChallengeResolverFields {
     private challengeService: ChallengeService
   ) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.Members
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -51,11 +47,7 @@ export class ChallengeResolverFields {
     return opportunities;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.Members
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('contributors', () => [User], {
     nullable: true,

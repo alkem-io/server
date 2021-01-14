@@ -28,6 +28,7 @@ export class OrganisationResolverFields {
   ) {}
 
   @Roles(
+    RestrictedGroupNames.Members,
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
@@ -48,6 +49,7 @@ export class OrganisationResolverFields {
   }
 
   @Roles(
+    RestrictedGroupNames.Members,
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins
   )
