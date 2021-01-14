@@ -59,7 +59,10 @@ export class ProfileResolver {
     return reference;
   }
 
-  @Roles(RestrictedGroupNames.Members, RestrictedGroupNames.CommunityAdmins)
+  @Roles(
+    RestrictedGroupNames.EcoverseAdmins,
+    RestrictedGroupNames.CommunityAdmins
+  )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:
