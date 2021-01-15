@@ -48,7 +48,7 @@ export class OpportunityResolver {
   })
   @Profiling.api
   async opportunity(@Args('ID') id: number): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityByID(id);
+    const opportunity = await this.opportunityService.getOpportunityOrFail(id);
     if (opportunity) return opportunity;
 
     throw new EntityNotFoundException(

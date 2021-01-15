@@ -182,7 +182,9 @@ export class EcoverseResolverQueries {
   async organisation(
     @Args('ID') id: number
   ): Promise<IOrganisation | undefined> {
-    return await this.organisationService.getOrganisationByID(id);
+    return await this.organisationService.getOrganisationOrFail(id, {
+      relations: ['groups'],
+    });
   }
 
   @Query(() => Tagset, {
