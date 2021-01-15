@@ -16,7 +16,7 @@ import { TagsetModule } from '@domain/tagset/tagset.module';
 import { ProfileModule } from '@domain/profile/profile.module';
 import { UserGroupModule } from '@domain/user-group/user-group.module';
 import { GraphQLModule } from '@nestjs/graphql';
-import { ConfigModule } from '@nestjs/config/dist/config.module';
+import { ConfigModule } from '@nestjs/config';
 import aadConfig from '@config/aad.config';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
@@ -39,18 +39,23 @@ import { MetadataModule } from '@utils/metadata/metadata.module';
 import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
+import { listDotenvFiles } from 'dotenv-flow';
+const ENV = process.env.NODE_ENV;
+
+const getConfigFiles = () => {
+  return listDotenvFiles('', {
+    node_env: ENV,
+  });
+};
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: [
-        '.env',
-        '.env.default',
+      envFilePath: getConfigFiles().concat([
         '.env.aad.cherrytwist.api.default',
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
-        // '.env.test',
-      ],
+      ]),
       isGlobal: true,
       load: [
         aadConfig,
