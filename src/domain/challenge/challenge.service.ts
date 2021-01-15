@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -77,23 +77,12 @@ export class ChallengeService {
       `Adding userGroup (${groupName}) to challenge (${challengeID})`,
       LogContext.CHALLENGES
     );
-    // Check a valid ID was passed
-    if (!challengeID)
-      throw new ValidationException(
-        `Invalid challenge id passed in: ${challengeID}`,
-        LogContext.COMMUNITY
-      );
+
     // Try to find the challenge
-    const challenge = await this.challengeRepository.findOne({
-      where: { id: challengeID },
+    const challenge = await this.getChallengeOrFail(challengeID, {
       relations: ['groups'],
     });
-    if (!challenge) {
-      throw new EntityNotFoundException(
-        `Unable to create the group: no challenge with ID: ${challengeID}`,
-        LogContext.COMMUNITY
-      );
-    }
+
     const group = await this.userGroupService.addGroupWithName(
       challenge,
       groupName
@@ -126,14 +115,13 @@ export class ChallengeService {
       return challenge.opportunities;
     }
 
-    const challengeWithOpportunities = await this.challengeRepository.findOne({
-      where: { id: challenge.id },
-      relations: ['opportunities'],
-    });
-    if (
-      !challengeWithOpportunities ||
-      !challengeWithOpportunities.opportunities
-    )
+    const challengeWithOpportunities = await this.getChallengeOrFail(
+      challenge.id,
+      {
+        relations: ['opportunities'],
+      }
+    );
+    if (!challengeWithOpportunities.opportunities)
       throw new RelationshipNotFoundException(
         `Unable to load opportunities for challenge ${challenge.id} `,
         LogContext.CHALLENGES
@@ -153,16 +141,9 @@ export class ChallengeService {
       LogContext.CHALLENGES
     );
     // Try to find the challenge
-    const challenge = await this.challengeRepository.findOne({
-      where: { id: challengeID },
+    const challenge = await this.getChallengeOrFail(challengeID, {
       relations: ['opportunities'],
     });
-    if (!challenge) {
-      throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    }
 
     await this.validateOpportunity(challenge, opportunityData);
 
@@ -208,10 +189,14 @@ export class ChallengeService {
       );
   }
 
-  async getChallengeByID(challengeID: number): Promise<IChallenge> {
-    const challenge = await this.challengeRepository.findOne({
-      where: { id: challengeID },
-    });
+  async getChallengeOrFail(
+    challengeID: number,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeRepository.findOne(
+      { id: challengeID },
+      options
+    );
     if (!challenge)
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: ${challengeID}`,
@@ -263,13 +248,8 @@ export class ChallengeService {
     challengeID: number,
     challengeData: ChallengeInput
   ): Promise<IChallenge> {
-    const challenge = await this.getChallengeByID(challengeID);
-    if (!challenge) {
-      throw new EntityNotFoundException(
-        `Unable to locate challenge: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    }
+    const challenge = await this.getChallengeOrFail(challengeID);
+
     const newName = challengeData.name;
     if (newName) {
       if (!(newName === challenge.name)) {
@@ -316,15 +296,9 @@ export class ChallengeService {
 
   async removeChallenge(challengeID: number): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.challengeRepository.findOne({
-      where: { id: challengeID },
+    const challenge = await this.getChallengeOrFail(challengeID, {
       relations: ['opportunities', 'groups'],
     });
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `Not able to locate challenge with the specified ID: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
 
     // Do not remove a challenge that has opporutnities, require these to be individually first removed
     if (challenge.opportunities && challenge.opportunities.length > 0)
@@ -340,7 +314,7 @@ export class ChallengeService {
       }
     }
 
-    await this.challengeRepository.remove(challenge);
+    await this.challengeRepository.remove(challenge as Challenge);
     return true;
   }
 
@@ -364,7 +338,9 @@ export class ChallengeService {
   }
 
   async isUserMember(userID: number, challengeID: number): Promise<boolean> {
-    const challenge = await this.getChallengeByID(challengeID);
+    const challenge = await this.getChallengeOrFail(challengeID, {
+      relations: ['groups'],
+    });
     const membersGroup = await this.getMembersGroup(challenge);
     const members = membersGroup.members;
     if (!members)
@@ -387,13 +363,9 @@ export class ChallengeService {
       );
     }
 
-    const challenge = await this.getChallengeByID(challengeID);
-    if (!challenge) {
-      throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    }
+    const challenge = await this.getChallengeOrFail(challengeID, {
+      relations: ['groups'],
+    });
 
     // Get the members group
     const membersGroup = await this.userGroupService.getGroupByName(
@@ -493,13 +465,7 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    const challenge = await this.getChallengeByID(challengeID);
-
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `No challenge with id ${challengeID} was found!`,
-        LogContext.CHALLENGES
-      );
+    const challenge = await this.getChallengeOrFail(challengeID);
 
     // Check the org is not already added
     if (!challenge.leadOrganisations)

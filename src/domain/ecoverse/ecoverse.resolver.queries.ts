@@ -160,8 +160,8 @@ export class EcoverseResolverQueries {
     description: 'A particular challenge',
   })
   @Profiling.api
-  async challenge(@Args('ID') id: number): Promise<IChallenge | undefined> {
-    return await this.challengeService.getChallengeByID(id);
+  async challenge(@Args('ID') id: number): Promise<IChallenge> {
+    return await this.challengeService.getChallengeOrFail(id);
   }
 
   @Query(() => [Organisation], {
