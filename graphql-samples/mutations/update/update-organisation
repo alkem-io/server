@@ -7,10 +7,14 @@ mutation updateOrganisation($orgID: Float!, $organisationData: OrganisationInput
 
 query variables:
 {
-  "organisationID": 1,
+  "orgID": 1,
   "organisationData":
   {
     "name": "Cherrytwist2",
+    "profileData": {
+      "description": "some description",
+      "avatar": "http://someUri"
+    }
   }
 }
 
