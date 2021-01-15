@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { ProfileService } from '@domain/profile/profile.service';
@@ -58,12 +58,15 @@ export class OrganisationService {
     return organisation;
   }
 
-  async getOrganisationByID(organisationID: number): Promise<IOrganisation> {
+  async getOrganisationOrFail(
+    organisationID: number,
+    options?: FindOneOptions<Organisation>
+  ): Promise<IOrganisation> {
     //const t1 = performance.now()
-    const organisation = await Organisation.findOne({
-      where: [{ id: organisationID }],
-      relations: ['groups'],
-    });
+    const organisation = await Organisation.findOne(
+      { id: organisationID },
+      options
+    );
     if (!organisation)
       throw new EntityNotFoundException(
         `Unable to find organisation with ID: ${organisationID}`,
@@ -84,23 +87,16 @@ export class OrganisationService {
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to organisation (${orgID})`
     );
-    // Try to find the challenge
-    const organisation = await Organisation.findOne({
-      where: [{ id: orgID }],
+    // Try to find the organisation
+    const organisation = await this.getOrganisationOrFail(orgID, {
       relations: ['groups'],
     });
 
-    if (!organisation) {
-      throw new EntityNotFoundException(
-        `Unable to find organisation with ID: ${orgID}`,
-        LogContext.CHALLENGES
-      );
-    }
     const group = await this.userGroupService.addGroupWithName(
       organisation,
       groupName
     );
-    await organisation.save();
+    await this.organisationRepository.save(organisation);
 
     return group;
   }
@@ -109,12 +105,9 @@ export class OrganisationService {
     orgID: number,
     organisationData: OrganisationInput
   ): Promise<IOrganisation> {
-    const existingOrganisation = await Organisation.findOne(orgID);
-    if (!existingOrganisation)
-      throw new EntityNotFoundException(
-        `Oganisation with given ID (${orgID}) not found!`,
-        LogContext.CHALLENGES
-      );
+    const existingOrganisation = await this.getOrganisationOrFail(orgID, {
+      relations: ['groups'],
+    });
 
     // Merge in the data
     if (organisationData.name) {

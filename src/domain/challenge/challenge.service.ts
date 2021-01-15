@@ -484,14 +484,10 @@ export class ChallengeService {
     challengeID: number,
     organisationID: number
   ): Promise<[IChallenge, IOrganisation]> {
-    const organisation = await this.organisationService.getOrganisationByID(
-      organisationID
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      organisationID,
+      { relations: ['groups'] }
     );
-    if (!organisation)
-      throw new EntityNotFoundException(
-        `No organisation with id ${organisationID} was found!`,
-        LogContext.CHALLENGES
-      );
 
     const challenge = await this.getChallengeByID(challengeID);
 

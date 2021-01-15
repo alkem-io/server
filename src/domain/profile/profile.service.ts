@@ -59,13 +59,7 @@ export class ProfileService {
   }
 
   async createTagset(profileID: number, tagsetName: string): Promise<ITagset> {
-    const profile = await this.getProfile(profileID);
-
-    if (!profile)
-      throw new EntityNotFoundException(
-        `Profile with id(${profileID}) not found!`,
-        LogContext.COMMUNITY
-      );
+    const profile = await this.getProfileOrFail(profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
@@ -80,13 +74,7 @@ export class ProfileService {
     profileID: number,
     referenceInput: ReferenceInput
   ): Promise<IReference> {
-    const profile = await this.getProfile(profileID);
-
-    if (!profile)
-      throw new EntityNotFoundException(
-        `Profile with id(${profileID}) not found!`,
-        LogContext.COMMUNITY
-      );
+    const profile = await this.getProfileOrFail(profileID);
 
     if (!profile.references)
       throw new EntityNotInitializedException(
@@ -114,12 +102,7 @@ export class ProfileService {
     profileID: number,
     profileData: ProfileInput
   ): Promise<boolean> {
-    const profile = await this.getProfile(profileID);
-    if (!profile)
-      throw new EntityNotFoundException(
-        `Profile with id (${profileID}) not found!`,
-        LogContext.CHALLENGES
-      );
+    const profile = await this.getProfileOrFail(profileID);
 
     profile.avatar = profileData.avatar;
     profile.description = profileData.description;
@@ -156,7 +139,13 @@ export class ProfileService {
     return true;
   }
 
-  async getProfile(profileID: number): Promise<IProfile | undefined> {
-    return await Profile.findOne({ id: profileID });
+  async getProfileOrFail(profileID: number): Promise<IProfile> {
+    const profile = await Profile.findOne({ id: profileID });
+    if (!profile)
+      throw new EntityNotFoundException(
+        `Profile with id(${profileID}) not found!`,
+        LogContext.COMMUNITY
+      );
+    return profile;
   }
 }
