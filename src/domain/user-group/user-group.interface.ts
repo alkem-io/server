@@ -1,6 +1,6 @@
-import { IEcoverse } from '../ecoverse/ecoverse.interface';
-import { IProfile } from '../profile/profile.interface';
-import { IUser } from '../user/user.interface';
+import { IEcoverse } from '@domain/ecoverse/ecoverse.interface';
+import { IProfile } from '@domain/profile/profile.interface';
+import { IUser } from '@domain/user/user.interface';
 
 export interface IUserGroup {
   id: number;

@@ -1,23 +1,25 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
-import { User } from '../user/user.entity';
-import { UserGroupService } from '../user-group/user-group.service';
+} from '@domain/user-group/user-group.entity';
+import { User } from '@domain/user/user.entity';
+import { UserGroupService } from '@domain/user-group/user-group.service';
 import { Opportunity } from './opportunity.entity';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { OpportunityService } from './opportunity.service';
-import { ActorGroup } from '../actor-group/actor-group.entity';
-import { Aspect } from '../aspect/aspect.entity';
-import { Relation } from '../relation/relation.entity';
-import { RelationshipNotFoundException } from '../../utils/error-handling/exceptions/relationship.not.found.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import { ActorGroup } from '@domain/actor-group/actor-group.entity';
+import { Aspect } from '@domain/aspect/aspect.entity';
+import { Relation } from '@domain/relation/relation.entity';
+import {
+  RelationshipNotFoundException,
+  EntityNotInitializedException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
@@ -26,10 +28,7 @@ export class OpportunityResolverFields {
     private opportunityService: OpportunityService
   ) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -41,10 +40,7 @@ export class OpportunityResolverFields {
     return groups;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('contributors', () => [User], {
     nullable: true,

@@ -7,8 +7,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IReference } from './reference.interface';
-import { Context } from '../context/context.entity';
-import { Profile } from '../profile/profile.entity';
+import { Context } from '@domain/context/context.entity';
+import { Profile } from '@domain/profile/profile.entity';
 
 @Entity()
 @ObjectType()
@@ -22,12 +22,12 @@ export class Reference extends BaseEntity implements IReference {
   name: string;
 
   @Field(() => String)
-  @Column()
+  @Column('text')
   uri: string;
 
   @Field(() => String)
-  @Column('varchar', { length: 300 })
-  description: string;
+  @Column('text', { nullable: true })
+  description?: string;
 
   @ManyToOne(
     () => Context,

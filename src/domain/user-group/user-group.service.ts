@@ -1,27 +1,29 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { IGroupable } from '../../interfaces/groupable.interface';
-import { Challenge } from '../challenge/challenge.entity';
-import { Ecoverse } from '../ecoverse/ecoverse.entity';
-import { Organisation } from '../organisation/organisation.entity';
-import { ProfileService } from '../profile/profile.service';
-import { User } from '../user/user.entity';
-import { IUser } from '../user/user.interface';
-import { UserService } from '../user/user.service';
+import { IGroupable } from '@interfaces/groupable.interface';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
+import { Organisation } from '@domain/organisation/organisation.entity';
+import { ProfileService } from '@domain/profile/profile.service';
+import { IUser } from '@domain/user/user.interface';
+import { UserService } from '@domain/user/user.service';
 import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { Opportunity } from '../opportunity/opportunity.entity';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
 import { UserGroupParent } from './user-group-parent.dto';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { NotSupportedException } from '../../utils/error-handling/exceptions/not.supported.exception';
-import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
+import {
+  EntityNotFoundException,
+  ValidationException,
+  NotSupportedException,
+  GroupNotInitializedException,
+  EntityNotInitializedException,
+} from '@utils/error-handling/exceptions';
+import { UserGroupInput } from './user-group.dto';
 
 @Injectable()
 export class UserGroupService {
@@ -34,6 +36,11 @@ export class UserGroupService {
   ) {}
 
   async createUserGroup(name: string): Promise<IUserGroup> {
+    if (name.length == 0)
+      throw new ValidationException(
+        'Unable to create a group with an empty name',
+        LogContext.COMMUNITY
+      );
     const group = new UserGroup(name);
     await this.initialiseMembers(group);
     await this.groupRepository.save(group);
@@ -55,7 +62,10 @@ export class UserGroupService {
     return group;
   }
 
-  async removeUserGroup(groupID: number): Promise<boolean> {
+  async removeUserGroup(
+    groupID: number,
+    checkForRestricted = false
+  ): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const group = await this.groupRepository.findOne({
       where: { id: groupID },
@@ -66,8 +76,69 @@ export class UserGroupService {
         LogContext.COMMUNITY
       );
 
+    // Cannot remove restricted groups
+    if (checkForRestricted && (await this.isRestricted(group)))
+      throw new ValidationException(
+        `Unable to remove User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
+        LogContext.COMMUNITY
+      );
+
     await this.groupRepository.remove(group);
     return true;
+  }
+
+  // Note: explicitly do not support updating of email addresses
+  async updateUserGroup(
+    groupID: number,
+    userGroupInput: UserGroupInput
+  ): Promise<IUserGroup> {
+    const group = await this.groupRepository.findOne({
+      where: { id: groupID },
+    });
+    if (!group)
+      throw new EntityNotFoundException(
+        `Unable to update User Group with ID: ${groupID}`,
+        LogContext.COMMUNITY
+      );
+    // Cannot rename restricted groups
+    const newName = userGroupInput.name;
+    if (newName && newName.length > 0 && newName !== group.name) {
+      // group being renamed; check if allowed
+      if (await this.isRestricted(group)) {
+        throw new ValidationException(
+          `Unable to rename User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
+          LogContext.COMMUNITY
+        );
+      } else {
+        group.name = newName;
+        await this.groupRepository.save(group);
+      }
+    }
+
+    // Check the tagsets
+    if (userGroupInput.profileData && group.profile) {
+      await this.profileService.updateProfile(
+        group.profile.id,
+        userGroupInput.profileData
+      );
+    }
+
+    const populatedUserGroup = await this.getGroupByID(group.id);
+    if (!populatedUserGroup)
+      throw new EntityNotFoundException(
+        `Unable to get User Group by id: ${group.id}`,
+        LogContext.COMMUNITY
+      );
+
+    return populatedUserGroup;
+  }
+
+  async isRestricted(group: UserGroup): Promise<boolean> {
+    const parent: IGroupable = await this.getParent(group);
+    if (parent.restrictedGroupNames?.includes(group.name)) {
+      return true;
+    }
+    return false;
   }
 
   async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
@@ -85,7 +156,6 @@ export class UserGroupService {
     );
   }
 
-  //toDo vyanakiev - fix this
   async getGroups(groupable: IGroupable): Promise<IUserGroup[]> {
     if (groupable instanceof Ecoverse) {
       return await this.groupRepository.find({
@@ -125,7 +195,7 @@ export class UserGroupService {
       );
     }
 
-    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    const group = await this.getGroupByID(groupID);
     if (!group) {
       throw new EntityNotFoundException(
         `Unable to find group with ID: ${groupID}`,
@@ -137,7 +207,7 @@ export class UserGroupService {
     await this.addUserToGroup(user, group);
 
     // Have both user + group so do the add
-    group.focalPoint = user as User;
+    group.focalPoint = user;
     await this.groupRepository.save(group);
 
     return group;
@@ -163,14 +233,14 @@ export class UserGroupService {
   }
 
   async addUser(userID: number, groupID: number): Promise<boolean> {
-    const user = (await this.userService.getUserByID(userID)) as IUser;
+    const user = await this.userService.getUserByID(userID);
     if (!user)
       throw new EntityNotFoundException(
         `No user with id ${userID} was found!`,
         LogContext.COMMUNITY
       );
 
-    const group = (await this.getGroupByID(groupID)) as IUserGroup;
+    const group = await this.getGroupByID(groupID);
     if (!group)
       throw new EntityNotFoundException(
         `No group with id ${groupID} was found!`,
@@ -191,10 +261,10 @@ export class UserGroupService {
         LogContext.COMMUNITY
       );
 
-    const userGroup = (await this.groupRepository.findOne({
+    const userGroup = await this.groupRepository.findOne({
       where: { members: { id: userID }, id: groupID },
       relations: ['members'],
-    })) as IUserGroup;
+    });
 
     const members = userGroup?.members;
     if (!members || members.length === 0) return false;
@@ -301,7 +371,7 @@ export class UserGroupService {
   }
 
   async removeFocalPoint(groupID: number): Promise<IUserGroup> {
-    const group = (await this.getGroupByID(groupID)) as UserGroup;
+    const group = await this.getGroupByID(groupID);
     if (!group) {
       throw new EntityNotFoundException(
         `Unable to find group with ID: ${groupID}`,
@@ -318,7 +388,6 @@ export class UserGroupService {
     return group;
   }
 
-  //toDo vyanakiev - fix this
   async getGroupByName(
     groupable: IGroupable,
     name: string
@@ -376,7 +445,7 @@ export class UserGroupService {
 
     for (const groupToAdd of newMandatoryGroups) {
       const newGroup = await this.createUserGroup(groupToAdd);
-      groupable.groups.push(newGroup as IUserGroup);
+      groupable.groups.push(newGroup);
     }
 
     return groupable;
@@ -453,11 +522,10 @@ export class UserGroupService {
   }
 
   async getMembers(groupID: number): Promise<IUser[]> {
-    return (
-      await this.groupRepository.findOne({
-        where: { id: groupID },
-        relations: ['members'],
-      })
-    )?.members as IUser[];
+    const group = await this.groupRepository.findOne({
+      where: { id: groupID },
+      relations: ['members', 'profile'],
+    });
+    return group?.members as IUser[];
   }
 }

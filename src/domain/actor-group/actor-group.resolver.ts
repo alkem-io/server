@@ -1,20 +1,18 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
-import { ActorGroupService } from './actor-group.service';
-import { ActorInput } from '../actor/actor.dto';
-import { IActor } from '../actor/actor.interface';
-import { Actor } from '../actor/actor.entity';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { ActorInput } from '@domain/actor/actor.dto';
+import { Actor } from '@domain/actor/actor.entity';
+import { IActor } from '@domain/actor/actor.interface';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { ActorGroupService } from '@domain/actor-group/actor-group.service';
 
 @Resolver()
 export class ActorGroupResolver {
   constructor(private actorGroupService: ActorGroupService) {}
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Actor, {
     description: 'Create a new actor on the ActorGroup with the specified ID',
@@ -31,9 +29,7 @@ export class ActorGroupResolver {
     return result;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the actor group with the specified ID',

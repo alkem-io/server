@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { UserGroupResolver } from './user-group.resolver';
 
 describe('UserGroupResolver', () => {
@@ -6,7 +7,7 @@ describe('UserGroupResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UserGroupResolver],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<UserGroupResolver>(UserGroupResolver);

@@ -1,7 +1,7 @@
 import { Field } from '@nestjs/graphql/dist/decorators/field.decorator';
 import { ObjectType } from '@nestjs/graphql/dist/decorators/object-type.decorator';
 import { ID } from '@nestjs/graphql/dist/scalars';
-import { Project } from '../project/project.entity';
+import { Project } from '@domain/project/project.entity';
 import {
   BaseEntity,
   Column,
@@ -12,7 +12,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IAgreement } from './agreement.interface';
-import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
+import { RestrictedTagsetNames, Tagset } from '@domain/tagset/tagset.entity';
 
 @Entity()
 @ObjectType()
@@ -26,7 +26,7 @@ export class Agreement extends BaseEntity implements IAgreement {
   name: string;
 
   @Field(() => String)
-  @Column()
+  @Column('text', { nullable: true })
   description?: string;
 
   @ManyToOne(

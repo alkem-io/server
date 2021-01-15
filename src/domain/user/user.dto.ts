@@ -1,52 +1,69 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
-import { ProfileInput } from '../profile/profile.dto';
+import { IsEmail, IsOptional, MaxLength } from 'class-validator';
+import { ProfileInput } from '@domain/profile/profile.dto';
+import {
+  LONG_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  MID_TEXT_LENGTH,
+} from '@constants';
 
 @InputType()
 export class UserInput {
   @Field({ nullable: true })
-  @MaxLength(50)
+  @IsOptional()
+  @MaxLength(LONG_TEXT_LENGTH)
   accountUpn!: string;
 
   @Field({ nullable: true })
-  @MaxLength(30)
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
   @Field({ nullable: true })
-  @MaxLength(60)
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
   firstName?: string;
 
   @Field({ nullable: true })
-  @MaxLength(60)
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
   lastName?: string;
 
   @Field({
     nullable: true,
-    description: 'Email address is required for creating a new user',
+    description: 'Email address is required for mutations!',
   })
-  @MaxLength(120)
+  @IsEmail()
+  @IsOptional()
+  @MaxLength(MID_TEXT_LENGTH)
   email!: string;
 
   @Field({ nullable: true })
-  @MaxLength(120)
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
   phone?: string;
 
   @Field({ nullable: true })
-  @MaxLength(120)
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
   city?: string;
 
   @Field({ nullable: true })
-  @MaxLength(120)
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
   country?: string;
 
   @Field({ nullable: true })
-  @MaxLength(20)
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
   gender?: string;
 
   @Field({ nullable: true })
-  @MaxLength(30)
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
   aadPassword?: string;
 
   @Field(() => ProfileInput, { nullable: true })
+  @IsOptional()
   profileData?: ProfileInput;
 }

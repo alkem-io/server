@@ -1,26 +1,26 @@
-import { Inject, UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { CherrytwistErrorStatus } from '../../utils/error-handling/enums/cherrytwist.error.status';
-import { AccountException } from '../../utils/error-handling/exceptions/account.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { ChallengeInput } from '../challenge/challenge.dto';
-import { Challenge } from '../challenge/challenge.entity';
-import { IChallenge } from '../challenge/challenge.interface';
-import { OrganisationInput } from '../organisation/organisation.dto';
-import { Organisation } from '../organisation/organisation.entity';
-import { IOrganisation } from '../organisation/organisation.interface';
+import { ChallengeInput } from '@domain/challenge/challenge.dto';
+import { Challenge } from '@domain/challenge/challenge.entity';
+import { IChallenge } from '@domain/challenge/challenge.interface';
+import { OrganisationInput } from '@domain/organisation/organisation.dto';
+import { Organisation } from '@domain/organisation/organisation.entity';
+import { IOrganisation } from '@domain/organisation/organisation.interface';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
-import { UserInput } from '../user/user.dto';
-import { User } from '../user/user.entity';
-import { IUser } from '../user/user.interface';
+} from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { UserInput } from '@domain/user/user.dto';
+import { User } from '@domain/user/user.entity';
+import { IUser } from '@domain/user/user.interface';
+import { Inject, UseGuards } from '@nestjs/common';
+import { Resolver } from '@nestjs/graphql';
+import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
+import { AccountException } from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';

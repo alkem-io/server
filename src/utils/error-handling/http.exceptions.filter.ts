@@ -7,14 +7,15 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '../logging/logging.contexts';
+import { LogContext } from '@utils/logging/logging.contexts';
 import { BaseException } from './exceptions/base.exception';
 
 @Injectable()
 @Catch()
 export class HttpExceptionsFilter implements ExceptionFilter {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   catch(exception: BaseException, _host: ArgumentsHost) {

@@ -80,7 +80,7 @@ const createReferenceOnProfileVariable = `
     "referenceInput":
         {
             "name": "wow",
-            "uri": "something",
+            "uri": "https://test.com",
             "description": "this works"
         }
   }`;
@@ -173,7 +173,7 @@ const createOpportunityVariables = `
             "impact": "test impact",
             "references": {
                 "name": "test name",
-                "uri": "test uri",
+                "uri": "https://test.com",
                 "description": "test description"
             }
         }
@@ -339,7 +339,7 @@ const createReferenceOnContextVariables = `
     "referenceInput":
         {
             "name": "wow",
-            "uri": "something",
+            "uri": "https://test.com",
             "description": "this works"
         }
   }`;

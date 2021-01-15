@@ -5,9 +5,11 @@ import { Actor } from './actor.entity';
 import { IActor } from './actor.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorInput } from './actor.dto';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
+import {
+  ValidationException,
+  EntityNotFoundException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Injectable()
 export class ActorService {
@@ -45,7 +47,7 @@ export class ActorService {
         `Not able to locate actor with the specified ID: ${actorID}`,
         LogContext.CHALLENGES
       );
-    await this.actorRepository.remove(actor as Actor);
+    await this.actorRepository.delete(actorID);
     return true;
   }
 

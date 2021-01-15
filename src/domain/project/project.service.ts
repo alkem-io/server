@@ -2,13 +2,15 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { AspectInput } from '../aspect/aspect.dto';
-import { IAspect } from '../aspect/aspect.interface';
-import { AspectService } from '../aspect/aspect.service';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+  ValidationException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { AspectInput } from '@domain/aspect/aspect.dto';
+import { IAspect } from '@domain/aspect/aspect.interface';
+import { AspectService } from '@domain/aspect/aspect.service';
 import { ProjectInput } from './project.dto';
 import { Project } from './project.entity';
 import { IProject } from './project.interface';

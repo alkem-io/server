@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { AspectResolver } from './aspect.resolver';
 
 describe('AspectResolver', () => {
@@ -6,7 +7,7 @@ describe('AspectResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AspectResolver],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<AspectResolver>(AspectResolver);

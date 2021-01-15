@@ -1,27 +1,26 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Ecoverse } from '../../domain/ecoverse/ecoverse.entity';
-import { IEcoverse } from '../../domain/ecoverse/ecoverse.interface';
-import { EcoverseService } from '../../domain/ecoverse/ecoverse.service';
-import { RestrictedGroupNames } from '../../domain/user-group/user-group.entity';
-import { UserInput } from '../../domain/user/user.dto';
-import { UserService } from '../../domain/user/user.service';
-import { IServiceConfig } from '../../interfaces/service.config.interface';
+import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
+import { IEcoverse } from '@domain/ecoverse/ecoverse.interface';
+import { EcoverseService } from '@domain/ecoverse/ecoverse.service';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { UserInput } from '@domain/user/user.dto';
+import { UserService } from '@domain/user/user.service';
+import { IServiceConfig } from '@interfaces/service.config.interface';
 import { Repository } from 'typeorm';
-import { AccountService } from '../account/account.service';
+import { AccountService } from '@utils/account/account.service';
 import fs from 'fs';
-import * as defaultRoles from '../../templates/authorisation-bootstrap.json';
-import { IUser } from '../../domain/user/user.interface';
+import * as defaultRoles from '@templates/authorisation-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Profiling } from '../logging/logging.profiling.decorator';
-import { LogContext } from '../logging/logging.contexts';
-import { ILoggingConfig } from '../../interfaces/logging.config.interface';
-import { EntityNotInitializedException } from '../error-handling/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '../error-handling/exceptions/validation.exception';
-import { BaseException } from '../error-handling/exceptions/base.exception';
-import { EntityNotFoundException } from '../error-handling/exceptions/entity.not.found.exception';
-import { CherrytwistErrorStatus } from '../error-handling/enums/cherrytwist.error.status';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ILoggingConfig } from '@interfaces/logging.config.interface';
+import { EntityNotInitializedException } from '@utils/error-handling/exceptions/entity.not.initialized.exception';
+import { ValidationException } from '@utils/error-handling/exceptions/validation.exception';
+import { BaseException } from '@utils/error-handling/exceptions/base.exception';
+import { EntityNotFoundException } from '@utils/error-handling/exceptions/entity.not.found.exception';
+import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class BootstrapService {
@@ -175,6 +174,15 @@ export class BootstrapService {
         communityAdmins
       );
     }
+    const members = bootstrapJson.members;
+    if (!members) {
+      this.logger.verbose?.(
+        'No coverse members section in the authorisation bootstrap file!',
+        LogContext.BOOTSTRAP
+      );
+    } else {
+      await this.createGroupProfiles(RestrictedGroupNames.Members, members);
+    }
   }
 
   @Profiling.api
@@ -204,7 +212,7 @@ export class BootstrapService {
             CherrytwistErrorStatus.USER_PROFILE_NOT_FOUND
           );
 
-        const groups = (user as IUser).userGroups;
+        const groups = user.userGroups;
         if (!groups)
           throw new EntityNotInitializedException(
             `User ${user.email} isn't initialised properly. The user doesn't belong to any groups!`,
@@ -270,14 +278,14 @@ export class BootstrapService {
       this.logger.verbose?.('........populating...', LogContext.BOOTSTRAP);
       await this.populateEmptyEcoverse(ecoverse);
       await this.ecoverseRepository.save(ecoverse);
-      return ecoverse as IEcoverse;
+      return ecoverse;
     }
     if (ecoverseCount == 1) {
       this.logger.verbose?.(
         '...single ecoverse - verified',
         LogContext.BOOTSTRAP
       );
-      return ecoverseArray[0] as IEcoverse;
+      return ecoverseArray[0];
     }
 
     throw new ValidationException(

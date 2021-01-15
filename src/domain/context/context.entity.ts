@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Reference } from '../reference/reference.entity';
+import { Reference } from '@domain/reference/reference.entity';
 import {
   BaseEntity,
   Column,
@@ -20,35 +20,35 @@ export class Context extends BaseEntity implements IContext {
     nullable: true,
     description: 'A one line description',
   })
-  @Column('varchar', { length: 250 })
+  @Column('varchar', { length: 255, nullable: true })
   tagline?: string = '';
 
   @Field(() => String, {
     nullable: true,
     description: 'A detailed description of the current situation',
   })
-  @Column('varchar', { length: 2000 })
+  @Column('text', { nullable: true })
   background?: string = '';
 
   @Field(() => String, {
     nullable: true,
     description: 'The goal that is being pursued',
   })
-  @Column('varchar', { length: 2000 })
+  @Column('text', { nullable: true })
   vision?: string = '';
 
   @Field(() => String, {
     nullable: true,
     description: 'What is the potential impact?',
   })
-  @Column('varchar', { length: 2000 })
+  @Column('text', { nullable: true })
   impact?: string = '';
 
   @Field(() => String, {
     nullable: true,
     description: 'Who should get involved in this challenge',
   })
-  @Column('varchar', { length: 2000 })
+  @Column('text', { nullable: true })
   who?: string = '';
 
   @Field(() => [Reference], {

@@ -2,11 +2,13 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { NotSupportedException } from '../../utils/error-handling/exceptions/not.supported.exception';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ProfileService } from '../profile/profile.service';
+import {
+  EntityNotFoundException,
+  NotSupportedException,
+  ValidationException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ProfileService } from '@domain/profile/profile.service';
 import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
@@ -74,10 +76,9 @@ export class UserService {
       const user = await this.getUserByID(idInt);
       if (user) return user;
     }
-    if (this.isValidEmail(userID)) {
-      const user = await this.getUserByEmail(userID);
-      if (user) return user;
-    }
+
+    const user = await this.getUserByEmail(userID);
+    if (user) return user;
   }
 
   async getUserByID(userID: number): Promise<IUser | undefined> {
@@ -233,11 +234,6 @@ export class UserService {
   async validateUserProfileCreationRequest(
     userData: UserInput
   ): Promise<boolean> {
-    if (!this.isValidEmail(userData.email))
-      throw new ValidationException(
-        `Valid email address required to create a user: ${userData.email}`,
-        LogContext.COMMUNITY
-      );
     if (!userData.firstName || userData.firstName.length == 0)
       throw new ValidationException(
         `User profile creation (${userData.email}) missing required first name`,
@@ -335,12 +331,6 @@ export class UserService {
       );
 
     return populatedUser;
-  }
-
-  isValidEmail(email: string): boolean {
-    // The reg exp used to validate the email format
-    const emailValidationExpression = /\S+@\S+/;
-    return emailValidationExpression.test(String(email).toLowerCase());
   }
 
   updateLastModified(user: IUser) {

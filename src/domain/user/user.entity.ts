@@ -1,7 +1,7 @@
 import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
-import { DID } from '../did/did.entity';
-import { Profile } from '../profile/profile.entity';
-import { UserGroup } from '../user-group/user-group.entity';
+import { DID } from '@domain/did/did.entity';
+import { Profile } from '@domain/profile/profile.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import {
   BaseEntity,

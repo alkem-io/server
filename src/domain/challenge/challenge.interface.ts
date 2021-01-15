@@ -1,8 +1,8 @@
-import { IContext } from '../context/context.interface';
-import { IOpportunity } from '../opportunity/opportunity.interface';
-import { IOrganisation } from '../organisation/organisation.interface';
-import { ITagset } from '../tagset/tagset.interface';
-import { IUserGroup } from '../user-group/user-group.interface';
+import { IContext } from '@domain/context/context.interface';
+import { IOpportunity } from '@domain/opportunity/opportunity.interface';
+import { IOrganisation } from '@domain/organisation/organisation.interface';
+import { ITagset } from '@domain/tagset/tagset.interface';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
 
 export interface IChallenge {
   id: number;

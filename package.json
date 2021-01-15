@@ -1,11 +1,15 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
-  "license": "EUPL",
+  "license": "EUPL-1.2",
   "main": "src/main.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cherrytwist/Server.git"
+  },
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
@@ -21,7 +25,11 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --detectOpenHandles --runInBand --config ./test/jest-e2e.json",
+    "test:e2e": "jest --detectOpenHandles --runInBand --config ./test/config/jest.config.e2e.js",
+    "test:it": "jest --detectOpenHandles --runInBand --config ./test/config/jest.config.it.js",
+    "test:ut": "jest --detectOpenHandles --runInBand --config ./test/config/jest.config.js",
+    "test:nightly": "jest --forceExit --runInBand --config ./test/config/jest.config.nightly.js && cat ./coverage-nightly/lcov.info | coveralls",
+    "test:ci": "jest --forceExit --runInBand --config ./test/config/jest.config.ci.js",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/config/typeorm.cli.config.ts",
     "migration:create": "npm run typeorm migration:create -- -n",
     "migration:generate": "npm run typeorm migration:generate -- -n",
@@ -30,6 +38,7 @@
     "migration:show": "npm run typeorm migration:show"
   },
   "dependencies": {
+    "@cmdbg/tokenator": "^0.1.0",
     "@microsoft/microsoft-graph-client": "^2.1.0",
     "@nestjs/common": "^7.4.4",
     "@nestjs/config": "^0.5.0",
@@ -39,18 +48,16 @@
     "@nestjs/platform-express": "^7.0.0",
     "@nestjs/typeorm": "^7.1.4",
     "apollo-server-express": "^2.18.1",
-    "cd": "^0.3.3",
-    "cherrytwist-lib": "^0.4.4",
+    "class-transformer": "^0.3.2",
     "class-validator": "^0.12.2",
-    "elastic-apm-node": "^3.7.0",
     "graphql": "^15.3.0",
     "graphql-tools": "^6.2.4",
+    "helmet": "^4.3.1",
     "isomorphic-fetch": "^3.0.0",
-    "msal": "^1.4.1",
+    "module-alias": "^2.2.2",
     "mysql": "^2.18.1",
     "nest-winston": "^1.4.0",
     "node-cache": "^5.1.2",
-    "node-fetch": "^2.6.1",
     "nodemon": "^2.0.4",
     "normalizer": "^1.2.7",
     "passport": "^0.4.1",
@@ -69,13 +76,14 @@
     "@nestjs/testing": "^7.0.0",
     "@types/express": "^4.17.3",
     "@types/jest": "^26.0.10",
+    "@types/module-alias": "^2.0.0",
     "@types/node": "^13.9.1",
-    "@types/node-fetch": "^2.5.7",
     "@types/passport-azure-ad": "^4.0.7",
     "@types/passport-local": "^1.0.33",
     "@types/supertest": "^2.0.8",
     "@typescript-eslint/eslint-plugin": "3.9.1",
     "@typescript-eslint/parser": "3.9.1",
+    "coveralls": "^3.1.0",
     "eslint": "7.7.0",
     "eslint-config-prettier": "^6.10.0",
     "eslint-plugin-import": "^2.20.1",
@@ -89,18 +97,7 @@
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.7.4"
   },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".spec.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+  "_moduleAliases": {
+    "@src": "./dist"
   }
 }

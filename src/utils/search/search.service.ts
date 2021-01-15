@@ -3,21 +3,24 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './search-input.dto';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserGroup } from '../../domain/user-group/user-group.entity';
-import { User } from '../../domain/user/user.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
+import { User } from '@domain/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
-import { LogContext } from '../logging/logging.contexts';
-import { ValidationException } from '../error-handling/exceptions/validation.exception';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ValidationException } from '@utils/error-handling/exceptions/validation.exception';
+import { Organisation } from '@domain/organisation/organisation.entity';
 
 enum SearchEntityTypes {
   User = 'user',
   Group = 'group',
+  Organisation = 'organisation',
 }
 
 const SEARCH_ENTITIES: string[] = [
   SearchEntityTypes.User,
   SearchEntityTypes.Group,
+  SearchEntityTypes.Organisation,
 ];
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
@@ -27,7 +30,7 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity: User | UserGroup | undefined;
+  entity: User | UserGroup | Organisation | undefined;
 }
 
 export class SearchService {
@@ -36,6 +39,8 @@ export class SearchService {
     private userRepository: Repository<User>,
     @InjectRepository(UserGroup)
     private groupRepository: Repository<UserGroup>,
+    @InjectRepository(Organisation)
+    private organisationRepository: Repository<Organisation>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -45,13 +50,17 @@ export class SearchService {
     // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
     const userResults: Map<number, Match> = new Map();
     const groupResults: Map<number, Match> = new Map();
+    const organisationResults: Map<number, Match> = new Map();
 
     const terms = searchData.terms;
     // By default search all entity types
     let searchUsers = true;
     let searchGroups = true;
-
+    let searchOrganisations = true;
     const entityTypesFilter = searchData.typesFilter;
+    [searchUsers, searchGroups, searchOrganisations] = await this.searchBy(
+      entityTypesFilter
+    );
 
     // Only support certain features for now
     if (searchData.challengesFilter)
@@ -65,55 +74,24 @@ export class SearchService {
         terms,
         userResults,
         groupResults,
+        organisationResults,
         entityTypesFilter
       );
 
-    if (entityTypesFilter && entityTypesFilter.length > 0) {
-      if (!entityTypesFilter.includes(SearchEntityTypes.User))
-        searchUsers = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Group))
-        searchGroups = false;
-    }
-    for (const term of terms) {
-      if (searchUsers) {
-        const userMatches = await this.userRepository
-          .createQueryBuilder('user')
-          .leftJoinAndSelect('user.profile', 'profile')
-          .where('user.firstName like :term')
-          .orWhere('user.lastName like :term')
-          .orWhere('user.email like :term')
-          .orWhere('user.country like :term')
-          .orWhere('user.city like :term')
-          .orWhere('profile.description like :term')
-          .setParameters({ term: `%${term}%` })
-          .getMany();
-
-        // Create results for each match
-        await this.buildMatchingResults(userMatches, userResults, term);
-      }
-
-      if (searchGroups) {
-        const groupMatches = await this.groupRepository
-          .createQueryBuilder('group')
-          .leftJoinAndSelect('group.profile', 'profile')
-          .where('group.name like :term')
-          .orWhere('profile.description like :term')
-          .andWhere('group.includeInSearch = true')
-          .setParameters({ term: `%${term}%` })
-          .getMany();
-        // Create results for each match
-        await this.buildMatchingResults(groupMatches, groupResults, term);
-      }
-    }
+    if (searchUsers) await this.searchUsersByTerms(terms, userResults);
+    if (searchGroups) await this.searchGroupsByTerms(terms, groupResults);
+    if (searchOrganisations)
+      await this.searchOrganisationsByTerms(terms, organisationResults);
 
     this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results and ${groupResults.size} group results found`,
+      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results ; ${organisationResults.size} organisation results found`,
       LogContext.API
     );
 
     let results: ISearchResultEntry[] = [];
     results = await this.buildSearchResults(userResults);
     results.push(...(await this.buildSearchResults(groupResults)));
+    results.push(...(await this.buildSearchResults(organisationResults)));
     this.ensureUniqueTermsPerResult(results);
     return results;
   }
@@ -125,49 +103,170 @@ export class SearchService {
     }
   }
 
-  async searchTagsets(
-    tagsets: string[],
-    terms: string[],
-    userResults: Map<number, Match>,
-    groupResults: Map<number, Match>,
+  async searchBy(
     entityTypesFilter?: string[]
-  ) {
+  ): Promise<[boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
+    let searchOrganisations = true;
+
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.User))
         searchUsers = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.Group))
         searchGroups = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.Organisation))
+        searchOrganisations = false;
     }
 
+    return [searchUsers, searchGroups, searchOrganisations];
+  }
+
+  async searchUsersByTerms(terms: string[], userResults: Map<number, Match>) {
     for (const term of terms) {
-      if (searchUsers) {
-        const userMatches = await this.userRepository
-          .createQueryBuilder('user')
-          .leftJoinAndSelect('user.profile', 'profile')
-          .leftJoinAndSelect('profile.tagsets', 'tagset')
-          .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
-          .andWhere('find_in_set(:term, tagset.tags)')
-          .setParameters({ term: `${term}` })
-          .getMany();
+      const userMatches = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.profile', 'profile')
+        .where('user.firstName like :term')
+        .orWhere('user.lastName like :term')
+        .orWhere('user.email like :term')
+        .orWhere('user.country like :term')
+        .orWhere('user.city like :term')
+        .orWhere('profile.description like :term')
+        .setParameters({ term: `%${term}%` })
+        .getMany();
 
-        // Create results for each match
-        await this.buildMatchingResults(userMatches, userResults, term);
-      }
+      // Create results for each match
+      await this.buildMatchingResults(userMatches, userResults, term);
+    }
+  }
 
-      if (searchGroups) {
-        const groupMatches = await this.groupRepository
-          .createQueryBuilder('group')
-          .leftJoinAndSelect('group.profile', 'profile')
-          .leftJoinAndSelect('profile.tagsets', 'tagset')
-          .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
-          .andWhere('find_in_set(:term, tagset.tags)')
-          .setParameters({ term: `${term}` })
-          .getMany();
-        // Create results for each match
-        await this.buildMatchingResults(groupMatches, groupResults, term);
-      }
+  async searchGroupsByTerms(terms: string[], groupResults: Map<number, Match>) {
+    for (const term of terms) {
+      const groupMatches = await this.groupRepository
+        .createQueryBuilder('group')
+        .leftJoinAndSelect('group.profile', 'profile')
+        .where('group.name like :term')
+        .orWhere('profile.description like :term')
+        .andWhere('group.includeInSearch = true')
+        .setParameters({ term: `%${term}%` })
+        .getMany();
+      // Create results for each match
+      await this.buildMatchingResults(groupMatches, groupResults, term);
+    }
+  }
+
+  async searchOrganisationsByTerms(
+    terms: string[],
+    organisationResults: Map<number, Match>
+  ) {
+    for (const term of terms) {
+      const organisationMatches = await this.organisationRepository
+        .createQueryBuilder('organisation')
+        .leftJoinAndSelect('organisation.profile', 'profile')
+        .where('organisation.name like :term')
+        .orWhere('profile.description like :term')
+        .setParameters({ term: `%${term}%` })
+        .getMany();
+      // Create results for each match
+      await this.buildMatchingResults(
+        organisationMatches,
+        organisationResults,
+        term
+      );
+    }
+  }
+
+  async searchTagsets(
+    tagsets: string[],
+    terms: string[],
+    userResults: Map<number, Match>,
+    groupResults: Map<number, Match>,
+    organisationResults: Map<number, Match>,
+    entityTypesFilter?: string[]
+  ) {
+    let searchUsers = true;
+    let searchGroups = true;
+    let searchOrganisations = true;
+    [searchUsers, searchGroups, searchOrganisations] = await this.searchBy(
+      entityTypesFilter
+    );
+
+    if (searchUsers)
+      await this.searchUsersByTagsets(terms, tagsets, userResults);
+
+    if (searchGroups)
+      await this.searchGroupsByTagsets(terms, tagsets, groupResults);
+
+    if (searchOrganisations)
+      await this.searchOrganisationsByTagsets(
+        terms,
+        tagsets,
+        organisationResults
+      );
+  }
+
+  async searchUsersByTagsets(
+    terms: string[],
+    tagsets: string[],
+    userResults: Map<number, Match>
+  ) {
+    for (const term of terms) {
+      const userMatches = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.profile', 'profile')
+        .leftJoinAndSelect('profile.tagsets', 'tagset')
+        .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
+        .andWhere('find_in_set(:term, tagset.tags)')
+        .setParameters({ term: `${term}` })
+        .getMany();
+
+      // Create results for each match
+      await this.buildMatchingResults(userMatches, userResults, term);
+    }
+  }
+
+  async searchGroupsByTagsets(
+    terms: string[],
+    tagsets: string[],
+    groupResults: Map<number, Match>
+  ) {
+    for (const term of terms) {
+      const groupMatches = await this.groupRepository
+        .createQueryBuilder('group')
+        .leftJoinAndSelect('group.profile', 'profile')
+        .leftJoinAndSelect('profile.tagsets', 'tagset')
+        .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
+        .andWhere('find_in_set(:term, tagset.tags)')
+        .setParameters({ term: `${term}` })
+        .getMany();
+
+      // Create results for each match
+      await this.buildMatchingResults(groupMatches, groupResults, term);
+    }
+  }
+
+  async searchOrganisationsByTagsets(
+    terms: string[],
+    tagsets: string[],
+    organisationResults: Map<number, Match>
+  ) {
+    for (const term of terms) {
+      const organisationMatches = await this.organisationRepository
+        .createQueryBuilder('organisation')
+        .leftJoinAndSelect('organisation.profile', 'profile')
+        .leftJoinAndSelect('profile.tagsets', 'tagset')
+        .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
+        .andWhere('find_in_set(:term, tagset.tags)')
+        .setParameters({ term: `${term}` })
+        .getMany();
+
+      // Create results for each match
+      await this.buildMatchingResults(
+        organisationMatches,
+        organisationResults,
+        term
+      );
     }
   }
 

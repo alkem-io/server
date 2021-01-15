@@ -1,10 +1,10 @@
-import { RopcStrategy } from '../../src/utils/authentication/ropc.strategy';
+import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
 
 export class TokenHelper {
   private users = Object.values(TestUser);
-  private ropcStrategy: RopcStrategy;
+  private ropcStrategy: AadRopcStrategy;
 
-  constructor(ropcStrategy: RopcStrategy) {
+  constructor(ropcStrategy: AadRopcStrategy) {
     this.ropcStrategy = ropcStrategy;
   }
 
@@ -56,4 +56,5 @@ export enum TestUser {
   GLOBAL_ADMIN = 'admin',
   ECOVERSE_ADMIN = 'ecoverse.admin',
   COMMUNITY_ADMIN = 'community.admin',
+  ECOVERSE_MEMBER = 'ecoverse.member',
 }

@@ -2,15 +2,17 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ReferenceInput } from '../reference/reference.dto';
-import { Reference } from '../reference/reference.entity';
-import { IReference } from '../reference/reference.interface';
-import { ReferenceService } from '../reference/reference.service';
-import { ITagset } from '../tagset/tagset.interface';
-import { TagsetService } from '../tagset/tagset.service';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ReferenceInput } from '@domain/reference/reference.dto';
+import { Reference } from '@domain/reference/reference.entity';
+import { IReference } from '@domain/reference/reference.interface';
+import { ReferenceService } from '@domain/reference/reference.service';
+import { ITagset } from '@domain/tagset/tagset.interface';
+import { TagsetService } from '@domain/tagset/tagset.service';
 import { ProfileInput } from './profile.dto';
 import { Profile } from './profile.entity';
 import { IProfile } from './profile.interface';
@@ -57,13 +59,7 @@ export class ProfileService {
   }
 
   async createTagset(profileID: number, tagsetName: string): Promise<ITagset> {
-    const profile = (await this.getProfile(profileID)) as Profile;
-
-    if (!profile)
-      throw new EntityNotFoundException(
-        `Profile with id(${profileID}) not found!`,
-        LogContext.COMMUNITY
-      );
+    const profile = await this.getProfileOrFail(profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
@@ -78,13 +74,7 @@ export class ProfileService {
     profileID: number,
     referenceInput: ReferenceInput
   ): Promise<IReference> {
-    const profile = (await this.getProfile(profileID)) as Profile;
-
-    if (!profile)
-      throw new EntityNotFoundException(
-        `Profile with id(${profileID}) not found!`,
-        LogContext.COMMUNITY
-      );
+    const profile = await this.getProfileOrFail(profileID);
 
     if (!profile.references)
       throw new EntityNotInitializedException(
@@ -112,12 +102,7 @@ export class ProfileService {
     profileID: number,
     profileData: ProfileInput
   ): Promise<boolean> {
-    const profile = (await this.getProfile(profileID)) as Profile;
-    if (!profile)
-      throw new EntityNotFoundException(
-        `Profile with id (${profileID}) not found!`,
-        LogContext.CHALLENGES
-      );
+    const profile = await this.getProfileOrFail(profileID);
 
     profile.avatar = profileData.avatar;
     profile.description = profileData.description;
@@ -154,7 +139,13 @@ export class ProfileService {
     return true;
   }
 
-  async getProfile(profileID: number): Promise<IProfile | undefined> {
-    return await Profile.findOne({ id: profileID });
+  async getProfileOrFail(profileID: number): Promise<IProfile> {
+    const profile = await Profile.findOne({ id: profileID });
+    if (!profile)
+      throw new EntityNotFoundException(
+        `Profile with id(${profileID}) not found!`,
+        LogContext.COMMUNITY
+      );
+    return profile;
   }
 }

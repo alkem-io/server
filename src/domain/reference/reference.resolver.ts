@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { ReferenceService } from './reference.service';
 
 @Resolver()

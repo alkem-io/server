@@ -2,11 +2,9 @@
 
 Represents the core back-end server that manages the representation of the ecoverse and all the entities stored wthin it.
 
-Build Status:
-![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
+[![Build Status](https://travis-ci.com/cherrytwist/Server.svg?branch=develop)](https://travis-ci.com/cherrytwist/Server) [![Coverage Status](https://coveralls.io/repos/github/cherrytwist/Server/badge.svg?branch=develop)](https://coveralls.io/github/cherrytwist/Server?branch=server-627) [![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/) ![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
 
-Build Quality
-[![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/)
+
 
 ## === Server architecture ===
 
@@ -112,16 +110,19 @@ AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI=The login redirect for the Cherrytwist Web Cl
 ```
 ***Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
 
-Optionally configure CORS origin for improved security with the following env variable (by default the value is *):
+Optionally configure CORS  for improved security with the following env variables (by default the value is *):
 
 ```conf
-CORS_ORIGIN=[your CORS origin value]
+CORS_ORIGIN=[your CORS origin value]. Default value is '*'.
+CORS_ALLOWED_HEADERS=[CORS allowed headers]. Default value is 'Origin, X-Requested-With, Content-Type, Accept'.
+CORS_METHODS=[CORS methods allowed]. Default value is 'GET,HEAD,PUT,PATCH,POST,DELETE'.
 ```
 
 ### Configure logging
 To configure logging levels, use:
 
 ```conf
+LOGGING_CONSOLE_ENABLED=true|false. Defaults to true. Determines if logging messages (apart from NestJS messages) are sent to the console.
 LOGGING_LEVEL_CONSOLE=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Winston console transports (logging to console).
 LOGGING_LEVEL_ELK=Error|Warn|Verbose|Debug. Defaults to Error if no value is set. The logging level for the Elasticsearch transports (logging to Elastic Cloud).
 AUTH_AAD_LOGGING_LEVEL=info|warn|error. Defaults to `error` if no value is set.
@@ -262,9 +263,14 @@ Initial version of integration tests is in place. To run them, look at the prere
 - `AUTH_AAD_CLIENT_APP_ID`, `AUTH_AAD_CHERRYTWIST_API_SCOPE`, `AUTH_AAD_TENANT`, `AUTH_AAD_TEST_HARNESS_PASSWORD`, `AUTH_AAD_CHERRYTWIST_API_APP_ID`, `AUTH_AAD_MSGRAPH_API_SCOPE` and `AUTH_AAD_UPN_DOMAIN` env variables  must be provided for authenticated scenarios.
 - `AUTH_ENABLED` env variable must be set to `true`.
 - `AUTH_AAD_TEST_HARNESS_PASSWORD` and `AUTH_AAD_MSGRAPH_API_SECRET` secrets (also env variables) need to be provided
-- In order to run the integration tests, navigate to the `/Server` repository, and execute the following command: `npm run test:e2e`
-  - To run specific suite: `npm run-script test:e2e jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
+- `LOGGING_CONSOLE_ENABLED=false` can be used to disable logging the exceptions (exceptions are quite verbose and will pollute the test results log).
+- In order to run the unit, integration and end-to-end, navigate to the `/Server` repository, and execute the following command: `npm run test:[TEST_TYPE]` where TEST_TYPE is `e2e` for end-to-end, `it` for
+integration tests and `ut` for unit tests
+  - To run specific suite: `npm run-script test:[TEST_TYPE] jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.
+
+To run e2e tests with coverage:
+- Use `npm run test:e2e-cov`
 
 To debug tests in VS Code:
 - Use `Debug Jest e2e Tests` configuration for API tests

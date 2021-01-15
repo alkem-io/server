@@ -4,13 +4,15 @@ import { Repository } from 'typeorm';
 import { ActorGroup } from './actor-group.entity';
 import { IActorGroup } from './actor-group.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ActorInput } from '../actor/actor.dto';
+import { ActorInput } from '@domain/actor/actor.dto';
 import { ActorGroupInput } from './actor-group.dto';
-import { ActorService } from '../actor/actor.service';
-import { IActor } from '../actor/actor.interface';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { GroupNotInitializedException } from '../../utils/error-handling/exceptions/group.not.initialized.exception';
+import { ActorService } from '@domain/actor/actor.service';
+import { IActor } from '@domain/actor/actor.interface';
+import {
+  EntityNotFoundException,
+  GroupNotInitializedException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Injectable()
 export class ActorGroupService {
@@ -35,12 +37,7 @@ export class ActorGroupService {
     actorGroupID: number,
     actorData: ActorInput
   ): Promise<IActor> {
-    const actorGroup = await this.getActorGroup(actorGroupID);
-    if (!actorGroup)
-      throw new EntityNotFoundException(
-        `Unable to locate actor group with id: ${actorGroupID}`,
-        LogContext.CHALLENGES
-      );
+    const actorGroup = await this.getActorGroupOrFail(actorGroupID);
 
     const actor = await this.actorService.createActor(actorData);
     if (!actorGroup.actors)
@@ -66,17 +63,20 @@ export class ActorGroupService {
   }
 
   async removeActorGroup(actorGroupID: number): Promise<boolean> {
-    const actorGroup = await this.getActorGroup(actorGroupID);
+    const actorGroup = await this.getActorGroupOrFail(actorGroupID);
+    await this.actorGroupRepository.remove(actorGroup as ActorGroup);
+    return true;
+  }
+
+  async getActorGroupOrFail(actorGroupID: number): Promise<IActorGroup> {
+    const actorGroup = await this.actorGroupRepository.findOne({
+      id: actorGroupID,
+    });
     if (!actorGroup)
       throw new EntityNotFoundException(
         `Not able to locate actorGroup with the specified ID: ${actorGroupID}`,
         LogContext.CHALLENGES
       );
-    await this.actorGroupRepository.remove(actorGroup as ActorGroup);
-    return true;
-  }
-
-  async getActorGroup(actorGroupID: number): Promise<IActorGroup | undefined> {
-    return await this.actorGroupRepository.findOne({ id: actorGroupID });
+    return actorGroup;
   }
 }

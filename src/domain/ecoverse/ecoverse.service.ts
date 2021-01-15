@@ -1,36 +1,38 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IContext } from '../context/context.interface';
-import { IOrganisation } from '../organisation/organisation.interface';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
-import { UserGroupService } from '../user-group/user-group.service';
+import { IContext } from '@domain/context/context.interface';
+import { IOrganisation } from '@domain/organisation/organisation.interface';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { UserGroupService } from '@domain/user-group/user-group.service';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { ContextService } from '../context/context.service';
+import { ContextService } from '@domain/context/context.service';
 import { EcoverseInput } from './ecoverse.dto';
-import { TagsetService } from '../tagset/tagset.service';
-import { IUser } from '../user/user.interface';
-import { IChallenge } from '../challenge/challenge.interface';
-import { ITagset } from '../tagset/tagset.interface';
-import { ChallengeService } from '../challenge/challenge.service';
-import { ChallengeInput } from '../challenge/challenge.dto';
-import { UserInput } from '../user/user.dto';
-import { OrganisationInput } from '../organisation/organisation.dto';
-import { Organisation } from '../organisation/organisation.entity';
-import { Context } from '../context/context.entity';
-import { RestrictedTagsetNames, Tagset } from '../tagset/tagset.entity';
+import { TagsetService } from '@domain/tagset/tagset.service';
+import { IUser } from '@domain/user/user.interface';
+import { IChallenge } from '@domain/challenge/challenge.interface';
+import { ITagset } from '@domain/tagset/tagset.interface';
+import { ChallengeService } from '@domain/challenge/challenge.service';
+import { ChallengeInput } from '@domain/challenge/challenge.dto';
+import { UserInput } from '@domain/user/user.dto';
+import { OrganisationInput } from '@domain/organisation/organisation.dto';
+import { Organisation } from '@domain/organisation/organisation.entity';
+import { Context } from '@domain/context/context.entity';
+import { RestrictedTagsetNames, Tagset } from '@domain/tagset/tagset.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { OrganisationService } from '../organisation/organisation.service';
-import { UserService } from '../user/user.service';
-import { AccountService } from '../../utils/account/account.service';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ValidationException } from '../../utils/error-handling/exceptions/validation.exception';
-import { EntityNotInitializedException } from '../../utils/error-handling/exceptions/entity.not.initialized.exception';
-import { AccountException } from '../../utils/error-handling/exceptions/account.exception';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { CherrytwistErrorStatus } from '../../utils/error-handling/enums/cherrytwist.error.status';
+import { OrganisationService } from '@domain/organisation/organisation.service';
+import { UserService } from '@domain/user/user.service';
+import { AccountService } from '@utils/account/account.service';
+import { LogContext } from '@utils/logging/logging.contexts';
+import {
+  ValidationException,
+  EntityNotInitializedException,
+  AccountException,
+  EntityNotFoundException,
+} from '@utils/error-handling/exceptions';
+import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class EcoverseService {
@@ -115,9 +117,9 @@ export class EcoverseService {
 
   async getUsers(): Promise<IUser[]> {
     try {
-      const ecoverse = (await this.getEcoverse({
+      const ecoverse = await this.getEcoverse({
         relations: ['groups'],
-      })) as IEcoverse;
+      });
       const membersGroup = await this.userGroupService.getGroupByName(
         ecoverse,
         RestrictedGroupNames.Members
@@ -175,7 +177,7 @@ export class EcoverseService {
   }
 
   async getContext(): Promise<IContext> {
-    const ecoverse = (await this.getEcoverse()) as IEcoverse;
+    const ecoverse = await this.getEcoverse();
     return ecoverse.context as IContext;
   }
 
@@ -185,7 +187,7 @@ export class EcoverseService {
   }
 
   async getHost(): Promise<IOrganisation> {
-    const ecoverse = (await this.getEcoverse()) as Ecoverse;
+    const ecoverse = await this.getEcoverse();
     return ecoverse.host as IOrganisation;
   }
 
@@ -195,14 +197,14 @@ export class EcoverseService {
       LogContext.CHALLENGES
     );
 
-    const ecoverse = (await this.getEcoverse({
+    const ecoverse = await this.getEcoverse({
       join: {
         alias: 'ecoverse',
         leftJoinAndSelect: {
           groups: 'ecoverse.groups',
         },
       },
-    })) as Ecoverse;
+    });
 
     const group = await this.userGroupService.addGroupWithName(
       ecoverse,

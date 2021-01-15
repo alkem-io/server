@@ -7,8 +7,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IAspect } from './aspect.interface';
-import { Opportunity } from '../opportunity/opportunity.entity';
-import { Project } from '../project/project.entity';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
+import { Project } from '@domain/project/project.entity';
 
 @Entity()
 @ObjectType()
@@ -22,11 +22,11 @@ export class Aspect extends BaseEntity implements IAspect {
   title: string;
 
   @Field(() => String)
-  @Column('varchar', { length: 400 })
+  @Column('text')
   framing: string;
 
   @Field(() => String)
-  @Column('varchar', { length: 400 })
+  @Column('text')
   explanation: string;
 
   @ManyToOne(

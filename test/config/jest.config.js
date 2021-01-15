@@ -1,0 +1,33 @@
+module.exports = {
+  moduleNameMapper: {
+    '@interfaces/(.*)': ['<rootDir>/src/interfaces/$1'],
+    '@domain/(.*)': ['<rootDir>/src/domain/$1'],
+    '@config/(.*)': ['<rootDir>/src/config/$1'],
+    '@utils/(.*)': ['<rootDir>/src/utils/$1'],
+    '@templates/(.*)': ['<rootDir>/src/templates/$1'],
+    '@src/(.*)': ['<rootDir>/src/$1'],
+    '@test/(.*)': ['<rootDir>/test/$1'],
+    '@constants': ['<rootDir>/src/utils/constants'],
+    '@constants/(.*)': ['<rootDir>/src/utils/constants/$1'],
+  },
+  moduleFileExtensions: ['js', 'json', 'ts'],
+  rootDir: '../../',
+  roots: ['<rootDir>/test', '<rootDir>/src'],
+  testMatch: ['**/?(*.)+(spec).ts'],
+  transform: {
+    '^.+\\.(t|j)s$': 'ts-jest',
+  },
+  coverageDirectory: '<rootDir>/coverage',
+  testEnvironment: 'node',
+  collectCoverageFrom: [
+    '<rootDir>/src/**/*.service.ts',
+    '<rootDir>/src/utils/authentication/*.strategy.*',
+    '<rootDir>/src/utils/authentication/*.guard.*',
+    '<rootDir>/src/utils/decorators/*.*',
+    '<rootDir>/src/utils/middleware/*.*',
+    '<rootDir>/src/utils/logging/logging.profiling.decorator.ts',
+    '<rootDir>/src/utils/error-handling/http.exceptions.filter.ts',
+  ],
+  testTimeout: 90000,
+  collectCoverage: true,
+};

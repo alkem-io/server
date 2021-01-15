@@ -1,33 +1,33 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Float, Mutation } from '@nestjs/graphql/dist';
-import { Roles } from '../../utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '../../utils/authentication/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,
-} from '../user-group/user-group.entity';
+} from '@domain/user-group/user-group.entity';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
 import { Args, Query } from '@nestjs/graphql';
-import { AspectInput } from '../aspect/aspect.dto';
-import { IAspect } from '../aspect/aspect.interface';
-import { Aspect } from '../aspect/aspect.entity';
-import { ActorGroupInput } from '../actor-group/actor-group.dto';
-import { IActorGroup } from '../actor-group/actor-group.interface';
-import { ActorGroup } from '../actor-group/actor-group.entity';
-import { Profiling } from '../../utils/logging/logging.profiling.decorator';
-import { IRelation } from '../relation/relation.interface';
-import { RelationInput } from '../relation/relation.dto';
-import { Relation } from '../relation/relation.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
-import { ProjectInput } from '../project/project.dto';
-import { Project } from '../project/project.entity';
-import { IProject } from '../project/project.interface';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
+import { AspectInput } from '@domain/aspect/aspect.dto';
+import { IAspect } from '@domain/aspect/aspect.interface';
+import { Aspect } from '@domain/aspect/aspect.entity';
+import { ActorGroupInput } from '@domain/actor-group/actor-group.dto';
+import { IActorGroup } from '@domain/actor-group/actor-group.interface';
+import { ActorGroup } from '@domain/actor-group/actor-group.entity';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { IRelation } from '@domain/relation/relation.interface';
+import { RelationInput } from '@domain/relation/relation.dto';
+import { Relation } from '@domain/relation/relation.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { ProjectInput } from '@domain/project/project.dto';
+import { Project } from '@domain/project/project.entity';
+import { IProject } from '@domain/project/project.interface';
+import { EntityNotFoundException } from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Resolver()
 export class OpportunityResolver {
@@ -48,7 +48,7 @@ export class OpportunityResolver {
   })
   @Profiling.api
   async opportunity(@Args('ID') id: number): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityByID(id);
+    const opportunity = await this.opportunityService.getOpportunityOrFail(id);
     if (opportunity) return opportunity;
 
     throw new EntityNotFoundException(
@@ -84,9 +84,7 @@ export class OpportunityResolver {
     return await this.opportunityService.removeOpportunity(opportunityID);
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Project, {
     description: 'Create a new Project on the Opportunity identified by the ID',
@@ -103,9 +101,7 @@ export class OpportunityResolver {
     return project;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new aspect on the Opportunity identified by the ID',
@@ -122,9 +118,7 @@ export class OpportunityResolver {
     return aspect;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => ActorGroup, {
     description:
@@ -142,9 +136,7 @@ export class OpportunityResolver {
     return actorGroup;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Relation, {
     description:
@@ -161,9 +153,7 @@ export class OpportunityResolver {
     );
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:

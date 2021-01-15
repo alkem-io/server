@@ -1,9 +1,9 @@
-import { IActorGroup } from '../actor-group/actor-group.interface';
-import { IAspect } from '../aspect/aspect.interface';
-import { IContext } from '../context/context.interface';
-import { IProject } from '../project/project.interface';
-import { IRelation } from '../relation/relation.interface';
-import { IUserGroup } from '../user-group/user-group.interface';
+import { IActorGroup } from '@domain/actor-group/actor-group.interface';
+import { IAspect } from '@domain/aspect/aspect.interface';
+import { IContext } from '@domain/context/context.interface';
+import { IProject } from '@domain/project/project.interface';
+import { IRelation } from '@domain/relation/relation.interface';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
 
 export interface IOpportunity {
   id: number;

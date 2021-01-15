@@ -1,14 +1,14 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '../../utils/error-handling/exceptions/entity.not.found.exception';
-import { LogContext } from '../../utils/logging/logging.contexts';
-import { ProfileService } from '../profile/profile.service';
-import { TagsetService } from '../tagset/tagset.service';
-import { RestrictedGroupNames } from '../user-group/user-group.entity';
-import { IUserGroup } from '../user-group/user-group.interface';
-import { UserGroupService } from '../user-group/user-group.service';
+import { FindOneOptions, Repository } from 'typeorm';
+import { EntityNotFoundException } from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ProfileService } from '@domain/profile/profile.service';
+import { TagsetService } from '@domain/tagset/tagset.service';
+import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { UserGroupService } from '@domain/user-group/user-group.service';
 import { OrganisationInput } from './organisation.dto';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
@@ -58,11 +58,39 @@ export class OrganisationService {
     return organisation;
   }
 
-  async getOrganisationByID(organisationID: number): Promise<IOrganisation> {
+  async updateOrganisation(
+    orgID: number,
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    const existingOrganisation = await this.getOrganisationOrFail(orgID);
+
+    // Merge in the data
+    if (organisationData.name) {
+      existingOrganisation.name = organisationData.name;
+      await this.organisationRepository.save(existingOrganisation);
+    }
+
+    // Check the tagsets
+    if (organisationData.profileData && existingOrganisation.profile) {
+      await this.profileService.updateProfile(
+        existingOrganisation.profile.id,
+        organisationData.profileData
+      );
+    }
+
+    // Reload the organisation for returning
+    return await this.getOrganisationOrFail(orgID);
+  }
+
+  async getOrganisationOrFail(
+    organisationID: number,
+    options?: FindOneOptions<Organisation>
+  ): Promise<IOrganisation> {
     //const t1 = performance.now()
-    const organisation = await Organisation.findOne({
-      where: [{ id: organisationID }],
-    });
+    const organisation = await Organisation.findOne(
+      { id: organisationID },
+      options
+    );
     if (!organisation)
       throw new EntityNotFoundException(
         `Unable to find organisation with ID: ${organisationID}`,
@@ -83,43 +111,18 @@ export class OrganisationService {
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to organisation (${orgID})`
     );
-    // Try to find the challenge
-    const organisation = await Organisation.findOne(orgID);
-    if (!organisation) {
-      throw new EntityNotFoundException(
-        `Unable to find organisation with ID: ${orgID}`,
-        LogContext.CHALLENGES
-      );
-    }
+    // Try to find the organisation
+    const organisation = await this.getOrganisationOrFail(orgID, {
+      relations: ['groups'],
+    });
+
     const group = await this.userGroupService.addGroupWithName(
       organisation,
       groupName
     );
-    await organisation.save();
+    await this.organisationRepository.save(organisation);
 
     return group;
-  }
-
-  async updateOrganisation(
-    orgID: number,
-    organisationData: OrganisationInput
-  ): Promise<IOrganisation> {
-    const existingOrganisation = await Organisation.findOne(orgID);
-    if (!existingOrganisation)
-      throw new EntityNotFoundException(
-        `Oganisation with given ID (${orgID}) not found!`,
-        LogContext.CHALLENGES
-      );
-
-    // Merge in the data
-    if (organisationData.name) {
-      existingOrganisation.name = organisationData.name;
-    }
-
-    // To do - merge in the rest of the organisation update
-    await this.organisationRepository.save(existingOrganisation);
-
-    return existingOrganisation;
   }
 
   async save(organisation: IOrganisation) {
