@@ -58,6 +58,35 @@ export class OrganisationService {
     return organisation;
   }
 
+  async updateOrganisation(
+    orgID: number,
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    const existingOrganisation = await Organisation.findOne(orgID);
+    if (!existingOrganisation)
+      throw new EntityNotFoundException(
+        `Oganisation with given ID (${orgID}) not found!`,
+        LogContext.CHALLENGES
+      );
+
+    // Merge in the data
+    if (organisationData.name) {
+      existingOrganisation.name = organisationData.name;
+      await this.organisationRepository.save(existingOrganisation);
+    }
+
+    // Check the tagsets
+    if (organisationData.profileData && existingOrganisation.profile) {
+      await this.profileService.updateProfile(
+        existingOrganisation.profile.id,
+        organisationData.profileData
+      );
+    }
+
+    // Reload the organisation for returning
+    return await this.getOrganisationByID(orgID);
+  }
+
   async getOrganisationByID(organisationID: number): Promise<IOrganisation> {
     //const t1 = performance.now()
     const organisation = await Organisation.findOne({
@@ -103,28 +132,6 @@ export class OrganisationService {
     await organisation.save();
 
     return group;
-  }
-
-  async updateOrganisation(
-    orgID: number,
-    organisationData: OrganisationInput
-  ): Promise<IOrganisation> {
-    const existingOrganisation = await Organisation.findOne(orgID);
-    if (!existingOrganisation)
-      throw new EntityNotFoundException(
-        `Oganisation with given ID (${orgID}) not found!`,
-        LogContext.CHALLENGES
-      );
-
-    // Merge in the data
-    if (organisationData.name) {
-      existingOrganisation.name = organisationData.name;
-    }
-
-    // To do - merge in the rest of the organisation update
-    await this.organisationRepository.save(existingOrganisation);
-
-    return existingOrganisation;
   }
 
   async save(organisation: IOrganisation) {
