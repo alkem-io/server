@@ -301,7 +301,7 @@ export class TestDataService {
   }
 
   async teardownChallenges() {
-    const challengeToRemove = (await this.challengeService.getChallengeByID(
+    const challengeToRemove = (await this.challengeService.getChallengeOrFail(
       1
     )) as IChallenge;
     await this.challengeService.removeChallenge(challengeToRemove?.id);

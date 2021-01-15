@@ -58,6 +58,30 @@ export class OrganisationService {
     return organisation;
   }
 
+  async updateOrganisation(
+    orgID: number,
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    const existingOrganisation = await this.getOrganisationOrFail(orgID);
+
+    // Merge in the data
+    if (organisationData.name) {
+      existingOrganisation.name = organisationData.name;
+      await this.organisationRepository.save(existingOrganisation);
+    }
+
+    // Check the tagsets
+    if (organisationData.profileData && existingOrganisation.profile) {
+      await this.profileService.updateProfile(
+        existingOrganisation.profile.id,
+        organisationData.profileData
+      );
+    }
+
+    // Reload the organisation for returning
+    return await this.getOrganisationOrFail(orgID);
+  }
+
   async getOrganisationOrFail(
     organisationID: number,
     options?: FindOneOptions<Organisation>
@@ -99,25 +123,6 @@ export class OrganisationService {
     await this.organisationRepository.save(organisation);
 
     return group;
-  }
-
-  async updateOrganisation(
-    orgID: number,
-    organisationData: OrganisationInput
-  ): Promise<IOrganisation> {
-    const existingOrganisation = await this.getOrganisationOrFail(orgID, {
-      relations: ['groups'],
-    });
-
-    // Merge in the data
-    if (organisationData.name) {
-      existingOrganisation.name = organisationData.name;
-    }
-
-    // To do - merge in the rest of the organisation update
-    await this.organisationRepository.save(existingOrganisation);
-
-    return existingOrganisation;
   }
 
   async save(organisation: IOrganisation) {
