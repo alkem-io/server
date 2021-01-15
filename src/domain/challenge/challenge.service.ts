@@ -77,12 +77,7 @@ export class ChallengeService {
       `Adding userGroup (${groupName}) to challenge (${challengeID})`,
       LogContext.CHALLENGES
     );
-    // Check a valid ID was passed
-    if (!challengeID)
-      throw new ValidationException(
-        `Invalid challenge id passed in: ${challengeID}`,
-        LogContext.COMMUNITY
-      );
+
     // Try to find the challenge
     const challenge = await this.getChallengeOrFail(challengeID, {
       relations: ['groups'],
