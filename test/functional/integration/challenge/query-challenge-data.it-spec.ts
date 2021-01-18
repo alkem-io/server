@@ -214,7 +214,6 @@ describe('Query Challenge data', () => {
       refUri,
       tagsArray
     );
-    console.log(response.body)
     const updatedChallenge = response.body.data.updateChallenge;
 
     // Act
