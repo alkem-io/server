@@ -7,12 +7,14 @@ import { MID_TEXT_LENGTH, LONG_TEXT_LENGTH } from '@constants';
 @InputType()
 export class ProfileInput {
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
-  avatar!: string;
+  avatar?: string;
 
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
-  description!: string;
+  description?: string;
 
   @Field(() => [TagsetInput], { nullable: true })
   @IsOptional()

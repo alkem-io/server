@@ -17,11 +17,11 @@ export class ReferenceService {
   convertReferences(newReferences: ReferenceInput[]): IReference[] {
     const references = [];
     if (newReferences) {
-      for (const reference of newReferences) {
+      for (const referenceData of newReferences) {
         const newRef = new Reference(
-          reference.name,
-          reference.uri,
-          reference.description
+          referenceData.name,
+          referenceData.uri || '',
+          referenceData.description
         );
         references.push(newRef);
       }
@@ -33,7 +33,7 @@ export class ReferenceService {
   async createReference(referenceInput: ReferenceInput): Promise<IReference> {
     const reference = new Reference(
       referenceInput.name,
-      referenceInput.uri,
+      referenceInput.uri || '',
       referenceInput.description
     );
     await this.referenceRepository.save(reference);
@@ -86,7 +86,7 @@ export class ReferenceService {
         references.push(
           new Reference(
             referenceDTO.name,
-            referenceDTO.uri,
+            referenceDTO.uri || '',
             referenceDTO?.description
           )
         );
