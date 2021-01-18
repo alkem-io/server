@@ -394,12 +394,7 @@ export class EcoverseService {
 
   // Removes the user and deletes the profile
   async removeUser(userID: number): Promise<boolean> {
-    const user = await this.userService.getUserByID(userID);
-    if (!user)
-      throw new EntityNotFoundException(
-        `Could not locate specified user: ${userID}`,
-        LogContext.COMMUNITY
-      );
+    const user = await this.userService.getUserByIdOrFail(userID);
 
     await this.userService.removeUser(user);
     if (this.accountService.accountUsageEnabled())
@@ -412,12 +407,7 @@ export class EcoverseService {
     userID: number,
     newPassword: string
   ): Promise<boolean> {
-    const user = await this.userService.getUserByID(userID);
-    if (!user)
-      throw new EntityNotFoundException(
-        `Could not locate specified user: ${userID}`,
-        LogContext.COMMUNITY
-      );
+    const user = await this.userService.getUserByIdOrFail(userID);
 
     if (this.accountService.accountUsageEnabled())
       return await this.accountService.updateUserAccountPassword(
