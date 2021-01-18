@@ -26,6 +26,7 @@ import { UserService } from '@domain/user/user.service';
 import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
+import { UpdateChallengeInput } from './update.challenge.dto';
 
 @Injectable()
 export class ChallengeService {
@@ -245,10 +246,9 @@ export class ChallengeService {
   }
 
   async updateChallenge(
-    challengeID: number,
-    challengeData: ChallengeInput
+    challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
-    const challenge = await this.getChallengeOrFail(challengeID);
+    const challenge = await this.getChallengeOrFail(challengeData.ID);
 
     const newName = challengeData.name;
     if (newName) {
@@ -275,7 +275,7 @@ export class ChallengeService {
     if (challengeData.context) {
       if (!challenge.context)
         throw new EntityNotInitializedException(
-          `Challenge not initialised: ${challengeID}`,
+          `Challenge not initialised: ${challengeData.ID}`,
           LogContext.CHALLENGES
         );
       await this.contextService.update(
