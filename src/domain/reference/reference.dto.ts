@@ -14,7 +14,7 @@ export class ReferenceInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsUrl()
+  //@IsUrl()
   @MaxLength(MID_TEXT_LENGTH)
   uri?: string;
 
