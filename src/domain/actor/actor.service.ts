@@ -47,18 +47,13 @@ export class ActorService {
   }
 
   async removeActor(actorID: number): Promise<boolean> {
-    const actor = await this.getActorOrFail(actorID);
+    await this.getActorOrFail(actorID);
     await this.actorRepository.delete(actorID);
     return true;
   }
 
   async updateActor(actorID: number, actorData: ActorInput): Promise<IActor> {
     const actor = await this.getActorOrFail(actorID);
-    if (!actor)
-      throw new EntityNotFoundException(
-        `Not able to locate actor with the specified ID: ${actorID}`,
-        LogContext.CHALLENGES
-      );
 
     // Copy over the received data
     if (actorData.name) {
