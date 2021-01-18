@@ -4,7 +4,7 @@ import {
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
 } from '@constants';
-import { IsUrl, IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class ReferenceInput {
