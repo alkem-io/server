@@ -199,7 +199,7 @@ describe('Query Challenge data', () => {
     );
   });
 
-  test.only('should update a challenge', async () => {
+  test('should update a challenge', async () => {
     // Arrange
     const response = await updateChallangeMutation(
       challengeId,
@@ -214,6 +214,7 @@ describe('Query Challenge data', () => {
       refUri,
       tagsArray
     );
+    console.log(response.body)
     const updatedChallenge = response.body.data.updateChallenge;
 
     // Act
