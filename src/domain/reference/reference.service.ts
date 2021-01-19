@@ -14,22 +14,6 @@ export class ReferenceService {
     private referenceRepository: Repository<Reference>
   ) {}
 
-  convertReferences(newReferences: ReferenceInput[]): IReference[] {
-    const references = [];
-    if (newReferences) {
-      for (const referenceData of newReferences) {
-        const newRef = new Reference(
-          referenceData.name,
-          referenceData.uri || '',
-          referenceData.description
-        );
-        references.push(newRef);
-      }
-    }
-
-    return references;
-  }
-
   async createReference(referenceInput: ReferenceInput): Promise<IReference> {
     const reference = new Reference(
       referenceInput.name,
@@ -44,11 +28,9 @@ export class ReferenceService {
     reference: IReference,
     referenceData: ReferenceInput
   ): Promise<IReference> {
-    // Copy over the received data
+    // Copy over the received data if a uri is supplied
     if (referenceData.uri) {
       reference.uri = referenceData.uri;
-    } else {
-      reference.uri = '';
     }
 
     if (referenceData.description) {
@@ -62,17 +44,20 @@ export class ReferenceService {
     return updatedReference;
   }
 
-  async getReference(referenceID: number): Promise<IReference | undefined> {
-    return await this.referenceRepository.findOne({ id: referenceID });
-  }
-
-  async removeReference(referenceID: number): Promise<boolean> {
-    const reference = await this.getReference(referenceID);
+  async getReferenceOrFail(referenceID: number): Promise<IReference> {
+    const reference = await this.referenceRepository.findOne({
+      id: referenceID,
+    });
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate reference with the specified ID: ${referenceID}`,
         LogContext.CHALLENGES
       );
+    return reference;
+  }
+
+  async removeReference(referenceID: number): Promise<boolean> {
+    await this.getReferenceOrFail(referenceID);
     await this.referenceRepository.delete(referenceID);
     return true;
   }
@@ -82,19 +67,14 @@ export class ReferenceService {
     referenceDTOs: ReferenceInput[]
   ) {
     for (const referenceDTO of referenceDTOs) {
-      if (!references.some(({ name }) => name === referenceDTO.name))
-        references.push(
-          new Reference(
-            referenceDTO.name,
-            referenceDTO.uri || '',
-            referenceDTO?.description
-          )
-        );
-      else {
-        const reference = await references.find(
-          e => e.name === referenceDTO.name
-        );
-        await this.updateReference(reference as IReference, referenceDTO);
+      const existingReference = await references.find(
+        e => e.name === referenceDTO.name
+      );
+      if (!existingReference) {
+        const reference = await this.createReference(referenceDTO);
+        references.push(reference);
+      } else {
+        await this.updateReference(existingReference, referenceDTO);
       }
     }
   }
