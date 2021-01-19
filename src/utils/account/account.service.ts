@@ -77,12 +77,8 @@ export class AccountService {
     userID: number,
     password: string
   ): Promise<boolean> {
-    const user = await this.userService.getUserByID(userID);
-    if (!user)
-      throw new AccountException(
-        `Unable to locate user: ${userID}`,
-        LogContext.COMMUNITY
-      );
+    const user = await this.userService.getUserByIdOrFail(userID);
+
     const userData = new UserInput();
     userData.accountUpn = user.accountUpn;
     userData.aadPassword = password;

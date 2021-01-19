@@ -53,7 +53,7 @@ describe('Remove user', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      `Could not locate specified user: ${userId}`
+      `Unable to find user with given ID: ${userId}`
     );
   });
 
@@ -64,7 +64,7 @@ describe('Remove user', () => {
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'Could not locate specified user: 77777'
+      'Unable to find user with given ID: 77777'
     );
   });
 
@@ -89,7 +89,7 @@ describe('Remove user', () => {
     // Assert
     expect(responseQueryResult.status).toBe(200);
     expect(responseQueryResult.text).toContain(
-      `Unable to locate user with given id: ${userId}`
+      `Unable to find user with given ID: ${userId}`
     );
   });
 });

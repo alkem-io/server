@@ -83,13 +83,7 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async user(@Args('ID') id: string): Promise<IUser> {
-    const user = await this.userService.getUser(id);
-    if (user) return user;
-
-    throw new EntityNotFoundException(
-      `Unable to locate user with given id: ${id}`,
-      LogContext.COMMUNITY
-    );
+    return await this.userService.getUserOrFail(id);
   }
 
   @Roles(RestrictedGroupNames.Members)
@@ -141,8 +135,8 @@ export class EcoverseResolverQueries {
       'The user group with the specified id anywhere in the ecoverse',
   })
   @Profiling.api
-  async group(@Args('ID') id: number): Promise<IUserGroup | undefined> {
-    const group = await this.groupService.getGroupByID(id, {
+  async group(@Args('ID') id: number): Promise<IUserGroup> {
+    const group = await this.groupService.getUserGroupOrFail(id, {
       relations: ['members', 'focalPoint'],
     });
     return group;
