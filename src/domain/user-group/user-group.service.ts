@@ -67,14 +67,7 @@ export class UserGroupService {
     checkForRestricted = false
   ): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const group = await this.groupRepository.findOne({
-      where: { id: groupID },
-    });
-    if (!group)
-      throw new EntityNotFoundException(
-        `Not able to locate User Group with the specified ID: ${group}`,
-        LogContext.COMMUNITY
-      );
+    const group = (await this.getUserGroupOrFail(groupID)) as UserGroup;
 
     // Cannot remove restricted groups
     if (checkForRestricted && (await this.isRestricted(group)))
@@ -92,19 +85,13 @@ export class UserGroupService {
     groupID: number,
     userGroupInput: UserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.groupRepository.findOne({
-      where: { id: groupID },
-    });
-    if (!group)
-      throw new EntityNotFoundException(
-        `Unable to update User Group with ID: ${groupID}`,
-        LogContext.COMMUNITY
-      );
+    const group = await this.getUserGroupOrFail(groupID);
+
     // Cannot rename restricted groups
     const newName = userGroupInput.name;
     if (newName && newName.length > 0 && newName !== group.name) {
       // group being renamed; check if allowed
-      if (await this.isRestricted(group)) {
+      if (await this.isRestricted(group as UserGroup)) {
         throw new ValidationException(
           `Unable to rename User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
           LogContext.COMMUNITY
@@ -123,12 +110,7 @@ export class UserGroupService {
       );
     }
 
-    const populatedUserGroup = await this.getGroupByID(group.id);
-    if (!populatedUserGroup)
-      throw new EntityNotFoundException(
-        `Unable to get User Group by id: ${group.id}`,
-        LogContext.COMMUNITY
-      );
+    const populatedUserGroup = await this.getUserGroupOrFail(group.id);
 
     return populatedUserGroup;
   }
@@ -142,10 +124,9 @@ export class UserGroupService {
   }
 
   async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
-    const groupWithParent = await this.groupRepository.findOne({
-      where: { id: group.id },
+    const groupWithParent = (await this.getUserGroupOrFail(group.id, {
       relations: ['ecoverse', 'challenge', 'organisation', 'opportunity'],
-    });
+    })) as UserGroup;
     if (groupWithParent?.ecoverse) return groupWithParent?.ecoverse;
     if (groupWithParent?.challenge) return groupWithParent?.challenge;
     if (groupWithParent?.opportunity) return groupWithParent?.opportunity;
@@ -187,21 +168,8 @@ export class UserGroupService {
 
   async assignFocalPoint(userID: number, groupID: number): Promise<IUserGroup> {
     // Try to find the user + group
-    const user = await this.userService.getUserByID(userID);
-    if (!user) {
-      throw new ValidationException(
-        `Unable to find exactly one user with ID: ${userID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    const group = await this.getGroupByID(groupID);
-    if (!group) {
-      throw new EntityNotFoundException(
-        `Unable to find group with ID: ${groupID}`,
-        LogContext.COMMUNITY
-      );
-    }
+    const user = await this.userService.getUserByIdOrFail(userID);
+    const group = await this.getUserGroupOrFail(groupID);
 
     // Add the user to the group if not already a member
     await this.addUserToGroup(user, group);
@@ -213,17 +181,12 @@ export class UserGroupService {
     return group;
   }
 
-  async getGroupByID(
+  async getUserGroupOrFail(
     groupID: number,
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
     //const t1 = performance.now()
-    const group = await this.groupRepository.findOne(
-      {
-        id: groupID,
-      },
-      options
-    );
+    const group = await this.groupRepository.findOne({ id: groupID }, options);
     if (!group)
       throw new EntityNotFoundException(
         `Unable to find group with ID: ${groupID}`,
@@ -233,33 +196,16 @@ export class UserGroupService {
   }
 
   async addUser(userID: number, groupID: number): Promise<boolean> {
-    const user = await this.userService.getUserByID(userID);
-    if (!user)
-      throw new EntityNotFoundException(
-        `No user with id ${userID} was found!`,
-        LogContext.COMMUNITY
-      );
+    const user = await this.userService.getUserByIdOrFail(userID);
 
-    const group = await this.getGroupByID(groupID);
-    if (!group)
-      throw new EntityNotFoundException(
-        `No group with id ${groupID} was found!`,
-        LogContext.COMMUNITY
-      );
+    const group = await this.getUserGroupOrFail(groupID);
+
     return await this.addUserToGroup(user, group);
   }
 
   async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
-    if (!(await this.userService.userExists(undefined, userID)))
-      throw new EntityNotFoundException(
-        `No user with id ${userID} found!`,
-        LogContext.COMMUNITY
-      );
-    if (!(await this.groupExists(groupID)))
-      throw new EntityNotFoundException(
-        `No group with id ${groupID} found!`,
-        LogContext.COMMUNITY
-      );
+    await this.userService.getUserByIdOrFail(userID);
+    await this.getUserGroupOrFail(groupID);
 
     const userGroup = await this.groupRepository.findOne({
       where: { members: { id: userID }, id: groupID },
@@ -270,12 +216,6 @@ export class UserGroupService {
     if (!members || members.length === 0) return false;
 
     return true;
-  }
-
-  async groupExists(groupID: number): Promise<boolean> {
-    const group = await this.groupRepository.findOne({ id: groupID });
-    if (group) return true;
-    else return false;
   }
 
   async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
@@ -313,24 +253,12 @@ export class UserGroupService {
 
   async removeUser(userID: number, groupID: number): Promise<IUserGroup> {
     // Try to find the user + group
-    const user = await this.userService.getUserByID(userID);
-    if (!user) {
-      throw new ValidationException(
-        `Unable to find exactly one user with ID: ${userID}`,
-        LogContext.COMMUNITY
-      );
-    }
+    const user = await this.userService.getUserByIdOrFail(userID);
 
     // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
-    const group = await this.getGroupByID(groupID, {
+    const group = await this.getUserGroupOrFail(groupID, {
       relations: ['members', 'ecoverse'],
     });
-    if (!group) {
-      throw new EntityNotFoundException(
-        `Unable to find group with ID: ${groupID}`,
-        LogContext.COMMUNITY
-      );
-    }
 
     // Check that the group being removed from is not the ecoverse members group, would leave the ecoverse in an inconsistent state
     if (group.name === RestrictedGroupNames.Members) {
@@ -371,13 +299,7 @@ export class UserGroupService {
   }
 
   async removeFocalPoint(groupID: number): Promise<IUserGroup> {
-    const group = await this.getGroupByID(groupID);
-    if (!group) {
-      throw new EntityNotFoundException(
-        `Unable to find group with ID: ${groupID}`,
-        LogContext.COMMUNITY
-      );
-    }
+    const group = await this.getUserGroupOrFail(groupID);
     // Set focalPoint to NULL will remove the relation.
     // For typeorm 'undefined' means - 'Not changed'
     // More information: https://github.com/typeorm/typeorm/issues/5454
@@ -522,8 +444,7 @@ export class UserGroupService {
   }
 
   async getMembers(groupID: number): Promise<IUser[]> {
-    const group = await this.groupRepository.findOne({
-      where: { id: groupID },
+    const group = await this.getUserGroupOrFail(groupID, {
       relations: ['members', 'profile'],
     });
     return group?.members as IUser[];

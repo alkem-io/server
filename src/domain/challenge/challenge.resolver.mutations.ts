@@ -16,6 +16,7 @@ import { OpportunityInput } from '@domain/opportunity/opportunity.dto';
 import { Opportunity } from '@domain/opportunity/opportunity.entity';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { IOpportunity } from '@domain/opportunity/opportunity.interface';
+import { UpdateChallengeInput } from './update.challenge.dto';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -67,11 +68,9 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async updateChallenge(
-    @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
-    @Args('challengeData') challengeData: ChallengeInput
+    @Args('challengeData') challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.updateChallenge(
-      challengeID,
       challengeData
     );
     return challenge;

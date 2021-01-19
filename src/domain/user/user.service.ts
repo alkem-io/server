@@ -13,7 +13,8 @@ import { MemberOf } from './memberof.composite';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
-
+import validator from 'validator';
+@Injectable()
 @Injectable()
 export class UserService {
   constructor(
@@ -43,12 +44,7 @@ export class UserService {
       await this.profileService.updateProfile(user.profile.id, profileData);
     }
     // reload the user to get it populated
-    const populatedUser = await this.getUserByID(user.id);
-    if (!populatedUser)
-      throw new EntityNotFoundException(
-        `Unable to locate user: ${user.id}`,
-        LogContext.COMMUNITY
-      );
+    const populatedUser = await this.getUserByIdOrFail(user.id);
 
     this.logger.verbose?.(
       `User ${userData.email} was created!`,
@@ -69,20 +65,26 @@ export class UserService {
   }
 
   //Find a user either by id or email
-  //toDo - review that
-  async getUser(userID: string): Promise<IUser | undefined> {
-    const idInt: number = parseInt(userID);
-    if (!isNaN(idInt)) {
-      const user = await this.getUserByID(idInt);
-      if (user) return user;
+  async getUserOrFail(userID: string): Promise<IUser> {
+    if (validator.isNumeric(userID)) {
+      const idInt: number = parseInt(userID);
+      return await this.getUserByIdOrFail(idInt);
     }
 
-    const user = await this.getUserByEmail(userID);
-    if (user) return user;
+    return await this.getUserByEmailOrFail(userID);
   }
 
-  async getUserByID(userID: number): Promise<IUser | undefined> {
-    return await this.userRepository.findOne({ id: userID });
+  async getUserByIdOrFail(
+    userID: number,
+    options?: FindOneOptions<User>
+  ): Promise<IUser> {
+    const user = await this.userRepository.findOne({ id: userID }, options);
+    if (!user)
+      throw new EntityNotFoundException(
+        `Unable to find user with given ID: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    return user;
   }
 
   async getUserByEmail(
@@ -92,18 +94,23 @@ export class UserService {
     return await this.userRepository.findOne({ email: email }, options);
   }
 
-  async findUser(
-    conditions?: FindConditions<User>,
+  async getUserByEmailOrFail(
+    email: string,
     options?: FindOneOptions<User>
-  ): Promise<IUser | undefined> {
-    return await this.userRepository.findOne(conditions, options);
+  ): Promise<IUser> {
+    const user = await this.getUserByEmail(email, options);
+    if (!user)
+      throw new EntityNotFoundException(
+        `Unable to find user with given email: ${email}`,
+        LogContext.COMMUNITY
+      );
+    return user;
   }
 
   async getUserWithGroups(email: string): Promise<IUser | undefined> {
-    const user = await this.userRepository.findOne(
-      { email: email },
-      { relations: ['userGroups'] }
-    );
+    const user = await this.getUserByEmail(email, {
+      relations: ['userGroups'],
+    });
 
     if (!user) {
       this.logger.verbose?.(
@@ -147,20 +154,6 @@ export class UserService {
     }
 
     return user;
-  }
-
-  async userExists(email?: string, id?: number): Promise<boolean> {
-    if (email) {
-      if (await this.getUserByEmail(email)) return true;
-      else return false;
-    } else if (id) {
-      if (await this.getUserByID(id)) return true;
-      else return false;
-    } else
-      throw new ValidationException(
-        'No email or id provided!',
-        LogContext.COMMUNITY
-      );
   }
 
   async getMemberOf(user: User): Promise<MemberOf> {
@@ -274,12 +267,8 @@ export class UserService {
 
   // Note: explicitly do not support updating of email addresses
   async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
-    const user = await this.getUserByID(userID);
-    if (!user)
-      throw new EntityNotFoundException(
-        `Unable to update user with ID: ${userID}`,
-        LogContext.COMMUNITY
-      );
+    const user = await this.getUserByIdOrFail(userID);
+
     // Convert the data to json
     if (userInput.name) {
       user.name = userInput.name;
@@ -323,12 +312,7 @@ export class UserService {
       );
     }
 
-    const populatedUser = await this.getUserByID(user.id);
-    if (!populatedUser)
-      throw new EntityNotFoundException(
-        `Unable to get user by id: ${user.id}`,
-        LogContext.COMMUNITY
-      );
+    const populatedUser = await this.getUserByIdOrFail(user.id);
 
     return populatedUser;
   }

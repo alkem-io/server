@@ -58,17 +58,19 @@ export class RelationService {
     return true;
   }
 
-  async getRelation(relationID: number): Promise<IRelation | undefined> {
-    return await this.relationRepository.findOne({ id: relationID });
-  }
-
-  async removeRelation(relationID: number): Promise<boolean> {
-    const relation = await this.getRelation(relationID);
+  async getRelationOrFail(relationID: number): Promise<IRelation> {
+    const relation = await this.relationRepository.findOne({ id: relationID });
     if (!relation)
       throw new EntityNotFoundException(
         `Not able to locate relation with the specified ID: ${relationID}`,
         LogContext.CHALLENGES
       );
+    return relation;
+  }
+
+  async removeRelation(relationID: number): Promise<boolean> {
+    await this.getRelationOrFail(relationID);
+
     await this.relationRepository.delete(relationID);
     return true;
   }

@@ -48,8 +48,8 @@ const updateOrganisationVariabls = `
   }`;
 
 const updateChallengeMutation = `  
-mutation UpdateChallenge($challengeID: Float! $challengeData: ChallengeInput!) {
-    updateChallenge(challengeID: $challengeID, challengeData: $challengeData) {
+mutation updateChallenge($challengeData: UpdateChallengeInput!) {
+    updateChallenge(challengeData: $challengeData) {
       name,
       id
     }
@@ -57,9 +57,10 @@ mutation UpdateChallenge($challengeID: Float! $challengeData: ChallengeInput!) {
 
 const updateChallengeVariables = `
 {
-    "challengeID": 1,
+    
     "challengeData":
           {
+            "ID": 1,
             "name": "Challenge with better name"                
           }
   }`;
