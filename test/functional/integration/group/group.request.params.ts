@@ -45,6 +45,31 @@ export const createGroupOnChallengeMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+
+export const createGroupOnOpportunityMutation = async (
+  testGroup: string,
+  opportunityId: any
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation createGroupOnOpportunity($groupName: String!, $opportunityID: Float!) {
+      createGroupOnOpportunity(groupName: $groupName, opportunityID: $opportunityID) {
+        name,
+        id
+        members {
+          name
+        }
+      }
+    }`,
+    variables: {
+      opportunityID: parseFloat(opportunityId),
+      groupName: testGroup,
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
 export const getGroups = async () => {
   const requestParams = {
     operationName: null,

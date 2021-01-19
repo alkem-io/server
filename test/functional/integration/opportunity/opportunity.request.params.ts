@@ -1,12 +1,11 @@
-import { graphqlRequestAuth } from "../../../utils/graphql.request";
-import { TestUser } from "../../../utils/token.helper";
-
-
+import { graphqlRequestAuth } from '../../../utils/graphql.request';
+import { TestUser } from '../../../utils/token.helper';
 
 export const createOpportunityOnChallengeMutation = async (
   challengeId: string,
   oppName: string,
-  oppTextId: string
+  oppTextId: string,
+  contextTagline?: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -30,6 +29,7 @@ export const createOpportunityOnChallengeMutation = async (
             description
           }
         }
+        contributors{id }
       }
     }`,
     variables: {
@@ -41,7 +41,7 @@ export const createOpportunityOnChallengeMutation = async (
         context: {
           background: 'test background',
           vision: 'test vision',
-          tagline: 'test tagline',
+          tagline: `${contextTagline}`,
           who: 'test who',
           impact: 'test impact',
           references: {
@@ -82,6 +82,7 @@ export const updateOpportunityOnChallengeMutation = async (
             description
           }
         }
+        contributors{id }
       }
     }`,
     variables: {
@@ -127,7 +128,7 @@ export const addUserToOpportunityMutation = async (
     }`,
     variables: {
       userID: parseFloat(userId),
-      opportunityID: parseFloat(opportunityId)
+      opportunityID: parseFloat(opportunityId),
     },
   };
 
@@ -171,6 +172,7 @@ export const queryOpportunity = async (opportunityId: any) => {
             description
           }
         }
+        contributors{id }
       }
     }`,
   };
@@ -208,13 +210,83 @@ export const queryOpportunities = async () => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-
 export const queryOpportunityGroups = async (opportunityId: any) => {
   const requestParams = {
     operationName: null,
     query: `query {
       opportunity(ID: ${parseFloat(opportunityId)}) {
         groups{id name members{id name}}
+      }
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const queryOpportunitySubEntities = async (opportunityId: any) => {
+  const requestParams = {
+    operationName: null,
+    query: `query {
+      opportunity(ID: ${parseFloat(opportunityId)}) {
+        aspects {
+          
+          title
+        }
+        projects {
+          
+          name
+        }
+        actorGroups {
+          
+          name
+        }
+        relations {
+          
+          actorName
+        }
+        groups {
+          
+          name
+        }
+        context{
+          
+          tagline
+        }
+      }
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+export const queryOpportunitiesSubEntities = async () => {
+  const requestParams = {
+    operationName: null,
+    query: `query {
+      opportunities {
+        aspects {
+          
+          title
+        }
+        projects {
+          
+          name
+        }
+        actorGroups {
+          
+          name
+        }
+        relations {
+          
+          actorName
+        }
+        groups {
+          
+          name
+        }
+        context{
+          
+          tagline
+        }
       }
     }`,
   };

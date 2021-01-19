@@ -32,3 +32,17 @@ export const createProjectMutation = async (
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
+
+export const removeProjectMutation = async (projectId: any) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation removeProject($ID: Float!) {
+      removeProject(ID: $ID)
+    }`,
+    variables: {
+      ID: parseFloat(projectId),
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
