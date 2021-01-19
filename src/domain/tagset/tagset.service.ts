@@ -40,18 +40,19 @@ export class TagsetService {
     return tagset;
   }
 
-  async getTagset(tagsetID: number): Promise<ITagset | undefined> {
-    return Tagset.findOne({ id: tagsetID });
-  }
-
-  async replaceTags(tagsetID: number, newTags: string[]): Promise<ITagset> {
-    const tagset = await this.getTagset(tagsetID);
-
+  async getTagsetOrFail(tagsetID: number): Promise<ITagset> {
+    const tagset = await this.tagsetRepository.findOne({ id: tagsetID });
     if (!tagset)
       throw new EntityNotFoundException(
         `Tagset with id(${tagsetID}) not found!`,
         LogContext.COMMUNITY
       );
+    return tagset as ITagset;
+  }
+
+  async replaceTags(tagsetID: number, newTags: string[]): Promise<ITagset> {
+    const tagset = await this.getTagsetOrFail(tagsetID);
+
     if (!newTags)
       throw new ValidationException(
         `Unable to replace tags on tagset(${tagsetID}`,
@@ -98,13 +99,8 @@ export class TagsetService {
   }
 
   async addTag(tagsetID: number, newTag: string): Promise<ITagset> {
-    const tagset = await this.getTagset(tagsetID);
+    const tagset = await this.getTagsetOrFail(tagsetID);
 
-    if (!tagset)
-      throw new EntityNotFoundException(
-        `Tagset with id(${tagsetID}) not found!`,
-        LogContext.COMMUNITY
-      );
     if (!tagset.tags)
       throw new EntityNotInitializedException(
         `Tagset with id(${tagsetID}) not initialised!`,

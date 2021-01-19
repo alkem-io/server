@@ -27,30 +27,26 @@ export class AspectService {
   }
 
   async removeAspect(aspectID: number): Promise<boolean> {
-    const aspect = await this.getAspect(aspectID);
+    await this.getAspectOrFail(aspectID);
+    await this.aspectRepository.delete(aspectID);
+    return true;
+  }
+
+  async getAspectOrFail(aspectID: number): Promise<IAspect> {
+    const aspect = await this.aspectRepository.findOne({ id: aspectID });
     if (!aspect)
       throw new EntityNotFoundException(
         `Not able to locate aspect with the specified ID: ${aspectID}`,
         LogContext.CHALLENGES
       );
-    await this.aspectRepository.delete(aspectID);
-    return true;
-  }
-
-  async getAspect(aspectID: number): Promise<IAspect | undefined> {
-    return await this.aspectRepository.findOne({ id: aspectID });
+    return aspect;
   }
 
   async updateAspect(
     aspectID: number,
     aspectData: AspectInput
   ): Promise<IAspect> {
-    const aspect = await this.getAspect(aspectID);
-    if (!aspect)
-      throw new EntityNotFoundException(
-        `Not able to locate aspect with the specified ID: ${aspectID}`,
-        LogContext.CHALLENGES
-      );
+    const aspect = await this.getAspectOrFail(aspectID);
 
     // Copy over the received data
     if (aspectData.title) {
