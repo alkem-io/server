@@ -216,6 +216,7 @@ describe('Query Challenge data', () => {
     );
     const updatedChallenge = response.body.data.updateChallenge;
 
+
     // Act
     const getChallengeData = await getChallenge(challengeId);
 
