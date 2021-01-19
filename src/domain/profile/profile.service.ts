@@ -104,8 +104,12 @@ export class ProfileService {
   ): Promise<boolean> {
     const profile = await this.getProfileOrFail(profileID);
 
-    profile.avatar = profileData.avatar;
-    profile.description = profileData.description;
+    if (profileData.avatar) {
+      profile.avatar = profileData.avatar;
+    }
+    if (profileData.description) {
+      profile.description = profileData.description;
+    }
 
     // Iterate over the tagsets
     const tagsetsData = profileData.tagsetsData;
