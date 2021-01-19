@@ -61,7 +61,7 @@ beforeEach(async () => {
 describe('Aspect', () => {
   test('should create aspect on opportunity', async () => {
     // Act
-    // Create Actor group
+    // Create Aspect on opportunity group
     const createAspectResponse = await createAspectOnOpportunityMutation(
       opportunityId,
       aspectTitle,

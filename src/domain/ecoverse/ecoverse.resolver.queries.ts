@@ -160,8 +160,8 @@ export class EcoverseResolverQueries {
     description: 'A particular challenge',
   })
   @Profiling.api
-  async challenge(@Args('ID') id: number): Promise<IChallenge | undefined> {
-    return await this.challengeService.getChallengeByID(id);
+  async challenge(@Args('ID') id: number): Promise<IChallenge> {
+    return await this.challengeService.getChallengeOrFail(id);
   }
 
   @Query(() => [Organisation], {
@@ -182,7 +182,9 @@ export class EcoverseResolverQueries {
   async organisation(
     @Args('ID') id: number
   ): Promise<IOrganisation | undefined> {
-    return await this.organisationService.getOrganisationByID(id);
+    return await this.organisationService.getOrganisationOrFail(id, {
+      relations: ['groups'],
+    });
   }
 
   @Query(() => Tagset, {
