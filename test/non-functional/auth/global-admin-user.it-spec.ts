@@ -173,7 +173,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT community admin user - queries - authorized', () => {
+describe('DDT global admin user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                 | expected

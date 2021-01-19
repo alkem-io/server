@@ -78,8 +78,8 @@ export const updateChallangeMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation UpdateChallenge($challengeID: Float! $challengeData: ChallengeInput!) {
-      updateChallenge(challengeID: $challengeID, challengeData: $challengeData) {
+    query: `mutation updateChallenge($challengeData: UpdateChallengeInput!) {
+      updateChallenge(challengeData: $challengeData) {
         name
         id
         textID
@@ -108,8 +108,8 @@ export const updateChallangeMutation = async (
       }
     }`,
     variables: {
-      challengeID: parseFloat(challengeId),
       challengeData: {
+        ID: parseFloat(challengeId),
         name: challengeName,
         state: challengeState,
         context: {
