@@ -49,7 +49,6 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
         '.env.aad.cherrytwist.api.default',
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
-        // '.env.test',
       ],
       isGlobal: true,
       load: [
@@ -98,6 +97,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
       autoSchemaFile: true,
       playground: true,
       fieldResolverEnhancers: ['guards'],
+      sortSchema: true,
     }),
     DataManagementModule,
     BootstrapModule,
