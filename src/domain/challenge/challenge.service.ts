@@ -355,13 +355,7 @@ export class ChallengeService {
 
   async addMember(userID: number, challengeID: number): Promise<IUserGroup> {
     // Try to find the user + group
-    const user = await this.userService.getUserByID(userID);
-    if (!user) {
-      throw new ValidationException(
-        `Unable to find exactly one user with ID: ${userID}`,
-        LogContext.CHALLENGES
-      );
-    }
+    const user = await this.userService.getUserByIdOrFail(userID);
 
     const challenge = await this.getChallengeOrFail(challengeID, {
       relations: ['groups'],
