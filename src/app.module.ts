@@ -97,7 +97,6 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
     GraphQLModule.forRoot({
       autoSchemaFile: true,
       playground: true,
-      sortSchema: true,
       fieldResolverEnhancers: ['guards'],
     }),
     DataManagementModule,
