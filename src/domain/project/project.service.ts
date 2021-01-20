@@ -62,7 +62,7 @@ export class ProjectService {
     const project = await this.projectRepository.findOne({ id: projectID });
     if (!project)
       throw new EntityNotFoundException(
-        `Unable to find Opportunity with ID: ${projectID}`,
+        `Unable to find Project with ID: ${projectID}`,
         LogContext.CHALLENGES
       );
     return project;
