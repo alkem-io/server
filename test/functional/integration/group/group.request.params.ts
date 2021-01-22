@@ -101,3 +101,14 @@ export const getGroup = async (groupId: any) => {
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
+
+export const removeUserGroupMutation = async (groupId: any) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation {
+      removeUserGroup(ID: ${parseFloat(groupId)})
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
