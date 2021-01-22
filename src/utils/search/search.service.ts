@@ -164,6 +164,7 @@ export class SearchService {
       const organisationMatches = await this.organisationRepository
         .createQueryBuilder('organisation')
         .leftJoinAndSelect('organisation.profile', 'profile')
+        .leftJoinAndSelect('organisation.groups', 'groups')
         .where('organisation.name like :term')
         .orWhere('profile.description like :term')
         .setParameters({ term: `%${term}%` })
