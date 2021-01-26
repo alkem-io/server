@@ -288,27 +288,19 @@ describe('Groups', () => {
   });
 
   test('should get groups parent challenge', async () => {
-    // Act
-    console.log(organisationId);
+    // Arrange
 
-    // Create organisation group
+    // Create challenge group
     const responseCreateGroupeOnChallenge = await createGroupOnChallengeMutation(
       challengeName,
       challengeId
     );
-    console.log(responseCreateGroupeOnChallenge.body);
     const challengeGroupId =
       responseCreateGroupeOnChallenge.body.data.createGroupOnChallenge.id;
 
+      // Act
     let groupParent = await getGroupParent(challengeGroupId);
 
-    console.log(groupParent.body.data.group.parent);
-    //  let groupsData = await getGroups();
-
-    // Assert
-    // expect(groupData.body.data.group.id).toEqual(
-    //   responseCreateGroupOnEcoverse.body.data.createGroupOnEcoverse.id
-    // );
     expect(groupParent.body.data.group.parent).not.toContainObject({
       __typename: 'Ecoverse',
       id: '1',
@@ -327,16 +319,11 @@ describe('Groups', () => {
     expect(groupParent.body.data.group.parent).not.toContainObject({
       __typename: 'Opportunity',
     });
-
-    // expect(groupsData.body.data.groups).toContainObject({
-    //   id: `${ecoverseGroupId}`,
-    //   name: `${groupName}`,
-    // });
   });
 
   test('should get groups parent opportunity', async () => {
     // Arrange
-    // Create organisation group
+    // Create opportunity group
     const responseCreateGroupeOnOpportunity = await createGroupOnOpportunityMutation(
       opportunityName,
       opportunityId
