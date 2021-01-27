@@ -39,6 +39,7 @@ import { MetadataModule } from '@utils/metadata/metadata.module';
 import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
+import { AuthService } from '@utils/authentication/auth.service';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
         '.env.aad.cherrytwist.api.default',
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
+        '.env.oidc.default',
       ],
       isGlobal: true,
       load: [
@@ -119,6 +121,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    AuthService,
   ],
 })
 export class AppModule {}
