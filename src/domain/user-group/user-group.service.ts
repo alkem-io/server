@@ -96,6 +96,13 @@ export class UserGroupService {
           `Unable to rename User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
           LogContext.COMMUNITY
         );
+      } else if (
+        await this.isRestrictedGroupName(group as UserGroup, newName)
+      ) {
+        throw new ValidationException(
+          `Unable to rename User Group with the specified ID: ${group.id}; new name is a restricted name: ${newName}`,
+          LogContext.COMMUNITY
+        );
       } else {
         group.name = newName;
         await this.groupRepository.save(group);
@@ -116,8 +123,15 @@ export class UserGroupService {
   }
 
   async isRestricted(group: UserGroup): Promise<boolean> {
+    return await this.isRestrictedGroupName(group, group.name);
+  }
+
+  async isRestrictedGroupName(
+    group: UserGroup,
+    groupName: string
+  ): Promise<boolean> {
     const parent: IGroupable = await this.getParent(group);
-    if (parent.restrictedGroupNames?.includes(group.name)) {
+    if (parent.restrictedGroupNames?.includes(groupName)) {
       return true;
     }
     return false;
