@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindConditions, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   NotSupportedException,
@@ -162,6 +162,7 @@ export class UserService {
       .leftJoinAndSelect('user.userGroups', 'userGroup')
       .leftJoinAndSelect('userGroup.ecoverse', 'ecoverse')
       .leftJoinAndSelect('userGroup.challenge', 'challenge')
+      .leftJoinAndSelect('userGroup.opportunity', 'opportunity')
       .leftJoinAndSelect('userGroup.organisation', 'organisation')
       .where('user.id = :userId')
       .setParameters({ userId: `${user.id}` })
@@ -170,6 +171,7 @@ export class UserService {
     const memberOf = new MemberOf();
     memberOf.groups = [];
     memberOf.challenges = [];
+    memberOf.opportunities = [];
     memberOf.organisations = [];
 
     if (!membership) return memberOf;
@@ -181,6 +183,7 @@ export class UserService {
       group.membersPopulationEnabled = false;
       const ecoverse = group.ecoverse;
       const challenge = group.challenge;
+      const opportunity = group.opportunity;
       const organisation = group.organisation;
 
       if (ecoverse) {
@@ -190,6 +193,10 @@ export class UserService {
       if (challenge) {
         // challenge group
         memberOf.challenges.push(challenge);
+      }
+      if (opportunity) {
+        // challenge group
+        memberOf.opportunities.push(opportunity);
       }
       if (organisation) {
         // challenge group
@@ -210,12 +217,22 @@ export class UserService {
     }
 
     // Also need to only return the groups that the user is a member of
+    for (const opportunity of memberOf.opportunities) {
+      opportunity.groups = [];
+      // add back in the groups for this challenge
+      for (const group of membership?.userGroups) {
+        if (group.opportunity) {
+          opportunity.groups?.push(group);
+        }
+      }
+    }
+
+    // Also need to only return the groups that the user is a member of
     for (const organisation of memberOf.organisations) {
       organisation.groups = [];
       // add back in the groups for this challenge
       for (const group of membership?.userGroups) {
         if (group.challenge) {
-          // challenge group
           organisation.groups?.push(group);
         }
       }
