@@ -282,6 +282,11 @@ export class UserService {
     return result;
   }
 
+  async updateUserByEmail(email: string, userInput: UserInput): Promise<IUser> {
+    const user = await this.getUserByEmailOrFail(email);
+    return this.updateUser(user.id, userInput);
+  }
+
   // Note: explicitly do not support updating of email addresses
   async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userID);

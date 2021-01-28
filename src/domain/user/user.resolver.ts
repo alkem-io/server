@@ -50,4 +50,23 @@ export class UserResolver {
     const user = await this.userService.getUserByEmail(email);
     return user as IUser;
   }
+
+  @Roles(RestrictedGroupNames.Members)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => User, {
+    description: 'Update user profile.',
+  })
+  @Profiling.api
+  async updateMyProfile(
+    @Args('userData') userData: UserInput,
+    @CurrentUser() email?: string
+  ): Promise<IUser> {
+    if (!email) throw new AuthenticationException('User not authenticated!');
+    if (email !== userData.email)
+      throw new AuthenticationException(
+        'You are not allowed to update others profile!'
+      );
+    const user = await this.userService.updateUserByEmail(email, userData);
+    return user;
+  }
 }
