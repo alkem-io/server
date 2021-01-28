@@ -8,13 +8,13 @@ import {
   TokenError,
 } from '@cmdbg/tokenator';
 import { TokenException } from '../error-handling/exceptions';
-import { OidcStrategy } from './oidc.strategy';
+import { AuthService } from './auth.service';
 
 @Injectable()
 export class AadOboStrategy implements AuthenticationProvider {
   constructor(
     private configService: ConfigService,
-    private oidcStrategy: OidcStrategy
+    private authService: AuthService
   ) {}
 
   async getAccessToken(): Promise<string> {
@@ -22,7 +22,7 @@ export class AadOboStrategy implements AuthenticationProvider {
       () => this.configService.get<AuthConfig>('aad_obo') as AuthConfig
     );
 
-    const upstreamAccessToken = await this.oidcStrategy.getCachedBearerToken();
+    const upstreamAccessToken = await this.authService.getCachedBearerToken();
 
     if (!upstreamAccessToken)
       throw new TokenException(

@@ -40,6 +40,8 @@ import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
 import { AuthService } from '@utils/authentication/auth.service';
+import { OidcStrategy } from '@utils/authentication/oidc.strategy';
+import oidcConfig from '@config/oidc.config';
 
 @Module({
   imports: [
@@ -62,6 +64,7 @@ import { AuthService } from '@utils/authentication/auth.service';
         loggingConfig,
         aadRopcConfig,
         aadOboConfig,
+        oidcConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({
@@ -121,6 +124,7 @@ import { AuthService } from '@utils/authentication/auth.service';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    OidcStrategy,
     AuthService,
   ],
 })
