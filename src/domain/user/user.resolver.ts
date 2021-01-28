@@ -64,7 +64,7 @@ export class UserResolver {
     if (!email) throw new AuthenticationException('User not authenticated!');
     if (email !== userData.email)
       throw new AuthenticationException(
-        `Unable to update Profie: current user email (${email}) does not match email provided: ${userData.email}`
+        `Unable to update Profile: current user email (${email}) does not match email provided: ${userData.email}`
       );
     const user = await this.userService.updateUserByEmail(email, userData);
     return user;
