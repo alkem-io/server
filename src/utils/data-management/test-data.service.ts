@@ -21,6 +21,15 @@ import { DataManagementService } from './data-management.service';
 export type TestDataServiceInitResult = {
   challengeId: number;
   opportunityId: number;
+  projectId: number;
+  aspectId: number;
+  aspectOnProjectId: number;
+  relationId: number;
+  addUserToOpportunityId: number;
+  createGroupOnChallengeId: number;
+  assignGroupFocalPointId: number;
+  actorGroupId: number;
+  actorId: number;
 };
 
 @Injectable()
@@ -200,72 +209,100 @@ export class TestDataService {
     return response.id;
   }
 
-  async initProject() {
+  async initProject(opportunityId: number): Promise<number> {
     const project = new ProjectInput();
     project.name = 'init project name';
     project.state = 'init project state';
     project.textID = 'init-project';
     project.description = 'init project description';
-    await this.opportunityService.createProject(1, project);
+    const response = await this.opportunityService.createProject(
+      opportunityId,
+      project
+    );
+    return response.id;
   }
 
-  async initAspect() {
+  async initAspect(opportunityId: number): Promise<number> {
     const aspect = new AspectInput();
     aspect.explanation = 'init aspect explanation';
     aspect.framing = 'init aspect framing';
     aspect.title = 'init aspect title';
-    await this.opportunityService.createAspect(1, aspect);
+    const response = await this.opportunityService.createAspect(
+      opportunityId,
+      aspect
+    );
+    return response.id;
   }
 
-  async initAspectOnProject() {
+  async initAspectOnProject(projectId: number): Promise<number> {
     const aspect = new AspectInput();
     aspect.explanation = 'init project aspect explanation';
     aspect.framing = 'init project aspect framing';
     aspect.title = 'init project aspect title';
-    await this.projectService.createAspect(1, aspect);
+    const response = await this.projectService.createAspect(projectId, aspect);
+    return response.id;
   }
 
-  async initRelation() {
+  async initRelation(opportunityId: number): Promise<number> {
     const relation = new RelationInput();
     relation.actorName = 'init relation actor name';
     relation.actorRole = 'init relation actor role';
     relation.actorType = 'init relation actor type';
     relation.description = 'init relation description';
     relation.type = 'incoming';
-    await this.opportunityService.createRelation(1, relation);
+    const response = await this.opportunityService.createRelation(
+      opportunityId,
+      relation
+    );
+    return response.id;
   }
 
-  async initAddUserToOpportunity() {
+  async initAddUserToOpportunity(opportunityId: number): Promise<number> {
     const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as IUser;
-    await this.opportunityService.addMember(createdTestUser?.id, 1);
+    const response = await this.opportunityService.addMember(
+      createdTestUser?.id,
+      opportunityId
+    );
+    return response.id;
   }
 
   async initAddChallengeLead(challengeId: number) {
     await this.challengeService.addChallengeLead(challengeId, 1);
   }
 
-  async initCreateGroupOnEcoverse() {
-    await this.ecoverseService.createGroup('ecoverseTestGroup');
+  async initCreateGroupOnEcoverse(): Promise<number> {
+    const response = await this.ecoverseService.createGroup(
+      'ecoverseTestGroup'
+    );
+    return response.id;
   }
 
-  async initCreateGroupOnChallenge() {
-    await this.challengeService.createGroup(4, 'challengeTestGroup');
+  async initCreateGroupOnChallenge(challengeId: number): Promise<number> {
+    const response = await this.challengeService.createGroup(
+      challengeId,
+      'challengeTestGroup'
+    );
+    return response.id;
   }
 
-  async initAssignGroupFocalPoint() {
+  async initAssignGroupFocalPoint(groupId: number): Promise<number> {
     const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as IUser;
-    await this.userGroupService.assignFocalPoint(createdTestUser?.id, 13);
+    const response = await this.userGroupService.assignFocalPoint(
+      createdTestUser?.id,
+      groupId
+    );
+    return response.id;
   }
 
-  async initAddUserToChallengeGroup() {
+  async initAddUserToChallengeGroup(groupId: number) {
     const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as IUser;
-    await this.userGroupService.addUser(createdTestUser?.id, 14);
+    await this.userGroupService.addUser(createdTestUser?.id, groupId);
   }
 
   async initActorGroup(opportunityId: number): Promise<number> {
@@ -279,16 +316,20 @@ export class TestDataService {
     return response.id;
   }
 
-  async initActor(actorGroupId: number) {
+  async initActor(actorGroupId: number): Promise<number> {
     const actorGroup = new ActorInput();
     actorGroup.name = 'init actor name';
     actorGroup.impact = 'init actor impact';
     actorGroup.value = 'init actor value';
     actorGroup.description = 'init actor description';
-    await this.actorGroupService.createActor(actorGroupId, actorGroup);
+    const response = await this.actorGroupService.createActor(
+      actorGroupId,
+      actorGroup
+    );
+    return response.id;
   }
 
-  async initAddAdmin() {
+  async initAddUserToGroup() {
     const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as any;
@@ -296,11 +337,11 @@ export class TestDataService {
     await this.userGroupService.addUserToGroup(createdTestUser?.id, testGroup);
   }
 
-  async teardownRemoveGroupFocalPoint() {
+  async teardownRemoveGroupFocalPoint(groupId: number) {
     const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
     )) as IUser;
-    await this.userGroupService.removeFocalPoint(13);
+    await this.userGroupService.removeFocalPoint(groupId);
   }
 
   async teardownUsers() {
@@ -310,9 +351,9 @@ export class TestDataService {
     await this.ecoverseService.removeUser(createdTestUser?.id);
   }
 
-  async teardownChallenges() {
+  async teardownChallenges(challengeId: number) {
     const challengeToRemove = (await this.challengeService.getChallengeOrFail(
-      1
+      challengeId
     )) as IChallenge;
     await this.challengeService.removeChallenge(challengeToRemove?.id);
   }
@@ -321,33 +362,34 @@ export class TestDataService {
     // await this.initUsers();
     const challengeId = await this.initChallenge();
     const opportunityId = await this.initOpportunity(challengeId);
-    // await this.initProject();
-    // await this.initAspect();
-    // await this.initAspectOnProject();
-    // await this.initRelation();
-    // await this.initActorGroup();
-    // await this.initActor(
-    //   await this.initActorGroup(
-    //     await this.initOpportunityActor(await this.initChallengeActor())
-    //   )
-    // );
-    // // await this.initAddUserToOpportunity();
-    // await this.initAddChallengeLead(await this.initChallengeLeadOrganisation());
-    // await this.initAddChallengeLead(1);
-    // await this.initChallengeDelete();
-    // await this.initCreateGroupOnEcoverse();
-    // await this.initCreateGroupOnChallenge();
-    // await this.initAddUserToChallengeGroup();
-    // await this.initAssignGroupFocalPoint();
+    const projectId = await this.initProject(opportunityId);
+    const aspectId = await this.initAspect(opportunityId);
+    const aspectOnProjectId = await this.initAspectOnProject(projectId);
+    const relationId = await this.initRelation(opportunityId);
+    const addUserToOpportunityId = await this.initAddUserToOpportunity(
+      opportunityId
+    );
+    const createGroupOnChallengeId = await this.initCreateGroupOnChallenge(
+      challengeId
+    );
+    const assignGroupFocalPointId = await this.initAssignGroupFocalPoint(
+      createGroupOnChallengeId
+    );
+    const actorGroupId = await this.initActorGroup(opportunityId);
+    const actorId = await this.initActor(actorGroupId);
+
     return {
       challengeId,
       opportunityId,
+      projectId,
+      aspectId,
+      aspectOnProjectId,
+      relationId,
+      addUserToOpportunityId,
+      createGroupOnChallengeId,
+      assignGroupFocalPointId,
+      actorGroupId,
+      actorId,
     };
   }
-
-  // async teardownFunctions() {
-  //   // await this.teardownRemoveGroupFocalPoint();
-  //   // await this.teardownUsers();
-  //   // await this.teardownChallenges();
-  // }
 }
