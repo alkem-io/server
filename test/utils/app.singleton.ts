@@ -4,7 +4,10 @@ import { AppModule } from '@src/app.module';
 import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
 import { TestData } from '@utils/data-management/test-data';
 import { TestDataInit } from '@utils/data-management/test-data-init';
-import { TestDataService } from '@utils/data-management/test-data.service';
+import {
+  TestDataService,
+  TestDataServiceInitResult,
+} from '@utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
 export class appSingleton {
@@ -12,7 +15,7 @@ export class appSingleton {
   private static testDataService: TestDataService;
   private static testDataInit: TestDataInit;
   private static testData: TestData;
-  private data;
+  private data!: TestDataServiceInitResult;
   private _app!: INestApplication;
   public get app(): INestApplication {
     return this._app;
@@ -56,7 +59,7 @@ export class appSingleton {
 
     // await appSingleton.testDataInit.initDB();
     // await appSingleton.testData.initFunction();
-    await appSingleton.testDataService.initFunctions();
+    this.data = await appSingleton.testDataService.initFunctions();
   }
 
   // async initData() {
@@ -66,7 +69,7 @@ export class appSingleton {
 
   async teardownServer() {
     //await appSingleton.testDataService.teardownFunctions();
-    await appSingleton.testDataInit.teardownDB();
+    await appSingleton.testDataService.teardownDB();
     await this.app.close();
   }
 

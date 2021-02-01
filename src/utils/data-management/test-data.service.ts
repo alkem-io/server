@@ -326,15 +326,15 @@ export class TestDataService {
     // await this.initAspectOnProject();
     // await this.initRelation();
     // await this.initActorGroup();
-    await this.initActor(
-      await this.initActorGroup(
-        await this.initOpportunityActor(await this.initChallengeActor())
-      )
-    );
-    // await this.initAddUserToOpportunity();
-    await this.initAddChallengeLead(await this.initChallengeLeadOrganisation());
-    await this.initAddChallengeLead(1);
-    await this.initChallengeDelete();
+    // await this.initActor(
+    //   await this.initActorGroup(
+    //     await this.initOpportunityActor(await this.initChallengeActor())
+    //   )
+    // );
+    // // await this.initAddUserToOpportunity();
+    // await this.initAddChallengeLead(await this.initChallengeLeadOrganisation());
+    // await this.initAddChallengeLead(1);
+    // await this.initChallengeDelete();
     // await this.initCreateGroupOnEcoverse();
     // await this.initCreateGroupOnChallenge();
     // await this.initAddUserToChallengeGroup();
