@@ -12,7 +12,7 @@ export class appSingleton {
   private static testDataService: TestDataService;
   private static testDataInit: TestDataInit;
   private static testData: TestData;
-
+  private data;
   private _app!: INestApplication;
   public get app(): INestApplication {
     return this._app;
@@ -38,6 +38,10 @@ export class appSingleton {
     return this._instance || (this._instance = new this());
   }
 
+  getData() {
+    return this.data;
+  }
+
   async initServer() {
     const testModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -45,13 +49,14 @@ export class appSingleton {
 
     this.app = testModule.createNestApplication();
     await this.app.init();
-    appSingleton.testDataInit = await testModule.get(TestDataInit);
+    //appSingleton.testDataInit = await testModule.get(TestDataInit);
+    appSingleton.testDataService = await testModule.get(TestDataService);
     const ropcStrategy = await testModule.get(AadRopcStrategy);
     await this.getTokensForAllTestUsers(ropcStrategy);
 
-    await appSingleton.testDataInit.initDB();
-    await appSingleton.testData.initFunction();
-    //await appSingleton.testDataService.initFunctions();
+    // await appSingleton.testDataInit.initDB();
+    // await appSingleton.testData.initFunction();
+    await appSingleton.testDataService.initFunctions();
   }
 
   // async initData() {

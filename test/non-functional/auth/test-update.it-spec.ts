@@ -2,23 +2,21 @@ import { TestUser } from '@test/utils/token.helper';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 
-
 import {
   updateChallengeMutation,
   updateChallengeVariables,
 } from '@test/utils/update-mutations';
 
-
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
 
 const notAuthorizedCode = '"code":"FORBIDDEN"';
 
-let challengeId = 0
+let data: TestDataServiceInitResult;
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
-  // challengeId = await appSingleton.Instance.initData()
-  // return challengeId
+  data = appSingleton.Instance.getData();
 });
 
 afterAll(async () => {
@@ -28,8 +26,8 @@ afterAll(async () => {
 describe('DDT ecoverse member user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
-    mutation                   | variables                   | expected
-    ${updateChallengeMutation} | ${updateChallengeVariables} | ${notAuthorizedCode}
+    mutation                   | variables                                     | expected
+    ${updateChallengeMutation} | ${updateChallengeVariables(data.challengeId)} | ${notAuthorizedCode}
   `(
     "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, expected }) => {

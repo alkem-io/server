@@ -47,7 +47,7 @@ const updateOrganisationVariabls = `
     }
   }`;
 
-const updateChallengeMutation = `  
+const updateChallengeMutation = `
 mutation updateChallenge($challengeData: UpdateChallengeInput!) {
     updateChallenge(challengeData: $challengeData) {
       name,
@@ -55,13 +55,13 @@ mutation updateChallenge($challengeData: UpdateChallengeInput!) {
     }
   }`;
 
-const updateChallengeVariables = `
+const updateChallengeVariables = (challengeId: number) => `
 {
-    
+
     "challengeData":
           {
-            "ID": 1,
-            "name": "Challenge with better name"                
+            "ID": ${challengeId},
+            "name": "Challenge with better name"
           }
   }`;
 
@@ -75,7 +75,7 @@ mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
 
 const updateOpportunityVariables = `
 {
-    "ID": 1,
+    "ID": ,
     "opportunityData":
     {
       "name": "Test Oportunity "
@@ -99,9 +99,9 @@ const updateAspectVariable = `
     }
   }`;
 
-const updateActorMutation = `  
+const updateActorMutation = `
 mutation updateActor($actorData: ActorInput!, $ID: Float!) {
-    updateActor(actorData: $actorData, ID: $ID) {    
+    updateActor(actorData: $actorData, ID: $ID) {
       name
       description
       value
@@ -168,7 +168,7 @@ const addUserToChallengeVariables = `
 
 const addUserToGroupMutation = `
 mutation addUserToGroup($userID: Float!, $groupID: Float!) {
-    addUserToGroup(groupID: $groupID, userID: $userID) 
+    addUserToGroup(groupID: $groupID, userID: $userID)
   }`;
 
 const addUserToGroupVariables = `

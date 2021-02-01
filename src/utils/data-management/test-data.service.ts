@@ -314,7 +314,8 @@ export class TestDataService {
 
   async initFunctions() {
     // await this.initUsers();
-    await this.initOpportunity(await this.initChallenge());
+    const challengeID = await this.initChallenge();
+    const opportunityId = await this.initOpportunity(challengeID);
     // await this.initProject();
     // await this.initAspect();
     // await this.initAspectOnProject();
@@ -333,6 +334,10 @@ export class TestDataService {
     // await this.initCreateGroupOnChallenge();
     // await this.initAddUserToChallengeGroup();
     // await this.initAssignGroupFocalPoint();
+    return {
+      challengeID,
+      opportunityId,
+    };
   }
 
   // async teardownFunctions() {
