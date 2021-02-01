@@ -2,12 +2,16 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
+import { TestData } from '@utils/data-management/test-data';
+import { TestDataInit } from '@utils/data-management/test-data-init';
 import { TestDataService } from '@utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
 export class appSingleton {
   private static _instance: appSingleton;
   private static testDataService: TestDataService;
+  private static testDataInit: TestDataInit;
+  private static testData: TestData;
 
   private _app!: INestApplication;
   public get app(): INestApplication {
@@ -41,17 +45,23 @@ export class appSingleton {
 
     this.app = testModule.createNestApplication();
     await this.app.init();
-    appSingleton.testDataService = await testModule.get(TestDataService);
+    appSingleton.testDataInit = await testModule.get(TestDataInit);
     const ropcStrategy = await testModule.get(AadRopcStrategy);
     await this.getTokensForAllTestUsers(ropcStrategy);
 
-    await appSingleton.testDataService.initDB();
-    await appSingleton.testDataService.initFunctions();
+    await appSingleton.testDataInit.initDB();
+    await appSingleton.testData.initFunction();
+    //await appSingleton.testDataService.initFunctions();
   }
+
+  // async initData() {
+
+  //   return await appSingleton.testData.initFunction();
+  // }
 
   async teardownServer() {
     //await appSingleton.testDataService.teardownFunctions();
-    await appSingleton.testDataService.teardownDB();
+    await appSingleton.testDataInit.teardownDB();
     await this.app.close();
   }
 

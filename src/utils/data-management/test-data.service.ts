@@ -40,6 +40,11 @@ export class TestDataService {
     await this.dataManagementService.reset_to_empty_ecoverse();
   }
 
+  uniqueTextId = Math.random()
+    .toString(36)
+    .slice(-6);
+  challengeName = `testChallenge ${this.uniqueTextId}`;
+
   async initUsers() {
     const user = new UserInput();
     user.firstName = 'Bat';
@@ -59,9 +64,9 @@ export class TestDataService {
   async initChallenge(): Promise<number> {
     const challenge = new ChallengeInput();
 
-    challenge.name = 'init challenege name';
+    challenge.name = `${this.challengeName}`;
     challenge.state = 'init challenge state';
-    challenge.textID = 'init-challenge';
+    challenge.textID = `${this.uniqueTextId}`;
     challenge.context = {
       background: 'test challenge background',
       impact: 'test challenge impact',
@@ -107,9 +112,9 @@ export class TestDataService {
 
   async initChallengeActor(): Promise<number> {
     const challenge = new ChallengeInput();
-    challenge.name = 'init challenege name 3';
+    challenge.name = 'init challenege name 4';
     challenge.state = 'init challenge state 3';
-    challenge.textID = 'init-challenge3';
+    challenge.textID = 'init-challenge4';
     challenge.context = {
       background: 'test challenge background 3',
       impact: 'test challenge impact 3',
@@ -131,9 +136,9 @@ export class TestDataService {
 
   async initChallengeDelete(): Promise<number> {
     const challenge = new ChallengeInput();
-    challenge.name = 'init challenege name 4';
-    challenge.state = 'init challenge state 4';
-    challenge.textID = 'init-challenge4';
+    challenge.name = 'init challenege name 5';
+    challenge.state = 'init challenge state 5';
+    challenge.textID = 'init-challenge5';
     const response = await this.ecoverseService.createChallenge(challenge);
     return response.id;
   }
