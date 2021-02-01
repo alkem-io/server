@@ -18,6 +18,11 @@ import { IUser } from '@domain/user/user.interface';
 import { UserService } from '@domain/user/user.service';
 import { DataManagementService } from './data-management.service';
 
+export type TestDataServiceInitResult = {
+  challengeId: number;
+  opportunityId: number;
+};
+
 @Injectable()
 export class TestDataService {
   constructor(
@@ -312,10 +317,10 @@ export class TestDataService {
     await this.challengeService.removeChallenge(challengeToRemove?.id);
   }
 
-  async initFunctions() {
+  async initFunctions(): Promise<TestDataServiceInitResult> {
     // await this.initUsers();
-    const challengeID = await this.initChallenge();
-    const opportunityId = await this.initOpportunity(challengeID);
+    const challengeId = await this.initChallenge();
+    const opportunityId = await this.initOpportunity(challengeId);
     // await this.initProject();
     // await this.initAspect();
     // await this.initAspectOnProject();
@@ -335,7 +340,7 @@ export class TestDataService {
     // await this.initAddUserToChallengeGroup();
     // await this.initAssignGroupFocalPoint();
     return {
-      challengeID,
+      challengeId,
       opportunityId,
     };
   }
