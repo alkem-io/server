@@ -167,12 +167,13 @@ describe('Groups', () => {
     });
   });
 
-  test.skip('should throw error for creating group with exsting name', async () => {
+  test.skip('should throw error for creating group with restricted name', async () => {
     // Act
     // Create ecoverse group
     const responseCreateGroupOnEcoverse = await createGroupMutation(
       `ecoverse-admins`
     );
+ 
     ecoverseGroupId =
       responseCreateGroupOnEcoverse.body.data.createGroupOnEcoverse.id;
 
@@ -182,7 +183,7 @@ describe('Groups', () => {
     );
   });
 
-  test('should throw error for updating restricted group name', async () => {
+  test('should throw error for updating group name to restricted group name', async () => {
     // Arrange
     // Create ecoverse group
     const responseCreateGroupOnEcoverse = await createGroupMutation(groupName);
@@ -190,23 +191,42 @@ describe('Groups', () => {
       responseCreateGroupOnEcoverse.body.data.createGroupOnEcoverse.id;
 
     // Act
-    await updateGroupMutation(ecoverseGroupId, `ecoverse-admins`);
-
-    const responseUpdateMutationTwo = await updateGroupMutation(
-      ecoverseGroupId,
-      groupName
-    );
+    // Update new group name to existing restricted group name
+    const responseUpdateMutation = await updateGroupMutation(ecoverseGroupId, `ecoverse-admins`);
 
     let groupsData = await getGroups();
 
     // Assert
 
-    expect(responseUpdateMutationTwo.text).toContain(
-      `Unable to rename User Group with the specified ID: ${ecoverseGroupId}; restricted group: ecoverse-admins`
+    expect(responseUpdateMutation.text).toContain(
+      `Unable to rename User Group with the specified ID: ${ecoverseGroupId}; new name is a restricted name: ecoverse-admins`
     );
 
-    expect(groupsData.body.data.groups).not.toContainObject({
+    expect(groupsData.body.data.groups).toContainObject({
       id: `${ecoverseGroupId}`,
+      name: `${groupName}`,
+    });
+  });
+
+  test('should throw error for updating restricted group name', async () => {
+    // Act
+    // Update restricted group name
+    const responseUpdateMutation = await updateGroupMutation(2, groupName);
+
+    let groupsData = await getGroups();
+
+    // Assert
+    expect(responseUpdateMutation.text).toContain(
+      `Unable to rename User Group with the specified ID: 2; restricted group: ecoverse-admins`
+    );
+
+    expect(groupsData.body.data.groups).toContainObject({
+      id: "2",
+      name: `ecoverse-admins`,
+    });
+
+    expect(groupsData.body.data.groups).not.toContainObject({
+      id: "2",
       name: `${groupName}`,
     });
   });
