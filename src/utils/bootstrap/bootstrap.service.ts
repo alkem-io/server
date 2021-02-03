@@ -22,7 +22,6 @@ import { BaseException } from '@utils/error-handling/exceptions/base.exception';
 import { EntityNotFoundException } from '@utils/error-handling/exceptions/entity.not.found.exception';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 import { AAD_MODULE_NEST_PROVIDER } from '@utils/aad/aad.constants';
-import { AadModule } from '@utils/aad/aad.module';
 import { IdentityService } from '@interfaces/idp.service';
 
 @Injectable()

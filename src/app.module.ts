@@ -43,20 +43,19 @@ import { AuthService } from '@utils/authentication/auth.service';
 import { OidcStrategy } from '@utils/authentication/oidc.strategy';
 import oidcConfig from '@config/oidc.config';
 import { AadModule } from '@utils/aad/aad.module';
-import { async } from 'rxjs';
 import { AuthConfig } from '@cmdbg/tokenator';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: [
-        // '.env',
-        // '.env.default',
-        // '.env.aad.cherrytwist.api.default',
-        // '.env.aad.cherrytwist.client.default',
-        // '.env.logging.default',
-        // '.env.oidc.default',
-        '.env.test',
+        '.env',
+        '.env.default',
+        '.env.aad.cherrytwist.api.default',
+        '.env.aad.cherrytwist.client.default',
+        '.env.logging.default',
+        '.env.oidc.default',
+        // '.env.test',
       ],
       isGlobal: true,
       load: [
