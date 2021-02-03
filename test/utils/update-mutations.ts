@@ -1,14 +1,19 @@
+const userId = 4;
+const organisationId = 1;
+
 export const updateUserMutation = `
 mutation UpdateUser($userID: Float!, $userData: UserInput!) {
     updateUser(userID: $userID, userData: $userData) {
-      name,
-        email
+      id
+      name
+      email
+      city
     }
   }`;
 
 export const updateUserVariables = (id: number) => `
 {
-    "userID": ${id},
+    "userID": ${userId},
     "userData":
     {
       "name": "TestName",
@@ -21,9 +26,9 @@ mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
     updateProfile(profileData: $profileData, ID: $ID)
   }`;
 
-export const updateProfileVariables = `
+export const updateProfileVariables = (id: number) => `
 {
-    "ID": 1,
+    "ID": ${id},
     "profileData": {
       "description": "some description",
       "avatar": "https://avatar.com"
@@ -38,9 +43,9 @@ mutation updateOrganisation($orgID: Float!, $organisationData: OrganisationInput
     }
   }`;
 
-export const updateOrganisationVariabls = `
+export const updateOrganisationVariabls = (id: number) => `
 {
-    "orgID": 1,
+    "orgID": ${id},
     "organisationData":
     {
       "name": "Cherrytwist2"
@@ -73,9 +78,9 @@ mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
     }
   }`;
 
-export const updateOpportunityVariables = `
+export const updateOpportunityVariables = (id: number) => `
 {
-    "ID": ,
+    "ID": ${id},
     "opportunityData":
     {
       "name": "Test Oportunity "
@@ -86,12 +91,13 @@ export const updateAspectMutation = `
 mutation updateAspect($aspectData: AspectInput!, $ID: Float!) {
     updateAspect(aspectData: $aspectData, ID: $ID) {
       title
+      id
     }
   }`;
 
-export const updateAspectVariable = `
+export const updateAspectVariable = (id: number) => `
 {
-    "ID": 1,
+    "ID": ${id},
     "aspectData": {
       "title": "aspect some description",
       "framing": "https://aspect_framing.com",
@@ -106,12 +112,13 @@ mutation updateActor($actorData: ActorInput!, $ID: Float!) {
       description
       value
       impact
+      id
     }
   }`;
 
-export const updateActorVariables = `
+export const updateActorVariables = (id: number) => `
 {
-    "ID": 1,
+    "ID": ${id},
     "actorData": {
       "name": "actor some description",
       "value": "https://actor_value.com",
@@ -125,12 +132,13 @@ mutation addTagToTagset($tag: String!, $tagsetID: Float!) {
     addTagToTagset(tag: $tag, tagsetID: $tagsetID) {
       name
       tags
+      id
     }
   }`;
 
-export const addTagsOnTagsetVariables = `
+export const addTagsOnTagsetVariables = (id: number) => `
 {
-    "tagsetID": 1,
+    "tagsetID": ${id},
     "tag": "tagTest"
   }`;
 
@@ -142,9 +150,9 @@ mutation replaceTagsOnTagset($tags: [String!]!, $tagsetID: Float!) {
     }
   }`;
 
-export const replaceTagsOnTagsetVariables = `
+export const replaceTagsOnTagsetVariables = (id: number) => `
 {
-    "tagsetID": 1,
+    "tagsetID": ${id},
     "tags": ["tag1", "tag2"]
   }`;
 
@@ -160,10 +168,10 @@ mutation addUserToChallenge($userID: Float!, $challengeID: Float!) {
     }
   }`;
 
-export const addUserToChallengeVariables = `
+export const addUserToChallengeVariables = (id: number) => `
 {
-    "userID": 1,
-    "challengeID": 4
+    "userID": ${userId},
+    "challengeID": ${id}
   }`;
 
 export const addUserToGroupMutation = `
@@ -171,10 +179,10 @@ mutation addUserToGroup($userID: Float!, $groupID: Float!) {
     addUserToGroup(groupID: $groupID, userID: $userID)
   }`;
 
-export const addUserToGroupVariables = `
+export const addUserToGroupVariables = (id: number) => `
 {
-    "userID": 1,
-    "groupID": 1
+    "userID": ${userId},
+    "groupID": ${id}
   }`;
 
 export const addUserToOpportunityMutation = `
@@ -189,10 +197,10 @@ mutation addUserToOpportunity($userID: Float!, $opportunityID: Float!) {
     }
   }`;
 
-export const addUserToOpportunityVariables = `
+export const addUserToOpportunityVariables = (id: number) => `
 {
-    "userID": 1,
-    "opportunityID": 1
+    "userID": ${userId},
+    "opportunityID": ${id}
   }`;
 
 export const assignGroupFocalPointMutation = `
@@ -206,10 +214,10 @@ mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
     }
   }`;
 
-export const assignGroupFocalPointVariables = `
+export const assignGroupFocalPointVariables = (id: number) => `
   {
-    "userID": 1,
-    "groupID": 2
+    "userID": ${userId},
+    "groupID": ${id}
   }`;
 
 export const removeGroupFocalPointMutation = `
@@ -223,9 +231,9 @@ mutation removeGroupFocalPoint($groupID: Float!) {
     }
   }`;
 
-export const removeGroupFocalPointVariables = `
+export const removeGroupFocalPointVariables = (id: number) => `
 {
-    "groupID": 2
+    "groupID": ${id}
   }`;
 
 export const addChallengeLeadToOrganisationMutation = `
@@ -233,10 +241,10 @@ mutation addChallengeLead($challengeID: Float!, $organisationID: Float!) {
     addChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
   }`;
 
-export const addChallengeLeadToOrganisationVariables = `
+export const addChallengeLeadToOrganisationVariables = (id: number) => `
 {
-    "organisationID": 1,
-    "challengeID": 2
+    "organisationID": ${organisationId},
+    "challengeID": ${id}
   }`;
 
 export const removeUserFromGroupMutation = `
@@ -251,10 +259,10 @@ mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {
     }
   }`;
 
-export const removeUserFromGroupVariables = `
+export const removeUserFromGroupVariables = (id: number) => `
 {
-    "userID": 1,
-    "groupID": 2
+    "userID": ${userId},
+    "groupID": ${id}
   }`;
 
 const mutations: Record<string, string> = {
@@ -278,21 +286,21 @@ const mutations: Record<string, string> = {
 
 const variables: Record<string, (id: number) => string> = {
   updateUserVariables,
-  // updateProfileVariables,
-  // updateOrganisationVariabls,
+  updateProfileVariables,
+  updateOrganisationVariabls,
   updateChallengeVariables,
-  // updateOpportunityVariables,
-  // updateAspectVariable,
-  // updateActorVariables,
-  // addTagsOnTagsetVariables,
-  // replaceTagsOnTagsetVariables,
-  // addUserToChallengeVariables,
-  // addUserToGroupVariables,
-  // addUserToOpportunityVariables,
-  // assignGroupFocalPointVariables,
-  // removeGroupFocalPointVariables,
-  // addChallengeLeadToOrganisationVariables,
-  // removeUserFromGroupVariables,
+  updateOpportunityVariables,
+  updateAspectVariable,
+  updateActorVariables,
+  addTagsOnTagsetVariables,
+  replaceTagsOnTagsetVariables,
+  addUserToChallengeVariables,
+  addUserToGroupVariables,
+  addUserToOpportunityVariables,
+  assignGroupFocalPointVariables,
+  removeGroupFocalPointVariables,
+  addChallengeLeadToOrganisationVariables,
+  removeUserFromGroupVariables,
 };
 export const getMutation = (name: string) => {
   return mutations[name];
