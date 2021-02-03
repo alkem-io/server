@@ -414,11 +414,10 @@ export class UserGroupService {
     // Check if the group already exists, if so log a warning
     const alreadyExists = this.hasGroupWithName(groupable, name);
     if (alreadyExists) {
-      this.logger.verbose?.(
-        `Attempting to add group that already exists: ${name}`,
+      throw new NotSupportedException(
+        `Unable to create user group as parent already has a group with the given name: ${name}`,
         LogContext.COMMUNITY
       );
-      return await this.getGroupByName(groupable, name);
     }
 
     if (groupable.restrictedGroupNames?.includes(name)) {
