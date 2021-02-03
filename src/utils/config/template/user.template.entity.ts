@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IUserTemplate } from './user.template.interface';
+import { IUserTemplate, ITagsetTemplate } from './user.template.interface';
 
 @ObjectType()
 export class UserTemplate implements IUserTemplate {
@@ -9,11 +9,29 @@ export class UserTemplate implements IUserTemplate {
   })
   name: string;
 
-  @Field(() => [String], {
+  @Field(() => [TagsetTemplate], {
     nullable: true,
     description: 'Template tagsets.',
   })
-  tagsets?: string[];
+  tagsets?: ITagsetTemplate[];
+
+  constructor(name: string) {
+    this.name = name;
+  }
+}
+
+@ObjectType()
+export class TagsetTemplate implements ITagsetTemplate {
+  @Field(() => String, {
+    nullable: false,
+    description: 'Tagset name',
+  })
+  name: string;
+  @Field(() => String, {
+    nullable: true,
+    description: 'Tagset placeholder',
+  })
+  placeholder?: string;
 
   constructor(name: string) {
     this.name = name;
