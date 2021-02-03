@@ -42,7 +42,7 @@ export class AadRopcStrategy {
     const res = await authClient.authenticateROPC();
     const token = res as Token;
 
-    if (token) return token.access_token;
+    if (token && token.access_token) return token.access_token;
 
     const err = res as TokenError;
     throw new Error(err.error_description);

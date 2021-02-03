@@ -42,17 +42,21 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
 import { AuthService } from '@utils/authentication/auth.service';
 import { OidcStrategy } from '@utils/authentication/oidc.strategy';
 import oidcConfig from '@config/oidc.config';
+import { AadModule } from '@utils/aad/aad.module';
+import { async } from 'rxjs';
+import { AuthConfig } from '@cmdbg/tokenator';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: [
-        '.env',
-        '.env.default',
-        '.env.aad.cherrytwist.api.default',
-        '.env.aad.cherrytwist.client.default',
-        '.env.logging.default',
-        '.env.oidc.default',
+        // '.env',
+        // '.env.default',
+        // '.env.aad.cherrytwist.api.default',
+        // '.env.aad.cherrytwist.client.default',
+        // '.env.logging.default',
+        // '.env.oidc.default',
+        '.env.test',
       ],
       isGlobal: true,
       load: [
@@ -103,6 +107,7 @@ import oidcConfig from '@config/oidc.config';
       playground: true,
       fieldResolverEnhancers: ['guards'],
       sortSchema: true,
+      // context: ({ req }) => ({ req }),
     }),
     DataManagementModule,
     BootstrapModule,
@@ -112,6 +117,18 @@ import oidcConfig from '@config/oidc.config';
     }),
     SearchModule,
     KonfigModule,
+    AadModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        clientID: configService.get<AuthConfig>('aad_ropc')?.clientID as string,
+        clientSecret: '',
+        tenant: configService.get<AuthConfig>('aad_ropc')?.tenant as string,
+        scope: configService.get<AuthConfig>('aad_ropc')?.scope as string,
+        username: 'admin@devcherrytwist.onmicrosoft.com',
+        password: 'Ch3rrytw1$t@0rG',
+      }),
+    }),
   ],
   controllers: [AppController],
   providers: [
@@ -124,6 +141,10 @@ import oidcConfig from '@config/oidc.config';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    // {
+    //   provide: AUTH_OBO,
+    //   useClass: AadOboStrategy,
+    // },
     OidcStrategy,
     AuthService,
   ],

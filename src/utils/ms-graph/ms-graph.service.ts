@@ -2,15 +2,16 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Client, ClientOptions } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
 import { UserInput } from '@domain/user/user.dto';
-import { AadOboStrategy } from '@utils/authentication/aad.obo.strategy';
+import { AadOboStrategy } from '@utils/aad/aad.obo.strategy';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { AccountException } from '@utils/error-handling/exceptions/account.exception';
+import { AUTH_OBO } from '@constants';
 
 @Injectable()
 export class MsGraphService {
   constructor(
-    private oboStrategy: AadOboStrategy,
+    @Inject(AUTH_OBO) private readonly oboStrategy: AadOboStrategy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
