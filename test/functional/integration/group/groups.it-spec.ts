@@ -167,19 +167,16 @@ describe('Groups', () => {
     });
   });
 
-  test.skip('should throw error for creating group with restricted name', async () => {
+  test('should throw error for creating group with restricted name', async () => {
     // Act
     // Create ecoverse group
     const responseCreateGroupOnEcoverse = await createGroupMutation(
       `ecoverse-admins`
     );
- 
-    ecoverseGroupId =
-      responseCreateGroupOnEcoverse.body.data.createGroupOnEcoverse.id;
 
     // Assert
     expect(responseCreateGroupOnEcoverse.text).toContain(
-      `Unable to create user group with restricted name: ecoverse-admins`
+      `Unable to create user group as parent already has a group with the given name: ecoverse-admins`
     );
   });
 
@@ -192,7 +189,10 @@ describe('Groups', () => {
 
     // Act
     // Update new group name to existing restricted group name
-    const responseUpdateMutation = await updateGroupMutation(ecoverseGroupId, `ecoverse-admins`);
+    const responseUpdateMutation = await updateGroupMutation(
+      ecoverseGroupId,
+      `ecoverse-admins`
+    );
 
     let groupsData = await getGroups();
 
@@ -221,12 +221,12 @@ describe('Groups', () => {
     );
 
     expect(groupsData.body.data.groups).toContainObject({
-      id: "2",
+      id: '2',
       name: `ecoverse-admins`,
     });
 
     expect(groupsData.body.data.groups).not.toContainObject({
-      id: "2",
+      id: '2',
       name: `${groupName}`,
     });
   });
@@ -318,7 +318,7 @@ describe('Groups', () => {
     const challengeGroupId =
       responseCreateGroupeOnChallenge.body.data.createGroupOnChallenge.id;
 
-      // Act
+    // Act
     let groupParent = await getGroupParent(challengeGroupId);
 
     expect(groupParent.body.data.group.parent).not.toContainObject({
