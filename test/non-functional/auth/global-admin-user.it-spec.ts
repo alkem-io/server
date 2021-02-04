@@ -4,21 +4,21 @@ import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import {
   getQueries,
-} from '@test/utils/queries';
+} from '@test/non-functional/auth/queries';
 
 import {
   getCreateMutation,
   getCreateVariables,
-} from '@test/utils/create-mutations';
+} from '@test/non-functional/auth/create-mutations';
 
 import {
   getUpdateMutation,
   getUpdateVariables,
-} from '@test/utils/update-mutations';
+} from '@test/non-functional/auth/update-mutations';
 import {
   getRemoveMutation,
   getRemoveVariables,
-} from '@test/utils/remove-mutations';
+} from '@test/non-functional/auth/remove-mutations';
 import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
