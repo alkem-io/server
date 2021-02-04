@@ -1,0 +1,7 @@
+{
+  "src/**/*.ts{,x}": [
+    "cross-env NODE_ENV=production eslint --fix",
+    "prettier --write"
+  ],
+  "*.{json,md}": "prettier --write"
+}
