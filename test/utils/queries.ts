@@ -1,175 +1,191 @@
-const name = '{ name }';
+export const name = () => '{ name }';
 
-const hostMembers = '{ host { groups { name }}}';
+export const hostMembers = () => '{ host { groups { name }}}';
 
-const hostGroups = '{ host { members { name }}}';
+export const hostGroups = () => '{ host { members { name }}}';
 
-const hostProfile = '{ host { profile { description }}}';
+export const hostProfile = () => '{ host { profile { description }}}';
 
-const contextTagline = '{ context { tagline }}';
+export const contextTagline = () => '{ context { tagline }}';
 
-const contextBackground = '{ context { background }}';
+export const contextBackground = () => '{ context { background }}';
 
-const contextVision = '{ context { vision }}';
+export const contextVision = () => '{ context { vision }}';
 
-const contextImpact = '{ context { impact }}';
+export const contextImpact = () => '{ context { impact }}';
 
-const contextWho = '{ context { who }}';
+export const contextWho = () => '{ context { who }}';
 
-const contextReferencesName = '{ context { references { name }}}';
+export const contextReferencesName = () => '{ context { references { name }}}';
 
-const usersName = '{ users { name }}';
+export const usersName = () => '{ users { name }}';
 
-const usersAccountUPN = '{ users { accountUpn }}';
+export const usersAccountUPN = () => '{ users { accountUpn }}';
 
-const usersProfile = '{ users { profile { description }}}';
+export const usersProfile = () => '{ users { profile { description }}}';
 
-const usersMemberofGroupsName = '{ users { memberof { groups { name }}}}';
+export const usersMemberofGroupsName = () =>
+  '{ users { memberof { groups { name }}}}';
 
-const usersMemberofChallengesName =
+export const usersMemberofChallengesName = () =>
   '{ users { memberof { challenges { name }}}}';
 
-const usersMemberofOrganisationsName =
+export const usersMemberofOrganisationsName = () =>
   '{ users { memberof { organisations { name }}}}';
 
-const userName = '{ user ( ID: "13" ) { name }}';
+export const userName = (id: number) => `{ user ( ID: "${id}" ) { name }}`;
 
-const userAccountUPN = '{ user ( ID: "13" ){ accountUpn }}';
+export const userAccountUPN = (id: number) =>
+  `{ user ( ID: "${id}" ){ accountUpn }}`;
 
-const userProfile = '{ user ( ID: "13" ){ profile { description }}}';
+export const userProfile = (id: number) =>
+  `{ user ( ID: "${id}" ){ profile { description }}}`;
 
-const userMemberofGroupsName =
-  '{ user ( ID: "13" ){ memberof { groups { name }}}}';
+export const userMemberofGroupsName = (id: number) =>
+  `{ user ( ID: "${id}" ){ memberof { groups { name }}}}`;
 
-const userMemberofChallengesName =
-  '{ user ( ID: "13" ){ memberof { challenges { name }}}}';
+export const userMemberofChallengesName = (id: number) =>
+  `{ user ( ID: "${id}" ){ memberof { challenges { name }}}}`;
 
-const userMemberofOrganisationsName =
-  '{ user ( ID: "13" ){ memberof { organisations { name }}}}';
+export const userMemberofOrganisationsName = (id: number) =>
+  `{ user ( ID: "${id}" ){ memberof { organisations { name }}}}`;
 
-const usersById = '{ usersById (IDs: ["1", "2"]) { id }}';
+export const usersById = () => '{ usersById (IDs: ["1", "2"]) { id }}';
 
-const groupsName = '{ groups { name }}';
+export const groupsName = () => '{ groups { name }}';
 
-const groupsFocalPointName = '{ groups { focalPoint { name }}}';
+export const groupsFocalPointName = () => '{ groups { focalPoint { name }}}';
 
-const groupsMembersName = '{ groups { members { name }}}';
+export const groupsMembersName = () => '{ groups { members { name }}}';
 
-const groupsProfile = '{ groups { profile { description }}}';
+export const groupsProfile = () => '{ groups { profile { description }}}';
 
-const groupsParentChallenge =
+export const groupsParentChallenge = () =>
   '{ groups { parent { __typename ... on Challenge { name }}}}';
 
-const groupsParentOpportunity =
+export const groupsParentOpportunity = () =>
   '{ groups { parent { __typename ... on Opportunity { name }}}}';
 
-const groupsParentEcoverse =
-  '{ groups { parent { __typename ... on Challenge { name }}}}';
+export const groupsParentEcoverse = () =>
+  '{ groups { parent { __typename ... on Ecoverse { name }}}}';
 
-const groupsWithTagName = '{ groupsWithTag (tag: ""){ name }}';
+export const groupsWithTagName = () => '{ groupsWithTag (tag: ""){ name }}';
 
-const groupsWithTagFocalPointName =
+export const groupsWithTagFocalPointName = () =>
   '{ groupsWithTag (tag: ""){ focalPoint { name }}}';
 
-const groupsWithTagProfile =
+export const groupsWithTagProfile = () =>
   '{ groupsWithTag (tag: ""){ profile { description }}}';
 
-const groupsWithTagMembersName =
+export const groupsWithTagMembersName = () =>
   '{ groupsWithTag (tag: ""){ members { name }}}';
 
-const groupsWithTagParentChallenge =
+export const groupsWithTagParentChallenge = () =>
   '{ groupsWithTag (tag: ""){ parent { __typename ... on Challenge { name }}}}';
 
-const groupsWithTagParentEcoverse =
+export const groupsWithTagParentEcoverse = () =>
+  '{ groupsWithTag (tag: ""){ parent { __typename ... on Ecoverse { name }}}}';
+
+export const groupsWithTagParentOpportunity = () =>
   '{ groupsWithTag (tag: ""){ parent { __typename ... on Opportunity { name }}}}';
 
-const groupsWithTagParentOpportunity =
-  '{ groupsWithTag (tag: ""){ parent { __typename ... on Challenge { name }}}}';
+export const challengesName = () => '{ challenges { name }}';
 
-const challengesName = '{ challenges { name }}';
+export const challengesTextId = () => '{ challenges { textID }}';
 
-const challengesTextId = '{ challenges { textID }}';
+export const challengesState = () => '{ challenges { state }}';
 
-const challengesState = '{ challenges { state }}';
+export const challengesContext = () => '{ challenges { context { who }}}';
 
-const challengesContext = '{ challenges { context { who }}}';
-
-const challengesLeadOrganisation =
+export const challengesLeadOrganisation = () =>
   '{ challenges { leadOrganisations { name }}}';
 
-const challengesLeadOrganisationGroups =
+export const challengesLeadOrganisationGroups = () =>
   '{ challenges { leadOrganisations { groups { name }}}}';
 
-const challengesTagsets = '{ challenges { tagset { name }}}';
+export const challengesTagsets = () => '{ challenges { tagset { name }}}';
 
-const challengesGroups = '{ challenges { groups { name }}}';
+export const challengesGroups = () => '{ challenges { groups { name }}}';
 
-const challengesContributors = '{ challenges { contributors { name }}}';
+export const challengesContributors = () =>
+  '{ challenges { contributors { name }}}';
 
-const challengesOpportunities = '{ challenges { opportunities { name }}}';
+export const challengesOpportunities = () =>
+  '{ challenges { opportunities { name }}}';
 
-const challengeName = '{ challenge(ID: 1) { name }}';
+export const challengeName = (id: number) => `{ challenge(ID: ${id}) { name }}`;
 
-const challengeTextId = '{ challenge(ID: 1) { textID }}';
+export const challengeTextId = (id: number) =>
+  `{ challenge(ID: ${id}) { textID }}`;
 
-const challengeState = '{ challenge(ID: 1) { state }}';
+export const challengeState = (id: number) =>
+  `{ challenge(ID: ${id}) { state }}`;
 
-const challengeContext = '{ challenge(ID: 1) { context { who }}}';
+export const challengeContext = (id: number) =>
+  `{ challenge(ID: ${id}) { context { who }}}`;
 
-const challengeLeadOrganisation =
-  '{ challenge(ID: 1) { leadOrganisations { name }}}';
+export const challengeLeadOrganisation = (id: number) =>
+  `{ challenge(ID: ${id}) { leadOrganisations { name }}}`;
 
-const challengeLeadOrganisationGroups =
-  '{ challenge(ID: 1) { leadOrganisations { groups { name }}}}';
+export const challengeLeadOrganisationGroups = (id: number) =>
+  `{ challenge(ID: ${id}) { leadOrganisations { groups { name }}}}`;
 
-const challengeTagsets = '{ challenge(ID: 1) { tagset { name }}}';
+export const challengeTagsets = (id: number) =>
+  `{ challenge(ID: ${id}) { tagset { name }}}`;
 
-const challengeGroups = '{ challenge(ID: 1) { groups { name }}}';
+export const challengeGroups = (id: number) =>
+  `{ challenge(ID: ${id}) { groups { name }}}`;
 
-const challengeContributors = '{ challenge(ID: 1) { contributors { name }}}';
+export const challengeContributors = (id: number) =>
+  `{ challenge(ID: ${id}) { contributors { name }}}`;
 
-const challengeOpportunities = '{ challenge(ID: 1) { opportunities { name }}}';
+export const challengeOpportunities = (id: number) =>
+  `{ challenge(ID: ${id}) { opportunities { name }}}`;
 
-const opportunitiesName = '{ opportunities { name }}';
+export const opportunitiesName = () => '{ opportunities { name }}';
 
-const opportunitiesTextId = '{ opportunities { textID }}';
+export const opportunitiesTextId = () => '{ opportunities { textID }}';
 
-const opportunitiesState = '{ opportunities { state }}';
+export const opportunitiesState = () => '{ opportunities { state }}';
 
-const opportunitiesContext = '{ opportunities { context { who }}}';
+export const opportunitiesContext = () => '{ opportunities { context { who }}}';
 
-const opportunitiesGroups = '{ opportunities { groups { name }}}';
+export const opportunitiesGroups = () => '{ opportunities { groups { name }}}';
 
-const opportunitiesContributors = '{ opportunities { contributors { name }}}';
+export const opportunitiesContributors = () =>
+  '{ opportunities { contributors { name }}}';
 
-const opportunitiesProjectsName = '{ opportunities { projects { name }}}';
+export const opportunitiesProjectsName = () =>
+  '{ opportunities { projects { name }}}';
 
-const opportunitiesProjectsAspectsName =
+export const opportunitiesProjectsAspectsName = () =>
   '{ opportunities { projects { aspects { name }}}}';
 
-const opportunitiesActorgroupsName = '{ opportunities { actorGroups { name }}}';
+export const opportunitiesActorgroupsName = () =>
+  '{ opportunities { actorGroups { name }}}';
 
-const opportunitiesActorGroupsActorsName =
+export const opportunitiesActorGroupsActorsName = () =>
   '{ opportunities { actorGroups { actors { name }}}}';
 
-const opportunitiesAspects = '{ opportunities { aspects { title }}}';
+export const opportunitiesAspects = () =>
+  '{ opportunities { aspects { title }}}';
 
-const opportunitiesRelationsName =
+export const opportunitiesRelationsName = () =>
   '{ opportunities { relations { actorName }}}';
 
-const projectsName = '{ projects { name }}';
+export const projectsName = () => '{ projects { name }}';
 
-const projectsTextId = '{ projects { textID }}';
+export const projectsTextId = () => '{ projects { textID }}';
 
-const projectsDescription = '{ projects { description }}';
+export const projectsDescription = () => '{ projects { description }}';
 
-const projectsState = '{ projects { state }}';
+export const projectsState = () => '{ projects { state }}';
 
-const projectsTagset = '{ projects { tagset { name }}}';
+export const projectsTagset = () => '{ projects { tagset { name }}}';
 
-const projectsAspects = '{ projects { aspects { title }}}';
+export const projectsAspects = () => '{ projects { aspects { title }}}';
 
-export {
+const query: Record<string, (id: number) => string> = {
   name,
   hostMembers,
   hostGroups,
@@ -233,8 +249,6 @@ export {
   opportunitiesContext,
   opportunitiesGroups,
   opportunitiesContributors,
-  opportunitiesProjectsName,
-  opportunitiesProjectsAspectsName,
   opportunitiesActorgroupsName,
   opportunitiesActorGroupsActorsName,
   opportunitiesAspects,
@@ -246,3 +260,85 @@ export {
   projectsTagset,
   projectsAspects,
 };
+
+export const getQueries = (name: string, id: number) => {
+  return query[name](id);
+};
+
+// export {
+//   name,
+//   hostMembers,
+//   hostGroups,
+//   hostProfile,
+//   contextTagline,
+//   contextBackground,
+//   contextVision,
+//   contextImpact,
+//   contextWho,
+//   contextReferencesName,
+//   usersName,
+//   usersAccountUPN,
+//   usersProfile,
+//   usersMemberofGroupsName,
+//   usersMemberofChallengesName,
+//   usersMemberofOrganisationsName,
+//   userName,
+//   userAccountUPN,
+//   userProfile,
+//   userMemberofGroupsName,
+//   userMemberofChallengesName,
+//   userMemberofOrganisationsName,
+//   usersById,
+//   groupsName,
+//   groupsFocalPointName,
+//   groupsProfile,
+//   groupsMembersName,
+//   groupsParentChallenge,
+//   groupsParentEcoverse,
+//   groupsParentOpportunity,
+//   groupsWithTagName,
+//   groupsWithTagFocalPointName,
+//   groupsWithTagProfile,
+//   groupsWithTagMembersName,
+//   groupsWithTagParentChallenge,
+//   groupsWithTagParentEcoverse,
+//   groupsWithTagParentOpportunity,
+//   challengesName,
+//   challengesTextId,
+//   challengesState,
+//   challengesContext,
+//   challengesLeadOrganisation,
+//   challengesLeadOrganisationGroups,
+//   challengesContributors,
+//   challengesTagsets,
+//   challengesGroups,
+//   challengesOpportunities,
+//   challengeName,
+//   challengeTextId,
+//   challengeState,
+//   challengeContext,
+//   challengeLeadOrganisation,
+//   challengeLeadOrganisationGroups,
+//   challengeTagsets,
+//   challengeGroups,
+//   challengeContributors,
+//   challengeOpportunities,
+//   opportunitiesName,
+//   opportunitiesTextId,
+//   opportunitiesState,
+//   opportunitiesContext,
+//   opportunitiesGroups,
+//   opportunitiesContributors,
+//   opportunitiesProjectsName,
+//   opportunitiesProjectsAspectsName,
+//   opportunitiesActorgroupsName,
+//   opportunitiesActorGroupsActorsName,
+//   opportunitiesAspects,
+//   opportunitiesRelationsName,
+//   projectsName,
+//   projectsTextId,
+//   projectsDescription,
+//   projectsState,
+//   projectsTagset,
+//   projectsAspects,
+// };

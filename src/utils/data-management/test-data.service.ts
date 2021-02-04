@@ -24,7 +24,9 @@ export type TestDataServiceInitResult = {
   userProfileId: number;
   organisationId: number;
   challengeId: number;
+  removeChallangeId: number;
   opportunityId: number;
+  removeOpportunityId: number;
   projectId: number;
   aspectId: number;
   aspectOnProjectId: number;
@@ -36,6 +38,7 @@ export type TestDataServiceInitResult = {
   actorGroupId: number;
   actorId: number;
   tagsetId: number;
+  contextId: number;
 };
 
 @Injectable()
@@ -68,7 +71,7 @@ export class TestDataService {
   organisationName = `testOrganisation ${this.uniqueTextId}`;
   avatar = 'https://dev.cherrytwist.org/graphql';
   description = 'TestDescription';
-  userEmail = 'admin@cherrytwist.org';
+  userEmail = 'evgeni@cherrytwist.org';
 
   async initUsers() {
     const user = new UserInput();
@@ -120,6 +123,17 @@ export class TestDataService {
     return response.id;
   }
 
+  async initRemoveChallenge(): Promise<number> {
+    const challenge = new ChallengeInput();
+
+    challenge.name = `Remove-challemge`;
+    challenge.state = 'state';
+    challenge.textID = `remove-chall`;
+    challenge.tags = ['test1', 'test2'];
+    const response = await this.ecoverseService.createChallenge(challenge);
+    return response.id;
+  }
+
   async initOpportunity(challengeId: number): Promise<number> {
     const opportunity = new OpportunityInput();
     opportunity.name = 'init opportunity name';
@@ -139,6 +153,18 @@ export class TestDataService {
       vision: 'test opportunity vision',
       who: 'test opportunity who',
     };
+    const response = await this.challengeService.createOpportunity(
+      challengeId,
+      opportunity
+    );
+    return response.id;
+  }
+
+  async initRemoveOpportunity(challengeId: number): Promise<number> {
+    const opportunity = new OpportunityInput();
+    opportunity.name = 'init remove opportunity name';
+    opportunity.state = 'init opportunity state';
+    opportunity.textID = 'remove-opport';
     const response = await this.challengeService.createOpportunity(
       challengeId,
       opportunity
@@ -257,16 +283,6 @@ export class TestDataService {
     return response.id;
   }
 
-  async initAddUserToGroup(): Promise<number> {
-    const createdTestUser = (await this.userService.getUserByEmail(
-      'ecoverse-admin@cherrytwist.org'
-    )) as any;
-    const testGroup = await this.ecoverseService.createGroup('xxx');
-    const groupId = testGroup.id;
-    await this.userGroupService.addUserToGroup(createdTestUser?.id, testGroup);
-    return testGroup.id;
-  }
-
   async teardownRemoveGroupFocalPoint(groupId: number) {
     await this.userGroupService.removeFocalPoint(groupId);
   }
@@ -288,6 +304,13 @@ export class TestDataService {
     return response.tagset?.id;
   }
 
+  async initGetContextId(challengeId: number): Promise<any> {
+    const response = await this.challengeService.getChallengeOrFail(
+      challengeId
+    );
+    return response.context?.id;
+  }
+
   async teardownUsers() {
     const createdTestUser = (await this.userService.getUserByEmail(
       'testuser@test.com'
@@ -307,7 +330,11 @@ export class TestDataService {
     const userId = await this.initGetUserId(this.userEmail);
     const organisationId = await this.initOrganisation();
     const challengeId = await this.initChallenge();
+    const removeChallangeId = await this.initRemoveChallenge();
     const opportunityId = await this.initOpportunity(challengeId);
+    const removeOpportunityId = await this.initRemoveOpportunity(
+      removeChallangeId
+    );
     const projectId = await this.initProject(opportunityId);
     const aspectId = await this.initAspect(opportunityId);
     const aspectOnProjectId = await this.initAspectOnProject(projectId);
@@ -325,13 +352,16 @@ export class TestDataService {
     const actorGroupId = await this.initActorGroup(opportunityId);
     const actorId = await this.initActor(actorGroupId);
     const tagsetId = await this.initGetTagsetId(challengeId);
+    const contextId = await this.initGetContextId(challengeId);
 
     return {
       userId,
       userProfileId,
       organisationId,
       challengeId,
+      removeChallangeId,
       opportunityId,
+      removeOpportunityId,
       projectId,
       aspectId,
       addUserToOpportunityId,
@@ -343,6 +373,7 @@ export class TestDataService {
       actorGroupId,
       actorId,
       tagsetId,
+      contextId,
     };
   }
 }

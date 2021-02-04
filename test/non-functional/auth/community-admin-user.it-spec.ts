@@ -1,173 +1,34 @@
-import { graphqlRequest, graphqlRequestAuth } from '@test/utils/graphql.request';
+import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import { TestUser } from '@test/utils/token.helper';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import {
-  name,
-  hostMembers,
-  hostGroups,
-  hostProfile,
-  contextTagline,
-  contextBackground,
-  contextVision,
-  contextImpact,
-  contextWho,
-  contextReferencesName,
-  usersName,
-  usersAccountUPN,
-  usersProfile,
-  usersMemberofGroupsName,
-  usersMemberofChallengesName,
-  usersMemberofOrganisationsName,
-  userName,
-  userAccountUPN,
-  userProfile,
-  userMemberofGroupsName,
-  userMemberofChallengesName,
-  userMemberofOrganisationsName,
-  usersById,
-  groupsName,
-  groupsFocalPointName,
-  groupsProfile,
-  groupsMembersName,
-  groupsParentChallenge,
-  groupsParentEcoverse,
-  groupsParentOpportunity,
-  groupsWithTagName,
-  groupsWithTagFocalPointName,
-  groupsWithTagProfile,
-  groupsWithTagMembersName,
-  groupsWithTagParentChallenge,
-  groupsWithTagParentEcoverse,
-  groupsWithTagParentOpportunity,
-  challengesName,
-  challengesTextId,
-  challengesState,
-  challengesContext,
-  challengesLeadOrganisation,
-  challengesLeadOrganisationGroups,
-  challengesContributors,
-  challengesTagsets,
-  challengesGroups,
-  challengesOpportunities,
-  challengeName,
-  challengeTextId,
-  challengeState,
-  challengeContext,
-  challengeLeadOrganisation,
-  challengeLeadOrganisationGroups,
-  challengeTagsets,
-  challengeGroups,
-  challengeContributors,
-  challengeOpportunities,
-  opportunitiesName,
-  opportunitiesTextId,
-  opportunitiesState,
-  opportunitiesContext,
-  opportunitiesGroups,
-  opportunitiesContributors,
-  opportunitiesProjectsName,
-  opportunitiesProjectsAspectsName,
-  opportunitiesActorgroupsName,
-  opportunitiesActorGroupsActorsName,
-  opportunitiesAspects,
-  opportunitiesRelationsName,
-  projectsName,
-  projectsTextId,
-  projectsDescription,
-  projectsState,
-  projectsTagset,
-  projectsAspects,
+  getQueries,
 } from '@test/utils/queries';
 
 import {
-  createOrganisationMutation,
-  createOrganisationVariables,
-  createGroupOnEcoverseMutation,
-  createGroupOnEcoverseVariables,
-  createUserMutation,
-  createUserVariables,
-  createReferenceOnProfileMutation,
-  createReferenceOnProfileVariable,
-  createChallengeMutation,
-  createChallengeVariables,
-  createGroupOnChallengeMutation,
-  createGroupOnChallengeVariables,
-  createOpportunityMutation,
-  createOpportunityVariables,
-  createGroupOnOpportunityMutations,
-  createGroupOnOpportunityVariables,
-  createProjectMutation,
-  createProjectVariables,
-  createActorGroupMutation,
-  createActorGroupVariables,
-  createActorMutation,
-  createActorVariables,
-  createAspectOnOpportunityMutation,
-  createAspectOnOpportunityVariables,
-  createRelationMutation,
-  createRelationVariables,
-  createAspectOnProjectMutation,
-  createAspectOnProjectVariables,
-  createReferenceOnContextMutation,
-  createReferenceOnContextVariables,
-  createTagsetOnProfileMutation,
-  createTagsetOnProfileVariables,
+  getCreateMutation,
+  getCreateVariables,
 } from '@test/utils/create-mutations';
 
 import {
-  updateUserMutation,
-  updateUserVariables,
-  updateProfileMutation,
-  updateProfileVariables,
-  updateOrganisationMutation,
-  updateOrganisationVariabls,
-  updateChallengeMutation,
-  updateChallengeVariables,
-  updateOpportunityMutation,
-  updateOpportunityVariables,
-  updateAspectMutation,
-  updateAspectVariable,
-  updateActorMutation,
-  updateActorVariables,
-  addTagsOnTagsetMutation,
-  addTagsOnTagsetVariables,
-  replaceTagsOnTagsetMutation,
-  replaceTagsOnTagsetVariables,
-  addUserToChallengeMutation,
-  addUserToChallengeVariables,
-  addUserToGroupMutation,
-  addUserToGroupVariables,
-  addUserToOpportunityMutation,
-  addUserToOpportunityVariables,
-  assignGroupFocalPointMutation,
-  assignGroupFocalPointVariables,
-  removeGroupFocalPointMutation,
-  removeGroupFocalPointVariables,
-  addChallengeLeadToOrganisationMutation,
-  addChallengeLeadToOrganisationVariables,
-  removeUserFromGroupMutation,
-  removeUserFromGroupVariables,
+  getUpdateMutation,
+  getUpdateVariables,
 } from '@test/utils/update-mutations';
 
 import {
-  removeUserMutation,
-  removeUserVariables,
-  removeChallengeMutation,
-  removeChallengeVariables,
-  removeAspectMutation,
-  removeAspectVariables,
-  removeActorMutation,
-  removeActorVariables,
-  removeActorGroupMutation,
-  removeActorGroupVariables,
+  getRemoveMutation,
+  getRemoveVariables,
 } from '@test/utils/remove-mutations';
 
-const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
+import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
+
 const forbiddenCode = '"code":"FORBIDDEN"';
+let data: TestDataServiceInitResult;
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+  data = appSingleton.Instance.getData();
 });
 
 afterAll(async () => {
@@ -177,87 +38,87 @@ afterAll(async () => {
 describe('DDT community admin user - queries - authorized', () => {
   // Arrange
   test.each`
-    query                                 | expected
-    ${name}                               | ${forbiddenCode}
-    ${hostGroups}                         | ${forbiddenCode}
-    ${hostMembers}                        | ${forbiddenCode}
-    ${hostProfile}                        | ${forbiddenCode}
-    ${contextTagline}                     | ${forbiddenCode}
-    ${contextBackground}                  | ${forbiddenCode}
-    ${contextVision}                      | ${forbiddenCode}
-    ${contextWho}                         | ${forbiddenCode}
-    ${contextImpact}                      | ${forbiddenCode}
-    ${contextReferencesName}              | ${forbiddenCode}
-    ${usersName}                          | ${forbiddenCode}
-    ${usersAccountUPN}                    | ${forbiddenCode}
-    ${usersProfile}                       | ${forbiddenCode}
-    ${usersMemberofGroupsName}            | ${forbiddenCode}
-    ${usersMemberofChallengesName}        | ${forbiddenCode}
-    ${usersMemberofOrganisationsName}     | ${forbiddenCode}
-    ${userName}                           | ${forbiddenCode}
-    ${userAccountUPN}                     | ${forbiddenCode}
-    ${userProfile}                        | ${forbiddenCode}
-    ${userMemberofGroupsName}             | ${forbiddenCode}
-    ${userMemberofChallengesName}         | ${forbiddenCode}
-    ${userMemberofOrganisationsName}      | ${forbiddenCode}
-    ${usersById}                          | ${forbiddenCode}
-    ${groupsName}                         | ${forbiddenCode}
-    ${groupsFocalPointName}               | ${forbiddenCode}
-    ${groupsProfile}                      | ${forbiddenCode}
-    ${groupsMembersName}                  | ${forbiddenCode}
-    ${groupsParentChallenge}              | ${forbiddenCode}
-    ${groupsParentEcoverse}               | ${forbiddenCode}
-    ${groupsParentOpportunity}            | ${forbiddenCode}
-    ${groupsWithTagName}                  | ${forbiddenCode}
-    ${groupsWithTagFocalPointName}        | ${forbiddenCode}
-    ${groupsWithTagProfile}               | ${forbiddenCode}
-    ${groupsWithTagMembersName}           | ${forbiddenCode}
-    ${groupsWithTagParentChallenge}       | ${forbiddenCode}
-    ${groupsWithTagParentEcoverse}        | ${forbiddenCode}
-    ${groupsWithTagParentOpportunity}     | ${forbiddenCode}
-    ${challengesName}                     | ${forbiddenCode}
-    ${challengesTextId}                   | ${forbiddenCode}
-    ${challengesState}                    | ${forbiddenCode}
-    ${challengesContext}                  | ${forbiddenCode}
-    ${challengesLeadOrganisation}         | ${forbiddenCode}
-    ${challengesLeadOrganisationGroups}   | ${forbiddenCode}
-    ${challengesContributors}             | ${forbiddenCode}
-    ${challengesTagsets}                  | ${forbiddenCode}
-    ${challengesGroups}                   | ${forbiddenCode}
-    ${challengesOpportunities}            | ${forbiddenCode}
-    ${challengeName}                      | ${forbiddenCode}
-    ${challengeTextId}                    | ${forbiddenCode}
-    ${challengeState}                     | ${forbiddenCode}
-    ${challengeContext}                   | ${forbiddenCode}
-    ${challengeLeadOrganisation}          | ${forbiddenCode}
-    ${challengeLeadOrganisationGroups}    | ${forbiddenCode}
-    ${challengeContributors}              | ${forbiddenCode}
-    ${challengeTagsets}                   | ${forbiddenCode}
-    ${challengeGroups}                    | ${forbiddenCode}
-    ${challengeOpportunities}             | ${forbiddenCode}
-    ${opportunitiesName}                  | ${forbiddenCode}
-    ${opportunitiesTextId}                | ${forbiddenCode}
-    ${opportunitiesState}                 | ${forbiddenCode}
-    ${opportunitiesContext}               | ${forbiddenCode}
-    ${opportunitiesContributors}          | ${forbiddenCode}
-    ${opportunitiesGroups}                | ${forbiddenCode}
-    ${opportunitiesActorgroupsName}       | ${forbiddenCode}
-    ${opportunitiesActorGroupsActorsName} | ${forbiddenCode}
-    ${opportunitiesAspects}               | ${forbiddenCode}
-    ${opportunitiesRelationsName}         | ${forbiddenCode}
-    ${projectsName}                       | ${forbiddenCode}
-    ${projectsTextId}                     | ${forbiddenCode}
-    ${projectsDescription}                | ${forbiddenCode}
-    ${projectsState}                      | ${forbiddenCode}
-    ${projectsTagset}                     | ${forbiddenCode}
-    ${projectsAspects}                    | ${forbiddenCode}
+    query                                   | idName           | expected
+    ${'name'}                               | ${''}            | ${forbiddenCode}
+    ${'hostGroups'}                         | ${''}            | ${forbiddenCode}
+    ${'hostMembers'}                        | ${''}            | ${forbiddenCode}
+    ${'hostProfile'}                        | ${''}            | ${forbiddenCode}
+    ${'contextTagline'}                     | ${''}            | ${forbiddenCode}
+    ${'contextBackground'}                  | ${''}            | ${forbiddenCode}
+    ${'contextVision'}                      | ${''}            | ${forbiddenCode}
+    ${'contextWho'}                         | ${''}            | ${forbiddenCode}
+    ${'contextImpact'}                      | ${''}            | ${forbiddenCode}
+    ${'contextReferencesName'}              | ${''}            | ${forbiddenCode}
+    ${'usersName'}                          | ${''}            | ${forbiddenCode}
+    ${'usersAccountUPN'}                    | ${''}            | ${forbiddenCode}
+    ${'usersProfile'}                       | ${''}            | ${forbiddenCode}
+    ${'usersMemberofGroupsName'}            | ${''}            | ${forbiddenCode}
+    ${'usersMemberofChallengesName'}        | ${''}            | ${forbiddenCode}
+    ${'usersMemberofOrganisationsName'}     | ${''}            | ${forbiddenCode}
+    ${'userName'}                           | ${'userId'}      | ${forbiddenCode}
+    ${'userAccountUPN'}                     | ${'userId'}      | ${forbiddenCode}
+    ${'userProfile'}                        | ${'userId'}      | ${forbiddenCode}
+    ${'userMemberofGroupsName'}             | ${'userId'}      | ${forbiddenCode}
+    ${'userMemberofChallengesName'}         | ${'userId'}      | ${forbiddenCode}
+    ${'userMemberofOrganisationsName'}      | ${'userId'}      | ${forbiddenCode}
+    ${'usersById'}                          | ${''}            | ${forbiddenCode}
+    ${'groupsName'}                         | ${''}            | ${forbiddenCode}
+    ${'groupsFocalPointName'}               | ${''}            | ${forbiddenCode}
+    ${'groupsProfile'}                      | ${''}            | ${forbiddenCode}
+    ${'groupsMembersName'}                  | ${''}            | ${forbiddenCode}
+    ${'groupsParentChallenge'}              | ${''}            | ${forbiddenCode}
+    ${'groupsParentEcoverse'}               | ${''}            | ${forbiddenCode}
+    ${'groupsParentOpportunity'}            | ${''}            | ${forbiddenCode}
+    ${'groupsWithTagName'}                  | ${''}            | ${forbiddenCode}
+    ${'groupsWithTagFocalPointName'}        | ${''}            | ${forbiddenCode}
+    ${'groupsWithTagProfile'}               | ${''}            | ${forbiddenCode}
+    ${'groupsWithTagMembersName'}           | ${''}            | ${forbiddenCode}
+    ${'groupsWithTagParentChallenge'}       | ${''}            | ${forbiddenCode}
+    ${'groupsWithTagParentEcoverse'}        | ${''}            | ${forbiddenCode}
+    ${'groupsWithTagParentOpportunity'}     | ${''}            | ${forbiddenCode}
+    ${'challengesName'}                     | ${''}            | ${forbiddenCode}
+    ${'challengesTextId'}                   | ${''}            | ${forbiddenCode}
+    ${'challengesState'}                    | ${''}            | ${forbiddenCode}
+    ${'challengesContext'}                  | ${''}            | ${forbiddenCode}
+    ${'challengesLeadOrganisation'}         | ${''}            | ${forbiddenCode}
+    ${'challengesLeadOrganisationGroups'}   | ${''}            | ${forbiddenCode}
+    ${'challengesContributors'}             | ${''}            | ${forbiddenCode}
+    ${'challengesTagsets'}                  | ${''}            | ${forbiddenCode}
+    ${'challengesGroups'}                   | ${''}            | ${forbiddenCode}
+    ${'challengesOpportunities'}            | ${''}            | ${forbiddenCode}
+    ${'challengeName'}                      | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeTextId'}                    | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeState'}                     | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeContext'}                   | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeLeadOrganisation'}          | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeLeadOrganisationGroups'}    | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeContributors'}              | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeTagsets'}                   | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeGroups'}                    | ${'challengeId'} | ${forbiddenCode}
+    ${'challengeOpportunities'}             | ${'challengeId'} | ${forbiddenCode}
+    ${'opportunitiesName'}                  | ${''}            | ${forbiddenCode}
+    ${'opportunitiesTextId'}                | ${''}            | ${forbiddenCode}
+    ${'opportunitiesState'}                 | ${''}            | ${forbiddenCode}
+    ${'opportunitiesContext'}               | ${''}            | ${forbiddenCode}
+    ${'opportunitiesContributors'}          | ${''}            | ${forbiddenCode}
+    ${'opportunitiesGroups'}                | ${''}            | ${forbiddenCode}
+    ${'opportunitiesActorgroupsName'}       | ${''}            | ${forbiddenCode}
+    ${'opportunitiesActorGroupsActorsName'} | ${''}            | ${forbiddenCode}
+    ${'opportunitiesAspects'}               | ${''}            | ${forbiddenCode}
+    ${'opportunitiesRelationsName'}         | ${''}            | ${forbiddenCode}
+    ${'projectsName'}                       | ${''}            | ${forbiddenCode}
+    ${'projectsTextId'}                     | ${''}            | ${forbiddenCode}
+    ${'projectsDescription'}                | ${''}            | ${forbiddenCode}
+    ${'projectsState'}                      | ${''}            | ${forbiddenCode}
+    ${'projectsTagset'}                     | ${''}            | ${forbiddenCode}
+    ${'projectsAspects'}                    | ${''}            | ${forbiddenCode}
   `(
-    'should expect: \'$expected\' for query: \'$query\'',
-    async ({ query, expected }) => {
+    "should expect: '$expected' for query: '$query'",
+    async ({ query, idName, expected }) => {
       // Act
       const requestParamsQueryData = {
         operationName: null,
-        query: `${query}`,
+        query: getQueries(query, (data as Record<string, number>)[idName]),
         variables: null,
       };
       const response = await graphqlRequestAuth(
@@ -278,21 +139,24 @@ describe('DDT community admin user - queries - authorized', () => {
 // ${opportunitiesProjectsAspectsId}   | ${forbiddenCode}
 
 describe('DDT community admin user - Create mutations - authorized', () => {
-  // Arrange
+  // ArrangeidName
   test.each`
-    mutation                            | variables                            | expected
-    ${createOrganisationMutation}       | ${createOrganisationVariables}       | ${forbiddenCode}
-    ${createReferenceOnProfileMutation} | ${createReferenceOnProfileVariable}  | ${forbiddenCode}
-    ${createReferenceOnContextMutation} | ${createReferenceOnContextVariables} | ${forbiddenCode}
-    ${createTagsetOnProfileMutation}    | ${createTagsetOnProfileVariables}    | ${forbiddenCode}
+    mutation                              | variables                              | idName             | expected
+    ${'createOrganisationMutation'}       | ${'createOrganisationVariables'}       | ${''}              | ${forbiddenCode}
+    ${'createReferenceOnProfileMutation'} | ${'createReferenceOnProfileVariable'}  | ${'userProfileId'} | ${forbiddenCode}
+    ${'createReferenceOnContextMutation'} | ${'createReferenceOnContextVariables'} | ${'contextId'}     | ${forbiddenCode}
+    ${'createTagsetOnProfileMutation'}    | ${'createTagsetOnProfileVariables'}    | ${'userProfileId'} | ${forbiddenCode}
   `(
-    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
-    async ({ mutation, variables, expected }) => {
+    "should NOT expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
         operationName: null,
-        query: `${mutation}`,
-        variables: `${variables}`,
+        query: getCreateMutation(mutation),
+        variables: getCreateVariables(
+          variables,
+          (data as Record<string, number>)[idName]
+        ),
       };
       const response = await graphqlRequestAuth(
         requestParamsCreateMutations,
@@ -312,26 +176,29 @@ describe('DDT community admin user - Create mutations - authorized', () => {
 describe('DDT community admin user - Create mutations - NOT authorized', () => {
   // Arrange
   test.each`
-    mutation                             | variables                             | expected
-    ${createGroupOnEcoverseMutation}     | ${createGroupOnEcoverseVariables}     | ${forbiddenCode}
-    ${createChallengeMutation}           | ${createChallengeVariables}           | ${forbiddenCode}
-    ${createGroupOnChallengeMutation}    | ${createGroupOnChallengeVariables}    | ${forbiddenCode}
-    ${createOpportunityMutation}         | ${createOpportunityVariables}         | ${forbiddenCode}
-    ${createGroupOnOpportunityMutations} | ${createGroupOnOpportunityVariables}  | ${forbiddenCode}
-    ${createProjectMutation}             | ${createProjectVariables}             | ${forbiddenCode}
-    ${createActorGroupMutation}          | ${createActorGroupVariables}          | ${forbiddenCode}
-    ${createActorMutation}               | ${createActorVariables}               | ${forbiddenCode}
-    ${createAspectOnOpportunityMutation} | ${createAspectOnOpportunityVariables} | ${forbiddenCode}
-    ${createRelationMutation}            | ${createRelationVariables}            | ${forbiddenCode}
-    ${createAspectOnProjectMutation}     | ${createAspectOnProjectVariables}     | ${forbiddenCode}
+    mutation                               | variables                               | idName             | expected
+    ${'createGroupOnEcoverseMutation'}     | ${'createGroupOnEcoverseVariables'}     | ${''}              | ${forbiddenCode}
+    ${'createChallengeMutation'}           | ${'createChallengeVariables'}           | ${''}              | ${forbiddenCode}
+    ${'createGroupOnChallengeMutation'}    | ${'createGroupOnChallengeVariables'}    | ${'challengeId'}   | ${forbiddenCode}
+    ${'createOpportunityMutation'}         | ${'createOpportunityVariables'}         | ${'challengeId'}   | ${forbiddenCode}
+    ${'createGroupOnOpportunityMutations'} | ${'createGroupOnOpportunityVariables'}  | ${'opportunityId'} | ${forbiddenCode}
+    ${'createProjectMutation'}             | ${'createProjectVariables'}             | ${'opportunityId'} | ${forbiddenCode}
+    ${'createActorGroupMutation'}          | ${'createActorGroupVariables'}          | ${'opportunityId'} | ${forbiddenCode}
+    ${'createActorMutation'}               | ${'createActorVariables'}               | ${'actorGroupId'}  | ${forbiddenCode}
+    ${'createAspectOnOpportunityMutation'} | ${'createAspectOnOpportunityVariables'} | ${'opportunityId'} | ${forbiddenCode}
+    ${'createRelationMutation'}            | ${'createRelationVariables'}            | ${'opportunityId'} | ${forbiddenCode}
+    ${'createAspectOnProjectMutation'}     | ${'createAspectOnProjectVariables'}     | ${'projectId'}     | ${forbiddenCode}
   `(
-    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
-    async ({ mutation, variables, expected }) => {
+    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
         operationName: null,
-        query: `${mutation}`,
-        variables: `${variables}`,
+        query: getCreateMutation(mutation),
+        variables: getCreateVariables(
+          variables,
+          (data as Record<string, number>)[idName]
+        ),
       };
       const response = await graphqlRequestAuth(
         requestParamsCreateMutations,
@@ -349,27 +216,30 @@ describe('DDT community admin user - Create mutations - NOT authorized', () => {
 describe('DDT community admin user - Update mutations - authorized', () => {
   // Arrange
   test.each`
-    mutation                                  | variables                                  | expected
-    ${updateUserMutation}                     | ${updateUserVariables}                     | ${forbiddenCode}
-    ${updateProfileMutation}                  | ${updateProfileVariables}                  | ${forbiddenCode}
-    ${updateOrganisationMutation}             | ${updateOrganisationVariabls}              | ${forbiddenCode}
-    ${addTagsOnTagsetMutation}                | ${addTagsOnTagsetVariables}                | ${forbiddenCode}
-    ${replaceTagsOnTagsetMutation}            | ${replaceTagsOnTagsetVariables}            | ${forbiddenCode}
-    ${addUserToChallengeMutation}             | ${addUserToChallengeVariables}             | ${forbiddenCode}
-    ${addUserToGroupMutation}                 | ${addUserToGroupVariables}                 | ${forbiddenCode}
-    ${addUserToOpportunityMutation}           | ${addUserToOpportunityVariables}           | ${forbiddenCode}
-    ${assignGroupFocalPointMutation}          | ${assignGroupFocalPointVariables}          | ${forbiddenCode}
-    ${removeGroupFocalPointMutation}          | ${removeGroupFocalPointVariables}          | ${forbiddenCode}
-    ${addChallengeLeadToOrganisationMutation} | ${addChallengeLeadToOrganisationVariables} | ${forbiddenCode}
-    ${removeUserFromGroupMutation}            | ${removeUserFromGroupVariables}            | ${forbiddenCode}
+    mutation                                    | variables                                    | idName                        | expected
+    ${'updateUserMutation'}                     | ${'updateUserVariables'}                     | ${'userId'}                   | ${forbiddenCode}
+    ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}            | ${forbiddenCode}
+    ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}           | ${forbiddenCode}
+    ${'addUserToChallengeMutation'}             | ${'addUserToChallengeVariables'}             | ${'challengeId'}              | ${forbiddenCode}
+    ${'addUserToOpportunityMutation'}           | ${'addUserToOpportunityVariables'}           | ${'opportunityId'}            | ${forbiddenCode}
+    ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'}          | ${forbiddenCode}
+    ${'assignGroupFocalPointMutation'}          | ${'assignGroupFocalPointVariables'}          | ${'groupIdEcoverse'}          | ${forbiddenCode}
+    ${'removeGroupFocalPointMutation'}          | ${'removeGroupFocalPointVariables'}          | ${'createGroupOnChallengeId'} | ${forbiddenCode}
+    ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}              | ${forbiddenCode}
+    ${'removeUserFromGroupMutation'}            | ${'removeUserFromGroupVariables'}            | ${'addUserToOpportunityId'}   | ${forbiddenCode}
+    ${'addTagsOnTagsetMutation'}                | ${'addTagsOnTagsetVariables'}                | ${'tagsetId'}                 | ${forbiddenCode}
+    ${'replaceTagsOnTagsetMutation'}            | ${'replaceTagsOnTagsetVariables'}            | ${'tagsetId'}                 | ${forbiddenCode}
   `(
-    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
-    async ({ mutation, variables, expected }) => {
+    "should NOT expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
         operationName: null,
-        query: `${mutation}`,
-        variables: `${variables}`,
+        query: getUpdateMutation(mutation),
+        variables: getUpdateVariables(
+          variables,
+          (data as Record<string, number>)[idName]
+        ),
       };
       const response = await graphqlRequestAuth(
         requestParamsUpdateMutations,
@@ -387,19 +257,22 @@ describe('DDT community admin user - Update mutations - authorized', () => {
 describe('DDT community admin user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
-    mutation                     | variables                     | expected
-    ${updateChallengeMutation}   | ${updateChallengeVariables}   | ${forbiddenCode}
-    ${updateOpportunityMutation} | ${updateOpportunityVariables} | ${forbiddenCode}
-    ${updateAspectMutation}      | ${updateAspectVariable}       | ${forbiddenCode}
-    ${updateActorMutation}       | ${updateActorVariables}       | ${forbiddenCode}
+    mutation                       | variables                       | idName             | expected
+    ${'updateChallengeMutation'}   | ${'updateChallengeVariables'}   | ${'challengeId'}   | ${forbiddenCode}
+    ${'updateOpportunityMutation'} | ${'updateOpportunityVariables'} | ${'opportunityId'} | ${forbiddenCode}
+    ${'updateAspectMutation'}      | ${'updateAspectVariable'}       | ${'aspectId'}      | ${forbiddenCode}
+    ${'updateActorMutation'}       | ${'updateActorVariables'}       | ${'actorId'}       | ${forbiddenCode}
   `(
-    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
-    async ({ mutation, variables, expected }) => {
+    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
         operationName: null,
-        query: `${mutation}`,
-        variables: `${variables}`,
+        query: getUpdateMutation(mutation),
+        variables: getUpdateVariables(
+          variables,
+          (data as Record<string, number>)[idName]
+        ),
       };
       const response = await graphqlRequestAuth(
         requestParamsUpdateMutations,
@@ -417,16 +290,19 @@ describe('DDT community admin user - Update mutations - NOT authorized', () => {
 describe('DDT community admin user - Remove mutations - authorized', () => {
   // Arrange
   test.each`
-    mutation              | variables              | expected
-    ${removeUserMutation} | ${removeUserVariables} | ${forbiddenCode}
+    mutation                | variables                | idName      | expected
+    ${'removeUserMutation'} | ${'removeUserVariables'} | ${'userId'} | ${forbiddenCode}
   `(
-    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
-    async ({ mutation, variables, expected }) => {
+    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {
         operationName: null,
-        query: `${mutation}`,
-        variables: `${variables}`,
+        query: getRemoveMutation(mutation),
+        variables: getRemoveVariables(
+          variables,
+          (data as Record<string, number>)[idName]
+        ),
       };
       const response = await graphqlRequestAuth(
         requestParamsRemoveMutations,
@@ -444,19 +320,23 @@ describe('DDT community admin user - Remove mutations - authorized', () => {
 describe('DDT community admin user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
-    mutation                    | variables                    | expected
-    ${removeChallengeMutation}  | ${removeChallengeVariables}  | ${forbiddenCode}
-    ${removeAspectMutation}     | ${removeAspectVariables}     | ${forbiddenCode}
-    ${removeActorGroupMutation} | ${removeActorGroupVariables} | ${forbiddenCode}
-    ${removeActorMutation}      | ${removeActorVariables}      | ${forbiddenCode}
+    mutation                       | variables                       | idName                   | expected
+    ${'removeActorMutation'}       | ${'removeActorVariables'}       | ${'actorId'}             | ${forbiddenCode}
+    ${'removeActorGroupMutation'}  | ${'removeActorGroupVariables'}  | ${'actorGroupId'}        | ${forbiddenCode}
+    ${'removeAspectMutation'}      | ${'removeAspectVariables'}      | ${'aspectId'}            | ${forbiddenCode}
+    ${'removeOpportunityMutation'} | ${'removeOpportunityVariables'} | ${'removeOpportunityId'} | ${forbiddenCode}
+    ${'removeChallengeMutation'}   | ${'removeChallengeVariables'}   | ${'removeChallangeId'}   | ${forbiddenCode}
   `(
-    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
-    async ({ mutation, variables, expected }) => {
+    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {
         operationName: null,
-        query: `${mutation}`,
-        variables: `${variables}`,
+        query: getRemoveMutation(mutation),
+        variables: getRemoveVariables(
+          variables,
+          (data as Record<string, number>)[idName]
+        ),
       };
       const response = await graphqlRequestAuth(
         requestParamsRemoveMutations,

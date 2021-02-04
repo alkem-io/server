@@ -1,4 +1,4 @@
-const createOrganisationMutation = `
+export const createOrganisationMutation = `
 mutation CreateOrganisation($organisationData: OrganisationInput!) {
     createOrganisation(organisationData: $organisationData) {
       name,
@@ -9,14 +9,14 @@ mutation CreateOrganisation($organisationData: OrganisationInput!) {
     }
   }`;
 
-const createOrganisationVariables = `
+export const createOrganisationVariables = () => `
 {
     "organisationData": {
-        "name": "Cherrytwist7"
+        "name": "Cherrytwist7 "
     }
 }`;
 
-const createGroupOnEcoverseMutation = `
+export const createGroupOnEcoverseMutation = `
 mutation CreateGroupOnEcoverse($groupName: String!) {
     createGroupOnEcoverse(groupName: $groupName) {
       name,
@@ -24,12 +24,12 @@ mutation CreateGroupOnEcoverse($groupName: String!) {
     }
   }`;
 
-const createGroupOnEcoverseVariables = `
+export const createGroupOnEcoverseVariables = () => `
 {
-    "groupName": "test Ecoverse Group"
+    "groupName": "test Ecoverse Group "
   }`;
 
-const createUserMutation = `
+export const createUserMutation = `
 mutation CreateUser($userData: UserInput!) {
     createUser(userData: $userData) {
       id
@@ -46,7 +46,7 @@ mutation CreateUser($userData: UserInput!) {
 }
 `;
 
-const createUserVariables = `
+export const createUserVariables = (id: number) => `
 {
     "userData": {
         "name": "user12",
@@ -65,7 +65,7 @@ const createUserVariables = `
     }
 }`;
 
-const createReferenceOnProfileMutation = `
+export const createReferenceOnProfileMutation = `
 mutation createReferenceOnProfile($referenceInput: ReferenceInput!, $profileID: Float!) {
     createReferenceOnProfile(referenceInput: $referenceInput, profileID: $profileID) {
       name,
@@ -74,9 +74,9 @@ mutation createReferenceOnProfile($referenceInput: ReferenceInput!, $profileID: 
     }
   }`;
 
-const createReferenceOnProfileVariable = `
+export const createReferenceOnProfileVariable = (id: number) => `
 {
-    "profileID": 1,
+    "profileID": ${id},
     "referenceInput":
         {
             "name": "wow",
@@ -85,7 +85,7 @@ const createReferenceOnProfileVariable = `
         }
   }`;
 
-const createChallengeMutation = `
+export const createChallengeMutation = `
 mutation CreateChallenge($challengeData: ChallengeInput!) {
     createChallenge(challengeData: $challengeData) {
       name,
@@ -101,10 +101,10 @@ mutation CreateChallenge($challengeData: ChallengeInput!) {
     }
   }`;
 
-const createChallengeVariables = `
+export const createChallengeVariables = () => `
 {
     "challengeData": {
-        "name": "test challenge name",
+        "name": "test challenge name ",
         "textID": "testCha-textId",
         "context": {
             "tagline": "Test tagline - How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?",
@@ -133,7 +133,7 @@ const createChallengeVariables = `
     }
 }`;
 
-const createGroupOnChallengeMutation = `
+export const createGroupOnChallengeMutation = `
 mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
   createGroupOnChallenge(groupName: $groupName, challengeID: $challengeID) {
     name,
@@ -144,13 +144,13 @@ mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
   }
 }`;
 
-const createGroupOnChallengeVariables = `
+export const createGroupOnChallengeVariables = (id: number) => `
 {
-  "challengeID": 1,
+  "challengeID": ${id},
   "groupName": "testGroup"
 }`;
 
-const createOpportunityMutation = `
+export const createOpportunityMutation = `
 mutation createOpportunityOnChallenge($opportunityData: OpportunityInput!, $challengeID: Float!) {
     createOpportunityOnChallenge(opportunityData: $opportunityData, challengeID: $challengeID) {
       name,
@@ -158,9 +158,9 @@ mutation createOpportunityOnChallenge($opportunityData: OpportunityInput!, $chal
       }
   }`;
 
-const createOpportunityVariables = `
+export const createOpportunityVariables = (id: number) => `
 {
-    "challengeID": 1,
+    "challengeID": ${id},
     "opportunityData": {
         "name": "Test opportunity",
         "textID": "test-opp",
@@ -180,7 +180,7 @@ const createOpportunityVariables = `
     }
 }`;
 
-const createGroupOnOpportunityMutations = `
+export const createGroupOnOpportunityMutations = `
 mutation createGroupOnOpportunity($groupName: String!, $opportunityID: Float!) {
     createGroupOnOpportunity(groupName: $groupName, opportunityID: $opportunityID) {
       name,
@@ -191,13 +191,13 @@ mutation createGroupOnOpportunity($groupName: String!, $opportunityID: Float!) {
     }
   }`;
 
-const createGroupOnOpportunityVariables = `
+export const createGroupOnOpportunityVariables = (id: number) => `
 {
-    "opportunityID": 1,
+    "opportunityID": ${id},
     "groupName": "testOpportunityGroup"
   }`;
 
-const createProjectMutation = `
+export const createProjectMutation = `
 mutation CreateProject($projectData: ProjectInput!, $opportunityID: Float!) {
     createProject(projectData: $projectData, opportunityID: $opportunityID) {
         id
@@ -207,9 +207,9 @@ mutation CreateProject($projectData: ProjectInput!, $opportunityID: Float!) {
     }
   }`;
 
-const createProjectVariables = `
+export const createProjectVariables = (id: number) => `
 {
-    "opportunityID": 1,
+    "opportunityID": ${id},
     "projectData": {
         "name": "Test-Name-Project",
         "textID": "Test-TextId2",
@@ -218,7 +218,7 @@ const createProjectVariables = `
     }
 }`;
 
-const createAspectOnOpportunityMutation = `
+export const createAspectOnOpportunityMutation = `
 mutation CreateAspect($aspectData: AspectInput!, $opportunityID: Float!) {
     createAspect(aspectData: $aspectData, opportunityID: $opportunityID) {
       title,
@@ -227,9 +227,9 @@ mutation CreateAspect($aspectData: AspectInput!, $opportunityID: Float!) {
     }
   }`;
 
-const createAspectOnOpportunityVariables = `
+export const createAspectOnOpportunityVariables = (id: number) => `
 {
-    "opportunityID": 1,
+    "opportunityID": ${id},
     "aspectData": {
         "title": "2 Test-Test-Deployment---zzz kkk mm",
         "framing": "2 Test-Test-How do I handle scalability?",
@@ -237,16 +237,16 @@ const createAspectOnOpportunityVariables = `
     }
 }`;
 
-const createRelationMutation = `
+export const createRelationMutation = `
 mutation CreateRelation($relationData: RelationInput!, $opportunityID: Float!) {
     createRelation(relationData: $relationData, opportunityID: $opportunityID) {
       type
     }
   }`;
 
-const createRelationVariables = `
+export const createRelationVariables = (id: number) => `
 {
-    "opportunityID": 1,
+    "opportunityID": ${id},
     "relationData":
     {
       "type": "incoming",
@@ -257,7 +257,7 @@ const createRelationVariables = `
     }
   }`;
 
-const createAspectOnProjectMutation = `
+export const createAspectOnProjectMutation = `
 mutation CreateAspectOnProject($aspectData: AspectInput!, $projectID: Float!) {
     createAspectOnProject(aspectData: $aspectData, projectID: $projectID) {
       title,
@@ -266,9 +266,9 @@ mutation CreateAspectOnProject($aspectData: AspectInput!, $projectID: Float!) {
     }
   }`;
 
-const createAspectOnProjectVariables = `
+export const createAspectOnProjectVariables = (id: number) => `
 {
-    "projectID": 1,
+    "projectID": ${id},
     "aspectData": {
         "title": "Test-Title",
         "framing": "Test-Framing-How do I handle scalability?",
@@ -276,7 +276,7 @@ const createAspectOnProjectVariables = `
     }
 }`;
 
-const createActorGroupMutation = `
+export const createActorGroupMutation = `
 mutation CreateActorGroup(
     $actorGroupData: ActorGroupInput!
     $opportunityID: Float!
@@ -293,16 +293,16 @@ mutation CreateActorGroup(
       }
   }`;
 
-const createActorGroupVariables = `
+export const createActorGroupVariables = (id: number) => `
 {
-    "opportunityID": 1,
+    "opportunityID": ${id},
     "actorGroupData": {
         "name": "Test Actor 1",
         "description": "Test-How do I handle scalability? - Test"
     }
 }`;
 
-const createActorMutation = `
+export const createActorMutation = `
 mutation createActor($actorData: ActorInput!, $actorGroupID: Float!) {
     createActor(actorData: $actorData, actorGroupID: $actorGroupID) {
       id,
@@ -313,9 +313,9 @@ mutation createActor($actorData: ActorInput!, $actorGroupID: Float!) {
       }
   }`;
 
-const createActorVariables = `
+export const createActorVariables = (id: number) => `
 {
-    "actorGroupID": 1,
+    "actorGroupID": ${id},
     "actorData": {
         "name": "test",
         "description": "Test-Main architect for the solution - Test",
@@ -324,7 +324,7 @@ const createActorVariables = `
     }
 }`;
 
-const createReferenceOnContextMutation = `
+export const createReferenceOnContextMutation = `
 mutation createReferenceOnContext($referenceInput: ReferenceInput!, $contextID: Float!) {
     createReferenceOnContext(referenceInput: $referenceInput, contextID: $contextID) {
       name,
@@ -333,9 +333,9 @@ mutation createReferenceOnContext($referenceInput: ReferenceInput!, $contextID: 
     }
   }`;
 
-const createReferenceOnContextVariables = `
+export const createReferenceOnContextVariables = (id: number) => `
 {
-    "contextID": 1,
+    "contextID": ${id},
     "referenceInput":
         {
             "name": "wow",
@@ -344,7 +344,7 @@ const createReferenceOnContextVariables = `
         }
   }`;
 
-const createTagsetOnProfileMutation = `
+export const createTagsetOnProfileMutation = `
 mutation createTagsetOnProfile($tagsetName: String!, $profileID: Float!) {
     createTagsetOnProfile(tagsetName: $tagsetName, profileID: $profileID) {
       name,
@@ -353,43 +353,54 @@ mutation createTagsetOnProfile($tagsetName: String!, $profileID: Float!) {
     }
   }`;
 
-const createTagsetOnProfileVariables = `
+export const createTagsetOnProfileVariables = (id: number) => `
 {
-    "profileID": 1,
+    "profileID": ${id},
     "tagsetName": "testTagset"
   }`;
 
-export {
+const mutations: Record<string, string> = {
   createOrganisationMutation,
-  createOrganisationVariables,
   createGroupOnEcoverseMutation,
-  createGroupOnEcoverseVariables,
   createUserMutation,
-  createUserVariables,
   createReferenceOnProfileMutation,
-  createReferenceOnProfileVariable,
   createChallengeMutation,
-  createChallengeVariables,
   createGroupOnChallengeMutation,
-  createGroupOnChallengeVariables,
   createOpportunityMutation,
-  createOpportunityVariables,
   createGroupOnOpportunityMutations,
-  createGroupOnOpportunityVariables,
   createProjectMutation,
-  createProjectVariables,
   createActorGroupMutation,
-  createActorGroupVariables,
   createActorMutation,
-  createActorVariables,
   createAspectOnOpportunityMutation,
-  createAspectOnOpportunityVariables,
   createRelationMutation,
-  createRelationVariables,
   createAspectOnProjectMutation,
-  createAspectOnProjectVariables,
   createReferenceOnContextMutation,
-  createReferenceOnContextVariables,
   createTagsetOnProfileMutation,
+};
+
+const variables: Record<string, (id: number) => string> = {
+  createOrganisationVariables,
+  createGroupOnEcoverseVariables,
+  createUserVariables,
+  createReferenceOnProfileVariable,
+  createChallengeVariables,
+  createGroupOnChallengeVariables,
+  createOpportunityVariables,
+  createGroupOnOpportunityVariables,
+  createProjectVariables,
+  createActorGroupVariables,
+  createActorVariables,
+  createAspectOnOpportunityVariables,
+  createRelationVariables,
+  createAspectOnProjectVariables,
+  createReferenceOnContextVariables,
   createTagsetOnProfileVariables,
+};
+
+export const getCreateMutation = (name: string) => {
+  return mutations[name];
+};
+
+export const getCreateVariables = (name: string, id: number) => {
+  return variables[name](id);
 };

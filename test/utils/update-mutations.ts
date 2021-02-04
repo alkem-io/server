@@ -302,10 +302,11 @@ const variables: Record<string, (id: number) => string> = {
   addChallengeLeadToOrganisationVariables,
   removeUserFromGroupVariables,
 };
-export const getMutation = (name: string) => {
+
+export const getUpdateMutation = (name: string) => {
   return mutations[name];
 };
 
-export const getVariables = (name: string, id: number) => {
+export const getUpdateVariables = (name: string, id: number) => {
   return variables[name](id);
 };

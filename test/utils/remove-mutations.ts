@@ -1,62 +1,85 @@
-const removeUserMutation = `
+export const removeUserMutation = `
 mutation removeUser($userID: Float!) {
     removeUser(userID: $userID)
   }`;
 
-const removeUserVariables = `
+export const removeUserVariables = (id: number) => `
 {
-    "userID": 7
+    "userID": ${id}
   }`;
 
-const removeChallengeMutation = `
+export const removeChallengeMutation = `
 mutation removeChallenge($ID: Float!) {
     removeChallenge(ID: $ID)
   }`;
 
-const removeChallengeVariables = `
+export const removeChallengeVariables = (id: number) => `
 {
-    "ID": 7
+    "ID": ${id}
   }`;
 
-const removeAspectMutation = `
+export const removeOpportunityMutation = `
+  mutation removeOpportunity($ID: Float!) {
+    removeOpportunity(ID: $ID)
+    }`;
+
+export const removeOpportunityVariables = (id: number) => `
+  {
+      "ID": ${id}
+    }`;
+
+export const removeAspectMutation = `
 mutation removeAspect($ID: Float!) {
     removeAspect(ID: $ID)
   }`;
 
-const removeAspectVariables = `
+export const removeAspectVariables = (id: number) => `
   {
-    "ID": 1
+    "ID": ${id}
   }`;
 
-const removeActorMutation = `
+export const removeActorMutation = `
 mutation removeActor($ID: Float!) {
     removeActor(ID: $ID)
   }`;
 
-const removeActorVariables = `
+export const removeActorVariables = (id: number) => `
 {
-    "ID": 1
+    "ID": ${id}
   }`;
 
-const removeActorGroupMutation = `
+export const removeActorGroupMutation = `
 mutation removeActorGroup($ID: Float!) {
     removeActorGroup(ID: $ID)
   }`;
 
-const removeActorGroupVariables = `
+export const removeActorGroupVariables = (id: number) => `
   {
-      "ID": 2
+      "ID": ${id}
     }`;
 
-export {
-  removeUserMutation,
-  removeUserVariables,
-  removeChallengeMutation,
-  removeChallengeVariables,
+const mutations: Record<string, string> = {
   removeAspectMutation,
-  removeAspectVariables,
   removeActorMutation,
-  removeActorVariables,
   removeActorGroupMutation,
+  removeOpportunityMutation,
+  removeChallengeMutation,
+  removeUserMutation,
+};
+
+const variables: Record<string, (id: number) => string> = {
+  removeAspectVariables,
+  removeActorVariables,
   removeActorGroupVariables,
+  removeOpportunityVariables,
+  removeChallengeVariables,
+  removeUserVariables,
+};
+
+export const getRemoveMutation = (name: string) => {
+  return mutations[name];
+};
+
+export const getRemoveVariables = (name: string, id: number) => {
+  return variables[name](id);
 };
