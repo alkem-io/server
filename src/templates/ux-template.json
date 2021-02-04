@@ -1,17 +1,28 @@
 {
   "name": "default-ux-template",
-  "description":
-    "sample ecoverse template based on Odyssey ecoverse setup; used by CT Web Client to configure the display / options to end users",
+  "description": "sample ecoverse template based on Odyssey ecoverse setup; used by CT Web Client to configure the display / options to end users",
   "users": [
     {
       "name": "default",
-      "tagsets": ["skills", "keywords"]
+      "tagsets": [
+        {
+          "name": "skills",
+          "placeholder": "Communication, Blockchain"
+        },
+        {
+          "name": "keywords",
+          "placeholder": "Innovation, AI, Technology"
+        }
+      ]
     }
   ],
   "opportunities": [
     {
       "name": "default",
-      "actorGroups": ["key_users", "stakeholders"],
+      "actorGroups": [
+        "key_users",
+        "stakeholders"
+      ],
       "aspects": [
         "prototype",
         "economic-win",
@@ -23,7 +34,10 @@
         "cso",
         "international_standards"
       ],
-      "relations": ["members", "groups"]
+      "relations": [
+        "members",
+        "groups"
+      ]
     }
   ]
 }
