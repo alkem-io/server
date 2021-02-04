@@ -53,6 +53,7 @@ export class appSingleton {
     const ropcStrategy = await testModule.get(AadRopcStrategy);
     await this.getTokensForAllTestUsers(ropcStrategy);
 
+    await appSingleton.testDataService.initDB();
     this.data = await appSingleton.testDataService.initFunctions();
   }
 

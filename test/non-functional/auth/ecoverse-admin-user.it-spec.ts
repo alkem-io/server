@@ -219,7 +219,6 @@ describe('DDT ecoverse admin user - Update mutations - authorized', () => {
         TestUser.GLOBAL_ADMIN
       );
       const responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);

@@ -2,9 +2,7 @@ import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import { TestUser } from '@test/utils/token.helper';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import {
-  getQueries,
-} from '@test/non-functional/auth/queries';
+import { getQueries } from '@test/non-functional/auth/queries';
 
 import {
   getCreateMutation,
@@ -174,7 +172,6 @@ describe('DDT global admin user - Create mutations - authorized', () => {
         TestUser.GLOBAL_ADMIN
       );
       const responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);
@@ -257,7 +254,6 @@ describe('DDT global admin user - Remove mutations - authorized', () => {
         TestUser.GLOBAL_ADMIN
       );
       const responseData = JSON.stringify(response.body).replace('\\', '');
-      console.log(responseData);
 
       // Assert
       expect(response.status).toBe(200);
