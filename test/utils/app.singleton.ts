@@ -2,13 +2,16 @@ import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { TestDataService } from '@utils/data-management/test-data.service';
+import {
+  TestDataService,
+  TestDataServiceInitResult,
+} from '@utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
 export class appSingleton {
   private static _instance: appSingleton;
   private static testDataService: TestDataService;
-
+  private data!: TestDataServiceInitResult;
   private _app!: INestApplication;
   public get app(): INestApplication {
     return this._app;
@@ -34,6 +37,11 @@ export class appSingleton {
     return this._instance || (this._instance = new this());
   }
 
+  // Returns data generated in test-data.service.ts
+  getData() {
+    return this.data;
+  }
+
   async initServer() {
     const testModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -46,11 +54,10 @@ export class appSingleton {
     await this.getTokensForAllTestUsers(configService);
 
     await appSingleton.testDataService.initDB();
-    await appSingleton.testDataService.initFunctions();
+    this.data = await appSingleton.testDataService.initFunctions();
   }
 
   async teardownServer() {
-    //await appSingleton.testDataService.teardownFunctions();
     await appSingleton.testDataService.teardownDB();
     await this.app.close();
   }
