@@ -1,7 +1,11 @@
+import { AuthConfig } from '@cmdbg/tokenator';
 import { INestApplication } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
+import { AAD_MODULE_NEST_PROVIDER } from '@utils/aad/aad.constants';
+import { AadIdentityService } from '@utils/aad/aad.identity.service';
+import { AadModule } from '@utils/aad/aad.module';
 import { TestDataService } from '@utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
@@ -42,8 +46,8 @@ export class appSingleton {
     this.app = testModule.createNestApplication();
     await this.app.init();
     appSingleton.testDataService = await testModule.get(TestDataService);
-    const ropcStrategy = await testModule.get(AadRopcStrategy);
-    await this.getTokensForAllTestUsers(ropcStrategy);
+    const aadIdentityService = await testModule.get(AAD_MODULE_NEST_PROVIDER);
+    await this.getTokensForAllTestUsers(aadIdentityService);
 
     await appSingleton.testDataService.initDB();
     await appSingleton.testDataService.initFunctions();
@@ -55,8 +59,10 @@ export class appSingleton {
     await this.app.close();
   }
 
-  private async getTokensForAllTestUsers(ropcStrategy: AadRopcStrategy) {
-    const tokenHelper = new TokenHelper(ropcStrategy);
+  private async getTokensForAllTestUsers(
+    aadIdentityService: AadIdentityService
+  ) {
+    const tokenHelper = new TokenHelper(aadIdentityService);
     this.userTokenMap = await tokenHelper.buildUserTokenMap();
   }
 }

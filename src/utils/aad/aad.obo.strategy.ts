@@ -1,5 +1,5 @@
 import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
-import { Inject, Injectable, Scope } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AuthConfig,
@@ -10,10 +10,11 @@ import {
 import { TokenException } from '@utils/error-handling/exceptions';
 import { CONTEXT } from '@nestjs/graphql';
 
-@Injectable({ scope: Scope.DEFAULT })
+//vyanakiev toDo - review this class and decide whether it's needed or it's merged with the AadIdentityService
 export class AadOboStrategy implements AuthenticationProvider {
   constructor(
-    private configService: ConfigService // @Inject(CONTEXT) private readonly context: any
+    private configService: ConfigService,
+    @Inject(CONTEXT) private readonly context: any
   ) {}
 
   async getAccessToken(): Promise<string> {
@@ -37,12 +38,11 @@ export class AadOboStrategy implements AuthenticationProvider {
   }
 
   async getBearerToken(): Promise<string> {
-    // const { req } = this.context as any;
-    // if (!req.headers.authorization)
-    //   throw new TokenException('Trying to access OBO flow unauthenticated!');
+    const { req } = this.context as any;
+    if (!req.headers.authorization)
+      throw new TokenException('Trying to access OBO flow unauthenticated!');
 
-    // const [{}, token] = req.headers.authorization.split(' ');
-    // return token;
-    return '';
+    const [{}, token] = req.headers.authorization.split(' ');
+    return token;
   }
 }

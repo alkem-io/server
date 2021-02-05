@@ -1,11 +1,12 @@
-import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
+import { Token } from '@cmdbg/tokenator';
+import { IdentityService } from '@interfaces/identity.service';
 
 export class TokenHelper {
   private users = Object.values(TestUser);
-  private ropcStrategy: AadRopcStrategy;
+  private identityService: IdentityService;
 
-  constructor(ropcStrategy: AadRopcStrategy) {
-    this.ropcStrategy = ropcStrategy;
+  constructor(identityService: IdentityService) {
+    this.identityService = identityService;
   }
 
   private async buildUpn(user: string): Promise<string> {
@@ -32,10 +33,12 @@ export class TokenHelper {
 
     for (const user of this.users) {
       const upn = await this.buildUpn(user);
-      const token = await this.ropcStrategy.getAccessTokenForUser(
-        upn,
-        password
-      );
+      const res = await this.identityService.authenticateRopc({
+        username: upn,
+        password,
+      });
+
+      const token = (res as Token).access_token;
 
       userTokenMap.set(user, token);
     }

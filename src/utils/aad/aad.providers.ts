@@ -1,7 +1,8 @@
 import { AadAuthenticationClient } from '@cmdbg/tokenator';
 import { Provider, Type } from '@nestjs/common';
-import { AadIdentityService } from './aad.classes';
+import { AadIdentityService } from './aad.identity.service';
 import {
+  AAD_GRAPH_MODULE_PROVIDER,
   AAD_MODULE_NEST_PROVIDER,
   AAD_MODULE_OPTIONS,
   AAD_MODULE_PROVIDER,
@@ -11,26 +12,31 @@ import {
   AadModuleOptions,
   AadModuleOptionsFactory,
 } from './aad.interfaces';
-import { createIdentityService } from './identity.service.factory';
-
-export function createNestAadAuthenticationClient(
-  aadOptions: AadModuleOptions
-): AadAuthenticationClient {
-  return createIdentityService(aadOptions);
-}
+import {
+  identityServiceFactory,
+  graphServiceFactory,
+} from './identity.service.factories';
+import { MsGraphService } from './ms-graph.service';
 
 export function createAadProviders(aadOptions: AadModuleOptions): Provider[] {
   return [
     {
       provide: AAD_MODULE_PROVIDER,
-      useFactory: () => createIdentityService(aadOptions),
+      useFactory: () => identityServiceFactory(aadOptions),
+    },
+    {
+      provide: AAD_GRAPH_MODULE_PROVIDER,
+      useFactory: () => graphServiceFactory(),
     },
     {
       provide: AAD_MODULE_NEST_PROVIDER,
-      useFactory: (aadAuthenticationClient: AadAuthenticationClient) => {
-        return new AadIdentityService(aadAuthenticationClient);
+      useFactory: (
+        aadAuthenticationClient: AadAuthenticationClient,
+        graphService: MsGraphService
+      ) => {
+        return new AadIdentityService(aadAuthenticationClient, graphService);
       },
-      inject: [AAD_MODULE_PROVIDER],
+      inject: [AAD_MODULE_PROVIDER, AAD_GRAPH_MODULE_PROVIDER],
     },
   ];
 }
@@ -42,15 +48,22 @@ export function createAadAsyncProviders(
     {
       provide: AAD_MODULE_PROVIDER,
       useFactory: (aadOptions: AadModuleOptions) =>
-        createIdentityService(aadOptions),
+        identityServiceFactory(aadOptions),
       inject: [AAD_MODULE_OPTIONS],
     },
     {
+      provide: AAD_GRAPH_MODULE_PROVIDER,
+      useFactory: () => graphServiceFactory(),
+    },
+    {
       provide: AAD_MODULE_NEST_PROVIDER,
-      useFactory: (aadAuthenticationClient: AadAuthenticationClient) => {
-        return new AadIdentityService(aadAuthenticationClient);
+      useFactory: (
+        aadAuthenticationClient: AadAuthenticationClient,
+        graphService: MsGraphService
+      ) => {
+        return new AadIdentityService(aadAuthenticationClient, graphService);
       },
-      inject: [AAD_MODULE_PROVIDER],
+      inject: [AAD_MODULE_PROVIDER, AAD_GRAPH_MODULE_PROVIDER],
     },
   ];
 

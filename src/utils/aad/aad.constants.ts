@@ -1,3 +1,4 @@
-export const AAD_MODULE_OPTIONS = 'AadModuleOptions';
-export const AAD_MODULE_PROVIDER = 'tokenator';
-export const AAD_MODULE_NEST_PROVIDER = 'nestTokenator';
+export const AAD_MODULE_OPTIONS = 'aadModuleOptions';
+export const AAD_MODULE_PROVIDER = 'aadModule';
+export const AAD_GRAPH_MODULE_PROVIDER = 'aadGraphModule';
+export const AAD_MODULE_NEST_PROVIDER = 'nestAadModule';

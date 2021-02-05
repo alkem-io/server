@@ -21,8 +21,6 @@ import { ValidationException } from '@utils/error-handling/exceptions/validation
 import { BaseException } from '@utils/error-handling/exceptions/base.exception';
 import { EntityNotFoundException } from '@utils/error-handling/exceptions/entity.not.found.exception';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
-import { AAD_MODULE_NEST_PROVIDER } from '@utils/aad/aad.constants';
-import { IdentityService } from '@interfaces/idp.service';
 
 @Injectable()
 export class BootstrapService {
@@ -34,14 +32,11 @@ export class BootstrapService {
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @Inject(AAD_MODULE_NEST_PROVIDER)
-    private readonly identityService: IdentityService
+    private readonly logger: LoggerService
   ) {}
 
   async bootstrapEcoverse() {
     try {
-      const res = await this.identityService.authenticateRopc();
       this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
       this.logConfig();
 

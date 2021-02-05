@@ -1,11 +1,6 @@
-import { AadAuthenticationClient } from '@cmdbg/tokenator';
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import { AadModuleAsyncOptions, AadModuleOptions } from './aad.interfaces';
-import {
-  createAadAsyncProviders,
-  createAadProviders,
-  createNestAadAuthenticationClient,
-} from './aad.providers';
+import { createAadAsyncProviders, createAadProviders } from './aad.providers';
 
 @Global()
 @Module({})
@@ -29,11 +24,5 @@ export class AadModule {
       providers: providers,
       exports: providers,
     } as DynamicModule;
-  }
-
-  public static createIdentityService(
-    options: AadModuleOptions
-  ): AadAuthenticationClient {
-    return createNestAadAuthenticationClient(options);
   }
 }

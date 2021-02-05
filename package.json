@@ -38,7 +38,7 @@
     "migration:show": "npm run typeorm migration:show"
   },
   "dependencies": {
-    "@cmdbg/tokenator": "^0.1.0",
+    "@cmdbg/tokenator": "^0.1.1",
     "@microsoft/microsoft-graph-client": "^2.1.0",
     "@nestjs/common": "^7.6.5",
     "@nestjs/config": "^0.5.0",

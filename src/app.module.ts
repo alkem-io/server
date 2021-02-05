@@ -25,7 +25,6 @@ import { IDatabaseConfig } from '@interfaces/database.config.interface';
 import { DataManagementModule } from '@utils/data-management/data-management.module';
 import serviceConfig from '@config/service.config';
 import { BootstrapModule } from '@utils/bootstrap/bootstrap.module';
-import { MsGraphModule } from '@utils/ms-graph/ms-graph.module';
 import msGraphConfig from '@config/ms-graph.config';
 import { WinstonModule } from 'nest-winston';
 import aadClientConfig from '@config/aad.client.config';
@@ -55,7 +54,6 @@ import { AuthConfig } from '@cmdbg/tokenator';
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
         '.env.oidc.default',
-        // '.env.test',
       ],
       isGlobal: true,
       load: [
@@ -106,11 +104,10 @@ import { AuthConfig } from '@cmdbg/tokenator';
       playground: true,
       fieldResolverEnhancers: ['guards'],
       sortSchema: true,
-      // context: ({ req }) => ({ req }),
+      // context: ({ req }) => ({ req }), vyanakiev toDo - review whether / how we inject gql context
     }),
     DataManagementModule,
     BootstrapModule,
-    MsGraphModule,
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
@@ -140,12 +137,8 @@ import { AuthConfig } from '@cmdbg/tokenator';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
-    // {
-    //   provide: AUTH_OBO,
-    //   useClass: AadOboStrategy,
-    // },
-    OidcStrategy,
-    AuthService,
+    OidcStrategy, //vyanakiev toDo - review this provider
+    AuthService, //vyanakiev toDo - review this provider
   ],
 })
 export class AppModule {}
