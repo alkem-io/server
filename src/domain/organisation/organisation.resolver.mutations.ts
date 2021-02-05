@@ -4,7 +4,7 @@ import { Float } from '@nestjs/graphql';
 import { Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
 import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import {
   RestrictedGroupNames,
   UserGroup,

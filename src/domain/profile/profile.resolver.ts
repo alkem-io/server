@@ -2,7 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Mutation, Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
 import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { ReferenceInput } from '@domain/reference/reference.dto';
 import { Reference } from '@domain/reference/reference.entity';
 import { IReference } from '@domain/reference/reference.interface';

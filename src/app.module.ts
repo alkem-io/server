@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthenticationModule } from '@utils/authentication/authentication.module';
+import { AuthModule } from '@utils/auth/auth.module';
 import { AgreementModule } from '@domain/agreement/agreement.module';
 import { UserModule } from '@domain/user/user.module';
 import { ChallengeModule } from '@domain/challenge/challenge.module';
@@ -38,8 +38,8 @@ import { MetadataModule } from '@utils/metadata/metadata.module';
 import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
-import { AuthService } from '@utils/authentication/auth.service';
-import { OidcStrategy } from '@utils/authentication/oidc.strategy';
+import { AuthService } from '@utils/auth/auth.service';
+import { OidcBearerStrategy } from '@utils/auth/oidc.bearer.strategy';
 import oidcConfig from '@config/oidc.config';
 import { AadModule } from '@utils/aad/aad.module';
 import { AuthConfig } from '@cmdbg/tokenator';
@@ -85,7 +85,7 @@ import { AuthConfig } from '@cmdbg/tokenator';
         logging: configService.get<IDatabaseConfig>('database')?.logging,
       }),
     }),
-    AuthenticationModule,
+    AuthModule,
     AgreementModule,
     ChallengeModule,
     ContextModule,
@@ -137,7 +137,7 @@ import { AuthConfig } from '@cmdbg/tokenator';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
-    OidcStrategy, //vyanakiev toDo - review this provider
+    OidcBearerStrategy, //vyanakiev toDo - review this provider
     AuthService, //vyanakiev toDo - review this provider
   ],
 })

@@ -8,7 +8,7 @@ import { IOidcConfig } from '@interfaces/oidc.config.interface';
 import { AuthService } from './auth.service';
 
 @Injectable()
-export class OidcStrategy extends PassportStrategy(Strategy, 'bearer') {
+export class OidcBearerStrategy extends PassportStrategy(Strategy, 'bearer') {
   constructor(
     private configService: ConfigService,
     private authService: AuthService,

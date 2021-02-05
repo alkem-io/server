@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { SearchService } from './search.service';
 import { ISearchResultEntry } from './search-result-entry.interface';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
