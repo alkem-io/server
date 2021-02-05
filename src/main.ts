@@ -9,8 +9,6 @@ import { BootstrapService } from './utils/bootstrap/bootstrap.service';
 import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
 import { faviconMiddleware } from './utils/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
-import session from 'express-session';
-import passport from 'passport';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -36,18 +34,6 @@ const bootstrap = async () => {
       contentSecurityPolicy: false,
     })
   );
-
-  app.use(
-    session({
-      secret: 'keyboard cat',
-      resave: false,
-      saveUninitialized: true,
-      cookie: { secure: true },
-    })
-  );
-
-  app.use(passport.initialize());
-  app.use(passport.session());
 
   await app.listen(
     configService.get<IServiceConfig>('service')?.graphqlEndpointPort as number
