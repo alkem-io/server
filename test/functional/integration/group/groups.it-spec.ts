@@ -18,9 +18,10 @@ import {
   removeUserMutation,
 } from '@test/functional/e2e/user-management/user.request.params';
 import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
+import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
 
-let userName = '';
-let userId = '';
+let data: TestDataServiceInitResult;
+let userId: number;
 let groupName = '';
 let ecoverseGroupId = '';
 let organisationName = '';
@@ -34,19 +35,16 @@ let challengeId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+  data = appSingleton.Instance.getData();
+  userId = data.userId;
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
-  userName = `QAuserName${uniqueTextId}`;
   groupName = `QA groupName ${uniqueTextId}`;
   organisationName = `QA organisationName ${uniqueTextId}`;
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
   opportunityTextId = `${uniqueTextId}`;
-
-  // Create user
-  const response = await createUserMutation(userName);
-  userId = response.body.data.createUser.id;
 
   // Create organisation
   const responseCreateOrganisation = await createOrganisationMutation(
@@ -89,9 +87,9 @@ describe('Groups', () => {
     ecoverseGroupId =
       responseCreateGroupOnEcoverse.body.data.createGroupOnEcoverse.id;
 
-    let groupData = await getGroup(ecoverseGroupId);
+    const groupData = await getGroup(ecoverseGroupId);
 
-    let groupsData = await getGroups();
+    const groupsData = await getGroups();
 
     // Assert
     expect(groupData.body.data.group.id).toEqual(
@@ -117,7 +115,7 @@ describe('Groups', () => {
     // Act
     const response = await removeUserGroupMutation(ecoverseGroupId);
 
-    let groupsData = await getGroups();
+    const groupsData = await getGroups();
 
     // Assert
     expect(response.body.data.removeUserGroup).toEqual(true);
@@ -141,7 +139,7 @@ describe('Groups', () => {
       groupName + 'change'
     );
 
-    let groupsData = await getGroups();
+    const groupsData = await getGroups();
 
     // Assert
     expect(groupsData.body.data.groups).toContainObject({
@@ -154,7 +152,7 @@ describe('Groups', () => {
     // Act
     const responseRemoveRestrictedGroup = await removeUserGroupMutation(2);
 
-    let groupsData = await getGroups();
+    const groupsData = await getGroups();
 
     // Assert
     expect(responseRemoveRestrictedGroup.text).toContain(
@@ -163,7 +161,7 @@ describe('Groups', () => {
 
     expect(groupsData.body.data.groups).not.toContainObject({
       id: 2,
-      name: `ecoverse-admins`,
+      name: 'ecoverse-admins',
     });
   });
 
@@ -171,12 +169,12 @@ describe('Groups', () => {
     // Act
     // Create ecoverse group
     const responseCreateGroupOnEcoverse = await createGroupMutation(
-      `ecoverse-admins`
+      'ecoverse-admins'
     );
 
     // Assert
     expect(responseCreateGroupOnEcoverse.text).toContain(
-      `Unable to create user group as parent already has a group with the given name: ecoverse-admins`
+      'Unable to create user group as parent already has a group with the given name: ecoverse-admins'
     );
   });
 
@@ -191,10 +189,10 @@ describe('Groups', () => {
     // Update new group name to existing restricted group name
     const responseUpdateMutation = await updateGroupMutation(
       ecoverseGroupId,
-      `ecoverse-admins`
+      'ecoverse-admins'
     );
 
-    let groupsData = await getGroups();
+    const groupsData = await getGroups();
 
     // Assert
 
@@ -213,16 +211,16 @@ describe('Groups', () => {
     // Update restricted group name
     const responseUpdateMutation = await updateGroupMutation(2, groupName);
 
-    let groupsData = await getGroups();
+    const groupsData = await getGroups();
 
     // Assert
     expect(responseUpdateMutation.text).toContain(
-      `Unable to rename User Group with the specified ID: 2; restricted group: ecoverse-admins`
+      'Unable to rename User Group with the specified ID: 2; restricted group: ecoverse-admins'
     );
 
     expect(groupsData.body.data.groups).toContainObject({
       id: '2',
-      name: `ecoverse-admins`,
+      name: 'ecoverse-admins',
     });
 
     expect(groupsData.body.data.groups).not.toContainObject({
@@ -236,7 +234,7 @@ describe('Groups', () => {
     // Create ecoverse group
     const responseCreateGroupOnEcoverse = await createGroupMutation('');
 
-    let groupsData = await getGroups();
+    const groupsData = await getGroups();
 
     // Assert
     expect(responseCreateGroupOnEcoverse.text).toContain(
@@ -245,7 +243,7 @@ describe('Groups', () => {
 
     expect(groupsData.body.data.groups).not.toContainObject({
       id: `${ecoverseGroupId}`,
-      name: ``,
+      name: '',
     });
   });
 
@@ -257,7 +255,7 @@ describe('Groups', () => {
       responseCreateGroupOnEcoverse.body.data.createGroupOnEcoverse.id;
 
     // Act
-    let groupParent = await getGroupParent(ecoverseGroupId);
+    const groupParent = await getGroupParent(ecoverseGroupId);
 
     // Assert
     expect(groupParent.body.data.group.parent).toEqual({
@@ -287,7 +285,7 @@ describe('Groups', () => {
       responseCreateGroupeOnOrganisation.body.data.createGroupOnOrganisation.id;
 
     // Act
-    let groupParent = await getGroupParent(organisationGroupId);
+    const groupParent = await getGroupParent(organisationGroupId);
 
     expect(groupParent.body.data.group.parent).not.toContainObject({
       __typename: 'Ecoverse',
@@ -319,7 +317,7 @@ describe('Groups', () => {
       responseCreateGroupeOnChallenge.body.data.createGroupOnChallenge.id;
 
     // Act
-    let groupParent = await getGroupParent(challengeGroupId);
+    const groupParent = await getGroupParent(challengeGroupId);
 
     expect(groupParent.body.data.group.parent).not.toContainObject({
       __typename: 'Ecoverse',
@@ -352,7 +350,7 @@ describe('Groups', () => {
       responseCreateGroupeOnOpportunity.body.data.createGroupOnOpportunity.id;
 
     // Act
-    let groupParent = await getGroupParent(opportunityGroupId);
+    const groupParent = await getGroupParent(opportunityGroupId);
 
     expect(groupParent.body.data.group.parent).not.toContainObject({
       __typename: 'Ecoverse',

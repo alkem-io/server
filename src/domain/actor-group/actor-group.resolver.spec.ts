@@ -1,5 +1,3 @@
-import { ActorModule } from '@domain/actor/actor.module';
-import { ProfileModule } from '@domain/profile/profile.module';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import { ActorGroupResolver } from './actor-group.resolver';

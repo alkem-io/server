@@ -8,9 +8,7 @@
       "type": "node",
       "request": "launch",
       "name": "Launch Program",
-      "args": [
-        "${workspaceFolder}/src/main.ts"
-      ],
+      "args": ["${workspaceFolder}/src/main.ts"],
       "envFile": "${workspaceFolder}/.env",
       "runtimeArgs": [
         "-r",
@@ -20,9 +18,7 @@
       ],
       "cwd": "${workspaceRoot}",
       "preLaunchTask": "tsc: watch - tsconfig.build.json",
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "skipFiles": [
         "${workspaceFolder}/node_modules/**/*.js",
         "<node_internals>/**/*.js"
@@ -33,14 +29,8 @@
       "request": "launch",
       "name": "Debug Nest Framework",
       "program": "${workspaceFolder}/node_modules/@nestjs/cli/bin/nest.js",
-      "runtimeArgs": [
-        "--preserve-symlinks"
-      ],
-      "args": [
-        "start",
-        "debug",
-        "--watch"
-      ],
+      "runtimeArgs": ["--preserve-symlinks"],
+      "args": ["start", "debug", "--watch"],
       "sourceMaps": true,
       "envFile": "${workspaceFolder}/.env",
       "cwd": "${workspaceRoot}",
@@ -56,13 +46,13 @@
         "${workspaceRoot}/node_modules/.bin/jest",
         "--runInBand",
         "--config",
-        "${workspaceRoot}/test/jest-e2e.json"
+        "${workspaceRoot}/test/config/jest.config.e2e.js"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
     },
     {
-      "name": "Debug Jest it Tests",
+      "name": "Debug Jest Integration Tests",
       "type": "node",
       "request": "launch",
       "runtimeArgs": [
@@ -88,6 +78,6 @@
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
-    },
+    }
   ]
 }

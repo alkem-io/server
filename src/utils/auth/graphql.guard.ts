@@ -20,7 +20,7 @@ import { ForbiddenException } from '@utils/error-handling/exceptions/forbidden.e
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
-export class GqlAuthGuard extends AuthGuard('azure-ad') {
+export class GqlAuthGuard extends AuthGuard('bearer') {
   JWT_EXPIRED = 'jwt is expired';
   private _roles!: string[];
   public get roles(): string[] {
@@ -57,7 +57,7 @@ export class GqlAuthGuard extends AuthGuard('azure-ad') {
     );
   }
 
-  handleRequest(err: any, user: any, info: any) {
+  handleRequest(err: any, user: any, info: any, _context: any, _status?: any) {
     // Always handle the request if authentication is disabled
     if (
       this.configService.get<IServiceConfig>('service')

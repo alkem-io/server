@@ -16,13 +16,13 @@ let userId = '';
 let userPhone = '';
 let userEmail = '';
 let uniqueId = '';
-let profileDescritpion = 'y';
-let profileAvatar = 'http://yProf.com';
-let profileTagsetsName = 'y';
-let profileTagestTags = ['y1', 'y2'];
-let profileRefName = 'yRef';
-let profileRefDescription = 'yRef';
-let profileRefUri = 'http://yRef.com';
+const profileDescritpion = 'y';
+const profileAvatar = 'http://yProf.com';
+const profileTagsetsName = 'y';
+const profileTagestTags = ['y1', 'y2'];
+const profileRefName = 'yRef';
+const profileRefDescription = 'yRef';
+const profileRefUri = 'http://yRef.com';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -64,10 +64,10 @@ describe('Create User', () => {
       profileRefDescription,
       profileRefUri
     );
-    console.log(updateProfileResponse.body)
+    console.log(updateProfileResponse.body);
 
     const getProfileDataResponse = await getUsersProfile(userId);
-    console.log(getProfileDataResponse.body.data.user.profile)
+    console.log(getProfileDataResponse.body.data.user.profile);
     const profileData = getProfileDataResponse.body.data.user.profile;
 
     // Assert

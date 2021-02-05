@@ -1,11 +1,14 @@
-import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
+import { AadAuthenticationClient, AuthConfig, Token } from '@cmdbg/tokenator';
+import { ConfigService } from '@nestjs/config';
 
 export class TokenHelper {
   private users = Object.values(TestUser);
-  private ropcStrategy: AadRopcStrategy;
+  private aadAuthenticationClient: AadAuthenticationClient;
 
-  constructor(ropcStrategy: AadRopcStrategy) {
-    this.ropcStrategy = ropcStrategy;
+  constructor(configService: ConfigService) {
+    this.aadAuthenticationClient = new AadAuthenticationClient(
+      () => configService.get<AuthConfig>('aad_ropc') as AuthConfig
+    );
   }
 
   private async buildUpn(user: string): Promise<string> {
@@ -32,10 +35,12 @@ export class TokenHelper {
 
     for (const user of this.users) {
       const upn = await this.buildUpn(user);
-      const token = await this.ropcStrategy.getAccessTokenForUser(
-        upn,
-        password
-      );
+      const res = await this.aadAuthenticationClient.authenticateROPC({
+        username: upn,
+        password,
+      });
+
+      const token = (res as Token).access_token;
 
       userTokenMap.set(user, token);
     }

@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';

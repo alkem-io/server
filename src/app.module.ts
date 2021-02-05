@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthenticationModule } from '@utils/authentication/authentication.module';
+import { AuthModule } from '@utils/auth/auth.module';
 import { AgreementModule } from '@domain/agreement/agreement.module';
 import { UserModule } from '@domain/user/user.module';
 import { ChallengeModule } from '@domain/challenge/challenge.module';
@@ -25,7 +25,6 @@ import { IDatabaseConfig } from '@interfaces/database.config.interface';
 import { DataManagementModule } from '@utils/data-management/data-management.module';
 import serviceConfig from '@config/service.config';
 import { BootstrapModule } from '@utils/bootstrap/bootstrap.module';
-import { MsGraphModule } from '@utils/ms-graph/ms-graph.module';
 import msGraphConfig from '@config/ms-graph.config';
 import { WinstonModule } from 'nest-winston';
 import aadClientConfig from '@config/aad.client.config';
@@ -39,6 +38,11 @@ import { MetadataModule } from '@utils/metadata/metadata.module';
 import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
+import { AuthService } from '@utils/auth/auth.service';
+import { OidcBearerStrategy } from '@utils/auth/oidc.bearer.strategy';
+import oidcConfig from '@config/oidc.config';
+import { AadAccountManagementModule } from '@utils/aad/aad.account-management.module';
+import { AuthConfig } from '@cmdbg/tokenator';
 
 @Module({
   imports: [
@@ -49,6 +53,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
         '.env.aad.cherrytwist.api.default',
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
+        '.env.oidc.default',
       ],
       isGlobal: true,
       load: [
@@ -60,6 +65,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
         loggingConfig,
         aadRopcConfig,
         aadOboConfig,
+        oidcConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({
@@ -79,7 +85,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
         logging: configService.get<IDatabaseConfig>('database')?.logging,
       }),
     }),
-    AuthenticationModule,
+    AuthModule,
     AgreementModule,
     ChallengeModule,
     ContextModule,
@@ -98,15 +104,27 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
       playground: true,
       fieldResolverEnhancers: ['guards'],
       sortSchema: true,
+      // context: ({ req }) => ({ req }), vyanakiev toDo - review whether / how we inject gql context
     }),
     DataManagementModule,
     BootstrapModule,
-    MsGraphModule,
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
     SearchModule,
     KonfigModule,
+    AadAccountManagementModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        clientID: configService.get<AuthConfig>('aad_ropc')?.clientID as string,
+        clientSecret: '',
+        tenant: configService.get<AuthConfig>('aad_ropc')?.tenant as string,
+        scope: configService.get<AuthConfig>('aad_ropc')?.scope as string,
+        username: configService.get<AuthConfig>('aad_ropc')?.username as string,
+        password: configService.get<AuthConfig>('aad_ropc')?.password as string,
+      }),
+    }),
   ],
   controllers: [AppController],
   providers: [
@@ -119,6 +137,8 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    OidcBearerStrategy, //vyanakiev toDo - review this provider
+    AuthService, //vyanakiev toDo - review this provider
   ],
 })
 export class AppModule {}

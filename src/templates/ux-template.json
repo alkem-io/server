@@ -19,10 +19,7 @@
   "opportunities": [
     {
       "name": "default",
-      "actorGroups": [
-        "key_users",
-        "stakeholders"
-      ],
+      "actorGroups": ["key_users", "stakeholders"],
       "aspects": [
         "prototype",
         "economic-win",
@@ -34,10 +31,7 @@
         "cso",
         "international_standards"
       ],
-      "relations": [
-        "members",
-        "groups"
-      ]
+      "relations": ["members", "groups"]
     }
   ]
 }

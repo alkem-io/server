@@ -29,9 +29,9 @@ let uniqueTextId = '';
 let challengeState = '';
 let organisationName = '';
 let taglineText = '';
-let refName = 'refName';
-let refUri = 'https://test.com';
-let tagsArray = ['tag1', 'tag2'];
+const refName = 'refName';
+const refUri = 'https://test.com';
+const tagsArray = ['tag1', 'tag2'];
 let groupName = '';
 
 beforeAll(async () => {
@@ -78,7 +78,7 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(responseQueryData.text).toContain(
-      `Unable to find challenge with ID: 7000`
+      'Unable to find challenge with ID: 7000'
     );
   });
 
@@ -215,7 +215,6 @@ describe('Query Challenge data', () => {
       tagsArray
     );
     const updatedChallenge = response.body.data.updateChallenge;
-
 
     // Act
     const getChallengeData = await getChallenge(challengeId);

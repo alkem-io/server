@@ -14,9 +14,13 @@ import {
   createUserMutation,
   removeUserMutation,
 } from '@test/functional/e2e/user-management/user.request.params';
+import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
 
-let userName = '';
-let userId = '';
+let data: TestDataServiceInitResult;
+//let userId: null
+
+const userName = 'Qa User';
+let userId: number;
 let groupName = '';
 let ecoverseGroupId = '';
 let organisationName = '';
@@ -45,6 +49,8 @@ const termAllScored = ['QA', 'QA', 'user', 'mm'];
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+  data = appSingleton.Instance.getData();
+  userId = data.userId;
 });
 
 afterAll(async () => {
@@ -55,13 +61,8 @@ beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
-  userName = `QAuserName${uniqueTextId}`;
   groupName = `QA groupName ${uniqueTextId}`;
   organisationName = `QA organisationName ${uniqueTextId}`;
-
-  // Create user
-  const response = await createUserMutation(userName);
-  userId = response.body.data.createUser.id;
 
   // Create organisation
   const responseCreateOrganisation = await createOrganisationMutation(
@@ -77,7 +78,7 @@ beforeEach(async () => {
 
 describe('Query Challenge data', () => {
   afterEach(async () => {
-    await removeUserMutation(userId);
+    //await removeUserMutation(userId);
     await removeUserGroupMutation(ecoverseGroupId);
   });
   test('should search with all filters applied', async () => {
@@ -241,7 +242,7 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(responseSearchData.text).toContain(
-      `Maximum number of search terms is 10; supplied: 11`
+      'Maximum number of search terms is 10; supplied: 11'
     );
   });
 
@@ -251,7 +252,7 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(responseSearchData.text).toContain(
-      `Not allowed typeFilter encountered: invalid`
+      'Not allowed typeFilter encountered: invalid'
     );
   });
 

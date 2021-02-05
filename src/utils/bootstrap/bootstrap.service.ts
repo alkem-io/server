@@ -31,7 +31,8 @@ export class BootstrapService {
     private configService: ConfigService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async bootstrapEcoverse() {

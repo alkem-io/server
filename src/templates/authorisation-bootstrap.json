@@ -44,6 +44,11 @@
       "email": "community.admin@cherrytwist.org",
       "firstName": "Community",
       "lastName": "Admin"
+    },
+    {
+      "email": "qa.user@cherrytwist.org",
+      "firstName": "Qa",
+      "lastName": "User"
     }
   ],
   "members": [

@@ -71,7 +71,7 @@ export class TestDataService {
   organisationName = `testOrganisation ${this.uniqueTextId}`;
   avatar = 'https://dev.cherrytwist.org/graphql';
   description = 'TestDescription';
-  userEmail = 'evgeni@cherrytwist.org';
+  userEmail = 'qa.user@cherrytwist.org';
 
   async initUsers() {
     const user = new UserInput();
@@ -126,9 +126,9 @@ export class TestDataService {
   async initRemoveChallenge(): Promise<number> {
     const challenge = new ChallengeInput();
 
-    challenge.name = `Remove-challemge`;
+    challenge.name = 'Remove-challemge';
     challenge.state = 'state';
-    challenge.textID = `remove-chall`;
+    challenge.textID = 'remove-chall';
     challenge.tags = ['test1', 'test2'];
     const response = await this.ecoverseService.createChallenge(challenge);
     return response.id;

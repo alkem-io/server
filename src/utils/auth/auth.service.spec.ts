@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { MsGraphService } from './ms-graph.service';
+import { AuthService } from './auth.service';
 
-describe('MsGraphService', () => {
-  let service: MsGraphService;
+describe('AuthService', () => {
+  let service: AuthService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    service = module.get<MsGraphService>(MsGraphService);
+    service = module.get<AuthService>(AuthService);
   });
 
   it('should be defined', () => {

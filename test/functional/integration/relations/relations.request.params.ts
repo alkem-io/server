@@ -29,7 +29,6 @@ export const createRelationMutation = async (
         actorName: `${relationActorName}`,
         actorType: `${relationActorType}`,
         actorRole: `${relationActorRole}`,
-      
       },
     },
   };

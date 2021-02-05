@@ -9,7 +9,12 @@ import { IsUserAlreadyExistConstraint } from '@utils/validation/constraints/user
 
 @Module({
   imports: [ProfileModule, TypeOrmModule.forFeature([User])],
-  providers: [UserService, UserResolver, UserResolverFields, IsUserAlreadyExistConstraint],
+  providers: [
+    UserService,
+    UserResolver,
+    UserResolverFields,
+    IsUserAlreadyExistConstraint,
+  ],
   exports: [UserService],
 })
 export class UserModule {}

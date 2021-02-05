@@ -15,7 +15,7 @@ import { IUser } from '@domain/user/user.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
-import { GqlAuthGuard } from '@utils/authentication/graphql.guard';
+import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { Roles } from '@utils/decorators/roles.decorator';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 import { AccountException } from '@utils/error-handling/exceptions';

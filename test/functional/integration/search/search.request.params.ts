@@ -27,9 +27,9 @@ export const searchMutation = async (terms: any, filter: any) => {
     }`,
     variables: {
       searchData: {
-        tagsetNames: ["Keywords"],
+        tagsetNames: ['Keywords'],
         terms: terms,
-        typesFilter: filter
+        typesFilter: filter,
       },
     },
   };
