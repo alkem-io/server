@@ -1,8 +1,7 @@
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { AAD_MODULE_NEST_PROVIDER } from '@utils/aad/aad.constants';
-import { AadIdentityService } from '@utils/aad/aad.identity.service';
 import { TestDataService } from '@utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
@@ -43,8 +42,8 @@ export class appSingleton {
     this.app = testModule.createNestApplication();
     await this.app.init();
     appSingleton.testDataService = await testModule.get(TestDataService);
-    const aadIdentityService = await testModule.get(AAD_MODULE_NEST_PROVIDER);
-    await this.getTokensForAllTestUsers(aadIdentityService);
+    const configService = await testModule.get(ConfigService);
+    await this.getTokensForAllTestUsers(configService);
 
     await appSingleton.testDataService.initDB();
     await appSingleton.testDataService.initFunctions();
@@ -56,10 +55,8 @@ export class appSingleton {
     await this.app.close();
   }
 
-  private async getTokensForAllTestUsers(
-    aadIdentityService: AadIdentityService
-  ) {
-    const tokenHelper = new TokenHelper(aadIdentityService);
+  private async getTokensForAllTestUsers(configService: ConfigService) {
+    const tokenHelper = new TokenHelper(configService);
     this.userTokenMap = await tokenHelper.buildUserTokenMap();
   }
 }

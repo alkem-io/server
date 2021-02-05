@@ -9,16 +9,16 @@ import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.
 import { AccountException } from '@utils/error-handling/exceptions/account.exception';
 import { ValidationException } from '@utils/error-handling/exceptions/validation.exception';
 import { LogContext } from '@utils/logging/logging.contexts';
-import { AAD_MODULE_NEST_PROVIDER } from '@utils/aad/aad.constants';
-import { IdentityService } from '@interfaces/identity.service';
+import { AAD_ACCOUNT_MANAGEMENT_MODULE_NEST_PROVIDER } from '@utils/aad/aad.account-management.constants';
+import { AccountManagementService } from '@src/common/interfaces/account-management.service';
 
 @Injectable()
 export class AccountService {
   constructor(
     private configService: ConfigService,
     private userService: UserService,
-    @Inject(AAD_MODULE_NEST_PROVIDER)
-    private readonly identityService: IdentityService,
+    @Inject(AAD_ACCOUNT_MANAGEMENT_MODULE_NEST_PROVIDER)
+    private readonly accountManagementService: AccountManagementService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -44,7 +44,7 @@ export class AccountService {
         LogContext.COMMUNITY,
         CherrytwistErrorStatus.ACCOUNT_USAGE_DISABLED
       );
-    return await this.identityService.userExists(accountUpn);
+    return await this.accountManagementService.userExists(accountUpn);
   }
 
   // Create an account for the specified user and update the user to store the UPN
@@ -53,7 +53,10 @@ export class AccountService {
 
     const accountUpn = this.buildUPN(userData);
 
-    const result = await this.identityService.createUser(userData, accountUpn);
+    const result = await this.accountManagementService.createUser(
+      userData,
+      accountUpn
+    );
     if (!result)
       throw new AccountException(
         `Unable to complete account creation for ${userData.email} using UPN: ${accountUpn}`,
@@ -175,7 +178,7 @@ export class AccountService {
 
     let res = false;
     try {
-      res = await this.identityService.removeUser(accountUpn);
+      res = await this.accountManagementService.removeUser(accountUpn);
     } catch (error) {
       throw new AccountException(
         `Failed to delete account ${accountUpn}. ${error}`,
@@ -201,7 +204,7 @@ export class AccountService {
 
     let res = false;
     try {
-      res = await this.identityService.updateUserPassword(
+      res = await this.accountManagementService.updateUserPassword(
         accountUpn,
         newPassword
       );

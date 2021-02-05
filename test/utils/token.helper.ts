@@ -1,12 +1,14 @@
-import { Token } from '@cmdbg/tokenator';
-import { IdentityService } from '@interfaces/identity.service';
+import { AadAuthenticationClient, AuthConfig, Token } from '@cmdbg/tokenator';
+import { ConfigService } from '@nestjs/config';
 
 export class TokenHelper {
   private users = Object.values(TestUser);
-  private identityService: IdentityService;
+  private aadAuthenticationClient: AadAuthenticationClient;
 
-  constructor(identityService: IdentityService) {
-    this.identityService = identityService;
+  constructor(configService: ConfigService) {
+    this.aadAuthenticationClient = new AadAuthenticationClient(
+      () => configService.get<AuthConfig>('aad_ropc') as AuthConfig
+    );
   }
 
   private async buildUpn(user: string): Promise<string> {
@@ -33,7 +35,7 @@ export class TokenHelper {
 
     for (const user of this.users) {
       const upn = await this.buildUpn(user);
-      const res = await this.identityService.authenticateRopc({
+      const res = await this.aadAuthenticationClient.authenticateROPC({
         username: upn,
         password,
       });

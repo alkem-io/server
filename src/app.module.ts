@@ -41,7 +41,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
 import { AuthService } from '@utils/auth/auth.service';
 import { OidcBearerStrategy } from '@utils/auth/oidc.bearer.strategy';
 import oidcConfig from '@config/oidc.config';
-import { AadModule } from '@utils/aad/aad.module';
+import { AadAccountManagementModule } from '@utils/aad/aad.account-management.module';
 import { AuthConfig } from '@cmdbg/tokenator';
 
 @Module({
@@ -113,7 +113,7 @@ import { AuthConfig } from '@cmdbg/tokenator';
     }),
     SearchModule,
     KonfigModule,
-    AadModule.forRootAsync({
+    AadAccountManagementModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
