@@ -71,7 +71,7 @@ export class TestDataService {
   organisationName = `testOrganisation ${this.uniqueTextId}`;
   avatar = 'https://dev.cherrytwist.org/graphql';
   description = 'TestDescription';
-  userEmail = 'evgeni@cherrytwist.org';
+  userEmail = 'qa.user@cherrytwist.org';
 
   async initUsers() {
     const user = new UserInput();

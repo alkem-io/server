@@ -18,9 +18,10 @@ import {
   removeUserMutation,
 } from '@test/functional/e2e/user-management/user.request.params';
 import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
+import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
 
-let userName = '';
-let userId = '';
+let data: TestDataServiceInitResult;
+let userId: number;
 let groupName = '';
 let ecoverseGroupId = '';
 let organisationName = '';
@@ -34,19 +35,16 @@ let challengeId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+  data = appSingleton.Instance.getData();
+  userId = data.userId;
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
-  userName = `QAuserName${uniqueTextId}`;
   groupName = `QA groupName ${uniqueTextId}`;
   organisationName = `QA organisationName ${uniqueTextId}`;
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
   opportunityTextId = `${uniqueTextId}`;
-
-  // Create user
-  const response = await createUserMutation(userName);
-  userId = response.body.data.createUser.id;
 
   // Create organisation
   const responseCreateOrganisation = await createOrganisationMutation(
