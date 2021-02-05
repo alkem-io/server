@@ -1,14 +1,19 @@
-const updateUserMutation = `
+const userId = 4;
+const organisationId = 1;
+
+export const updateUserMutation = `
 mutation UpdateUser($userID: Float!, $userData: UserInput!) {
     updateUser(userID: $userID, userData: $userData) {
-      name,
-        email
+      id
+      name
+      email
+      city
     }
   }`;
 
-const updateUserVariables = `
+export const updateUserVariables = (id: number) => `
 {
-    "userID": 1,
+    "userID": ${userId},
     "userData":
     {
       "name": "TestName",
@@ -16,21 +21,21 @@ const updateUserVariables = `
     }
   }`;
 
-const updateProfileMutation = `
+export const updateProfileMutation = `
 mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
     updateProfile(profileData: $profileData, ID: $ID)
   }`;
 
-const updateProfileVariables = `
+export const updateProfileVariables = (id: number) => `
 {
-    "ID": 1,
+    "ID": ${id},
     "profileData": {
       "description": "some description",
       "avatar": "https://avatar.com"
     }
   }`;
 
-const updateOrganisationMutation = `
+export const updateOrganisationMutation = `
 mutation updateOrganisation($orgID: Float!, $organisationData: OrganisationInput!) {
     updateOrganisation(orgID: $orgID, organisationData: $organisationData) {
       name,
@@ -38,16 +43,16 @@ mutation updateOrganisation($orgID: Float!, $organisationData: OrganisationInput
     }
   }`;
 
-const updateOrganisationVariabls = `
+export const updateOrganisationVariabls = (id: number) => `
 {
-    "orgID": 1,
+    "orgID": ${id},
     "organisationData":
     {
       "name": "Cherrytwist2"
     }
   }`;
 
-const updateChallengeMutation = `  
+export const updateChallengeMutation = `
 mutation updateChallenge($challengeData: UpdateChallengeInput!) {
     updateChallenge(challengeData: $challengeData) {
       name,
@@ -55,17 +60,17 @@ mutation updateChallenge($challengeData: UpdateChallengeInput!) {
     }
   }`;
 
-const updateChallengeVariables = `
+export const updateChallengeVariables = (id: number) => `
 {
-    
+
     "challengeData":
           {
-            "ID": 1,
-            "name": "Challenge with better name"                
+            "ID": ${id},
+            "name": "Challenge with better name"
           }
   }`;
 
-const updateOpportunityMutation = `
+export const updateOpportunityMutation = `
 mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
     updateOpportunity(opportunityData: $opportunityData, ID: $ID) {
       name,
@@ -73,25 +78,26 @@ mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
     }
   }`;
 
-const updateOpportunityVariables = `
+export const updateOpportunityVariables = (id: number) => `
 {
-    "ID": 1,
+    "ID": ${id},
     "opportunityData":
     {
       "name": "Test Oportunity "
     }
   }`;
 
-const updateAspectMutation = `
+export const updateAspectMutation = `
 mutation updateAspect($aspectData: AspectInput!, $ID: Float!) {
     updateAspect(aspectData: $aspectData, ID: $ID) {
       title
+      id
     }
   }`;
 
-const updateAspectVariable = `
+export const updateAspectVariable = (id: number) => `
 {
-    "ID": 1,
+    "ID": ${id},
     "aspectData": {
       "title": "aspect some description",
       "framing": "https://aspect_framing.com",
@@ -99,19 +105,20 @@ const updateAspectVariable = `
     }
   }`;
 
-const updateActorMutation = `  
+export const updateActorMutation = `
 mutation updateActor($actorData: ActorInput!, $ID: Float!) {
-    updateActor(actorData: $actorData, ID: $ID) {    
+    updateActor(actorData: $actorData, ID: $ID) {
       name
       description
       value
       impact
+      id
     }
   }`;
 
-const updateActorVariables = `
+export const updateActorVariables = (id: number) => `
 {
-    "ID": 1,
+    "ID": ${id},
     "actorData": {
       "name": "actor some description",
       "value": "https://actor_value.com",
@@ -120,21 +127,22 @@ const updateActorVariables = `
     }
   }`;
 
-const addTagsOnTagsetMutation = `
+export const addTagsOnTagsetMutation = `
 mutation addTagToTagset($tag: String!, $tagsetID: Float!) {
     addTagToTagset(tag: $tag, tagsetID: $tagsetID) {
       name
       tags
+      id
     }
   }`;
 
-const addTagsOnTagsetVariables = `
+export const addTagsOnTagsetVariables = (id: number) => `
 {
-    "tagsetID": 1,
+    "tagsetID": ${id},
     "tag": "tagTest"
   }`;
 
-const replaceTagsOnTagsetMutation = `
+export const replaceTagsOnTagsetMutation = `
 mutation replaceTagsOnTagset($tags: [String!]!, $tagsetID: Float!) {
     replaceTagsOnTagset(tags: $tags, tagsetID: $tagsetID){
       name
@@ -142,13 +150,13 @@ mutation replaceTagsOnTagset($tags: [String!]!, $tagsetID: Float!) {
     }
   }`;
 
-const replaceTagsOnTagsetVariables = `
+export const replaceTagsOnTagsetVariables = (id: number) => `
 {
-    "tagsetID": 1,
+    "tagsetID": ${id},
     "tags": ["tag1", "tag2"]
   }`;
 
-const addUserToChallengeMutation = `
+export const addUserToChallengeMutation = `
 mutation addUserToChallenge($userID: Float!, $challengeID: Float!) {
     addUserToChallenge(challengeID: $challengeID, userID: $userID) {
       name,
@@ -160,24 +168,24 @@ mutation addUserToChallenge($userID: Float!, $challengeID: Float!) {
     }
   }`;
 
-const addUserToChallengeVariables = `
+export const addUserToChallengeVariables = (id: number) => `
 {
-    "userID": 1,
-    "challengeID": 4
+    "userID": ${userId},
+    "challengeID": ${id}
   }`;
 
-const addUserToGroupMutation = `
+export const addUserToGroupMutation = `
 mutation addUserToGroup($userID: Float!, $groupID: Float!) {
-    addUserToGroup(groupID: $groupID, userID: $userID) 
+    addUserToGroup(groupID: $groupID, userID: $userID)
   }`;
 
-const addUserToGroupVariables = `
+export const addUserToGroupVariables = (id: number) => `
 {
-    "userID": 1,
-    "groupID": 1
+    "userID": ${userId},
+    "groupID": ${id}
   }`;
 
-const addUserToOpportunityMutation = `
+export const addUserToOpportunityMutation = `
 mutation addUserToOpportunity($userID: Float!, $opportunityID: Float!) {
     addUserToOpportunity(opportunityID: $opportunityID, userID: $userID) {
       name,
@@ -189,13 +197,13 @@ mutation addUserToOpportunity($userID: Float!, $opportunityID: Float!) {
     }
   }`;
 
-const addUserToOpportunityVariables = `
+export const addUserToOpportunityVariables = (id: number) => `
 {
-    "userID": 1,
-    "opportunityID": 1
+    "userID": ${userId},
+    "opportunityID": ${id}
   }`;
 
-const assignGroupFocalPointMutation = `
+export const assignGroupFocalPointMutation = `
 mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
     assignGroupFocalPoint(groupID: $groupID, userID: $userID) {
       name,
@@ -206,13 +214,13 @@ mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
     }
   }`;
 
-const assignGroupFocalPointVariables = `
+export const assignGroupFocalPointVariables = (id: number) => `
   {
-    "userID": 1,
-    "groupID": 2
+    "userID": ${userId},
+    "groupID": ${id}
   }`;
 
-const removeGroupFocalPointMutation = `
+export const removeGroupFocalPointMutation = `
 mutation removeGroupFocalPoint($groupID: Float!) {
     removeGroupFocalPoint(groupID: $groupID) {
       name,
@@ -223,23 +231,23 @@ mutation removeGroupFocalPoint($groupID: Float!) {
     }
   }`;
 
-const removeGroupFocalPointVariables = `
+export const removeGroupFocalPointVariables = (id: number) => `
 {
-    "groupID": 2
+    "groupID": ${id}
   }`;
 
-const addChallengeLeadToOrganisationMutation = `
+export const addChallengeLeadToOrganisationMutation = `
 mutation addChallengeLead($challengeID: Float!, $organisationID: Float!) {
     addChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
   }`;
 
-const addChallengeLeadToOrganisationVariables = `
+export const addChallengeLeadToOrganisationVariables = (id: number) => `
 {
-    "organisationID": 1,
-    "challengeID": 2
+    "organisationID": ${organisationId},
+    "challengeID": ${id}
   }`;
 
-const removeUserFromGroupMutation = `
+export const removeUserFromGroupMutation = `
 mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {
     removeUserFromGroup(groupID: $groupID, userID: $userID) {
       name,
@@ -251,43 +259,54 @@ mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {
     }
   }`;
 
-const removeUserFromGroupVariables = `
+export const removeUserFromGroupVariables = (id: number) => `
 {
-    "userID": 1,
-    "groupID": 2
+    "userID": ${userId},
+    "groupID": ${id}
   }`;
 
-export {
+const mutations: Record<string, string> = {
   updateUserMutation,
-  updateUserVariables,
   updateProfileMutation,
-  updateProfileVariables,
   updateOrganisationMutation,
-  updateOrganisationVariabls,
   updateChallengeMutation,
-  updateChallengeVariables,
   updateOpportunityMutation,
-  updateOpportunityVariables,
   updateAspectMutation,
-  updateAspectVariable,
   updateActorMutation,
-  updateActorVariables,
   addTagsOnTagsetMutation,
-  addTagsOnTagsetVariables,
   replaceTagsOnTagsetMutation,
-  replaceTagsOnTagsetVariables,
   addUserToChallengeMutation,
-  addUserToChallengeVariables,
   addUserToGroupMutation,
-  addUserToGroupVariables,
   addUserToOpportunityMutation,
-  addUserToOpportunityVariables,
   assignGroupFocalPointMutation,
-  assignGroupFocalPointVariables,
   removeGroupFocalPointMutation,
-  removeGroupFocalPointVariables,
   addChallengeLeadToOrganisationMutation,
-  addChallengeLeadToOrganisationVariables,
   removeUserFromGroupMutation,
+};
+
+const variables: Record<string, (id: number) => string> = {
+  updateUserVariables,
+  updateProfileVariables,
+  updateOrganisationVariabls,
+  updateChallengeVariables,
+  updateOpportunityVariables,
+  updateAspectVariable,
+  updateActorVariables,
+  addTagsOnTagsetVariables,
+  replaceTagsOnTagsetVariables,
+  addUserToChallengeVariables,
+  addUserToGroupVariables,
+  addUserToOpportunityVariables,
+  assignGroupFocalPointVariables,
+  removeGroupFocalPointVariables,
+  addChallengeLeadToOrganisationVariables,
   removeUserFromGroupVariables,
+};
+
+export const getUpdateMutation = (name: string) => {
+  return mutations[name];
+};
+
+export const getUpdateVariables = (name: string, id: number) => {
+  return variables[name](id);
 };
