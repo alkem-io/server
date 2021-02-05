@@ -1,4 +1,7 @@
-import { graphqlRequest, graphqlRequestAuth } from '@test/utils/graphql.request';
+import {
+  graphqlRequest,
+  graphqlRequestAuth,
+} from '@test/utils/graphql.request';
 import { TestUser } from '@test/utils/token.helper';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';

@@ -241,7 +241,7 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(responseSearchData.text).toContain(
-      `Maximum number of search terms is 10; supplied: 11`
+      'Maximum number of search terms is 10; supplied: 11'
     );
   });
 
@@ -251,7 +251,7 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(responseSearchData.text).toContain(
-      `Not allowed typeFilter encountered: invalid`
+      'Not allowed typeFilter encountered: invalid'
     );
   });
 

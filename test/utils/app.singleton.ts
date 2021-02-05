@@ -1,11 +1,8 @@
-import { AuthConfig } from '@cmdbg/tokenator';
 import { INestApplication } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import { AAD_MODULE_NEST_PROVIDER } from '@utils/aad/aad.constants';
 import { AadIdentityService } from '@utils/aad/aad.identity.service';
-import { AadModule } from '@utils/aad/aad.module';
 import { TestDataService } from '@utils/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 

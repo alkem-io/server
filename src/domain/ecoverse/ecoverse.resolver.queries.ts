@@ -2,8 +2,6 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { Roles } from '@utils/decorators/roles.decorator';
-import { EntityNotFoundException } from '@utils/error-handling/exceptions';
-import { LogContext } from '@utils/logging/logging.contexts';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { Challenge } from '@domain/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge.interface';

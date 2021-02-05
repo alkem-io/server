@@ -1,4 +1,3 @@
-import { AuthenticationError } from 'apollo-server-express';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { CherrytwistErrorStatus } from '../enums/cherrytwist.error.status';
 import { BaseException } from './base.exception';

@@ -37,23 +37,23 @@ let opportunityId = '';
 let challengeName = '';
 let challengeId = '';
 let uniqueTextId = '';
-let aspectId = '';
+const aspectId = '';
 let aspectTitle = '';
 let aspectFrame = '';
 let aspectExplanation = '';
 let actorGroupName = '';
 let actorGroupDescription = '';
-let relationId = '';
+const relationId = '';
 let relationDescription = '';
 let relationActorName = '';
 let relationActorType = '';
 let relationActorRole = '';
 const relationIncoming = 'incoming';
 const relationOutgoing = 'outgoing';
-let contextTagline = 'contextTagline';
+const contextTagline = 'contextTagline';
 let projectName = '';
 let projectTextId = '';
-let projectId = '';
+const projectId = '';
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
@@ -468,10 +468,10 @@ describe('Opportunity sub entities', () => {
     // Assert
     expect(baseResponse.projects).toHaveLength(1);
     expect(responseCreateOrojectSameTextId.text).toContain(
-      `property textID has failed the following constraints: isUniqueTextId`
+      'property textID has failed the following constraints: isUniqueTextId'
     );
     expect(responseCreateOrojectSameTextId.text).toContain(
-      `property textID has failed the following constraints: isUniqueTextId`
+      'property textID has failed the following constraints: isUniqueTextId'
     );
     expect(baseResponse.projects[0].name).toContain(responseProjectData);
 
@@ -659,7 +659,7 @@ describe('Opportunity sub entities', () => {
 
     expect(baseResponse.groups).toHaveLength(2);
     expect(baseResponse.groups[0]).toEqual({
-      name: `members`,
+      name: 'members',
     });
     expect(baseResponse.groups[1].name).toEqual(groupNameResponse);
 

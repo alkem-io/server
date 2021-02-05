@@ -12,7 +12,6 @@ import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { UserInput } from '@domain/user/user.dto';
 import { IUser } from '@domain/user/user.interface';
-import { UserService } from '@domain/user/user.service';
 import { Connection, Repository } from 'typeorm';
 import { BootstrapService } from '../bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -25,7 +24,6 @@ export class DataManagementService {
   constructor(
     private bootstrapService: BootstrapService,
     private ecoverseService: EcoverseService,
-    private userService: UserService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     private tagsetService: TagsetService,
@@ -57,7 +55,7 @@ export class DataManagementService {
       } catch (error) {
         //Gracefully handling the error if you start spamming the button as it will try creating multiple migrations.
         //only one migration will succeed as they are transactional, the rest will return an error. No need to show it to the client.
-        console.log(`exec error: ${error}`);
+        this.addLogMsg(msgs, `exec error: ${error}`);
       }
 
       // Create new Ecoverse

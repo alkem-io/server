@@ -20,7 +20,9 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "tsc --noEmit && eslint src/**/*.ts{,x}",
+    "lint:prod": "tsc --noEmit && cross-env NODE_ENV=production eslint src/**/*.ts{,x}",
+    "lint:fix": "tsc --noEmit && eslint src/**/*.ts{,x} --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -52,6 +54,7 @@
     "cd": "^0.3.3",
     "class-transformer": "^0.3.2",
     "class-validator": "^0.12.2",
+    "cross-env": "^7.0.3",
     "express-session": "^1.17.1",
     "graphql": "^15.4.0",
     "graphql-tools": "^6.2.6",
@@ -63,7 +66,6 @@
     "nest-winston": "^1.4.0",
     "nodemon": "^2.0.4",
     "normalizer": "^1.2.7",
-    "openid-client": "^4.3.0",
     "passport": "^0.4.1",
     "passport-http-bearer": "^1.0.1",
     "reflect-metadata": "^0.1.13",
@@ -94,7 +96,9 @@
     "eslint-config-prettier": "^6.10.0",
     "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-prettier": "^3.1.4",
+    "husky": "^4.3.8",
     "jest": "26.4.2",
+    "lint-staged": "^10.5.3",
     "prettier": "^1.19.1",
     "supertest": "^4.0.2",
     "ts-jest": "26.2.0",
@@ -105,5 +109,10 @@
   },
   "_moduleAliases": {
     "@src": "./dist"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   }
 }

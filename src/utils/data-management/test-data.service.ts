@@ -287,9 +287,7 @@ export class TestDataService {
   }
 
   async teardownRemoveGroupFocalPoint() {
-    const createdTestUser = (await this.userService.getUserByEmail(
-      'testuser@test.com'
-    )) as IUser;
+    await this.userService.getUserByEmail('testuser@test.com');
     await this.userGroupService.removeFocalPoint(13);
   }
 

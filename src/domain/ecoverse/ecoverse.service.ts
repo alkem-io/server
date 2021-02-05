@@ -30,7 +30,6 @@ import {
   ValidationException,
   EntityNotInitializedException,
   AccountException,
-  EntityNotFoundException,
 } from '@utils/error-handling/exceptions';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 

@@ -1,3 +1,4 @@
+const env = (prod, dev) => (process.env.NODE_ENV === 'production' ? prod : dev);
 module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
@@ -19,12 +20,14 @@ module.exports = {
   },
   rules: {
     quotes: ['error', 'single'],
+    'no-console': env(1, 0),
+    'no-debugger': env(1, 0),
     '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unused-vars': [
-      'error',
+      env(2, 1),
       {
         argsIgnorePattern: '^_',
       },
