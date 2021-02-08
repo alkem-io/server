@@ -21,7 +21,6 @@ import {
 import { createActorGroupMutation } from '../actor-groups/actor-groups.request.params';
 import { createRelationMutation } from '../relations/relations.request.params';
 import {
-  createGroupOnChallengeMutation,
   createGroupOnOpportunityMutation,
 } from '../group/group.request.params';
 import {
@@ -37,23 +36,19 @@ let opportunityId = '';
 let challengeName = '';
 let challengeId = '';
 let uniqueTextId = '';
-const aspectId = '';
 let aspectTitle = '';
 let aspectFrame = '';
 let aspectExplanation = '';
 let actorGroupName = '';
 let actorGroupDescription = '';
-const relationId = '';
 let relationDescription = '';
 let relationActorName = '';
 let relationActorType = '';
 let relationActorRole = '';
 const relationIncoming = 'incoming';
-const relationOutgoing = 'outgoing';
 const contextTagline = 'contextTagline';
 let projectName = '';
 let projectTextId = '';
-const projectId = '';
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
@@ -452,11 +447,6 @@ describe('Opportunity sub entities', () => {
       projectTextId
     );
 
-    const responseCreateOrojectSameName = await createProjectMutation(
-      opportunityId,
-      projectName,
-      projectTextId + 'c'
-    );
 
     // Act
     // Get opportunity
@@ -596,7 +586,6 @@ describe('Opportunity sub entities', () => {
     const responseAspect = createAspectResponse.body.data.createAspect.title;
 
     const getAspect = await getAspectPerOpportunity(opportunityId);
-    const aspectData = getAspect.body.data.opportunity.aspects[0];
 
     // Create Project
     const responseCreateProject = await createProjectMutation(
