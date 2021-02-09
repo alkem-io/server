@@ -23,6 +23,18 @@ let aspectTitle = '';
 let aspectFrame = '';
 let aspectExplanation = '';
 let uniqueTextId = '';
+let aspectDataCreate = '';
+let aspectCountPerProject = async (): Promise<number> => {
+  const responseQuery = await getAspectPerProject(opportunityId);
+  let response = responseQuery.body.data.opportunity.projects[0].aspects;
+  return response;
+};
+
+let aspectDataPerPerproject = async (): Promise<String> => {
+  const responseQuery = await getAspectPerProject(opportunityId);
+  let response = responseQuery.body.data.opportunity.projects[0].aspects[0];
+  return response;
+};
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
@@ -70,41 +82,31 @@ beforeEach(async () => {
     projectTextId
   );
   projectId = responseCreateProject.body.data.createProject.id;
+
+  // Create Aspect
+  const createAspectResponse = await createAspectOnProjectMutation(
+    projectId,
+    aspectTitle,
+    aspectFrame,
+    aspectExplanation
+  );
+  aspectDataCreate = createAspectResponse.body.data.createAspectOnProject;
+  aspectId = createAspectResponse.body.data.createAspectOnProject.id;
+});
+
+afterEach(async () => {
+  await removeAspectMutation(aspectId);
 });
 
 describe('Aspect on Project', () => {
-  test('should create aspect on project', async () => {
-    // Act
-    // Create Aspect
-    const createAspectResponse = await createAspectOnProjectMutation(
-      projectId,
-      aspectTitle,
-      aspectFrame,
-      aspectExplanation
-    );
-    const response = createAspectResponse.body.data.createAspectOnProject;
-
-    const getAspect = await getAspectPerProject(opportunityId);
-    const aspectData = getAspect.body.data.opportunity.projects[0].aspects[0];
-
+  test('should assert created aspect on project', async () => {
     // Assert
-    expect(createAspectResponse.status).toBe(200);
-    expect(response.title).toEqual(aspectTitle);
-    expect(response.framing).toEqual(aspectFrame);
-    expect(response.explanation).toEqual(aspectExplanation);
-    expect(response).toEqual(aspectData);
+    expect(await aspectDataPerPerproject()).toEqual(aspectDataCreate);
   });
 
   test('should create 2 aspects for the same project', async () => {
     // Act
-    // Create 2 Aspects with different names
-    await createAspectOnProjectMutation(
-      projectId,
-      aspectTitle,
-      aspectFrame,
-      aspectExplanation
-    );
-
+    // Create second aspect with different names
     await createAspectOnProjectMutation(
       projectId,
       aspectTitle + aspectTitle,
@@ -112,24 +114,13 @@ describe('Aspect on Project', () => {
       aspectExplanation
     );
 
-    const responseQuery = await getAspectPerProject(opportunityId);
-
     // Assert
-    expect(
-      responseQuery.body.data.opportunity.projects[0].aspects
-    ).toHaveLength(2);
+    expect(await aspectCountPerProject()).toHaveLength(2);
   });
 
   test('should NOT create 2 aspects for the same project with same name', async () => {
     // Act
-    // Create 2 Aspects with same names
-    await createAspectOnProjectMutation(
-      projectId,
-      aspectTitle,
-      aspectFrame,
-      aspectExplanation
-    );
-
+    // Create second aspect with same names
     const responseSecondAspect = await createAspectOnProjectMutation(
       projectId,
       aspectTitle,
@@ -137,28 +128,14 @@ describe('Aspect on Project', () => {
       aspectExplanation
     );
 
-    const responseQuery = await getAspectPerProject(opportunityId);
-
     // Assert
-    expect(
-      responseQuery.body.data.opportunity.projects[0].aspects
-    ).toHaveLength(1);
+    expect(await aspectCountPerProject()).toHaveLength(1);
     expect(responseSecondAspect.body.errors[0].message).toEqual(
       `Already have an aspect with the provided title: ${aspectTitle}`
     );
   });
 
   test('should update aspect on project', async () => {
-    // Arrange
-    // Create Aspect
-    const createAspectResponse = await createAspectOnProjectMutation(
-      projectId,
-      aspectTitle,
-      aspectFrame,
-      aspectExplanation
-    );
-    aspectId = createAspectResponse.body.data.createAspectOnProject.id;
-
     // Act
     // Update Aspect
     const responseUpdateAspect = await updateAspectMutation(
@@ -171,35 +148,18 @@ describe('Aspect on Project', () => {
     const responseUpdateAspectData =
       responseUpdateAspect.body.data.updateAspect;
 
-    const getAspect = await getAspectPerProject(opportunityId);
-    const aspectData = getAspect.body.data.opportunity.projects[0].aspects[0];
-
     // Assert
-    expect(getAspect.body.data.opportunity.projects[0].aspects).toHaveLength(1);
-    expect(responseUpdateAspectData).toEqual(aspectData);
+    expect(await aspectCountPerProject()).toHaveLength(1);
+    expect(responseUpdateAspectData).toEqual(await aspectDataPerPerproject());
   });
 
   test('should remove created aspect from project', async () => {
-    // Arrange
-    // Create aspect
-    const responseCreateAspect = await createAspectOnProjectMutation(
-      projectId,
-      aspectTitle,
-      aspectFrame,
-      aspectExplanation
-    );
-    aspectId = responseCreateAspect.body.data.createAspectOnProject.id;
-
     // Act
     // Remove aspect
     const responseRemoveAaspect = await removeAspectMutation(aspectId);
 
-    const responseQuery = await getAspectPerProject(opportunityId);
-
     // Assert
-    expect(
-      responseQuery.body.data.opportunity.projects[0].aspects
-    ).toHaveLength(0);
+    expect(await aspectCountPerProject()).toHaveLength(0);
     expect(responseRemoveAaspect.body.data.removeAspect).toEqual(true);
   });
 });

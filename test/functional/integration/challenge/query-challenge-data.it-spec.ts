@@ -11,15 +11,17 @@ import {
   queryOpportunityGroups,
 } from '../opportunity/opportunity.request.params';
 import {
-  addChallengeChallengeLeadToOrganisationMutation,
+  addChallengeLeadToOrganisationMutation,
   addUserToChallangeMutation,
   getChallenge,
   getChallengeGroups,
-  removeChallengeChallengeLeadFromOrganisationMutation,
+  removeChallengeLeadFromOrganisationMutation,
   updateChallangeMutation,
 } from './challenge.request.params';
 import { createOrganisationMutation } from '../organisation/organisation.request.params';
+import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
 
+let data: TestDataServiceInitResult;
 let opportunityName = '';
 let opportunityTextId = '';
 let opportunityId = '';
@@ -28,14 +30,20 @@ let challengeId = '';
 let uniqueTextId = '';
 let challengeState = '';
 let organisationName = '';
+let organisationId = '';
+let organisationIdService = '';
 let taglineText = '';
 const refName = 'refName';
 const refUri = 'https://test.com';
 const tagsArray = ['tag1', 'tag2'];
 let groupName = '';
+let userId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+  data = appSingleton.Instance.getData();
+  organisationIdService = data.organisationId.toString();
+  userId = data.userId.toString();
 });
 
 afterAll(async () => {
@@ -140,7 +148,7 @@ describe('Query Challenge data', () => {
 
   test('should add user to challenge and to opportunity of it ', async () => {
     // Arrange
-    await addUserToChallangeMutation(challengeId, '1');
+    await addUserToChallangeMutation(challengeId, userId);
 
     // Act
     // Create Opportunity
@@ -156,7 +164,7 @@ describe('Query Challenge data', () => {
 
     const responseAddUserToOpp = await addUserToOpportunityMutation(
       opportunityId,
-      1
+      userId
     );
 
     // Query Opportunity data
@@ -166,7 +174,7 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(requestOpportunityData).toHaveLength(1);
-    expect(requestOpportunityData[0].id).toContain(1);
+    expect(requestOpportunityData[0].id).toContain(userId);
   });
 
   test('should throw error adding user to opportunity without being part of a challenge ', async () => {
@@ -184,7 +192,7 @@ describe('Query Challenge data', () => {
 
     const responseAddUserToOpp = await addUserToOpportunityMutation(
       opportunityId,
-      1
+      userId
     );
 
     // Query Opportunity data
@@ -195,7 +203,7 @@ describe('Query Challenge data', () => {
     // Assert
     expect(requestOpportunityData).toHaveLength(0);
     expect(responseAddUserToOpp.text).toContain(
-      `User (1) is not a member of parent challenge: ${challengeId}`
+      `User (${userId}) is not a member of parent challenge: ${challengeId}`
     );
   });
 
@@ -239,8 +247,8 @@ describe('Query Challenge data', () => {
 
   test('should add challange lead to organisation', async () => {
     // Act
-    const response = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const response = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
@@ -259,13 +267,13 @@ describe('Query Challenge data', () => {
       responseCreateSecondChallenge.body.data.createChallenge.id;
 
     // Act
-    const responseFirstChallengeLead = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseFirstChallengeLead = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
-    const responseSecondhallengeLead = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseSecondhallengeLead = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       secondChallengeId
     );
 
@@ -281,16 +289,16 @@ describe('Query Challenge data', () => {
     const createOrganisationResponse = await createOrganisationMutation(
       organisationName
     );
-    const organisationId =
+    organisationId =
       createOrganisationResponse.body.data.createOrganisation.id;
 
     // Act
-    const responseFirstOrganisation = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseFirstOrganisation = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
-    const responseSecondOrganisation = await addChallengeChallengeLeadToOrganisationMutation(
+    const responseSecondOrganisation = await addChallengeLeadToOrganisationMutation(
       organisationId,
       challengeId
     );
@@ -304,13 +312,13 @@ describe('Query Challenge data', () => {
 
   test('should throw error, when try to add the same challnge to organisation as a lead ', async () => {
     // Act
-    const responseOne = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseOne = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
-    const responseTwo = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseTwo = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
@@ -319,20 +327,20 @@ describe('Query Challenge data', () => {
     expect(responseOne.body.data.addChallengeLead).toEqual(true);
     expect(responseTwo.status).toBe(200);
     expect(responseTwo.text).toContain(
-      `Challenge ${challengeId} already has an organisation with the provided organisation ID: 1`
+      `Challenge ${challengeId} already has an organisation with the provided organisation ID: ${organisationIdService}`
     );
   });
 
   test('should remove challange lead from organisation', async () => {
     // Act
-    const responseAddCL = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseAddCL = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
     // Act
-    const responseRemoveCL = await removeChallengeChallengeLeadFromOrganisationMutation(
-      1,
+    const responseRemoveCL = await removeChallengeLeadFromOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
