@@ -1,4 +1,5 @@
 import { AadAuthenticationClient, AuthConfig } from '@cmdbg/tokenator';
+import { AadAccountManagementService } from './aad.account-management.service';
 import { AadOboStrategy } from './aad.obo.strategy';
 import { MsGraphService } from './ms-graph.service';
 
@@ -15,10 +16,13 @@ export function graphServiceFactory(
 }
 
 export function aadOboStrategyFactory(
-  authClient: AadAuthenticationClient,
-  req: any
+  authClient: AadAuthenticationClient
 ): AadOboStrategy {
-  const headers = req.headers;
-  console.log(headers);
-  return new AadOboStrategy(authClient, req);
+  return new AadOboStrategy(authClient);
+}
+
+export function aadAccountManagementServiceFactory(
+  graphService: MsGraphService
+): AadAccountManagementService {
+  return new AadAccountManagementService(graphService);
 }

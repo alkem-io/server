@@ -13,7 +13,6 @@ import { ProjectInput } from '@domain/project/project.dto';
 import { ProjectService } from '@domain/project/project.service';
 import { RelationInput } from '@domain/relation/relation.dto';
 import { UserGroupService } from '@domain/user-group/user-group.service';
-import { UserInput } from '@domain/user/user.dto';
 import { IUser } from '@domain/user/user.interface';
 import { UserService } from '@domain/user/user.service';
 import { DataManagementService } from './data-management.service';
@@ -72,22 +71,6 @@ export class TestDataService {
   avatar = 'https://dev.cherrytwist.org/graphql';
   description = 'TestDescription';
   userEmail = 'qa.user@cherrytwist.org';
-
-  async initUsers() {
-    const user = new UserInput();
-    user.firstName = 'Bat';
-    user.lastName = 'Georgi';
-    user.email = 'testuser@test.com';
-    user.name = 'Bat Georgi';
-    user.accountUpn = 'testAccountUpn@test.com';
-    user.aadPassword = '687sd7ds&*';
-    user.profileData = {
-      avatar: 'test profile avatar',
-      description: 'test profile description',
-      tagsetsData: [{ name: 'test' }],
-    };
-    await this.ecoverseService.createUser(user);
-  }
 
   async initOrganisation(): Promise<number> {
     const organisation = new OrganisationInput();
@@ -309,13 +292,6 @@ export class TestDataService {
       challengeId
     );
     return response.context?.id;
-  }
-
-  async teardownUsers() {
-    const createdTestUser = (await this.userService.getUserByEmail(
-      'testuser@test.com'
-    )) as IUser;
-    await this.ecoverseService.removeUser(createdTestUser?.id);
   }
 
   async teardownChallenges(challengeId: number) {

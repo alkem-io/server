@@ -38,8 +38,6 @@ import { MetadataModule } from '@utils/metadata/metadata.module';
 import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
-import { AuthService } from '@utils/auth/auth.service';
-import { OidcBearerStrategy } from '@utils/auth/oidc.bearer.strategy';
 import oidcConfig from '@config/oidc.config';
 import { AadAccountManagementModule } from '@utils/aad/aad.account-management.module';
 import { AuthConfig } from '@cmdbg/tokenator';
@@ -131,15 +129,13 @@ import { AuthConfig } from '@cmdbg/tokenator';
   providers: [
     AppService,
     {
-      provide: APP_FILTER, //you have to use this custom provider
-      useClass: HttpExceptionsFilter, //this is your custom exception filter
+      provide: APP_FILTER,
+      useClass: HttpExceptionsFilter,
     },
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
-    OidcBearerStrategy, //vyanakiev toDo - review this provider
-    AuthService, //vyanakiev toDo - review this provider
   ],
 })
 export class AppModule {}

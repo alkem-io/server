@@ -13,7 +13,12 @@ export class MsGraphService {
     @Inject(AAD_OBO_PROVIDER) private readonly aadOboStrategy: AadOboStrategy
   ) {}
 
-  async createUser(userData: UserInput, accountUpn: string): Promise<any> {
+  async createUser(
+    userData: UserInput,
+    accountUpn: string,
+    accessToken: string
+  ): Promise<any> {
+    this.aadOboStrategy.upstreamAccessToken = accessToken;
     const clientOptions: ClientOptions = {
       authProvider: this.aadOboStrategy,
     };
@@ -39,7 +44,9 @@ export class MsGraphService {
     return res;
   }
 
-  async removeUser(accountUpn: string): Promise<any> {
+  async removeUser(accountUpn: string, accessToken: string): Promise<any> {
+    this.aadOboStrategy.upstreamAccessToken = accessToken;
+
     const clientOptions: ClientOptions = {
       authProvider: this.aadOboStrategy,
     };
@@ -71,7 +78,12 @@ export class MsGraphService {
     return res.value;
   }
 
-  async userExists(accountUpn: string, client?: Client): Promise<boolean> {
+  async userExists(
+    accountUpn: string,
+    accessToken: string,
+    client?: Client
+  ): Promise<boolean> {
+    this.aadOboStrategy.upstreamAccessToken = accessToken;
     try {
       const users = (await this.getAllUsers(client)) as any[];
       if (
@@ -101,7 +113,12 @@ export class MsGraphService {
     return tenantName;
   }
 
-  async resetPassword(accountUpn: string, newPassword: string): Promise<any> {
+  async resetPassword(
+    accountUpn: string,
+    newPassword: string,
+    accessToken: string
+  ): Promise<any> {
+    this.aadOboStrategy.upstreamAccessToken = accessToken;
     const clientOptions: ClientOptions = {
       authProvider: this.aadOboStrategy,
     };

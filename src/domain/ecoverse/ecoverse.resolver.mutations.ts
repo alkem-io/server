@@ -25,6 +25,7 @@ import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
+import { AccessToken } from '@utils/decorators/bearer-token.decorator';
 
 @Resolver()
 export class EcoverseResolverMutations {
@@ -68,8 +69,11 @@ export class EcoverseResolverMutations {
       'Creates a new user as a member of the ecoverse, including an account if enabled',
   })
   @Profiling.api
-  async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
-    const user = await this.ecoverseService.createUser(userData);
+  async createUser(
+    @Args('userData') userData: UserInput,
+    @AccessToken() accessToken: string
+  ): Promise<IUser> {
+    const user = await this.ecoverseService.createUser(userData, accessToken);
     return user;
   }
 
@@ -99,8 +103,11 @@ export class EcoverseResolverMutations {
     description: 'Removes the specified user from the ecoverse',
   })
   @Profiling.api
-  async removeUser(@Args('userID') userID: number): Promise<boolean> {
-    const success = await this.ecoverseService.removeUser(userID);
+  async removeUser(
+    @Args('userID') userID: number,
+    @AccessToken() accessToken: string
+  ): Promise<boolean> {
+    const success = await this.ecoverseService.removeUser(userID, accessToken);
     return success;
   }
 

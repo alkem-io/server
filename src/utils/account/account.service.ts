@@ -36,7 +36,10 @@ export class AccountService {
     return this.authenticationEnabled();
   }
 
-  async accountExists(accountUpn: string): Promise<boolean> {
+  async accountExists(
+    accountUpn: string,
+    accessToken: string
+  ): Promise<boolean> {
     // Should not be called if account usage is disabled
     if (!this.accountUsageEnabled())
       throw new AccountException(
@@ -44,18 +47,25 @@ export class AccountService {
         LogContext.COMMUNITY,
         CherrytwistErrorStatus.ACCOUNT_USAGE_DISABLED
       );
-    return await this.accountManagementService.userExists(accountUpn);
+    return await this.accountManagementService.userExists(
+      accountUpn,
+      accessToken
+    );
   }
 
   // Create an account for the specified user and update the user to store the UPN
-  async createUserAccount(userData: UserInput): Promise<boolean> {
-    await this.validateAccountCreationRequest(userData);
+  async createUserAccount(
+    userData: UserInput,
+    accessToken: string
+  ): Promise<boolean> {
+    await this.validateAccountCreationRequest(userData, accessToken);
 
     const accountUpn = this.buildUPN(userData);
 
     const result = await this.accountManagementService.createUser(
       userData,
-      accountUpn
+      accountUpn,
+      accessToken
     );
     if (!result)
       throw new AccountException(
@@ -80,7 +90,8 @@ export class AccountService {
   // Create an account for the specified user and update the user to store the UPN
   async createAccountForExistingUser(
     userID: number,
-    password: string
+    password: string,
+    accessToken: string
   ): Promise<boolean> {
     const user = await this.userService.getUserByIdOrFail(userID);
 
@@ -92,7 +103,7 @@ export class AccountService {
     userData.name = user.name;
     userData.email = user.email;
 
-    await this.createUserAccount(userData);
+    await this.createUserAccount(userData, accessToken);
     return true;
   }
 
@@ -139,7 +150,10 @@ export class AccountService {
     return upn;
   }
 
-  async validateAccountCreationRequest(userData: UserInput) {
+  async validateAccountCreationRequest(
+    userData: UserInput,
+    accessToken: string
+  ) {
     if (!this.accountUsageEnabled()) {
       throw new AccountException(
         'Not able to create accounts while authentication is disabled',
@@ -158,7 +172,7 @@ export class AccountService {
     const accountUpn = this.buildUPN(userData);
 
     // Check if the account exists already
-    const accountExists = await this.accountExists(accountUpn);
+    const accountExists = await this.accountExists(accountUpn, accessToken);
     if (accountExists)
       throw new AccountException(
         `There already exists an account with UPN (${accountUpn}); please choose another`,
@@ -167,7 +181,10 @@ export class AccountService {
       );
   }
 
-  async removeUserAccount(accountUpn: string): Promise<boolean> {
+  async removeUserAccount(
+    accountUpn: string,
+    accessToken: string
+  ): Promise<boolean> {
     if (accountUpn === '') {
       throw new AccountException(
         `Failed to delete account ${accountUpn}`,
@@ -178,7 +195,10 @@ export class AccountService {
 
     let res = false;
     try {
-      res = await this.accountManagementService.removeUser(accountUpn);
+      res = await this.accountManagementService.removeUser(
+        accountUpn,
+        accessToken
+      );
     } catch (error) {
       throw new AccountException(
         `Failed to delete account ${accountUpn}. ${error}`,
@@ -193,7 +213,8 @@ export class AccountService {
 
   async updateUserAccountPassword(
     accountUpn: string,
-    newPassword: string
+    newPassword: string,
+    accessToken: string
   ): Promise<boolean> {
     if (accountUpn === '') {
       throw new ValidationException(
@@ -206,7 +227,8 @@ export class AccountService {
     try {
       res = await this.accountManagementService.updateUserPassword(
         accountUpn,
-        newPassword
+        newPassword,
+        accessToken
       );
     } catch (error) {
       throw new AccountException(
