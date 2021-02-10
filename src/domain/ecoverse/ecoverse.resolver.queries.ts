@@ -1,8 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
-import { Args, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { Application } from '@domain/application/application.entity';
 import { Challenge } from '@domain/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge.service';
@@ -22,6 +18,11 @@ import { UserGroupService } from '@domain/user-group/user-group.service';
 import { User } from '@domain/user/user.entity';
 import { IUser } from '@domain/user/user.interface';
 import { UserService } from '@domain/user/user.service';
+import { Inject, UseGuards } from '@nestjs/common';
+import { Args, Query, Resolver } from '@nestjs/graphql';
+import { GqlAuthGuard } from '@utils/auth/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()
@@ -186,5 +187,15 @@ export class EcoverseResolverQueries {
   @Profiling.api
   async tagset(): Promise<ITagset> {
     return await this.ecoverseService.getTagset();
+  }
+
+  @Query(() => [Application], {
+    nullable: false,
+    description: 'All applications for this ecoverse',
+  })
+  @Profiling.api
+  async applications(): Promise<Application[]> {
+    const applications = await this.ecoverseService.getApplications();
+    return applications;
   }
 }

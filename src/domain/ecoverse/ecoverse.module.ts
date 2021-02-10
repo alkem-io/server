@@ -11,6 +11,7 @@ import { ChallengeModule } from '@domain/challenge/challenge.module';
 import { UserModule } from '@domain/user/user.module';
 import { OrganisationModule } from '@domain/organisation/organisation.module';
 import { AccountModule } from '@utils/account/account.module';
+import { ApplicationModule } from '@domain/application/application.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AccountModule } from '@utils/account/account.module';
     TypeOrmModule.forFeature([Ecoverse]),
     UserModule,
     AccountModule,
+    ApplicationModule,
   ],
   providers: [
     EcoverseService,

@@ -10,6 +10,8 @@ import {
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { IGroupable } from '@interfaces/groupable.interface';
 import { ActorGroup } from '@domain/actor-group/actor-group.entity';
@@ -24,6 +26,7 @@ import {
   UserGroup,
 } from '@domain/user-group/user-group.entity';
 import { IOpportunity } from './opportunity.interface';
+import { Application } from '@domain/application/application.entity';
 
 @Entity()
 @ObjectType()
@@ -112,6 +115,17 @@ export class Opportunity extends BaseEntity
     challenge => challenge.opportunities
   )
   challenge?: Challenge;
+
+  @Field(() => [Application])
+  @ManyToMany(
+    () => Application,
+    application => application.opportunity,
+    { eager: false, onDelete: 'CASCADE' }
+  )
+  @JoinTable({
+    name: 'opportunity_application',
+  })
+  applications?: Application[];
 
   // The restricted group names at the Opportunity level
   restrictedGroupNames: string[];

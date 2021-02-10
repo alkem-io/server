@@ -1,37 +1,41 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { ApplicationInput } from '@domain/application/application.dto';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationService } from '@domain/application/application.service';
+import { ChallengeInput } from '@domain/challenge/challenge.dto';
+import { IChallenge } from '@domain/challenge/challenge.interface';
+import { ChallengeService } from '@domain/challenge/challenge.service';
+import { Context } from '@domain/context/context.entity';
 import { IContext } from '@domain/context/context.interface';
+import { ContextService } from '@domain/context/context.service';
+import { OrganisationInput } from '@domain/organisation/organisation.dto';
+import { Organisation } from '@domain/organisation/organisation.entity';
 import { IOrganisation } from '@domain/organisation/organisation.interface';
+import { OrganisationService } from '@domain/organisation/organisation.service';
+import { RestrictedTagsetNames, Tagset } from '@domain/tagset/tagset.entity';
+import { ITagset } from '@domain/tagset/tagset.interface';
+import { TagsetService } from '@domain/tagset/tagset.service';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { UserGroupService } from '@domain/user-group/user-group.service';
+import { UserInput } from '@domain/user/user.dto';
+import { IUser } from '@domain/user/user.interface';
+import { UserService } from '@domain/user/user.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { AccountService } from '@utils/account/account.service';
+import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
+import {
+  AccountException,
+  EntityNotInitializedException,
+  ValidationException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ApolloError } from 'apollo-server-express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
+import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { ContextService } from '@domain/context/context.service';
-import { EcoverseInput } from './ecoverse.dto';
-import { TagsetService } from '@domain/tagset/tagset.service';
-import { IUser } from '@domain/user/user.interface';
-import { IChallenge } from '@domain/challenge/challenge.interface';
-import { ITagset } from '@domain/tagset/tagset.interface';
-import { ChallengeService } from '@domain/challenge/challenge.service';
-import { ChallengeInput } from '@domain/challenge/challenge.dto';
-import { UserInput } from '@domain/user/user.dto';
-import { OrganisationInput } from '@domain/organisation/organisation.dto';
-import { Organisation } from '@domain/organisation/organisation.entity';
-import { Context } from '@domain/context/context.entity';
-import { RestrictedTagsetNames, Tagset } from '@domain/tagset/tagset.entity';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { OrganisationService } from '@domain/organisation/organisation.service';
-import { UserService } from '@domain/user/user.service';
-import { AccountService } from '@utils/account/account.service';
-import { LogContext } from '@utils/logging/logging.contexts';
-import {
-  ValidationException,
-  EntityNotInitializedException,
-  AccountException,
-} from '@utils/error-handling/exceptions';
-import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
 export class EcoverseService {
@@ -43,6 +47,7 @@ export class EcoverseService {
     private contextService: ContextService,
     private tagsetService: TagsetService,
     private accountService: AccountService,
+    private applicationService: ApplicationService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -444,5 +449,38 @@ export class EcoverseService {
     await this.ecoverseRepository.save(ecoverse);
 
     return ecoverse;
+  }
+
+  async getApplications(): Promise<Application[]> {
+    const ecoverse = await this.getEcoverse({
+      relations: ['applications'],
+    });
+
+    return ecoverse.applications || [];
+  }
+
+  async createApplication(applicationData: ApplicationInput) {
+    const ecoverse = await this.getEcoverse({
+      relations: ['applications'],
+    });
+
+    const applications = await this.getApplications();
+    const existingApplication = applications.find(
+      x => x.user.id === applicationData.userId
+    );
+    if (existingApplication) {
+      throw new ApolloError(
+        `An application for user ${
+          existingApplication.user.email
+        } already exits. Application status: ${existingApplication.status.toString()}`
+      );
+    }
+    const application = await this.applicationService.createApplication(
+      applicationData
+    );
+
+    ecoverse.applications?.push(application);
+    await this.ecoverseRepository.save(ecoverse);
+    return application;
   }
 }

@@ -25,6 +25,7 @@ import {
   UserGroup,
 } from '@domain/user-group/user-group.entity';
 import { IChallenge } from './challenge.interface';
+import { Application } from '@domain/application/application.entity';
 
 @Entity()
 @ObjectType()
@@ -108,6 +109,17 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
     ecoverse => ecoverse.challenges
   )
   ecoverse?: Ecoverse;
+
+  @Field(() => [Application])
+  @ManyToMany(
+    () => Application,
+    application => application.challenge,
+    { eager: false, onDelete: 'CASCADE' }
+  )
+  @JoinTable({
+    name: 'challenge_application',
+  })
+  applications?: Application[];
 
   // The restricted group names at the challenge level
   restrictedGroupNames: string[];
