@@ -1,34 +1,23 @@
 import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
-import { Inject } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import {
-  AuthConfig,
-  AadAuthenticationClient,
-  Token,
-  TokenError,
-} from '@cmdbg/tokenator';
+import { Injectable } from '@nestjs/common';
+import { AadAuthenticationClient, Token, TokenError } from '@cmdbg/tokenator';
 import { TokenException } from '@utils/error-handling/exceptions';
-import { CONTEXT } from '@nestjs/graphql';
 
-//vyanakiev toDo - review this class and decide whether it's needed or it's merged with the AadIdentityService
+@Injectable()
 export class AadOboStrategy implements AuthenticationProvider {
   constructor(
-    private configService: ConfigService,
-    @Inject(CONTEXT) private readonly context: any
+    private authClient: AadAuthenticationClient,
+    private context: any
   ) {}
 
   async getAccessToken(): Promise<string> {
-    const authClient = new AadAuthenticationClient(
-      () => this.configService.get<AuthConfig>('aad_obo') as AuthConfig
-    );
-
     const upstreamAccessToken = await this.getBearerToken();
 
     if (!upstreamAccessToken)
       throw new TokenException(
         'Could not retrieve upstream access token in on-behalf-of flow!'
       );
-    const res = await authClient.authenticateOBO(upstreamAccessToken);
+    const res = await this.authClient.authenticateOBO(upstreamAccessToken);
     const token = res as Token;
 
     if (token) return token.access_token;
@@ -38,11 +27,13 @@ export class AadOboStrategy implements AuthenticationProvider {
   }
 
   async getBearerToken(): Promise<string> {
-    const { req } = this.context as any;
-    if (!req.headers.authorization)
-      throw new TokenException('Trying to access OBO flow unauthenticated!');
+    // const req = getRequest();
+    return '';
+    // const { req } = this.context as any;
+    // if (!req.headers.authorization)
+    //   throw new TokenException('Trying to access OBO flow unauthenticated!');
 
-    const [{}, token] = req.headers.authorization.split(' ');
-    return token;
+    // const [{}, token] = req.headers.authorization.split(' ');
+    // return token;
   }
 }

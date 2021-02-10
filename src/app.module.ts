@@ -104,7 +104,7 @@ import { AuthConfig } from '@cmdbg/tokenator';
       playground: true,
       fieldResolverEnhancers: ['guards'],
       sortSchema: true,
-      // context: ({ req }) => ({ req }), vyanakiev toDo - review whether / how we inject gql context
+      context: ({ req }) => ({ req }),
     }),
     DataManagementModule,
     BootstrapModule,
@@ -117,12 +117,13 @@ import { AuthConfig } from '@cmdbg/tokenator';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        clientID: configService.get<AuthConfig>('aad_ropc')?.clientID as string,
-        clientSecret: '',
-        tenant: configService.get<AuthConfig>('aad_ropc')?.tenant as string,
-        scope: configService.get<AuthConfig>('aad_ropc')?.scope as string,
-        username: configService.get<AuthConfig>('aad_ropc')?.username as string,
-        password: configService.get<AuthConfig>('aad_ropc')?.password as string,
+        clientID: configService.get<AuthConfig>('aad_obo')?.clientID as string,
+        clientSecret: configService.get<AuthConfig>('aad_obo')
+          ?.clientSecret as string,
+        tenant: configService.get<AuthConfig>('aad_obo')?.tenant as string,
+        scope: configService.get<AuthConfig>('aad_obo')?.scope as string,
+        username: configService.get<AuthConfig>('aad_obo')?.username as string,
+        password: configService.get<AuthConfig>('aad_obo')?.password as string,
       }),
     }),
   ],

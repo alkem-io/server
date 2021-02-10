@@ -1,9 +1,7 @@
-import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import { AccountManagementService } from '@src/common/interfaces/account-management.service';
 import { MsGraphService } from './ms-graph.service';
 
-export class AadAccountManagementService
-  implements AccountManagementService, AuthenticationProvider {
+export class AadAccountManagementService implements AccountManagementService {
   constructor(private readonly graphService: MsGraphService) {}
 
   async createUser(userDto: any, upn: string) {
@@ -20,10 +18,5 @@ export class AadAccountManagementService
 
   async userExists(upn: string): Promise<boolean> {
     return await this.graphService.userExists(upn);
-  }
-
-  //vyanakiev toDo - review dependencies AadIdentityService - MSGraph. Fix OBO flow.
-  async getAccessToken(): Promise<string> {
-    return '';
   }
 }

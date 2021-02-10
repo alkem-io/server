@@ -3,23 +3,19 @@ import 'isomorphic-fetch';
 import { UserInput } from '@domain/user/user.dto';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { AccountException } from '@utils/error-handling/exceptions/account.exception';
-import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
-// import { AadIdentityService } from './aad.identity.service';
+import { AadOboStrategy } from './aad.obo.strategy';
+import { AAD_OBO_PROVIDER } from './aad.account-management.constants';
+import { Inject, Injectable } from '@nestjs/common';
 
-export class MsGraphService implements AuthenticationProvider {
-  // constructor(
-  //   private readonly aadIdentityService: AadIdentityService
-  //   ) {}
-
-  //vyanakiev toDo - fix dependency injection and resolve OBO.
-  async getAccessToken(): Promise<string> {
-    return '';
-  }
+@Injectable()
+export class MsGraphService {
+  constructor(
+    @Inject(AAD_OBO_PROVIDER) private readonly aadOboStrategy: AadOboStrategy
+  ) {}
 
   async createUser(userData: UserInput, accountUpn: string): Promise<any> {
     const clientOptions: ClientOptions = {
-      // authProvider: this.aadIdentityService,
-      authProvider: this,
+      authProvider: this.aadOboStrategy,
     };
     const client = Client.initWithMiddleware(clientOptions);
 
@@ -45,8 +41,7 @@ export class MsGraphService implements AuthenticationProvider {
 
   async removeUser(accountUpn: string): Promise<any> {
     const clientOptions: ClientOptions = {
-      // authProvider: this.aadIdentityService,
-      authProvider: this,
+      authProvider: this.aadOboStrategy,
     };
     const client = Client.initWithMiddleware(clientOptions);
     const res = await client.api(`/users/${accountUpn}`).delete();
@@ -62,8 +57,7 @@ export class MsGraphService implements AuthenticationProvider {
   async getAllUsers(client?: Client): Promise<any> {
     if (!client) {
       const clientOptions: ClientOptions = {
-        // authProvider: this.aadIdentityService,
-        authProvider: this,
+        authProvider: this.aadOboStrategy,
       };
       client = Client.initWithMiddleware(clientOptions);
     }
@@ -109,8 +103,7 @@ export class MsGraphService implements AuthenticationProvider {
 
   async resetPassword(accountUpn: string, newPassword: string): Promise<any> {
     const clientOptions: ClientOptions = {
-      // authProvider: this.aadIdentityService,
-      authProvider: this,
+      authProvider: this.aadOboStrategy,
     };
 
     const passwordResetResponse = {
