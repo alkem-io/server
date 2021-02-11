@@ -470,6 +470,7 @@ export class EcoverseService {
     const existingApplication = applications.find(
       x => x.user.id === applicationData.userId
     );
+
     if (existingApplication) {
       throw new ApolloError(
         `An application for user ${

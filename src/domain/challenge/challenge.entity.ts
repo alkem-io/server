@@ -114,7 +114,7 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @ManyToMany(
     () => Application,
     application => application.challenge,
-    { eager: false, onDelete: 'CASCADE' }
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
   )
   @JoinTable({
     name: 'challenge_application',

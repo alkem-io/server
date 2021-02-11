@@ -27,6 +27,11 @@ import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { UpdateChallengeInput } from './update.challenge.dto';
+import { ApplicationInput } from '@domain/application/application.dto';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationService } from '@domain/application/application.service';
+import { ApolloError } from 'apollo-server-express';
+import { ApplicationFactoryService } from '@domain/application/application.factory';
 
 @Injectable()
 export class ChallengeService {
@@ -37,6 +42,8 @@ export class ChallengeService {
     private tagsetService: TagsetService,
     private opportunityService: OpportunityService,
     private organisationService: OrganisationService,
+    private applicationService: ApplicationService,
+    private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -465,5 +472,37 @@ export class ChallengeService {
       );
 
     return [challenge, organisation];
+  }
+
+  async createApplication(
+    id: number,
+    applicationData: ApplicationInput
+  ): Promise<Application> {
+    const challenge = (await this.getChallengeOrFail(id, {
+      relations: ['applications'],
+    })) as Challenge;
+
+    const applications = await this.applicationService.getForChallengeById(id);
+    const existingApplication = applications.find(
+      x => x.user.id === applicationData.userId
+    );
+
+    if (existingApplication) {
+      throw new ApolloError(
+        `An application for user ${
+          existingApplication.user.email
+        } already exits for challenge: ${
+          challenge.name
+        }. Application status: ${existingApplication.status.toString()}`
+      );
+    }
+
+    const application = await this.applicationFactoryService.createApplication(
+      applicationData
+    );
+
+    challenge.applications?.push(application);
+    await this.challengeRepository.save(challenge);
+    return application;
   }
 }

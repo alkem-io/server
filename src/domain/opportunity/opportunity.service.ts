@@ -30,6 +30,11 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@utils/error-handling/exceptions';
+import { ApplicationInput } from '@domain/application/application.dto';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationService } from '@domain/application/application.service';
+import { ApplicationFactoryService } from '@domain/application/application.factory';
+import { ApolloError } from 'apollo-server-express';
 
 @Injectable()
 export class OpportunityService {
@@ -41,6 +46,8 @@ export class OpportunityService {
     private projectService: ProjectService,
     private contextService: ContextService,
     private relationService: RelationService,
+    private applicationService: ApplicationService,
+    private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -464,5 +471,40 @@ export class OpportunityService {
     await this.userGroupService.addUserToGroup(user, membersGroup);
 
     return membersGroup;
+  }
+
+  async createApplication(
+    id: number,
+    applicationData: ApplicationInput
+  ): Promise<Application> {
+    const opportunity = (await this.getOpportunityOrFail(id, {
+      relations: ['applications'],
+    })) as Opportunity;
+
+    const applications = await this.applicationService.getForOpportunityById(
+      id
+    );
+
+    const existingApplication = applications.find(
+      x => x.user.id === applicationData.userId
+    );
+
+    if (existingApplication) {
+      throw new ApolloError(
+        `An application for user ${
+          existingApplication.user.email
+        } already exits for opportunity: ${
+          opportunity.name
+        }. Application status: ${existingApplication.status.toString()}`
+      );
+    }
+
+    const application = await this.applicationFactoryService.createApplication(
+      applicationData
+    );
+
+    opportunity.applications?.push(application);
+    await this.opportunityRepository.save(opportunity);
+    return application;
   }
 }

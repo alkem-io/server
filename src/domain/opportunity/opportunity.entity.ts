@@ -120,7 +120,7 @@ export class Opportunity extends BaseEntity
   @ManyToMany(
     () => Application,
     application => application.opportunity,
-    { eager: false, onDelete: 'CASCADE' }
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
   )
   @JoinTable({
     name: 'opportunity_application',
