@@ -36,7 +36,6 @@ beforeEach(async () => {
   opportunityTextId = `${uniqueTextId}`;
 });
 
-//let challengeNames ='';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -78,10 +77,11 @@ beforeEach(async () => {
 
 describe('Context', () => {
   test('should update and query challenge context and references', async () => {
-    // Act
+    // Arrange
     // Query Challenge Context Data data
     const contextChallengeQuery = await getContextQuery(challengeId);
 
+    // Act
     // Update challenge context and references
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
@@ -99,7 +99,7 @@ describe('Context', () => {
     const updatedChallengeData =
       responseUpdateChallenge.body.data.updateChallenge.context;
 
-    // Query updated context data
+    // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
       contextUpdatedChallengeQuery.body.data.challenge.context;
@@ -113,10 +113,11 @@ describe('Context', () => {
   });
 
   test('should update the same reference and query challenge context and references', async () => {
-    // Act
+    // Arrange
     // Query Challenge Context Data data
     const contextChallengeQuery = await getContextQuery(challengeId);
 
+    // Act
     // Update challenge context and references
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
@@ -134,7 +135,7 @@ describe('Context', () => {
     const updatedChallengeData =
       responseUpdateChallenge.body.data.updateChallenge.context;
 
-    // Query updated context data
+    // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
       contextUpdatedChallengeQuery.body.data.challenge.context;
@@ -156,7 +157,7 @@ describe('Context', () => {
       refUri
     );
 
-    // Query updated context data
+    // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
       contextUpdatedChallengeQuery.body.data.challenge.context;
@@ -179,7 +180,7 @@ describe('Context', () => {
     // Update challenge context and references
     await createReferenceOnContextMutation(contextIdChallenge, refName, refUri);
 
-    // Query updated context data
+    // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
       contextUpdatedChallengeQuery.body.data.challenge.context;

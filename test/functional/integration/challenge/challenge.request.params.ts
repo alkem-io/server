@@ -5,7 +5,8 @@ const uniqueId = (Date.now() + Math.random()).toString();
 
 export const createChallangeMutation = async (
   challengeName: string,
-  uniqueTextId: string
+  uniqueTextId: string,
+  challangeState?: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -39,7 +40,7 @@ export const createChallangeMutation = async (
       challengeData: {
         name: challengeName,
         textID: uniqueTextId,
-        state: 'SELECT * FROM users; DROP users--',
+        state: challangeState,
         tags: 'testTags',
         context: {
           tagline: 'test tagline' + uniqueId,
@@ -56,6 +57,49 @@ export const createChallangeMutation = async (
             },
           ],
         },
+      },
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const createBasicChallangeMutation = async (
+  challengeName: string,
+  uniqueTextId: string,
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation CreateChallenge($challengeData: ChallengeInput!) {
+              createChallenge(challengeData: $challengeData) {
+                name
+                id
+                textID
+                state
+                groups {
+                  id
+                  name
+                }
+                context {
+                  id
+                  tagline
+                  background
+                  vision
+                  impact
+                  who
+                  references {
+                    id
+                    name
+                    uri
+                    
+                  }
+                }
+              }
+            }`,
+    variables: {
+      challengeData: {
+        name: challengeName,
+        textID: uniqueTextId,
       },
     },
   };
@@ -169,7 +213,7 @@ export const addUserToChallangeMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const addChallengeChallengeLeadToOrganisationMutation = async (
+export const addChallengeLeadToOrganisationMutation = async (
   organisationId: any,
   challengeId: any
 ) => {
@@ -187,7 +231,7 @@ export const addChallengeChallengeLeadToOrganisationMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const removeChallengeChallengeLeadFromOrganisationMutation = async (
+export const removeChallengeLeadFromOrganisationMutation = async (
   organisationId: any,
   challengeId: any
 ) => {
@@ -215,12 +259,83 @@ export const getChallenges = async () => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+export const getChallengeData = async (challengeId: any) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query{challenge (ID: ${parseFloat(challengeId)}) {
+      name
+      id
+      textID
+      state
+      groups {
+        id
+        name
+      }
+      context {
+        id
+        tagline
+        background
+        vision
+        impact
+        who
+        references {
+          id
+          name
+          uri
+        }
+        }
+      }
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getChallengesData = async () => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query{challenges{
+      name
+      id
+      textID
+      state
+      groups {
+        id
+        name
+      }
+      context {
+        id
+        tagline
+        background
+        vision
+        impact
+        who
+        references {
+          id
+          name
+          uri
+        }
+        }
+      }
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
 export const getChallenge = async (challengeId: any) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{challenge (ID: ${challengeId}) {name id state context {tagline}  
-    tagset{
+    query: `query{challenge (ID: ${challengeId}) {
+      name 
+      id 
+      state 
+      context 
+      {tagline}  
+        tagset{
       tags 
     }}}`,
   };

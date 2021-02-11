@@ -38,9 +38,9 @@ export const createRelationMutation = async (
 
 export const updateRelationMutation = async (
   relationId: any,
-  relationType: string,
+  relationActorName: string,  
   relationDescription?: string,
-  relationActorName?: string,
+  relationType?: string,
   relationActorType?: string,
   relationActorRole?: string
 ) => {
