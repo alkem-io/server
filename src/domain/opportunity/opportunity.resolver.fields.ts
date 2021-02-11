@@ -20,12 +20,15 @@ import {
   EntityNotInitializedException,
 } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationService } from '@domain/application/application.service';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
   constructor(
     private userGroupService: UserGroupService,
-    private opportunityService: OpportunityService
+    private opportunityService: OpportunityService,
+    private applicationService: ApplicationService
   ) {}
 
   @Roles(RestrictedGroupNames.Members)
@@ -92,5 +95,20 @@ export class OpportunityResolverFields {
   @Profiling.api
   async relations(@Parent() opportunity: Opportunity) {
     return await this.opportunityService.loadRelations(opportunity);
+  }
+
+  @Roles(
+    RestrictedGroupNames.GlobalAdmins,
+    RestrictedGroupNames.EcoverseAdmins,
+    RestrictedGroupNames.CommunityAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('applications', () => [Application], {
+    nullable: false,
+    description: 'Application available for this opportunity.',
+  })
+  @Profiling.api
+  async applications(@Parent() opportunity: Opportunity) {
+    return await this.applicationService.getForOpportunity(opportunity);
   }
 }

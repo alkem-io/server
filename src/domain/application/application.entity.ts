@@ -14,6 +14,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Question } from '@domain/application/application.dto';
 
 export enum ApplicationStatus {
   new,
@@ -48,14 +49,14 @@ export class Application extends BaseEntity {
   )
   user!: User;
 
-  @Field(() => [NVP])
+  @Field(() => [Question])
   @ManyToMany(
     () => NVP,
     nvp => nvp.id,
     { eager: true, cascade: true, onDelete: 'CASCADE' }
   )
   @JoinTable({ name: 'application_questions' })
-  questions?: NVP[];
+  questions?: Question[];
 
   @ManyToMany(
     () => Ecoverse,
@@ -65,13 +66,13 @@ export class Application extends BaseEntity {
 
   @ManyToMany(
     () => Challenge,
-    ecoverse => ecoverse.applications
+    challenge => challenge.applications
   )
   challenge?: Challenge;
 
   @ManyToMany(
     () => Opportunity,
-    ecoverse => ecoverse.applications
+    opportunity => opportunity.applications
   )
   opportunity?: Opportunity;
 }

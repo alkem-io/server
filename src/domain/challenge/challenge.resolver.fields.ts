@@ -15,12 +15,15 @@ import { Opportunity } from '@domain/opportunity/opportunity.entity';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { GroupNotInitializedException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationService } from '@domain/application/application.service';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
   constructor(
     private userGroupService: UserGroupService,
-    private challengeService: ChallengeService
+    private challengeService: ChallengeService,
+    private applicationService: ApplicationService
   ) {}
 
   @Roles(RestrictedGroupNames.Members)
@@ -63,5 +66,21 @@ export class ChallengeResolverFields {
         LogContext.CHALLENGES
       );
     return members;
+  }
+
+  @Roles(
+    RestrictedGroupNames.GlobalAdmins,
+    RestrictedGroupNames.EcoverseAdmins,
+    RestrictedGroupNames.CommunityAdmins
+  )
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('applications', () => [Application], {
+    nullable: false,
+    description: 'Application available for this ecoverese.',
+  })
+  @Profiling.api
+  async applications(@Parent() challenge: Challenge) {
+    const apps = await this.applicationService.getForChallenge(challenge);
+    return apps || [];
   }
 }

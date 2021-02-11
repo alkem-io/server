@@ -12,10 +12,12 @@ import { OpportunityResolverFields } from './opportunity.resolver.fields';
 import { ProjectModule } from '@domain/project/project.module';
 import { ContextModule } from '@domain/context/context.module';
 import { ProfileModule } from '@domain/profile/profile.module';
+import { ApplicationModule } from '@domain/application/application.module';
 
 @Module({
   imports: [
     ActorGroupModule,
+    ApplicationModule,
     AspectModule,
     ProfileModule,
     ProjectModule,

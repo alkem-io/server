@@ -36,6 +36,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
+import { ApplicationFactoryService } from '@domain/application/application.factory';
 
 @Injectable()
 export class EcoverseService {
@@ -48,6 +49,7 @@ export class EcoverseService {
     private tagsetService: TagsetService,
     private accountService: AccountService,
     private applicationService: ApplicationService,
+    private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -475,7 +477,8 @@ export class EcoverseService {
         } already exits. Application status: ${existingApplication.status.toString()}`
       );
     }
-    const application = await this.applicationService.createApplication(
+
+    const application = await this.applicationFactoryService.createApplication(
       applicationData
     );
 

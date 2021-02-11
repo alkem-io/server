@@ -106,11 +106,10 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @JoinColumn()
   tagset?: Tagset;
 
-  @Field(() => [Application])
   @ManyToMany(
     () => Application,
     application => application.ecoverse,
-    { eager: false, onDelete: 'CASCADE' }
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
   )
   @JoinTable({
     name: 'ecoverse_application',
