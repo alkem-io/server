@@ -24,7 +24,7 @@ export class GqlAuthGuard extends AuthGuard('bearer') {
   JWT_EXPIRED = 'jwt is expired';
   private _roles!: string[];
   public get roles(): string[] {
-    return this._roles;
+    return this._roles || [];
   }
   public set roles(value: string[]) {
     this._roles = value;
