@@ -173,6 +173,7 @@ export class OpportunityResolver {
     return group;
   }
 
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this opportunity',

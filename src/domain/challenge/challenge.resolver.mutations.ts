@@ -165,6 +165,7 @@ export class ChallengeResolverMutations {
     );
   }
 
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this challenge',
