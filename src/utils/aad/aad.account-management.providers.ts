@@ -1,20 +1,24 @@
+import { AadAuthenticationClient } from '@cmdbg/tokenator';
 import { Provider, Type } from '@nestjs/common';
 import {
   AAD_GRAPH_MODULE_PROVIDER,
   AAD_ACCOUNT_MANAGEMENT_MODULE_NEST_PROVIDER,
   AAD_ACCOUNT_MANAGEMENT_MODULE_OPTIONS,
-  AAD_ACCOUNT_MANAGEMENT_MODULE_PROVIDER,
+  AAD_AUTH_CLIENT_PROVIDER,
+  AAD_OBO_PROVIDER,
 } from './aad.account-management.constants';
 import {
   AadAccountManagementModuleAsyncOptions,
   AadAccountManagementModuleOptions,
   AadAccountManagementModuleOptionsFactory,
 } from './aad.account-management.interfaces';
-import { AadAccountManagementService } from './aad.account-management.service';
 import {
-  identityServiceFactory,
+  aadAccountManagementServiceFactory,
+  aadAuthClientFactory,
+  aadOboStrategyFactory,
   graphServiceFactory,
 } from './aad.account-management.service.factories';
+import { AadOboStrategy } from './aad.obo.strategy';
 import { MsGraphService } from './ms-graph.service';
 
 export function createAadProviders(
@@ -22,22 +26,26 @@ export function createAadProviders(
 ): Provider[] {
   return [
     {
-      provide: AAD_ACCOUNT_MANAGEMENT_MODULE_PROVIDER,
-      useFactory: () => identityServiceFactory(options),
+      provide: AAD_AUTH_CLIENT_PROVIDER,
+      useFactory: () => aadAuthClientFactory(options),
+    },
+    {
+      provide: AAD_OBO_PROVIDER,
+      useFactory: (authClient: AadAuthenticationClient) =>
+        aadOboStrategyFactory(authClient),
+      inject: [AAD_AUTH_CLIENT_PROVIDER],
     },
     {
       provide: AAD_GRAPH_MODULE_PROVIDER,
-      useFactory: () => graphServiceFactory(),
+      useFactory: (aadOboStrategy: AadOboStrategy) =>
+        graphServiceFactory(aadOboStrategy),
+      inject: [AAD_OBO_PROVIDER],
     },
     {
       provide: AAD_ACCOUNT_MANAGEMENT_MODULE_NEST_PROVIDER,
-      useFactory: (graphService: MsGraphService) => {
-        return new AadAccountManagementService(graphService);
-      },
-      inject: [
-        AAD_ACCOUNT_MANAGEMENT_MODULE_PROVIDER,
-        AAD_GRAPH_MODULE_PROVIDER,
-      ],
+      useFactory: (graphService: MsGraphService) =>
+        aadAccountManagementServiceFactory(graphService),
+      inject: [AAD_GRAPH_MODULE_PROVIDER],
     },
   ];
 }
@@ -47,24 +55,28 @@ export function createAadAsyncProviders(
 ): Provider[] {
   const providers: Provider[] = [
     {
-      provide: AAD_ACCOUNT_MANAGEMENT_MODULE_PROVIDER,
+      provide: AAD_AUTH_CLIENT_PROVIDER,
       useFactory: (options: AadAccountManagementModuleOptions) =>
-        identityServiceFactory(options),
+        aadAuthClientFactory(options),
       inject: [AAD_ACCOUNT_MANAGEMENT_MODULE_OPTIONS],
     },
     {
+      provide: AAD_OBO_PROVIDER,
+      useFactory: (authClient: AadAuthenticationClient) =>
+        aadOboStrategyFactory(authClient),
+      inject: [AAD_AUTH_CLIENT_PROVIDER],
+    },
+    {
       provide: AAD_GRAPH_MODULE_PROVIDER,
-      useFactory: () => graphServiceFactory(),
+      useFactory: (aadOboStrategy: AadOboStrategy) =>
+        graphServiceFactory(aadOboStrategy),
+      inject: [AAD_OBO_PROVIDER],
     },
     {
       provide: AAD_ACCOUNT_MANAGEMENT_MODULE_NEST_PROVIDER,
-      useFactory: (graphService: MsGraphService) => {
-        return new AadAccountManagementService(graphService);
-      },
-      inject: [
-        AAD_ACCOUNT_MANAGEMENT_MODULE_PROVIDER,
-        AAD_GRAPH_MODULE_PROVIDER,
-      ],
+      useFactory: (graphService: MsGraphService) =>
+        aadAccountManagementServiceFactory(graphService),
+      inject: [AAD_GRAPH_MODULE_PROVIDER],
     },
   ];
 

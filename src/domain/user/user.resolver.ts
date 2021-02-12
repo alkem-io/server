@@ -4,7 +4,7 @@ import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { Roles } from '@utils/decorators/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
-import { CurrentUser } from './user.decorator';
+import { CurrentUser } from '../../utils/decorators/user.decorator';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
