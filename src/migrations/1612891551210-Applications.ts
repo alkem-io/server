@@ -8,6 +8,9 @@ export class Applications1612891551210 implements MigrationInterface {
       'CREATE TABLE `application` (`id` int NOT NULL AUTO_INCREMENT, `status` int NOT NULL, `reason` varchar(512) NULL, `userId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
+      'CREATE TABLE `nvp` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `value` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
       'CREATE TABLE `application_questions` (`applicationId` int NOT NULL, `nvpId` int NOT NULL, INDEX `IDX_8495fae86f13836b0745642baa` (`applicationId`), INDEX `IDX_fe50118fd82e7fe2f74f986a19` (`nvpId`), PRIMARY KEY (`applicationId`, `nvpId`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
@@ -103,7 +106,9 @@ export class Applications1612891551210 implements MigrationInterface {
     await queryRunner.query(
       'DROP INDEX `IDX_8495fae86f13836b0745642baa` ON `application_questions`'
     );
+
     await queryRunner.query('DROP TABLE `application_questions`');
+    await queryRunner.query('DROP TABLE `nvp`');
     await queryRunner.query('DROP TABLE `application`');
   }
 }
