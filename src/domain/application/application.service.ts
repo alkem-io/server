@@ -1,13 +1,9 @@
 import { ApplicationInput } from '@domain/application/application.dto';
-import {
-  Application,
-  ApplicationStatus,
-} from '@domain/application/application.entity';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationFactoryService } from '@domain/application/application.factory';
 import { Challenge } from '@domain/challenge/challenge.entity';
 import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
-import { NVP } from '@domain/nvp/nvp.entity';
 import { Opportunity } from '@domain/opportunity/opportunity.entity';
-import { User } from '@domain/user/user.entity';
 import { UserService } from '@domain/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,27 +22,16 @@ export class ApplicationService {
     @InjectRepository(Opportunity)
     private opportunityReposity: Repository<Opportunity>,
     private userService: UserService,
+    private applicationFactoryService: ApplicationFactoryService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createApplication(
     applicationData: ApplicationInput
   ): Promise<Application> {
-    const { questions } = applicationData;
-
-    const application = new Application();
-    const user = await this.userService.getUserOrFail(
-      applicationData.userId.toString()
+    const application = await this.applicationFactoryService.createApplication(
+      applicationData
     );
-    application.user = user as User;
-    application.status = ApplicationStatus.new;
-    application.questions = questions.map(x => {
-      const nvp = new NVP();
-      nvp.name = x.name;
-      nvp.value = x.value;
-      return nvp;
-    });
-
     return await this.applicationReposity.save(application);
   }
 

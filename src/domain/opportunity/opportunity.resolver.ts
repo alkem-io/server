@@ -173,11 +173,6 @@ export class OpportunityResolver {
     return group;
   }
 
-  @Roles(
-    RestrictedGroupNames.GlobalAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.CommunityAdmins
-  )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this opportunity',
