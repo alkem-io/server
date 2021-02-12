@@ -37,9 +37,7 @@ import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { ApplicationFactoryService } from '@domain/application/application.factory';
-import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 import { AccessToken } from '@utils/decorators/bearer-token.decorator';
-
 
 @Injectable()
 export class EcoverseService {
