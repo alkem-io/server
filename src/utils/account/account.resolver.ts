@@ -5,6 +5,7 @@ import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { AccountService } from './account.service';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { AccessToken } from '@utils/decorators/bearer-token.decorator';
 
 @Resolver()
 export class AccountResolver {
@@ -22,11 +23,13 @@ export class AccountResolver {
   @Profiling.api
   async createUserAccount(
     @Args('userID') userID: number,
-    @Args('password') password: string
+    @Args('password') password: string,
+    @AccessToken() accessToken: string
   ): Promise<boolean> {
     const success = await this.accountService.createAccountForExistingUser(
       userID,
-      password
+      password,
+      accessToken
     );
     return success;
   }

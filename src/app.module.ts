@@ -38,8 +38,6 @@ import { MetadataModule } from '@utils/metadata/metadata.module';
 import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
-import { AuthService } from '@utils/auth/auth.service';
-import { OidcBearerStrategy } from '@utils/auth/oidc.bearer.strategy';
 import oidcConfig from '@config/oidc.config';
 import { AadAccountManagementModule } from '@utils/aad/aad.account-management.module';
 import { AuthConfig } from '@cmdbg/tokenator';
@@ -108,7 +106,7 @@ import { NVPModule } from '@domain/nvp/nvp.module';
       playground: true,
       fieldResolverEnhancers: ['guards'],
       sortSchema: true,
-      // context: ({ req }) => ({ req }), vyanakiev toDo - review whether / how we inject gql context
+      context: ({ req }) => ({ req }),
     }),
     DataManagementModule,
     BootstrapModule,
@@ -121,12 +119,13 @@ import { NVPModule } from '@domain/nvp/nvp.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        clientID: configService.get<AuthConfig>('aad_ropc')?.clientID as string,
-        clientSecret: '',
-        tenant: configService.get<AuthConfig>('aad_ropc')?.tenant as string,
-        scope: configService.get<AuthConfig>('aad_ropc')?.scope as string,
-        username: configService.get<AuthConfig>('aad_ropc')?.username as string,
-        password: configService.get<AuthConfig>('aad_ropc')?.password as string,
+        clientID: configService.get<AuthConfig>('aad_obo')?.clientID as string,
+        clientSecret: configService.get<AuthConfig>('aad_obo')
+          ?.clientSecret as string,
+        tenant: configService.get<AuthConfig>('aad_obo')?.tenant as string,
+        scope: configService.get<AuthConfig>('aad_obo')?.scope as string,
+        username: configService.get<AuthConfig>('aad_obo')?.username as string,
+        password: configService.get<AuthConfig>('aad_obo')?.password as string,
       }),
     }),
   ],
@@ -134,15 +133,13 @@ import { NVPModule } from '@domain/nvp/nvp.module';
   providers: [
     AppService,
     {
-      provide: APP_FILTER, //you have to use this custom provider
-      useClass: HttpExceptionsFilter, //this is your custom exception filter
+      provide: APP_FILTER,
+      useClass: HttpExceptionsFilter,
     },
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
-    OidcBearerStrategy, //vyanakiev toDo - review this provider
-    AuthService, //vyanakiev toDo - review this provider
   ],
 })
 export class AppModule {}

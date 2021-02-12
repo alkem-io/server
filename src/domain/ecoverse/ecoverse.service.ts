@@ -37,6 +37,9 @@ import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { ApplicationFactoryService } from '@domain/application/application.factory';
+import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
+import { AccessToken } from '@utils/decorators/bearer-token.decorator';
+
 
 @Injectable()
 export class EcoverseService {
@@ -296,17 +299,23 @@ export class EcoverseService {
   }
 
   // Create the user and an account on the identity provider
-  async createUser(userData: UserInput): Promise<IUser> {
+  async createUser(userData: UserInput, accessToken: string): Promise<IUser> {
     // Check that a valid profile and a valid account can be created. It is double work but not easily avoided.
     await this.userService.validateUserProfileCreationRequest(userData);
     if (this.accountService.authenticationEnabled()) {
-      await this.accountService.validateAccountCreationRequest(userData);
+      await this.accountService.validateAccountCreationRequest(
+        userData,
+        accessToken
+      );
     }
 
     // Ok to proceed to creating profile and optionally account
     const user = await this.createUserProfile(userData);
     if (this.accountService.authenticationEnabled()) {
-      const result = await this.accountService.createUserAccount(userData);
+      const result = await this.accountService.createUserAccount(
+        userData,
+        accessToken
+      );
       if (!result) {
         await this.userService.removeUser(user);
         throw new AccountException(
@@ -399,26 +408,31 @@ export class EcoverseService {
   }
 
   // Removes the user and deletes the profile
-  async removeUser(userID: number): Promise<boolean> {
+  async removeUser(userID: number, accessToken: string): Promise<boolean> {
     const user = await this.userService.getUserByIdOrFail(userID);
 
     await this.userService.removeUser(user);
     if (this.accountService.accountUsageEnabled())
-      return await this.accountService.removeUserAccount(user.accountUpn);
+      return await this.accountService.removeUserAccount(
+        user.accountUpn,
+        accessToken
+      );
     return true;
   }
 
   // Removes the user and deletes the profile
   async updateUserAccountPassword(
     userID: number,
-    newPassword: string
+    newPassword: string,
+    @AccessToken() accessToken: string
   ): Promise<boolean> {
     const user = await this.userService.getUserByIdOrFail(userID);
 
     if (this.accountService.accountUsageEnabled())
       return await this.accountService.updateUserAccountPassword(
         user.accountUpn,
-        newPassword
+        newPassword,
+        accessToken
       );
     return true;
   }

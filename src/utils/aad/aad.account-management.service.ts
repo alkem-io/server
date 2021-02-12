@@ -1,29 +1,30 @@
-import { AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import { AccountManagementService } from '@src/common/interfaces/account-management.service';
 import { MsGraphService } from './ms-graph.service';
 
-export class AadAccountManagementService
-  implements AccountManagementService, AuthenticationProvider {
+export class AadAccountManagementService implements AccountManagementService {
   constructor(private readonly graphService: MsGraphService) {}
 
-  async createUser(userDto: any, upn: string) {
-    await this.graphService.createUser(userDto, upn);
+  async createUser(
+    userDto: any,
+    upn: string,
+    accessToken: string
+  ): Promise<any> {
+    return await this.graphService.createUser(userDto, upn, accessToken);
   }
 
-  async removeUser(upn: string) {
-    await this.graphService.removeUser(upn);
+  async removeUser(upn: string, accessToken: string): Promise<any> {
+    return await this.graphService.removeUser(upn, accessToken);
   }
 
-  async updateUserPassword(upn: string, password: string) {
-    await this.graphService.resetPassword(upn, password);
+  async updateUserPassword(
+    upn: string,
+    password: string,
+    accessToken: string
+  ): Promise<any> {
+    return await this.graphService.resetPassword(upn, password, accessToken);
   }
 
-  async userExists(upn: string): Promise<boolean> {
-    return await this.graphService.userExists(upn);
-  }
-
-  //vyanakiev toDo - review dependencies AadIdentityService - MSGraph. Fix OBO flow.
-  async getAccessToken(): Promise<string> {
-    return '';
+  async userExists(upn: string, accessToken: string): Promise<boolean> {
+    return await this.graphService.userExists(upn, accessToken);
   }
 }
