@@ -261,7 +261,7 @@ describe('Groups', () => {
     expect(groupParent.body.data.group.parent).toEqual({
       __typename: 'Ecoverse',
       id: '1',
-      name: 'Cherrytwist dogfood',
+      name: 'Empty ecoverse',
     });
     expect(groupParent.body.data.group.parent).not.toContainObject({
       __typename: 'Organisation',
