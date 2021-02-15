@@ -10,6 +10,7 @@ import { UserModule } from '@domain/user/user.module';
 import { OpportunityModule } from '@domain/opportunity/opportunity.module';
 import { ChallengeResolverFields } from './challenge.resolver.fields';
 import { OrganisationModule } from '@domain/organisation/organisation.module';
+import { ApplicationModule } from '@domain/application/application.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { OrganisationModule } from '@domain/organisation/organisation.module';
     OrganisationModule,
     UserGroupModule,
     UserModule,
+    ApplicationModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [

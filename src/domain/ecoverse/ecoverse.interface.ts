@@ -5,6 +5,7 @@ import { IOrganisation } from '@domain/organisation/organisation.interface';
 import { ITagset } from '@domain/tagset/tagset.interface';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { IUser } from '@domain/user/user.interface';
+import { Application } from '@domain/application/application.entity';
 
 export interface IEcoverse {
   id: number;
@@ -18,4 +19,5 @@ export interface IEcoverse {
   challenges?: IChallenge[];
   tagset?: ITagset;
   restrictedGroupNames: string[];
+  applications?: Application[];
 }

@@ -25,6 +25,8 @@ import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationInput } from '@domain/application/application.dto';
 import { AccessToken } from '@utils/decorators/bearer-token.decorator';
 
 @Resolver()
@@ -163,5 +165,16 @@ export class EcoverseResolverMutations {
     );
 
     return organisation;
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Application, {
+    description: 'Create application to join this ecoverse',
+  })
+  @Profiling.api
+  async createApplication(
+    @Args('applicationData') applicationData: ApplicationInput
+  ): Promise<Application> {
+    return await this.ecoverseService.createApplication(applicationData);
   }
 }

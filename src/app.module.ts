@@ -41,6 +41,8 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
 import oidcConfig from '@config/oidc.config';
 import { AadAccountManagementModule } from '@utils/aad/aad.account-management.module';
 import { AuthConfig } from '@cmdbg/tokenator';
+import { ApplicationModule } from '@domain/application/application.module';
+import { NVPModule } from '@domain/nvp/nvp.module';
 
 @Module({
   imports: [
@@ -84,6 +86,8 @@ import { AuthConfig } from '@cmdbg/tokenator';
       }),
     }),
     AuthModule,
+    ApplicationModule,
+    NVPModule,
     AgreementModule,
     ChallengeModule,
     ContextModule,

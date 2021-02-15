@@ -14,6 +14,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { IUser } from './user.interface';
+import { Application } from '@domain/application/application.entity';
 
 @Entity()
 @ObjectType()
@@ -94,6 +95,12 @@ export class User extends BaseEntity implements IUser {
     { eager: false }
   )
   focalPoints?: UserGroup[];
+
+  @OneToMany(
+    () => Application,
+    application => application.id
+  )
+  applications?: Application[];
 
   constructor(name: string) {
     super();

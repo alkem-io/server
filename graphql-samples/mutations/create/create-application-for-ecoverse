@@ -1,0 +1,26 @@
+mutation createApplication($applicationData: ApplicationInput!) {
+  createApplication(applicationData:$applicationData){
+    id
+	  questions {
+      id
+      name
+      value
+    }
+    reason
+    status
+  }
+}
+
+
+query variables:
+{
+  "applicationData": {
+    "userId": 4,
+    "questions": [
+      {"name": "Question 1", "value": "No"},
+      {"name": "Question 2", "value": "Yes"},
+      {"name": "Question 3", "value": "Maybe"},
+      {"name": "Question 4", "value": "Yes"}
+    ]
+  }
+}

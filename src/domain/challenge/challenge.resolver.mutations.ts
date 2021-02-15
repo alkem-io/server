@@ -16,6 +16,8 @@ import { Opportunity } from '@domain/opportunity/opportunity.entity';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { IOpportunity } from '@domain/opportunity/opportunity.interface';
 import { UpdateChallengeInput } from './update.challenge.dto';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationInput } from '@domain/application/application.dto';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -161,5 +163,18 @@ export class ChallengeResolverMutations {
       challengeID,
       organisationID
     );
+  }
+
+  @Roles(RestrictedGroupNames.Members)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Application, {
+    description: 'Create application to join this challenge',
+  })
+  @Profiling.api
+  async createApplicationForChallenge(
+    @Args('ID') id: number,
+    @Args('applicationData') applicationData: ApplicationInput
+  ): Promise<Application> {
+    return await this.challengeService.createApplication(id, applicationData);
   }
 }

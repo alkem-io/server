@@ -21,6 +21,7 @@ import {
   UserGroup,
 } from '@domain/user-group/user-group.entity';
 import { IEcoverse } from './ecoverse.interface';
+import { Application } from '@domain/application/application.entity';
 
 @Entity()
 @ObjectType()
@@ -104,6 +105,16 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset?: Tagset;
+
+  @ManyToMany(
+    () => Application,
+    application => application.ecoverse,
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
+  )
+  @JoinTable({
+    name: 'ecoverse_application',
+  })
+  applications?: Application[];
 
   // The restricted group names at the ecoverse level
   restrictedGroupNames: string[];

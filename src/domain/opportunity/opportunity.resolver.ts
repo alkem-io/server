@@ -28,6 +28,8 @@ import { Project } from '@domain/project/project.entity';
 import { IProject } from '@domain/project/project.interface';
 import { EntityNotFoundException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationInput } from '@domain/application/application.dto';
 
 @Resolver()
 export class OpportunityResolver {
@@ -169,5 +171,18 @@ export class OpportunityResolver {
       groupName
     );
     return group;
+  }
+
+  @Roles(RestrictedGroupNames.Members)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Application, {
+    description: 'Create application to join this opportunity',
+  })
+  @Profiling.api
+  async createApplicationForOpportunity(
+    @Args('ID') id: number,
+    @Args('applicationData') applicationData: ApplicationInput
+  ): Promise<Application> {
+    return await this.opportunityService.createApplication(id, applicationData);
   }
 }
