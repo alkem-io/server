@@ -4,15 +4,12 @@ Represents the core back-end server that manages the representation of the ecove
 
 [![Build Status](https://travis-ci.com/cherrytwist/Server.svg?branch=develop)](https://travis-ci.com/cherrytwist/Server) [![Coverage Status](https://coveralls.io/repos/github/cherrytwist/Server/badge.svg?branch=develop)](https://coveralls.io/github/cherrytwist/Server?branch=develop) [![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/) ![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
 
-
-
 ## === Server architecture ===
 
 Cherrytwist server uses [NestJS](https://nestjs.com/) as framework and complies to its principles. The code is split into Data Layer (entities), Data Access Layer (), Service Layer and an API Layer (GraphQL).
 Interactions between different layers is depicted in the Layer Diagram below:
 
 ![Layer Diagram](diagrams/ct-server-layer-diagram.png)
-
 
 The technology stack is as follows:
 
@@ -30,27 +27,28 @@ The technology stack is as follows:
 - Elastic Cloud + Kibana for centralized log management
 
 ## === Interacting with a Cherrytwist server ===
+
 ### **Graphql API**
+
 The server primarily interacts via a GraphQL api that it exploses. This api is used by the [Cherrytwist Web Client](http://github.com/cherrytwist/Client.Web), but also by any other clients / integrations that need to interact with the Cherrytwist server.
 
 This can be found at the following location: <http://localhost:4000/graphql>
 (4000 is the default port, see below for information on adjusting this port)
 
 ### **Data Management**
+
 For evaluation / development with the Cherrytwist server, there is also a simple Data Management panel, available at the following URL: <http://localhost:4000/data-management>.
 
 The Data Management panel provides the following capabilities:
-- **Empty Ecoverse**: Resets the database back to an empty state, and ensures there is an empty Ecoverse available. It is triggered by a http request to <http://localhost:4000/data-management/empty-ecoverse>, or alternatively by pressing the relevant button on the main Data Management panel.
-- **Load Sample Data**: Loads a set of sample data into the Ecoverse. It is triggered by a http request to <http://localhost:4000/data-management/seed-data>, or alternatively by pressing the relevant button on the main Data Management panel.
 
-Note: the sample data provided here is basic so users are encouraged to look also at the Demo project where additional and more extensive data loading capabilities are available.
+- **Empty Ecoverse**: Resets the database back to an empty state, and ensures there is an empty Ecoverse available. It is triggered by a http request to <http://localhost:4000/data-management/empty-ecoverse>, or alternatively by pressing the relevant button on the main Data Management panel.
 
 ## === Bootstrapping Ecoverse roles ===
 
 In order to bootstrap Ecoverse profiles **first time**, do the following:
 
 1. Set AUTH_ENABLED=false environment variable
-1. If you are running an old version of the application (<0.3.*) do a Reset Ecoverse + Sample Data from the Data Management Panel.
+1. If you are running an old version of the application (<0.3.\*) do a Reset Ecoverse + Sample Data from the Data Management Panel.
 1. Prepare a bootstrap json. Default json file is provided in src/utils/config/authorisation-bootstrap.json. If you'd like to change the name / location of the bootstrap file, set AUTH_BOOTSTRAP_PATH environment variable with the full path to your file.
 1. Start the CT server. Your users and roles will be updated.
 
@@ -108,9 +106,10 @@ AUTH_AAD_CLIENT_APP_ID= The AAD app registrion client id of the Cherrytwist Web 
 AUTH_AAD_CHERRYTWIST_API_SCOPE=[Cherrytwist API URI]./default - it is very important to have ./default after the API URI as this scope aggregates all the scopes of the Cherrytwist API and all downstream API scopes.
 AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI=The login redirect for the Cherrytwist Web Client.
 ```
-***Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
 
-Optionally configure CORS  for improved security with the following env variables (by default the value is *):
+**\*Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
+
+Optionally configure CORS for improved security with the following env variables (by default the value is \*):
 
 ```conf
 CORS_ORIGIN=[your CORS origin value]. Default value is '*'.
@@ -119,6 +118,7 @@ CORS_METHODS=[CORS methods allowed]. Default value is 'GET,HEAD,PUT,PATCH,POST,D
 ```
 
 ### Configure logging
+
 To configure logging levels, use:
 
 ```conf
@@ -175,15 +175,16 @@ To run this project:
 
 1. Build the server image, pull mySQL image and start the containers
 
-    ```bash
-    docker-compose --env-file .env.docker up -d --build
-    ```
+   ```bash
+   docker-compose --env-file .env.docker up -d --build
+   ```
 
-    if .env file has been added use:
+   if .env file has been added use:
 
-    ```bash
-    docker-compose up -d --build
-    ```
+   ```bash
+   docker-compose up -d --build
+   ```
+
 2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4000/graphql).
 
 3. Optionally, populate database with initial data using the Data Management panel described above.
@@ -252,7 +253,6 @@ We have automated the creation and deployment of containers to docker hub via a 
 - Create a github release and tag it with the appropriate version number ie. `v0.1.3`
 - Go to github actions and view the `push to docker` action to see if everything ran correctly.
 
-
 ## === Testing ===
 
 Initial version of integration tests is in place. To run them, look at the prerequisites, below:
@@ -261,22 +261,23 @@ Initial version of integration tests is in place. To run them, look at the prere
 - Running `MySQL sql server`
 - Running `Cherrytwist/Server` service.
 - Local .env file must contain the following vairable, to run tests with authentication:
-    - `AUTH_AAD_CLIENT_APP_ID` 
-    - `AUTH_AAD_CHERRYTWIST_API_SCOPE` 
-    - `AUTH_AAD_TENANT` 
-    - `AUTH_AAD_TEST_HARNESS_PASSWORD` 
-    - `AUTH_AAD_CHERRYTWIST_API_APP_ID` 
-    - `AUTH_AAD_MSGRAPH_API_SCOPE` 
-    - `AUTH_AAD_UPN_DOMAIN` 
-   - `AUTH_ENABLED` env variable must be set to `true`.
+  - `AUTH_AAD_CLIENT_APP_ID`
+  - `AUTH_AAD_CHERRYTWIST_API_SCOPE`
+  - `AUTH_AAD_TENANT`
+  - `AUTH_AAD_TEST_HARNESS_PASSWORD`
+  - `AUTH_AAD_CHERRYTWIST_API_APP_ID`
+  - `AUTH_AAD_MSGRAPH_API_SCOPE`
+  - `AUTH_AAD_UPN_DOMAIN`
+  - `AUTH_ENABLED` env variable must be set to `true`.
 - `AUTH_AAD_TEST_HARNESS_PASSWORD` and `AUTH_AAD_MSGRAPH_API_SECRET` secrets (also env variables) need to be provided
 - `LOGGING_CONSOLE_ENABLED=false` can be used to disable logging the exceptions (exceptions are quite verbose and will pollute the test results log).
 - In order to run the unit, integration and end-to-end, navigate to the `/Server` repository, and execute the following command: `npm run test:[TEST_TYPE]` where TEST_TYPE is `e2e` for end-to-end, `it` for
-integration tests and `ut` for unit tests
+  integration tests and `ut` for unit tests
   - To run specific suite: `npm run-script test:[TEST_TYPE] jest --config ./test folder>/<test suite file>` (i.e. `./test/user.e2e-spec.ts`)
 - The results of the test, will be displayed at the end of the execution.
 
 Automation test structure
+
 ```
 server/
  src/
@@ -301,7 +302,8 @@ server/
    utils/
      graphql.request.ts
 ```
-Test types 
+
+Test types
 
     - unit tests: `*.spec.ts` testing functions part of a service
     - functional e2e tests: `*.e2e-spec.ts` testing functionallity and its integration with third part services (i.e. "MS AAD")
@@ -321,6 +323,5 @@ To debug tests in VS Code
 
 To run only one test from a test file
 
-- Set the keyword *.only* after `test` or `describe` (i.e. `test.only('should remove a challenge', async () => {})`)
+- Set the keyword _.only_ after `test` or `describe` (i.e. `test.only('should remove a challenge', async () => {})`)
 - Run the command for this particular test file: `npm run-script test:it ./test/functional/integration/challenge/query-challenge-data.it-spec.ts`
-
