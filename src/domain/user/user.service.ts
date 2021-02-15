@@ -14,6 +14,8 @@ import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import validator from 'validator';
+import { IGroupable } from '@interfaces/groupable.interface';
+import { IUserGroup } from '@domain/user-group/user-group.interface';
 @Injectable()
 @Injectable()
 export class UserService {
@@ -156,6 +158,21 @@ export class UserService {
     return user;
   }
 
+  addGroupToEntity(
+    entities: IGroupable[],
+    entity: IGroupable,
+    group: IUserGroup
+  ) {
+    const existingEntity = entities.find(e => e.id === entity.id);
+    if (!existingEntity) {
+      //first time through
+      entities.push(entity);
+      entity.groups = [group];
+    } else {
+      existingEntity.groups?.push(group);
+    }
+  }
+
   async getMemberOf(user: User): Promise<MemberOf> {
     const membership = await this.userRepository
       .createQueryBuilder('user')
@@ -179,6 +196,8 @@ export class UserService {
 
     // First get the list of challenges + orgs + groups to return
     for (const group of membership?.userGroups) {
+      // Set flag on the group to block population of the members field
+      group.membersPopulationEnabled = false;
       const ecoverse = group.ecoverse;
       const challenge = group.challenge;
       const opportunity = group.opportunity;
@@ -190,49 +209,16 @@ export class UserService {
       }
       if (challenge) {
         // challenge group
-        memberOf.challenges.push(challenge);
+        this.addGroupToEntity(memberOf.challenges, challenge, group);
+        group.challenge = undefined;
       }
       if (opportunity) {
-        // challenge group
-        memberOf.opportunities.push(opportunity);
+        this.addGroupToEntity(memberOf.opportunities, opportunity, group);
+        group.opportunity = undefined;
       }
       if (organisation) {
-        // challenge group
-        memberOf.organisations.push(organisation);
-      }
-    }
-
-    // Also need to only return the groups that the user is a member of
-    for (const challenge of memberOf.challenges) {
-      challenge.groups = [];
-      // add back in the groups for this challenge
-      for (const group of membership?.userGroups) {
-        if (group.challenge) {
-          // challenge group
-          challenge.groups?.push(group);
-        }
-      }
-    }
-
-    // Also need to only return the groups that the user is a member of
-    for (const opportunity of memberOf.opportunities) {
-      opportunity.groups = [];
-      // add back in the groups for this challenge
-      for (const group of membership?.userGroups) {
-        if (group.opportunity) {
-          opportunity.groups?.push(group);
-        }
-      }
-    }
-
-    // Also need to only return the groups that the user is a member of
-    for (const organisation of memberOf.organisations) {
-      organisation.groups = [];
-      // add back in the groups for this challenge
-      for (const group of membership?.userGroups) {
-        if (group.challenge) {
-          organisation.groups?.push(group);
-        }
+        this.addGroupToEntity(memberOf.organisations, organisation, group);
+        group.organisation = undefined;
       }
     }
 
