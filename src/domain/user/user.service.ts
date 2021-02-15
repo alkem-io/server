@@ -179,8 +179,6 @@ export class UserService {
 
     // First get the list of challenges + orgs + groups to return
     for (const group of membership?.userGroups) {
-      // Set flag on the group to block population of the members field
-      group.membersPopulationEnabled = false;
       const ecoverse = group.ecoverse;
       const challenge = group.challenge;
       const opportunity = group.opportunity;
