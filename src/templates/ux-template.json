@@ -31,7 +31,50 @@
         "cso",
         "international_standards"
       ],
-      "relations": ["members", "groups"]
+      "relations": ["members", "groups"],
+      "applications": [
+        {
+          "name": "default",
+          "questions": [
+            {
+              "question": "Why do you want to join?",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "ecoverses": [
+    {
+      "name": "default",
+      "applications": [
+        {
+          "name": "default",
+          "questions": [
+            {
+              "question": "Why do you want to join?",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "challenges": [
+    {
+      "name": "default",
+      "applications": [
+        {
+          "name": "default",
+          "questions": [
+            {
+              "question": "Why do you want to join?",
+              "required": true
+            }
+          ]
+        }
+      ]
     }
   ]
 }

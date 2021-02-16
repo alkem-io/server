@@ -1,4 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { ApplicationTemplate } from '@utils/config/template/application.template.entity';
 import { IOpportunityTemplate } from './opportunity.template.interface';
 
 @ObjectType()
@@ -26,6 +27,12 @@ export class OpportunityTemplate implements IOpportunityTemplate {
     description: 'Template relations.',
   })
   relations?: string[];
+
+  @Field(() => [ApplicationTemplate], {
+    nullable: true,
+    description: 'Application template',
+  })
+  applications?: ApplicationTemplate[];
 
   constructor(name: string) {
     this.name = name;
