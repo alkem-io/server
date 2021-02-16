@@ -50,12 +50,11 @@ export class TestDataService {
     private userGroupService: UserGroupService,
     private projectService: ProjectService,
     private actorGroupService: ActorGroupService,
-    private dataManagementService: DataManagementService //private profileService: ProfileService
+    private dataManagementService: DataManagementService
   ) {}
 
   async initDB() {
     await this.dataManagementService.reset_to_empty_ecoverse();
-    await this.dataManagementService.load_sample_data();
   }
 
   async teardownDB() {
