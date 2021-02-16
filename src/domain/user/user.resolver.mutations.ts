@@ -9,15 +9,11 @@ import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
-import { UserFactoryService } from './user.factory.service';
 import { UserService } from './user.service';
 
 @Resolver(() => User)
 export class UserResolverMutations {
-  constructor(
-    private userFactoryService: UserFactoryService,
-    private userService: UserService
-  ) {}
+  constructor(private userService: UserService) {}
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
@@ -66,7 +62,7 @@ export class UserResolverMutations {
   })
   @Profiling.api
   async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
-    const user = await this.userFactoryService.createUser(userData);
+    const user = await this.userService.createUser(userData);
     return user;
   }
 
@@ -80,7 +76,7 @@ export class UserResolverMutations {
   })
   @Profiling.api
   async removeUser(@Args('userID') userID: number): Promise<IUser> {
-    const user = await this.userFactoryService.removeUser(userID);
+    const user = await this.userService.removeUser(userID);
     return user;
   }
 }

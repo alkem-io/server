@@ -20,14 +20,11 @@ import { ValidationException } from '@utils/error-handling/exceptions/validation
 import { BaseException } from '@utils/error-handling/exceptions/base.exception';
 import { EntityNotFoundException } from '@utils/error-handling/exceptions/entity.not.found.exception';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
-import { UserFactoryService } from '@domain/user/user.factory.service';
-
 @Injectable()
 export class BootstrapService {
   constructor(
     private ecoverseService: EcoverseService,
     private userService: UserService,
-    private userFactoryService: UserFactoryService,
     private configService: ConfigService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -201,7 +198,7 @@ export class BootstrapService {
         let user = await this.userService.getUserByEmail(userInput.email);
         if (!user) {
           // First create, then ensure groups are loaded - not optimal but only on bootstrap
-          user = await this.userFactoryService.createUser(userInput);
+          user = await this.userService.createUser(userInput);
           if (groupName !== RestrictedGroupNames.Members) {
             // also need to add to members group
             await this.ecoverseService.addUserToRestrictedGroup(
