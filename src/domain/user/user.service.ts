@@ -5,7 +5,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   NotSupportedException,
-  ValidationException,
 } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { ProfileService } from '@domain/profile/profile.service';
@@ -25,46 +24,6 @@ export class UserService {
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  async createUser(userData: UserInput): Promise<IUser> {
-    await this.validateUserProfileCreationRequest(userData);
-
-    // Ok to create a new user + save
-    const user = User.create(userData);
-    await this.initialiseMembers(user);
-    this.updateLastModified(user);
-    // Need to save to get the object identifiers assigned
-    await this.userRepository.save(user);
-    this.logger.verbose?.(
-      `Created a new user with id: ${user.id}`,
-      LogContext.COMMUNITY
-    );
-
-    // Now update the profile if needed
-    const profileData = userData.profileData;
-    if (profileData && user.profile) {
-      await this.profileService.updateProfile(user.profile.id, profileData);
-    }
-    // reload the user to get it populated
-    const populatedUser = await this.getUserByIdOrFail(user.id);
-
-    this.logger.verbose?.(
-      `User ${userData.email} was created!`,
-      LogContext.COMMUNITY
-    );
-
-    return populatedUser;
-  }
-
-  // Helper method to ensure all members that are arrays are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(user: IUser): Promise<IUser> {
-    if (!user.profile) {
-      user.profile = await this.profileService.createProfile();
-    }
-
-    return user;
-  }
 
   //Find a user either by id or email
   async getUserOrFail(userID: string): Promise<IUser> {
@@ -132,30 +91,8 @@ export class UserService {
     return user;
   }
 
-  async getUserForAccountWithGroups(
-    accountUpn: string
-  ): Promise<IUser | undefined> {
-    const user = await this.userRepository.findOne(
-      { accountUpn: accountUpn },
-      { relations: ['userGroups'] }
-    );
-
-    if (!user) {
-      this.logger.verbose?.(
-        `No user with provided account UPN ${accountUpn} exists!`,
-        LogContext.COMMUNITY
-      );
-      return undefined;
-    }
-
-    if (!user.userGroups) {
-      this.logger.verbose?.(
-        `User with provided account UPN ${accountUpn} doesn't belong to any groups!`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return user;
+  async getUsers(): Promise<IUser[]> {
+    return (await this.userRepository.find()) || [];
   }
 
   addGroupToEntity(
@@ -225,50 +162,9 @@ export class UserService {
     return memberOf;
   }
 
-  async validateUserProfileCreationRequest(
-    userData: UserInput
-  ): Promise<boolean> {
-    if (!userData.firstName || userData.firstName.length == 0)
-      throw new ValidationException(
-        `User profile creation (${userData.email}) missing required first name`,
-        LogContext.COMMUNITY
-      );
-    if (!userData.lastName || userData.lastName.length == 0)
-      throw new ValidationException(
-        `User profile creation (${userData.email}) missing required last name`,
-        LogContext.COMMUNITY
-      );
-    if (!userData.email || userData.email.length == 0)
-      throw new ValidationException(
-        `User profile creation (${userData.firstName}) missing required email`,
-        LogContext.COMMUNITY
-      );
-    const userCheck = await this.getUserByEmail(userData.email);
-    if (userCheck)
-      throw new ValidationException(
-        `User profile with the specified email (${userData.email}) already exists`,
-        LogContext.COMMUNITY
-      );
-    // Trim all values to remove space issues
-    userData.firstName = userData.firstName.trim();
-    userData.lastName = userData.lastName.trim();
-    userData.email = userData.email.trim();
-    return true;
-  }
-
-  async saveUser(user: IUser): Promise<boolean> {
-    await this.userRepository.save(user);
-    return true;
-  }
-
-  async removeUser(user: IUser): Promise<IUser> {
-    const result = await this.userRepository.remove(user as User);
-    return result;
-  }
-
   async updateUserByEmail(email: string, userInput: UserInput): Promise<IUser> {
     const user = await this.getUserByEmailOrFail(email);
-    return this.updateUser(user.id, userInput);
+    return await this.updateUser(user.id, userInput);
   }
 
   // Note: explicitly do not support updating of email addresses

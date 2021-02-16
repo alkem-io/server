@@ -9,17 +9,11 @@ import {
   UserGroup,
 } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
-import { UserInput } from '@domain/user/user.dto';
-import { User } from '@domain/user/user.entity';
-import { IUser } from '@domain/user/user.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
 import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { Roles } from '@utils/decorators/roles.decorator';
-import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
-import { AccountException } from '@utils/error-handling/exceptions';
-import { LogContext } from '@utils/logging/logging.contexts';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
@@ -27,7 +21,6 @@ import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationInput } from '@domain/application/application.dto';
-import { AccessToken } from '@utils/decorators/bearer-token.decorator';
 
 @Resolver()
 export class EcoverseResolverMutations {
@@ -59,78 +52,6 @@ export class EcoverseResolverMutations {
   ): Promise<IEcoverse> {
     const ctVerse = await this.ecoverseService.update(ecoverseData);
     return ctVerse;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description:
-      'Creates a new user as a member of the ecoverse, including an account if enabled',
-  })
-  @Profiling.api
-  async createUser(
-    @Args('userData') userData: UserInput,
-    @AccessToken() accessToken: string
-  ): Promise<IUser> {
-    const user = await this.ecoverseService.createUser(userData, accessToken);
-    return user;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description:
-      'Creates a new user as a member of the ecoverse, without an account',
-  })
-  @Profiling.api
-  async createUserProfile(
-    @Args('userData') userData: UserInput
-  ): Promise<IUser> {
-    const user = await this.ecoverseService.createUserProfile(userData);
-    return user;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
-    description: 'Removes the specified user from the ecoverse',
-  })
-  @Profiling.api
-  async removeUser(
-    @Args('userID') userID: number,
-    @AccessToken() accessToken: string
-  ): Promise<boolean> {
-    const success = await this.ecoverseService.removeUser(userID, accessToken);
-    return success;
-  }
-
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
-    description: 'Updates the user account password',
-  })
-  @Profiling.api
-  async updateUserAccountPassword(): Promise<boolean> {
-    throw new AccountException(
-      'MS Graph API does not have production support for password update!',
-      LogContext.API,
-      CherrytwistErrorStatus.MS_GRAPH_METHOD_NOT_SUPPORTED
-    );
-
-    //const success = await this.ecoverseService.updateUserAccountPassword(userID, newPassword);
-    //return success;
   }
 
   @Roles(RestrictedGroupNames.EcoverseAdmins)

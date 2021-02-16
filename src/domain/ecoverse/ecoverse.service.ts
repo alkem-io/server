@@ -1,6 +1,5 @@
 import { ApplicationInput } from '@domain/application/application.dto';
 import { Application } from '@domain/application/application.entity';
-import { ApplicationService } from '@domain/application/application.service';
 import { ChallengeInput } from '@domain/challenge/challenge.dto';
 import { IChallenge } from '@domain/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge.service';
@@ -17,15 +16,10 @@ import { TagsetService } from '@domain/tagset/tagset.service';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { UserGroupService } from '@domain/user-group/user-group.service';
-import { UserInput } from '@domain/user/user.dto';
 import { IUser } from '@domain/user/user.interface';
-import { UserService } from '@domain/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AccountService } from '@utils/account/account.service';
-import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 import {
-  AccountException,
   EntityNotInitializedException,
   ValidationException,
 } from '@utils/error-handling/exceptions';
@@ -37,19 +31,15 @@ import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { ApplicationFactoryService } from '@domain/application/application.factory';
-import { AccessToken } from '@utils/decorators/bearer-token.decorator';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
-    private userService: UserService,
     private challengeService: ChallengeService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
-    private accountService: AccountService,
-    private applicationService: ApplicationService,
     private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -122,7 +112,7 @@ export class EcoverseService {
     return ecoverse.id;
   }
 
-  async getUsers(): Promise<IUser[]> {
+  async getMembers(): Promise<IUser[]> {
     try {
       const ecoverse = await this.getEcoverse({
         relations: ['groups'],
@@ -296,58 +286,6 @@ export class EcoverseService {
     return organisation;
   }
 
-  // Create the user and an account on the identity provider
-  async createUser(userData: UserInput, accessToken: string): Promise<IUser> {
-    // Check that a valid profile and a valid account can be created. It is double work but not easily avoided.
-    await this.userService.validateUserProfileCreationRequest(userData);
-    if (this.accountService.authenticationEnabled()) {
-      await this.accountService.validateAccountCreationRequest(
-        userData,
-        accessToken
-      );
-    }
-
-    // Ok to proceed to creating profile and optionally account
-    const user = await this.createUserProfile(userData);
-    if (this.accountService.authenticationEnabled()) {
-      const result = await this.accountService.createUserAccount(
-        userData,
-        accessToken
-      );
-      if (!result) {
-        await this.userService.removeUser(user);
-        throw new AccountException(
-          'Unable to create account for user!',
-          LogContext.COMMUNITY,
-          CherrytwistErrorStatus.ACCOUNT_CREATION_FAILED
-        );
-      }
-    }
-    return user;
-  }
-
-  // Create the user and add the user into the members group
-  async createUserProfile(userData: UserInput): Promise<IUser> {
-    const ctUser = await this.userService.createUser(userData);
-    if (!ctUser)
-      throw new ValidationException(
-        `User ${userData.email} could not be created!`,
-        LogContext.COMMUNITY
-      );
-
-    const ecoverse = await this.getEcoverse({
-      relations: ['groups'],
-    });
-    // Also add the user into the members group
-    const membersGroup = await this.userGroupService.getGroupByName(
-      ecoverse,
-      RestrictedGroupNames.Members
-    );
-    await this.userGroupService.addUserToGroup(ctUser, membersGroup);
-
-    return ctUser;
-  }
-
   async addAdmin(user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
       user,
@@ -403,36 +341,6 @@ export class EcoverseService {
     )
       return true;
     return false;
-  }
-
-  // Removes the user and deletes the profile
-  async removeUser(userID: number, accessToken: string): Promise<boolean> {
-    const user = await this.userService.getUserByIdOrFail(userID);
-
-    await this.userService.removeUser(user);
-    if (this.accountService.accountUsageEnabled())
-      return await this.accountService.removeUserAccount(
-        user.accountUpn,
-        accessToken
-      );
-    return true;
-  }
-
-  // Removes the user and deletes the profile
-  async updateUserAccountPassword(
-    userID: number,
-    newPassword: string,
-    @AccessToken() accessToken: string
-  ): Promise<boolean> {
-    const user = await this.userService.getUserByIdOrFail(userID);
-
-    if (this.accountService.accountUsageEnabled())
-      return await this.accountService.updateUserAccountPassword(
-        user.accountUpn,
-        newPassword,
-        accessToken
-      );
-    return true;
   }
 
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
