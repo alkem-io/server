@@ -54,7 +54,6 @@ export class UserResolverQueries {
     });
   }
 
-  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => User, {
     nullable: false,

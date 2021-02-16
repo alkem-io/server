@@ -33,7 +33,6 @@ export class UserResolverMutations {
     return user;
   }
 
-  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Update user profile.',
