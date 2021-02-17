@@ -30,7 +30,7 @@ export class OpportunityTemplate implements IOpportunityTemplate {
 
   @Field(() => [ApplicationTemplate], {
     nullable: true,
-    description: 'Application template',
+    description: 'Application templates.',
   })
   applications?: ApplicationTemplate[];
 
