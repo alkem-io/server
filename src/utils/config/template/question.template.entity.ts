@@ -4,13 +4,13 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export class QuestionTemplate {
   @Field(() => String, {
     nullable: false,
-    description: 'Question.',
+    description: 'Question template.',
   })
   question!: string;
 
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Is question required.',
+    description: 'Is question required?',
   })
   required!: boolean;
 }

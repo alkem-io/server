@@ -6,6 +6,7 @@ import { ITemplate } from './template.interface';
 import { UserTemplate } from './user.template.entity';
 import { IUserTemplate } from './user.template.interface';
 import { ChallengeTemplate } from '@utils/config/template/challenge.template.entity';
+import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
 
 @ObjectType()
 export class Template implements ITemplate {
@@ -23,25 +24,25 @@ export class Template implements ITemplate {
 
   @Field(() => [UserTemplate], {
     nullable: false,
-    description: 'Users template.',
+    description: 'User templates.',
   })
   users?: IUserTemplate[];
 
   @Field(() => [OpportunityTemplate], {
     nullable: false,
-    description: 'Opportunities template.',
+    description: 'Opportunity templates.',
   })
   opportunities?: IOpportunityTemplate[];
 
-  @Field(() => [OpportunityTemplate], {
+  @Field(() => [Ecoverse], {
     nullable: false,
-    description: 'Ecoverses template.',
+    description: 'Ecoverse templates.',
   })
   ecoverses?: EcoverseTemplate[];
 
-  @Field(() => [OpportunityTemplate], {
+  @Field(() => [ChallengeTemplate], {
     nullable: false,
-    description: 'Challenges template.',
+    description: 'Challenge templates.',
   })
   challenges?: ChallengeTemplate[];
 
