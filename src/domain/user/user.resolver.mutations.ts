@@ -57,11 +57,30 @@ export class UserResolverMutations {
   )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
-    description: 'Creates a new user profile.',
+    description: 'Creates a new user profile on behalf of another user.',
   })
   @Profiling.api
   async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
     const user = await this.userService.createUser(userData);
+    return user;
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => User, {
+    nullable: false,
+    description:
+      'Creates a new user profile for the currently authenticated user.',
+  })
+  @Profiling.api
+  async createUserForMe(
+    @CurrentUser() email: string,
+    @Args('userData') userData: UserInput
+  ): Promise<IUser> {
+    if (!email)
+      throw new AuthenticationException(
+        'User authentication missing email in Token'
+      );
+    const user = await this.userService.createUserForMe(email, userData);
     return user;
   }
 

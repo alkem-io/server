@@ -221,7 +221,7 @@ describe('Users and Groups', () => {
 
     // Assert
     expect(responseRemoveUser.status).toBe(200);
-    expect(responseRemoveUser.body.data.removeUser).toBe(true);
+    expect(responseRemoveUser.body.data.removeUser.name).toBe(userName);
     expect(responseQueryGroups.body.data.group.members).toHaveLength(0);
   });
 
@@ -252,6 +252,7 @@ describe('Users and Groups', () => {
     ).toEqual(userName);
   });
 
+  // To be enabled when, there is implementation for cascade deletion
   test.skip('should remove "user" assigned as focal point', async () => {
     // Arrange
     const responseCreate = await createGroupMutation(groupName);
@@ -273,6 +274,8 @@ describe('Users and Groups', () => {
 
     // Assert
     expect(responseDeleteUserFocalPoint.status).toBe(200);
-    expect(responseDeleteUserFocalPoint.body.data.removeUser).toBe(true);
+    expect(responseDeleteUserFocalPoint.body.data.removeUser.name).toBe(
+      userName
+    );
   });
 });

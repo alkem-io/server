@@ -16,14 +16,9 @@ export class AuthService {
     let knownUser = await this.userService.getUserWithGroups(token.email);
 
     if (!knownUser) {
-      // User does not yet have a profile on the platform, create one
+      // todo: this needs to be replaced with a custom exception
       const userData = new UserInput();
       userData.email = token.email;
-      // todo: add additional fields from token
-      userData.name = '';
-      userData.firstName = '';
-      userData.lastName = '';
-      // todo: log a msg that we are creating a new user based on token data; fill out more of the user profile data? catch + rethrow any exception?
       knownUser = await this.userService.createUser(userData);
       if (!knownUser) {
         throw new AuthenticationException(
