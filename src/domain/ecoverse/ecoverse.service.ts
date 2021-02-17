@@ -1,6 +1,6 @@
 import { ApplicationInput } from '@domain/application/application.dto';
 import { Application } from '@domain/application/application.entity';
-import { ApplicationService } from '@domain/application/application.service';
+import { ApplicationFactoryService } from '@domain/application/application.factory';
 import { ChallengeInput } from '@domain/challenge/challenge.dto';
 import { IChallenge } from '@domain/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge.service';
@@ -23,6 +23,7 @@ import { UserService } from '@domain/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AccountService } from '@utils/account/account.service';
+import { AccessToken } from '@utils/decorators/bearer-token.decorator';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 import {
   AccountException,
@@ -36,8 +37,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { ApplicationFactoryService } from '@domain/application/application.factory';
-import { AccessToken } from '@utils/decorators/bearer-token.decorator';
 
 @Injectable()
 export class EcoverseService {
@@ -49,7 +48,6 @@ export class EcoverseService {
     private contextService: ContextService,
     private tagsetService: TagsetService,
     private accountService: AccountService,
-    private applicationService: ApplicationService,
     private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,

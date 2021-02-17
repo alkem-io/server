@@ -1,15 +1,6 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-  GroupNotInitializedException,
-  RelationshipNotFoundException,
-  ValidationException,
-} from '@utils/error-handling/exceptions';
-import { LogContext } from '@utils/logging/logging.contexts';
+import { ApplicationInput } from '@domain/application/application.dto';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationFactoryService } from '@domain/application/application.factory';
 import { Context } from '@domain/context/context.entity';
 import { ContextService } from '@domain/context/context.service';
 import { OpportunityInput } from '@domain/opportunity/opportunity.dto';
@@ -23,15 +14,23 @@ import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { UserService } from '@domain/user/user.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+  GroupNotInitializedException,
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ApolloError } from 'apollo-server-express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
 import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { UpdateChallengeInput } from './update.challenge.dto';
-import { ApplicationInput } from '@domain/application/application.dto';
-import { Application } from '@domain/application/application.entity';
-import { ApplicationService } from '@domain/application/application.service';
-import { ApolloError } from 'apollo-server-express';
-import { ApplicationFactoryService } from '@domain/application/application.factory';
 
 @Injectable()
 export class ChallengeService {
@@ -42,7 +41,6 @@ export class ChallengeService {
     private tagsetService: TagsetService,
     private opportunityService: OpportunityService,
     private organisationService: OrganisationService,
-    private applicationService: ApplicationService,
     private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -482,8 +480,7 @@ export class ChallengeService {
       relations: ['applications'],
     })) as Challenge;
 
-    const applications = await this.applicationService.getForChallengeById(id);
-    const existingApplication = applications.find(
+    const existingApplication = challenge.applications?.find(
       x => x.user.id === applicationData.userId
     );
 
@@ -504,5 +501,12 @@ export class ChallengeService {
     challenge.applications?.push(application);
     await this.challengeRepository.save(challenge);
     return application;
+  }
+
+  async getApplications(challenge: Challenge) {
+    const _challenge = await this.getChallengeOrFail(challenge.id, {
+      relations: ['applications'],
+    });
+    return _challenge?.applications || [];
   }
 }

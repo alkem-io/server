@@ -62,17 +62,17 @@ export class Application extends BaseEntity {
     () => Ecoverse,
     ecoverse => ecoverse.applications
   )
-  ecoverse?: Ecoverse;
+  ecoverse?: Ecoverse[];
 
   @ManyToMany(
     () => Challenge,
     challenge => challenge.applications
   )
-  challenge?: Challenge;
+  challenge?: Challenge[];
 
   @ManyToMany(
     () => Opportunity,
     opportunity => opportunity.applications
   )
-  opportunity?: Opportunity;
+  opportunity?: Opportunity[];
 }

@@ -1,29 +1,26 @@
-import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
+import { Application } from '@domain/application/application.entity';
+import { Opportunity } from '@domain/opportunity/opportunity.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
 } from '@domain/user-group/user-group.entity';
-import { Challenge } from './challenge.entity';
-import { User } from '@domain/user/user.entity';
 import { UserGroupService } from '@domain/user-group/user-group.service';
-import { ChallengeService } from './challenge.service';
-import { Opportunity } from '@domain/opportunity/opportunity.entity';
-import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { User } from '@domain/user/user.entity';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { GqlAuthGuard } from '@utils/auth/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
 import { GroupNotInitializedException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
-import { Application } from '@domain/application/application.entity';
-import { ApplicationService } from '@domain/application/application.service';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { Challenge } from './challenge.entity';
+import { ChallengeService } from './challenge.service';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
   constructor(
     private userGroupService: UserGroupService,
-    private challengeService: ChallengeService,
-    private applicationService: ApplicationService
+    private challengeService: ChallengeService
   ) {}
 
   @Roles(RestrictedGroupNames.Members)
@@ -80,7 +77,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async applications(@Parent() challenge: Challenge) {
-    const apps = await this.applicationService.getForChallenge(challenge);
+    const apps = await this.challengeService.getApplications(challenge);
     return apps || [];
   }
 }

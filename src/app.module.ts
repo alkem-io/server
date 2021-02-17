@@ -43,6 +43,7 @@ import { AadAccountManagementModule } from '@utils/aad/aad.account-management.mo
 import { AuthConfig } from '@cmdbg/tokenator';
 import { ApplicationModule } from '@domain/application/application.module';
 import { NVPModule } from '@domain/nvp/nvp.module';
+import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { NVPModule } from '@domain/nvp/nvp.module';
     }),
     AuthModule,
     ApplicationModule,
+    ApplicationFactoryModule,
     NVPModule,
     AgreementModule,
     ChallengeModule,

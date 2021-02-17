@@ -1,5 +1,4 @@
 import { Application } from '@domain/application/application.entity';
-import { ApplicationService } from '@domain/application/application.service';
 import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { Inject, UseGuards } from '@nestjs/common';
@@ -12,8 +11,7 @@ import { EcoverseService } from './ecoverse.service';
 @Resolver()
 export class EcoverseResolverFields {
   constructor(
-    @Inject(EcoverseService) private ecoverseService: EcoverseService,
-    private applicationService: ApplicationService
+    @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
   @Roles(
@@ -27,7 +25,7 @@ export class EcoverseResolverFields {
     description: 'Application available for this ecoverese.',
   })
   @Profiling.api
-  async applications(@Parent() ecoverse: Ecoverse) {
-    return await this.applicationService.getForEcoverse(ecoverse);
+  async applications(@Parent() _ecoverse: Ecoverse) {
+    return await this.ecoverseService.getApplications();
   }
 }

@@ -1,0 +1,36 @@
+query {
+  configuration {
+    template {
+      ecoverses {
+        name
+        applications{
+          name
+          questions {
+            question
+            required
+          }
+        }
+      }
+      challenges{
+        name
+        applications{
+          name
+          questions {
+            question
+            required
+          }
+        }
+      }
+      opportunities{
+        name
+        applications{
+          name
+          questions {
+            question
+            required
+          }
+        }
+      }
+    }
+  }
+}

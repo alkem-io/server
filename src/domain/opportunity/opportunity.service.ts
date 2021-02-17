@@ -1,19 +1,17 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
-import { LogContext } from '@utils/logging/logging.contexts';
 import { ActorGroupInput } from '@domain/actor-group/actor-group.dto';
 import { IActorGroup } from '@domain/actor-group/actor-group.interface';
 import { ActorGroupService } from '@domain/actor-group/actor-group.service';
+import { ApplicationInput } from '@domain/application/application.dto';
+import { Application } from '@domain/application/application.entity';
+import { ApplicationFactoryService } from '@domain/application/application.factory';
 import { AspectInput } from '@domain/aspect/aspect.dto';
 import { IAspect } from '@domain/aspect/aspect.interface';
 import { AspectService } from '@domain/aspect/aspect.service';
+import { Context } from '@domain/context/context.entity';
+import { ContextService } from '@domain/context/context.service';
 import { ProjectInput } from '@domain/project/project.dto';
 import { IProject } from '@domain/project/project.interface';
 import { ProjectService } from '@domain/project/project.service';
-import { Context } from '@domain/context/context.entity';
-import { ContextService } from '@domain/context/context.service';
 import { RelationInput } from '@domain/relation/relation.dto';
 import { IRelation } from '@domain/relation/relation.interface';
 import { RelationService } from '@domain/relation/relation.service';
@@ -21,20 +19,21 @@ import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { UserService } from '@domain/user/user.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+  GroupNotInitializedException,
+  ValidationException,
+} from '@utils/error-handling/exceptions';
+import { LogContext } from '@utils/logging/logging.contexts';
+import { ApolloError } from 'apollo-server-express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
-import {
-  EntityNotFoundException,
-  GroupNotInitializedException,
-  EntityNotInitializedException,
-  ValidationException,
-} from '@utils/error-handling/exceptions';
-import { ApplicationInput } from '@domain/application/application.dto';
-import { Application } from '@domain/application/application.entity';
-import { ApplicationService } from '@domain/application/application.service';
-import { ApplicationFactoryService } from '@domain/application/application.factory';
-import { ApolloError } from 'apollo-server-express';
 
 @Injectable()
 export class OpportunityService {
@@ -46,7 +45,6 @@ export class OpportunityService {
     private projectService: ProjectService,
     private contextService: ContextService,
     private relationService: RelationService,
-    private applicationService: ApplicationService,
     private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -481,11 +479,7 @@ export class OpportunityService {
       relations: ['applications'],
     })) as Opportunity;
 
-    const applications = await this.applicationService.getForOpportunityById(
-      id
-    );
-
-    const existingApplication = applications.find(
+    const existingApplication = opportunity.applications?.find(
       x => x.user.id === applicationData.userId
     );
 
@@ -506,5 +500,12 @@ export class OpportunityService {
     opportunity.applications?.push(application);
     await this.opportunityRepository.save(opportunity);
     return application;
+  }
+
+  async getApplications(opportunity: Opportunity) {
+    const _opportunity = await this.getOpportunityOrFail(opportunity.id, {
+      relations: ['applications'],
+    });
+    return _opportunity?.applications || [];
   }
 }
