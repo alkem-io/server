@@ -1,6 +1,7 @@
 export const removeUserMutation = `
 mutation removeUser($userID: Float!) {
     removeUser(userID: $userID)
+    {name}
   }`;
 
 export const removeUserVariables = (id: number) => `

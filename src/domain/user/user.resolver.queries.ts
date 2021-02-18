@@ -1,39 +1,59 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@utils/auth/graphql.guard';
 import { Roles } from '@utils/decorators/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { CurrentUser } from '../../utils/decorators/user.decorator';
-import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { UserService } from './user.service';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
 
 @Resolver(() => User)
-export class UserResolver {
+export class UserResolverQueries {
   constructor(private userService: UserService) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(RestrictedGroupNames.Members)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description:
-      'Update the base user information. Note: email address cannot be updated.',
+  @Query(() => [User], {
+    nullable: false,
+    description: 'The users who have profiles on this platform',
   })
   @Profiling.api
-  async updateUser(
-    @Args('userID') userID: number,
-    @Args('userData') userData: UserInput
-  ): Promise<IUser> {
-    const user = await this.userService.updateUser(userID, userData);
-    return user;
+  async users(): Promise<IUser[]> {
+    return await this.userService.getUsers();
   }
 
   @Roles(RestrictedGroupNames.Members)
+  @UseGuards(GqlAuthGuard)
+  //should be in user queries
+  @Query(() => User, {
+    nullable: false,
+    description: 'A particular user, identified by the ID or by email',
+  })
+  @Profiling.api
+  async user(@Args('ID') id: string): Promise<IUser> {
+    return await this.userService.getUserOrFail(id);
+  }
+
+  @Roles(RestrictedGroupNames.Members)
+  @UseGuards(GqlAuthGuard)
+  //should be in user queries
+  @Query(() => [User], {
+    nullable: false,
+    description: 'The users filtered by list of IDs.',
+  })
+  @Profiling.api
+  async usersById(
+    @Args({ name: 'IDs', type: () => [String] }) ids: string[]
+  ): Promise<IUser[]> {
+    const users = await this.userService.getUsers();
+    return users.filter(x => {
+      return ids ? ids.indexOf(x.id.toString()) > -1 : false;
+    });
+  }
+
   @UseGuards(GqlAuthGuard)
   @Query(() => User, {
     nullable: false,
@@ -49,24 +69,5 @@ export class UserResolver {
     if (!email) throw new AuthenticationException('User not authenticated!');
     const user = await this.userService.getUserByEmail(email);
     return user as IUser;
-  }
-
-  @Roles(RestrictedGroupNames.Members)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description: 'Update user profile.',
-  })
-  @Profiling.api
-  async updateMyProfile(
-    @Args('userData') userData: UserInput,
-    @CurrentUser() email?: string
-  ): Promise<IUser> {
-    if (!email) throw new AuthenticationException('User not authenticated!');
-    if (email !== userData.email)
-      throw new AuthenticationException(
-        `Unable to update Profile: current user email (${email}) does not match email provided: ${userData.email}`
-      );
-    const user = await this.userService.updateUserByEmail(email, userData);
-    return user;
   }
 }

@@ -38,7 +38,7 @@ describe('Remove user', () => {
 
     // Assert
     expect(responseQuery.status).toBe(200);
-    expect(responseQuery.body.data.removeUser).toBe(true);
+    expect(responseQuery.body.data.removeUser.name).toEqual(userName);
   });
 
   test('should receive a message for removing already removed user', async () => {

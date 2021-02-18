@@ -9,7 +9,6 @@ import { UserInput } from '@domain/user/user.dto';
 import { UserService } from '@domain/user/user.service';
 import { IServiceConfig } from '@interfaces/service.config.interface';
 import { Repository } from 'typeorm';
-import { AccountService } from '@utils/account/account.service';
 import fs from 'fs';
 import * as defaultRoles from '@templates/authorisation-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -21,11 +20,9 @@ import { ValidationException } from '@utils/error-handling/exceptions/validation
 import { BaseException } from '@utils/error-handling/exceptions/base.exception';
 import { EntityNotFoundException } from '@utils/error-handling/exceptions/entity.not.found.exception';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
-
 @Injectable()
 export class BootstrapService {
   constructor(
-    private accountService: AccountService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
     private configService: ConfigService,
@@ -48,7 +45,6 @@ export class BootstrapService {
 
       // Now setup the rest...
       await this.ensureEcoverseSingleton();
-      await this.validateAccountManagementSetup();
       await this.bootstrapProfiles();
     } catch (error) {
       this.logger.error(error, undefined, LogContext.BOOTSTRAP);
@@ -202,7 +198,14 @@ export class BootstrapService {
         let user = await this.userService.getUserByEmail(userInput.email);
         if (!user) {
           // First create, then ensure groups are loaded - not optimal but only on bootstrap
-          user = await this.ecoverseService.createUserProfile(userInput);
+          user = await this.userService.createUser(userInput);
+          if (groupName !== RestrictedGroupNames.Members) {
+            // also need to add to members group
+            await this.ecoverseService.addUserToRestrictedGroup(
+              user,
+              RestrictedGroupNames.Members
+            );
+          }
         }
         user = await this.userService.getUserWithGroups(userInput.email);
 
@@ -234,27 +237,6 @@ export class BootstrapService {
         error,
         LogContext.BOOTSTRAP
       );
-    }
-  }
-
-  async validateAccountManagementSetup(): Promise<boolean> {
-    this.logger.verbose?.(
-      '=== Validating Account Management configuration ===',
-      LogContext.BOOTSTRAP
-    );
-    const accountsEnabled = this.accountService.accountUsageEnabled();
-    if (accountsEnabled) {
-      this.logger.verbose?.(
-        '...usage of Accounts is enabled',
-        LogContext.BOOTSTRAP
-      );
-      return true;
-    } else {
-      this.logger.warn(
-        '...usage of Accounts is DISABLED',
-        LogContext.BOOTSTRAP
-      );
-      return false;
     }
   }
 
