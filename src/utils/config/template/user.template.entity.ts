@@ -5,13 +5,13 @@ import { IUserTemplate, ITagsetTemplate } from './user.template.interface';
 export class UserTemplate implements IUserTemplate {
   @Field(() => String, {
     nullable: false,
-    description: 'Template user name.',
+    description: 'User template name.',
   })
   name: string;
 
   @Field(() => [TagsetTemplate], {
     nullable: true,
-    description: 'Template tagsets.',
+    description: 'Tagset templates.',
   })
   tagsets?: ITagsetTemplate[];
 
@@ -24,7 +24,7 @@ export class UserTemplate implements IUserTemplate {
 export class TagsetTemplate implements ITagsetTemplate {
   @Field(() => String, {
     nullable: false,
-    description: 'Tagset name',
+    description: 'Tagset template name.',
   })
   name: string;
   @Field(() => String, {
