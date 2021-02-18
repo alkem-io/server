@@ -1,3 +1,4 @@
+import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
 import { ChallengeModule } from '@domain/challenge/challenge.module';
 import { ContextModule } from '@domain/context/context.module';
 import { OrganisationModule } from '@domain/organisation/organisation.module';
@@ -6,12 +7,10 @@ import { UserGroupModule } from '@domain/user-group/user-group.module';
 import { UserModule } from '@domain/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AccountModule } from '@utils/account/account.module';
 import { Ecoverse } from './ecoverse.entity';
 import { EcoverseResolverMutations } from './ecoverse.resolver.mutations';
 import { EcoverseResolverQueries } from './ecoverse.resolver.queries';
 import { EcoverseService } from './ecoverse.service';
-import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
 
 @Module({
   imports: [
@@ -25,7 +24,6 @@ import { ApplicationFactoryModule } from '@domain/application/application.factor
     UserModule,
     TypeOrmModule.forFeature([Ecoverse]),
     UserModule,
-    AccountModule,
     ApplicationFactoryModule,
   ],
   providers: [

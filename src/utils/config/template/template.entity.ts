@@ -1,11 +1,11 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import { ChallengeTemplate } from '@utils/config/template/challenge.template.entity';
 import { EcoverseTemplate } from '@utils/config/template/ecoverse.template.entity';
 import { OpportunityTemplate } from './opportunity.template.entity';
 import { IOpportunityTemplate } from './opportunity.template.interface';
 import { ITemplate } from './template.interface';
 import { UserTemplate } from './user.template.entity';
 import { IUserTemplate } from './user.template.interface';
-import { ChallengeTemplate } from '@utils/config/template/challenge.template.entity';
 
 @ObjectType()
 export class Template implements ITemplate {
@@ -23,25 +23,25 @@ export class Template implements ITemplate {
 
   @Field(() => [UserTemplate], {
     nullable: false,
-    description: 'Users template.',
+    description: 'User templates.',
   })
   users?: IUserTemplate[];
 
   @Field(() => [OpportunityTemplate], {
     nullable: false,
-    description: 'Opportunities template.',
+    description: 'Opportunity templates.',
   })
   opportunities?: IOpportunityTemplate[];
 
-  @Field(() => [OpportunityTemplate], {
+  @Field(() => [EcoverseTemplate], {
     nullable: false,
-    description: 'Ecoverses template.',
+    description: 'Ecoverse templates.',
   })
   ecoverses?: EcoverseTemplate[];
 
-  @Field(() => [OpportunityTemplate], {
+  @Field(() => [ChallengeTemplate], {
     nullable: false,
-    description: 'Challenges template.',
+    description: 'Challenge templates.',
   })
   challenges?: ChallengeTemplate[];
 

@@ -66,40 +66,11 @@ export class EcoverseResolverQueries {
   @UseGuards(GqlAuthGuard)
   @Query(() => [User], {
     nullable: false,
-    description: 'The members of this this ecoverse',
+    description: 'The members of this ecoverse',
   })
   @Profiling.api
-  async users(): Promise<IUser[]> {
-    return await this.ecoverseService.getUsers();
-  }
-
-  @Roles(RestrictedGroupNames.Members)
-  @UseGuards(GqlAuthGuard)
-  //should be in user queries
-  @Query(() => User, {
-    nullable: false,
-    description: 'A particular user, identified by the ID or by email',
-  })
-  @Profiling.api
-  async user(@Args('ID') id: string): Promise<IUser> {
-    return await this.userService.getUserOrFail(id);
-  }
-
-  @Roles(RestrictedGroupNames.Members)
-  @UseGuards(GqlAuthGuard)
-  //should be in user queries
-  @Query(() => [User], {
-    nullable: false,
-    description: 'The members of this this ecoverse filtered by list of IDs.',
-  })
-  @Profiling.api
-  async usersById(
-    @Args({ name: 'IDs', type: () => [String] }) ids: string[]
-  ): Promise<IUser[]> {
-    const users = await this.ecoverseService.getUsers();
-    return users.filter(x => {
-      return ids ? ids.indexOf(x.id.toString()) > -1 : false;
-    });
+  async members(): Promise<IUser[]> {
+    return await this.ecoverseService.getMembers();
   }
 
   @Roles(RestrictedGroupNames.Members)

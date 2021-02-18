@@ -5,7 +5,7 @@ import { QuestionTemplate } from '@utils/config/template/question.template.entit
 export class ApplicationTemplate {
   @Field(() => String, {
     nullable: false,
-    description: 'Template application name.',
+    description: 'Application template name.',
   })
   name!: string;
 

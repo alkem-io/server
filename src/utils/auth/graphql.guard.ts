@@ -51,6 +51,7 @@ export class GqlAuthGuard extends AuthGuard('bearer') {
   }
 
   matchRoles(userGroups: IUserGroup[]): boolean {
+    if (this.roles.length == 0) return true;
     return userGroups.some(
       ({ name }) =>
         name === RestrictedGroupNames.GlobalAdmins || this.roles.includes(name)

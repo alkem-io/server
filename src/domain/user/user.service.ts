@@ -26,6 +26,15 @@ export class UserService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  async createUserForMe(email: string, userData: UserInput): Promise<IUser> {
+    if (email !== userData.email)
+      throw new ValidationException(
+        `User provided data (${userData.email}) does not match the email of the logged in user: ${email}`,
+        LogContext.COMMUNITY
+      );
+    return await this.createUser(userData);
+  }
+
   async createUser(userData: UserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
 
@@ -64,6 +73,36 @@ export class UserService {
     }
 
     return user;
+  }
+
+  async removeUser(userID: number): Promise<IUser> {
+    const user = await this.getUserByIdOrFail(userID);
+    const result = await this.userRepository.remove(user as User);
+    return result;
+  }
+
+  async validateUserProfileCreationRequest(
+    userData: UserInput
+  ): Promise<boolean> {
+    if (!userData.email || userData.email.length == 0)
+      throw new ValidationException(
+        `User profile creation (${userData.firstName}) missing required email`,
+        LogContext.COMMUNITY
+      );
+    const userCheck = await this.getUserByEmail(userData.email);
+    if (userCheck)
+      throw new ValidationException(
+        `User profile with the specified email (${userData.email}) already exists`,
+        LogContext.COMMUNITY
+      );
+    // Trim all values to remove space issues
+    userData.email = userData.email.trim();
+    return true;
+  }
+
+  async saveUser(user: IUser): Promise<boolean> {
+    await this.userRepository.save(user);
+    return true;
   }
 
   //Find a user either by id or email
@@ -132,30 +171,8 @@ export class UserService {
     return user;
   }
 
-  async getUserForAccountWithGroups(
-    accountUpn: string
-  ): Promise<IUser | undefined> {
-    const user = await this.userRepository.findOne(
-      { accountUpn: accountUpn },
-      { relations: ['userGroups'] }
-    );
-
-    if (!user) {
-      this.logger.verbose?.(
-        `No user with provided account UPN ${accountUpn} exists!`,
-        LogContext.COMMUNITY
-      );
-      return undefined;
-    }
-
-    if (!user.userGroups) {
-      this.logger.verbose?.(
-        `User with provided account UPN ${accountUpn} doesn't belong to any groups!`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return user;
+  async getUsers(): Promise<IUser[]> {
+    return (await this.userRepository.find()) || [];
   }
 
   addGroupToEntity(
@@ -225,50 +242,9 @@ export class UserService {
     return memberOf;
   }
 
-  async validateUserProfileCreationRequest(
-    userData: UserInput
-  ): Promise<boolean> {
-    if (!userData.firstName || userData.firstName.length == 0)
-      throw new ValidationException(
-        `User profile creation (${userData.email}) missing required first name`,
-        LogContext.COMMUNITY
-      );
-    if (!userData.lastName || userData.lastName.length == 0)
-      throw new ValidationException(
-        `User profile creation (${userData.email}) missing required last name`,
-        LogContext.COMMUNITY
-      );
-    if (!userData.email || userData.email.length == 0)
-      throw new ValidationException(
-        `User profile creation (${userData.firstName}) missing required email`,
-        LogContext.COMMUNITY
-      );
-    const userCheck = await this.getUserByEmail(userData.email);
-    if (userCheck)
-      throw new ValidationException(
-        `User profile with the specified email (${userData.email}) already exists`,
-        LogContext.COMMUNITY
-      );
-    // Trim all values to remove space issues
-    userData.firstName = userData.firstName.trim();
-    userData.lastName = userData.lastName.trim();
-    userData.email = userData.email.trim();
-    return true;
-  }
-
-  async saveUser(user: IUser): Promise<boolean> {
-    await this.userRepository.save(user);
-    return true;
-  }
-
-  async removeUser(user: IUser): Promise<IUser> {
-    const result = await this.userRepository.remove(user as User);
-    return result;
-  }
-
   async updateUserByEmail(email: string, userInput: UserInput): Promise<IUser> {
     const user = await this.getUserByEmailOrFail(email);
-    return this.updateUser(user.id, userInput);
+    return await this.updateUser(user.id, userInput);
   }
 
   // Note: explicitly do not support updating of email addresses

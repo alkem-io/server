@@ -39,8 +39,6 @@ import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
 import oidcConfig from '@config/oidc.config';
-import { AadAccountManagementModule } from '@utils/aad/aad.account-management.module';
-import { AuthConfig } from '@cmdbg/tokenator';
 import { ApplicationModule } from '@domain/application/application.module';
 import { NVPModule } from '@domain/nvp/nvp.module';
 import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
@@ -117,19 +115,6 @@ import { ApplicationFactoryModule } from '@domain/application/application.factor
     }),
     SearchModule,
     KonfigModule,
-    AadAccountManagementModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        clientID: configService.get<AuthConfig>('aad_obo')?.clientID as string,
-        clientSecret: configService.get<AuthConfig>('aad_obo')
-          ?.clientSecret as string,
-        tenant: configService.get<AuthConfig>('aad_obo')?.tenant as string,
-        scope: configService.get<AuthConfig>('aad_obo')?.scope as string,
-        username: configService.get<AuthConfig>('aad_obo')?.username as string,
-        password: configService.get<AuthConfig>('aad_obo')?.password as string,
-      }),
-    }),
   ],
   controllers: [AppController],
   providers: [
