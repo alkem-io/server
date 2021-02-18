@@ -18,6 +18,7 @@ import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { IUser } from '@domain/user/user.interface';
+import { UserService } from '@domain/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -37,6 +38,7 @@ export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
     private challengeService: ChallengeService,
+    private userService: UserService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
@@ -406,5 +408,22 @@ export class EcoverseService {
     ecoverse.applications?.push(application);
     await this.ecoverseRepository.save(ecoverse);
     return application;
+  }
+
+  async addMember(userID: number): Promise<IUserGroup> {
+    const user = await this.userService.getUserByIdOrFail(userID);
+
+    const ecoverse = await this.getEcoverse({
+      relations: ['groups'],
+    });
+
+    // Get the members group
+    const membersGroup = await this.userGroupService.getGroupByName(
+      ecoverse,
+      RestrictedGroupNames.Members
+    );
+    await this.userGroupService.addUserToGroup(user, membersGroup);
+
+    return membersGroup;
   }
 }

@@ -13,7 +13,7 @@ import { EntityNotFoundException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { ApolloError } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { getManager, Repository } from 'typeorm';
 
 @Injectable()
 export class ApplicationService {
@@ -45,10 +45,8 @@ export class ApplicationService {
   }
 
   async approveApplication(id: number) {
-    console.time('Load application');
     const application = await this.applicationReposity.findOne({
       where: { id },
-      relations: ['ecoverse', 'challenge', 'opportunity'],
     });
 
     console.timeEnd('Load application');
@@ -64,19 +62,33 @@ export class ApplicationService {
       throw new ApolloError('Application has already been rejected!');
     }
 
-    if (application.ecoverse && application.ecoverse.length > 0) {
-      // TBD: Add members to ecoverse.
-      //await this.assignUser(application.ecoverse[0], application.user);
-    } else if (application.challenge && application.challenge.length > 0) {
-      await this.challengeService.addMember(
-        application.user.id,
-        application.challenge[0].id
-      );
-    } else if (application.opportunity && application.opportunity.length > 0) {
-      await this.opportunityService.addMember(
-        application.user.id,
-        application.opportunity[0].id
-      );
+    const entityManager = getManager();
+
+    const rawApplication = await entityManager.query(
+      `select * from (
+        select a.*, 'ecoverse' as parent, ecoverseId as parentId from application a
+        inner join ecoverse_application on a.id=applicationId
+        union all
+        select a.*, 'challenge' as parent, challengeId as parentId from application a
+        inner join challenge_application on a.id=applicationId
+        union all
+        select a.*, 'opportunity' as parent, opportunityId as parentId from application a
+        inner join opportunity_application on a.id=applicationId) as app
+        where app.id = ?;`,
+      [id]
+    );
+
+    const { parent, parentId } = rawApplication[0] as {
+      parent: 'ecoverse' | 'challenge' | 'opportunity';
+      parentId: number;
+    };
+
+    if (parent === 'ecoverse') {
+      await this.ecoverseService.addMember(application.user.id);
+    } else if (parent === 'challenge') {
+      await this.challengeService.addMember(application.user.id, parentId);
+    } else if (parent === 'opportunity') {
+      await this.opportunityService.addMember(application.user.id, parentId);
     }
 
     application.status = ApplicationStatus.approved;
@@ -84,5 +96,6 @@ export class ApplicationService {
     await this.applicationReposity.save(application);
 
     return application;
+    return {} as Application;
   }
 }
