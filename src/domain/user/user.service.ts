@@ -77,8 +77,12 @@ export class UserService {
 
   async removeUser(userID: number): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userID);
+    const { id } = user;
     const result = await this.userRepository.remove(user as User);
-    return result;
+    return {
+      ...result,
+      id,
+    };
   }
 
   async validateUserProfileCreationRequest(
