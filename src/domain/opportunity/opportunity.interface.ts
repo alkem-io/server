@@ -4,6 +4,7 @@ import { IContext } from '@domain/context/context.interface';
 import { IProject } from '@domain/project/project.interface';
 import { IRelation } from '@domain/relation/relation.interface';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { Application } from '@domain/application/application.entity';
 
 export interface IOpportunity {
   id: number;
@@ -18,4 +19,5 @@ export interface IOpportunity {
   restrictedGroupNames: string[];
   aspects?: IAspect[];
   relations?: IRelation[];
+  applications?: Application[];
 }

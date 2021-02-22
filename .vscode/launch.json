@@ -27,7 +27,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug Nest Framework",
+      "name": "Debug CT Server",
       "program": "${workspaceFolder}/node_modules/@nestjs/cli/bin/nest.js",
       "runtimeArgs": ["--preserve-symlinks"],
       "args": ["start", "debug", "--watch"],

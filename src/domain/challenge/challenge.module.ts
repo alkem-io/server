@@ -1,16 +1,16 @@
-import { Module } from '@nestjs/common';
-import { UserGroupModule } from '@domain/user-group/user-group.module';
-import { ChallengeService } from './challenge.service';
-import { ChallengeResolverMutations } from './challenge.resolver.mutations';
+import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
 import { ContextModule } from '@domain/context/context.module';
+import { OpportunityModule } from '@domain/opportunity/opportunity.module';
+import { OrganisationModule } from '@domain/organisation/organisation.module';
 import { TagsetModule } from '@domain/tagset/tagset.module';
+import { UserGroupModule } from '@domain/user-group/user-group.module';
+import { UserModule } from '@domain/user/user.module';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Challenge } from './challenge.entity';
-import { UserModule } from '@domain/user/user.module';
-import { OpportunityModule } from '@domain/opportunity/opportunity.module';
 import { ChallengeResolverFields } from './challenge.resolver.fields';
-import { OrganisationModule } from '@domain/organisation/organisation.module';
-import { ApplicationModule } from '@domain/application/application.module';
+import { ChallengeResolverMutations } from './challenge.resolver.mutations';
+import { ChallengeService } from './challenge.service';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { ApplicationModule } from '@domain/application/application.module';
     OrganisationModule,
     UserGroupModule,
     UserModule,
-    ApplicationModule,
+    ApplicationFactoryModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [

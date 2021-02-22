@@ -1,34 +1,31 @@
-import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
+import { ActorGroup } from '@domain/actor-group/actor-group.entity';
+import { Application } from '@domain/application/application.entity';
+import { Aspect } from '@domain/aspect/aspect.entity';
+import { Relation } from '@domain/relation/relation.entity';
 import {
   RestrictedGroupNames,
   UserGroup,
 } from '@domain/user-group/user-group.entity';
-import { User } from '@domain/user/user.entity';
 import { UserGroupService } from '@domain/user-group/user-group.service';
-import { Opportunity } from './opportunity.entity';
-import { Profiling } from '@utils/logging/logging.profiling.decorator';
-import { OpportunityService } from './opportunity.service';
-import { ActorGroup } from '@domain/actor-group/actor-group.entity';
-import { Aspect } from '@domain/aspect/aspect.entity';
-import { Relation } from '@domain/relation/relation.entity';
+import { User } from '@domain/user/user.entity';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { GqlAuthGuard } from '@utils/auth/graphql.guard';
+import { Roles } from '@utils/decorators/roles.decorator';
 import {
-  RelationshipNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
 } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
-import { Application } from '@domain/application/application.entity';
-import { ApplicationService } from '@domain/application/application.service';
+import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { Opportunity } from './opportunity.entity';
+import { OpportunityService } from './opportunity.service';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
   constructor(
     private userGroupService: UserGroupService,
-    private opportunityService: OpportunityService,
-    private applicationService: ApplicationService
+    private opportunityService: OpportunityService
   ) {}
 
   @Roles(RestrictedGroupNames.Members)
@@ -109,6 +106,6 @@ export class OpportunityResolverFields {
   })
   @Profiling.api
   async applications(@Parent() opportunity: Opportunity) {
-    return await this.applicationService.getForOpportunity(opportunity);
+    return await this.opportunityService.getApplications(opportunity);
   }
 }

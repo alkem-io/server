@@ -1,0 +1,8 @@
+mutation approveApplication($ID: Float!) {
+  approveApplication(ID: $ID)
+}
+
+Variables:
+{
+  "ID": 7
+}

@@ -41,6 +41,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
 import oidcConfig from '@config/oidc.config';
 import { ApplicationModule } from '@domain/application/application.module';
 import { NVPModule } from '@domain/nvp/nvp.module';
+import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { NVPModule } from '@domain/nvp/nvp.module';
     }),
     AuthModule,
     ApplicationModule,
+    ApplicationFactoryModule,
     NVPModule,
     AgreementModule,
     ChallengeModule,
