@@ -6,7 +6,6 @@ mutation createApplication($applicationData: ApplicationInput!) {
       name
       value
     }
-    reason
     status
   }
 }
@@ -15,7 +14,7 @@ mutation createApplication($applicationData: ApplicationInput!) {
 query variables:
 {
   "applicationData": {
-    "userId": 4,
+    "userId": 10,
     "questions": [
       {"name": "Question 1", "value": "No"},
       {"name": "Question 2", "value": "Yes"},

@@ -1,5 +1,6 @@
 import { ApplicationInput } from '@domain/application/application.dto';
 import { Application } from '@domain/application/application.entity';
+import { ApplicationFactoryService } from '@domain/application/application.factory';
 import { ChallengeInput } from '@domain/challenge/challenge.dto';
 import { IChallenge } from '@domain/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge.service';
@@ -17,6 +18,7 @@ import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { IUser } from '@domain/user/user.interface';
+import { UserService } from '@domain/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -30,13 +32,13 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { ApplicationFactoryService } from '@domain/application/application.factory';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
     private challengeService: ChallengeService,
+    private userService: UserService,
     private userGroupService: UserGroupService,
     private contextService: ContextService,
     private tagsetService: TagsetService,
@@ -393,9 +395,7 @@ export class EcoverseService {
 
     if (existingApplication) {
       throw new ApolloError(
-        `An application for user ${
-          existingApplication.user.email
-        } already exits. Application status: ${existingApplication.status.toString()}`
+        `An application for user ${existingApplication.user.email} already exists. Application status: ${existingApplication.status}`
       );
     }
 
@@ -406,5 +406,22 @@ export class EcoverseService {
     ecoverse.applications?.push(application);
     await this.ecoverseRepository.save(ecoverse);
     return application;
+  }
+
+  async addMember(userID: number): Promise<IUserGroup> {
+    const user = await this.userService.getUserByIdOrFail(userID);
+
+    const ecoverse = await this.getEcoverse({
+      relations: ['groups'],
+    });
+
+    // Get the members group
+    const membersGroup = await this.userGroupService.getGroupByName(
+      ecoverse,
+      RestrictedGroupNames.Members
+    );
+    await this.userGroupService.addUserToGroup(user, membersGroup);
+
+    return membersGroup;
   }
 }

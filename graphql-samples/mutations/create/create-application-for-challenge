@@ -6,7 +6,6 @@ mutation createApplicationForChallenge($id:Float!, $applicationData: Application
       name
       value
     }
-    reason
     status
   }
 }

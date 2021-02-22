@@ -5,7 +5,7 @@ export class Applications1612891551210 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      'CREATE TABLE `application` (`id` int NOT NULL AUTO_INCREMENT, `status` int NOT NULL, `reason` varchar(512) NULL, `userId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `application` (`id` int NOT NULL AUTO_INCREMENT, `status` int NOT NULL, `userId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `nvp` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `value` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'

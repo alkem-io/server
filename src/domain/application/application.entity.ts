@@ -1,4 +1,3 @@
-import { MID_TEXT_LENGTH } from '@constants';
 import { Challenge } from '@domain/challenge/challenge.entity';
 import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
 import { NVP } from '@domain/nvp/nvp.entity';
@@ -37,10 +36,6 @@ export class Application extends BaseEntity {
   @Column()
   status!: ApplicationStatus;
 
-  @Field(() => String, { nullable: true })
-  @Column({ length: MID_TEXT_LENGTH, nullable: true })
-  reason?: string;
-
   @Field(() => User)
   @ManyToOne(
     () => User,
@@ -62,17 +57,17 @@ export class Application extends BaseEntity {
     () => Ecoverse,
     ecoverse => ecoverse.applications
   )
-  ecoverse?: Ecoverse;
+  ecoverse?: Ecoverse[];
 
   @ManyToMany(
     () => Challenge,
     challenge => challenge.applications
   )
-  challenge?: Challenge;
+  challenge?: Challenge[];
 
   @ManyToMany(
     () => Opportunity,
     opportunity => opportunity.applications
   )
-  opportunity?: Opportunity;
+  opportunity?: Opportunity[];
 }
