@@ -36,12 +36,26 @@ export class ApplicationService {
     return await this.applicationReposity.save(application);
   }
 
+  async removeApplication(applicationID: number): Promise<Application> {
+    const application = await this.getApplicationOrFail(applicationID);
+    const result = await this.applicationReposity.remove(
+      application as Application
+    );
+    return result;
+  }
+
   async getApplications() {
     return (await this.applicationReposity.find()) || [];
   }
 
-  async getApplication(id: number) {
-    return await this.applicationReposity.findOne(id);
+  async getApplicationOrFail(id: number): Promise<Application> {
+    const app = await this.applicationReposity.findOne(id);
+    if (!app)
+      throw new EntityNotFoundException(
+        `Application with ID ${id} can not be found!`,
+        LogContext.COMMUNITY
+      );
+    return app;
   }
 
   async approveApplication(id: number) {

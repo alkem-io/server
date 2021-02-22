@@ -1,8 +1,6 @@
 import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationService } from '@domain/application/application.service';
-import { EntityNotFoundException } from '@utils/error-handling/exceptions';
-import { LogContext } from '@utils/logging/logging.contexts';
 import { Roles } from '@utils/decorators/roles.decorator';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { UseGuards } from '@nestjs/common';
@@ -26,13 +24,7 @@ export class ApplicationResolver {
     description: 'All applications to join',
   })
   async application(@Args('ID') id: number): Promise<Application> {
-    const app = await this.applicationService.getApplication(id);
-    if (!app)
-      throw new EntityNotFoundException(
-        `Application with ID ${id} can not be found!`,
-        LogContext.COMMUNITY
-      );
-    return app;
+    return await this.applicationService.getApplicationOrFail(id);
   }
 
   @Roles(
