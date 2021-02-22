@@ -1,7 +1,7 @@
-import { IWebClientConfig } from './client/web.client.config.interface';
+import { IAuthenticationProvidersConfig } from './client/authentication.providers.config.interface';
 import { ITemplate } from './template/template.interface';
 
 export interface IConfig {
-  webClient?: IWebClientConfig;
+  authenticationProviders?: IAuthenticationProvidersConfig;
   template?: ITemplate;
 }

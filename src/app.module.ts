@@ -41,6 +41,7 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
 import oidcConfig from '@config/oidc.config';
 import { ApplicationModule } from '@domain/application/application.module';
 import { NVPModule } from '@domain/nvp/nvp.module';
+import simpleAuthProvider from '@config/simple.auth.provider';
 import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
 
 @Module({
@@ -53,6 +54,7 @@ import { ApplicationFactoryModule } from '@domain/application/application.factor
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
         '.env.oidc.default',
+        '.env.simple.auth.provider',
       ],
       isGlobal: true,
       load: [
@@ -65,6 +67,7 @@ import { ApplicationFactoryModule } from '@domain/application/application.factor
         aadRopcConfig,
         aadOboConfig,
         oidcConfig,
+        simpleAuthProvider,
       ],
     }),
     TypeOrmModule.forRootAsync({
