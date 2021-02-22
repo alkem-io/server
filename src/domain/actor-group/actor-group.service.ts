@@ -64,6 +64,11 @@ export class ActorGroupService {
 
   async removeActorGroup(actorGroupID: number): Promise<boolean> {
     const actorGroup = await this.getActorGroupOrFail(actorGroupID);
+    if (actorGroup.actors) {
+      for (const actor of actorGroup.actors) {
+        await this.actorService.removeActor(actor.id);
+      }
+    }
     await this.actorGroupRepository.remove(actorGroup as ActorGroup);
     return true;
   }
