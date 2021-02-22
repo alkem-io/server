@@ -486,11 +486,7 @@ export class ChallengeService {
 
     if (existingApplication) {
       throw new ApolloError(
-        `An application for user ${
-          existingApplication.user.email
-        } already exits for challenge: ${
-          challenge.name
-        }. Application status: ${existingApplication.status.toString()}`
+        `An application for user ${existingApplication.user.email} already exists for challenge: ${challenge.name}. Application status: ${existingApplication.status}`
       );
     }
 

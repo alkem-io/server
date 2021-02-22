@@ -395,9 +395,7 @@ export class EcoverseService {
 
     if (existingApplication) {
       throw new ApolloError(
-        `An application for user ${
-          existingApplication.user.email
-        } already exits. Application status: ${existingApplication.status.toString()}`
+        `An application for user ${existingApplication.user.email} already exists. Application status: ${existingApplication.status}`
       );
     }
 

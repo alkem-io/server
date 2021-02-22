@@ -29,7 +29,7 @@ export class ApplicationResolver {
     const app = await this.applicationService.getApplication(id);
     if (!app)
       throw new EntityNotFoundException(
-        `Application with id ${id} can not be found!`,
+        `Application with ID ${id} can not be found!`,
         LogContext.COMMUNITY
       );
     return app;
@@ -44,7 +44,7 @@ export class ApplicationResolver {
     description: 'Create application to join this ecoverse',
   })
   @Profiling.api
-  async approveApplication(@Args('id') id: number): Promise<Application> {
+  async approveApplication(@Args('ID') id: number): Promise<Application> {
     return await this.applicationService.approveApplication(id);
   }
 }

@@ -49,7 +49,6 @@ export class ApplicationService {
       where: { id },
     });
 
-    console.timeEnd('Load application');
     if (!application)
       throw new EntityNotFoundException(
         `Application with id ${id} does not exist.`,
@@ -96,6 +95,5 @@ export class ApplicationService {
     await this.applicationReposity.save(application);
 
     return application;
-    return {} as Application;
   }
 }

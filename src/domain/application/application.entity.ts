@@ -1,4 +1,3 @@
-import { MID_TEXT_LENGTH } from '@constants';
 import { Challenge } from '@domain/challenge/challenge.entity';
 import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
 import { NVP } from '@domain/nvp/nvp.entity';
@@ -36,10 +35,6 @@ export class Application extends BaseEntity {
   @Field(() => ApplicationStatus, { nullable: false })
   @Column()
   status!: ApplicationStatus;
-
-  @Field(() => String, { nullable: true })
-  @Column({ length: MID_TEXT_LENGTH, nullable: true })
-  reason?: string;
 
   @Field(() => User)
   @ManyToOne(
