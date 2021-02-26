@@ -1,8 +1,8 @@
 import { ObjectType, Field } from '@nestjs/graphql';
-import { AadConfig } from './aad-config/aad.config.entity';
-import { IAadConfig } from './aad-config/aad.config.interface';
-import { SimpleAuthProviderConfig } from './aad-config/simple-auth.provider.config.entity';
-import { ISimpleAuthProviderConfig } from './aad-config/simple-auth.provider.config.interface';
+import { AadConfig } from './aad/aad.config.entity';
+import { IAadConfig } from './aad/aad.config.interface';
+import { SimpleAuthProviderConfig } from './simple-auth/simple-auth.provider.config.entity';
+import { ISimpleAuthProviderConfig } from './simple-auth/simple-auth.provider.config.interface';
 import { IAuthenticationProvidersConfig } from './authentication.providers.config.interface';
 
 @ObjectType()

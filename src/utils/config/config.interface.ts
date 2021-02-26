@@ -1,4 +1,4 @@
-import { IAuthenticationProvidersConfig } from './client/authentication.providers.config.interface';
+import { IAuthenticationProvidersConfig } from './authentication-providers/authentication.providers.config.interface';
 import { ITemplate } from './template/template.interface';
 
 export interface IConfig {
