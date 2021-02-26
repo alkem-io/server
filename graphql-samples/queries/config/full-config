@@ -1,0 +1,60 @@
+query
+{
+  configuration
+  {
+     template
+      {
+        name
+        description
+        users
+        {
+          name
+        }
+        opportunities
+        {
+          name
+          actorGroups
+          aspects
+          relations
+        }
+      }
+
+    authenticationProviders
+    {
+      name
+      enabled
+      config
+      {
+        __typename
+      	... on AadConfig
+        {
+          msalConfig
+          {
+            auth
+            {
+              authority
+              clientId
+              redirectUri
+            }
+            cache
+            {
+              cacheLocation
+              storeAuthStateInCookie
+            }
+          }
+          apiConfig
+          {
+            resourceScope
+          }
+          authEnabled
+      }
+      ... on SimpleAuthProviderConfig {
+        issuer
+        tokenEndpoint
+      }
+    }
+
+
+  }
+}
+}

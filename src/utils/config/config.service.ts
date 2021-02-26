@@ -4,7 +4,7 @@ import { IAadConfig } from './authentication-providers/aad/aad.config.interface'
 import { ITemplate } from './template/template.interface';
 import * as uxTemplate from '@templates/ux-template.json';
 import { IConfig } from './config.interface';
-import { IAuthenticationProvidersConfig } from './authentication-providers/authentication.providers.config.interface';
+import { IAuthenticationProviderConfig } from './authentication-providers/authentication.provider.config.interface';
 import { ISimpleAuthProviderConfig } from './authentication-providers/simple-auth/simple-auth.provider.config.interface';
 
 @Injectable()
@@ -19,12 +19,26 @@ export class KonfigService {
   }
 
   async getAuthenticationProvidersConfig(): Promise<
-    IAuthenticationProvidersConfig
+    IAuthenticationProviderConfig[]
   > {
-    return {
-      aadConfig: await this.getAadConfig(),
-      simpleAuth: await this.getSimpleAuthProviderConfig(),
-    };
+    const authProviders = [
+      {
+        name: 'Azure Active Directory',
+        label: '',
+        icon: '',
+        enabled: true,
+        config: await this.getAadConfig(),
+      },
+      {
+        name: 'Simple Auth',
+        label: '',
+        icon: '',
+        enabled: true,
+        config: await this.getSimpleAuthProviderConfig(),
+      },
+    ];
+
+    return authProviders;
   }
 
   async getTemplate(): Promise<ITemplate> {
