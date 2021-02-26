@@ -4,7 +4,6 @@ import { AadConfig } from './client/aad-config/aad.config.entity';
 import { IAadConfig } from './client/aad-config/aad.config.interface';
 import { IConfig } from './config.interface';
 import { Config } from './config.entity';
-
 @Resolver()
 export class ConfigResolver {
   constructor(private configService: KonfigService) {}
