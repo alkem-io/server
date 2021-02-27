@@ -22,4 +22,12 @@ export class AuthService {
 
     return [knownUser, token];
   }
+
+  async getUserFromJwtPayload(jwtPayload: any): Promise<IUser> {
+    const knownUser = await this.userService.getUserWithGroups(
+      jwtPayload.email
+    );
+
+    return knownUser as IUser;
+  }
 }
