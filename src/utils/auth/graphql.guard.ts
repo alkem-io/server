@@ -20,7 +20,7 @@ import { ForbiddenException } from '@utils/error-handling/exceptions/forbidden.e
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 
 @Injectable()
-export class GqlAuthGuard extends AuthGuard('bearer') {
+export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
   JWT_EXPIRED = 'jwt is expired';
   private _roles!: string[];
   public get roles(): string[] {
