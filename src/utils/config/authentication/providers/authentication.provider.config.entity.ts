@@ -1,6 +1,6 @@
 import { ObjectType, Field, createUnionType } from '@nestjs/graphql';
-import { AadConfig } from './aad/aad.config.entity';
-import { IAadConfig } from './aad/aad.config.interface';
+import { AadAuthProviderConfig } from './aad/aad.config.entity';
+import { IAadAuthProviderConfig } from './aad/aad.config.interface';
 import { IAuthenticationProviderConfig } from './authentication.provider.config.interface';
 import { SimpleAuthProviderConfig } from './simple-auth/simple-auth.provider.config.entity';
 import { ISimpleAuthProviderConfig } from './simple-auth/simple-auth.provider.config.interface';
@@ -33,19 +33,19 @@ export class AuthenticationProviderConfig
   })
   enabled?: boolean;
 
-  @Field(() => AuthenticationConfigUnion, {
+  @Field(() => AuthenticationProviderConfigUnion, {
     nullable: false,
     description: 'Configuration of the authenticaiton provider',
   })
-  config?: IAadConfig | ISimpleAuthProviderConfig;
+  config?: IAadAuthProviderConfig | ISimpleAuthProviderConfig;
 }
 
-export const AuthenticationConfigUnion = createUnionType({
-  name: 'ConfigUnion',
-  types: () => [AadConfig, SimpleAuthProviderConfig],
+export const AuthenticationProviderConfigUnion = createUnionType({
+  name: 'AuthenticationProviderConfigUnion',
+  types: () => [AadAuthProviderConfig, SimpleAuthProviderConfig],
   resolveType(value) {
     if (value.msalConfig) {
-      return AadConfig;
+      return AadAuthProviderConfig;
     }
     if (value.tokenEndpoint) {
       return SimpleAuthProviderConfig;

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IAadConfig } from './authentication/providers/aad/aad.config.interface';
 import { ITemplate } from './template/template.interface';
 import * as uxTemplate from '@templates/ux-template.json';
 import { IConfig } from './config.interface';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
 import { ISimpleAuthProviderConfig } from './authentication/providers/simple-auth/simple-auth.provider.config.interface';
+import { IAadAuthProviderConfig } from './authentication/providers/aad/aad.config.interface';
 
 @Injectable()
 export class KonfigService {
@@ -52,10 +52,10 @@ export class KonfigService {
     return template;
   }
 
-  async getAadConfig(): Promise<IAadConfig> {
-    return (await this.configService.get<IAadConfig>(
+  async getAadConfig(): Promise<IAadAuthProviderConfig> {
+    return (await this.configService.get<IAadAuthProviderConfig>(
       'aad_client'
-    )) as IAadConfig;
+    )) as IAadAuthProviderConfig;
   }
 
   async getSimpleAuthProviderConfig(): Promise<ISimpleAuthProviderConfig> {

@@ -29,7 +29,7 @@ query
       	config
       {
         __typename
-      	... on AadConfig
+      	... on AadAuthProviderConfig
         {
           msalConfig
           {
