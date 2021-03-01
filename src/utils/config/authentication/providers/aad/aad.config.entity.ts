@@ -42,14 +42,4 @@ export class AadConfig implements IAadConfig {
       'Scopes for silent token acquisition. Cherrytwist API scope + OpenID mandatory scopes.',
   })
   silentRequest?: IScope;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Is the client and server authentication enabled?',
-  })
-  authEnabled: boolean;
-
-  constructor(authEnabled: boolean) {
-    this.authEnabled = authEnabled;
-  }
 }

@@ -1,6 +1,7 @@
 import { registerAs } from '@nestjs/config/dist/utils/register-as.util';
 
 export default registerAs('service', () => ({
+  authEnabled: process.env.AUTH_ENABLED === 'true',
   graphqlEndpointPort: process.env.GRAPHQL_ENDPOINT
     ? Number(process.env.GRAPHQL_ENDPOINT)
     : 4000,

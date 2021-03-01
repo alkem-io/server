@@ -19,11 +19,14 @@ query
         }
       }
 
-    authenticationProviders
+    authentication
     {
-      name
       enabled
-      config
+      providers
+      {
+        enabled
+      	name
+      	config
       {
         __typename
       	... on AadConfig
@@ -46,15 +49,14 @@ query
           {
             resourceScope
           }
-          authEnabled
-      }
-      ... on SimpleAuthProviderConfig {
-        issuer
-        tokenEndpoint
-      }
-    }
-
-
-  }
+      	}
+      ... on SimpleAuthProviderConfig
+        {
+        	issuer
+        	tokenEndpoint
+        }
+      	}
+    	}
+  	}
 }
 }

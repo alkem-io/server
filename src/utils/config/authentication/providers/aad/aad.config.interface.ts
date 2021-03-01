@@ -8,5 +8,4 @@ export interface IAadConfig {
   loginRequest?: IScope;
   tokenRequest?: IScope;
   silentRequest?: IScope;
-  authEnabled: boolean;
 }

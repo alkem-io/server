@@ -33,14 +33,14 @@ export class AuthenticationProviderConfig
   })
   enabled?: boolean;
 
-  @Field(() => ConfigUnion, {
+  @Field(() => AuthenticationConfigUnion, {
     nullable: false,
     description: 'Configuration of the authenticaiton provider',
   })
   config?: IAadConfig | ISimpleAuthProviderConfig;
 }
 
-export const ConfigUnion = createUnionType({
+export const AuthenticationConfigUnion = createUnionType({
   name: 'ConfigUnion',
   types: () => [AadConfig, SimpleAuthProviderConfig],
   resolveType(value) {
