@@ -1,0 +1,24 @@
+query
+{
+  configuration
+  {
+     template
+      {
+        name
+        description
+        users
+        {
+          name
+        }
+        opportunities
+        {
+          name
+          actorGroups
+          aspects
+          relations
+        }
+      }
+
+
+	}
+}

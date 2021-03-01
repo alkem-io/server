@@ -1,21 +1,21 @@
 import { ObjectType, Field } from '@nestjs/graphql';
-import { IWebClientConfig } from './client/web.client.config.interface';
-import { WebClientConfig } from './client/web.client.config.entity';
 import { IConfig } from './config.interface';
 import { ITemplate } from './template/template.interface';
 import { Template } from './template/template.entity';
+import { AuthenticationConfig } from './authentication/authentication.config.entity';
+import { IAuthenticationConfig } from './authentication/authentication.config.interface';
 
 @ObjectType()
 export class Config implements IConfig {
-  @Field(() => WebClientConfig, {
+  @Field(() => AuthenticationConfig, {
     nullable: false,
-    description: 'Cherrytwist Web Client Config.',
+    description: 'Cherrytwist authentication configuration.',
   })
-  webClient?: IWebClientConfig;
+  authentication?: IAuthenticationConfig;
 
   @Field(() => Template, {
     nullable: false,
-    description: 'Cherrytwist Template.',
+    description: 'Cherrytwist template configuration.',
   })
   template?: ITemplate;
 }

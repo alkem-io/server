@@ -1,7 +1,6 @@
 import { registerAs } from '@nestjs/config/dist/utils/register-as.util';
 
 export default registerAs('aad_client', () => ({
-  authEnabled: process.env.AUTH_ENABLED === 'true',
   msalConfig: {
     auth: {
       clientId: process.env.AUTH_AAD_CLIENT_APP_ID || '',
