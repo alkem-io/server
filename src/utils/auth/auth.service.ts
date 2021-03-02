@@ -30,4 +30,8 @@ export class AuthService {
 
     return knownUser as IUser;
   }
+
+  async getUserProfile(email: string): Promise<IUser> {
+    return (await this.userService.getUserWithGroups(email)) as IUser;
+  }
 }
