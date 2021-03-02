@@ -60,7 +60,8 @@ export class UserResolverMutations {
   }
 
   @Mutation(() => User, {
-    description: 'Creates a new user profile on behalf of another user.',
+    description:
+      'Creates a new user profile on behalf of an admin or the user account owner.',
   })
   @Profiling.api
   async createUser(
