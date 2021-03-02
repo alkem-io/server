@@ -2,21 +2,24 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Strategy } from 'passport-http-bearer';
+import { BearerStrategy } from 'passport-azure-ad';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
-import { IOidcConfig } from '@interfaces/oidc.config.interface';
 import { AuthService } from './auth.service';
 import { ITokenPayload } from 'passport-azure-ad';
+import { IAzureADConfig } from '@interfaces/aad.config.interface';
 
 @Injectable()
-export class OidcBearerStrategy extends PassportStrategy(Strategy, 'azure-ad') {
+export class AadBearerStrategy extends PassportStrategy(
+  BearerStrategy,
+  'azure-ad'
+) {
   constructor(
     private configService: ConfigService,
     private authService: AuthService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super({
-      ...configService.get<IOidcConfig>('oidc'),
+      ...configService.get<IAzureADConfig>('aad'),
     });
   }
 
