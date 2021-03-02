@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IAadConfig } from './aad.config.interface';
+import { IAadAuthProviderConfig } from './aad.config.interface';
 import { ApiConfig } from './api-config/api.config.entity';
 import { IApiConfig } from './api-config/api.config.interface';
 import { MsalConfig } from './msal-config/msal.config.entity';
@@ -8,7 +8,7 @@ import { Scope } from './scope/scope.entity';
 import { IScope } from './scope/scope.interface';
 
 @ObjectType()
-export class AadConfig implements IAadConfig {
+export class AadAuthProviderConfig implements IAadAuthProviderConfig {
   @Field(() => MsalConfig, {
     nullable: false,
     description:
@@ -42,14 +42,4 @@ export class AadConfig implements IAadConfig {
       'Scopes for silent token acquisition. Cherrytwist API scope + OpenID mandatory scopes.',
   })
   silentRequest?: IScope;
-
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Is the client and server authentication enabled?',
-  })
-  authEnabled: boolean;
-
-  constructor(authEnabled: boolean) {
-    this.authEnabled = authEnabled;
-  }
 }

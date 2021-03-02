@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IAadConfig } from './client/aad-config/aad.config.interface';
-import { IWebClientConfig } from './client/web.client.config.interface';
 import { ITemplate } from './template/template.interface';
 import * as uxTemplate from '@templates/ux-template.json';
 import { IConfig } from './config.interface';
+import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
+import { ISimpleAuthProviderConfig } from './authentication/providers/simple-auth/simple-auth.provider.config.interface';
+import { IAadAuthProviderConfig } from './authentication/providers/aad/aad.config.interface';
 
 @Injectable()
 export class KonfigService {
@@ -13,14 +14,34 @@ export class KonfigService {
   async getConfig(): Promise<IConfig> {
     return {
       template: await this.getTemplate(),
-      webClient: await this.getWebClientConfig(),
+      authentication: {
+        providers: await this.getAuthenticationProvidersConfig(),
+        enabled: this.configService.get('service').authEnabled,
+      },
     };
   }
 
-  async getWebClientConfig(): Promise<IWebClientConfig> {
-    return {
-      aadConfig: await this.getAadConfig(),
-    };
+  async getAuthenticationProvidersConfig(): Promise<
+    IAuthenticationProviderConfig[]
+  > {
+    const authProviders = [
+      {
+        name: 'Azure Active Directory',
+        label: '',
+        icon: '',
+        enabled: true,
+        config: await this.getAadConfig(),
+      },
+      {
+        name: 'Simple Auth',
+        label: '',
+        icon: '',
+        enabled: true,
+        config: await this.getSimpleAuthProviderConfig(),
+      },
+    ];
+
+    return authProviders;
   }
 
   async getTemplate(): Promise<ITemplate> {
@@ -31,9 +52,16 @@ export class KonfigService {
     return template;
   }
 
-  async getAadConfig(): Promise<IAadConfig> {
-    return (await this.configService.get<IAadConfig>(
+  async getAadConfig(): Promise<IAadAuthProviderConfig> {
+    return (await this.configService.get<IAadAuthProviderConfig>(
       'aad_client'
-    )) as IAadConfig;
+    )) as IAadAuthProviderConfig;
+  }
+
+  async getSimpleAuthProviderConfig(): Promise<ISimpleAuthProviderConfig> {
+    const res = (await this.configService.get<ISimpleAuthProviderConfig>(
+      'simple_auth_provider'
+    )) as ISimpleAuthProviderConfig;
+    return res;
   }
 }

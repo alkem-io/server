@@ -41,8 +41,8 @@ import { ValidationPipe } from '@utils/validation/validation.pipe';
 import oidcConfig from '@config/oidc.config';
 import { ApplicationModule } from '@domain/application/application.module';
 import { NVPModule } from '@domain/nvp/nvp.module';
-import simpleAuthProviderConfig from '@config/simple.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
+import simpleAuthProviderConfig from '@config/simple.auth.provider.config';
 
 @Module({
   imports: [
