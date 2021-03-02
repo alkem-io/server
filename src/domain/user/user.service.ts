@@ -26,15 +26,6 @@ export class UserService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createUserForMe(email: string, userData: UserInput): Promise<IUser> {
-    if (email !== userData.email)
-      throw new ValidationException(
-        `User provided data (${userData.email}) does not match the email of the logged in user: ${email}`,
-        LogContext.COMMUNITY
-      );
-    return await this.createUser(userData);
-  }
-
   async createUser(userData: UserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
 

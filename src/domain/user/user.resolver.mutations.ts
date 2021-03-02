@@ -8,12 +8,20 @@ import { CurrentUser } from '../../utils/decorators/user.decorator';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
-import { AuthenticationException } from '@utils/error-handling/exceptions';
+import {
+  AuthenticationException,
+  ForbiddenException,
+} from '@utils/error-handling/exceptions';
 import { UserService } from './user.service';
+import { AuthService } from '@utils/auth/auth.service';
+import { LogContext } from '@utils/logging/logging.contexts';
 
 @Resolver(() => User)
 export class UserResolverMutations {
-  constructor(private userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly authService: AuthService
+  ) {}
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
@@ -51,37 +59,27 @@ export class UserResolverMutations {
     return user;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
-  @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Creates a new user profile on behalf of another user.',
   })
   @Profiling.api
-  async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
-    const user = await this.userService.createUser(userData);
-    return user;
-  }
-
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    nullable: false,
-    description:
-      'Creates a new user profile for the currently authenticated user.',
-  })
-  @Profiling.api
-  async createUserForMe(
+  async createUser(
     @CurrentUser() email: string,
     @Args('userData') userData: UserInput
   ): Promise<IUser> {
-    if (!email)
-      throw new AuthenticationException(
-        'User authentication missing email in Token'
-      );
-    const user = await this.userService.createUserForMe(email, userData);
-    return user;
+    if (
+      userData.email === email ||
+      (await this.authService.isUserInRole(email, [
+        RestrictedGroupNames.CommunityAdmins,
+        RestrictedGroupNames.EcoverseAdmins,
+      ]))
+    )
+      return await this.userService.createUser(userData);
+
+    throw new ForbiddenException(
+      `User ${email} doesn't have permissions to create profile with email ${userData.email}`,
+      LogContext.AUTH
+    );
   }
 
   @Roles(

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/profile/profile.module';
@@ -7,9 +7,14 @@ import { User } from './user.entity';
 import { UserResolverFields } from './user.resolver.fields';
 import { IsUserAlreadyExistConstraint } from '@utils/validation/constraints/user.exists.constraint';
 import { UserResolverMutations } from './user.resolver.mutations';
+import { AuthModule } from '@utils/auth/auth.module';
 
 @Module({
-  imports: [ProfileModule, TypeOrmModule.forFeature([User])],
+  imports: [
+    forwardRef(() => AuthModule),
+    ProfileModule,
+    TypeOrmModule.forFeature([User]),
+  ],
   providers: [
     UserService,
     UserResolverMutations,

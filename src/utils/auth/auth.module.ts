@@ -6,10 +6,12 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UserGroupModule } from '@domain/user-group/user-group.module';
 @Module({
   imports: [
     PassportModule.register({ session: false, defaultStrategy: 'bearer' }),
     forwardRef(() => UserModule),
+    UserGroupModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -20,5 +22,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
   ],
   providers: [OidcBearerStrategy, AuthService, JwtStrategy],
+  exports: [AuthService],
 })
 export class AuthModule {}
