@@ -8,14 +8,10 @@ import jwt_decode from 'jwt-decode';
 import { IUser } from '@domain/user/user.interface';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { LogContext } from '@utils/logging/logging.contexts';
-import { UserGroupService } from '@domain/user-group/user-group.service';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly userService: UserService,
-    private readonly userGroupService: UserGroupService
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   async getUserFromToken(encodedToken: any): Promise<[IUser, string]> {
     const token = (await jwt_decode(encodedToken)) as any;
@@ -57,11 +53,8 @@ export class AuthService {
         LogContext.AUTH
       );
 
-    for (const role of roles) {
-      const userRole = role as string;
-      if (this.userGroupService.hasGroupWithName(user, userRole)) return true;
-    }
-
-    return false;
+    return roles.some(
+      role => role === RestrictedGroupNames.GlobalAdmins || roles.includes(role)
+    );
   }
 }
