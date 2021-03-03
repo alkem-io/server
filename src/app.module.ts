@@ -43,6 +43,7 @@ import { ApplicationModule } from '@domain/application/application.module';
 import { NVPModule } from '@domain/nvp/nvp.module';
 import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
 import simpleAuthProviderConfig from '@config/simple.auth.provider.config';
+import { AuthorisationModule } from '@utils/authorisation/authorisation.module';
 
 @Module({
   imports: [
@@ -88,6 +89,7 @@ import simpleAuthProviderConfig from '@config/simple.auth.provider.config';
       }),
     }),
     AuthModule,
+    AuthorisationModule,
     ApplicationModule,
     ApplicationFactoryModule,
     NVPModule,
