@@ -7,11 +7,11 @@ import { User } from './user.entity';
 import { UserResolverFields } from './user.resolver.fields';
 import { IsUserAlreadyExistConstraint } from '@utils/validation/constraints/user.exists.constraint';
 import { UserResolverMutations } from './user.resolver.mutations';
-import { AuthModule } from '@utils/auth/auth.module';
+import { AuthorisationModule } from '@utils/authorisation/authorisation.module';
 
 @Module({
   imports: [
-    forwardRef(() => AuthModule),
+    forwardRef(() => AuthorisationModule),
     ProfileModule,
     TypeOrmModule.forFeature([User]),
   ],

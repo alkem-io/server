@@ -1,13 +1,9 @@
 import { UserService } from '@domain/user/user.service';
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import {
-  AuthenticationException,
-  EntityNotInitializedException,
-} from '@utils/error-handling/exceptions';
+import { Injectable } from '@nestjs/common';
+import { AuthenticationException } from '@utils/error-handling/exceptions';
 import jwt_decode from 'jwt-decode';
 import { IUser } from '@domain/user/user.interface';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
-import { LogContext } from '@utils/logging/logging.contexts';
+import { AuthenticatedUserDTO } from './authenticated.user.dto';
 
 @Injectable()
 export class AuthService {
@@ -36,25 +32,10 @@ export class AuthService {
     return knownUser as IUser;
   }
 
-  async isUserInRole(
-    email: string,
-    roles: RestrictedGroupNames[]
-  ): Promise<boolean> {
-    const user = await this.userService.getUserWithGroups(email);
-
-    if (!user)
-      throw new ForbiddenException(
-        `User account with email ${email} doesn't have a profile!`
-      );
-
-    if (!user.userGroups)
-      throw new EntityNotInitializedException(
-        `User profile for user ${email} not properly initialized!`,
-        LogContext.AUTH
-      );
-
-    return roles.some(
-      role => role === RestrictedGroupNames.GlobalAdmins || roles.includes(role)
-    );
+  async populateAuthenticatedUser(
+    email: string
+  ): Promise<AuthenticatedUserDTO> {
+    const knownUser = await this.userService.getUserWithGroups(email);
+    return new AuthenticatedUserDTO(email, knownUser);
   }
 }

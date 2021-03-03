@@ -6,6 +6,7 @@ import { Strategy } from 'passport-http-bearer';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { IOidcConfig } from '@interfaces/oidc.config.interface';
 import { AuthService } from './auth.service';
+import jwt_decode from 'jwt-decode';
 
 @Injectable()
 export class OidcBearerStrategy extends PassportStrategy(Strategy, 'bearer') {
@@ -24,12 +25,16 @@ export class OidcBearerStrategy extends PassportStrategy(Strategy, 'bearer') {
     encodedToken: string,
     done: CallableFunction
   ): Promise<any> {
-    try {
-      const [knownUser, token] = await this.authService.getUserFromToken(
-        encodedToken
-      );
+    const token = (await jwt_decode(encodedToken)) as any;
 
-      return done(null, knownUser, token);
+    if (!token.email) throw new AuthenticationException('Token email missing!');
+
+    const authenticatedUser = await this.authService.populateAuthenticatedUser(
+      token.email
+    );
+
+    try {
+      return done(null, authenticatedUser, token);
     } catch (error) {
       done(
         new AuthenticationException(

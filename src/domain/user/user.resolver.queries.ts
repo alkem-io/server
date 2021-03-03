@@ -1,14 +1,15 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorisation/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
-import { CurrentUser } from '../../utils/decorators/user.decorator';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { UserService } from './user.service';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
+import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
+import { AuthenticatedUser } from '@utils/auth/authenticated.user.decorator';
 
 @Resolver(() => User)
 export class UserResolverQueries {
@@ -60,14 +61,17 @@ export class UserResolverQueries {
     description: 'The currently logged in user',
   })
   @Profiling.api
-  async me(@CurrentUser() email?: string): Promise<IUser> {
-    // Having a token is mandatory for this method.
-    // When authentication is turned off the authentication check is bypassed,
-    // so if token is missng no error will be thrown.
-    // This will handle that particular case.
-    // https://github.com/cherrytwist/Client.Web/issues/411
-    if (!email) throw new AuthenticationException('User not authenticated!');
-    const user = await this.userService.getUserByEmail(email);
-    return user as IUser;
+  async me(
+    @AuthenticatedUser() authUser: AuthenticatedUserDTO
+  ): Promise<IUser> {
+    if (!authUser) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated user.'
+      );
+    }
+    if (!authUser.ctUser) {
+      throw new AuthenticationException('Unable to retrieve user profile.');
+    }
+    return authUser.ctUser;
   }
 }

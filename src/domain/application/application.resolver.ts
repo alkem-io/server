@@ -1,10 +1,10 @@
 import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationService } from '@domain/application/application.service';
-import { Roles } from '@utils/decorators/roles.decorator';
+import { Roles } from '@utils/authorisation/roles.decorator';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { UseGuards } from '@nestjs/common';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
+import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 
 @Resolver(() => Application)

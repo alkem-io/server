@@ -1,31 +1,56 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorisation/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
-import { CurrentUser } from '../../utils/decorators/user.decorator';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
-import {
-  AuthenticationException,
-  ForbiddenException,
-} from '@utils/error-handling/exceptions';
+import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { UserService } from './user.service';
-import { AuthService } from '@utils/auth/auth.service';
-import { LogContext } from '@utils/logging/logging.contexts';
+import {
+  AuthorisationRoles,
+  AuthorisationService,
+} from '@utils/authorisation/authorisation.service';
+import { AuthenticatedUser } from '@utils/auth/authenticated.user.decorator';
+import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
 
 @Resolver(() => User)
 export class UserResolverMutations {
   constructor(
     private readonly userService: UserService,
-    private readonly authService: AuthService
+    private readonly authorisationService: AuthorisationService
   ) {}
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
+    RestrictedGroupNames.EcoverseAdmins,
+    AuthorisationRoles.NewUser
+  )
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => User, {
+    description:
+      'Creates a new user profile on behalf of an admin or the user account owner.',
+  })
+  @Profiling.api
+  async createUser(
+    @AuthenticatedUser() authenticatedUser: AuthenticatedUserDTO,
+    @Args('userData') userData: UserInput
+  ): Promise<IUser> {
+    if (authenticatedUser.newUser) {
+      this.userService.validateAuthenitcatedUserSelfAccessOrFail(
+        authenticatedUser,
+        userData
+      );
+    }
+    return await this.userService.createUser(userData);
+  }
+
+  @Roles(
+    RestrictedGroupNames.CommunityAdmins,
+    RestrictedGroupNames.EcoverseAdmins,
+    AuthorisationRoles.AuthenticatedUser
   )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
@@ -41,6 +66,7 @@ export class UserResolverMutations {
     return user;
   }
 
+  //todo: this mutation should disappear
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Update user profile.',
@@ -48,9 +74,9 @@ export class UserResolverMutations {
   @Profiling.api
   async updateMyProfile(
     @Args('userData') userData: UserInput,
-    @CurrentUser() email?: string
+    @AuthenticatedUser() authUser?: AuthenticatedUserDTO
   ): Promise<IUser> {
-    if (!email) throw new AuthenticationException('User not authenticated!');
+    const email = authUser?.email;
     if (email !== userData.email)
       throw new AuthenticationException(
         `Unable to update Profile: current user email (${email}) does not match email provided: ${userData.email}`
@@ -59,30 +85,7 @@ export class UserResolverMutations {
     return user;
   }
 
-  @Mutation(() => User, {
-    description:
-      'Creates a new user profile on behalf of an admin or the user account owner.',
-  })
-  @Profiling.api
-  async createUser(
-    @CurrentUser() email: string,
-    @Args('userData') userData: UserInput
-  ): Promise<IUser> {
-    if (
-      userData.email === email ||
-      (await this.authService.isUserInRole(email, [
-        RestrictedGroupNames.CommunityAdmins,
-        RestrictedGroupNames.EcoverseAdmins,
-      ]))
-    )
-      return await this.userService.createUser(userData);
-
-    throw new ForbiddenException(
-      `User ${email} doesn't have permissions to create profile with email ${userData.email}`,
-      LogContext.AUTH
-    );
-  }
-
+  // todo: a user should be able to remove their own profile
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
     RestrictedGroupNames.EcoverseAdmins

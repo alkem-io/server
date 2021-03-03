@@ -10,8 +10,8 @@ import { UserGroupService } from '@domain/user-group/user-group.service';
 import { User } from '@domain/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorisation/roles.decorator';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,

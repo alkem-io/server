@@ -1,4 +1,9 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  LoggerService,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -16,6 +21,7 @@ import { IUser } from './user.interface';
 import validator from 'validator';
 import { IGroupable } from '@interfaces/groupable.interface';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
+import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
 @Injectable()
 @Injectable()
 export class UserService {
@@ -168,6 +174,19 @@ export class UserService {
 
   async getUsers(): Promise<IUser[]> {
     return (await this.userRepository.find()) || [];
+  }
+
+  validateAuthenitcatedUserSelfAccessOrFail(
+    authenticatedUser: AuthenticatedUserDTO,
+    userData: UserInput
+  ) {
+    // New users, so check incoming data matches the email
+    if (userData.email !== authenticatedUser.email) {
+      throw new ForbiddenException(
+        `User ${authenticatedUser.email} is trying to modify a profile that is not their own: ${userData.email}`,
+        LogContext.AUTH
+      );
+    }
   }
 
   addGroupToEntity(

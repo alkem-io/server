@@ -20,8 +20,8 @@ import { IUser } from '@domain/user/user.interface';
 import { UserService } from '@domain/user/user.service';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorisation/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { EcoverseService } from './ecoverse.service';
 

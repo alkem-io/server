@@ -10,7 +10,6 @@ import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-hos
 import { ConfigService } from '@nestjs/config';
 import { IServiceConfig } from '@interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
-import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@utils/logging/logging.contexts';
@@ -18,6 +17,8 @@ import { AuthenticationException } from '@utils/error-handling/exceptions/authen
 import { TokenException } from '@utils/error-handling/exceptions/token.exception';
 import { ForbiddenException } from '@utils/error-handling/exceptions/forbidden.exception';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
+import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
+import { AuthorisationRoles } from './authorisation.service';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
@@ -50,9 +51,18 @@ export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
     return super.canActivate(new ExecutionContextHost([req]));
   }
 
-  matchRoles(userGroups: IUserGroup[]): boolean {
+  matchRolesAuthUser(authenticatedUser: AuthenticatedUserDTO): boolean {
     if (this.roles.length == 0) return true;
-    return userGroups.some(
+    const ctUser = authenticatedUser.ctUser;
+    if (!ctUser) {
+      if (this.roles.includes(AuthorisationRoles.NewUser)) {
+        return true;
+      }
+      return false;
+    }
+    const groups = ctUser.userGroups;
+    if (!groups) return false;
+    return groups.some(
       ({ name }) =>
         name === RestrictedGroupNames.GlobalAdmins || this.roles.includes(name)
     );
@@ -77,12 +87,12 @@ export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
 
     if (!user)
       throw new AuthenticationException(
-        'Failed to retrieve user from the graphql context! '
+        'Failed to retrieve authenticated user from the graphql context! '
       );
 
-    if (this.matchRoles(user.userGroups)) return user;
+    if (this.matchRolesAuthUser(user)) return user;
     throw new ForbiddenException(
-      `User '${user.email}' doesn't have any roles in this ecoverse.`,
+      `User '${user.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
   }
