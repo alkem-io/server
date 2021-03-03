@@ -9,19 +9,13 @@ import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { UserService } from './user.service';
-import {
-  AuthorisationRoles,
-  AuthorisationService,
-} from '@utils/authorisation/authorisation.service';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.service';
 import { AuthenticatedUser } from '@utils/auth/authenticated.user.decorator';
 import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
 
 @Resolver(() => User)
 export class UserResolverMutations {
-  constructor(
-    private readonly userService: UserService,
-    private readonly authorisationService: AuthorisationService
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   @Roles(
     RestrictedGroupNames.CommunityAdmins,
