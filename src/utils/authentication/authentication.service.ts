@@ -1,13 +1,13 @@
 import { UserService } from '@domain/user/user.service';
 import { Injectable } from '@nestjs/common';
-import { AccountMapping } from './account.mapping';
+import { UserInfo } from './user-info';
 
 @Injectable()
-export class AuthService {
+export class AuthenticationService {
   constructor(private readonly userService: UserService) {}
 
-  async populateAccountMapping(email: string): Promise<AccountMapping> {
+  async createUserInfo(email: string): Promise<UserInfo> {
     const knownUser = await this.userService.getUserWithGroups(email);
-    return new AccountMapping(email, knownUser);
+    return { email, user: knownUser };
   }
 }

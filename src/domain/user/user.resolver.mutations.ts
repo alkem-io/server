@@ -6,41 +6,28 @@ import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
-import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { UserService } from './user.service';
 import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
-import { AccountMap } from '@utils/auth/account.mapping.decorator';
-import { AccountMapping } from '@utils/auth/account.mapping';
+import { SelfManagement } from '@utils/authorization/self.management.decorator';
 
 @Resolver(() => User)
 export class UserResolverMutations {
   constructor(private readonly userService: UserService) {}
 
-  @Roles(
-    AuthorizationRoles.CommunityAdmins,
-    AuthorizationRoles.EcoverseAdmins,
-    AuthorizationRoles.NewUser
-  )
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description:
       'Creates a new user profile on behalf of an admin or the user account owner.',
   })
   @Profiling.api
-  async createUser(
-    @AccountMap() accountMapping: AccountMapping,
-    @Args('userData') userData: UserInput
-  ): Promise<IUser> {
-    if (accountMapping.newUser()) {
-      this.userService.validateAuthenticatedUserSelfAccessOrFail(
-        accountMapping,
-        userData
-      );
-    }
+  async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
     return await this.userService.createUser(userData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description:
@@ -55,27 +42,8 @@ export class UserResolverMutations {
     return user;
   }
 
-  //todo: this mutation should disappear
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description: 'Update user profile.',
-  })
-  @Profiling.api
-  async updateMyProfile(
-    @Args('userData') userData: UserInput,
-    @AccountMap() authUser?: AccountMapping
-  ): Promise<IUser> {
-    const email = authUser?.email;
-    if (email !== userData.email)
-      throw new AuthenticationException(
-        `Unable to update Profile: current user email (${email}) does not match email provided: ${userData.email}`
-      );
-    const user = await this.userService.updateUserByEmail(email, userData);
-    return user;
-  }
-
-  // todo: a user should be able to remove their own profile
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Removes the specified user profile.',

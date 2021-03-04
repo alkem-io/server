@@ -7,9 +7,9 @@ import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { UserService } from './user.service';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
-import { AccountMapping } from '@utils/auth/account.mapping';
 import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
-import { AccountMap } from '@utils/auth/account.mapping.decorator';
+import { CurrentUser } from '@utils/authentication/current-user.decorator';
+import { UserInfo } from '@utils/authentication/user-info';
 
 @Resolver(() => User)
 export class UserResolverQueries {
@@ -61,15 +61,15 @@ export class UserResolverQueries {
     description: 'The currently logged in user',
   })
   @Profiling.api
-  async me(@AccountMap() accountMapping: AccountMapping): Promise<IUser> {
-    if (!accountMapping) {
+  async me(@CurrentUser() userInfo: UserInfo): Promise<IUser> {
+    if (!userInfo) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated user.'
       );
     }
-    if (!accountMapping.user) {
+    if (!userInfo.user) {
       throw new AuthenticationException('Unable to retrieve user profile.');
     }
-    return accountMapping.user;
+    return userInfo.user;
   }
 }

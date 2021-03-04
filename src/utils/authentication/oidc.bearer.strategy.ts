@@ -5,14 +5,14 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-http-bearer';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { IOidcConfig } from '@interfaces/oidc.config.interface';
-import { AuthService } from './auth.service';
+import { AuthenticationService } from './authentication.service';
 import jwt_decode from 'jwt-decode';
 
 @Injectable()
 export class OidcBearerStrategy extends PassportStrategy(Strategy, 'bearer') {
   constructor(
     private configService: ConfigService,
-    private authService: AuthService,
+    private authService: AuthenticationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super({
@@ -29,9 +29,7 @@ export class OidcBearerStrategy extends PassportStrategy(Strategy, 'bearer') {
 
     if (!token.email) throw new AuthenticationException('Token email missing!');
 
-    const accountMapping = await this.authService.populateAccountMapping(
-      token.email
-    );
+    const accountMapping = await this.authService.createUserInfo(token.email);
 
     try {
       return done(null, accountMapping, token);

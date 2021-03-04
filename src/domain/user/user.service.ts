@@ -1,9 +1,4 @@
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-  LoggerService,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -21,7 +16,6 @@ import { IUser } from './user.interface';
 import validator from 'validator';
 import { IGroupable } from '@interfaces/groupable.interface';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
-import { AccountMapping } from '@utils/auth/account.mapping';
 @Injectable()
 @Injectable()
 export class UserService {
@@ -176,19 +170,6 @@ export class UserService {
     return (await this.userRepository.find()) || [];
   }
 
-  validateAuthenticatedUserSelfAccessOrFail(
-    userPayload: AccountMapping,
-    userData: UserInput
-  ) {
-    // New users, so check incoming data matches the email
-    if (userData.email !== userPayload.email) {
-      throw new ForbiddenException(
-        `User ${userPayload.email} is trying to modify a profile that is not their own: ${userData.email}`,
-        LogContext.AUTH
-      );
-    }
-  }
-
   addGroupToEntity(
     entities: IGroupable[],
     entity: IGroupable,
@@ -254,11 +235,6 @@ export class UserService {
     }
 
     return memberOf;
-  }
-
-  async updateUserByEmail(email: string, userInput: UserInput): Promise<IUser> {
-    const user = await this.getUserByEmailOrFail(email);
-    return await this.updateUser(user.id, userInput);
   }
 
   // Note: explicitly do not support updating of email addresses

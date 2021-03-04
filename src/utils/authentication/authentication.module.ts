@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '@domain/user/user.module';
 import { OidcBearerStrategy } from './oidc.bearer.strategy';
-import { AuthService } from './auth.service';
+import { AuthenticationService } from './authentication.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -19,7 +19,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
     }),
   ],
-  providers: [OidcBearerStrategy, AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [OidcBearerStrategy, AuthenticationService, JwtStrategy],
+  exports: [AuthenticationService],
 })
-export class AuthModule {}
+export class AuthenticationModule {}
