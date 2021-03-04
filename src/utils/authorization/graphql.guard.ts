@@ -17,7 +17,7 @@ import { TokenException } from '@utils/error-handling/exceptions/token.exception
 import { ForbiddenException } from '@utils/error-handling/exceptions/forbidden.exception';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 import { AccountMapping } from '@utils/auth/account.mapping';
-import { AuthorisationRoles } from './authorization.roles';
+import { AuthorizationRoles } from './authorization.roles';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
@@ -54,7 +54,7 @@ export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
     if (this.roles.length == 0) return true;
     const ctUser = accountMapping.user;
     if (!ctUser) {
-      if (this.roles.includes(AuthorisationRoles.NewUser)) {
+      if (this.roles.includes(AuthorizationRoles.NewUser)) {
         return true;
       }
       return false;
@@ -63,7 +63,7 @@ export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
     if (!groups) return false;
     return groups.some(
       ({ name }) =>
-        name === AuthorisationRoles.GlobalAdmins || this.roles.includes(name)
+        name === AuthorizationRoles.GlobalAdmins || this.roles.includes(name)
     );
   }
 

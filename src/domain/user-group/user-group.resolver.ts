@@ -7,13 +7,13 @@ import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { UserGroupInput } from './user-group.dto';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolver {
   constructor(private groupService: UserGroupService) {}
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the user group with the specified ID',
@@ -22,7 +22,7 @@ export class UserGroupResolver {
     return await this.groupService.removeUserGroup(groupID, true);
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Update the user group information.',
@@ -39,7 +39,7 @@ export class UserGroupResolver {
     return group;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:
@@ -54,7 +54,7 @@ export class UserGroupResolver {
     return res;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
@@ -69,7 +69,7 @@ export class UserGroupResolver {
     return group;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     nullable: true,
@@ -85,7 +85,7 @@ export class UserGroupResolver {
     return group;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     nullable: true,

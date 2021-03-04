@@ -1,6 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { Roles } from '@utils/authorization/roles.decorator';
 import { RelationService } from './relation.service';
@@ -9,7 +9,7 @@ import { RelationService } from './relation.service';
 export class RelationResolver {
   constructor(private relationService: RelationService) {}
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the relation with the specified ID',

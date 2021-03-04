@@ -12,7 +12,7 @@ import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -21,7 +21,7 @@ export class OrganisationResolverMutations {
     private organisationService: OrganisationService
   ) {}
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
@@ -36,7 +36,7 @@ export class OrganisationResolverMutations {
     return group;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description: 'Updates the organisation with the given data',

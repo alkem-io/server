@@ -18,7 +18,7 @@ import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationInput } from '@domain/application/application.dto';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class EcoverseResolverMutations {
@@ -26,7 +26,7 @@ export class EcoverseResolverMutations {
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group at the ecoverse level',
@@ -39,7 +39,7 @@ export class EcoverseResolverMutations {
     return group;
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Ecoverse, {
     description: 'Updates the Ecoverse with the provided data',
@@ -52,7 +52,7 @@ export class EcoverseResolverMutations {
     return ctVerse;
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
     description: 'Creates a new challenge and registers it with the ecoverse',
@@ -66,7 +66,7 @@ export class EcoverseResolverMutations {
     return challenge;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description:

@@ -5,7 +5,7 @@ import { Roles } from '@utils/authorization/roles.decorator';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => Application)
 export class ApplicationResolver {
@@ -27,7 +27,7 @@ export class ApplicationResolver {
     return await this.applicationService.getApplicationOrFail(id);
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this ecoverse',

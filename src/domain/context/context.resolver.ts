@@ -7,13 +7,13 @@ import { ReferenceInput } from '@domain/reference/reference.dto';
 import { Reference } from '@domain/reference/reference.entity';
 import { IReference } from '@domain/reference/reference.interface';
 import { ContextService } from './context.service';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class ContextResolver {
   constructor(private contextService: ContextService) {}
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
     description:

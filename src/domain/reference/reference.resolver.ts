@@ -1,6 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { Roles } from '@utils/authorization/roles.decorator';
 import { ReferenceService } from './reference.service';
@@ -9,7 +9,7 @@ import { ReferenceService } from './reference.service';
 export class ReferenceResolver {
   constructor(private referenceService: ReferenceService) {}
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the reference  with the specified ID',

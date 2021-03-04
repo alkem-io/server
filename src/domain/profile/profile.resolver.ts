@@ -11,13 +11,13 @@ import { ITagset } from '@domain/tagset/tagset.interface';
 import { ProfileService } from './profile.service';
 import { ProfileInput } from './profile.dto';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class ProfileResolver {
   constructor(private profileService: ProfileService) {}
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description:
@@ -35,7 +35,7 @@ export class ProfileResolver {
     return tagset;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
     description:
@@ -53,7 +53,7 @@ export class ProfileResolver {
     return reference;
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins, AuthorisationRoles.CommunityAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:

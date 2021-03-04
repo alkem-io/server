@@ -15,7 +15,7 @@ import { IOpportunity } from '@domain/opportunity/opportunity.interface';
 import { UpdateChallengeInput } from './update.challenge.dto';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationInput } from '@domain/application/application.dto';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -23,7 +23,7 @@ export class ChallengeResolverMutations {
     @Inject(ChallengeService) private challengeService: ChallengeService
   ) {}
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group for the challenge with the given id',
@@ -40,7 +40,7 @@ export class ChallengeResolverMutations {
     return group;
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
     description:
@@ -59,7 +59,7 @@ export class ChallengeResolverMutations {
     return opportunity;
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
     description:
@@ -75,7 +75,7 @@ export class ChallengeResolverMutations {
     return challenge;
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the Challenge with the specified ID',
@@ -84,7 +84,7 @@ export class ChallengeResolverMutations {
     return await this.challengeService.removeChallenge(challengeID);
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
@@ -99,7 +99,7 @@ export class ChallengeResolverMutations {
     return group;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
@@ -117,7 +117,7 @@ export class ChallengeResolverMutations {
     return group;
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:
@@ -134,7 +134,7 @@ export class ChallengeResolverMutations {
     );
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:
@@ -151,7 +151,7 @@ export class ChallengeResolverMutations {
     );
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this challenge',

@@ -17,7 +17,7 @@ import { IUser } from '@domain/user/user.interface';
 import { UserService } from '@domain/user/user.service';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { Roles } from '@utils/authorization/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
@@ -60,7 +60,7 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getContext();
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [User], {
     nullable: false,
@@ -71,7 +71,7 @@ export class EcoverseResolverQueries {
     return await this.ecoverseService.getMembers();
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
@@ -83,7 +83,7 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
@@ -95,7 +95,7 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => UserGroup, {
     nullable: false,

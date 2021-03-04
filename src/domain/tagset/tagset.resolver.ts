@@ -8,13 +8,13 @@ import { ITagset } from './tagset.interface';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { ValidationException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => Tagset)
 export class TagsetResolver {
   constructor(private tagsetService: TagsetService) {}
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description: 'Replace the set of tags in a tagset with the provided tags',
@@ -33,7 +33,7 @@ export class TagsetResolver {
     return await this.tagsetService.replaceTags(tagsetID, newTags);
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description: 'Add the provided tag to the tagset with the given ID',

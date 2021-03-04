@@ -1,4 +1,4 @@
-export enum AuthorisationRoles {
+export enum AuthorizationRoles {
   NewUser = 'new-user',
   Members = 'members',
   CommunityAdmins = 'community-admins',

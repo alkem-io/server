@@ -7,13 +7,13 @@ import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { User } from '@domain/user/user.entity';
 import { UserService } from './user.service';
 import { MemberOf } from './memberof.composite';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => User)
 export class UserResolverFields {
   constructor(private userService: UserService) {}
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('memberof', () => MemberOf, {
     nullable: true,

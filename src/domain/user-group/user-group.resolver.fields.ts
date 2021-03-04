@@ -8,13 +8,13 @@ import { UserGroupService } from './user-group.service';
 import { UserGroupParent } from './user-group-parent.dto';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { User } from '@domain/user/user.entity';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolverFields {
   constructor(private userGroupService: UserGroupService) {}
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('parent', () => UserGroupParent, {
     nullable: true,
@@ -25,7 +25,7 @@ export class UserGroupResolverFields {
     return await this.userGroupService.getParent(userGroup);
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('members', () => User, {
     nullable: true,

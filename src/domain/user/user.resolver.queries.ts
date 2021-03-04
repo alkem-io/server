@@ -8,14 +8,14 @@ import { IUser } from './user.interface';
 import { UserService } from './user.service';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { AccountMapping } from '@utils/auth/account.mapping';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 import { AccountMap } from '@utils/auth/account.mapping.decorator';
 
 @Resolver(() => User)
 export class UserResolverQueries {
   constructor(private userService: UserService) {}
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [User], {
     nullable: false,
@@ -26,7 +26,7 @@ export class UserResolverQueries {
     return await this.userService.getUsers();
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   //should be in user queries
   @Query(() => User, {
@@ -38,7 +38,7 @@ export class UserResolverQueries {
     return await this.userService.getUserOrFail(id);
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   //should be in user queries
   @Query(() => [User], {

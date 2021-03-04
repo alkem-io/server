@@ -1,6 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { Roles } from '@utils/authorization/roles.decorator';
 import { ActorInput } from './actor.dto';
@@ -12,7 +12,7 @@ import { ActorService } from './actor.service';
 export class ActorResolver {
   constructor(private actorService: ActorService) {}
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the actor  with the specified ID',
@@ -21,7 +21,7 @@ export class ActorResolver {
     return await this.actorService.removeActor(actorID);
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Actor, {
     description:

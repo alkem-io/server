@@ -10,12 +10,12 @@ import { ProjectInput } from './project.dto';
 import { Project } from './project.entity';
 import { IProject } from './project.interface';
 import { ProjectService } from './project.service';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 @Resolver()
 export class ProjectResolver {
   constructor(private projectService: ProjectService) {}
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [Project], {
     nullable: false,
@@ -26,7 +26,7 @@ export class ProjectResolver {
     return await this.projectService.getProjects();
   }
 
-  @Roles(AuthorisationRoles.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => Project, {
     nullable: false,
@@ -37,7 +37,7 @@ export class ProjectResolver {
     return await this.projectService.getProjectByID(id);
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the Project with the specified ID',
@@ -46,7 +46,7 @@ export class ProjectResolver {
     return await this.projectService.removeProject(ProjectID);
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Project, {
     description: 'Updates the Project with the specified ID',
@@ -58,7 +58,7 @@ export class ProjectResolver {
     return await this.projectService.updateProject(projectID, projectData);
   }
 
-  @Roles(AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new aspect on the Project identified by the ID',

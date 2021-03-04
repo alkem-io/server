@@ -8,7 +8,7 @@ import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { UserService } from './user.service';
-import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 import { AccountMap } from '@utils/auth/account.mapping.decorator';
 import { AccountMapping } from '@utils/auth/account.mapping';
 
@@ -17,9 +17,9 @@ export class UserResolverMutations {
   constructor(private readonly userService: UserService) {}
 
   @Roles(
-    AuthorisationRoles.CommunityAdmins,
-    AuthorisationRoles.EcoverseAdmins,
-    AuthorisationRoles.NewUser
+    AuthorizationRoles.CommunityAdmins,
+    AuthorizationRoles.EcoverseAdmins,
+    AuthorizationRoles.NewUser
   )
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
@@ -40,7 +40,7 @@ export class UserResolverMutations {
     return await this.userService.createUser(userData);
   }
 
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description:
@@ -75,7 +75,7 @@ export class UserResolverMutations {
   }
 
   // todo: a user should be able to remove their own profile
-  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Removes the specified user profile.',
