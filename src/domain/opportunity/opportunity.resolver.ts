@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Float, Mutation } from '@nestjs/graphql/dist';
-import { Roles } from '@utils/authorisation/roles.decorator';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { UserGroup } from '@domain/user-group/user-group.entity';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
@@ -27,7 +27,7 @@ import { EntityNotFoundException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationInput } from '@domain/application/application.dto';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class OpportunityResolver {

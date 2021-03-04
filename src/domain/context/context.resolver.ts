@@ -1,13 +1,13 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
-import { Roles } from '@utils/authorisation/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { ReferenceInput } from '@domain/reference/reference.dto';
 import { Reference } from '@domain/reference/reference.entity';
 import { IReference } from '@domain/reference/reference.interface';
 import { ContextService } from './context.service';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class ContextResolver {

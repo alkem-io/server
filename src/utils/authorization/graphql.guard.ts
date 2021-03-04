@@ -17,7 +17,7 @@ import { TokenException } from '@utils/error-handling/exceptions/token.exception
 import { ForbiddenException } from '@utils/error-handling/exceptions/forbidden.exception';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
 import { AccountMapping } from '@utils/auth/account.mapping';
-import { AuthorisationRoles } from './authorisation.roles';
+import { AuthorisationRoles } from './authorization.roles';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {

@@ -2,9 +2,9 @@ import { Application } from '@domain/application/application.entity';
 import { Ecoverse } from '@domain/ecoverse/ecoverse.entity';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
-import { Roles } from '@utils/authorisation/roles.decorator';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { EcoverseService } from './ecoverse.service';
 

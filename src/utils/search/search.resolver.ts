@@ -1,13 +1,13 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
-import { Roles } from '@utils/authorisation/roles.decorator';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { SearchService } from './search.service';
 import { ISearchResultEntry } from './search-result-entry.interface';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { SearchInput } from './search-input.dto';
 import { SearchResultEntry } from './search-result-entry.dto';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class SearchResolver {

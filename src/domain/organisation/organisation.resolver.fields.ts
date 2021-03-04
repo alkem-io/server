@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@utils/authorisation/roles.decorator';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { UserGroup } from '@domain/user-group/user-group.entity';
 import { Organisation } from './organisation.entity';
 import { User } from '@domain/user/user.entity';
@@ -16,7 +16,7 @@ import {
   EntityNotInitializedException,
 } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {

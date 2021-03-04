@@ -1,12 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
-import { Roles } from '@utils/authorisation/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { ActorInput } from '@domain/actor/actor.dto';
 import { Actor } from '@domain/actor/actor.entity';
 import { IActor } from '@domain/actor/actor.interface';
 import { ActorGroupService } from '@domain/actor-group/actor-group.service';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class ActorGroupResolver {

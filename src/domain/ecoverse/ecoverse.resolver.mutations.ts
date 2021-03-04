@@ -9,8 +9,8 @@ import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
-import { Roles } from '@utils/authorisation/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
@@ -18,7 +18,7 @@ import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationInput } from '@domain/application/application.dto';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class EcoverseResolverMutations {

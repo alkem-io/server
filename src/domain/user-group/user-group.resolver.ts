@@ -1,13 +1,13 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Roles } from '@utils/authorisation/roles.decorator';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { UserGroupInput } from './user-group.dto';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolver {

@@ -1,14 +1,14 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Roles } from '@utils/authorisation/roles.decorator';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { Tagset } from './tagset.entity';
 import { TagsetService } from './tagset.service';
 import { ITagset } from './tagset.interface';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { ValidationException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => Tagset)
 export class TagsetResolver {

@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
-import { Roles } from '@utils/authorisation/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { AspectInput } from '@domain/aspect/aspect.dto';
 import { Aspect } from '@domain/aspect/aspect.entity';
@@ -10,7 +10,7 @@ import { ProjectInput } from './project.dto';
 import { Project } from './project.entity';
 import { IProject } from './project.interface';
 import { ProjectService } from './project.service';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AuthorisationRoles } from '@utils/authorization/authorization.roles';
 @Resolver()
 export class ProjectResolver {
   constructor(private projectService: ProjectService) {}
