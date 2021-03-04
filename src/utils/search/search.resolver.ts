@@ -7,13 +7,13 @@ import { ISearchResultEntry } from './search-result-entry.interface';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { SearchInput } from './search-input.dto';
 import { SearchResultEntry } from './search-result-entry.dto';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 
 @Resolver()
 export class SearchResolver {
   constructor(private searchService: SearchService) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [SearchResultEntry], {
     nullable: false,

@@ -6,14 +6,14 @@ import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { User } from '@domain/user/user.entity';
 import { UserService } from './user.service';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { MemberOf } from './memberof.composite';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 
 @Resolver(() => User)
 export class UserResolverFields {
   constructor(private userService: UserService) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('memberof', () => MemberOf, {
     nullable: true,

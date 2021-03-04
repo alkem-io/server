@@ -21,7 +21,7 @@ import { IUser } from './user.interface';
 import validator from 'validator';
 import { IGroupable } from '@interfaces/groupable.interface';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
-import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
+import { AccountMapping } from '@utils/auth/account.mapping';
 @Injectable()
 @Injectable()
 export class UserService {
@@ -176,14 +176,14 @@ export class UserService {
     return (await this.userRepository.find()) || [];
   }
 
-  validateAuthenitcatedUserSelfAccessOrFail(
-    authenticatedUser: AuthenticatedUserDTO,
+  validateAuthenticatedUserSelfAccessOrFail(
+    userPayload: AccountMapping,
     userData: UserInput
   ) {
     // New users, so check incoming data matches the email
-    if (userData.email !== authenticatedUser.email) {
+    if (userData.email !== userPayload.email) {
       throw new ForbiddenException(
-        `User ${authenticatedUser.email} is trying to modify a profile that is not their own: ${userData.email}`,
+        `User ${userPayload.email} is trying to modify a profile that is not their own: ${userData.email}`,
         LogContext.AUTH
       );
     }

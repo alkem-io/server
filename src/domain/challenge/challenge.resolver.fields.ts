@@ -1,13 +1,11 @@
 import { Application } from '@domain/application/application.entity';
 import { Opportunity } from '@domain/opportunity/opportunity.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { User } from '@domain/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
 import { Roles } from '@utils/authorisation/roles.decorator';
 import { GroupNotInitializedException } from '@utils/error-handling/exceptions';
@@ -23,7 +21,7 @@ export class ChallengeResolverFields {
     private challengeService: ChallengeService
   ) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -47,7 +45,7 @@ export class ChallengeResolverFields {
     return opportunities;
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('contributors', () => [User], {
     nullable: true,
@@ -66,9 +64,9 @@ export class ChallengeResolverFields {
   }
 
   @Roles(
-    RestrictedGroupNames.GlobalAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.CommunityAdmins
+    AuthorisationRoles.GlobalAdmins,
+    AuthorisationRoles.EcoverseAdmins,
+    AuthorisationRoles.CommunityAdmins
   )
   @UseGuards(GqlAuthGuard)
   @ResolveField('applications', () => [Application], {

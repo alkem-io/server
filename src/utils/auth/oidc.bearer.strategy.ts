@@ -29,12 +29,12 @@ export class OidcBearerStrategy extends PassportStrategy(Strategy, 'bearer') {
 
     if (!token.email) throw new AuthenticationException('Token email missing!');
 
-    const authenticatedUser = await this.authService.populateAuthenticatedUser(
+    const accountMapping = await this.authService.populateAccountMapping(
       token.email
     );
 
     try {
-      return done(null, authenticatedUser, token);
+      return done(null, accountMapping, token);
     } catch (error) {
       done(
         new AuthenticationException(

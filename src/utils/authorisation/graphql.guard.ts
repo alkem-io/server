@@ -10,15 +10,14 @@ import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-hos
 import { ConfigService } from '@nestjs/config';
 import { IServiceConfig } from '@interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { AuthenticationException } from '@utils/error-handling/exceptions/authentication.exception';
 import { TokenException } from '@utils/error-handling/exceptions/token.exception';
 import { ForbiddenException } from '@utils/error-handling/exceptions/forbidden.exception';
 import { CherrytwistErrorStatus } from '@utils/error-handling/enums/cherrytwist.error.status';
-import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
-import { AuthorisationRoles } from './authorisation.service';
+import { AccountMapping } from '@utils/auth/account.mapping';
+import { AuthorisationRoles } from './authorisation.roles';
 
 @Injectable()
 export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
@@ -51,9 +50,9 @@ export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
     return super.canActivate(new ExecutionContextHost([req]));
   }
 
-  matchRolesAuthUser(authenticatedUser: AuthenticatedUserDTO): boolean {
+  matchRoles(accountMapping: AccountMapping): boolean {
     if (this.roles.length == 0) return true;
-    const ctUser = authenticatedUser.ctUser;
+    const ctUser = accountMapping.user;
     if (!ctUser) {
       if (this.roles.includes(AuthorisationRoles.NewUser)) {
         return true;
@@ -64,19 +63,26 @@ export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
     if (!groups) return false;
     return groups.some(
       ({ name }) =>
-        name === RestrictedGroupNames.GlobalAdmins || this.roles.includes(name)
+        name === AuthorisationRoles.GlobalAdmins || this.roles.includes(name)
     );
   }
 
-  handleRequest(err: any, user: any, info: any, _context: any, _status?: any) {
+  handleRequest(
+    err: any,
+    accountInfo: any,
+    info: any,
+    _context: any,
+    _status?: any
+  ) {
     // Always handle the request if authentication is disabled
     if (
       this.configService.get<IServiceConfig>('service')
         ?.authenticationEnabled === 'false'
     ) {
-      return user;
+      return accountInfo;
     }
 
+    // todo - needed?
     if (info === this.JWT_EXPIRED)
       throw new TokenException(
         'Access token has expired!',
@@ -85,14 +91,14 @@ export class GqlAuthGuard extends AuthGuard(['simple-auth-jwt', 'bearer']) {
 
     if (err) throw new AuthenticationException(err);
 
-    if (!user)
+    if (!accountInfo)
       throw new AuthenticationException(
-        'Failed to retrieve authenticated user from the graphql context! '
+        'Failed to retrieve authenticated account information from the graphql context! '
       );
 
-    if (this.matchRolesAuthUser(user)) return user;
+    if (this.matchRoles(accountInfo)) return accountInfo;
     throw new ForbiddenException(
-      `User '${user.email}' is not authorised to access requested resources.`,
+      `User '${accountInfo.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
   }

@@ -3,23 +3,22 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
 import { Roles } from '@utils/authorisation/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { UserService } from './user.service';
-import { AuthorisationRoles } from '@utils/authorisation/authorisation.service';
-import { AuthenticatedUser } from '@utils/auth/authenticated.user.decorator';
-import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AccountMap } from '@utils/auth/account.mapping.decorator';
+import { AccountMapping } from '@utils/auth/account.mapping';
 
 @Resolver(() => User)
 export class UserResolverMutations {
   constructor(private readonly userService: UserService) {}
 
   @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
+    AuthorisationRoles.CommunityAdmins,
+    AuthorisationRoles.EcoverseAdmins,
     AuthorisationRoles.NewUser
   )
   @UseGuards(GqlAuthGuard)
@@ -29,23 +28,19 @@ export class UserResolverMutations {
   })
   @Profiling.api
   async createUser(
-    @AuthenticatedUser() authenticatedUser: AuthenticatedUserDTO,
+    @AccountMap() accountMapping: AccountMapping,
     @Args('userData') userData: UserInput
   ): Promise<IUser> {
-    if (authenticatedUser.newUser) {
-      this.userService.validateAuthenitcatedUserSelfAccessOrFail(
-        authenticatedUser,
+    if (accountMapping.newUser()) {
+      this.userService.validateAuthenticatedUserSelfAccessOrFail(
+        accountMapping,
         userData
       );
     }
     return await this.userService.createUser(userData);
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    AuthorisationRoles.AuthenticatedUser
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description:
@@ -68,7 +63,7 @@ export class UserResolverMutations {
   @Profiling.api
   async updateMyProfile(
     @Args('userData') userData: UserInput,
-    @AuthenticatedUser() authUser?: AuthenticatedUserDTO
+    @AccountMap() authUser?: AccountMapping
   ): Promise<IUser> {
     const email = authUser?.email;
     if (email !== userData.email)
@@ -80,10 +75,7 @@ export class UserResolverMutations {
   }
 
   // todo: a user should be able to remove their own profile
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Removes the specified user profile.',

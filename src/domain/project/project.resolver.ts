@@ -6,16 +6,16 @@ import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { AspectInput } from '@domain/aspect/aspect.dto';
 import { Aspect } from '@domain/aspect/aspect.entity';
 import { IAspect } from '@domain/aspect/aspect.interface';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { ProjectInput } from './project.dto';
 import { Project } from './project.entity';
 import { IProject } from './project.interface';
 import { ProjectService } from './project.service';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 @Resolver()
 export class ProjectResolver {
   constructor(private projectService: ProjectService) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [Project], {
     nullable: false,
@@ -26,7 +26,7 @@ export class ProjectResolver {
     return await this.projectService.getProjects();
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => Project, {
     nullable: false,
@@ -37,7 +37,7 @@ export class ProjectResolver {
     return await this.projectService.getProjectByID(id);
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the Project with the specified ID',
@@ -46,10 +46,7 @@ export class ProjectResolver {
     return await this.projectService.removeProject(ProjectID);
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Project, {
     description: 'Updates the Project with the specified ID',
@@ -61,7 +58,7 @@ export class ProjectResolver {
     return await this.projectService.updateProject(projectID, projectData);
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new aspect on the Project identified by the ID',

@@ -3,17 +3,18 @@ import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { Roles } from '@utils/authorisation/roles.decorator';
 import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
-import { RestrictedGroupNames, UserGroup } from './user-group.entity';
+import { UserGroup } from './user-group.entity';
 import { UserGroupService } from './user-group.service';
 import { UserGroupParent } from './user-group-parent.dto';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { User } from '@domain/user/user.entity';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolverFields {
   constructor(private userGroupService: UserGroupService) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('parent', () => UserGroupParent, {
     nullable: true,
@@ -24,7 +25,7 @@ export class UserGroupResolverFields {
     return await this.userGroupService.getParent(userGroup);
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('members', () => User, {
     nullable: true,

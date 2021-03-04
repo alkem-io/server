@@ -1,15 +1,13 @@
 import { UserService } from '@domain/user/user.service';
 import { Injectable } from '@nestjs/common';
-import { AuthenticatedUserDTO } from './authenticated.user.dto';
+import { AccountMapping } from './account.mapping';
 
 @Injectable()
 export class AuthService {
   constructor(private readonly userService: UserService) {}
 
-  async populateAuthenticatedUser(
-    email: string
-  ): Promise<AuthenticatedUserDTO> {
+  async populateAccountMapping(email: string): Promise<AccountMapping> {
     const knownUser = await this.userService.getUserWithGroups(email);
-    return new AuthenticatedUserDTO(email, knownUser);
+    return new AccountMapping(email, knownUser);
   }
 }

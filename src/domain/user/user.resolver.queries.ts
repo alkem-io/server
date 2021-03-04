@@ -3,19 +3,19 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
 import { Roles } from '@utils/authorisation/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { UserService } from './user.service';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
-import { AuthenticatedUserDTO } from '@utils/auth/authenticated.user.dto';
-import { AuthenticatedUser } from '@utils/auth/authenticated.user.decorator';
+import { AccountMapping } from '@utils/auth/account.mapping';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
+import { AccountMap } from '@utils/auth/account.mapping.decorator';
 
 @Resolver(() => User)
 export class UserResolverQueries {
   constructor(private userService: UserService) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [User], {
     nullable: false,
@@ -26,7 +26,7 @@ export class UserResolverQueries {
     return await this.userService.getUsers();
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   //should be in user queries
   @Query(() => User, {
@@ -38,7 +38,7 @@ export class UserResolverQueries {
     return await this.userService.getUserOrFail(id);
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   //should be in user queries
   @Query(() => [User], {
@@ -61,17 +61,15 @@ export class UserResolverQueries {
     description: 'The currently logged in user',
   })
   @Profiling.api
-  async me(
-    @AuthenticatedUser() authUser: AuthenticatedUserDTO
-  ): Promise<IUser> {
-    if (!authUser) {
+  async me(@AccountMap() accountMapping: AccountMapping): Promise<IUser> {
+    if (!accountMapping) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated user.'
       );
     }
-    if (!authUser.ctUser) {
+    if (!accountMapping.user) {
       throw new AuthenticationException('Unable to retrieve user profile.');
     }
-    return authUser.ctUser;
+    return accountMapping.user;
   }
 }

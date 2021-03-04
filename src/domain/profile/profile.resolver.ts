@@ -8,19 +8,16 @@ import { Reference } from '@domain/reference/reference.entity';
 import { IReference } from '@domain/reference/reference.interface';
 import { Tagset } from '@domain/tagset/tagset.entity';
 import { ITagset } from '@domain/tagset/tagset.interface';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { ProfileService } from './profile.service';
 import { ProfileInput } from './profile.dto';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 
 @Resolver()
 export class ProfileResolver {
   constructor(private profileService: ProfileService) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description:
@@ -38,10 +35,7 @@ export class ProfileResolver {
     return tagset;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
     description:
@@ -59,10 +53,7 @@ export class ProfileResolver {
     return reference;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.CommunityAdmins
-  )
+  @Roles(AuthorisationRoles.EcoverseAdmins, AuthorisationRoles.CommunityAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:

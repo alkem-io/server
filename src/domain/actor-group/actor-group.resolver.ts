@@ -5,14 +5,14 @@ import { Roles } from '@utils/authorisation/roles.decorator';
 import { ActorInput } from '@domain/actor/actor.dto';
 import { Actor } from '@domain/actor/actor.entity';
 import { IActor } from '@domain/actor/actor.interface';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { ActorGroupService } from '@domain/actor-group/actor-group.service';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 
 @Resolver()
 export class ActorGroupResolver {
   constructor(private actorGroupService: ActorGroupService) {}
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Actor, {
     description: 'Create a new actor on the ActorGroup with the specified ID',
@@ -29,7 +29,7 @@ export class ActorGroupResolver {
     return result;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the actor group with the specified ID',

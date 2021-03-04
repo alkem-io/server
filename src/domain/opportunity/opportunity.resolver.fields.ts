@@ -2,14 +2,12 @@ import { ActorGroup } from '@domain/actor-group/actor-group.entity';
 import { Application } from '@domain/application/application.entity';
 import { Aspect } from '@domain/aspect/aspect.entity';
 import { Relation } from '@domain/relation/relation.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { User } from '@domain/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
 import { Roles } from '@utils/authorisation/roles.decorator';
 import {
@@ -28,7 +26,7 @@ export class OpportunityResolverFields {
     private opportunityService: OpportunityService
   ) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -40,7 +38,7 @@ export class OpportunityResolverFields {
     return groups;
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('contributors', () => [User], {
     nullable: true,
@@ -50,7 +48,7 @@ export class OpportunityResolverFields {
   async contributors(@Parent() opportunity: Opportunity) {
     const group = await this.userGroupService.getGroupByName(
       opportunity,
-      RestrictedGroupNames.Members
+      AuthorisationRoles.Members
     );
     if (!group)
       throw new RelationshipNotFoundException(
@@ -95,9 +93,9 @@ export class OpportunityResolverFields {
   }
 
   @Roles(
-    RestrictedGroupNames.GlobalAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.CommunityAdmins
+    AuthorisationRoles.GlobalAdmins,
+    AuthorisationRoles.EcoverseAdmins,
+    AuthorisationRoles.CommunityAdmins
   )
   @UseGuards(GqlAuthGuard)
   @ResolveField('applications', () => [Application], {

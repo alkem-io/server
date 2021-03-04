@@ -3,10 +3,7 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Float, Mutation } from '@nestjs/graphql';
 import { Roles } from '@utils/authorisation/roles.decorator';
 import { GqlAuthGuard } from '@utils/authorisation/graphql.guard';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
@@ -18,6 +15,7 @@ import { IOpportunity } from '@domain/opportunity/opportunity.interface';
 import { UpdateChallengeInput } from './update.challenge.dto';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationInput } from '@domain/application/application.dto';
+import { AuthorisationRoles } from '@utils/authorisation/authorisation.roles';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -25,7 +23,7 @@ export class ChallengeResolverMutations {
     @Inject(ChallengeService) private challengeService: ChallengeService
   ) {}
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group for the challenge with the given id',
@@ -42,7 +40,7 @@ export class ChallengeResolverMutations {
     return group;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
     description:
@@ -61,7 +59,7 @@ export class ChallengeResolverMutations {
     return opportunity;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
     description:
@@ -77,7 +75,7 @@ export class ChallengeResolverMutations {
     return challenge;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the Challenge with the specified ID',
@@ -86,10 +84,7 @@ export class ChallengeResolverMutations {
     return await this.challengeService.removeChallenge(challengeID);
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
@@ -104,10 +99,7 @@ export class ChallengeResolverMutations {
     return group;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
@@ -125,10 +117,7 @@ export class ChallengeResolverMutations {
     return group;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:
@@ -145,10 +134,7 @@ export class ChallengeResolverMutations {
     );
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorisationRoles.CommunityAdmins, AuthorisationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:
@@ -165,7 +151,7 @@ export class ChallengeResolverMutations {
     );
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorisationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this challenge',
