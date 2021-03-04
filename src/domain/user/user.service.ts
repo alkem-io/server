@@ -17,7 +17,6 @@ import validator from 'validator';
 import { IGroupable } from '@interfaces/groupable.interface';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 @Injectable()
-@Injectable()
 export class UserService {
   constructor(
     private profileService: ProfileService,
