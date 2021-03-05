@@ -3,18 +3,16 @@ import { Mutation } from '@nestjs/graphql';
 import { Float } from '@nestjs/graphql';
 import { Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { OrganisationInput } from './organisation.dto';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -23,10 +21,7 @@ export class OrganisationResolverMutations {
     private organisationService: OrganisationService
   ) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
@@ -41,10 +36,7 @@ export class OrganisationResolverMutations {
     return group;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description: 'Updates the organisation with the given data',

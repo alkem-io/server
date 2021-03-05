@@ -4,16 +4,13 @@ import { IChallenge } from '@domain/challenge/challenge.interface';
 import { OrganisationInput } from '@domain/organisation/organisation.dto';
 import { Organisation } from '@domain/organisation/organisation.entity';
 import { IOrganisation } from '@domain/organisation/organisation.interface';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
@@ -21,6 +18,7 @@ import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationInput } from '@domain/application/application.dto';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class EcoverseResolverMutations {
@@ -28,7 +26,7 @@ export class EcoverseResolverMutations {
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new user group at the ecoverse level',
@@ -41,7 +39,7 @@ export class EcoverseResolverMutations {
     return group;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Ecoverse, {
     description: 'Updates the Ecoverse with the provided data',
@@ -54,7 +52,7 @@ export class EcoverseResolverMutations {
     return ctVerse;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
     description: 'Creates a new challenge and registers it with the ecoverse',
@@ -68,10 +66,7 @@ export class EcoverseResolverMutations {
     return challenge;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description:

@@ -9,10 +9,7 @@ import { IOrganisation } from '@domain/organisation/organisation.interface';
 import { OrganisationService } from '@domain/organisation/organisation.service';
 import { Tagset } from '@domain/tagset/tagset.entity';
 import { ITagset } from '@domain/tagset/tagset.interface';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { User } from '@domain/user/user.entity';
@@ -20,8 +17,9 @@ import { IUser } from '@domain/user/user.interface';
 import { UserService } from '@domain/user/user.service';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { EcoverseService } from './ecoverse.service';
 
@@ -62,7 +60,7 @@ export class EcoverseResolverQueries {
     return this.ecoverseService.getContext();
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [User], {
     nullable: false,
@@ -73,7 +71,7 @@ export class EcoverseResolverQueries {
     return await this.ecoverseService.getMembers();
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
@@ -85,7 +83,7 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => [UserGroup], {
     nullable: false,
@@ -97,7 +95,7 @@ export class EcoverseResolverQueries {
     return groups;
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Query(() => UserGroup, {
     nullable: false,

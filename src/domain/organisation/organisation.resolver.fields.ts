@@ -1,12 +1,9 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { Organisation } from './organisation.entity';
 import { User } from '@domain/user/user.entity';
 import { UserGroupService } from '@domain/user-group/user-group.service';
@@ -19,6 +16,7 @@ import {
   EntityNotInitializedException,
 } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
@@ -27,7 +25,7 @@ export class OrganisationResolverFields {
     private userGroupService: UserGroupService
   ) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -44,7 +42,7 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
@@ -54,7 +52,7 @@ export class OrganisationResolverFields {
   async contributors(@Parent() organisation: Organisation) {
     const group = await this.userGroupService.getGroupByName(
       organisation,
-      RestrictedGroupNames.Members
+      AuthorizationRoles.Members
     );
     if (!group)
       throw new GroupNotInitializedException(
