@@ -1,12 +1,9 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Float, Mutation } from '@nestjs/graphql/dist';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
@@ -30,6 +27,7 @@ import { EntityNotFoundException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { Application } from '@domain/application/application.entity';
 import { ApplicationInput } from '@domain/application/application.dto';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class OpportunityResolver {
@@ -59,7 +57,7 @@ export class OpportunityResolver {
     );
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
     description:
@@ -77,7 +75,7 @@ export class OpportunityResolver {
     return Opportunity;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the Opportunity with the specified ID',
@@ -86,7 +84,7 @@ export class OpportunityResolver {
     return await this.opportunityService.removeOpportunity(opportunityID);
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Project, {
     description: 'Create a new Project on the Opportunity identified by the ID',
@@ -103,7 +101,7 @@ export class OpportunityResolver {
     return project;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new aspect on the Opportunity identified by the ID',
@@ -120,7 +118,7 @@ export class OpportunityResolver {
     return aspect;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => ActorGroup, {
     description:
@@ -138,7 +136,7 @@ export class OpportunityResolver {
     return actorGroup;
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Relation, {
     description:
@@ -155,7 +153,7 @@ export class OpportunityResolver {
     );
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
@@ -173,7 +171,7 @@ export class OpportunityResolver {
     return group;
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this opportunity',

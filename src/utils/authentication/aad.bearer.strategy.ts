@@ -4,9 +4,9 @@ import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BearerStrategy } from 'passport-azure-ad';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
-import { AuthService } from './auth.service';
 import { ITokenPayload } from 'passport-azure-ad';
 import { IAzureADConfig } from '@interfaces/aad.config.interface';
+import { AuthenticationService } from './authentication.service';
 
 @Injectable()
 export class AadBearerStrategy extends PassportStrategy(
@@ -15,7 +15,7 @@ export class AadBearerStrategy extends PassportStrategy(
 ) {
   constructor(
     private configService: ConfigService,
-    private authService: AuthService,
+    private authService: AuthenticationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super({
@@ -36,7 +36,7 @@ export class AadBearerStrategy extends PassportStrategy(
           'Email claim missing from JWT token!'
         );
 
-      const knownUser = await this.authService.getUserProfile(email);
+      const knownUser = await this.authService.createUserInfo(email);
 
       return done(null, knownUser, token);
     } catch (error) {

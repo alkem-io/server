@@ -1,19 +1,19 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
 import { User } from '@domain/user/user.entity';
 import { UserService } from './user.service';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { MemberOf } from './memberof.composite';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver(() => User)
 export class UserResolverFields {
   constructor(private userService: UserService) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('memberof', () => MemberOf, {
     nullable: true,

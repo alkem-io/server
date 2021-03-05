@@ -1,26 +1,23 @@
 import { UseGuards } from '@nestjs/common';
 import { Mutation, Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
 import { ReferenceInput } from '@domain/reference/reference.dto';
 import { Reference } from '@domain/reference/reference.entity';
 import { IReference } from '@domain/reference/reference.interface';
 import { Tagset } from '@domain/tagset/tagset.entity';
 import { ITagset } from '@domain/tagset/tagset.interface';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
 import { ProfileService } from './profile.service';
 import { ProfileInput } from './profile.dto';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
 
 @Resolver()
 export class ProfileResolver {
   constructor(private profileService: ProfileService) {}
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description:
@@ -38,10 +35,7 @@ export class ProfileResolver {
     return tagset;
   }
 
-  @Roles(
-    RestrictedGroupNames.CommunityAdmins,
-    RestrictedGroupNames.EcoverseAdmins
-  )
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
     description:
@@ -59,10 +53,7 @@ export class ProfileResolver {
     return reference;
   }
 
-  @Roles(
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.CommunityAdmins
-  )
+  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description:

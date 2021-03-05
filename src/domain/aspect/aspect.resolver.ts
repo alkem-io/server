@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
-import { RestrictedGroupNames } from '@domain/user-group/user-group.entity';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { AspectInput } from './aspect.dto';
 import { Aspect } from './aspect.entity';
 import { IAspect } from './aspect.interface';
@@ -12,7 +12,7 @@ import { AspectService } from './aspect.service';
 export class AspectResolver {
   constructor(private aspectService: AspectService) {}
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, {
     description: 'Removes the aspect with the specified ID',
@@ -21,7 +21,7 @@ export class AspectResolver {
     return await this.aspectService.removeAspect(aspectID);
   }
 
-  @Roles(RestrictedGroupNames.EcoverseAdmins)
+  @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
     description: 'Updates the aspect with the specified ID',

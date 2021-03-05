@@ -1,7 +1,7 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '@domain/user/user.module';
-import { AuthService } from './auth.service';
+import { AuthenticationService } from './authentication.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -9,7 +9,7 @@ import { AadBearerStrategy } from './aad.bearer.strategy';
 @Module({
   imports: [
     PassportModule.register({ session: false, defaultStrategy: 'azure-ad' }),
-    forwardRef(() => UserModule),
+    UserModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -19,6 +19,7 @@ import { AadBearerStrategy } from './aad.bearer.strategy';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy, AadBearerStrategy],
+  providers: [AadBearerStrategy, AuthenticationService, JwtStrategy],
+  exports: [AuthenticationService],
 })
-export class AuthModule {}
+export class AuthenticationModule {}

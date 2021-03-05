@@ -17,7 +17,6 @@ import validator from 'validator';
 import { IGroupable } from '@interfaces/groupable.interface';
 import { IUserGroup } from '@domain/user-group/user-group.interface';
 @Injectable()
-@Injectable()
 export class UserService {
   constructor(
     private profileService: ProfileService,
@@ -25,15 +24,6 @@ export class UserService {
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  async createUserForMe(email: string, userData: UserInput): Promise<IUser> {
-    if (email !== userData.email)
-      throw new ValidationException(
-        `User provided data (${userData.email}) does not match the email of the logged in user: ${email}`,
-        LogContext.COMMUNITY
-      );
-    return await this.createUser(userData);
-  }
 
   async createUser(userData: UserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
@@ -244,11 +234,6 @@ export class UserService {
     }
 
     return memberOf;
-  }
-
-  async updateUserByEmail(email: string, userInput: UserInput): Promise<IUser> {
-    const user = await this.getUserByEmailOrFail(email);
-    return await this.updateUser(user.id, userInput);
   }
 
   // Note: explicitly do not support updating of email addresses

@@ -1,15 +1,13 @@
 import { Application } from '@domain/application/application.entity';
 import { Opportunity } from '@domain/opportunity/opportunity.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/user-group/user-group.entity';
+import { UserGroup } from '@domain/user-group/user-group.entity';
 import { UserGroupService } from '@domain/user-group/user-group.service';
 import { User } from '@domain/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@utils/auth/graphql.guard';
-import { Roles } from '@utils/decorators/roles.decorator';
+import { AuthorizationRoles } from '@utils/authorization/authorization.roles';
+import { GqlAuthGuard } from '@utils/authorization/graphql.guard';
+import { Roles } from '@utils/authorization/roles.decorator';
 import { GroupNotInitializedException } from '@utils/error-handling/exceptions';
 import { LogContext } from '@utils/logging/logging.contexts';
 import { Profiling } from '@utils/logging/logging.profiling.decorator';
@@ -23,7 +21,7 @@ export class ChallengeResolverFields {
     private challengeService: ChallengeService
   ) {}
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -47,7 +45,7 @@ export class ChallengeResolverFields {
     return opportunities;
   }
 
-  @Roles(RestrictedGroupNames.Members)
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @ResolveField('contributors', () => [User], {
     nullable: true,
@@ -66,9 +64,9 @@ export class ChallengeResolverFields {
   }
 
   @Roles(
-    RestrictedGroupNames.GlobalAdmins,
-    RestrictedGroupNames.EcoverseAdmins,
-    RestrictedGroupNames.CommunityAdmins
+    AuthorizationRoles.GlobalAdmins,
+    AuthorizationRoles.EcoverseAdmins,
+    AuthorizationRoles.CommunityAdmins
   )
   @UseGuards(GqlAuthGuard)
   @ResolveField('applications', () => [Application], {

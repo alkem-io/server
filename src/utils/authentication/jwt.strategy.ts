@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
-import { AuthenticationException } from '@utils/error-handling/exceptions';
 import { Strategy, ExtractJwt } from 'passport-jwt';
-import { AuthService } from './auth.service';
+import { AuthenticationService } from './authentication.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'simple-auth-jwt') {
   constructor(
     private readonly configService: ConfigService,
-    private readonly authService: AuthService
+    private readonly authService: AuthenticationService
   ) {
     super({
       secretOrKey: configService.get('simple_auth_provider').clientSecret,
@@ -18,13 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'simple-auth-jwt') {
   }
 
   async validate(payload: JwtPayload) {
-    const user = await this.authService.getUserFromJwtPayload(payload);
-    if (!user) {
-      throw new AuthenticationException(
-        'Failed to find user profile matching the email in jwt!'
-      );
-    }
-    return user;
+    return await this.authService.createUserInfo(payload.email);
   }
 }
 

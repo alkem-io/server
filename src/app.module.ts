@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from '@utils/auth/auth.module';
+import { AuthenticationModule } from '@utils/authentication/authentication.module';
 import { AgreementModule } from '@domain/agreement/agreement.module';
 import { UserModule } from '@domain/user/user.module';
 import { ChallengeModule } from '@domain/challenge/challenge.module';
@@ -84,7 +84,7 @@ import simpleAuthProviderConfig from '@config/simple.auth.provider.config';
         logging: configService.get<IDatabaseConfig>('database')?.logging,
       }),
     }),
-    AuthModule,
+    AuthenticationModule,
     ApplicationModule,
     ApplicationFactoryModule,
     NVPModule,
