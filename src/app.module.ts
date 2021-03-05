@@ -38,7 +38,6 @@ import { MetadataModule } from '@utils/metadata/metadata.module';
 import { KonfigModule } from '@utils/config/config.module';
 import aadOboConfig from '@config/aad.obo.config';
 import { ValidationPipe } from '@utils/validation/validation.pipe';
-import oidcConfig from '@config/oidc.config';
 import { ApplicationModule } from '@domain/application/application.module';
 import { NVPModule } from '@domain/nvp/nvp.module';
 import { ApplicationFactoryModule } from '@domain/application/application.factory.module';
@@ -53,7 +52,6 @@ import simpleAuthProviderConfig from '@config/simple.auth.provider.config';
         '.env.aad.cherrytwist.api.default',
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
-        '.env.oidc.default',
         '.env.simple.auth.provider.default',
       ],
       isGlobal: true,
@@ -66,7 +64,6 @@ import simpleAuthProviderConfig from '@config/simple.auth.provider.config';
         loggingConfig,
         aadRopcConfig,
         aadOboConfig,
-        oidcConfig,
         simpleAuthProviderConfig,
       ],
     }),

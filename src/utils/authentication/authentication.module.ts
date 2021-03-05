@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '@domain/user/user.module';
-import { OidcBearerStrategy } from './oidc.bearer.strategy';
 import { AuthenticationService } from './authentication.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AadBearerStrategy } from './aad.bearer.strategy';
 @Module({
   imports: [
-    PassportModule.register({ session: false, defaultStrategy: 'bearer' }),
+    PassportModule.register({ session: false, defaultStrategy: 'azure-ad' }),
     UserModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -19,7 +19,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
     }),
   ],
-  providers: [OidcBearerStrategy, AuthenticationService, JwtStrategy],
+  providers: [AadBearerStrategy, AuthenticationService, JwtStrategy],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}

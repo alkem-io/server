@@ -1,38 +1,44 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
-import { AuthGuard, PassportStrategy } from '@nestjs/passport';
+import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Strategy } from 'passport-http-bearer';
+import { BearerStrategy } from 'passport-azure-ad';
 import { AuthenticationException } from '@utils/error-handling/exceptions';
-import { IOidcConfig } from '@interfaces/oidc.config.interface';
+import { ITokenPayload } from 'passport-azure-ad';
+import { IAzureADConfig } from '@interfaces/aad.config.interface';
 import { AuthenticationService } from './authentication.service';
-import jwt_decode from 'jwt-decode';
 
 @Injectable()
-export class OidcBearerStrategy extends PassportStrategy(Strategy, 'bearer') {
+export class AadBearerStrategy extends PassportStrategy(
+  BearerStrategy,
+  'azure-ad'
+) {
   constructor(
     private configService: ConfigService,
     private authService: AuthenticationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super({
-      ...configService.get<IOidcConfig>('oidc'),
+      ...configService.get<IAzureADConfig>('aad'),
     });
   }
 
   async validate(
     _req: Request,
-    encodedToken: string,
+    token: IExtendedTokenPayload,
     done: CallableFunction
   ): Promise<any> {
-    const token = (await jwt_decode(encodedToken)) as any;
-
-    if (!token.email) throw new AuthenticationException('Token email missing!');
-
-    const accountMapping = await this.authService.createUserInfo(token.email);
+    const email = token.email;
 
     try {
-      return done(null, accountMapping, token);
+      if (!email)
+        throw new AuthenticationException(
+          'Email claim missing from JWT token!'
+        );
+
+      const knownUser = await this.authService.createUserInfo(email);
+
+      return done(null, knownUser, token);
     } catch (error) {
       done(
         new AuthenticationException(
@@ -42,4 +48,8 @@ export class OidcBearerStrategy extends PassportStrategy(Strategy, 'bearer') {
     }
   }
 }
-export const AzureADGuard = AuthGuard('bearer');
+
+interface IExtendedTokenPayload extends ITokenPayload {
+  /** User email. */
+  email?: string;
+}
