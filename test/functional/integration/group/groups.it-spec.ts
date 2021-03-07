@@ -18,7 +18,7 @@ import {
   removeUserMutation,
 } from '@test/functional/e2e/user-management/user.request.params';
 import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
-import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
 
 let data: TestDataServiceInitResult;
 let userId: number;

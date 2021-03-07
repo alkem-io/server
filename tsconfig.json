@@ -2,10 +2,7 @@
   "compilerOptions": {
     "target": "es2018",
     "module": "commonjs",
-    "lib": [
-      "es2018",
-      "esnext.asynciterable"
-    ],
+    "lib": ["es2018", "esnext.asynciterable"],
     "sourceMap": true,
     "outDir": "./dist",
     "removeComments": true,
@@ -19,33 +16,14 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "paths": {
-      "@interfaces/*": [
-        "src/interfaces/*"
-      ],
-      "@domain/*": [
-        "src/domain/*"
-      ],
-      "@config/*": [
-        "src/config/*"
-      ],
-      "@constants": [
-        "src/utils/constants"
-      ],
-      "@constants/*": [
-        "src/utils/constants/*"
-      ],
-      "@utils/*": [
-        "src/utils/*"
-      ],
-      "@templates/*": [
-        "src/templates/*"
-      ],
-      "@src/*": [
-        "src/*"
-      ],
-      "@test/*": [
-        "test/*"
-      ],
+      "@interfaces/*": ["src/common/interfaces/*"],
+      "@domain/*": ["src/domain/*"],
+      "@config/*": ["src/core/config/*"],
+      "@constants": ["src/common/constants"],
+      "@constants/*": ["src/common/constants/*"],
+      "@templates/*": ["src/services/configuration/templates/*"],
+      "@src/*": ["src/*"],
+      "@test/*": ["test/*"]
     }
   }
 }
