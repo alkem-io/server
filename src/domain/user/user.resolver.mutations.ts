@@ -43,7 +43,6 @@ export class UserResolverMutations {
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Removes the specified user profile.',
