@@ -1,30 +1,16 @@
-# Server
+# Cherrytwist Server
 
-Represents the core back-end server that manages the representation of the ecoverse and all the entities stored wthin it.
+Welcome to the Cherrytwist Server! This server is the heart of the Cherrytwist Platform, and manages the representation of the ecoverse and all the entities stored wthin it.
 
 [![Build Status](https://travis-ci.com/cherrytwist/Server.svg?branch=develop)](https://travis-ci.com/cherrytwist/Server) [![Coverage Status](https://coveralls.io/repos/github/cherrytwist/Server/badge.svg?branch=develop)](https://coveralls.io/github/cherrytwist/Server?branch=develop) [![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/) ![Docker Image CI](https://github.com/cherrytwist/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
 
 ## Design
 
-Cherrytwist server uses [NestJS](https://nestjs.com/) as framework and complies to its principles. The code is split into Data Layer (entities), Data Access Layer, Service Layer and an API Layer (GraphQL).
-Interactions between different layers is depicted in the Layer Diagram below:
+A high level overview of the Design of the Cherrytwist Server is shown below.
 
-![Layer Diagram](docs/diagrams/ct-server-layer-diagram.png)
+![Component Diagram](docs/diagrams/ct-server-design.png)
 
-The technology stack is as follows:
-
-- GraphQL: for specifying the interactions with the server, using Apollo server
-- Node: for runtime execution - **NB: LTS Node version (12.8.3) is currently used for development, and is required for deployment.**
-- NestJS as a framework
-- TypeScript: for all logic
-- TypeORM: for the orbject relational mapping
-- mySQL: for data persistance
-- docker: for containers
-- docker-compose: for container orchestration
-- passportjs for authentication
-- authentication providers: via one or the support authentication providers (e.g. AAD)
-- Winston and Nest-Winston for logging
-- Elastic Cloud + Kibana for centralized log management
+Additional destails on the layering and technologies uses within the server are available [here](docs/Configuration.md).
 
 The server primarily interacts via a _*GraphQL api*_' that it exposes. This can be found at the following location: <http://localhost:4000/graphql> (assuming default port).
 
@@ -53,9 +39,11 @@ Steps:
    docker-compose up -d --build
    ```
 
-2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4000/graphql).
+2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4001/graphql).
 
-Note: the server will be empty after initially being created. To populate the Server with some sample data please use the [Cherrytwist Populator](http://github.com/cherrytwist/Populator) tool which allows easy population from a local file.
+Note: The docker compose script puts the server listening on port 4001 - to avoid conflict with the default port that is used by local development.
+
+Note: the server will be empty after initially being created. To populate the Server with some sample data please use the [Cherrytwist Populator](http://github.com/cherrytwist/Populator) tool which allows easy population from a local file. Please remember to specify the correct port to connect to!
 
 ## Developing with the server
 
@@ -95,7 +83,7 @@ Please refer to the [configuration](docs/Configuation.md) for updating the Serve
 
 ## Configuration
 
-The Server is responsible for managing the majority of the configuration for the Cherrytwist platform.
+The Server is responsible for managing the majority of the configuration for the Cherrytwist Platform.
 
 Full details of how to configure the Cherrytwist server are available [here](docs/Configuration.md).
 

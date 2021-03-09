@@ -40,7 +40,7 @@ services:
       - ct_simple_auth_provider
     restart: always
     ports:
-      - 4000:4000
+      - 4001:4000
     command: sh -c "/wait && npm run migration:run && npm run start"
     volumes:
       - ct_server_dev:/usr/src/app/config
@@ -79,5 +79,5 @@ services:
       - db
     restart: always
     ports:
-      - 3002:3002
+      - 3003:3002
     command: sh -c "/wait && /create_db.sh && npm run start:prod"
