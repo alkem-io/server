@@ -1,3 +1,4 @@
+import { AuthenticationProviderConfigs } from '@common/enums';
 import { ObjectType, Field, createUnionType } from '@nestjs/graphql';
 import { AadAuthProviderConfig } from './aad/aad.config.entity';
 import { IAadAuthProviderConfig } from './aad/aad.config.interface';
@@ -45,10 +46,10 @@ export const AuthenticationProviderConfigUnion = createUnionType({
   types: () => [AadAuthProviderConfig, SimpleAuthProviderConfig],
   resolveType(value) {
     if (value.msalConfig) {
-      return AadAuthProviderConfig;
+      return AuthenticationProviderConfigs.AAD;
     }
     if (value.tokenEndpoint) {
-      return SimpleAuthProviderConfig;
+      return AuthenticationProviderConfigs.SIMPLE_AUTH;
     }
     return null;
   },
