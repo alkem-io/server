@@ -2,8 +2,7 @@ FROM node:12-alpine
 
 
 #install CLI mariadb/mysql client
-RUN apk add --update mariadb-client && rm -rf /var/cache/apk/*
-
+RUN apk add --update mariadb-client && apk add python3 && rm -rf /var/cache/apk/*
 
 # Create app directory
 WORKDIR /usr/src/app

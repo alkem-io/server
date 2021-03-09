@@ -77,7 +77,7 @@ services:
       - WAIT_SLEEP_INTERVAL
       - WAIT_HOST_CONNECT_TIMEOUT
       - SERVICE_ENDPOINT_PORT
-      - SECRET
+      - SECRET=AUTH_SIMPLE_AUTH_CLIENT_SECRET
     depends_on:
       - db
     restart: always
