@@ -35,6 +35,9 @@ services:
       - AUTH_AAD_CHERRYTWIST_API_SCOPE
       - AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI
       - NODE_ENV
+      - AUTH_SIMPLE_AUTH_ISSUER
+      - AUTH_SIMPLE_AUTH_TOKEN_ENDPOINT
+      - AUTH_SIMPLE_AUTH_CLIENT_SECRET
     depends_on:
       - db
       - ct_simple_auth_provider

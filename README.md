@@ -10,7 +10,7 @@ A high level overview of the Design of the Cherrytwist Server is shown below.
 
 ![Component Diagram](docs/diagrams/ct-server-design.png)
 
-Additional destails on the layering and technologies uses within the server are available [here](docs/Configuration.md).
+Additional destails on the layering and technologies uses within the server are available [here](docs/Design.md).
 
 The server primarily interacts via a _*GraphQL api*_' that it exposes. This can be found at the following location: <http://localhost:4000/graphql> (assuming default port).
 
