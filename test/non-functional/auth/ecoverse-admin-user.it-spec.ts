@@ -19,7 +19,7 @@ import {
   getRemoveVariables,
 } from '@test/non-functional/auth/remove-mutations';
 
-import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 let data: TestDataServiceInitResult;
@@ -111,7 +111,7 @@ describe('DDT ecoverse admin user - queries - authorized', () => {
     ${'projectsTagset'}                     | ${''}            | ${notAuthorizedCode}
     ${'projectsAspects'}                    | ${''}            | ${notAuthorizedCode}
   `(
-    "should NOT expect: '$expected' for query: '$query'",
+    'should NOT expect: \'$expected\' for query: \'$query\'',
     async ({ query, idName, expected }) => {
       // Act
       const requestParamsQueryData = {
@@ -156,7 +156,7 @@ describe('DDT ecoverse admin user - Create mutations - authorized', () => {
     ${'createRelationMutation'}            | ${'createRelationVariables'}            | ${'opportunityId'} | ${notAuthorizedCode}
     ${'createAspectOnProjectMutation'}     | ${'createAspectOnProjectVariables'}     | ${'projectId'}     | ${notAuthorizedCode}
   `(
-    "should NOT expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should NOT expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -203,7 +203,7 @@ describe('DDT ecoverse admin user - Update mutations - authorized', () => {
     ${'addTagsOnTagsetMutation'}                | ${'addTagsOnTagsetVariables'}                | ${'tagsetId'}                 | ${notAuthorizedCode}
     ${'replaceTagsOnTagsetMutation'}            | ${'replaceTagsOnTagsetVariables'}            | ${'tagsetId'}                 | ${notAuthorizedCode}
   `(
-    "should NOT expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should NOT expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -238,7 +238,7 @@ describe('DDT ecoverse admin user - Remove mutations - authorized', () => {
     ${'removeChallengeMutation'}   | ${'removeChallengeVariables'}   | ${'removeChallangeId'}   | ${notAuthorizedCode}
     ${'removeUserMutation'}        | ${'removeUserVariables'}        | ${'userId'}              | ${notAuthorizedCode}
   `(
-    "should NOT expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    'should NOT expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {

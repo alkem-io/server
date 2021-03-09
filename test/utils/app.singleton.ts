@@ -5,7 +5,7 @@ import { AppModule } from '@src/app.module';
 import {
   TestDataService,
   TestDataServiceInitResult,
-} from '@utils/data-management/test-data.service';
+} from '@src/services/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
 export class appSingleton {

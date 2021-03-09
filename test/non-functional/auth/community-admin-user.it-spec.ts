@@ -2,9 +2,7 @@ import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import { TestUser } from '@test/utils/token.helper';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import {
-  getQueries,
-} from '@test/non-functional/auth/queries';
+import { getQueries } from '@test/non-functional/auth/queries';
 
 import {
   getCreateMutation,
@@ -21,7 +19,7 @@ import {
   getRemoveVariables,
 } from '@test/non-functional/auth/remove-mutations';
 
-import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
 
 const forbiddenCode = '"code":"FORBIDDEN"';
 let data: TestDataServiceInitResult;
@@ -113,7 +111,7 @@ describe('DDT community admin user - queries - authorized', () => {
     ${'projectsTagset'}                     | ${''}            | ${forbiddenCode}
     ${'projectsAspects'}                    | ${''}            | ${forbiddenCode}
   `(
-    "should expect: '$expected' for query: '$query'",
+    'should expect: \'$expected\' for query: \'$query\'',
     async ({ query, idName, expected }) => {
       // Act
       const requestParamsQueryData = {
@@ -147,7 +145,7 @@ describe('DDT community admin user - Create mutations - authorized', () => {
     ${'createReferenceOnContextMutation'} | ${'createReferenceOnContextVariables'} | ${'contextId'}     | ${forbiddenCode}
     ${'createTagsetOnProfileMutation'}    | ${'createTagsetOnProfileVariables'}    | ${'userProfileId'} | ${forbiddenCode}
   `(
-    "should NOT expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should NOT expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -189,7 +187,7 @@ describe('DDT community admin user - Create mutations - NOT authorized', () => {
     ${'createRelationMutation'}            | ${'createRelationVariables'}            | ${'opportunityId'} | ${forbiddenCode}
     ${'createAspectOnProjectMutation'}     | ${'createAspectOnProjectVariables'}     | ${'projectId'}     | ${forbiddenCode}
   `(
-    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -230,7 +228,7 @@ describe('DDT community admin user - Update mutations - authorized', () => {
     ${'addTagsOnTagsetMutation'}                | ${'addTagsOnTagsetVariables'}                | ${'tagsetId'}                 | ${forbiddenCode}
     ${'replaceTagsOnTagsetMutation'}            | ${'replaceTagsOnTagsetVariables'}            | ${'tagsetId'}                 | ${forbiddenCode}
   `(
-    "should NOT expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should NOT expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -263,7 +261,7 @@ describe('DDT community admin user - Update mutations - NOT authorized', () => {
     ${'updateAspectMutation'}      | ${'updateAspectVariable'}       | ${'aspectId'}      | ${forbiddenCode}
     ${'updateActorMutation'}       | ${'updateActorVariables'}       | ${'actorId'}       | ${forbiddenCode}
   `(
-    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -293,7 +291,7 @@ describe('DDT community admin user - Remove mutations - authorized', () => {
     mutation                | variables                | idName      | expected
     ${'removeUserMutation'} | ${'removeUserVariables'} | ${'userId'} | ${forbiddenCode}
   `(
-    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {
@@ -327,7 +325,7 @@ describe('DDT community admin user - Remove mutations - NOT authorized', () => {
     ${'removeOpportunityMutation'} | ${'removeOpportunityVariables'} | ${'removeOpportunityId'} | ${forbiddenCode}
     ${'removeChallengeMutation'}   | ${'removeChallengeVariables'}   | ${'removeChallangeId'}   | ${forbiddenCode}
   `(
-    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {

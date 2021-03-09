@@ -1,9 +1,7 @@
 import { graphqlRequest } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import {
-  getQueries,
-} from '@test/non-functional/auth/queries';
+import { getQueries } from '@test/non-functional/auth/queries';
 
 import {
   getCreateMutation,
@@ -20,7 +18,7 @@ import {
   getRemoveVariables,
 } from '@test/non-functional/auth/remove-mutations';
 
-import { TestDataServiceInitResult } from '@utils/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 let data: TestDataServiceInitResult;
@@ -80,7 +78,7 @@ describe('DDT anonymous user - queries - Not authorized', () => {
     ${'projectsTagset'}                 | ${''}            | ${notAuthorizedCode}
     ${'projectsAspects'}                | ${''}            | ${notAuthorizedCode}
   `(
-    "should expect: '$expected' for query: '$query'",
+    'should expect: \'$expected\' for query: \'$query\'',
     async ({ query, idName, expected }) => {
       // Act
       const requestParamsQueryData = {
@@ -141,7 +139,7 @@ describe('DDT anonymous user - queries - authorized', () => {
     ${'opportunitiesAspects'}               | ${''}            | ${notAuthorizedCode}
     ${'opportunitiesRelationsName'}         | ${''}            | ${notAuthorizedCode}
   `(
-    "should NOT expect: '$expected' for query: '$query'",
+    'should NOT expect: \'$expected\' for query: \'$query\'',
     async ({ query, idName, expected }) => {
       // Act
       const requestParamsQueryData = {
@@ -180,7 +178,7 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
     ${'createRelationMutation'}            | ${'createRelationVariables'}            | ${'opportunityId'} | ${notAuthorizedCode}
     ${'createAspectOnProjectMutation'}     | ${'createAspectOnProjectVariables'}     | ${'projectId'}     | ${notAuthorizedCode}
   `(
-    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -222,7 +220,7 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
     ${'addTagsOnTagsetMutation'}                | ${'addTagsOnTagsetVariables'}                | ${'tagsetId'}                 | ${notAuthorizedCode}
     ${'replaceTagsOnTagsetMutation'}            | ${'replaceTagsOnTagsetVariables'}            | ${'tagsetId'}                 | ${notAuthorizedCode}
   `(
-    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -254,7 +252,7 @@ describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
     ${'removeChallengeMutation'}   | ${'removeChallengeVariables'}   | ${'removeChallangeId'}   | ${notAuthorizedCode}
     ${'removeUserMutation'}        | ${'removeUserVariables'}        | ${'userId'}              | ${notAuthorizedCode}
   `(
-    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {
