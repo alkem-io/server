@@ -11,8 +11,8 @@ import { IActor } from '@domain/context/actor/actor.interface';
 import {
   EntityNotFoundException,
   GroupNotInitializedException,
-} from '@src/common/error-handling/exceptions';
-import { LogContext } from '@src/core/logging/logging.contexts';
+} from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class ActorGroupService {

@@ -11,11 +11,11 @@ import { ConfigService } from '@nestjs/config';
 import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@src/core/logging/logging.contexts';
-import { AuthenticationException } from '@src/common/error-handling/exceptions/authentication.exception';
-import { TokenException } from '@src/common/error-handling/exceptions/token.exception';
-import { ForbiddenException } from '@src/common/error-handling/exceptions/forbidden.exception';
-import { CherrytwistErrorStatus } from '@src/common/error-handling/enums/cherrytwist.error.status';
+import { LogContext } from '@common/enums';
+import { AuthenticationException } from '@common/exceptions/authentication.exception';
+import { TokenException } from '@common/exceptions/token.exception';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
+import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
 import { UserInfo } from '@src/core/authentication/user-info';
 import { AuthorizationRoles } from './authorization.roles';
 

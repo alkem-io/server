@@ -1,8 +1,8 @@
 import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ForbiddenException } from '@src/common/error-handling/exceptions/forbidden.exception';
-import { LogContext } from '@src/core/logging/logging.contexts';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
+import { LogContext } from '@common/enums';
 import { DataManagementService } from './data-management.service';
 
 @Controller('data-management')

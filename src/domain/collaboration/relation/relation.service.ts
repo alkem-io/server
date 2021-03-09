@@ -4,8 +4,8 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
-} from '@src/common/error-handling/exceptions';
-import { LogContext } from '@src/core/logging/logging.contexts';
+} from '@common/exceptions';
+import { LogContext } from '@common/enums';
 import { RelationInput } from './relation.dto';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';

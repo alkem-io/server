@@ -12,14 +12,14 @@ import { Repository } from 'typeorm';
 import fs from 'fs';
 import * as defaultRoles from '@templates/authorisation-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
-import { LogContext } from '@src/core/logging/logging.contexts';
+import { Profiling } from '@common/decorators';
+import { LogContext } from '@common/enums';
 import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
-import { EntityNotInitializedException } from '@src/common/error-handling/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '@src/common/error-handling/exceptions/validation.exception';
-import { BaseException } from '@src/common/error-handling/exceptions/base.exception';
-import { EntityNotFoundException } from '@src/common/error-handling/exceptions/entity.not.found.exception';
-import { CherrytwistErrorStatus } from '@src/common/error-handling/enums/cherrytwist.error.status';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { ValidationException } from '@common/exceptions/validation.exception';
+import { BaseException } from '@common/exceptions/base.exception';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
 @Injectable()
 export class BootstrapService {
   constructor(

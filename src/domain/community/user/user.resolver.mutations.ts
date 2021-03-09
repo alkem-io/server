@@ -1,14 +1,14 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@src/core/authorization/roles.decorator';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
+import { Profiling } from '@src/common/decorators';
 import { UserInput } from './user.dto';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { UserService } from './user.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { SelfManagement } from '@src/core/authorization/self.management.decorator';
+import { SelfManagement } from '@common/decorators';
 
 @Resolver(() => User)
 export class UserResolverMutations {

@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@src/core/authorization/roles.decorator';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
+import { Profiling } from '@src/common/decorators';
 import { ReferenceInput } from '@domain/common/reference/reference.dto';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';

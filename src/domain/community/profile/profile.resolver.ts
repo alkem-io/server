@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Mutation, Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
-import { Roles } from '@src/core/authorization/roles.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { ReferenceInput } from '@domain/common/reference/reference.dto';
 import { Reference } from '@domain/common/reference/reference.entity';
@@ -10,7 +10,7 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ProfileService } from './profile.service';
 import { ProfileInput } from './profile.dto';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
+import { Profiling } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 
 @Resolver()

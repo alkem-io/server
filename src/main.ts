@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 import './config/aliases';
 import { IServiceConfig } from './common/interfaces/service.config.interface';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
-import { HttpExceptionsFilter } from './common/error-handling/http.exceptions.filter';
+import { HttpExceptionsFilter } from './core/error-handling/http.exceptions.filter';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
 

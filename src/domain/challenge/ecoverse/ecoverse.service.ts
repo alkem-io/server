@@ -27,8 +27,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotInitializedException,
   ValidationException,
-} from '@src/common/error-handling/exceptions';
-import { LogContext } from '@src/core/logging/logging.contexts';
+} from '@common/exceptions';
+import { LogContext } from '@common/enums';
 import { ApolloError } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';

@@ -7,10 +7,10 @@ import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@src/core/authorization/roles.decorator';
-import { GroupNotInitializedException } from '@src/common/error-handling/exceptions';
-import { LogContext } from '@src/core/logging/logging.contexts';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
+import { GroupNotInitializedException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 

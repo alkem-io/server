@@ -1,8 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@src/core/authorization/roles.decorator';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
+import { Profiling } from '@src/common/decorators';
 import { AspectInput } from '@domain/context/aspect/aspect.dto';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { IAspect } from '@domain/context/aspect/aspect.interface';

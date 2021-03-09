@@ -9,6 +9,8 @@ moduleAlias.addAliases({
   '@interfaces': path.join(rootCommonPath, 'interfaces'),
   '@constants': path.join(rootCommonPath, 'constants'),
   '@domain': path.join(rootPath, 'domain'),
+  '@common': path.join(rootCommonPath),
+  '@core': path.join(rootCorePath),
   '@config': path.join(rootCorePath, 'config'),
   '@templates': path.join(rootServicesPath, 'configuration', 'templates'),
   '@src': rootPath,

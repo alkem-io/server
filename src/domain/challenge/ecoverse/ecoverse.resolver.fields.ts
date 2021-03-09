@@ -4,8 +4,8 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@src/core/authorization/roles.decorator';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
+import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 
 @Resolver()

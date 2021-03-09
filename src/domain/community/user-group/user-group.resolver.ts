@@ -1,11 +1,11 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Roles } from '@src/core/authorization/roles.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
+import { Profiling } from '@src/common/decorators';
 import { UserGroupInput } from './user-group.dto';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 

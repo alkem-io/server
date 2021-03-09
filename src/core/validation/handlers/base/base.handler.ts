@@ -13,8 +13,8 @@ import { ReferenceInput } from '@domain/common/reference/reference.dto';
 import { RelationInput } from '@domain/collaboration/relation/relation.dto';
 import { TagsetInput } from '@domain/common/tagset/tagset.dto';
 import { UserInput } from '@domain/community/user/user.dto';
-import { ValidationException } from '@src/common/error-handling/exceptions';
-import { LogContext } from '@src/core/logging/logging.contexts';
+import { ValidationException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';
 import { AbstractHandler } from './abstract.handler';
 

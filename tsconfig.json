@@ -19,6 +19,8 @@
       "@interfaces/*": ["src/common/interfaces/*"],
       "@domain/*": ["src/domain/*"],
       "@config/*": ["src/config/*"],
+      "@common/*": ["src/common/*"],
+      "@core/*": ["src/core/*"],
       "@constants": ["src/common/constants"],
       "@constants/*": ["src/common/constants/*"],
       "@templates/*": ["src/services/configuration/templates/*"],

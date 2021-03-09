@@ -8,12 +8,12 @@ import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TagsetInput } from './tagset.dto';
-import { LogContext } from '@src/core/logging/logging.contexts';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   ValidationException,
   EntityNotInitializedException,
-} from '@src/common/error-handling/exceptions';
+} from '@common/exceptions';
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 
 @Injectable()

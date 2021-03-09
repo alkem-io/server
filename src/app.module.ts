@@ -32,16 +32,16 @@ import { WinstonConfigService } from '@src/config/winston.config';
 import loggingConfig from '@src/config/logging.config';
 import { SearchModule } from '@src/services/search/search.module';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
-import { HttpExceptionsFilter } from '@src/common/error-handling/http.exceptions.filter';
+import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import aadRopcConfig from '@src/config/aad.ropc.config';
 import { MetadataModule } from '@src/services/metadata/metadata.module';
 import { KonfigModule } from '@src/services/configuration/config/config.module';
 import aadOboConfig from '@src/config/aad.obo.config';
-import { ValidationPipe } from '@src/core/validation/validation.pipe';
+import { ValidationPipe } from '@common/pipes/validation.pipe';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { NVPModule } from '@domain/common/nvp/nvp.module';
-import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
+import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 
 @Module({
   imports: [
@@ -85,8 +85,8 @@ import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
       }),
     }),
     AuthenticationModule,
-    ApplicationModule,
     ApplicationFactoryModule,
+    ApplicationModule,
     NVPModule,
     AgreementModule,
     ChallengeModule,

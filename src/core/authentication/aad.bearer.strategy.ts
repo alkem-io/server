@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BearerStrategy } from 'passport-azure-ad';
-import { AuthenticationException } from '@src/common/error-handling/exceptions';
+import { AuthenticationException } from '@common/exceptions';
 import { ITokenPayload } from 'passport-azure-ad';
 import { IAzureADConfig } from '@src/common/interfaces/aad.config.interface';
 import { AuthenticationService } from './authentication.service';

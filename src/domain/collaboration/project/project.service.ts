@@ -6,8 +6,8 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
-} from '@src/common/error-handling/exceptions';
-import { LogContext } from '@src/core/logging/logging.contexts';
+} from '@common/exceptions';
+import { LogContext } from '@common/enums';
 import { AspectInput } from '@domain/context/aspect/aspect.dto';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';

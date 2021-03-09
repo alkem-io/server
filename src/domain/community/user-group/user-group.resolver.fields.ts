@@ -1,12 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@src/core/authorization/roles.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from './user-group.entity';
 import { UserGroupService } from './user-group.service';
 import { UserGroupParent } from './user-group-parent.dto';
-import { Profiling } from '@src/core/logging/logging.profiling.decorator';
+import { Profiling } from '@src/common/decorators';
 import { User } from '@domain/community/user/user.entity';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 

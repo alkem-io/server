@@ -7,8 +7,8 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
-import { LogContext } from '@src/core/logging/logging.contexts';
-import { ValidationException } from '@src/common/error-handling/exceptions/validation.exception';
+import { LogContext } from '@common/enums';
+import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 
 enum SearchEntityTypes {

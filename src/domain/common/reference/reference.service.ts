@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '@src/common/error-handling/exceptions';
-import { LogContext } from '@src/core/logging/logging.contexts';
+import { EntityNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 import { ReferenceInput } from './reference.dto';
 import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';

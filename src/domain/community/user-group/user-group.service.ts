@@ -13,7 +13,7 @@ import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@src/core/logging/logging.contexts';
+import { LogContext } from '@common/enums';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { UserGroupParent } from './user-group-parent.dto';
 import {
@@ -22,7 +22,7 @@ import {
   NotSupportedException,
   GroupNotInitializedException,
   EntityNotInitializedException,
-} from '@src/common/error-handling/exceptions';
+} from '@common/exceptions';
 import { UserGroupInput } from './user-group.dto';
 
 @Injectable()

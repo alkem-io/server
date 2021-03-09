@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto';
-import { ValidationException } from '@src/common/error-handling/exceptions';
-import { LogContext } from '@src/core/logging/logging.contexts';
+import { ValidationException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';
 import { AbstractHandler } from './base/abstract.handler';
 
