@@ -1,8 +1,13 @@
 # Developing with the server
 
-The easiest way to get going with custom development of the Cherrytwist Server is to leverage the Docker Compose script as detailed in the [Running the server](Running.md) document, and then disable the Server container! Please consult your docker runtime adminstration panel for disabling the Cherrytwist Server container.
+The easiest way to get going with custom development of the Cherrytwist Server is to leverage the Docker Compose script as detailed in the [Running the server](Running.md) document.
 
-This then leaves the database container and simple auth provider available and properly configured (nice!).
+In this setup you are then using the docker composed stack for:
+
+- Database container
+- Simple auth provider
+
+Note that the CT Server from the docker composed stack is listening on port 4001 instead of port 4000, so it will not collide with running a second server locally - but do keep in mind those two server instances are sharing the same data / authentication provider.
 
 Assuming you have a suitable database server and authentication provider available then please follow the following steps:
 
