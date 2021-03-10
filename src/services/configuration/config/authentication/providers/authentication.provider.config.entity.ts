@@ -1,10 +1,8 @@
 import { AuthenticationProviderConfigs } from '@common/enums';
-import { ObjectType, Field, createUnionType } from '@nestjs/graphql';
+import { createUnionType, Field, ObjectType } from '@nestjs/graphql';
 import { AadAuthProviderConfig } from './aad/aad.config.entity';
-import { IAadAuthProviderConfig } from './aad/aad.config.interface';
 import { IAuthenticationProviderConfig } from './authentication.provider.config.interface';
 import { SimpleAuthProviderConfig } from './simple-auth/simple-auth.provider.config.entity';
-import { ISimpleAuthProviderConfig } from './simple-auth/simple-auth.provider.config.interface';
 
 @ObjectType()
 export class AuthenticationProviderConfig
@@ -38,7 +36,7 @@ export class AuthenticationProviderConfig
     nullable: false,
     description: 'Configuration of the authenticaiton provider',
   })
-  config?: IAadAuthProviderConfig | ISimpleAuthProviderConfig;
+  config?: typeof AuthenticationProviderConfigUnion;
 }
 
 export const AuthenticationProviderConfigUnion = createUnionType({
