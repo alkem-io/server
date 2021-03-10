@@ -1,19 +1,19 @@
 version: '3.4'
 
 networks:
-  ct:
+  ct_server_dev:
 
 volumes:
-  ct_server:
-  ct_server_db:
+  ct_server_dev:
+  ct_server_dev_db:
 
 services:
-  server.node:
-    container_name: ct_server
-    image: server.node
+  ctserver.node:
+    container_name: ct_server_dev
+    image: ctserver.node
     build: .
     networks:
-      - ct
+      - ct_server_dev
     environment:
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
@@ -35,20 +35,24 @@ services:
       - AUTH_AAD_CHERRYTWIST_API_SCOPE
       - AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI
       - NODE_ENV
+      - AUTH_SIMPLE_AUTH_ISSUER
+      - AUTH_SIMPLE_AUTH_TOKEN_ENDPOINT
+      - AUTH_SIMPLE_AUTH_CLIENT_SECRET
     depends_on:
       - db
+      - ct_simple_auth_provider
     restart: always
     ports:
-      - 4000:4000
-    command: sh -c "/wait && npm run migration:run && npm run start:prod"
+      - 4001:4000
+    command: sh -c "/wait && npm run migration:run && npm run start"
     volumes:
-      - ct_server:/usr/src/app/config
+      - ct_server_dev:/usr/src/app/config
 
   db:
-    container_name: ct_server_db
+    container_name: ct_server_dev_db
     image: mysql:8.0.11
     networks:
-      - ct
+      - ct_server_dev
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     ports:
@@ -57,4 +61,26 @@ services:
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
     volumes:
-      - ct_server_db:/var/lib/mysql
+      - ct_server_dev_db:/var/lib/mysql
+
+  ct_simple_auth_provider:
+    container_name: ct_server_dev_simple_auth
+    image: cherrytwist/simple-auth:v0.1.5
+    networks:
+      - ct_server_dev
+    environment:
+      - DATABASE_HOST
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE=ct_auth_db
+      - WAIT_HOSTS
+      - WAIT_HOSTS_TIMEOUT
+      - WAIT_SLEEP_INTERVAL
+      - WAIT_HOST_CONNECT_TIMEOUT
+      - SERVICE_ENDPOINT_PORT
+      - SECRET=AUTH_SIMPLE_AUTH_CLIENT_SECRET
+    depends_on:
+      - db
+    restart: always
+    ports:
+      - 3003:3002
+    command: sh -c "/wait && /create_db.sh && npm run start:prod"
