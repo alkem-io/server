@@ -1,4 +1,3 @@
-import { Application } from '@domain/community/application/application.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -7,6 +6,7 @@ import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
+import { Community } from '@domain/community/community';
 
 @Resolver()
 export class EcoverseResolverFields {
@@ -14,18 +14,15 @@ export class EcoverseResolverFields {
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
-  @Roles(
-    AuthorizationRoles.GlobalAdmins,
-    AuthorizationRoles.EcoverseAdmins,
-    AuthorizationRoles.CommunityAdmins
-  )
+  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
-  @ResolveField('applications', () => [Application], {
-    nullable: false,
-    description: 'Application available for this ecoverese.',
+  @ResolveField('community', () => Community, {
+    nullable: true,
+    description: 'The community for the ecoverse.',
   })
   @Profiling.api
-  async applications(@Parent() _ecoverse: Ecoverse) {
-    return await this.ecoverseService.getApplications();
+  async community(@Parent() ecoverse: Ecoverse) {
+    const community = await this.ecoverseService.loadCommunity(ecoverse.id);
+    return community;
   }
 }

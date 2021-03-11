@@ -1,4 +1,3 @@
-import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
 import { IProfile } from '@domain/community/profile/profile.interface';
 import { IUser } from '@domain/community/user/user.interface';
 
@@ -8,6 +7,5 @@ export interface IUserGroup {
   members?: IUser[];
   focalPoint?: IUser | null; // because of https://github.com/typeorm/typeorm/issues/5454
   profile?: IProfile;
-  ecoverse?: IEcoverse;
   includeInSearch: boolean;
 }

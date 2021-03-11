@@ -13,8 +13,6 @@ import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Profiling } from '@src/common/decorators';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { UpdateChallengeInput } from './update-challenge.dto';
-import { Application } from '@domain/community/application/application.entity';
-import { ApplicationInput } from '@domain/community/application/application.dto';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 
 @Resolver()
@@ -22,23 +20,6 @@ export class ChallengeResolverMutations {
   constructor(
     @Inject(ChallengeService) private challengeService: ChallengeService
   ) {}
-
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
-    description: 'Creates a new user group for the challenge with the given id',
-  })
-  @Profiling.api
-  async createGroupOnChallenge(
-    @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
-    @Args({ name: 'groupName', type: () => String }) groupName: string
-  ): Promise<IUserGroup> {
-    const group = await this.challengeService.createGroup(
-      challengeID,
-      groupName
-    );
-    return group;
-  }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
@@ -86,17 +67,36 @@ export class ChallengeResolverMutations {
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @Mutation(() => Boolean, {
     description:
-      'Adds the user with the given identifier as a member of the specified challenge',
+      'Adds the specified organisation as a lead for the specified Community',
   })
   @Profiling.api
-  async addUserToChallenge(
-    @Args('userID') userID: number,
+  async addChallengeLead(
+    @Args('organisationID') organisationID: number,
     @Args('challengeID') challengeID: number
-  ): Promise<IUserGroup> {
-    const group = await this.challengeService.addMember(userID, challengeID);
-    return group;
+  ): Promise<boolean> {
+    return await this.challengeService.addChallengeLead(
+      challengeID,
+      organisationID
+    );
+  }
+
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Remove the specified organisation as a lead for the specified Challenge',
+  })
+  @Profiling.api
+  async removeChallengeLead(
+    @Args('organisationID') organisationID: number,
+    @Args('challengeID') chalengeID: number
+  ): Promise<boolean> {
+    return await this.challengeService.removeChallengeLead(
+      chalengeID,
+      organisationID
+    );
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -115,52 +115,5 @@ export class ChallengeResolverMutations {
       opportunityID
     );
     return group;
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Adds the specified organisation as a lead for the specified challenge',
-  })
-  @Profiling.api
-  async addChallengeLead(
-    @Args('organisationID') organisationID: number,
-    @Args('challengeID') challengeID: number
-  ): Promise<boolean> {
-    return await this.challengeService.addChallengeLead(
-      challengeID,
-      organisationID
-    );
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Remove the specified organisation as a lead for the specified challenge',
-  })
-  @Profiling.api
-  async removeChallengeLead(
-    @Args('organisationID') organisationID: number,
-    @Args('challengeID') challengeID: number
-  ): Promise<boolean> {
-    return await this.challengeService.removeChallengeLead(
-      challengeID,
-      organisationID
-    );
-  }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Application, {
-    description: 'Create application to join this challenge',
-  })
-  @Profiling.api
-  async createApplicationForChallenge(
-    @Args('ID') id: number,
-    @Args('applicationData') applicationData: ApplicationInput
-  ): Promise<Application> {
-    return await this.challengeService.createApplication(id, applicationData);
   }
 }

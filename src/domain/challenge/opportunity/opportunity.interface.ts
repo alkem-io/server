@@ -3,8 +3,7 @@ import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { IContext } from '@domain/context/context/context.interface';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { Application } from '@domain/community/application/application.entity';
+import { ICommunity } from '@domain/community/community';
 
 export interface IOpportunity {
   id: number;
@@ -12,12 +11,10 @@ export interface IOpportunity {
   textID: string;
   state: string;
   context?: IContext;
+  community?: ICommunity;
   projects?: IProject[];
   actorGroups?: IActorGroup[];
-  groups?: IUserGroup[];
   restrictedActorGroupNames: string[];
-  restrictedGroupNames: string[];
   aspects?: IAspect[];
   relations?: IRelation[];
-  applications?: Application[];
 }

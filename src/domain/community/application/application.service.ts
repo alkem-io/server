@@ -4,25 +4,25 @@ import {
   ApplicationStatus,
 } from '@domain/community/application/application.entity';
 import { ApplicationFactoryService } from '@domain/community/application/application.factory';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ApolloError } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { getManager, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
+import { CommunityService } from '../community';
 
 @Injectable()
 export class ApplicationService {
   constructor(
     @InjectRepository(Application)
     private applicationReposity: Repository<Application>,
-    private ecoverseService: EcoverseService,
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
+    private applicationService: ApplicationService,
+    private communityService: CommunityService,
     private applicationFactoryService: ApplicationFactoryService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -48,26 +48,26 @@ export class ApplicationService {
     return (await this.applicationReposity.find()) || [];
   }
 
-  async getApplicationOrFail(id: number): Promise<Application> {
-    const app = await this.applicationReposity.findOne(id);
-    if (!app)
-      throw new EntityNotFoundException(
-        `Application with ID ${id} can not be found!`,
-        LogContext.COMMUNITY
-      );
-    return app;
-  }
-
-  async approveApplication(id: number) {
-    const application = await this.applicationReposity.findOne({
-      where: { id },
-    });
-
+  async getApplicationOrFail(
+    applicationId: number,
+    options?: FindOneOptions<Application>
+  ): Promise<Application> {
+    const application = await this.applicationReposity.findOne(
+      { id: applicationId },
+      options
+    );
     if (!application)
       throw new EntityNotFoundException(
-        `Application with id ${id} does not exist.`,
+        `Application with ID ${applicationId} can not be found!`,
         LogContext.COMMUNITY
       );
+    return application;
+  }
+
+  async approveApplication(applicationId: number) {
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationId
+    );
 
     if (application.status == ApplicationStatus.approved) {
       throw new ApolloError('Application has already been approved!');
@@ -75,34 +75,15 @@ export class ApplicationService {
       throw new ApolloError('Application has already been rejected!');
     }
 
-    const entityManager = getManager();
-
-    const rawApplication = await entityManager.query(
-      `select * from (
-        select a.*, 'ecoverse' as parent, ecoverseId as parentId from application a
-        inner join ecoverse_application on a.id=applicationId
-        union all
-        select a.*, 'challenge' as parent, challengeId as parentId from application a
-        inner join challenge_application on a.id=applicationId
-        union all
-        select a.*, 'opportunity' as parent, opportunityId as parentId from application a
-        inner join opportunity_application on a.id=applicationId) as app
-        where app.id = ?;`,
-      [id]
+    if (!application.community)
+      throw new RelationshipNotFoundException(
+        `Unable to load community for application ${applicationId} `,
+        LogContext.COMMUNITY
+      );
+    await this.communityService.addMember(
+      application.user.id,
+      application.community?.id
     );
-
-    const { parent, parentId } = rawApplication[0] as {
-      parent: 'ecoverse' | 'challenge' | 'opportunity';
-      parentId: number;
-    };
-
-    if (parent === 'ecoverse') {
-      await this.ecoverseService.addMember(application.user.id);
-    } else if (parent === 'challenge') {
-      await this.challengeService.addMember(application.user.id, parentId);
-    } else if (parent === 'opportunity') {
-      await this.opportunityService.addMember(application.user.id, parentId);
-    }
 
     application.status = ApplicationStatus.approved;
 

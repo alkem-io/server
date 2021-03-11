@@ -1,4 +1,3 @@
-import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
@@ -11,11 +10,13 @@ import { Ecoverse } from './ecoverse.entity';
 import { EcoverseResolverMutations } from './ecoverse.resolver.mutations';
 import { EcoverseResolverQueries } from './ecoverse.resolver.queries';
 import { EcoverseService } from './ecoverse.service';
+import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
     ChallengeModule,
     ContextModule,
+    CommunityModule,
     TagsetModule,
     OrganisationModule,
     UserGroupModule,
@@ -24,7 +25,6 @@ import { EcoverseService } from './ecoverse.service';
     UserModule,
     TypeOrmModule.forFeature([Ecoverse]),
     UserModule,
-    ApplicationFactoryModule,
   ],
   providers: [
     EcoverseService,

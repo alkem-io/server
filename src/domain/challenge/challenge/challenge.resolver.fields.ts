@@ -1,18 +1,14 @@
-import { Application } from '@domain/community/application/application.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { User } from '@domain/community/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
-import { GroupNotInitializedException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
+import { Community } from '@domain/community/community';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -23,14 +19,14 @@ export class ChallengeResolverFields {
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
-  @ResolveField('groups', () => [UserGroup], {
+  @ResolveField('community', () => Community, {
     nullable: true,
-    description: 'Groups of users related to a challenge.',
+    description: 'The community for the challenge.',
   })
   @Profiling.api
-  async groups(@Parent() challenge: Challenge) {
-    const groups = await this.challengeService.loadGroups(challenge);
-    return groups;
+  async community(@Parent() challenge: Challenge) {
+    const community = await this.challengeService.loadCommunity(challenge.id);
+    return community;
   }
 
   @ResolveField('opportunities', () => [Opportunity], {
@@ -43,39 +39,5 @@ export class ChallengeResolverFields {
       challenge
     );
     return opportunities;
-  }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('contributors', () => [User], {
-    nullable: true,
-    description: 'All users that are contributing to this challenge.',
-  })
-  @Profiling.api
-  async contributors(@Parent() challenge: Challenge) {
-    const group = await this.challengeService.getMembersGroup(challenge);
-    const members = group.members;
-    if (!members)
-      throw new GroupNotInitializedException(
-        `Members group not initialised on challenge: ${challenge.name}`,
-        LogContext.CHALLENGES
-      );
-    return members;
-  }
-
-  @Roles(
-    AuthorizationRoles.GlobalAdmins,
-    AuthorizationRoles.EcoverseAdmins,
-    AuthorizationRoles.CommunityAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('applications', () => [Application], {
-    nullable: false,
-    description: 'Application available for this ecoverese.',
-  })
-  @Profiling.api
-  async applications(@Parent() challenge: Challenge) {
-    const apps = await this.challengeService.getApplications(challenge);
-    return apps || [];
   }
 }

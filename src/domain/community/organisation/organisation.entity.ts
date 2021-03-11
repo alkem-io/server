@@ -10,7 +10,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { DID } from '@domain/agent/did/did.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
@@ -19,6 +18,7 @@ import {
   UserGroup,
 } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
+import { Challenge } from '@domain/challenge';
 
 @Entity()
 @ObjectType()

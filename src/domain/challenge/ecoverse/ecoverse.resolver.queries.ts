@@ -1,4 +1,3 @@
-import { Application } from '@domain/community/application/application.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
@@ -9,17 +8,8 @@ import { IOrganisation } from '@domain/community/organisation/organisation.inter
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { User } from '@domain/community/user/user.entity';
-import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 
@@ -27,8 +17,6 @@ import { EcoverseService } from './ecoverse.service';
 export class EcoverseResolverQueries {
   constructor(
     @Inject(EcoverseService) private ecoverseService: EcoverseService,
-    private userService: UserService,
-    private groupService: UserGroupService,
     private organisationService: OrganisationService,
     private challengeService: ChallengeService
   ) {}
@@ -59,57 +47,6 @@ export class EcoverseResolverQueries {
   async context(): Promise<IContext> {
     return this.ecoverseService.getContext();
   }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @Query(() => [User], {
-    nullable: false,
-    description: 'The members of this ecoverse',
-  })
-  @Profiling.api
-  async members(): Promise<IUser[]> {
-    return await this.ecoverseService.getMembers();
-  }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @Query(() => [UserGroup], {
-    nullable: false,
-    description: 'All groups at the ecoverse level',
-  })
-  @Profiling.api
-  async groups(): Promise<IUserGroup[]> {
-    const groups = await this.ecoverseService.getGroups();
-    return groups;
-  }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @Query(() => [UserGroup], {
-    nullable: false,
-    description: 'All groups that have the provided tag',
-  })
-  @Profiling.api
-  async groupsWithTag(@Args('tag') tag: string): Promise<IUserGroup[]> {
-    const groups = await this.ecoverseService.getGroupsWithTag(tag);
-    return groups;
-  }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @Query(() => UserGroup, {
-    nullable: false,
-    description:
-      'The user group with the specified id anywhere in the ecoverse',
-  })
-  @Profiling.api
-  async group(@Args('ID') id: number): Promise<IUserGroup> {
-    const group = await this.groupService.getUserGroupOrFail(id, {
-      relations: ['members', 'focalPoint'],
-    });
-    return group;
-  }
-
   @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
   @Profiling.api
   async challenges(): Promise<IChallenge[]> {
@@ -156,15 +93,5 @@ export class EcoverseResolverQueries {
   @Profiling.api
   async tagset(): Promise<ITagset> {
     return await this.ecoverseService.getTagset();
-  }
-
-  @Query(() => [Application], {
-    nullable: false,
-    description: 'All applications for this ecoverse',
-  })
-  @Profiling.api
-  async applications(): Promise<Application[]> {
-    const applications = await this.ecoverseService.getApplications();
-    return applications;
   }
 }

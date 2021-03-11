@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { UserGroupResolverMutations } from './user-group.resolver.mutations';
+import { CommunityResolverMutations } from './community.resolver.mutations';
 
-describe('UserGroupResolver', () => {
-  let resolver: UserGroupResolverMutations;
+describe('CommunityResolver', () => {
+  let resolver: CommunityResolverMutations;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    resolver = module.get<UserGroupResolverMutations>(
-      UserGroupResolverMutations
+    resolver = module.get<CommunityResolverMutations>(
+      CommunityResolverMutations
     );
   });
 

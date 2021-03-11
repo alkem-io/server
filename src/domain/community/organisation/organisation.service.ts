@@ -5,7 +5,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -17,7 +16,6 @@ import { IOrganisation } from './organisation.interface';
 export class OrganisationService {
   constructor(
     private userGroupService: UserGroupService,
-    private tagsetService: TagsetService,
     private profileService: ProfileService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>,

@@ -1,21 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { UserGroupResolverMutations } from './user-group.resolver.mutations';
+import { CommunityService } from './community.service';
 
-describe('UserGroupResolver', () => {
-  let resolver: UserGroupResolverMutations;
+describe('CommunityService', () => {
+  let service: CommunityService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    resolver = module.get<UserGroupResolverMutations>(
-      UserGroupResolverMutations
-    );
+    service = module.get<CommunityService>(CommunityService);
   });
 
   it('should be defined', () => {
-    expect(resolver).toBeDefined();
+    expect(service).toBeDefined();
   });
 });

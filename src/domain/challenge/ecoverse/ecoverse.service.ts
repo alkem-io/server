@@ -1,6 +1,3 @@
-import { ApplicationInput } from '@domain/community/application/application.dto';
-import { Application } from '@domain/community/application/application.entity';
-import { ApplicationFactoryService } from '@domain/community/application/application.factory';
 import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
@@ -18,34 +15,36 @@ import {
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ApolloError } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
+import {
+  Community,
+  CommunityService,
+  ICommunity,
+} from '@domain/community/community';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
     private challengeService: ChallengeService,
-    private userService: UserService,
-    private userGroupService: UserGroupService,
     private contextService: ContextService,
+    private communityService: CommunityService,
     private tagsetService: TagsetService,
-    private applicationFactoryService: ApplicationFactoryService,
+    private userGroupService: UserGroupService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -54,18 +53,6 @@ export class EcoverseService {
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
   async initialiseMembers(ecoverse: IEcoverse): Promise<IEcoverse> {
-    if (!ecoverse.groups) {
-      ecoverse.groups = [];
-    }
-
-    // Check that the mandatory groups for a challenge are created
-    await this.userGroupService.addMandatoryGroups(
-      ecoverse,
-      ecoverse.restrictedGroupNames
-    );
-    // Disable searching on the mandatory platform groups
-    ecoverse.groups.forEach(group => (group.includeInSearch = false));
-
     if (!ecoverse.challenges) {
       ecoverse.challenges = [];
     }
@@ -82,6 +69,21 @@ export class EcoverseService {
     if (!ecoverse.context) {
       ecoverse.context = new Context();
       await this.contextService.initialiseMembers(ecoverse.context);
+    }
+
+    if (!ecoverse.community) {
+      ecoverse.community = new Community(ecoverse.name, [
+        RestrictedGroupNames.Members,
+        RestrictedGroupNames.EcoverseAdmins,
+        RestrictedGroupNames.GlobalAdmins,
+        RestrictedGroupNames.CommunityAdmins,
+      ]);
+
+      this.communityService.initialiseMembers(ecoverse.community);
+      // Disable searching on the mandatory platform groups
+      ecoverse.community.groups?.forEach(
+        group => (group.includeInSearch = false)
+      );
     }
 
     if (!ecoverse.host) {
@@ -116,50 +118,6 @@ export class EcoverseService {
     }
     return ecoverse.id;
   }
-
-  async getMembers(): Promise<IUser[]> {
-    try {
-      const ecoverse = await this.getEcoverse({
-        relations: ['groups'],
-      });
-      const membersGroup = await this.userGroupService.getGroupByName(
-        ecoverse,
-        RestrictedGroupNames.Members
-      );
-
-      return await this.userGroupService.getMembers(membersGroup.id);
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  async getGroups(): Promise<IUserGroup[]> {
-    try {
-      const ecoverse = await this.getEcoverse();
-      const groups = await this.userGroupService.getGroups(ecoverse);
-      return groups;
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  async getGroupsWithTag(tagFilter: string): Promise<IUserGroup[]> {
-    const groups = await this.getGroups();
-    return groups.filter(g => {
-      if (!tagFilter) {
-        return true;
-      }
-
-      if (!g.profile) return false;
-
-      const tagset = this.tagsetService.defaultTagset(g.profile);
-
-      return (
-        tagset !== undefined && this.tagsetService.hasTag(tagset, tagFilter)
-      );
-    });
-  }
-
   async getChallenges(): Promise<IChallenge[]> {
     const ecoverseId = await this.getEcoverseId();
     const challanges = await this.challengeService.getChallenges(ecoverseId);
@@ -191,31 +149,6 @@ export class EcoverseService {
   async getHost(): Promise<IOrganisation> {
     const ecoverse = await this.getEcoverse();
     return ecoverse.host as IOrganisation;
-  }
-
-  async createGroup(groupName: string): Promise<IUserGroup> {
-    this.logger.verbose?.(
-      `Adding userGroup (${groupName}) to ecoverse`,
-      LogContext.CHALLENGES
-    );
-
-    const ecoverse = await this.getEcoverse({
-      join: {
-        alias: 'ecoverse',
-        leftJoinAndSelect: {
-          groups: 'ecoverse.groups',
-        },
-      },
-    });
-
-    const group = await this.userGroupService.addGroupWithName(
-      ecoverse,
-      groupName
-    );
-
-    await this.ecoverseRepository.save(ecoverse);
-
-    return group;
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
@@ -316,36 +249,19 @@ export class EcoverseService {
     user: IUser,
     groupName: string
   ): Promise<boolean> {
-    if (!(await this.groupIsRestricted(groupName)))
-      throw new ValidationException(
-        `${groupName} is not a restricted group name!`,
+    const ecoverse = await this.getEcoverse();
+    const community = ecoverse.community;
+    if (!community) {
+      throw new RelationshipNotFoundException(
+        `Unable to load community for ecoverse ${ecoverse.id}`,
         LogContext.COMMUNITY
       );
-
-    const ctverse = await this.getEcoverse({ relations: ['groups'] });
-    const adminsGroup = await this.userGroupService.getGroupByName(
-      ctverse,
+    }
+    return await this.communityService.addUserToRestrictedGroup(
+      community.id,
+      user,
       groupName
     );
-
-    if (await this.userGroupService.addUserToGroup(user, adminsGroup)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  async groupIsRestricted(groupName: string): Promise<boolean> {
-    if (
-      [
-        RestrictedGroupNames.EcoverseAdmins as string,
-        RestrictedGroupNames.CommunityAdmins as string,
-        RestrictedGroupNames.GlobalAdmins as string,
-        RestrictedGroupNames.Members as string,
-      ].includes(groupName)
-    )
-      return true;
-    return false;
   }
 
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
@@ -378,53 +294,17 @@ export class EcoverseService {
     return ecoverse;
   }
 
-  async getApplications(): Promise<Application[]> {
+  // Loads the challenges into the ecoverse entity if not already present
+  async loadCommunity(ecoverseId: number): Promise<ICommunity> {
     const ecoverse = await this.getEcoverse({
-      relations: ['applications'],
+      relations: ['community'],
     });
-
-    return ecoverse.applications || [];
-  }
-
-  async createApplication(applicationData: ApplicationInput) {
-    const ecoverse = await this.getEcoverse({
-      relations: ['applications'],
-    });
-
-    const applications = await this.getApplications();
-    const existingApplication = applications.find(
-      x => x.user.id === applicationData.userId
-    );
-
-    if (existingApplication) {
-      throw new ApolloError(
-        `An application for user ${existingApplication.user.email} already exists. Application status: ${existingApplication.status}`
+    const community = ecoverse.community;
+    if (!community)
+      throw new RelationshipNotFoundException(
+        `Unable to load community for ecoverse ${ecoverseId}`,
+        LogContext.COMMUNITY
       );
-    }
-
-    const application = await this.applicationFactoryService.createApplication(
-      applicationData
-    );
-
-    ecoverse.applications?.push(application);
-    await this.ecoverseRepository.save(ecoverse);
-    return application;
-  }
-
-  async addMember(userID: number): Promise<IUserGroup> {
-    const user = await this.userService.getUserByIdOrFail(userID);
-
-    const ecoverse = await this.getEcoverse({
-      relations: ['groups'],
-    });
-
-    // Get the members group
-    const membersGroup = await this.userGroupService.getGroupByName(
-      ecoverse,
-      RestrictedGroupNames.Members
-    );
-    await this.userGroupService.addUserToGroup(user, membersGroup);
-
-    return membersGroup;
+    return community;
   }
 }

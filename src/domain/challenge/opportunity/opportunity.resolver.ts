@@ -3,7 +3,6 @@ import { Resolver } from '@nestjs/graphql';
 import { Float, Mutation } from '@nestjs/graphql/dist';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
@@ -19,14 +18,11 @@ import { Profiling } from '@src/common/decorators';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationInput } from '@domain/collaboration/relation/relation.dto';
 import { Relation } from '@domain/collaboration/relation/relation.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { ProjectInput } from '@domain/collaboration/project/project.dto';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { Application } from '@domain/community/application/application.entity';
-import { ApplicationInput } from '@domain/community/application/application.dto';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 
 @Resolver()
@@ -151,36 +147,5 @@ export class OpportunityResolver {
       opportunityId,
       relationData
     );
-  }
-
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
-    description:
-      'Creates a new user group for the opportunity with the given id',
-  })
-  @Profiling.api
-  async createGroupOnOpportunity(
-    @Args({ name: 'opportunityID', type: () => Float }) opportunityID: number,
-    @Args({ name: 'groupName', type: () => String }) groupName: string
-  ): Promise<IUserGroup> {
-    const group = await this.opportunityService.createUserGroup(
-      opportunityID,
-      groupName
-    );
-    return group;
-  }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Application, {
-    description: 'Create application to join this opportunity',
-  })
-  @Profiling.api
-  async createApplicationForOpportunity(
-    @Args('ID') id: number,
-    @Args('applicationData') applicationData: ApplicationInput
-  ): Promise<Application> {
-    return await this.opportunityService.createApplication(id, applicationData);
   }
 }

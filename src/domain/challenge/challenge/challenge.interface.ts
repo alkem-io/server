@@ -1,9 +1,8 @@
 import { IContext } from '@domain/context/context/context.interface';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { Application } from '@domain/community/application/application.entity';
+import { ICommunity } from '@domain/community/community';
+import { IOrganisation } from '@domain/community';
 
 export interface IChallenge {
   id: number;
@@ -11,10 +10,8 @@ export interface IChallenge {
   textID: string;
   state: string;
   context?: IContext;
+  community?: ICommunity;
   tagset?: ITagset;
-  groups?: IUserGroup[];
   opportunities?: IOpportunity[];
   leadOrganisations?: IOrganisation[];
-  restrictedGroupNames: string[];
-  applications?: Application[];
 }

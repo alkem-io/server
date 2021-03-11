@@ -17,6 +17,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { DataManagementService } from './data-management.service';
 import { OrganisationInput } from '@domain/community/organisation/organisation.dto';
+import { CommunityService } from '@domain/community/community';
 
 export type TestDataServiceInitResult = {
   userId: number;
@@ -46,6 +47,7 @@ export class TestDataService {
     private ecoverseService: EcoverseService,
     private userService: UserService,
     private challengeService: ChallengeService,
+    private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private userGroupService: UserGroupService,
     private projectService: ProjectService,
@@ -206,25 +208,27 @@ export class TestDataService {
     const createdTestUser = (await this.userService.getUserByEmail(
       this.userEmail
     )) as IUser;
-    const response = await this.opportunityService.addMember(
+    const response = await this.communityService.addMember(
       createdTestUser?.id,
       opportunityId
     );
     return response.id;
   }
 
-  async initAddChallengeLead(challengeId: number) {
-    await this.challengeService.addChallengeLead(challengeId, 1);
-  }
-
   async initCreateGroupOnEcoverse(): Promise<number> {
-    const response = await this.ecoverseService.createGroup(this.groupName);
+    const ecoverseId = await this.ecoverseService.getEcoverseId();
+    const community = await this.ecoverseService.loadCommunity(ecoverseId);
+    const response = await this.communityService.createGroup(
+      community.id,
+      this.groupName
+    );
     return response.id;
   }
 
   async initCreateGroupOnChallenge(challengeId: number): Promise<number> {
-    const response = await this.challengeService.createGroup(
-      challengeId,
+    const community = await this.challengeService.loadCommunity(challengeId);
+    const response = await this.communityService.createGroup(
+      community.id,
       this.groupName
     );
     return response.id;

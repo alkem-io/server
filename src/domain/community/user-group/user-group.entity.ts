@@ -1,6 +1,4 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { User } from '@domain/community/user/user.entity';
 import {
@@ -16,7 +14,7 @@ import {
 } from 'typeorm';
 import { IUserGroup } from './user-group.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
+import { Community } from '../community';
 
 @Entity()
 @ObjectType()
@@ -60,13 +58,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @JoinColumn()
   profile?: Profile;
 
-  @ManyToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.groups,
-    { eager: false }
-  )
-  ecoverse?: Ecoverse;
-
   @Column()
   includeInSearch: boolean;
 
@@ -78,18 +69,11 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   organisation?: Organisation;
 
   @ManyToOne(
-    () => Challenge,
-    challenge => challenge.groups,
+    () => Community,
+    community => community.groups,
     { eager: false }
   )
-  challenge?: Challenge;
-
-  @ManyToOne(
-    () => Opportunity,
-    opportunity => opportunity.groups,
-    { eager: false }
-  )
-  opportunity?: Opportunity;
+  community?: Community;
 
   // Flag to say whether members field should be populated
   membersPopulationEnabled = true;

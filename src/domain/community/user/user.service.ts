@@ -188,9 +188,7 @@ export class UserService {
     const membership = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.userGroups', 'userGroup')
-      .leftJoinAndSelect('userGroup.ecoverse', 'ecoverse')
-      .leftJoinAndSelect('userGroup.challenge', 'challenge')
-      .leftJoinAndSelect('userGroup.opportunity', 'opportunity')
+      .leftJoinAndSelect('userGroup.community', 'community')
       .leftJoinAndSelect('userGroup.organisation', 'organisation')
       .where('user.id = :userId')
       .setParameters({ userId: `${user.id}` })
@@ -209,24 +207,15 @@ export class UserService {
     for (const group of membership?.userGroups) {
       // Set flag on the group to block population of the members field
       group.membersPopulationEnabled = false;
-      const ecoverse = group.ecoverse;
-      const challenge = group.challenge;
-      const opportunity = group.opportunity;
+      const community = group.community;
       const organisation = group.organisation;
 
-      if (ecoverse) {
-        // ecoverse group
-        memberOf.groups.push(group);
+      if (community) {
+        // community - how to get the challen group
+        this.addGroupToEntity(memberOf.challenges, community, group);
+        group.community = undefined;
       }
-      if (challenge) {
-        // challenge group
-        this.addGroupToEntity(memberOf.challenges, challenge, group);
-        group.challenge = undefined;
-      }
-      if (opportunity) {
-        this.addGroupToEntity(memberOf.opportunities, opportunity, group);
-        group.opportunity = undefined;
-      }
+
       if (organisation) {
         this.addGroupToEntity(memberOf.organisations, organisation, group);
         group.organisation = undefined;
