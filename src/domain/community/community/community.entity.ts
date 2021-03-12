@@ -32,7 +32,7 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.community,
-    { eager: false, cascade: true }
+    { eager: true, cascade: true }
   )
   groups?: UserGroup[];
 
@@ -40,7 +40,7 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @ManyToMany(
     () => Application,
     application => application.community,
-    { eager: false, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true, onDelete: 'CASCADE' }
   )
   @JoinTable({
     name: 'Community_application',

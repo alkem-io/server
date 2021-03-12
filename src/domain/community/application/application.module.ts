@@ -1,5 +1,4 @@
 import { Application } from '@domain/community/application/application.entity';
-import { ApplicationFactoryService } from '@domain/community/application/application.factory';
 import { ApplicationResolver } from '@domain/community/application/application.resolver';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
@@ -13,11 +12,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     UserGroupModule,
     TypeOrmModule.forFeature([Application]),
   ],
-  providers: [
-    ApplicationResolver,
-    ApplicationService,
-    ApplicationFactoryService,
-  ],
-  exports: [ApplicationService, ApplicationFactoryService],
+  providers: [ApplicationResolver, ApplicationService],
+  exports: [ApplicationService],
 })
 export class ApplicationModule {}

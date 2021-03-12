@@ -1,4 +1,4 @@
-import { ApplicationFactoryService } from '@domain/community/application/application.factory';
+import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 

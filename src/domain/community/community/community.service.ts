@@ -1,7 +1,6 @@
 import { ApplicationInput } from '@domain/community/application/application.dto';
 import { Application } from '@domain/community/application/application.entity';
-import { ApplicationFactoryService } from '@domain/community/application/application.factory';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -27,7 +26,6 @@ export class CommunityService {
   constructor(
     private userService: UserService,
     private userGroupService: UserGroupService,
-    private organisationService: OrganisationService,
     private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
@@ -184,17 +182,17 @@ export class CommunityService {
     id: number,
     applicationData: ApplicationInput
   ): Promise<Application> {
-    const Community = (await this.getCommunityOrFail(id, {
+    const community = (await this.getCommunityOrFail(id, {
       relations: ['applications'],
     })) as Community;
 
-    const existingApplication = Community.applications?.find(
+    const existingApplication = community.applications?.find(
       x => x.user.id === applicationData.userId
     );
 
     if (existingApplication) {
       throw new ApolloError(
-        `An application for user ${existingApplication.user.email} already exists for Community: ${Community.id}. Application status: ${existingApplication.status}`
+        `An application for user ${existingApplication.user.email} already exists for Community: ${community.id}. Application status: ${existingApplication.status}`
       );
     }
 
@@ -202,8 +200,8 @@ export class CommunityService {
       applicationData
     );
 
-    Community.applications?.push(application);
-    await this.communityRepository.save(Community);
+    community.applications?.push(application);
+    await this.communityRepository.save(community);
     return application;
   }
 

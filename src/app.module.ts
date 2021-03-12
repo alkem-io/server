@@ -42,6 +42,7 @@ import { ApplicationModule } from '@domain/community/application/application.mod
 import { NVPModule } from '@domain/common/nvp/nvp.module';
 import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
+import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
@@ -85,12 +86,14 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
       }),
     }),
     AuthenticationModule,
+    UserModule,
     ApplicationFactoryModule,
     ApplicationModule,
     NVPModule,
     AgreementModule,
     ChallengeModule,
     ContextModule,
+    CommunityModule,
     DidModule,
     EcoverseModule,
     OrganisationModule,
@@ -98,7 +101,6 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
     ProjectModule,
     ReferenceModule,
     TagsetModule,
-    UserModule,
     UserGroupModule,
     MetadataModule,
     GraphQLModule.forRoot({

@@ -3,7 +3,7 @@ import {
   Application,
   ApplicationStatus,
 } from '@domain/community/application/application.entity';
-import { ApplicationFactoryService } from '@domain/community/application/application.factory';
+import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
