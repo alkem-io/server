@@ -18,6 +18,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { DataManagementService } from './data-management.service';
 import { OrganisationInput } from '@domain/community/organisation/organisation.dto';
 import { CommunityService } from '@domain/community/community/community.service';
+import { OrganisationService } from '@domain/community/organisation/organisation.service';
 
 export type TestDataServiceInitResult = {
   userId: number;
@@ -48,6 +49,7 @@ export class TestDataService {
     private userService: UserService,
     private challengeService: ChallengeService,
     private communityService: CommunityService,
+    private organisationService: OrganisationService,
     private opportunityService: OpportunityService,
     private userGroupService: UserGroupService,
     private projectService: ProjectService,
@@ -76,7 +78,7 @@ export class TestDataService {
   async initOrganisation(): Promise<number> {
     const organisation = new OrganisationInput();
     organisation.name = `${this.organisationName}`;
-    const response = await this.ecoverseService.createOrganisation(
+    const response = await this.organisationService.createOrganisation(
       organisation
     );
     return response.id;
@@ -216,8 +218,11 @@ export class TestDataService {
   }
 
   async initCreateGroupOnEcoverse(): Promise<number> {
-    const ecoverseId = await this.ecoverseService.getEcoverseId();
-    const community = await this.ecoverseService.loadCommunity(ecoverseId);
+    const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail({
+      relations: ['community'],
+    });
+    const community = ecoverse.community;
+    if (!community) throw new Error();
     const response = await this.communityService.createGroup(
       community.id,
       this.groupName

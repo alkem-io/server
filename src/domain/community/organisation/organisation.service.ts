@@ -2,7 +2,10 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
@@ -22,9 +25,13 @@ export class OrganisationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createOrganisation(name: string): Promise<IOrganisation> {
-    // Create and initialise a new organisation using the supplied data
-    const organisation = new Organisation(name);
+  async createOrganisation(
+    organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    await this.validateOrganisationCreationRequest(organisationData);
+
+    // No existing organisation found, create and initialise a new one!
+    const organisation = new Organisation();
     await this.initialiseMembers(organisation);
     await this.organisationRepository.save(organisation);
     this.logger.verbose?.(
@@ -54,6 +61,29 @@ export class OrganisationService {
     }
 
     return organisation;
+  }
+
+  async validateOrganisationCreationRequest(
+    organisationData: OrganisationInput
+  ): Promise<boolean> {
+    if (!organisationData.name || organisationData.name.length == 0)
+      throw new ValidationException(
+        'Organisation creation missing required name',
+        LogContext.COMMUNITY
+      );
+    const organisations = await this.getOrganisations();
+
+    const organisation = organisations.find(
+      o => o.name === organisationData.name
+    );
+    // First check if the organisation already exists on not...
+    if (organisation)
+      throw new ValidationException(
+        `Organisation with the provided name already exists: ${organisationData.name}`,
+        LogContext.COMMUNITY
+      );
+
+    return true;
   }
 
   async updateOrganisation(
@@ -97,10 +127,8 @@ export class OrganisationService {
     return organisation;
   }
 
-  async getOrganisations(ecoverseId: number): Promise<Organisation[]> {
-    const organisations = await this.organisationRepository.find({
-      where: { ecoverse: { id: ecoverseId } },
-    });
+  async getOrganisations(): Promise<Organisation[]> {
+    const organisations = await this.organisationRepository.find();
     return organisations || [];
   }
 

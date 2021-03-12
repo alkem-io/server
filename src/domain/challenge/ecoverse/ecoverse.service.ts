@@ -2,22 +2,19 @@ import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { Context } from '@domain/context/context/context.entity';
-import { IContext } from '@domain/context/context/context.interface';
 import { ContextService } from '@domain/context/context/context.service';
 import { OrganisationInput } from '@domain/community/organisation/organisation.dto';
-import { Organisation } from '@domain/community/organisation/organisation.entity';
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import {
   RestrictedTagsetNames,
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
+  EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
@@ -82,21 +79,37 @@ export class EcoverseService {
     }
 
     if (!ecoverse.host) {
+      const organisationInput = new OrganisationInput();
+      organisationInput.name = 'Default host organisation';
       ecoverse.host = await this.organisationService.createOrganisation(
-        'Default host organisation'
+        organisationInput
       );
     }
 
     return ecoverse;
   }
 
-  async getEcoverse(options?: FindOneOptions<Ecoverse>): Promise<IEcoverse> {
-    return await this.ecoverseRepository.findOneOrFail(options);
+  async getEcoverseOrFail(
+    ecoverseID: number,
+    options?: FindOneOptions<Ecoverse>
+  ): Promise<IEcoverse> {
+    const ecoverse = await this.ecoverseRepository.findOne(
+      { id: ecoverseID },
+      options
+    );
+    if (!ecoverse)
+      throw new EntityNotFoundException(
+        `Unable to find Ecoverse with ID: ${ecoverseID}`,
+        LogContext.CHALLENGES
+      );
+    return ecoverse;
   }
 
-  async getName(): Promise<string> {
-    const ecoverse = await this.getEcoverse();
-    return ecoverse.name;
+  async getDefaultEcoverseOrFail(
+    options?: FindOneOptions<Ecoverse>
+  ): Promise<IEcoverse> {
+    const ecoverseId = await this.getEcoverseId(); // todo - remove when can have multiple ecoverses
+    return await this.getEcoverseOrFail(ecoverseId, options);
   }
 
   async getEcoverseId(): Promise<number> {
@@ -113,47 +126,30 @@ export class EcoverseService {
     }
     return ecoverse.id;
   }
-  async getChallenges(): Promise<IChallenge[]> {
-    const ecoverseId = await this.getEcoverseId();
-    const challanges = await this.challengeService.getChallenges(ecoverseId);
-    return challanges;
+
+  async getChallenges(ecoverseID: number): Promise<IChallenge[]> {
+    const ecoverse = await this.getEcoverseOrFail(ecoverseID, {
+      relations: ['challenges'],
+    });
+    return ecoverse.challenges || [];
   }
 
-  async getOrganisations(): Promise<IOrganisation[]> {
-    try {
-      const ecoverse = await this.getEcoverse({
-        relations: ['organisations', 'organisations.groups'],
-      });
-
-      return ecoverse.organisations || [];
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  async getContext(): Promise<IContext> {
-    const ecoverse = await this.getEcoverse();
-    return ecoverse.context as IContext;
-  }
-
-  async getTagset(): Promise<ITagset> {
-    const ecoverse: IEcoverse = await this.getEcoverse();
-    return ecoverse.tagset as ITagset;
-  }
-
-  async getHost(): Promise<IOrganisation> {
-    const ecoverse = await this.getEcoverse();
-    return ecoverse.host as IOrganisation;
+  async getCommunity(ecoverseId: number): Promise<ICommunity> {
+    const ecoverse = await this.getEcoverseOrFail(ecoverseId, {
+      relations: ['community'],
+    });
+    const community = ecoverse.community;
+    if (!community)
+      throw new RelationshipNotFoundException(
+        `Unable to load community for ecoverse ${ecoverseId}`,
+        LogContext.COMMUNITY
+      );
+    return community;
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    const ecoverse = await this.getEcoverse({
-      join: {
-        alias: 'ecoverse',
-        leftJoinAndSelect: {
-          challenges: 'ecoverse.challenges',
-        },
-      },
+    const ecoverse = await this.getDefaultEcoverseOrFail({
+      relations: ['challenges'],
     });
 
     if (!ecoverse.challenges) {
@@ -182,43 +178,6 @@ export class EcoverseService {
     return challenge;
   }
 
-  async createOrganisation(
-    organisationData: OrganisationInput
-  ): Promise<IOrganisation> {
-    const ecoverse = await this.getEcoverse({
-      join: {
-        alias: 'ecoverse',
-        leftJoinAndSelect: {
-          organisations: 'ecoverse.organisations',
-        },
-      },
-    });
-    if (!ecoverse.organisations) {
-      throw new EntityNotInitializedException(
-        'Organisations must be defined',
-        LogContext.CHALLENGES
-      );
-    }
-
-    let organisation = ecoverse.organisations.find(
-      o => o.name === organisationData.name
-    );
-    // First check if the organisation already exists on not...
-    if (organisation)
-      throw new ValidationException(
-        `Organisation with the provided name already exists: ${organisationData.name}`,
-        LogContext.CHALLENGES
-      );
-    // No existing organisation found, create and initialise a new one!
-    organisation = await this.organisationService.createOrganisation(
-      organisationData.name
-    );
-    ecoverse.organisations.push(organisation as Organisation);
-    await this.ecoverseRepository.save(ecoverse);
-
-    return organisation;
-  }
-
   async addAdmin(user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
       user,
@@ -244,7 +203,7 @@ export class EcoverseService {
     user: IUser,
     groupName: string
   ): Promise<boolean> {
-    const ecoverse = await this.getEcoverse();
+    const ecoverse = await this.getDefaultEcoverseOrFail();
     const community = ecoverse.community;
     if (!community) {
       throw new RelationshipNotFoundException(
@@ -260,7 +219,7 @@ export class EcoverseService {
   }
 
   async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
-    const ecoverse = await this.getEcoverse();
+    const ecoverse = await this.getDefaultEcoverseOrFail();
 
     // Copy over the received data
     if (ecoverseData.name) {
@@ -287,23 +246,5 @@ export class EcoverseService {
     await this.ecoverseRepository.save(ecoverse);
 
     return ecoverse;
-  }
-
-  async getCommunity(): Promise<ICommunity> {
-    const ecoverseID = await this.getEcoverseId();
-    return await this.loadCommunity(ecoverseID);
-  }
-
-  async loadCommunity(ecoverseId: number): Promise<ICommunity> {
-    const ecoverse = await this.getEcoverse({
-      relations: ['community'],
-    });
-    const community = ecoverse.community;
-    if (!community)
-      throw new RelationshipNotFoundException(
-        `Unable to load community for ecoverse ${ecoverseId}`,
-        LogContext.COMMUNITY
-      );
-    return community;
   }
 }

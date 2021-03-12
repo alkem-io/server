@@ -40,12 +40,6 @@ export class Organisation extends BaseEntity
   )
   hostedEcoverse?: Ecoverse;
 
-  @ManyToMany(
-    () => Ecoverse,
-    ecoverse => ecoverse.organisations
-  )
-  ecoverses?: Ecoverse[];
-
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
   profile?: Profile;
@@ -66,9 +60,9 @@ export class Organisation extends BaseEntity
   // The restricted group names at the challenge level
   restrictedGroupNames?: string[];
 
-  constructor(name: string) {
+  constructor() {
     super();
-    this.name = name;
+    this.name = '';
     this.restrictedGroupNames = [AuthorizationRoles.Members];
   }
 }

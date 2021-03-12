@@ -23,6 +23,23 @@ export class OrganisationResolverMutations {
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
+  @Mutation(() => Organisation, {
+    description:
+      'Creates a new organisation and registers it with the ecoverse',
+  })
+  @Profiling.api
+  async createOrganisation(
+    @Args('organisationData') organisationData: OrganisationInput
+  ): Promise<IOrganisation> {
+    const organisation = await this.organisationService.createOrganisation(
+      organisationData
+    );
+
+    return organisation;
+  }
+
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
       'Creates a new user group for the organisation with the given id',

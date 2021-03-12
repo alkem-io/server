@@ -1,9 +1,6 @@
 import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { OrganisationInput } from '@domain/community/organisation/organisation.dto';
-import { Organisation } from '@domain/community/organisation/organisation.entity';
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
@@ -47,22 +44,5 @@ export class EcoverseResolverMutations {
     const challenge = await this.ecoverseService.createChallenge(challengeData);
 
     return challenge;
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Organisation, {
-    description:
-      'Creates a new organisation and registers it with the ecoverse',
-  })
-  @Profiling.api
-  async createOrganisation(
-    @Args('organisationData') organisationData: OrganisationInput
-  ): Promise<IOrganisation> {
-    const organisation = await this.ecoverseService.createOrganisation(
-      organisationData
-    );
-
-    return organisation;
   }
 }

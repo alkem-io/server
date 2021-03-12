@@ -308,10 +308,8 @@ export class ChallengeService {
     return await this.communityService.addMember(userID, community.id);
   }
 
-  async getChallenges(ecoverseId: number): Promise<Challenge[]> {
-    const challenges = await this.challengeRepository.find({
-      where: { ecoverse: { id: ecoverseId } },
-    });
+  async getChallenges(): Promise<Challenge[]> {
+    const challenges = await this.challengeRepository.find();
     return challenges || [];
   }
 

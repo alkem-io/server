@@ -11,6 +11,7 @@ import { DataManagementController } from './data-management.controller';
 import { DataManagementService } from './data-management.service';
 import { TestDataService } from './test-data.service';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { OrganisationModule } from '@domain/community/organisation/organisation.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
     ActorGroupModule,
     ProjectModule,
     EcoverseModule,
+    OrganisationModule,
     UserModule,
     UserGroupModule,
   ],

@@ -7,6 +7,7 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import { Community } from '@domain/community/community';
+import { Challenge } from '../challenge/challenge.entity';
 
 @Resolver()
 export class EcoverseResolverFields {
@@ -22,7 +23,17 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async community(@Parent() ecoverse: Ecoverse) {
-    const community = await this.ecoverseService.loadCommunity(ecoverse.id);
+    const community = await this.ecoverseService.getCommunity(ecoverse.id);
+    return community;
+  }
+
+  @ResolveField('challenges', () => [Challenge], {
+    nullable: true,
+    description: 'The challenges for the ecoverse.',
+  })
+  @Profiling.api
+  async challenges(@Parent() ecoverse: Ecoverse) {
+    const community = await this.ecoverseService.getChallenges(ecoverse.id);
     return community;
   }
 }

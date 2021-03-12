@@ -9,6 +9,7 @@ import { ChallengeResolverMutations } from './challenge.resolver.mutations';
 import { ChallengeService } from './challenge.service';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
+import { ChallengeResolverQueries } from './challenge.resolver.queries';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { OrganisationModule } from '@domain/community/organisation/organisation.
     ChallengeService,
     ChallengeResolverMutations,
     ChallengeResolverFields,
+    ChallengeResolverQueries,
   ],
   exports: [ChallengeService],
 })

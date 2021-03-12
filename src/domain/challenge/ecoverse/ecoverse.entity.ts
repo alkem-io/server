@@ -4,8 +4,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -63,25 +61,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, ICommunityable {
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
   DID!: DID;
-
-  @Field(() => [Organisation], {
-    nullable: true,
-    description:
-      'The set of partner organisations associated with this Ecoverse',
-  })
-  @ManyToMany(
-    () => Organisation,
-    organisation => organisation.ecoverses,
-    { eager: false, cascade: true }
-  )
-  @JoinTable({
-    name: 'ecoverse_partner',
-    joinColumns: [{ name: 'ecoverseId', referencedColumnName: 'id' }],
-    inverseJoinColumns: [
-      { name: 'organisationId', referencedColumnName: 'id' },
-    ],
-  })
-  organisations?: Organisation[];
 
   //
   @Field(() => [Challenge], {
