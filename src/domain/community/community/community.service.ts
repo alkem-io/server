@@ -4,7 +4,6 @@ import {
   ApplicationStatus,
 } from '@domain/community/application/application.entity';
 import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
-import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -25,6 +24,7 @@ import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
 import { CommunityParent } from './community-parent.dto';
 import { ApplicationService } from '../application/application.service';
+import { AuthorizationRoles } from '@core/authorization';
 
 @Injectable()
 export class CommunityService {
@@ -170,7 +170,7 @@ export class CommunityService {
     // Get the members group
     const membersGroup = await this.userGroupService.getGroupByName(
       community,
-      RestrictedGroupNames.Members
+      AuthorizationRoles.Members
     );
     await this.userGroupService.addUserToGroup(user, membersGroup);
 
@@ -180,7 +180,7 @@ export class CommunityService {
   async getMembersGroup(community: ICommunity): Promise<IUserGroup> {
     const group = await this.userGroupService.getGroupByName(
       community,
-      RestrictedGroupNames.Members
+      AuthorizationRoles.Members
     );
     if (!group)
       throw new RelationshipNotFoundException(

@@ -84,10 +84,3 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     this.includeInSearch = true;
   }
 }
-
-export enum RestrictedGroupNames {
-  Members = 'members',
-  CommunityAdmins = 'community-admins',
-  EcoverseAdmins = 'ecoverse-admins',
-  GlobalAdmins = 'global-admins',
-}

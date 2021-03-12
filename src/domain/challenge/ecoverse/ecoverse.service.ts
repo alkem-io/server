@@ -14,7 +14,6 @@ import {
 } from '@domain/common/tagset/tagset.entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -31,6 +30,7 @@ import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
+import { AuthorizationRoles } from '@core/authorization';
 
 @Injectable()
 export class EcoverseService {
@@ -68,10 +68,10 @@ export class EcoverseService {
 
     if (!ecoverse.community) {
       ecoverse.community = new Community(ecoverse.name, [
-        RestrictedGroupNames.Members,
-        RestrictedGroupNames.EcoverseAdmins,
-        RestrictedGroupNames.GlobalAdmins,
-        RestrictedGroupNames.CommunityAdmins,
+        AuthorizationRoles.Members,
+        AuthorizationRoles.EcoverseAdmins,
+        AuthorizationRoles.GlobalAdmins,
+        AuthorizationRoles.CommunityAdmins,
       ]);
 
       this.communityService.initialiseMembers(ecoverse.community);
@@ -222,21 +222,21 @@ export class EcoverseService {
   async addAdmin(user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
       user,
-      RestrictedGroupNames.EcoverseAdmins
+      AuthorizationRoles.EcoverseAdmins
     );
   }
 
   async addGlobalAdmin(user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
       user,
-      RestrictedGroupNames.GlobalAdmins
+      AuthorizationRoles.GlobalAdmins
     );
   }
 
   async addCommunityAdmin(user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
       user,
-      RestrictedGroupNames.CommunityAdmins
+      AuthorizationRoles.CommunityAdmins
     );
   }
 

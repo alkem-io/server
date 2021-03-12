@@ -5,12 +5,12 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { OrganisationInput } from './organisation.dto';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
+import { AuthorizationRoles } from '@core/authorization';
 
 @Injectable()
 export class OrganisationService {
@@ -36,7 +36,7 @@ export class OrganisationService {
 
   async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
     if (!organisation.restrictedGroupNames) {
-      organisation.restrictedGroupNames = [RestrictedGroupNames.Members];
+      organisation.restrictedGroupNames = [AuthorizationRoles.Members];
     }
 
     if (!organisation.groups) {

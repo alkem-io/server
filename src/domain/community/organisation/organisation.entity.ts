@@ -13,12 +13,10 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { DID } from '@domain/agent/did/did.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/community/user-group/user-group.entity';
+import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge';
+import { AuthorizationRoles } from '@core/authorization';
 
 @Entity()
 @ObjectType()
@@ -71,6 +69,6 @@ export class Organisation extends BaseEntity
   constructor(name: string) {
     super();
     this.name = name;
-    this.restrictedGroupNames = [RestrictedGroupNames.Members];
+    this.restrictedGroupNames = [AuthorizationRoles.Members];
   }
 }

@@ -7,7 +7,6 @@ import { OpportunityService } from '@domain/challenge/opportunity/opportunity.se
 import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,6 +25,7 @@ import { IChallenge } from './challenge.interface';
 import { UpdateChallengeInput } from './update-challenge.dto';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
+import { AuthorizationRoles } from '@core/authorization';
 
 @Injectable()
 export class ChallengeService {
@@ -54,7 +54,7 @@ export class ChallengeService {
 
     if (!challenge.community) {
       challenge.community = new Community(challenge.name, [
-        RestrictedGroupNames.Members,
+        AuthorizationRoles.Members,
       ]);
     }
 
