@@ -9,7 +9,7 @@ import { EcoverseService } from './ecoverse.service';
 import { Community } from '@domain/community/community';
 import { Challenge } from '../challenge/challenge.entity';
 
-@Resolver()
+@Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
   constructor(
     @Inject(EcoverseService) private ecoverseService: EcoverseService
@@ -33,7 +33,7 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async challenges(@Parent() ecoverse: Ecoverse) {
-    const community = await this.ecoverseService.getChallenges(ecoverse.id);
-    return community;
+    const challenges = await this.ecoverseService.getChallenges(ecoverse.id);
+    return challenges;
   }
 }

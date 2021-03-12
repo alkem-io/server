@@ -36,7 +36,6 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   )
   groups?: UserGroup[];
 
-  @Field(() => [Application])
   @OneToMany(
     () => Application,
     application => application.community,
@@ -66,6 +65,7 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   opportunity?: Opportunity;
 
   // The restricted group names at the Community level
+  @Column('simple-array')
   restrictedGroupNames: string[];
 
   constructor(name: string, restrictedGroupNames: string[]) {

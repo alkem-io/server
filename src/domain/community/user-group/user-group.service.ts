@@ -2,8 +2,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUser } from '@domain/community/user/user.interface';
@@ -13,7 +11,6 @@ import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { UserGroupParent } from './user-group-parent.dto';
 import {
   EntityNotFoundException,
@@ -228,12 +225,12 @@ export class UserGroupService {
   async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
     const entityManager = getManager();
     const rawData = await entityManager.query(
-      `SELECT * from user_group_members where userId=${user.id} and userGroupId=${group.id}`
+      `SELECT * from user_group_members where userId=${user.id} and userGroupId= ${group.id}`
     );
 
     if (rawData.length > 0) {
       this.logger.verbose?.(
-        `User ${user.email} already exists in group ${group.name}!`,
+        `User ${user.email} already exists in group  ${group.name}!`,
         LogContext.COMMUNITY
       );
       return false;
@@ -311,29 +308,16 @@ export class UserGroupService {
     groupable: IGroupable,
     name: string
   ): Promise<IUserGroup> {
-    if (groupable instanceof Ecoverse) {
-      const userGroup = (await this.userGroupRepository.findOne({
-        where: { ecoverse: { id: groupable.id }, name: name },
-        relations: ['ecoverse', 'members'],
-      })) as IUserGroup;
-      return userGroup;
-    }
-    if (groupable instanceof Challenge) {
-      return (await this.userGroupRepository.findOne({
-        where: { challenge: { id: groupable.id }, name: name },
-        relations: ['challenge', 'members'],
-      })) as IUserGroup;
-    }
     if (groupable instanceof Organisation) {
       return (await this.userGroupRepository.findOne({
         where: { organisation: { id: groupable.id }, name: name },
         relations: ['organisation', 'members'],
       })) as IUserGroup;
     }
-    if (groupable instanceof Opportunity) {
+    if (groupable instanceof Community) {
       return (await this.userGroupRepository.findOne({
-        where: { opportunity: { id: groupable.id }, name: name },
-        relations: ['opportunity', 'members'],
+        where: { community: { id: groupable.id }, name: name },
+        relations: ['community', 'members'],
       })) as IUserGroup;
     }
 

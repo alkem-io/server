@@ -45,10 +45,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, ICommunityable {
   @JoinColumn()
   context?: Context;
 
-  @Field(() => Community, {
-    nullable: true,
-    description: 'The community for the ecoverse',
-  })
   @OneToOne(
     () => Community,
     community => community.ecoverse,
@@ -63,10 +59,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, ICommunityable {
   DID!: DID;
 
   //
-  @Field(() => [Challenge], {
-    nullable: true,
-    description: 'The Challenges hosted by the Ecoverse',
-  })
   @OneToMany(
     () => Challenge,
     challenge => challenge.ecoverse,

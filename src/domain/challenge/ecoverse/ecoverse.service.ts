@@ -71,7 +71,7 @@ export class EcoverseService {
         AuthorizationRoles.CommunityAdmins,
       ]);
 
-      this.communityService.initialiseMembers(ecoverse.community);
+      await this.communityService.initialiseMembers(ecoverse.community);
       // Disable searching on the mandatory platform groups
       ecoverse.community.groups?.forEach(
         group => (group.includeInSearch = false)
@@ -203,11 +203,13 @@ export class EcoverseService {
     user: IUser,
     groupName: string
   ): Promise<boolean> {
-    const ecoverse = await this.getDefaultEcoverseOrFail();
+    const ecoverse = await this.getDefaultEcoverseOrFail({
+      relations: ['community'],
+    });
     const community = ecoverse.community;
     if (!community) {
       throw new RelationshipNotFoundException(
-        `Unable to load community for ecoverse ${ecoverse.id}`,
+        `Unable to load community for ecoverse  ${ecoverse.id}`,
         LogContext.COMMUNITY
       );
     }

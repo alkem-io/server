@@ -223,11 +223,11 @@ export class BootstrapService {
             LogContext.BOOTSTRAP
           );
 
-        if (!groups.some(({ name }) => groupName === name))
+        if (!groups.some(({ name }) => groupName === name)) {
           await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
-        else
+        } else
           this.logger.verbose?.(
-            `User ${userInput.email} already exists in group ${groupName}`,
+            `User ${userInput.email} already exists in group  ${groupName}`,
             LogContext.BOOTSTRAP
           );
       }

@@ -75,7 +75,7 @@ export class Challenge extends BaseEntity
     organisation => organisation.challenges,
     { eager: true, cascade: true }
   )
-  @JoinTable({ name: 'Community_lead' })
+  @JoinTable({ name: 'challenge_lead' })
   leadOrganisations?: Organisation[];
 
   // Other

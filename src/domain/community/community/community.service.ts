@@ -11,6 +11,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   GroupNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
@@ -236,17 +237,25 @@ export class CommunityService {
     user: IUser,
     groupName: string
   ): Promise<boolean> {
-    if (!(await this.groupIsRestricted(communityId, groupName)))
+    const community = await this.getCommunityOrFail(communityId, {
+      relations: ['groups'],
+    });
+
+    if (!(await this.groupIsRestricted(community, groupName)))
       throw new ValidationException(
         `${groupName} is not a restricted group name!`,
         LogContext.COMMUNITY
       );
 
-    const community = await this.getCommunityOrFail(communityId);
     const restrictedGroup = await this.userGroupService.getGroupByName(
       community,
       groupName
     );
+    if (!restrictedGroup)
+      throw new EntityNotInitializedException(
+        `${groupName} not found!`,
+        LogContext.COMMUNITY
+      );
 
     if (await this.userGroupService.addUserToGroup(user, restrictedGroup)) {
       return true;
@@ -256,10 +265,9 @@ export class CommunityService {
   }
 
   async groupIsRestricted(
-    communityId: number,
+    community: ICommunity,
     groupName: string
   ): Promise<boolean> {
-    const community = await this.getCommunityOrFail(communityId);
     if (community.restrictedGroupNames.includes(groupName)) return true;
     return false;
   }

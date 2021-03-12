@@ -9,6 +9,7 @@ import { EcoverseResolverMutations } from './ecoverse.resolver.mutations';
 import { EcoverseResolverQueries } from './ecoverse.resolver.queries';
 import { EcoverseService } from './ecoverse.service';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { EcoverseResolverFields } from './ecoverse.resolver.fields';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
   ],
   providers: [
     EcoverseService,
+    EcoverseResolverFields,
     EcoverseResolverQueries,
     EcoverseResolverMutations,
   ],
