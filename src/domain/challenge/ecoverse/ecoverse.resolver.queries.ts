@@ -13,6 +13,8 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import { Community, ICommunity } from '@domain/community/community';
+import { IEcoverse } from './ecoverse.interface';
+import { Ecoverse } from './ecoverse.entity';
 
 @Resolver()
 export class EcoverseResolverQueries {
@@ -21,6 +23,15 @@ export class EcoverseResolverQueries {
     private organisationService: OrganisationService,
     private challengeService: ChallengeService
   ) {}
+
+  @Query(() => Ecoverse, {
+    nullable: false,
+    description: 'The ecoverse.',
+  })
+  @Profiling.api
+  async ecoverse(): Promise<IEcoverse> {
+    return await this.ecoverseService.getEcoverse();
+  }
 
   @Query(() => String, {
     nullable: false,
