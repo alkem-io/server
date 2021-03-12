@@ -1,5 +1,4 @@
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
@@ -12,10 +11,7 @@ import { Community } from '@domain/community/community';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
-  constructor(
-    private userGroupService: UserGroupService,
-    private challengeService: ChallengeService
-  ) {}
+  constructor(private challengeService: ChallengeService) {}
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)

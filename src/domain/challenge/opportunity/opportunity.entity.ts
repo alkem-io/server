@@ -68,7 +68,7 @@ export class Opportunity extends BaseEntity
   @OneToOne(
     () => Community,
     community => community.opportunity,
-    { eager: false, cascade: true }
+    { eager: true, cascade: true }
   )
   @JoinColumn()
   community?: Community;

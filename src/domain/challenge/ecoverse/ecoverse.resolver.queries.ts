@@ -12,6 +12,7 @@ import { Inject } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
+import { Community, ICommunity } from '@domain/community/community';
 
 @Resolver()
 export class EcoverseResolverQueries {
@@ -27,7 +28,7 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async name(): Promise<string> {
-    return this.ecoverseService.getName();
+    return await this.ecoverseService.getName();
   }
 
   @Query(() => Organisation, {
@@ -36,7 +37,7 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async host(): Promise<IOrganisation> {
-    return this.ecoverseService.getHost();
+    return await this.ecoverseService.getHost();
   }
 
   @Query(() => Context, {
@@ -45,8 +46,18 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async context(): Promise<IContext> {
-    return this.ecoverseService.getContext();
+    return await this.ecoverseService.getContext();
   }
+
+  @Query(() => Community, {
+    nullable: false,
+    description: 'The community for this ecoverse',
+  })
+  @Profiling.api
+  async community(): Promise<ICommunity> {
+    return await this.ecoverseService.getCommunity();
+  }
+
   @Query(() => [Challenge], { nullable: false, description: 'All challenges' })
   @Profiling.api
   async challenges(): Promise<IChallenge[]> {

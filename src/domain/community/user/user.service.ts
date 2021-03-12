@@ -211,8 +211,22 @@ export class UserService {
       const organisation = group.organisation;
 
       if (community) {
-        // community - how to get the parent entity group
-        this.addGroupToEntity(memberOf.challenges, community, group);
+        // community - find which parent it has
+        if (community.ecoverse) {
+          this.addGroupToEntity(memberOf.ecoverses, community.ecoverse, group);
+        } else if (community.challenge) {
+          this.addGroupToEntity(
+            memberOf.challenges,
+            community.challenge,
+            group
+          );
+        } else if (community.opportunity) {
+          this.addGroupToEntity(
+            memberOf.opportunities,
+            community.opportunity,
+            group
+          );
+        }
         group.community = undefined;
       }
 

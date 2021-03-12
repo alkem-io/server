@@ -1,16 +1,16 @@
-import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
+import { Resolver, Query, Args } from '@nestjs/graphql';
 import { Application } from '@domain/community/application/application.entity';
 import { ApplicationService } from '@domain/community/application/application.service';
-import { Roles } from '@common/decorators/roles.decorator';
+import { AuthorizationRoles, GqlAuthGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { Roles } from '@common/decorators';
 
 @Resolver(() => Application)
 export class ApplicationResolver {
   constructor(private applicationService: ApplicationService) {}
 
+  @Roles(AuthorizationRoles.Members, AuthorizationRoles.CommunityAdmins)
+  @UseGuards(GqlAuthGuard)
   @Query(() => [Application], {
     nullable: false,
     description: 'All applications to join',
@@ -19,21 +19,13 @@ export class ApplicationResolver {
     return await this.applicationService.getApplications();
   }
 
+  @Roles(AuthorizationRoles.Members, AuthorizationRoles.CommunityAdmins)
+  @UseGuards(GqlAuthGuard)
   @Query(() => Application, {
     nullable: false,
     description: 'All applications to join',
   })
   async application(@Args('ID') id: number): Promise<Application> {
     return await this.applicationService.getApplicationOrFail(id);
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Application, {
-    description: 'Create application to join this ecoverse',
-  })
-  @Profiling.api
-  async approveApplication(@Args('ID') id: number): Promise<Application> {
-    return await this.applicationService.approveApplication(id);
   }
 }

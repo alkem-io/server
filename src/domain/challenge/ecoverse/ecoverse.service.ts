@@ -289,7 +289,11 @@ export class EcoverseService {
     return ecoverse;
   }
 
-  // Loads the challenges into the ecoverse entity if not already present
+  async getCommunity(): Promise<ICommunity> {
+    const ecoverseID = await this.getEcoverseId();
+    return await this.loadCommunity(ecoverseID);
+  }
+
   async loadCommunity(ecoverseId: number): Promise<ICommunity> {
     const ecoverse = await this.getEcoverse({
       relations: ['community'],

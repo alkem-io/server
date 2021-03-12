@@ -319,12 +319,12 @@ export class ChallengeService {
     challengeID: number,
     organisationID: number
   ): Promise<boolean> {
-    let challenge, organisation;
-    // eslint-disable-next-line prefer-const
-    [challenge, organisation] = await this.getChallengeAndOrganisation(
-      challengeID,
-      organisationID
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      organisationID,
+      { relations: ['groups'] }
     );
+
+    const challenge = await this.getChallengeOrFail(challengeID);
 
     const existingOrg = challenge.leadOrganisations?.find(
       existingOrg => existingOrg.id === organisationID
@@ -340,37 +340,11 @@ export class ChallengeService {
     return true;
   }
 
-  async getChallengeAndOrganisation(
-    challengeID: number,
-    organisationID: number
-  ): Promise<[IChallenge, IOrganisation]> {
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      organisationID,
-      { relations: ['groups'] }
-    );
-
-    const challenge = await this.getChallengeOrFail(challengeID);
-
-    // Check the org is not already added
-    if (!challenge.leadOrganisations)
-      throw new EntityNotInitializedException(
-        `Challenge not fully initialised: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-
-    return [challenge, organisation];
-  }
-
   async removeChallengeLead(
     challengeID: number,
     organisationID: number
   ): Promise<boolean> {
-    let challenge;
-    // eslint-disable-next-line prefer-const
-    [challenge, {}] = await this.getChallengeAndOrganisation(
-      challengeID,
-      organisationID
-    );
+    const challenge = await this.getChallengeOrFail(challengeID);
 
     const existingOrg = challenge.leadOrganisations?.find(
       existingOrg => existingOrg.id === organisationID

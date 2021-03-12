@@ -54,7 +54,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse, ICommunityable {
   @OneToOne(
     () => Community,
     community => community.ecoverse,
-    { eager: false, cascade: true }
+    { eager: true, cascade: true }
   )
   @JoinColumn()
   community?: Community;

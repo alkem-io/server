@@ -28,6 +28,7 @@ import { KonfigModule } from '@src/services/configuration/config/config.module';
 import aadOboConfig from '@src/config/aad.obo.config';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
+import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 
 @Module({
   imports: [
@@ -54,12 +55,13 @@ import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
       ],
     }),
     TypeOrmModule.forRootAsync({
+      name: 'default',
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         type: 'mysql',
         insecureAuth: true,
-        synchronize: false,
+        synchronize: true, //warning: to be reverted when go back to migrations!
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         host: configService.get<IDatabaseConfig>('database')?.host,
@@ -81,6 +83,7 @@ import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
       context: ({ req }) => ({ req }),
     }),
     AuthenticationModule,
+    ApplicationFactoryModule,
     EcoverseModule,
     MetadataModule,
     DataManagementModule,

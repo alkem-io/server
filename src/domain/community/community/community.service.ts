@@ -1,5 +1,8 @@
 import { ApplicationInput } from '@domain/community/application/application.dto';
-import { Application } from '@domain/community/application/application.entity';
+import {
+  Application,
+  ApplicationStatus,
+} from '@domain/community/application/application.entity';
 import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
@@ -21,6 +24,7 @@ import { Community } from './community.entity';
 import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
 import { CommunityParent } from './community-parent.dto';
+import { ApplicationService } from '../application/application.service';
 
 @Injectable()
 export class CommunityService {
@@ -28,6 +32,7 @@ export class CommunityService {
     private userService: UserService,
     private userGroupService: UserGroupService,
     private applicationFactoryService: ApplicationFactoryService,
+    private applicationService: ApplicationService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -257,5 +262,30 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(communityId);
     if (community.restrictedGroupNames.includes(groupName)) return true;
     return false;
+  }
+
+  async approveApplication(applicationId: number) {
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationId
+    );
+
+    if (application.status == ApplicationStatus.approved) {
+      throw new ApolloError('Application has already been approved!');
+    } else if (application.status == ApplicationStatus.rejected) {
+      throw new ApolloError('Application has already been rejected!');
+    }
+
+    if (!application.community)
+      throw new RelationshipNotFoundException(
+        `Unable to load community for application ${applicationId} `,
+        LogContext.COMMUNITY
+      );
+    await this.addMember(application.user.id, application.community?.id);
+
+    application.status = ApplicationStatus.approved;
+
+    await this.applicationService.save(application);
+
+    return application;
   }
 }

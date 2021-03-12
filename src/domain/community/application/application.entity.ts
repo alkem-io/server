@@ -51,7 +51,7 @@ export class Application extends BaseEntity {
   @JoinTable({ name: 'application_questions' })
   questions?: Question[];
 
-  @ManyToMany(
+  @ManyToOne(
     () => Community,
     community => community.applications
   )

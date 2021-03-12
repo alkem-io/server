@@ -6,7 +6,7 @@ import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { AuthorizationRoles } from '@core/authorization';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolverQueries {

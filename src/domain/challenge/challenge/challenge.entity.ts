@@ -60,7 +60,7 @@ export class Challenge extends BaseEntity
   @OneToOne(
     () => Community,
     community => community.challenge,
-    { eager: false, cascade: true }
+    { eager: true, cascade: true }
   )
   @JoinColumn()
   community?: Community;

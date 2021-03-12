@@ -5,8 +5,6 @@ import {
   BaseEntity,
   Column,
   Entity,
-  JoinTable,
-  ManyToMany,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -39,31 +37,31 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   groups?: UserGroup[];
 
   @Field(() => [Application])
-  @ManyToMany(
+  @OneToMany(
     () => Application,
     application => application.community,
     { eager: true, cascade: true, onDelete: 'CASCADE' }
   )
-  @JoinTable({
-    name: 'Community_application',
-  })
   applications?: Application[];
 
   @OneToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.community
+    ecoverse => ecoverse.community,
+    { eager: false, cascade: false }
   )
   ecoverse?: Ecoverse;
 
   @OneToOne(
     () => Challenge,
-    challenge => challenge.community
+    challenge => challenge.community,
+    { eager: false, cascade: false }
   )
   challenge?: Challenge;
 
   @OneToOne(
     () => Opportunity,
-    opportunity => opportunity.community
+    opportunity => opportunity.community,
+    { eager: false, cascade: false }
   )
   opportunity?: Opportunity;
 

@@ -55,10 +55,25 @@ export class CommunityResolverMutations {
     description: 'Create application to join this Community',
   })
   @Profiling.api
-  async createApplicationForCommunity(
-    @Args('ID') id: number,
+  async createApplication(
+    @Args('communityID') communityID: number,
     @Args('applicationData') applicationData: ApplicationInput
   ): Promise<Application> {
-    return await this.communityService.createApplication(id, applicationData);
+    return await this.communityService.createApplication(
+      communityID,
+      applicationData
+    );
+  }
+
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Application, {
+    description: 'Create application to join this ecoverse',
+  })
+  @Profiling.api
+  async approveApplication(
+    @Args('ID') applicationID: number
+  ): Promise<Application> {
+    return await this.communityService.approveApplication(applicationID);
   }
 }

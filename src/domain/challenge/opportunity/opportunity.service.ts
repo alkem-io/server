@@ -12,7 +12,6 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { RelationInput } from '@domain/collaboration/relation/relation.dto';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -29,6 +28,7 @@ import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
+import { AuthorizationRoles } from '@core/authorization';
 
 @Injectable()
 export class OpportunityService {
@@ -67,7 +67,7 @@ export class OpportunityService {
 
     if (!opportunity.community) {
       opportunity.community = new Community(opportunity.name, [
-        RestrictedGroupNames.Members,
+        AuthorizationRoles.Members,
       ]);
     }
 
