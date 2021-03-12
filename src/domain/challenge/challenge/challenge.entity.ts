@@ -57,7 +57,7 @@ export class Challenge extends BaseEntity
     nullable: true,
     description: 'The community for the challenge',
   })
-  @OneToOne(() => Community, { eager: true, cascade: true })
+  @OneToOne(() => Community, { eager: false, cascade: true })
   @JoinColumn()
   community?: Community;
 

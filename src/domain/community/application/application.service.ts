@@ -14,7 +14,7 @@ import { LogContext } from '@common/enums';
 import { ApolloError } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { CommunityService } from '../community';
+import { CommunityService } from '../community/community.service';
 
 @Injectable()
 export class ApplicationService {

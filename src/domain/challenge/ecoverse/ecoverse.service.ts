@@ -15,7 +15,6 @@ import {
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -30,11 +29,8 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import {
-  Community,
-  CommunityService,
-  ICommunity,
-} from '@domain/community/community';
+import { Community, ICommunity } from '@domain/community/community';
+import { CommunityService } from '@domain/community/community/community.service';
 
 @Injectable()
 export class EcoverseService {
@@ -44,7 +40,6 @@ export class EcoverseService {
     private contextService: ContextService,
     private communityService: CommunityService,
     private tagsetService: TagsetService,
-    private userGroupService: UserGroupService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

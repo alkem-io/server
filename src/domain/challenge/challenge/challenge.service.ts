@@ -24,11 +24,8 @@ import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { UpdateChallengeInput } from './update-challenge.dto';
-import {
-  Community,
-  CommunityService,
-  ICommunity,
-} from '@domain/community/community';
+import { Community, ICommunity } from '@domain/community/community';
+import { CommunityService } from '@domain/community/community/community.service';
 
 @Injectable()
 export class ChallengeService {

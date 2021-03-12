@@ -10,11 +10,13 @@ import { BootstrapModule } from '../../core/bootstrap/bootstrap.module';
 import { DataManagementController } from './data-management.controller';
 import { DataManagementService } from './data-management.service';
 import { TestDataService } from './test-data.service';
+import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
     BootstrapModule,
     ChallengeModule,
+    CommunityModule,
     OpportunityModule,
     ActorGroupModule,
     ProjectModule,

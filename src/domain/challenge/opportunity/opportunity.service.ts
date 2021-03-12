@@ -27,11 +27,8 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
-import {
-  Community,
-  CommunityService,
-  ICommunity,
-} from '@domain/community/community';
+import { Community, ICommunity } from '@domain/community/community';
+import { CommunityService } from '@domain/community/community/community.service';
 
 @Injectable()
 export class OpportunityService {

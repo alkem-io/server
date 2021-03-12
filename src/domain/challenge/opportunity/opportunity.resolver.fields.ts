@@ -9,14 +9,11 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
 import { Opportunity } from './opportunity.entity';
 import { OpportunityService } from './opportunity.service';
-import { Community, CommunityService } from '@domain/community/community';
+import { Community } from '@domain/community/community';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
-  constructor(
-    private communityService: CommunityService,
-    private opportunityService: OpportunityService
-  ) {}
+  constructor(private opportunityService: OpportunityService) {}
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)

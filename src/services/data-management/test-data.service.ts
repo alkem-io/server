@@ -17,7 +17,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { DataManagementService } from './data-management.service';
 import { OrganisationInput } from '@domain/community/organisation/organisation.dto';
-import { CommunityService } from '@domain/community/community';
+import { CommunityService } from '@domain/community/community/community.service';
 
 export type TestDataServiceInitResult = {
   userId: number;

@@ -1,6 +1,5 @@
 import { Application } from '@domain/community/application/application.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { User } from '@domain/community/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -15,10 +14,7 @@ import { CommunityService } from './community.service';
 
 @Resolver(() => Community)
 export class CommunityResolverFields {
-  constructor(
-    private userGroupService: UserGroupService,
-    private communityService: CommunityService
-  ) {}
+  constructor(private communityService: CommunityService) {}
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
