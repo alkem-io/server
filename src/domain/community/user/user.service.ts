@@ -195,7 +195,7 @@ export class UserService {
       .getOne();
 
     const memberOf = new MemberOf();
-    memberOf.groups = [];
+    memberOf.ecoverses = [];
     memberOf.challenges = [];
     memberOf.opportunities = [];
     memberOf.organisations = [];
@@ -203,7 +203,7 @@ export class UserService {
     if (!membership) return memberOf;
     if (!membership.userGroups) return memberOf;
 
-    // First get the list of challenges + orgs + groups to return
+    // Iterate over the groups and add them to the right
     for (const group of membership?.userGroups) {
       // Set flag on the group to block population of the members field
       group.membersPopulationEnabled = false;
@@ -211,7 +211,7 @@ export class UserService {
       const organisation = group.organisation;
 
       if (community) {
-        // community - how to get the challen group
+        // community - how to get the parent entity group
         this.addGroupToEntity(memberOf.challenges, community, group);
         group.community = undefined;
       }

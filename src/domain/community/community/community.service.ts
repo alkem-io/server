@@ -20,6 +20,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { Community } from './community.entity';
 import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
+import { CommunityParent } from './community-parent.dto';
 
 @Injectable()
 export class CommunityService {
@@ -82,13 +83,26 @@ export class CommunityService {
   }
 
   // Loads the group into the Community entity if not already present
-  async loadGroups(community: Community): Promise<IUserGroup[]> {
+  async loadGroups(community: ICommunity): Promise<IUserGroup[]> {
     if (community.groups && community.groups.length > 0) {
       // Community already has groups loaded
       return community.groups;
     }
     // Community is not populated wih
     return await this.userGroupService.getGroupsOnGroupable(community);
+  }
+
+  async getParent(community: Community): Promise<typeof CommunityParent> {
+    const communityParent = (await this.getCommunityOrFail(community.id, {
+      relations: ['ecoverse', 'challenge', 'opportunity'],
+    })) as Community;
+    if (communityParent?.ecoverse) return communityParent?.ecoverse;
+    if (communityParent?.challenge) return communityParent?.challenge;
+    if (communityParent?.opportunity) return communityParent?.opportunity;
+    throw new EntityNotFoundException(
+      `Unable to locate parent for community: ${community.name}`,
+      LogContext.COMMUNITY
+    );
   }
 
   async getCommunityOrFail(
@@ -107,9 +121,9 @@ export class CommunityService {
     return Community;
   }
 
-  async removeCommunity(CommunityID: number): Promise<boolean> {
+  async removeCommunity(communityID: number): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const community = await this.getCommunityOrFail(CommunityID, {
+    const community = await this.getCommunityOrFail(communityID, {
       relations: ['opportunities', 'groups'],
     });
 
@@ -124,15 +138,15 @@ export class CommunityService {
     return true;
   }
 
-  async isUserMember(userID: number, CommunityID: number): Promise<boolean> {
-    const Community = await this.getCommunityOrFail(CommunityID, {
+  async isUserMember(userID: number, communityID: number): Promise<boolean> {
+    const Community = await this.getCommunityOrFail(communityID, {
       relations: ['groups'],
     });
     const membersGroup = await this.getMembersGroup(Community);
     const members = membersGroup.members;
     if (!members)
       throw new GroupNotInitializedException(
-        `Members group not initialised in Community: ${CommunityID}`,
+        `Members group not initialised in Community: ${communityID}`,
         LogContext.COMMUNITY
       );
     const user = members.find(user => user.id == userID);
@@ -205,11 +219,11 @@ export class CommunityService {
     return application;
   }
 
-  async getApplications(Community: Community) {
-    const _Community = await this.getCommunityOrFail(Community.id, {
+  async getApplications(community: Community): Promise<Application[]> {
+    const communityApps = await this.getCommunityOrFail(community.id, {
       relations: ['applications'],
     });
-    return _Community?.applications || [];
+    return communityApps?.applications || [];
   }
 
   async addUserToRestrictedGroup(
