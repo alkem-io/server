@@ -3,18 +3,7 @@ import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthenticationModule } from '@src/core/authentication/authentication.module';
-import { AgreementModule } from '@domain/collaboration/agreement/agreement.module';
-import { UserModule } from '@domain/community/user/user.module';
-import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { ContextModule } from '@domain/context/context/context.module';
-import { DidModule } from '@domain/agent/did/did.module';
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
-import { OrganisationModule } from '@domain/community/organisation/organisation.module';
-import { ProjectModule } from '@domain/collaboration/project/project.module';
-import { ReferenceModule } from '@domain/common/reference/reference.module';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
-import { ProfileModule } from '@domain/community/profile/profile.module';
-import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
 import aadConfig from '@src/config/aad.config';
@@ -38,11 +27,7 @@ import { MetadataModule } from '@src/services/metadata/metadata.module';
 import { KonfigModule } from '@src/services/configuration/config/config.module';
 import aadOboConfig from '@src/config/aad.obo.config';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
-import { ApplicationModule } from '@domain/community/application/application.module';
-import { NVPModule } from '@domain/common/nvp/nvp.module';
 import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
-import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
-import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
@@ -85,24 +70,9 @@ import { CommunityModule } from '@domain/community/community/community.module';
         logging: configService.get<IDatabaseConfig>('database')?.logging,
       }),
     }),
-    AuthenticationModule,
-    UserModule,
-    ApplicationFactoryModule,
-    ApplicationModule,
-    NVPModule,
-    AgreementModule,
-    ChallengeModule,
-    ContextModule,
-    CommunityModule,
-    DidModule,
-    EcoverseModule,
-    OrganisationModule,
-    ProfileModule,
-    ProjectModule,
-    ReferenceModule,
-    TagsetModule,
-    UserGroupModule,
-    MetadataModule,
+    WinstonModule.forRootAsync({
+      useClass: WinstonConfigService,
+    }),
     GraphQLModule.forRoot({
       autoSchemaFile: true,
       playground: true,
@@ -110,11 +80,11 @@ import { CommunityModule } from '@domain/community/community/community.module';
       sortSchema: true,
       context: ({ req }) => ({ req }),
     }),
+    AuthenticationModule,
+    EcoverseModule,
+    MetadataModule,
     DataManagementModule,
     BootstrapModule,
-    WinstonModule.forRootAsync({
-      useClass: WinstonConfigService,
-    }),
     SearchModule,
     KonfigModule,
   ],
