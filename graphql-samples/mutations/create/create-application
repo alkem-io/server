@@ -1,5 +1,5 @@
-mutation createApplicationForOpportunity($id:Float!, $applicationData: ApplicationInput!) {
-  createApplicationForOpportunity(ID:$id, applicationData:$applicationData){
+mutation createApplication($communityId:Float!, $applicationData: ApplicationInput!) {
+  createApplication(communityID:$communityId, applicationData:$applicationData){
     id
 	  questions {
       id
@@ -12,7 +12,7 @@ mutation createApplicationForOpportunity($id:Float!, $applicationData: Applicati
 
 query variables:
 {
-  "id": 1,
+  "communityId": 1,
   "applicationData": {
     "userId": 4,
     "questions": [
