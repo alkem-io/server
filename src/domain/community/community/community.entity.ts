@@ -5,6 +5,7 @@ import {
   BaseEntity,
   Column,
   Entity,
+  JoinColumn,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -24,10 +25,17 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
 
   @Field(() => String, {
     nullable: false,
-    description: 'The name of the challenge',
+    description: 'The name of the Community',
   })
   @Column()
   name: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The type of the Community',
+  })
+  @Column()
+  type: string;
 
   @OneToMany(
     () => UserGroup,
@@ -64,13 +72,29 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   )
   opportunity?: Opportunity;
 
+  // Community needs to know if it is part of a parent community
+  @OneToOne(() => Community, { eager: false, cascade: false })
+  @JoinColumn()
+  parentCommunity?: Community;
+
   // The restricted group names at the Community level
   @Column('simple-array')
   restrictedGroupNames: string[];
 
-  constructor(name: string, restrictedGroupNames: string[]) {
+  constructor(
+    name: string,
+    communityType: string,
+    restrictedGroupNames: string[]
+  ) {
     super();
     this.name = name;
     this.restrictedGroupNames = restrictedGroupNames;
+    this.type = communityType;
   }
+}
+
+export enum CommunityType {
+  ECOVERSE = 'ecoverse',
+  CHALLENGE = 'challenge',
+  OPPORTUNITY = 'opportunity',
 }

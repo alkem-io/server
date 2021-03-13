@@ -231,7 +231,7 @@ export class TestDataService {
   }
 
   async initCreateGroupOnChallenge(challengeId: number): Promise<number> {
-    const community = await this.challengeService.loadCommunity(challengeId);
+    const community = await this.challengeService.getCommunity(challengeId);
     const response = await this.communityService.createGroup(
       community.id,
       this.groupName

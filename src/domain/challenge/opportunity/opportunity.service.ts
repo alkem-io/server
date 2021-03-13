@@ -26,7 +26,11 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
-import { Community, ICommunity } from '@domain/community/community';
+import {
+  Community,
+  CommunityType,
+  ICommunity,
+} from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 
@@ -66,9 +70,11 @@ export class OpportunityService {
     }
 
     if (!opportunity.community) {
-      opportunity.community = new Community(opportunity.name, [
-        AuthorizationRoles.Members,
-      ]);
+      opportunity.community = new Community(
+        opportunity.name,
+        CommunityType.OPPORTUNITY,
+        [AuthorizationRoles.Members]
+      );
     }
 
     // Initialise contained objects

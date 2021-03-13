@@ -23,7 +23,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { Community } from './community.entity';
 import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
-import { CommunityParent } from './community-parent.dto';
 import { ApplicationService } from '../application/application.service';
 import { AuthorizationRoles } from '@core/authorization';
 
@@ -41,10 +40,11 @@ export class CommunityService {
 
   async createCommunity(
     name: string,
+    type: string,
     restrictedGroupNames: string[]
   ): Promise<ICommunity> {
     // reate and initialise a new Community using the first returned array item
-    const community = new Community(name, restrictedGroupNames);
+    const community = new Community(name, type, restrictedGroupNames);
     await this.initialiseMembers(community);
     await this.communityRepository.save(community);
 
@@ -98,19 +98,6 @@ export class CommunityService {
     return await this.userGroupService.getGroupsOnGroupable(community);
   }
 
-  async getParent(community: Community): Promise<typeof CommunityParent> {
-    const communityParent = (await this.getCommunityOrFail(community.id, {
-      relations: ['ecoverse', 'challenge', 'opportunity'],
-    })) as Community;
-    if (communityParent?.ecoverse) return communityParent?.ecoverse;
-    if (communityParent?.challenge) return communityParent?.challenge;
-    if (communityParent?.opportunity) return communityParent?.opportunity;
-    throw new EntityNotFoundException(
-      `Unable to locate parent for community: ${community.name}`,
-      LogContext.COMMUNITY
-    );
-  }
-
   async getCommunityOrFail(
     communityID: number,
     options?: FindOneOptions<Community>
@@ -144,41 +131,60 @@ export class CommunityService {
     return true;
   }
 
-  async isUserMember(userID: number, communityID: number): Promise<boolean> {
-    const Community = await this.getCommunityOrFail(communityID, {
-      relations: ['groups'],
-    });
-    const membersGroup = await this.getMembersGroup(Community);
-    const members = membersGroup.members;
-    if (!members)
-      throw new GroupNotInitializedException(
-        `Members group not initialised in Community: ${communityID}`,
+  async setParentCommunity(
+    community?: ICommunity,
+    parentCommunity?: ICommunity
+  ): Promise<ICommunity> {
+    if (!community || !parentCommunity)
+      throw new EntityNotInitializedException(
+        'Community not set',
         LogContext.COMMUNITY
       );
-    const user = members.find(user => user.id == userID);
-    if (user) return true;
-    return false;
+    community.parentCommunity = parentCommunity;
+    await this.communityRepository.save(community);
+    return community;
   }
 
   async addMember(userID: number, communityID: number): Promise<IUserGroup> {
+    const community = await this.getCommunityOrFail(communityID, {
+      relations: ['groups', 'parentCommunity'],
+    });
+
+    // If the parent community is set, then check if the user is also a member there
+    if (community.parentCommunity) {
+      const isParentMember = await this.isMember(
+        userID,
+        community.parentCommunity.id
+      );
+      if (!isParentMember)
+        throw new ValidationException(
+          `User (${userID}) is not a member of parent community: ${community.parentCommunity.name}`,
+          LogContext.CHALLENGES
+        );
+    }
+
     // Try to find the user + group
     const user = await this.userService.getUserByIdOrFail(userID);
 
-    const community = await this.getCommunityOrFail(communityID, {
-      relations: ['groups'],
-    });
-
     // Get the members group
-    const membersGroup = await this.userGroupService.getGroupByName(
-      community,
-      AuthorizationRoles.Members
-    );
+    const membersGroup = await this.getMembersGroupOrFail(community);
     await this.userGroupService.addUserToGroup(user, membersGroup);
 
     return membersGroup;
   }
 
-  async getMembersGroup(community: ICommunity): Promise<IUserGroup> {
+  async isMember(userID: number, communityID: number): Promise<boolean> {
+    const community = await this.getCommunityOrFail(communityID, {
+      relations: ['groups'],
+    });
+
+    const members = await this.getMembersOrFail(community);
+    const user = members.find(user => user.id == userID);
+    if (user) return true;
+    return false;
+  }
+
+  async getMembersGroupOrFail(community: ICommunity): Promise<IUserGroup> {
     const group = await this.userGroupService.getGroupByName(
       community,
       AuthorizationRoles.Members
@@ -189,6 +195,18 @@ export class CommunityService {
         LogContext.COMMUNITY
       );
     return group;
+  }
+
+  async getMembersOrFail(community: ICommunity): Promise<IUser[]> {
+    const membersGroup = await this.getMembersGroupOrFail(community);
+    const members = membersGroup.members;
+    if (!members)
+      throw new GroupNotInitializedException(
+        `Members group not initialised in Community: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+
+    return members;
   }
 
   async getCommunities(ecoverseId: number): Promise<Community[]> {

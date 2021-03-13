@@ -1,27 +1,13 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { Ecoverse } from '@domain/challenge';
+import { Community } from '../community/community.entity';
 
 @ObjectType()
 export class MemberOf {
-  @Field(() => [UserGroup], {
-    description:
-      'References to the ecoverse with a populated list of groups the user is in at the ecoverse level',
+  @Field(() => [Community], {
+    description: 'References to the Communities the user is a member of',
   })
-  ecoverses?: Ecoverse[];
-
-  @Field(() => [Challenge], {
-    description: 'References to the challenges the user is a member of',
-  })
-  challenges?: Challenge[];
-
-  @Field(() => [Opportunity], {
-    description: 'References to the opportunities the user is a member of',
-  })
-  opportunities?: Opportunity[];
+  communities?: Community[];
 
   @Field(() => [Organisation], {
     description: 'References to the orgnaisaitons the user is a member of',

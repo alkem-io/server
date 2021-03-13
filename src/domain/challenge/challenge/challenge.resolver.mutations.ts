@@ -3,8 +3,6 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Float, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
@@ -97,23 +95,5 @@ export class ChallengeResolverMutations {
       chalengeID,
       organisationID
     );
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
-    description:
-      'Adds the user with the given identifier as a member of the specified opportunity',
-  })
-  @Profiling.api
-  async addUserToOpportunity(
-    @Args('userID') userID: number,
-    @Args('opportunityID') opportunityID: number
-  ): Promise<IUserGroup> {
-    const group = await this.challengeService.addUserToOpportunity(
-      userID,
-      opportunityID
-    );
-    return group;
   }
 }

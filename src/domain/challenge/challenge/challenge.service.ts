@@ -7,7 +7,6 @@ import { OpportunityService } from '@domain/challenge/opportunity/opportunity.se
 import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -23,7 +22,11 @@ import { ChallengeInput } from './challenge.dto';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { UpdateChallengeInput } from './update-challenge.dto';
-import { Community, ICommunity } from '@domain/community/community';
+import {
+  Community,
+  CommunityType,
+  ICommunity,
+} from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 
@@ -53,9 +56,11 @@ export class ChallengeService {
     }
 
     if (!challenge.community) {
-      challenge.community = new Community(challenge.name, [
-        AuthorizationRoles.Members,
-      ]);
+      challenge.community = new Community(
+        challenge.name,
+        CommunityType.CHALLENGE,
+        [AuthorizationRoles.Members]
+      );
     }
 
     // Initialise contained objects
@@ -66,7 +71,7 @@ export class ChallengeService {
   }
 
   // Loads the challenges into the challenge entity if not already present
-  async loadCommunity(challengeId: number): Promise<ICommunity> {
+  async getCommunity(challengeId: number): Promise<ICommunity> {
     const challengeWithCommunity = await this.getChallengeOrFail(challengeId, {
       relations: ['community'],
     });
@@ -80,7 +85,7 @@ export class ChallengeService {
   }
 
   // Loads the challenges into the challenge entity if not already present
-  async loadOpportunities(challenge: Challenge): Promise<IOpportunity[]> {
+  async getOpportunities(challenge: Challenge): Promise<IOpportunity[]> {
     if (challenge.opportunities && challenge.opportunities.length > 0) {
       // challenge already has groups loaded
       return challenge.opportunities;
@@ -124,6 +129,12 @@ export class ChallengeService {
 
     challenge.opportunities?.push(opportunity as Opportunity);
     await this.challengeRepository.save(challenge);
+
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      opportunity.community,
+      challenge.community
+    );
 
     return opportunity;
   }
@@ -177,7 +188,7 @@ export class ChallengeService {
   }
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    await this.validateChallenge(challengeData);
+    await this.validateChallengeData(challengeData);
 
     const textID = challengeData.textID;
     // Ensure lower case
@@ -190,7 +201,7 @@ export class ChallengeService {
     return challenge;
   }
 
-  async validateChallenge(challengeData: ChallengeInput) {
+  async validateChallengeData(challengeData: ChallengeInput) {
     const textID = challengeData.textID;
     if (!textID || textID.length < 3)
       throw new ValidationException(
@@ -284,28 +295,6 @@ export class ChallengeService {
 
     await this.challengeRepository.remove(challenge as Challenge);
     return true;
-  }
-
-  async addUserToOpportunity(
-    userID: number,
-    opportunityID: number
-  ): Promise<IUserGroup> {
-    // Get the ID of the challenge containing the provided opportunity ID
-    const challengeID = await this.opportunityService.getChallengeID(
-      opportunityID
-    );
-    const isMember = true; //await this.community.isUserMember(userID, challengeID);
-    if (!isMember)
-      throw new ValidationException(
-        `User (${userID}) is not a member of parent challenge: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-
-    // Get the members group
-    const community = await this.opportunityService.loadCommunity(
-      opportunityID
-    );
-    return await this.communityService.addMember(userID, community.id);
   }
 
   async getChallenges(): Promise<Challenge[]> {

@@ -25,7 +25,11 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { Community, ICommunity } from '@domain/community/community';
+import {
+  Community,
+  CommunityType,
+  ICommunity,
+} from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 
@@ -64,12 +68,18 @@ export class EcoverseService {
     }
 
     if (!ecoverse.community) {
-      ecoverse.community = new Community(ecoverse.name, [
-        AuthorizationRoles.Members,
-        AuthorizationRoles.EcoverseAdmins,
-        AuthorizationRoles.GlobalAdmins,
-        AuthorizationRoles.CommunityAdmins,
-      ]);
+      let communityName = ecoverse.name;
+      if (communityName.length == 0) communityName = 'Ecoverse';
+      ecoverse.community = new Community(
+        communityName,
+        CommunityType.ECOVERSE,
+        [
+          AuthorizationRoles.Members,
+          AuthorizationRoles.EcoverseAdmins,
+          AuthorizationRoles.GlobalAdmins,
+          AuthorizationRoles.CommunityAdmins,
+        ]
+      );
 
       await this.communityService.initialiseMembers(ecoverse.community);
       // Disable searching on the mandatory platform groups
@@ -174,6 +184,12 @@ export class EcoverseService {
 
     ecoverse.challenges.push(challenge);
     await this.ecoverseRepository.save(ecoverse);
+
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      challenge.community,
+      ecoverse.community
+    );
 
     return challenge;
   }

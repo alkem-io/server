@@ -21,7 +21,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async community(@Parent() challenge: Challenge) {
-    const community = await this.challengeService.loadCommunity(challenge.id);
+    const community = await this.challengeService.getCommunity(challenge.id);
     return community;
   }
 
@@ -31,7 +31,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async opportunities(@Parent() challenge: Challenge) {
-    const opportunities = await this.challengeService.loadOpportunities(
+    const opportunities = await this.challengeService.getOpportunities(
       challenge
     );
     return opportunities;

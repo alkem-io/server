@@ -6,8 +6,6 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
-import { GroupNotInitializedException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { Profiling } from '@src/common/decorators';
 import { Community } from './community.entity';
 import { CommunityService } from './community.service';
@@ -23,9 +21,8 @@ export class CommunityResolverFields {
     description: 'Groups of users related to a Community.',
   })
   @Profiling.api
-  async groups(@Parent() Community: Community) {
-    const groups = await this.communityService.loadGroups(Community);
-    return groups;
+  async groups(@Parent() community: Community) {
+    return await this.communityService.loadGroups(community);
   }
 
   @Roles(AuthorizationRoles.Members)
@@ -35,15 +32,8 @@ export class CommunityResolverFields {
     description: 'All users that are contributing to this Community.',
   })
   @Profiling.api
-  async members(@Parent() Community: Community) {
-    const group = await this.communityService.getMembersGroup(Community);
-    const members = group.members;
-    if (!members)
-      throw new GroupNotInitializedException(
-        'Members group not initialised on Community',
-        LogContext.COMMUNITY
-      );
-    return members;
+  async members(@Parent() community: Community) {
+    return await this.communityService.getMembersOrFail(community);
   }
 
   @Roles(
@@ -57,8 +47,8 @@ export class CommunityResolverFields {
     description: 'Application available for this community.',
   })
   @Profiling.api
-  async applications(@Parent() Community: Community) {
-    const apps = await this.communityService.getApplications(Community);
+  async applications(@Parent() community: Community) {
+    const apps = await this.communityService.getApplications(community);
     return apps || [];
   }
 }
