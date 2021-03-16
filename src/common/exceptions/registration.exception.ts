@@ -1,7 +1,7 @@
 import { ApolloError } from 'apollo-server-express';
 import { LogContext, CherrytwistErrorStatus } from '@common/enums';
 
-export class UserNotRegistredException extends ApolloError {
+export class UserNotRegisteredException extends ApolloError {
   private context: LogContext;
 
   constructor(message = 'User not registered.') {
