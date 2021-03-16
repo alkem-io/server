@@ -128,13 +128,14 @@ export class ChallengeService {
     );
 
     challenge.opportunities?.push(opportunity as Opportunity);
-    await this.challengeRepository.save(challenge);
 
     // Finally set the community relationship
     await this.communityService.setParentCommunity(
       opportunity.community,
       challenge.community
     );
+
+    await this.challengeRepository.save(challenge);
 
     return opportunity;
   }

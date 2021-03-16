@@ -5,7 +5,7 @@ import {
   BaseEntity,
   Column,
   Entity,
-  JoinColumn,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -72,9 +72,8 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   )
   opportunity?: Opportunity;
 
-  // Community needs to know if it is part of a parent community
-  @OneToOne(() => Community, { eager: false, cascade: false })
-  @JoinColumn()
+  // The parent community can have many child communities; the relationship is controlled by the child.
+  @ManyToOne(() => Community, { eager: false, cascade: false })
   parentCommunity?: Community;
 
   // The restricted group names at the Community level
