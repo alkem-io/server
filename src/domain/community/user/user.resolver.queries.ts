@@ -10,6 +10,7 @@ import { AuthenticationException } from '@common/exceptions';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserInfo } from '@src/core/authentication/user-info';
+import { UserNotRegistredException } from '@common/exceptions/registration.exception';
 
 @Resolver(() => User)
 export class UserResolverQueries {
@@ -68,7 +69,7 @@ export class UserResolverQueries {
       );
     }
     if (!userInfo.user) {
-      throw new AuthenticationException('Unable to retrieve user profile.');
+      throw new UserNotRegistredException();
     }
     return userInfo.user;
   }
