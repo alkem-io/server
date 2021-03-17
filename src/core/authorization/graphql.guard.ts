@@ -106,7 +106,10 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'simple-auth-jwt']) {
 
     if (err) throw new AuthenticationException(err);
 
-    if (this.selfManagement && this.email === user.email) {
+    if (
+      this.selfManagement &&
+      this.email.toLowerCase() === user.email.toLowerCase()
+    ) {
       return user;
     }
 
