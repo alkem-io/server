@@ -1,22 +1,24 @@
-export const name = () => '{ name }';
+export const name = () => '{ecoverse { name }}';
 
-export const hostMembers = () => '{ host { groups { name }}}';
+export const hostMembers = () => '{ecoverse { host { members { name }}}}';
 
-export const hostGroups = () => '{ host { members { name }}}';
+export const hostGroups = () => '{ecoverse { host { groups { name }}}}';
 
-export const hostProfile = () => '{ host { profile { description }}}';
+export const hostProfile = () =>
+  '{ecoverse { host { profile { description }}}}';
 
-export const contextTagline = () => '{ context { tagline }}';
+export const contextTagline = () => '{ecoverse { context { tagline }}}';
 
-export const contextBackground = () => '{ context { background }}';
+export const contextBackground = () => '{ecoverse { context { background }}}';
 
-export const contextVision = () => '{ context { vision }}';
+export const contextVision = () => '{ecoverse { context { vision }}}';
 
-export const contextImpact = () => '{ context { impact }}';
+export const contextImpact = () => '{ecoverse { context { impact }}}';
 
-export const contextWho = () => '{ context { who }}';
+export const contextWho = () => '{ecoverse { context { who }}}';
 
-export const contextReferencesName = () => '{ context { references { name }}}';
+export const contextReferencesName = () =>
+  '{ecoverse { context { references { name }}}}';
 
 export const usersName = () => '{ users { name }}';
 
@@ -25,10 +27,7 @@ export const usersAccountUPN = () => '{ users { accountUpn }}';
 export const usersProfile = () => '{ users { profile { description }}}';
 
 export const usersMemberofGroupsName = () =>
-  '{ users { memberof { groups { name }}}}';
-
-export const usersMemberofChallengesName = () =>
-  '{ users { memberof { challenges { name }}}}';
+  '{ users {memberof{communities{groups{name}}}}}';
 
 export const usersMemberofOrganisationsName = () =>
   '{ users { memberof { organisations { name }}}}';
@@ -42,10 +41,7 @@ export const userProfile = (id: number) =>
   `{ user ( ID: "${id}" ){ profile { description }}}`;
 
 export const userMemberofGroupsName = (id: number) =>
-  `{ user ( ID: "${id}" ){ memberof { groups { name }}}}`;
-
-export const userMemberofChallengesName = (id: number) =>
-  `{ user ( ID: "${id}" ){ memberof { challenges { name }}}}`;
+  `{ user ( ID: "${id}" ){ memberof{communities{groups{name}}}}}`;
 
 export const userMemberofOrganisationsName = (id: number) =>
   `{ user ( ID: "${id}" ){ memberof { organisations { name }}}}`;
@@ -60,14 +56,11 @@ export const groupsMembersName = () => '{ groups { members { name }}}';
 
 export const groupsProfile = () => '{ groups { profile { description }}}';
 
-export const groupsParentChallenge = () =>
-  '{ groups { parent { __typename ... on Challenge { name }}}}';
+export const groupsParentCommunity = () =>
+  '{ groups { parent { __typename ... on Community { name }}}}';
 
-export const groupsParentOpportunity = () =>
-  '{ groups { parent { __typename ... on Opportunity { name }}}}';
-
-export const groupsParentEcoverse = () =>
-  '{ groups { parent { __typename ... on Ecoverse { name }}}}';
+export const groupsParentOrganisation = () =>
+  '{ groups { parent { __typename ... on Organisation { name }}}}';
 
 export const groupsWithTagName = () => '{ groupsWithTag (tag: ""){ name }}';
 
@@ -80,14 +73,11 @@ export const groupsWithTagProfile = () =>
 export const groupsWithTagMembersName = () =>
   '{ groupsWithTag (tag: ""){ members { name }}}';
 
-export const groupsWithTagParentChallenge = () =>
-  '{ groupsWithTag (tag: ""){ parent { __typename ... on Challenge { name }}}}';
+export const groupsWithTagParentCommunity = () =>
+  '{ groupsWithTag (tag: ""){ parent { __typename ... on Community { name }}}}';
 
-export const groupsWithTagParentEcoverse = () =>
-  '{ groupsWithTag (tag: ""){ parent { __typename ... on Ecoverse { name }}}}';
-
-export const groupsWithTagParentOpportunity = () =>
-  '{ groupsWithTag (tag: ""){ parent { __typename ... on Opportunity { name }}}}';
+export const groupsWithTagParentOrganisation = () =>
+  '{ groupsWithTag (tag: ""){ parent { __typename ... on Organisation { name }}}}';
 
 export const challengesName = () => '{ challenges { name }}';
 
@@ -105,10 +95,11 @@ export const challengesLeadOrganisationGroups = () =>
 
 export const challengesTagsets = () => '{ challenges { tagset { name }}}';
 
-export const challengesGroups = () => '{ challenges { groups { name }}}';
+export const challengesGroups = () =>
+  '{ challenges {community {groups {members {name}}}}}';
 
 export const challengesContributors = () =>
-  '{ challenges { contributors { name }}}';
+  '{challenges {community {groups {members {name}}}}}';
 
 export const challengesOpportunities = () =>
   '{ challenges { opportunities { name }}}';
@@ -134,10 +125,10 @@ export const challengeTagsets = (id: number) =>
   `{ challenge(ID: ${id}) { tagset { name }}}`;
 
 export const challengeGroups = (id: number) =>
-  `{ challenge(ID: ${id}) { groups { name }}}`;
+  `{ challenge(ID: ${id}) {community {groups {name}}}}`;
 
 export const challengeContributors = (id: number) =>
-  `{ challenge(ID: ${id}) { contributors { name }}}`;
+  `{ challenge(ID: ${id}) {community {groups {members {name}}}}}`;
 
 export const challengeOpportunities = (id: number) =>
   `{ challenge(ID: ${id}) { opportunities { name }}}`;
@@ -150,10 +141,11 @@ export const opportunitiesState = () => '{ opportunities { state }}';
 
 export const opportunitiesContext = () => '{ opportunities { context { who }}}';
 
-export const opportunitiesGroups = () => '{ opportunities { groups { name }}}';
+export const opportunitiesGroups = () =>
+  '{ opportunities { community{groups { name }}}}';
 
 export const opportunitiesContributors = () =>
-  '{ opportunities { contributors { name }}}';
+  '{ opportunities {community {groups {members {name}}}}}';
 
 export const opportunitiesProjectsName = () =>
   '{ opportunities { projects { name }}}';
@@ -200,29 +192,25 @@ const query: Record<string, (id: number) => string> = {
   usersAccountUPN,
   usersProfile,
   usersMemberofGroupsName,
-  usersMemberofChallengesName,
   usersMemberofOrganisationsName,
   userName,
   userAccountUPN,
   userProfile,
   userMemberofGroupsName,
-  userMemberofChallengesName,
   userMemberofOrganisationsName,
   usersById,
   groupsName,
   groupsFocalPointName,
   groupsProfile,
   groupsMembersName,
-  groupsParentChallenge,
-  groupsParentEcoverse,
-  groupsParentOpportunity,
+  groupsParentCommunity,
+  groupsParentOrganisation,
   groupsWithTagName,
   groupsWithTagFocalPointName,
   groupsWithTagProfile,
   groupsWithTagMembersName,
-  groupsWithTagParentChallenge,
-  groupsWithTagParentEcoverse,
-  groupsWithTagParentOpportunity,
+  groupsWithTagParentCommunity,
+  groupsWithTagParentOrganisation,
   challengesName,
   challengesTextId,
   challengesState,

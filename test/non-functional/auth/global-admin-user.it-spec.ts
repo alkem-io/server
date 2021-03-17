@@ -35,7 +35,7 @@ afterAll(async () => {
 describe('DDT global admin user - queries - authorized', () => {
   // Arrange
   test.each`
-    query                                   | idName           | expected             | expectedForb
+    query                                   | idName           | expectedAuth         | expectedForb
     ${'name'}                               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'hostGroups'}                         | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'hostMembers'}                        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
@@ -50,29 +50,25 @@ describe('DDT global admin user - queries - authorized', () => {
     ${'usersAccountUPN'}                    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersProfile'}                       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersMemberofGroupsName'}            | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'usersMemberofChallengesName'}        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersMemberofOrganisationsName'}     | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userName'}                           | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userAccountUPN'}                     | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userProfile'}                        | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userMemberofGroupsName'}             | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'userMemberofChallengesName'}         | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userMemberofOrganisationsName'}      | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersById'}                          | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsName'}                         | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsFocalPointName'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsProfile'}                      | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsMembersName'}                  | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsParentChallenge'}              | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsParentEcoverse'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsParentOpportunity'}            | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'groupsParentCommunity'}              | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'groupsParentOrganisation'}           | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagName'}                  | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagFocalPointName'}        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagProfile'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagMembersName'}           | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsWithTagParentChallenge'}       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsWithTagParentEcoverse'}        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsWithTagParentOpportunity'}     | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'groupsWithTagParentCommunity'}       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'groupsWithTagParentOrganisation'}    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'challengesName'}                     | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'challengesTextId'}                   | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'challengesState'}                    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
@@ -110,7 +106,7 @@ describe('DDT global admin user - queries - authorized', () => {
     ${'projectsTagset'}                     | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'projectsAspects'}                    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
   `(
-    'should NOT expect: \'$expected\' for query: \'$query\'',
+    "should NOT expect: '$expected' for query: '$query'",
     async ({ query, idName, expectedAuth, expectedForb }) => {
       // Act
       const requestParamsQueryData = {
@@ -140,23 +136,21 @@ describe('DDT global admin user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
-    ${'createOrganisationMutation'}        | ${'createOrganisationVariables'}        | ${''}              | ${notAuthorizedCode}
-    ${'createReferenceOnProfileMutation'}  | ${'createReferenceOnProfileVariable'}   | ${'userProfileId'} | ${notAuthorizedCode}
-    ${'createReferenceOnContextMutation'}  | ${'createReferenceOnContextVariables'}  | ${'contextId'}     | ${notAuthorizedCode}
-    ${'createTagsetOnProfileMutation'}     | ${'createTagsetOnProfileVariables'}     | ${'userProfileId'} | ${notAuthorizedCode}
-    ${'createGroupOnEcoverseMutation'}     | ${'createGroupOnEcoverseVariables'}     | ${''}              | ${notAuthorizedCode}
-    ${'createChallengeMutation'}           | ${'createChallengeVariables'}           | ${''}              | ${notAuthorizedCode}
-    ${'createGroupOnChallengeMutation'}    | ${'createGroupOnChallengeVariables'}    | ${'challengeId'}   | ${notAuthorizedCode}
     ${'createOpportunityMutation'}         | ${'createOpportunityVariables'}         | ${'challengeId'}   | ${notAuthorizedCode}
-    ${'createGroupOnOpportunityMutations'} | ${'createGroupOnOpportunityVariables'}  | ${'opportunityId'} | ${notAuthorizedCode}
+    ${'createChallengeMutation'}           | ${'createChallengeVariables'}           | ${'test'}          | ${notAuthorizedCode}
+    ${'createGroupOnCommunityMutation'}    | ${'createGroupOnCommunityVariables'}    | ${''}              | ${notAuthorizedCode}
     ${'createProjectMutation'}             | ${'createProjectVariables'}             | ${'opportunityId'} | ${notAuthorizedCode}
     ${'createActorGroupMutation'}          | ${'createActorGroupVariables'}          | ${'opportunityId'} | ${notAuthorizedCode}
     ${'createActorMutation'}               | ${'createActorVariables'}               | ${'actorGroupId'}  | ${notAuthorizedCode}
     ${'createAspectOnOpportunityMutation'} | ${'createAspectOnOpportunityVariables'} | ${'opportunityId'} | ${notAuthorizedCode}
     ${'createRelationMutation'}            | ${'createRelationVariables'}            | ${'opportunityId'} | ${notAuthorizedCode}
     ${'createAspectOnProjectMutation'}     | ${'createAspectOnProjectVariables'}     | ${'projectId'}     | ${notAuthorizedCode}
+    ${'createOrganisationMutation'}        | ${'createOrganisationVariables'}        | ${''}              | ${notAuthorizedCode}
+    ${'createReferenceOnProfileMutation'}  | ${'createReferenceOnProfileVariable'}   | ${'userProfileId'} | ${notAuthorizedCode}
+    ${'createReferenceOnContextMutation'}  | ${'createReferenceOnContextVariables'}  | ${'contextId'}     | ${notAuthorizedCode}
+    ${'createTagsetOnProfileMutation'}     | ${'createTagsetOnProfileVariables'}     | ${'userProfileId'} | ${notAuthorizedCode}
   `(
-    'should NOT expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
+    "should NOT expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -180,8 +174,6 @@ describe('DDT global admin user - Create mutations - authorized', () => {
   );
 });
 
-//  Scenario excluded not to load with fake data the AAD   ${createUserMutation}   | ${createUserVariables}  | ${notAuthorizedCode}
-
 describe('DDT global admin user - Update mutations - authorized', () => {
   // Arrange
   test.each`
@@ -193,8 +185,7 @@ describe('DDT global admin user - Update mutations - authorized', () => {
     ${'updateOpportunityMutation'}              | ${'updateOpportunityVariables'}              | ${'opportunityId'}            | ${notAuthorizedCode}
     ${'updateAspectMutation'}                   | ${'updateAspectVariable'}                    | ${'aspectId'}                 | ${notAuthorizedCode}
     ${'updateActorMutation'}                    | ${'updateActorVariables'}                    | ${'actorId'}                  | ${notAuthorizedCode}
-    ${'addUserToChallengeMutation'}             | ${'addUserToChallengeVariables'}             | ${'challengeId'}              | ${notAuthorizedCode}
-    ${'addUserToOpportunityMutation'}           | ${'addUserToOpportunityVariables'}           | ${'opportunityId'}            | ${notAuthorizedCode}
+    ${'addUserToCommunityMutation'}             | ${'addUserToCommunityVariables'}             | ${''}                         | ${notAuthorizedCode}
     ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'}          | ${notAuthorizedCode}
     ${'assignGroupFocalPointMutation'}          | ${'assignGroupFocalPointVariables'}          | ${'groupIdEcoverse'}          | ${notAuthorizedCode}
     ${'removeGroupFocalPointMutation'}          | ${'removeGroupFocalPointVariables'}          | ${'createGroupOnChallengeId'} | ${notAuthorizedCode}
@@ -203,7 +194,7 @@ describe('DDT global admin user - Update mutations - authorized', () => {
     ${'addTagsOnTagsetMutation'}                | ${'addTagsOnTagsetVariables'}                | ${'tagsetId'}                 | ${notAuthorizedCode}
     ${'replaceTagsOnTagsetMutation'}            | ${'replaceTagsOnTagsetVariables'}            | ${'tagsetId'}                 | ${notAuthorizedCode}
   `(
-    'should NOT expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
+    "should NOT expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -238,7 +229,7 @@ describe('DDT global admin user - Remove mutations - authorized', () => {
     ${'removeChallengeMutation'}   | ${'removeChallengeVariables'}   | ${'removeChallangeId'}   | ${notAuthorizedCode}
     ${'removeUserMutation'}        | ${'removeUserVariables'}        | ${'userId'}              | ${notAuthorizedCode}
   `(
-    'should NOT expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
+    "should NOT expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {

@@ -1,3 +1,5 @@
+const communityId = 1;
+
 export const createOrganisationMutation = `
 mutation CreateOrganisation($organisationData: OrganisationInput!) {
     createOrganisation(organisationData: $organisationData) {
@@ -15,19 +17,6 @@ export const createOrganisationVariables = () => `
         "name": "Cherrytwist7 "
     }
 }`;
-
-export const createGroupOnEcoverseMutation = `
-mutation CreateGroupOnEcoverse($groupName: String!) {
-    createGroupOnEcoverse(groupName: $groupName) {
-      name,
-      id,
-    }
-  }`;
-
-export const createGroupOnEcoverseVariables = () => `
-{
-    "groupName": "test Ecoverse Group "
-  }`;
 
 export const createUserMutation = `
 mutation CreateUser($userData: UserInput!) {
@@ -90,11 +79,6 @@ mutation CreateChallenge($challengeData: ChallengeInput!) {
     createChallenge(challengeData: $challengeData) {
       name,
       id,
-      groups
-      {
-        id,
-        name
-      },
       context{
           references{name, uri}
       }
@@ -133,9 +117,9 @@ export const createChallengeVariables = () => `
     }
 }`;
 
-export const createGroupOnChallengeMutation = `
-mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
-  createGroupOnChallenge(groupName: $groupName, challengeID: $challengeID) {
+export const createGroupOnCommunityMutation = `
+mutation createGroupOnCommuity($groupName: String!, $communityID: Float!) {
+  createGroupOnCommunity(groupName: $groupName, communityID: $communityID) {
     name,
     id
     members {
@@ -144,9 +128,9 @@ mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
   }
 }`;
 
-export const createGroupOnChallengeVariables = (id: number) => `
+export const createGroupOnCommunityVariables = (id: number) => `
 {
-  "challengeID": ${id},
+  "communityID": ${communityId},
   "groupName": "testGroup"
 }`;
 
@@ -179,23 +163,6 @@ export const createOpportunityVariables = (id: number) => `
         }
     }
 }`;
-
-export const createGroupOnOpportunityMutations = `
-mutation createGroupOnOpportunity($groupName: String!, $opportunityID: Float!) {
-    createGroupOnOpportunity(groupName: $groupName, opportunityID: $opportunityID) {
-      name,
-      id
-      members {
-        name
-      }
-    }
-  }`;
-
-export const createGroupOnOpportunityVariables = (id: number) => `
-{
-    "opportunityID": ${id},
-    "groupName": "testOpportunityGroup"
-  }`;
 
 export const createProjectMutation = `
 mutation CreateProject($projectData: ProjectInput!, $opportunityID: Float!) {
@@ -335,7 +302,7 @@ mutation createReferenceOnContext($referenceInput: ReferenceInput!, $contextID: 
 
 export const createReferenceOnContextVariables = (id: number) => `
 {
-    "contextID": ${id},
+    "contextID": 1,
     "referenceInput":
         {
             "name": "wow",
@@ -361,17 +328,15 @@ export const createTagsetOnProfileVariables = (id: number) => `
 
 const mutations: Record<string, string> = {
   createOrganisationMutation,
-  createGroupOnEcoverseMutation,
   createUserMutation,
   createReferenceOnProfileMutation,
   createChallengeMutation,
-  createGroupOnChallengeMutation,
+  createGroupOnCommunityMutation,
   createOpportunityMutation,
-  createGroupOnOpportunityMutations,
+  createAspectOnOpportunityMutation,
   createProjectMutation,
   createActorGroupMutation,
   createActorMutation,
-  createAspectOnOpportunityMutation,
   createRelationMutation,
   createAspectOnProjectMutation,
   createReferenceOnContextMutation,
@@ -380,13 +345,12 @@ const mutations: Record<string, string> = {
 
 const variables: Record<string, (id: number) => string> = {
   createOrganisationVariables,
-  createGroupOnEcoverseVariables,
+
   createUserVariables,
   createReferenceOnProfileVariable,
   createChallengeVariables,
-  createGroupOnChallengeVariables,
+  createGroupOnCommunityVariables,
   createOpportunityVariables,
-  createGroupOnOpportunityVariables,
   createProjectVariables,
   createActorGroupVariables,
   createActorVariables,
@@ -402,5 +366,6 @@ export const getCreateMutation = (name: string) => {
 };
 
 export const getCreateVariables = (name: string, id: number) => {
+  console.log(variables[name](id));
   return variables[name](id);
 };
