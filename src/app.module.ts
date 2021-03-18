@@ -61,7 +61,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
       useFactory: async (configService: ConfigService) => ({
         type: 'mysql',
         insecureAuth: true,
-        synchronize: true, //warning: to be reverted when go back to migrations!
+        synchronize: false,
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         host: configService.get<IDatabaseConfig>('database')?.host,
