@@ -10,6 +10,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
+  ApplicationInvalidStateException,
   EntityNotFoundException,
   EntityNotInitializedException,
   GroupNotInitializedException,
@@ -17,7 +18,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ApolloError } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Community } from './community.entity';
@@ -229,8 +229,9 @@ export class CommunityService {
     );
 
     if (existingApplication) {
-      throw new ApolloError(
-        `An application for user ${existingApplication.user.email} already exists for Community: ${community.id}. Application status: ${existingApplication.status}`
+      throw new ApplicationInvalidStateException(
+        `An application for user ${existingApplication.user.email} already exists for Community: ${community.id}. Application status: ${existingApplication.status}`,
+        LogContext.COMMUNITY
       );
     }
 
@@ -296,9 +297,15 @@ export class CommunityService {
     );
 
     if (application.status == ApplicationStatus.approved) {
-      throw new ApolloError('Application has already been approved!');
+      throw new ApplicationInvalidStateException(
+        'Application has already been approved!',
+        LogContext.COMMUNITY
+      );
     } else if (application.status == ApplicationStatus.rejected) {
-      throw new ApolloError('Application has already been rejected!');
+      throw new ApplicationInvalidStateException(
+        'Application has already been rejected!',
+        LogContext.COMMUNITY
+      );
     }
 
     if (!application.community)

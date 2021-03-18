@@ -91,9 +91,3 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
     this.type = communityType;
   }
 }
-
-export enum CommunityType {
-  ECOVERSE = 'ecoverse',
-  CHALLENGE = 'challenge',
-  OPPORTUNITY = 'opportunity',
-}

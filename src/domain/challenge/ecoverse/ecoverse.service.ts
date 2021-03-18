@@ -25,13 +25,10 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { EcoverseInput } from './ecoverse.dto';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import {
-  Community,
-  CommunityType,
-  ICommunity,
-} from '@domain/community/community';
+import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
+import { CommunityType } from '@common/enums/community.types';
 
 @Injectable()
 export class EcoverseService {
