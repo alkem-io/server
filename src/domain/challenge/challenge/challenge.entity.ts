@@ -49,7 +49,7 @@ export class Challenge extends BaseEntity
     nullable: true,
     description: 'The shared understanding for the challenge',
   })
-  @OneToOne(() => Context, { eager: false, cascade: true })
+  @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
   context?: Context;
 
