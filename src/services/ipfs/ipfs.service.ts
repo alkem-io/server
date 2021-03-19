@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import ipfs from 'ipfs-http-client';
 import fs from 'fs';
 
 @Injectable()
@@ -10,7 +9,9 @@ export class IpfsService {
   // }
 
   public async testUploadImage() {
-    const ipfsClient = ipfs();
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const IpfsHttpClient = require('ipfs-http-client');
+    const ipfsClient = IpfsHttpClient();
     const image = fs.readFileSync('image.png');
     return await ipfsClient.add(image, { pin: true });
   }

@@ -42,6 +42,7 @@ import { ApplicationModule } from '@domain/community/application/application.mod
 import { NVPModule } from '@domain/common/nvp/nvp.module';
 import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
+import { IpfsModule } from './services/ipfs/ipfs.module';
 
 @Module({
   imports: [
@@ -115,6 +116,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
     }),
     SearchModule,
     KonfigModule,
+    IpfsModule,
   ],
   controllers: [AppController],
   providers: [
