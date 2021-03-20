@@ -30,6 +30,7 @@ import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
+import { TagsetService } from '@domain/common/tagset';
 
 @Injectable()
 export class OpportunityService {
@@ -39,6 +40,7 @@ export class OpportunityService {
     private projectService: ProjectService,
     private contextService: ContextService,
     private communityService: CommunityService,
+    private tagsetService: TagsetService,
     private relationService: RelationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -254,6 +256,10 @@ export class OpportunityService {
     // Remove the context
     if (opportunity.context) {
       await this.contextService.removeContext(opportunity.context.id);
+    }
+
+    if (opportunity.tagset) {
+      await this.tagsetService.removeTagset(opportunity.tagset.id);
     }
 
     await this.opportunityRepository.remove(opportunity as Opportunity);

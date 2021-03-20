@@ -54,7 +54,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     nullable: true,
     description: 'The profile for the user group',
   })
-  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
 
@@ -71,7 +71,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @ManyToOne(
     () => Community,
     community => community.groups,
-    { eager: false }
+    { eager: false, onDelete: 'CASCADE' }
   )
   community?: Community;
 

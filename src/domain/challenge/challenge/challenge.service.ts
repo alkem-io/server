@@ -296,6 +296,10 @@ export class ChallengeService {
       await this.contextService.removeContext(challenge.context.id);
     }
 
+    if (challenge.tagset) {
+      await this.tagsetService.removeTagset(challenge.tagset.id);
+    }
+
     await this.challengeRepository.remove(challenge as Challenge);
     return true;
   }

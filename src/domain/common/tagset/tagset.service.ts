@@ -50,6 +50,11 @@ export class TagsetService {
     return tagset as ITagset;
   }
 
+  async removeTagset(tagsetID: number): Promise<ITagset> {
+    const tagset = await this.getTagsetOrFail(tagsetID);
+    return await this.tagsetRepository.remove(tagset as Tagset);
+  }
+
   async replaceTags(tagsetID: number, newTags: string[]): Promise<ITagset> {
     const tagset = await this.getTagsetOrFail(tagsetID);
 

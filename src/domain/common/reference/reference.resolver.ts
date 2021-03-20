@@ -15,6 +15,8 @@ export class ReferenceResolver {
     description: 'Removes the reference  with the specified ID',
   })
   async removeReference(@Args('ID') referenceID: number): Promise<boolean> {
-    return await this.referenceService.removeReference(referenceID);
+    const reference = await this.referenceService.removeReference(referenceID);
+    if (reference) return true;
+    return false;
   }
 }

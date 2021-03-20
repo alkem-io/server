@@ -110,6 +110,29 @@ export class OrganisationService {
     return await this.getOrganisationOrFail(orgID);
   }
 
+  async removeOrganisation(orgID: number): Promise<IOrganisation> {
+    const organisation = await this.getOrganisationOrFail(orgID);
+    const { id } = organisation;
+
+    if (organisation.profile) {
+      await this.profileService.removeProfile(organisation.profile.id);
+    }
+
+    if (organisation.groups) {
+      for (const group of organisation.groups) {
+        await this.userGroupService.removeUserGroup(group.id);
+      }
+    }
+
+    const result = await this.organisationRepository.remove(
+      organisation as Organisation
+    );
+    return {
+      ...result,
+      id,
+    };
+  }
+
   async getOrganisationOrFail(
     organisationID: number,
     options?: FindOneOptions<Organisation>

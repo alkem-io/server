@@ -27,7 +27,7 @@ export class Profile extends BaseEntity implements IProfile {
   @OneToMany(
     () => Reference,
     reference => reference.profile,
-    { eager: true, cascade: true }
+    { eager: true, cascade: true, onDelete: 'CASCADE' }
   )
   references?: Reference[];
 
@@ -38,7 +38,7 @@ export class Profile extends BaseEntity implements IProfile {
   @OneToMany(
     () => Tagset,
     tagset => tagset.profile,
-    { eager: true, cascade: true }
+    { eager: true, cascade: true, onDelete: 'CASCADE' }
   )
   tagsets?: Tagset[];
 

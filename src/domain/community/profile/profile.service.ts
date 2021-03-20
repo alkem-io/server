@@ -58,6 +58,25 @@ export class ProfileService {
     return profile;
   }
 
+  async removeProfile(profileID: number): Promise<IProfile> {
+    // Note need to load it in with all contained entities so can remove fully
+    const profile = await this.getProfileOrFail(profileID);
+
+    if (profile.tagsets) {
+      for (const tagset of profile.tagsets) {
+        await this.tagsetService.removeTagset(tagset.id);
+      }
+    }
+
+    if (profile.references) {
+      for (const reference of profile.references) {
+        await this.referenceService.removeReference(reference.id);
+      }
+    }
+
+    return await this.profileRepository.remove(profile as Profile);
+  }
+
   async createTagset(profileID: number, tagsetName: string): Promise<ITagset> {
     const profile = await this.getProfileOrFail(profileID);
 

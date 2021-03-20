@@ -76,6 +76,10 @@ export class UserGroupService {
         LogContext.COMMUNITY
       );
 
+    if (group.profile) {
+      await this.profileService.removeProfile(group.profile.id);
+    }
+
     await this.userGroupRepository.remove(group);
     return true;
   }

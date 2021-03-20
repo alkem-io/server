@@ -21,6 +21,7 @@ import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { IOpportunity } from './opportunity.interface';
 import { Community } from '@domain/community/community';
 import { ICommunityable } from '@interfaces/communityable.interface';
+import { Tagset } from '@domain/common/tagset';
 
 @Entity()
 @ObjectType()
@@ -84,24 +85,32 @@ export class Opportunity extends BaseEntity
   )
   projects?: Project[];
 
+  @Field(() => Tagset, {
+    nullable: true,
+    description: 'The set of tags for the Opportunity',
+  })
+  @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @JoinColumn()
+  tagset?: Tagset;
+
   @OneToMany(
     () => ActorGroup,
     actorGroup => actorGroup.opportunity,
-    { eager: false, cascade: true }
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
   )
   actorGroups?: ActorGroup[];
 
   @OneToMany(
     () => Aspect,
     aspect => aspect.opportunity,
-    { eager: false, cascade: true }
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
   )
   aspects?: Aspect[];
 
   @OneToMany(
     () => Relation,
     relation => relation.opportunity,
-    { eager: false, cascade: true }
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
   )
   relations?: Relation[];
 

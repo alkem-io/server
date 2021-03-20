@@ -4,6 +4,7 @@ import { IContext } from '@domain/context/context/context.interface';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICommunity } from '@domain/community/community';
+import { ITagset } from '@domain/common/tagset';
 
 export interface IOpportunity {
   id: number;
@@ -12,6 +13,7 @@ export interface IOpportunity {
   state: string;
   context?: IContext;
   community?: ICommunity;
+  tagset?: ITagset;
   projects?: IProject[];
   actorGroups?: IActorGroup[];
   restrictedActorGroupNames: string[];

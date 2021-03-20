@@ -10,6 +10,7 @@ import { OpportunityResolver } from './opportunity.resolver';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
 import { OpportunityService } from './opportunity.service';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
     ContextModule,
     CommunityModule,
     RelationModule,
+    TagsetModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

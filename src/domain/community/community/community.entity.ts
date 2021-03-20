@@ -54,21 +54,21 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @OneToOne(
     () => Ecoverse,
     ecoverse => ecoverse.community,
-    { eager: false, cascade: false }
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   ecoverse?: Ecoverse;
 
   @OneToOne(
     () => Challenge,
     challenge => challenge.community,
-    { eager: false, cascade: false }
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   challenge?: Challenge;
 
   @OneToOne(
     () => Opportunity,
     opportunity => opportunity.community,
-    { eager: false, cascade: false }
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   opportunity?: Opportunity;
 
