@@ -14,6 +14,7 @@ import { OrganisationInput } from './organisation.dto';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { AuthorizationRoles } from '@core/authorization';
+import validator from 'validator';
 
 @Injectable()
 export class OrganisationService {
@@ -91,7 +92,7 @@ export class OrganisationService {
     orgID: number,
     organisationData: OrganisationInput
   ): Promise<IOrganisation> {
-    const existingOrganisation = await this.getOrganisationOrFail(orgID);
+    const existingOrganisation = await this.getOrganisationByIdOrFail(orgID);
 
     // Merge in the data
     if (organisationData.name) {
@@ -108,11 +109,11 @@ export class OrganisationService {
     }
 
     // Reload the organisation for returning
-    return await this.getOrganisationOrFail(orgID);
+    return await this.getOrganisationByIdOrFail(orgID);
   }
 
   async removeOrganisation(orgID: number): Promise<IOrganisation> {
-    const organisation = await this.getOrganisationOrFail(orgID);
+    const organisation = await this.getOrganisationByIdOrFail(orgID);
     const { id } = organisation;
 
     if (organisation.profile) {
@@ -135,10 +136,21 @@ export class OrganisationService {
   }
 
   async getOrganisationOrFail(
+    organisationID: string,
+    options?: FindOneOptions<Organisation>
+  ): Promise<IOrganisation> {
+    if (validator.isNumeric(organisationID)) {
+      const idInt: number = parseInt(organisationID);
+      return await this.getOrganisationByIdOrFail(idInt, options);
+    }
+
+    return await this.getOrganisationByNameOrFail(organisationID);
+  }
+
+  async getOrganisationByIdOrFail(
     organisationID: number,
     options?: FindOneOptions<Organisation>
   ): Promise<IOrganisation> {
-    //const t1 = performance.now()
     const organisation = await Organisation.findOne(
       { id: organisationID },
       options
@@ -147,6 +159,22 @@ export class OrganisationService {
       throw new EntityNotFoundException(
         `Unable to find organisation with ID: ${organisationID}`,
         LogContext.CHALLENGES
+      );
+    return organisation;
+  }
+
+  async getOrganisationByNameOrFail(
+    name: string,
+    options?: FindOneOptions<Organisation>
+  ): Promise<IOrganisation> {
+    const organisation = await this.organisationRepository.findOne(
+      { name: name },
+      options
+    );
+    if (!organisation)
+      throw new EntityNotFoundException(
+        `Unable to find organisation with given identifier: ${name}`,
+        LogContext.COMMUNITY
       );
     return organisation;
   }
@@ -162,7 +190,7 @@ export class OrganisationService {
       `Adding userGroup (${groupName}) to organisation (${orgID})`
     );
     // Try to find the organisation
-    const organisation = await this.getOrganisationOrFail(orgID, {
+    const organisation = await this.getOrganisationByIdOrFail(orgID, {
       relations: ['groups'],
     });
 

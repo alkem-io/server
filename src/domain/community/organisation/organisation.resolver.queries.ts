@@ -22,7 +22,7 @@ export class OrganisationResolverQueries {
     description: 'A particular Organisation',
   })
   @Profiling.api
-  async organisation(@Args('ID') id: number): Promise<IOrganisation> {
+  async organisation(@Args('ID') id: string): Promise<IOrganisation> {
     return await this.organisationService.getOrganisationOrFail(id);
   }
 }

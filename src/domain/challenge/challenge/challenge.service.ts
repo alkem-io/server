@@ -313,7 +313,7 @@ export class ChallengeService {
     challengeID: number,
     organisationID: number
   ): Promise<boolean> {
-    const organisation = await this.organisationService.getOrganisationOrFail(
+    const organisation = await this.organisationService.getOrganisationByIdOrFail(
       organisationID,
       { relations: ['groups'] }
     );
