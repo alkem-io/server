@@ -49,7 +49,7 @@ export class Challenge extends BaseEntity
     nullable: true,
     description: 'The shared understanding for the challenge',
   })
-  @OneToOne(() => Context, { eager: true, cascade: true })
+  @OneToOne(() => Context, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   context?: Context;
 
@@ -60,15 +60,14 @@ export class Challenge extends BaseEntity
   @OneToOne(
     () => Community,
     community => community.challenge,
-    { eager: true, cascade: true }
+    { eager: true, cascade: true, onDelete: 'CASCADE' }
   )
   @JoinColumn()
   community?: Community;
 
   // Community
   @Field(() => [Organisation], {
-    description:
-      'The leads for the Community. The focal point for the user group is the primary Community lead.',
+    description: 'The Organisations that are leading this Challenge.',
   })
   @ManyToMany(
     () => Organisation,

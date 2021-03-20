@@ -53,7 +53,8 @@ export class Application extends BaseEntity {
 
   @ManyToOne(
     () => Community,
-    community => community.applications
+    community => community.applications,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   community?: Community;
 }

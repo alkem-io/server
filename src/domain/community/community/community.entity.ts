@@ -40,7 +40,7 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.community,
-    { eager: true, cascade: true }
+    { eager: true, cascade: true, onDelete: 'CASCADE' }
   )
   groups?: UserGroup[];
 

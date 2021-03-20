@@ -246,6 +246,16 @@ export class OpportunityService {
       }
     }
 
+    // Remove the community
+    if (opportunity.community) {
+      await this.communityService.removeCommunity(opportunity.community.id);
+    }
+
+    // Remove the context
+    if (opportunity.context) {
+      await this.contextService.removeContext(opportunity.context.id);
+    }
+
     await this.opportunityRepository.remove(opportunity as Opportunity);
     return true;
   }

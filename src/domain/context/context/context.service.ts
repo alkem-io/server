@@ -29,7 +29,7 @@ export class ContextService {
     return context;
   }
 
-  async getContext(contextID: number): Promise<IContext> {
+  async getContextOrFail(contextID: number): Promise<IContext> {
     const context = await this.contextRepository.findOne({ id: contextID });
     if (!context)
       throw new EntityNotFoundException(
@@ -77,11 +77,25 @@ export class ContextService {
     return context;
   }
 
+  async removeContext(contextID: number): Promise<IContext> {
+    // Note need to load it in with all contained entities so can remove fully
+    const context = await this.getContextOrFail(contextID);
+
+    // Remove all references
+    if (context.references) {
+      for (const reference of context.references) {
+        await this.referenceService.removeReference(reference.id);
+      }
+    }
+
+    return await this.contextRepository.remove(context as Context);
+  }
+
   async createReference(
     contextID: number,
     referenceInput: ReferenceInput
   ): Promise<IReference> {
-    const context = await this.getContext(contextID);
+    const context = await this.getContextOrFail(contextID);
 
     if (!context.references)
       throw new EntityNotInitializedException(

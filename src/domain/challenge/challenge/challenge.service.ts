@@ -276,7 +276,7 @@ export class ChallengeService {
   async removeChallenge(challengeID: number): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['opportunities', 'groups'],
+      relations: ['opportunities', 'community'],
     });
 
     // Do not remove a challenge that has opporutnities, require these to be individually first removed
@@ -289,6 +289,11 @@ export class ChallengeService {
     // Remove the community
     if (challenge.community) {
       await this.communityService.removeCommunity(challenge.community.id);
+    }
+
+    // Remove the context
+    if (challenge.context) {
+      await this.contextService.removeContext(challenge.context.id);
     }
 
     await this.challengeRepository.remove(challenge as Challenge);

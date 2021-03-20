@@ -57,7 +57,7 @@ export class Opportunity extends BaseEntity
     nullable: true,
     description: 'The shared understanding for the opportunity',
   })
-  @OneToOne(() => Context, { eager: true, cascade: true })
+  @OneToOne(() => Context, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   context?: Context;
 
@@ -68,7 +68,7 @@ export class Opportunity extends BaseEntity
   @OneToOne(
     () => Community,
     community => community.opportunity,
-    { eager: true, cascade: true }
+    { eager: true, cascade: true, onDelete: 'CASCADE' }
   )
   @JoinColumn()
   community?: Community;
