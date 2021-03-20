@@ -258,6 +258,13 @@ export class EcoverseService {
       );
     }
 
+    if (ecoverseData.hostID) {
+      const organisation = await this.organisationService.getOrganisationOrFail(
+        ecoverseData.hostID
+      );
+      ecoverse.host = organisation;
+    }
+
     await this.ecoverseRepository.save(ecoverse);
 
     return ecoverse;

@@ -12,6 +12,13 @@ export class EcoverseInput {
 
   @Field({
     nullable: true,
+    description: 'The host Organisation for the ecoverse',
+  })
+  @IsOptional()
+  hostID?: number;
+
+  @Field({
+    nullable: true,
     description:
       'Updated context for the ecoverse; will be merged with existing context',
   })

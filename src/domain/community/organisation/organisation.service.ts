@@ -32,6 +32,7 @@ export class OrganisationService {
 
     // No existing organisation found, create and initialise a new one!
     const organisation = new Organisation();
+    organisation.name = organisationData.name;
     await this.initialiseMembers(organisation);
     await this.organisationRepository.save(organisation);
     this.logger.verbose?.(
