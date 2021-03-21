@@ -1,8 +1,6 @@
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import {
-  createChallangeMutation,
-} from '@test/functional/integration/challenge/challenge.request.params';
+import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 import {
   addUserToOpportunityMutation,
   createOpportunityOnChallengeMutation,
@@ -19,9 +17,7 @@ import {
 } from '../aspect/aspect.request.params';
 import { createActorGroupMutation } from '../actor-groups/actor-groups.request.params';
 import { createRelationMutation } from '../relations/relations.request.params';
-import {
-  createGroupOnOpportunityMutation,
-} from '../group/group.request.params';
+import { createGroupOnOpportunityMutation } from '../group/group.request.params';
 import {
   createProjectMutation,
   removeProjectMutation,
@@ -289,38 +285,6 @@ describe('Opportunities', () => {
     );
   });
 
-  test('should throw error for adding member to opportunity, without being in parent challenge', async () => {
-    // Arrange
-    // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-      challengeId,
-      opportunityName,
-      opportunityTextId
-    );
-
-    opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
-
-    // Act
-    // Add member to opportunity
-    const addMemberResponse = await addUserToOpportunityMutation(
-      opportunityId,
-      1
-    );
-
-    // Query Opportunity data
-    const requestQueryOpportunity = await queryOpportunity(opportunityId);
-
-    // Assert
-    expect(addMemberResponse.text).toContain(
-      `User (1) is not a member of parent challenge: ${challengeId}`
-    );
-    expect(
-      requestQueryOpportunity.body.data.opportunity.contributors
-    ).toHaveLength(0);
-  });
-
   test('should get all opportunities', async () => {
     // Arrange
     // Create Opportunity
@@ -412,12 +376,11 @@ describe('Opportunity sub entities', () => {
     const responseProjectData =
       responseCreateProject.body.data.createProject.name;
 
-    const responseCreateOrojectSameTextId = await createProjectMutation(
+    const responseCreateProjectSameTextId = await createProjectMutation(
       opportunityId,
       projectName + 'dif',
       projectTextId
     );
-
 
     // Act
     // Get opportunity
@@ -428,10 +391,7 @@ describe('Opportunity sub entities', () => {
 
     // Assert
     expect(baseResponse.projects).toHaveLength(1);
-    expect(responseCreateOrojectSameTextId.text).toContain(
-      'property textID has failed the following constraints: isUniqueTextId'
-    );
-    expect(responseCreateOrojectSameTextId.text).toContain(
+    expect(responseCreateProjectSameTextId.text).toContain(
       'property textID has failed the following constraints: isUniqueTextId'
     );
     expect(baseResponse.projects[0].name).toContain(responseProjectData);
@@ -588,14 +548,6 @@ describe('Opportunity sub entities', () => {
     const responseCreateRelation =
       createRelationResponse.body.data.createRelation.actorName;
 
-    // Add group to an opportunity
-    const responseCreateGroupOnOpportunity = await createGroupOnOpportunityMutation(
-      groupName,
-      opportunityId
-    );
-    const groupNameResponse =
-      responseCreateGroupOnOpportunity.body.data.createGroupOnOpportunity.name;
-
     // Act
     // Get all opportunities
     const responseOpSubEntities = await queryOpportunitySubEntities(
@@ -616,12 +568,6 @@ describe('Opportunity sub entities', () => {
 
     expect(baseResponse.relations).toHaveLength(1);
     expect(baseResponse.relations[0].actorName).toEqual(responseCreateRelation);
-
-    expect(baseResponse.groups).toHaveLength(2);
-    expect(baseResponse.groups[0]).toEqual({
-      name: 'members',
-    });
-    expect(baseResponse.groups[1].name).toEqual(groupNameResponse);
 
     expect(baseResponse.context.tagline).toEqual(`${contextTagline}`);
 

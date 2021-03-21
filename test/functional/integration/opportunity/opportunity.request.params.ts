@@ -241,9 +241,10 @@ export const queryOpportunitySubEntities = async (opportunityId: any) => {
 
           actorName
         }
-        groups {
-
-          name
+        community {
+          groups {
+            name
+          }
         }
         context{
 
@@ -261,27 +262,23 @@ export const queryOpportunitiesSubEntities = async () => {
     query: `query {
       opportunities {
         aspects {
-
           title
         }
         projects {
-
           name
         }
         actorGroups {
-
           name
         }
         relations {
-
           actorName
         }
-        groups {
-
-          name
+        community {
+          groups {
+            name
+          }
         }
-        context{
-
+        context {
           tagline
         }
       }
