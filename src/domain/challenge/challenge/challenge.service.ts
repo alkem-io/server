@@ -120,7 +120,7 @@ export class ChallengeService {
     const challenge = await this.getChallengeOrFail(
       opportunityData.challengeID,
       {
-        relations: ['opportunities'],
+        relations: ['opportunities', 'community'],
       }
     );
 
@@ -228,9 +228,9 @@ export class ChallengeService {
     // reate and initialise a new challenge using the first returned array item
     const challenge = Challenge.create(challengeData);
     await this.initialiseMembers(challenge);
-    await this.challengeRepository.save(challenge);
+    const savedChallenge = await this.challengeRepository.save(challenge);
 
-    return challenge;
+    return savedChallenge;
   }
 
   async validateChallengeData(challengeData: ChallengeInput) {

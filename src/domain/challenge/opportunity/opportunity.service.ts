@@ -212,9 +212,9 @@ export class OpportunityService {
     // reate and initialise a new Opportunity using the first returned array item
     const opportunity = Opportunity.create(opportunityData);
     await this.initialiseMembers(opportunity);
-    await this.opportunityRepository.save(opportunity);
+    const savedOpp = await this.opportunityRepository.save(opportunity);
 
-    return opportunity;
+    return savedOpp;
   }
 
   async validateOpportunity(opportunityData: OpportunityInput) {
@@ -339,7 +339,7 @@ export class OpportunityService {
   }
 
   // Loads the challenges into the challenge entity if not already present
-  async loadCommunity(opportunityId: number): Promise<ICommunity> {
+  async getCommunity(opportunityId: number): Promise<ICommunity> {
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['community'],
     });

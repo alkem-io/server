@@ -156,7 +156,7 @@ export class EcoverseService {
 
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
     const ecoverse = await this.getDefaultEcoverseOrFail({
-      relations: ['challenges'],
+      relations: ['challenges', 'community'],
     });
 
     if (!ecoverse.challenges) {

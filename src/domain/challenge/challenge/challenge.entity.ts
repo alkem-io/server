@@ -59,7 +59,7 @@ export class Challenge extends BaseEntity
   @OneToOne(
     () => Community,
     community => community.challenge,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
   )
   @JoinColumn()
   community?: Community;
@@ -107,7 +107,7 @@ export class Challenge extends BaseEntity
   @ManyToOne(
     () => Ecoverse,
     ecoverse => ecoverse.challenges,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
+    { eager: false, cascade: false }
   )
   ecoverse?: Ecoverse;
 

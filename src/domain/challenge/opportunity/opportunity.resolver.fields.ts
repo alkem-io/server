@@ -23,7 +23,7 @@ export class OpportunityResolverFields {
   })
   @Profiling.api
   async community(@Parent() opportunity: Opportunity) {
-    const community = await this.opportunityService.loadCommunity(
+    const community = await this.opportunityService.getCommunity(
       opportunity.id
     );
     return community;
