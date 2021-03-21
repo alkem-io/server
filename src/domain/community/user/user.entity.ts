@@ -77,7 +77,7 @@ export class User extends BaseEntity implements IUser {
     nullable: true,
     description: 'The profile for this user',
   })
-  @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
   profile?: Profile;
 
@@ -99,7 +99,7 @@ export class User extends BaseEntity implements IUser {
   @OneToMany(
     () => Application,
     application => application.id,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
+    { eager: false, cascade: false }
   )
   applications?: Application[];
 

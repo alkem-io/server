@@ -48,7 +48,7 @@ export class Challenge extends BaseEntity
     nullable: true,
     description: 'The shared understanding for the challenge',
   })
-  @OneToOne(() => Context, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
   context?: Context;
 
@@ -59,7 +59,7 @@ export class Challenge extends BaseEntity
   @OneToOne(
     () => Community,
     community => community.challenge,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   @JoinColumn()
   community?: Community;
@@ -89,24 +89,25 @@ export class Challenge extends BaseEntity
     nullable: true,
     description: 'The set of tags for the challenge',
   })
-  @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset?: Tagset;
 
   @OneToMany(
     () => Opportunity,
     opportunity => opportunity.challenge,
-    { eager: false, cascade: true, onDelete: 'CASCADE' }
+    { eager: false, cascade: true }
   )
   opportunities?: Opportunity[];
 
-  @OneToOne(() => DID, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
   DID!: DID;
 
   @ManyToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.challenges
+    ecoverse => ecoverse.challenges,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   ecoverse?: Ecoverse;
 

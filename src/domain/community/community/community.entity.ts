@@ -38,14 +38,14 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.community,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   groups?: UserGroup[];
 
   @OneToMany(
     () => Application,
     application => application.community,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   applications?: Application[];
 

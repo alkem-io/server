@@ -108,19 +108,21 @@ export class ChallengeService {
   }
 
   async createOpportunity(
-    challengeID: number,
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
     // First find the Challenge
 
     this.logger.verbose?.(
-      `Adding opportunity to challenge (${challengeID})`,
+      `Adding opportunity to challenge (${opportunityData.challengeID})`,
       LogContext.CHALLENGES
     );
     // Try to find the challenge
-    const challenge = await this.getChallengeByIdOrFail(challengeID, {
-      relations: ['opportunities'],
-    });
+    const challenge = await this.getChallengeOrFail(
+      opportunityData.challengeID,
+      {
+        relations: ['opportunities'],
+      }
+    );
 
     await this.validateOpportunity(challenge, opportunityData);
 
@@ -342,18 +344,18 @@ export class ChallengeService {
   }
 
   async addChallengeLead(
-    challengeID: number,
-    organisationID: number
+    challengeID: string,
+    organisationID: string
   ): Promise<boolean> {
-    const organisation = await this.organisationService.getOrganisationByIdOrFail(
+    const organisation = await this.organisationService.getOrganisationOrFail(
       organisationID,
       { relations: ['groups'] }
     );
 
-    const challenge = await this.getChallengeByIdOrFail(challengeID);
+    const challenge = await this.getChallengeOrFail(challengeID);
 
     const existingOrg = challenge.leadOrganisations?.find(
-      existingOrg => existingOrg.id === organisationID
+      existingOrg => existingOrg.id === organisation.id
     );
     if (existingOrg)
       throw new ValidationException(
@@ -367,13 +369,16 @@ export class ChallengeService {
   }
 
   async removeChallengeLead(
-    challengeID: number,
-    organisationID: number
+    challengeID: string,
+    organisationID: string
   ): Promise<boolean> {
-    const challenge = await this.getChallengeByIdOrFail(challengeID);
+    const challenge = await this.getChallengeOrFail(challengeID);
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      organisationID
+    );
 
     const existingOrg = challenge.leadOrganisations?.find(
-      existingOrg => existingOrg.id === organisationID
+      existingOrg => existingOrg.id === organisation.id
     );
     if (!existingOrg)
       throw new EntityNotInitializedException(
@@ -383,7 +388,7 @@ export class ChallengeService {
     // ok to add the org
     const updatedLeads = [];
     for (const existingOrg of challenge.leadOrganisations as IOrganisation[]) {
-      if (existingOrg.id != organisationID) {
+      if (existingOrg.id != organisation.id) {
         updatedLeads.push(existingOrg);
       }
     }

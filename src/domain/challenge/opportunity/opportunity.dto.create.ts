@@ -12,13 +12,18 @@ export class OpportunityInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  name?: string;
+  challengeID!: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
+  name!: string;
 
   @Field({ nullable: true })
   @IsUniqueTextId(TextIdType.challenge)
   @IsOptional()
   @MaxLength(TINY_TEXT_LENGTH)
-  textID?: string;
+  textID!: string;
 
   @Field({ nullable: true })
   @IsOptional()

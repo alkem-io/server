@@ -38,7 +38,7 @@ export class Application extends BaseEntity {
   @ManyToOne(
     () => User,
     user => user.focalPoints,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   user!: User;
 
@@ -46,7 +46,7 @@ export class Application extends BaseEntity {
   @ManyToMany(
     () => NVP,
     nvp => nvp.id,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   @JoinTable({ name: 'application_questions' })
   questions?: Question[];

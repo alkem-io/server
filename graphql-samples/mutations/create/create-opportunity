@@ -1,0 +1,16 @@
+mutation createOpportunity($opportunityData: OpportunityInput!) {
+  createOpportunity(opportunityData: $opportunityData) {
+    name,
+    id
+  }
+}
+
+Variables:
+{
+  "opportunityData":
+  {
+    "challengeID": 2,
+    "name": "AI for good",
+    "textID": "ai-good"
+  }
+}

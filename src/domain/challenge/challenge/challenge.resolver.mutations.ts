@@ -1,6 +1,6 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
-import { Args, Float, Mutation } from '@nestjs/graphql';
+import { Args, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Challenge } from './challenge.entity';
@@ -26,13 +26,10 @@ export class ChallengeResolverMutations {
       'Creates a new Opportunity for the challenge with the given id',
   })
   @Profiling.api
-  async createOpportunityOnChallenge(
-    @Args({ name: 'challengeID', type: () => Float }) challengeID: number,
-    @Args({ name: 'opportunityData', type: () => OpportunityInput })
-    opportunityData: OpportunityInput
+  async createOpportunity(
+    @Args('opportunityData') opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
     const opportunity = await this.challengeService.createOpportunity(
-      challengeID,
       opportunityData
     );
     return opportunity;
@@ -71,8 +68,8 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async addChallengeLead(
-    @Args('organisationID') organisationID: number,
-    @Args('challengeID') challengeID: number
+    @Args('organisationID') organisationID: string,
+    @Args('challengeID') challengeID: string
   ): Promise<boolean> {
     return await this.challengeService.addChallengeLead(
       challengeID,
@@ -88,8 +85,8 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async removeChallengeLead(
-    @Args('organisationID') organisationID: number,
-    @Args('challengeID') chalengeID: number
+    @Args('organisationID') organisationID: string,
+    @Args('challengeID') chalengeID: string
   ): Promise<boolean> {
     return await this.challengeService.removeChallengeLead(
       chalengeID,

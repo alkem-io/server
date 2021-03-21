@@ -56,7 +56,7 @@ export class Opportunity extends BaseEntity
     nullable: true,
     description: 'The shared understanding for the opportunity',
   })
-  @OneToOne(() => Context, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Context, { eager: true, cascade: true })
   @JoinColumn()
   context?: Context;
 
@@ -67,7 +67,7 @@ export class Opportunity extends BaseEntity
   @OneToOne(
     () => Community,
     community => community.opportunity,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   @JoinColumn()
   community?: Community;
@@ -87,39 +87,39 @@ export class Opportunity extends BaseEntity
     nullable: true,
     description: 'The set of tags for the Opportunity',
   })
-  @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset?: Tagset;
 
   @OneToMany(
     () => ActorGroup,
     actorGroup => actorGroup.opportunity,
-    { eager: false, cascade: true, onDelete: 'CASCADE' }
+    { eager: false, cascade: true }
   )
   actorGroups?: ActorGroup[];
 
   @OneToMany(
     () => Aspect,
     aspect => aspect.opportunity,
-    { eager: false, cascade: true, onDelete: 'CASCADE' }
+    { eager: false, cascade: true }
   )
   aspects?: Aspect[];
 
   @OneToMany(
     () => Relation,
     relation => relation.opportunity,
-    { eager: false, cascade: true, onDelete: 'CASCADE' }
+    { eager: false, cascade: true }
   )
   relations?: Relation[];
 
-  @OneToOne(() => DID, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
   DID!: DID;
 
   @ManyToOne(
     () => Challenge,
     challenge => challenge.opportunities,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
+    { eager: false, cascade: false }
   )
   challenge?: Challenge;
 

@@ -122,6 +122,7 @@ export class TestDataService {
 
   async initOpportunity(challengeId: number): Promise<number> {
     const opportunity = new OpportunityInput();
+    opportunity.challengeID = `${challengeId}`;
     opportunity.name = 'init opportunity name';
     opportunity.state = 'init opportunity state';
     opportunity.textID = 'init-opport';
@@ -139,22 +140,17 @@ export class TestDataService {
       vision: 'test opportunity vision',
       who: 'test opportunity who',
     };
-    const response = await this.challengeService.createOpportunity(
-      challengeId,
-      opportunity
-    );
+    const response = await this.challengeService.createOpportunity(opportunity);
     return response.id;
   }
 
   async initRemoveOpportunity(challengeId: number): Promise<number> {
     const opportunity = new OpportunityInput();
+    opportunity.challengeID = `${challengeId}`;
     opportunity.name = 'init remove opportunity name';
     opportunity.state = 'init opportunity state';
     opportunity.textID = 'remove-opport';
-    const response = await this.challengeService.createOpportunity(
-      challengeId,
-      opportunity
-    );
+    const response = await this.challengeService.createOpportunity(opportunity);
     return response.id;
   }
 
