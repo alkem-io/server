@@ -29,7 +29,6 @@ export const createOpportunityOnChallengeMutation = async (
             description
           }
         }
-        contributors{id }
       }
     }`,
     variables: {
@@ -82,7 +81,6 @@ export const updateOpportunityOnChallengeMutation = async (
             description
           }
         }
-        contributors{id }
       }
     }`,
     variables: {
@@ -172,7 +170,6 @@ export const queryOpportunity = async (opportunityId: any) => {
             description
           }
         }
-        contributors{id }
       }
     }`,
   };
@@ -229,27 +226,27 @@ export const queryOpportunitySubEntities = async (opportunityId: any) => {
     query: `query {
       opportunity(ID: ${parseFloat(opportunityId)}) {
         aspects {
-          
+
           title
         }
         projects {
-          
+
           name
         }
         actorGroups {
-          
+
           name
         }
         relations {
-          
+
           actorName
         }
         groups {
-          
+
           name
         }
         context{
-          
+
           tagline
         }
       }
@@ -264,27 +261,27 @@ export const queryOpportunitiesSubEntities = async () => {
     query: `query {
       opportunities {
         aspects {
-          
+
           title
         }
         projects {
-          
+
           name
         }
         actorGroups {
-          
+
           name
         }
         relations {
-          
+
           actorName
         }
         groups {
-          
+
           name
         }
         context{
-          
+
           tagline
         }
       }

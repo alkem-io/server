@@ -1,7 +1,6 @@
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import {
-  addUserToChallangeMutation,
   createChallangeMutation,
 } from '@test/functional/integration/challenge/challenge.request.params';
 import {
@@ -320,34 +319,6 @@ describe('Opportunities', () => {
     expect(
       requestQueryOpportunity.body.data.opportunity.contributors
     ).toHaveLength(0);
-  });
-
-  test('should add member to opportunity', async () => {
-    // Arrange
-    // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-      challengeId,
-      opportunityName,
-      opportunityTextId
-    );
-    opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
-
-    // Add user to a challenge
-    await addUserToChallangeMutation(challengeId, userId);
-
-    // Act
-    // Add member to opportunity
-    await addUserToOpportunityMutation(opportunityId, userId);
-
-    // Query Opportunity data
-    const requestQueryOpportunity = await queryOpportunity(opportunityId);
-
-    // Assert
-    expect(
-      requestQueryOpportunity.body.data.opportunity.contributors[0].id
-    ).toEqual(userId);
   });
 
   test('should get all opportunities', async () => {
