@@ -10,11 +10,12 @@ import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { OrganisationInput } from './organisation.dto';
+import { OrganisationInput } from './organisation.dto.create';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { AuthorizationRoles } from '@core/authorization';
 import validator from 'validator';
+import { UpdateOrganisationInput } from './organisation.dto.update';
 
 @Injectable()
 export class OrganisationService {
@@ -89,10 +90,11 @@ export class OrganisationService {
   }
 
   async updateOrganisation(
-    orgID: number,
-    organisationData: OrganisationInput
+    organisationData: UpdateOrganisationInput
   ): Promise<IOrganisation> {
-    const existingOrganisation = await this.getOrganisationByIdOrFail(orgID);
+    const existingOrganisation = await this.getOrganisationOrFail(
+      organisationData.ID
+    );
 
     // Merge in the data
     if (organisationData.name) {
@@ -109,7 +111,7 @@ export class OrganisationService {
     }
 
     // Reload the organisation for returning
-    return await this.getOrganisationByIdOrFail(orgID);
+    return await this.getOrganisationByIdOrFail(existingOrganisation.id);
   }
 
   async removeOrganisation(orgID: number): Promise<IOrganisation> {

@@ -27,10 +27,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @Column()
   name: string;
 
-  @Field(() => [User], {
-    nullable: true,
-    description: 'The set of users that are members of this group',
-  })
   @ManyToMany(
     () => User,
     user => user.userGroups,
@@ -39,10 +35,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @JoinTable({ name: 'user_group_members' })
   members?: User[];
 
-  @Field(() => User, {
-    nullable: true,
-    description: 'The focal point for this group',
-  })
   @ManyToOne(
     () => User,
     user => user.focalPoints,

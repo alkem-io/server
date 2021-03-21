@@ -98,7 +98,8 @@ export class User extends BaseEntity implements IUser {
 
   @OneToMany(
     () => Application,
-    application => application.id
+    application => application.id,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   applications?: Application[];
 

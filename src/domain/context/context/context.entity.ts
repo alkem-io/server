@@ -58,7 +58,7 @@ export class Context extends BaseEntity implements IContext {
   @OneToMany(
     () => Reference,
     reference => reference.context,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   references?: Reference[];
 

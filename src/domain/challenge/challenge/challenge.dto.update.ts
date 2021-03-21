@@ -6,7 +6,7 @@ import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 @InputType()
 export class UpdateChallengeInput {
   @Field({ nullable: false })
-  ID!: number;
+  ID!: string;
 
   @Field({ nullable: true })
   @IsOptional()

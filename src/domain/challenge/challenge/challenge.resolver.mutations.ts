@@ -6,11 +6,11 @@ import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto';
+import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Profiling } from '@src/common/decorators';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
-import { UpdateChallengeInput } from './update-challenge.dto';
+import { UpdateChallengeInput } from './challenge.dto.update';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 
 @Resolver()

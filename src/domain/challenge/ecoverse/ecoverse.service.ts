@@ -1,9 +1,9 @@
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto';
+import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { OrganisationInput } from '@domain/community/organisation/organisation.dto';
+import { OrganisationInput } from '@domain/community/organisation/organisation.dto.create';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import {
   RestrictedTagsetNames,

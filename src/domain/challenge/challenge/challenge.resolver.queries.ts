@@ -18,10 +18,10 @@ export class ChallengeResolverQueries {
 
   @Query(() => Challenge, {
     nullable: false,
-    description: 'A particular challenge',
+    description: 'A particular Challenge, either by its ID or textID',
   })
   @Profiling.api
-  async challenge(@Args('ID') id: number): Promise<IChallenge> {
+  async challenge(@Args('ID') id: string): Promise<IChallenge> {
     return await this.challengeService.getChallengeOrFail(id);
   }
 }

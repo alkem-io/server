@@ -7,12 +7,13 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { OrganisationInput } from './organisation.dto';
+import { OrganisationInput } from './organisation.dto.create';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 import { Profiling } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { UpdateOrganisationInput } from './organisation.dto.update';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -60,11 +61,9 @@ export class OrganisationResolverMutations {
   })
   @Profiling.api
   async updateOrganisation(
-    @Args('orgID') orgID: number,
-    @Args('organisationData') organisationData: OrganisationInput
+    @Args('organisationData') organisationData: UpdateOrganisationInput
   ): Promise<IOrganisation> {
     const org = await this.organisationService.updateOrganisation(
-      orgID,
       organisationData
     );
     return org;

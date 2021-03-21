@@ -1,6 +1,4 @@
-import { Field } from '@nestjs/graphql/dist/decorators/field.decorator';
-import { ObjectType } from '@nestjs/graphql/dist/decorators/object-type.decorator';
-import { ID } from '@nestjs/graphql/dist/scalars';
+import { ID, Field, ObjectType } from '@nestjs/graphql';
 import { Project } from '@domain/collaboration/project/project.entity';
 import {
   BaseEntity,

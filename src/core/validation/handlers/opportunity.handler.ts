@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto';
+import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';

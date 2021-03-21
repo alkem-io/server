@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-inferrable-types */
-import { ID } from '@nestjs/graphql/dist';
-import { Field, ObjectType } from '@nestjs/graphql/dist/decorators';
+import { ID, Field, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
@@ -114,13 +112,14 @@ export class Opportunity extends BaseEntity
   )
   relations?: Relation[];
 
-  @OneToOne(() => DID, { eager: true, cascade: true })
+  @OneToOne(() => DID, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   DID!: DID;
 
   @ManyToOne(
     () => Challenge,
-    challenge => challenge.opportunities
+    challenge => challenge.opportunities,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   challenge?: Challenge;
 

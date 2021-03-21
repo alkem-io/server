@@ -23,7 +23,7 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { OpportunityInput } from './opportunity.dto';
+import { OpportunityInput } from './opportunity.dto.create';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { Community, ICommunity } from '@domain/community/community';
@@ -31,7 +31,8 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import { TagsetService } from '@domain/common/tagset';
-
+import validator from 'validator';
+import { UpdateOpportunityInput } from './opportunity.dto.update';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -85,6 +86,34 @@ export class OpportunityService {
   }
 
   async getOpportunityOrFail(
+    opportunityID: string,
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity> {
+    if (validator.isNumeric(opportunityID)) {
+      const idInt: number = parseInt(opportunityID);
+      return await this.getOpportunityByIdOrFail(idInt, options);
+    }
+
+    return await this.getOpportunityByTextIdOrFail(opportunityID, options);
+  }
+
+  async getOpportunityByTextIdOrFail(
+    opportunityID: string,
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityRepository.findOne(
+      { textID: opportunityID },
+      options
+    );
+    if (!opportunity)
+      throw new EntityNotFoundException(
+        `Unable to find opportunity with ID: ${opportunityID}`,
+        LogContext.CHALLENGES
+      );
+    return opportunity;
+  }
+
+  async getOpportunityByIdOrFail(
     opportunityID: number,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity> {
@@ -112,9 +141,12 @@ export class OpportunityService {
       return opportunity.actorGroups;
     }
     // Opportunity is not populated so load it with actorGroups
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['actorGroups'],
-    });
+    const opportunityLoaded = await this.getOpportunityByIdOrFail(
+      opportunity.id,
+      {
+        relations: ['actorGroups'],
+      }
+    );
     if (!opportunityLoaded.actorGroups)
       throw new EntityNotInitializedException(
         `Opportunity not initialised: ${opportunity.id}`,
@@ -131,9 +163,12 @@ export class OpportunityService {
       return opportunity.aspects;
     }
     // Opportunity is not populated so load it with actorGroups
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['aspects'],
-    });
+    const opportunityLoaded = await this.getOpportunityByIdOrFail(
+      opportunity.id,
+      {
+        relations: ['aspects'],
+      }
+    );
     if (!opportunityLoaded.aspects)
       throw new EntityNotFoundException(
         `Opportunity not initialised: ${opportunity.id}`,
@@ -150,9 +185,12 @@ export class OpportunityService {
       return opportunity.relations;
     }
     // Opportunity is not populated so load it with actorGroups
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['relations'],
-    });
+    const opportunityLoaded = await this.getOpportunityByIdOrFail(
+      opportunity.id,
+      {
+        relations: ['relations'],
+      }
+    );
 
     if (!opportunityLoaded.relations)
       throw new EntityNotInitializedException(
@@ -197,10 +235,9 @@ export class OpportunityService {
   }
 
   async updateOpportunity(
-    opportunityID: number,
-    opportunityData: OpportunityInput
+    opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID);
+    const opportunity = await this.getOpportunityOrFail(opportunityData.ID);
 
     // Copy over the received data
     if (opportunityData.name) {
@@ -225,7 +262,7 @@ export class OpportunityService {
 
   async removeOpportunity(opportunityID: number): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['actorGroups', 'aspects', 'relations', 'community'],
     });
 
@@ -267,7 +304,7 @@ export class OpportunityService {
   }
 
   async getChallengeID(opportunityID: number): Promise<number> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['challenge'],
     });
     const challenge = (opportunity as Opportunity).challenge;
@@ -303,7 +340,7 @@ export class OpportunityService {
 
   // Loads the challenges into the challenge entity if not already present
   async loadCommunity(opportunityId: number): Promise<ICommunity> {
-    const opportunity = await this.getOpportunityOrFail(opportunityId, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['community'],
     });
     const community = opportunity.community;
@@ -324,7 +361,7 @@ export class OpportunityService {
       LogContext.CHALLENGES
     );
 
-    const opportunity = await this.getOpportunityOrFail(opportunityId);
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId);
 
     // Check that do not already have an Project with the same name
     const name = projectData.name;
@@ -353,7 +390,7 @@ export class OpportunityService {
     opportunityID: number,
     aspectData: AspectInput
   ): Promise<IAspect> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['aspects'],
     });
     if (!opportunity.aspects)
@@ -384,7 +421,7 @@ export class OpportunityService {
     opportunityId: number,
     actorGroupData: ActorGroupInput
   ): Promise<IActorGroup> {
-    const opportunity = await this.getOpportunityOrFail(opportunityId, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['actorGroups'],
     });
 
@@ -416,7 +453,7 @@ export class OpportunityService {
     opportunityId: number,
     relationData: RelationInput
   ): Promise<IRelation> {
-    const opportunity = await this.getOpportunityOrFail(opportunityId, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['relations'],
     });
 

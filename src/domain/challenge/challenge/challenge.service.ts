@@ -1,6 +1,6 @@
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto';
+import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
@@ -18,14 +18,15 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { ChallengeInput } from './challenge.dto';
+import { ChallengeInput } from './challenge.dto.create';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
-import { UpdateChallengeInput } from './update-challenge.dto';
+import { UpdateChallengeInput } from './challenge.dto.update';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
+import validator from 'validator';
 
 @Injectable()
 export class ChallengeService {
@@ -69,9 +70,12 @@ export class ChallengeService {
 
   // Loads the challenges into the challenge entity if not already present
   async getCommunity(challengeId: number): Promise<ICommunity> {
-    const challengeWithCommunity = await this.getChallengeOrFail(challengeId, {
-      relations: ['community'],
-    });
+    const challengeWithCommunity = await this.getChallengeByIdOrFail(
+      challengeId,
+      {
+        relations: ['community'],
+      }
+    );
     const community = challengeWithCommunity.community;
     if (!community)
       throw new RelationshipNotFoundException(
@@ -88,7 +92,7 @@ export class ChallengeService {
       return challenge.opportunities;
     }
 
-    const challengeWithOpportunities = await this.getChallengeOrFail(
+    const challengeWithOpportunities = await this.getChallengeByIdOrFail(
       challenge.id,
       {
         relations: ['opportunities'],
@@ -114,7 +118,7 @@ export class ChallengeService {
       LogContext.CHALLENGES
     );
     // Try to find the challenge
-    const challenge = await this.getChallengeOrFail(challengeID, {
+    const challenge = await this.getChallengeByIdOrFail(challengeID, {
       relations: ['opportunities'],
     });
 
@@ -170,11 +174,39 @@ export class ChallengeService {
   }
 
   async getChallengeOrFail(
+    challengeID: string,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge> {
+    if (validator.isNumeric(challengeID)) {
+      const idInt: number = parseInt(challengeID);
+      return await this.getChallengeByIdOrFail(idInt, options);
+    }
+
+    return await this.getChallengeByTextIdOrFail(challengeID, options);
+  }
+
+  async getChallengeByIdOrFail(
     challengeID: number,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge> {
     const challenge = await this.challengeRepository.findOne(
       { id: challengeID },
+      options
+    );
+    if (!challenge)
+      throw new EntityNotFoundException(
+        `Unable to find challenge with ID: ${challengeID}`,
+        LogContext.CHALLENGES
+      );
+    return challenge;
+  }
+
+  async getChallengeByTextIdOrFail(
+    challengeID: string,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeRepository.findOne(
+      { textID: challengeID },
       options
     );
     if (!challenge)
@@ -275,7 +307,7 @@ export class ChallengeService {
 
   async removeChallenge(challengeID: number): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.getChallengeOrFail(challengeID, {
+    const challenge = await this.getChallengeByIdOrFail(challengeID, {
       relations: ['opportunities', 'community'],
     });
 
@@ -318,7 +350,7 @@ export class ChallengeService {
       { relations: ['groups'] }
     );
 
-    const challenge = await this.getChallengeOrFail(challengeID);
+    const challenge = await this.getChallengeByIdOrFail(challengeID);
 
     const existingOrg = challenge.leadOrganisations?.find(
       existingOrg => existingOrg.id === organisationID
@@ -338,7 +370,7 @@ export class ChallengeService {
     challengeID: number,
     organisationID: number
   ): Promise<boolean> {
-    const challenge = await this.getChallengeOrFail(challengeID);
+    const challenge = await this.getChallengeByIdOrFail(challengeID);
 
     const existingOrg = challenge.leadOrganisations?.find(
       existingOrg => existingOrg.id === organisationID

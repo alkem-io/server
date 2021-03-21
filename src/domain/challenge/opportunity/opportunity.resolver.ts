@@ -1,9 +1,7 @@
 import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Float, Mutation } from '@nestjs/graphql/dist';
+import { Resolver, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { OpportunityInput } from './opportunity.dto';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
@@ -24,6 +22,7 @@ import { IProject } from '@domain/collaboration/project/project.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { UpdateOpportunityInput } from './opportunity.dto.update';
 
 @Resolver()
 export class OpportunityResolver {
@@ -40,10 +39,10 @@ export class OpportunityResolver {
 
   @Query(() => Opportunity, {
     nullable: false,
-    description: 'A particular opportunitiy, identified by the ID',
+    description: 'A particular opportunitiy, identified by the ID or textID',
   })
   @Profiling.api
-  async opportunity(@Args('ID') id: number): Promise<IOpportunity> {
+  async opportunity(@Args('ID') id: string): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(id);
     if (opportunity) return opportunity;
 
@@ -61,11 +60,9 @@ export class OpportunityResolver {
   })
   @Profiling.api
   async updateOpportunity(
-    @Args({ name: 'ID', type: () => Float }) opportunityID: number,
-    @Args('opportunityData') opportunityData: OpportunityInput
+    @Args('opportunityData') opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
     const Opportunity = await this.opportunityService.updateOpportunity(
-      opportunityID,
       opportunityData
     );
     return Opportunity;

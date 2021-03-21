@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-inferrable-types */
-import { ID } from '@nestjs/graphql/dist';
-import { Field, ObjectType } from '@nestjs/graphql/dist/decorators';
+import { ID, Field, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,

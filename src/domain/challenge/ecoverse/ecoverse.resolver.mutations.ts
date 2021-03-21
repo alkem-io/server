@@ -1,9 +1,8 @@
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto';
+import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Inject, UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql/dist/decorators';
+import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
