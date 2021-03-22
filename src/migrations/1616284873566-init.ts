@@ -206,12 +206,12 @@ export class init1616284873566 implements MigrationInterface {
       'ALTER TABLE `challenge_lead` ADD CONSTRAINT `FK_617eb0632402d30eb93e9a5f9e2` FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'CREATE TABLE `cherrytwist`.`query-result-cache` (`id` int NOT NULL AUTO_INCREMENT, `identifier` varchar(255) NULL, `time` bigint NOT NULL, `duration` int NOT NULL, `query` text NOT NULL, `result` text NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `query-result-cache` (`id` int NOT NULL AUTO_INCREMENT, `identifier` varchar(255) NULL, `time` bigint NOT NULL, `duration` int NOT NULL, `query` text NOT NULL, `result` text NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query('DROP TABLE `cherrytwist`.`query-result-cache`');
+    await queryRunner.query('DROP TABLE `query-result-cache`');
     await queryRunner.query(
       'ALTER TABLE `challenge_lead` DROP FOREIGN KEY `FK_617eb0632402d30eb93e9a5f9e2`'
     );
