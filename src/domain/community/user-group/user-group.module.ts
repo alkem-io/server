@@ -6,7 +6,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserGroup } from './user-group.entity';
 import { ProfileModule } from '@domain/community/profile/profile.module';
 import { UserGroupResolverFields } from './user-group.resolver.fields';
-import { UserGroupResolverQueries } from './user-group.resolver.queries';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 
 @Module({
@@ -19,7 +18,6 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
   providers: [
     UserGroupService,
     UserGroupResolverMutations,
-    UserGroupResolverQueries,
     UserGroupResolverFields,
   ],
   exports: [UserGroupService],

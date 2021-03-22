@@ -1,11 +1,10 @@
 import { UseGuards } from '@nestjs/common';
-import { Resolver, Mutation } from '@nestjs/graphql';
+import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
-import { Args, Query } from '@nestjs/graphql';
 import { AspectInput } from '@domain/context/aspect/aspect.dto';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
@@ -19,39 +18,12 @@ import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { ProjectInput } from '@domain/collaboration/project/project.dto';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { IProject } from '@domain/collaboration/project/project.interface';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { UpdateOpportunityInput } from './opportunity.dto.update';
 
 @Resolver()
-export class OpportunityResolver {
+export class OpportunityResolverMutations {
   constructor(private opportunityService: OpportunityService) {}
-
-  @Query(() => [Opportunity], {
-    nullable: false,
-    description: 'All opportunities within the ecoverse',
-  })
-  @Profiling.api
-  async opportunities(): Promise<IOpportunity[]> {
-    return await this.opportunityService.getOpportunites();
-  }
-
-  @Query(() => Opportunity, {
-    nullable: false,
-    description: 'A particular opportunitiy, identified by the ID or textID',
-  })
-  @Profiling.api
-  async opportunity(@Args('ID') id: string): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(id);
-    if (opportunity) return opportunity;
-
-    throw new EntityNotFoundException(
-      `Unable to locate opportunity with given id: ${id}`,
-      LogContext.CHALLENGES
-    );
-  }
-
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {

@@ -6,7 +6,7 @@ import { RelationModule } from '@domain/collaboration/relation/relation.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Opportunity } from './opportunity.entity';
-import { OpportunityResolver } from './opportunity.resolver';
+import { OpportunityResolverMutations } from './opportunity.resolver.mutations';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
 import { OpportunityService } from './opportunity.service';
 import { CommunityModule } from '@domain/community/community/community.module';
@@ -25,7 +25,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
   ],
   providers: [
     OpportunityService,
-    OpportunityResolver,
+    OpportunityResolverMutations,
     OpportunityResolverFields,
   ],
   exports: [OpportunityService],
