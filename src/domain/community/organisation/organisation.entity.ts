@@ -34,6 +34,13 @@ export class Organisation extends BaseEntity
   @JoinColumn()
   DID!: DID;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'A short text identifier for this Organisation',
+  })
+  @Column()
+  textID: string;
+
   @OneToOne(
     () => Ecoverse,
     ecoverse => ecoverse.host
@@ -61,9 +68,10 @@ export class Organisation extends BaseEntity
   // The restricted group names at the challenge level
   restrictedGroupNames?: string[];
 
-  constructor() {
+  constructor(textID: string) {
     super();
     this.name = '';
+    this.textID = textID;
     this.restrictedGroupNames = [AuthorizationRoles.Members];
   }
 }

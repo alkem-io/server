@@ -33,7 +33,7 @@ export class OrganisationService {
     await this.validateOrganisationCreationRequest(organisationData);
 
     // No existing organisation found, create and initialise a new one!
-    const organisation = new Organisation();
+    const organisation = new Organisation(organisationData.textID);
     organisation.name = organisationData.name;
     await this.initialiseMembers(organisation);
     await this.organisationRepository.save(organisation);
@@ -74,12 +74,12 @@ export class OrganisationService {
         'Organisation creation missing required name',
         LogContext.COMMUNITY
       );
+
     const organisations = await this.getOrganisations();
 
     const organisation = organisations.find(
       o => o.name === organisationData.name
     );
-    // First check if the organisation already exists on not...
     if (organisation)
       throw new ValidationException(
         `Organisation with the provided name already exists: ${organisationData.name}`,
