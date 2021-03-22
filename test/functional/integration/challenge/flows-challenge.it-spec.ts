@@ -191,10 +191,10 @@ describe('Create Challenge', () => {
 
     const oportunityNameResponse =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.name;
+        .createOpportunity.name;
     const oportunityIdResponse =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);

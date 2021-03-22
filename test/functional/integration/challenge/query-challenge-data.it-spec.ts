@@ -87,10 +87,8 @@ describe('Query Challenge data', () => {
       opportunityName,
       opportunityTextId
     );
-
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
     // Query Opportunity data through Challenge query
     const responseQueryData = await getChallengeOpportunity(challengeId);
@@ -118,12 +116,10 @@ describe('Query Challenge data', () => {
     );
 
     const createOpportunityData =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity;
 
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
     // Query Opportunity data
     const requestQueryOpportunity = await queryOpportunity(opportunityId);

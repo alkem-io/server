@@ -99,7 +99,7 @@ describe('Opportunities', () => {
 
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Create Aspect on opportunity group
     await createAspectOnOpportunityMutation(
@@ -208,11 +208,11 @@ describe('Opportunities', () => {
 
     const createOpportunityData =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge;
+        .createOpportunity;
 
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Query Opportunity data
     const requestQueryOpportunity = await queryOpportunity(opportunityId);
@@ -224,7 +224,7 @@ describe('Opportunities', () => {
     expect(createOpportunityData).toEqual(requestOpportunityData);
   });
 
-  test('should update opportunity and query the data', async () => {
+  test.only('should update opportunity and query the data', async () => {
     // Arrange
     // Create Opportunity on Challenge
     const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
@@ -235,13 +235,14 @@ describe('Opportunities', () => {
 
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Act
     // Update the created Opportunity
     const responseUpdateOpportunity = await updateOpportunityOnChallengeMutation(
       opportunityId
     );
+    console.log(responseUpdateOpportunity.body)
     const updateOpportunityData =
       responseUpdateOpportunity.body.data.updateOpportunity;
 
@@ -266,7 +267,7 @@ describe('Opportunities', () => {
 
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Act
     // Remove opportunity
@@ -296,7 +297,7 @@ describe('Opportunities', () => {
 
     opportunityName =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.name;
+        .createOpportunity.name;
 
     // Act
     // Get all opportunities
@@ -337,17 +338,17 @@ describe('Opportunities', () => {
     expect(responseCreateOpportunityOnChallengeTwo.status).toBe(200);
     expect(
       responseCreateOpportunityOnChallengeOne.body.data
-        .createOpportunityOnChallenge.name
+        .createOpportunity.name
     ).toEqual(
       responseCreateOpportunityOnChallengeTwo.body.data
-        .createOpportunityOnChallenge.name
+        .createOpportunity.name
     );
     expect(
       responseCreateOpportunityOnChallengeOne.body.data
-        .createOpportunityOnChallenge.textID
+        .createOpportunity.textID
     ).toEqual(
       responseCreateOpportunityOnChallengeTwo.body.data
-        .createOpportunityOnChallenge.textID
+        .createOpportunity.textID
     );
   });
 });
@@ -365,7 +366,7 @@ describe('Opportunity sub entities', () => {
 
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Create Project
     const responseCreateProject = await createProjectMutation(
@@ -413,7 +414,7 @@ describe('Opportunity sub entities', () => {
 
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Create Aspect on opportunity group
     const createAspectResponse = await createAspectOnOpportunityMutation(
@@ -461,7 +462,7 @@ describe('Opportunity sub entities', () => {
 
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Create Actor group
     const createActorGroupResponse = await createActorGroupMutation(
@@ -505,7 +506,7 @@ describe('Opportunity sub entities', () => {
 
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+        .createOpportunity.id;
 
     // Create Aspect on opportunity group
     const createAspectResponse = await createAspectOnOpportunityMutation(
