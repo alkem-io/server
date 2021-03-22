@@ -66,7 +66,7 @@ beforeEach(async () => {
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunityOnChallenge
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity
       .id;
 
   // Create Aspect on opportunity group

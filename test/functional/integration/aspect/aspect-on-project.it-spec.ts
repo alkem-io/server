@@ -72,8 +72,7 @@ beforeEach(async () => {
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunityOnChallenge
-      .id;
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
   // Create Project
   const responseCreateProject = await createProjectMutation(
