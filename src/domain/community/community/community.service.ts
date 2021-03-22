@@ -10,10 +10,10 @@ import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
-  ApplicationInvalidStateException,
   EntityNotFoundException,
   EntityNotInitializedException,
   GroupNotInitializedException,
+  InvalidStateTransitionException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -236,7 +236,7 @@ export class CommunityService {
     );
 
     if (existingApplication) {
-      throw new ApplicationInvalidStateException(
+      throw new InvalidStateTransitionException(
         `An application for user ${existingApplication.user.email} already exists for Community: ${community.id}. Application status: ${existingApplication.status}`,
         LogContext.COMMUNITY
       );
@@ -304,12 +304,12 @@ export class CommunityService {
     );
 
     if (application.status == ApplicationStatus.approved) {
-      throw new ApplicationInvalidStateException(
+      throw new InvalidStateTransitionException(
         'Application has already been approved!',
         LogContext.COMMUNITY
       );
     } else if (application.status == ApplicationStatus.rejected) {
-      throw new ApplicationInvalidStateException(
+      throw new InvalidStateTransitionException(
         'Application has already been rejected!',
         LogContext.COMMUNITY
       );
