@@ -88,6 +88,7 @@ export class EcoverseService {
     if (!ecoverse.host) {
       const organisationInput = new OrganisationInput();
       organisationInput.name = 'Default host organisation';
+      organisationInput.textID = 'DefaultHostOrg';
       ecoverse.host = await this.organisationService.createOrganisation(
         organisationInput
       );
