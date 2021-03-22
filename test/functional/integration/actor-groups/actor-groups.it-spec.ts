@@ -56,7 +56,7 @@ beforeEach(async () => {
     uniqueTextId
   );
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
-  
+
   // Create Opportunity
   const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
     challengeId,
@@ -64,7 +64,7 @@ beforeEach(async () => {
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunityOnChallenge
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity
       .id;
 
   // Create Actor group
