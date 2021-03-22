@@ -38,7 +38,7 @@ export const createRelationMutation = async (
 
 export const updateRelationMutation = async (
   relationId: any,
-  relationActorName: string,  
+  relationActorName: string,
   relationDescription?: string,
   relationType?: string,
   relationActorType?: string,
@@ -47,7 +47,7 @@ export const updateRelationMutation = async (
   const requestParams = {
     operationName: null,
     query: `mutation updateRelation($relationData: RelationInput!, $ID: Float!) {
-        updateRelation(relationData: $relationData, ID: $ID) {    
+        updateRelation(relationData: $relationData, ID: $ID) {
           id
           type
           description
@@ -85,20 +85,10 @@ export const removeRelationMutation = async (relationId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-// const removeActorMutation = `
-// mutation removeActor($ID: Float!) {
-//     removeActor(ID: $ID)
-//   }`;
-
-// const removeActorVariables = `
-// {
-//     "ID": 1
-//   }`;
-
-export const getRelationsPerOpportunity = async (opportunityId: any) => {
+export const getRelationsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: ${parseFloat(opportunityId)}) {
+    query: `query {opportunity(ID: "${opportunityId}") {
       relations{id type actorName actorType actorRole description}}}`,
   };
 

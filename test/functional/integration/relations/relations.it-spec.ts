@@ -70,8 +70,7 @@ beforeEach(async () => {
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunityOnChallenge
-      .id;
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
   // Create Relation
   const createRelationResponse = await createRelationMutation(
