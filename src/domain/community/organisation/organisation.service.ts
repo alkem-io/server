@@ -146,7 +146,7 @@ export class OrganisationService {
       return await this.getOrganisationByIdOrFail(idInt, options);
     }
 
-    return await this.getOrganisationByNameOrFail(organisationID);
+    return await this.getOrganisationByTextIdOrFail(organisationID);
   }
 
   async getOrganisationByIdOrFail(
@@ -165,17 +165,17 @@ export class OrganisationService {
     return organisation;
   }
 
-  async getOrganisationByNameOrFail(
-    name: string,
+  async getOrganisationByTextIdOrFail(
+    textID: string,
     options?: FindOneOptions<Organisation>
   ): Promise<IOrganisation> {
     const organisation = await this.organisationRepository.findOne(
-      { name: name },
+      { textID: textID },
       options
     );
     if (!organisation)
       throw new EntityNotFoundException(
-        `Unable to find organisation with given identifier: ${name}`,
+        `Unable to find organisation with given identifier: ${textID}`,
         LogContext.COMMUNITY
       );
     return organisation;
