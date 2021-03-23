@@ -70,3 +70,29 @@ To run only one test from a test file
 
 - Set the keyword _.only_ after `test` or `describe` (i.e. `test.only('should remove a challenge', async () => {})`)
 - Run the command for this particular test file: `npm run-script test:it ./test/functional/integration/challenge/query-challenge-data.it-spec.ts`
+
+## Update user password secret for Travis CI
+
+In order to be able to update the user secret (used in automation tests) for Travi CI configuration, the following steps, should be perforemed:
+
+- Install `ruby`
+  ```sh
+  sudo apt update
+  sudo apt install ruby-full
+  ruby --version
+  ```
+- Install travis gem: `gem install travis`
+- Authenticate to travis throught console: `travis login --pro --github-token [token]`
+  - the token could be taken/generated from github settings
+- From `server` repo, remove the existing `secret` (secure: ) from `.travis.yml`
+- Escape the password special characters
+  - Note: when useng `"double quotes"` for the variable, escaping is done with double backslash `\\`
+  - Example: password: `t3$t@e!st`, escaped: `"t3\\\$t\\@e\\!st"`
+  - Special: the `$` should be escaped with 3 backaslashes `\\\`
+- In console run: `travis encrypt --pro AUTH_AAD_TEST_HARNESS_PASSWORD="t3\\\$t\\@e\\!st" --add`
+  - The command will generate `scure: [encrypted password]` in `.travis.yml` file
+- Commit changes :)
+
+## Resources
+
+- [TravisCI documentation](https://docs.travis-ci.com/user/environment-variables/)
