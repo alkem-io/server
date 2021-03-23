@@ -22,13 +22,13 @@ let aspectDataCreate = '';
 let uniqueTextId = '';
 let aspectCountPerOpportunity = async (): Promise<number> => {
   const responseQuery = await getAspectPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.opportunity.aspects;
+  let response = responseQuery.body.data.ecoverse.opportunity.aspects;
   return response;
 };
 
 let aspectDataPerOpportunity = async (): Promise<String> => {
   const responseQuery = await getAspectPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.opportunity.aspects[0];
+  let response = responseQuery.body.data.ecoverse.opportunity.aspects[0];
   return response;
 };
 beforeEach(async () => {

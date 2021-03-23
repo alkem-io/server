@@ -102,8 +102,8 @@ export const removeAspectMutation = async (aspectId: any) => {
 export const getAspectPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: "${opportunityId}") {
-        aspects { id title framing explanation }}}`,
+    query: `query {ecoverse{ opportunity(ID: "${opportunityId}") {
+        aspects { id title framing explanation }}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -112,14 +112,14 @@ export const getAspectPerOpportunity = async (opportunityId: string) => {
 export const getAspectPerProject = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: "${opportunityId}") {
+    query: `query {ecoverse{ opportunity(ID: "${opportunityId}") {
       projects{
         aspects{
           id title framing explanation
         }
       }
     }
-  }`,
+  }}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
