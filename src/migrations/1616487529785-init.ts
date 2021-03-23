@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class init1616284873566 implements MigrationInterface {
-  name = 'init1616284873566';
+export class init1616487529785 implements MigrationInterface {
+  name = 'init1616487529785';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -56,7 +56,7 @@ export class init1616284873566 implements MigrationInterface {
       'CREATE TABLE `user_group` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `includeInSearch` tinyint NOT NULL, `focalPointId` int NULL, `profileId` int NULL, `organisationId` int NULL, `communityId` int NULL, UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `organisation` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `dIDId` int NULL, `profileId` int NULL, UNIQUE INDEX `REL_5e7d69b206e4aec1c4c2165563` (`dIDId`), UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `organisation` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `dIDId` int NULL, `profileId` int NULL, UNIQUE INDEX `REL_5e7d69b206e4aec1c4c2165563` (`dIDId`), UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `ecoverse` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `hostId` int NULL, `contextId` int NULL, `communityId` int NULL, `dIDId` int NULL, `tagsetId` int NULL, UNIQUE INDEX `REL_84d2ecca9924fb1b0d2fe2d2ad` (`hostId`), UNIQUE INDEX `REL_6db8627abbf00b1b986e359054` (`contextId`), UNIQUE INDEX `REL_f5ad15bcb06a95c2a109fbcce2` (`communityId`), UNIQUE INDEX `REL_f0198cf63a79ffc2bfab423249` (`dIDId`), UNIQUE INDEX `REL_3a69b0a6c67ead761763400990` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
@@ -80,7 +80,7 @@ export class init1616284873566 implements MigrationInterface {
       'ALTER TABLE `reference` ADD CONSTRAINT `FK_07dbf4b02a078a59c216691f5eb` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `reference` ADD CONSTRAINT `FK_2f46c698fc4c19a8cc233c5f255` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+      'ALTER TABLE `reference` ADD CONSTRAINT `FK_2f46c698fc4c19a8cc233c5f255` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `actor` ADD CONSTRAINT `FK_0f9d41ee193d631a5439bb4f404` FOREIGN KEY (`actorGroupId`) REFERENCES `actor_group`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
@@ -110,13 +110,13 @@ export class init1616284873566 implements MigrationInterface {
       'ALTER TABLE `relation` ADD CONSTRAINT `FK_d6d967126caae9df4c763985f9b` FOREIGN KEY (`opportunityId`) REFERENCES `opportunity`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_9c169eb500e2d3823154c7b603d` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_9c169eb500e2d3823154c7b603d` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_1c7744df92f39ab567084fd8c09` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_7d23d17ce61f11c92ff1ea0ed1a` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_7d23d17ce61f11c92ff1ea0ed1a` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_cb4c7ef53da42d9759efaeb39e7` FOREIGN KEY (`dIDId`) REFERENCES `did`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
@@ -128,7 +128,7 @@ export class init1616284873566 implements MigrationInterface {
       'ALTER TABLE `community` ADD CONSTRAINT `FK_8e8283bdacc9e770918fe689333` FOREIGN KEY (`parentCommunityId`) REFERENCES `community`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `application` ADD CONSTRAINT `FK_b4ae3fea4a24b4be1a86dacf8a2` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `application` ADD CONSTRAINT `FK_b4ae3fea4a24b4be1a86dacf8a2` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `application` ADD CONSTRAINT `FK_500cee6f635849f50e19c7e2b76` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
@@ -137,7 +137,7 @@ export class init1616284873566 implements MigrationInterface {
       'ALTER TABLE `user` ADD CONSTRAINT `FK_f27e03d1f7ce0724d8814fe8411` FOREIGN KEY (`dIDId`) REFERENCES `did`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `user` ADD CONSTRAINT `FK_9466682df91534dd95e4dbaa616` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `user` ADD CONSTRAINT `FK_9466682df91534dd95e4dbaa616` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `user_group` ADD CONSTRAINT `FK_375df27b9233a3ffdd215bd1f86` FOREIGN KEY (`focalPointId`) REFERENCES `user`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
@@ -155,7 +155,7 @@ export class init1616284873566 implements MigrationInterface {
       'ALTER TABLE `organisation` ADD CONSTRAINT `FK_5e7d69b206e4aec1c4c21655631` FOREIGN KEY (`dIDId`) REFERENCES `did`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `organisation` ADD CONSTRAINT `FK_037ba4b170844c039e74aa22ecd` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `organisation` ADD CONSTRAINT `FK_037ba4b170844c039e74aa22ecd` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_84d2ecca9924fb1b0d2fe2d2ad6` FOREIGN KEY (`hostId`) REFERENCES `organisation`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
@@ -164,7 +164,7 @@ export class init1616284873566 implements MigrationInterface {
       'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_6db8627abbf00b1b986e359054f` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_f0198cf63a79ffc2bfab4232492` FOREIGN KEY (`dIDId`) REFERENCES `did`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
@@ -173,7 +173,7 @@ export class init1616284873566 implements MigrationInterface {
       'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_3a69b0a6c67ead7617634009903` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_1deebaabfc620e881858333b0d0` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_1deebaabfc620e881858333b0d0` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_aa9668dd2340c2d794b414577b6` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
