@@ -2,7 +2,7 @@
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
-import { Organisation } from '@domain/community/organisation';
+import { Organisation } from '@domain/community/organisation/organisation.entity';
 import {
   registerDecorator,
   ValidationArguments,
