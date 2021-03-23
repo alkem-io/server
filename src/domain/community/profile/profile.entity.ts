@@ -2,9 +2,12 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { Reference } from '@domain/common/reference/reference.entity';
 import {
@@ -19,6 +22,15 @@ export class Profile extends BaseEntity implements IProfile {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => [Reference], {
     nullable: true,

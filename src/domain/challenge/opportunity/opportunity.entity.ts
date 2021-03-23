@@ -2,12 +2,15 @@ import { ID, Field, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
@@ -28,6 +31,15 @@ export class Opportunity extends BaseEntity
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => String, {
     nullable: false,

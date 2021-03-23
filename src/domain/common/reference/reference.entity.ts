@@ -2,9 +2,12 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { IReference } from './reference.interface';
 import { Context } from '@domain/context/context/context.entity';
@@ -16,6 +19,15 @@ export class Reference extends BaseEntity implements IReference {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => String)
   @Column()

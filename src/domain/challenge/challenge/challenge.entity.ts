@@ -3,6 +3,7 @@ import { ID, Field, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   JoinTable,
@@ -11,6 +12,8 @@ import {
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { Context } from '@domain/context/context/context.entity';
 import { DID } from '@domain/agent/did/did.entity';
@@ -29,6 +32,15 @@ export class Challenge extends BaseEntity
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => String, {
     nullable: false,

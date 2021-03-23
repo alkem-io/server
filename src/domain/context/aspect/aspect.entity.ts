@@ -2,9 +2,12 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
@@ -16,6 +19,15 @@ export class Aspect extends BaseEntity implements IAspect {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => String)
   @Column()
