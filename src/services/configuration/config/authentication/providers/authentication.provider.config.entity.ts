@@ -2,7 +2,7 @@ import { AuthenticationProviderConfigs } from '@common/enums';
 import { createUnionType, Field, ObjectType } from '@nestjs/graphql';
 import { AadAuthProviderConfig } from './aad/aad.config.entity';
 import { IAuthenticationProviderConfig } from './authentication.provider.config.interface';
-import { SimpleAuthProviderConfig } from './simple-auth/simple-auth.provider.config.entity';
+import { DemoAuthProviderConfig } from './demo-auth/demo-auth.provider.config.entity';
 
 @ObjectType()
 export class AuthenticationProviderConfig
@@ -41,13 +41,13 @@ export class AuthenticationProviderConfig
 
 export const AuthenticationProviderConfigUnion = createUnionType({
   name: 'AuthenticationProviderConfigUnion',
-  types: () => [AadAuthProviderConfig, SimpleAuthProviderConfig],
+  types: () => [AadAuthProviderConfig, DemoAuthProviderConfig],
   resolveType(value) {
     if (value.msalConfig) {
       return AuthenticationProviderConfigs.AAD;
     }
     if (value.tokenEndpoint) {
-      return AuthenticationProviderConfigs.SIMPLE_AUTH;
+      return AuthenticationProviderConfigs.DEMO_AUTH;
     }
     return null;
   },

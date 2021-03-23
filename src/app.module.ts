@@ -27,7 +27,7 @@ import { MetadataModule } from '@src/services/metadata/metadata.module';
 import { KonfigModule } from '@src/services/configuration/config/config.module';
 import aadOboConfig from '@src/config/aad.obo.config';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
-import simpleAuthProviderConfig from '@src/config/simple.auth.provider.config';
+import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 
 @Module({
@@ -39,7 +39,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
         '.env.aad.cherrytwist.api.default',
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
-        '.env.simple.auth.provider.default',
+        '.env.demo.auth.provider.default',
       ],
       isGlobal: true,
       load: [
@@ -51,7 +51,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
         loggingConfig,
         aadRopcConfig,
         aadOboConfig,
-        simpleAuthProviderConfig,
+        demoAuthProviderConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({

@@ -50,7 +50,7 @@ query
             resourceScope
           }
       	}
-      ... on SimpleAuthProviderConfig
+      ... on DemoAuthProviderConfig
         {
         	issuer
         	tokenEndpoint

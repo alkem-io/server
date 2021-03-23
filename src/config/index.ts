@@ -6,6 +6,6 @@ export * from './database.config';
 export * from './logging.config';
 export * from './ms-graph.config';
 export * from './service.config';
-export * from './simple.auth.provider.config';
+export * from './demo.auth.provider.config';
 export * from './typeorm.cli.config';
 export * from './winston.config';
