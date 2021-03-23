@@ -1,68 +1,68 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class init1616487529785 implements MigrationInterface {
-  name = 'init1616487529785';
+export class init1616509795423 implements MigrationInterface {
+  name = 'init1616509795423';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      'CREATE TABLE `did` (`id` int NOT NULL AUTO_INCREMENT, `DID` varchar(255) NOT NULL, `DDO` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `did` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `DID` varchar(255) NOT NULL, `DDO` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      "CREATE TABLE `tagset` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL DEFAULT 'default', `tags` text NOT NULL, `profileId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB"
+      "CREATE TABLE `tagset` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL DEFAULT 'default', `tags` text NOT NULL, `profileId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB"
     );
     await queryRunner.query(
-      'CREATE TABLE `profile` (`id` int NOT NULL AUTO_INCREMENT, `avatar` text NULL, `description` text NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `profile` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `avatar` text NULL, `description` text NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `reference` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `uri` text NOT NULL, `description` text NULL, `contextId` int NULL, `profileId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `reference` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `uri` text NOT NULL, `description` text NULL, `contextId` int NULL, `profileId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `context` (`id` int NOT NULL AUTO_INCREMENT, `tagline` varchar(255) NULL, `background` text NULL, `vision` text NULL, `impact` text NULL, `who` text NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `context` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `tagline` varchar(255) NULL, `background` text NULL, `vision` text NULL, `impact` text NULL, `who` text NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `nvp` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `value` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `nvp` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `value` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `actor` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `description` text NULL, `value` text NULL, `impact` varchar(255) NULL, `actorGroupId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `actor` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `value` text NULL, `impact` varchar(255) NULL, `actorGroupId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `actor_group` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `description` text NULL, `opportunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `actor_group` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `opportunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `agreement` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `description` text NULL, `projectId` int NULL, `tagsetId` int NULL, UNIQUE INDEX `REL_22348b89c2f802a3d75d52fbd5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `agreement` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `projectId` int NULL, `tagsetId` int NULL, UNIQUE INDEX `REL_22348b89c2f802a3d75d52fbd5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `project` (`id` int NOT NULL AUTO_INCREMENT, `textID` varchar(255) NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `state` varchar(255) NOT NULL, `tagsetId` int NULL, `opportunityId` int NULL, UNIQUE INDEX `REL_d07535c59062f86e887de8f0a5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `project` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `textID` varchar(255) NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `state` varchar(255) NOT NULL, `tagsetId` int NULL, `opportunityId` int NULL, UNIQUE INDEX `REL_d07535c59062f86e887de8f0a5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `aspect` (`id` int NOT NULL AUTO_INCREMENT, `title` varchar(255) NOT NULL, `framing` text NOT NULL, `explanation` text NOT NULL, `opportunityId` int NULL, `projectId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `aspect` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `title` varchar(255) NOT NULL, `framing` text NOT NULL, `explanation` text NOT NULL, `opportunityId` int NULL, `projectId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `relation` (`id` int NOT NULL AUTO_INCREMENT, `type` varchar(255) NOT NULL, `actorName` varchar(255) NOT NULL, `actorType` varchar(255) NOT NULL, `actorRole` varchar(255) NOT NULL, `description` text NULL, `opportunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `relation` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `type` varchar(255) NOT NULL, `actorName` varchar(255) NOT NULL, `actorType` varchar(255) NOT NULL, `actorRole` varchar(255) NOT NULL, `description` text NULL, `opportunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `opportunity` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `state` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `tagsetId` int NULL, `dIDId` int NULL, `challengeId` int NULL, UNIQUE INDEX `REL_9c169eb500e2d3823154c7b603` (`contextId`), UNIQUE INDEX `REL_1c7744df92f39ab567084fd8c0` (`communityId`), UNIQUE INDEX `REL_7d23d17ce61f11c92ff1ea0ed1` (`tagsetId`), UNIQUE INDEX `REL_cb4c7ef53da42d9759efaeb39e` (`dIDId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `opportunity` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `state` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `tagsetId` int NULL, `dIDId` int NULL, `challengeId` int NULL, UNIQUE INDEX `REL_9c169eb500e2d3823154c7b603` (`contextId`), UNIQUE INDEX `REL_1c7744df92f39ab567084fd8c0` (`communityId`), UNIQUE INDEX `REL_7d23d17ce61f11c92ff1ea0ed1` (`tagsetId`), UNIQUE INDEX `REL_cb4c7ef53da42d9759efaeb39e` (`dIDId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `community` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `type` varchar(255) NOT NULL, `restrictedGroupNames` text NOT NULL, `parentCommunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `community` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `type` varchar(255) NOT NULL, `restrictedGroupNames` text NOT NULL, `parentCommunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `application` (`id` int NOT NULL AUTO_INCREMENT, `status` int NOT NULL, `userId` int NULL, `communityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `application` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `status` int NOT NULL, `userId` int NULL, `communityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `user` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `accountUpn` varchar(255) NOT NULL, `firstName` varchar(255) NOT NULL, `lastName` varchar(255) NOT NULL, `email` varchar(255) NOT NULL, `phone` varchar(255) NOT NULL, `city` varchar(255) NOT NULL, `country` varchar(255) NOT NULL, `gender` varchar(255) NOT NULL, `lastModified` int NOT NULL, `dIDId` int NULL, `profileId` int NULL, UNIQUE INDEX `REL_f27e03d1f7ce0724d8814fe841` (`dIDId`), UNIQUE INDEX `REL_9466682df91534dd95e4dbaa61` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `user` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `accountUpn` varchar(255) NOT NULL, `firstName` varchar(255) NOT NULL, `lastName` varchar(255) NOT NULL, `email` varchar(255) NOT NULL, `phone` varchar(255) NOT NULL, `city` varchar(255) NOT NULL, `country` varchar(255) NOT NULL, `gender` varchar(255) NOT NULL, `dIDId` int NULL, `profileId` int NULL, UNIQUE INDEX `REL_f27e03d1f7ce0724d8814fe841` (`dIDId`), UNIQUE INDEX `REL_9466682df91534dd95e4dbaa61` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `user_group` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `includeInSearch` tinyint NOT NULL, `focalPointId` int NULL, `profileId` int NULL, `organisationId` int NULL, `communityId` int NULL, UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `user_group` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `includeInSearch` tinyint NOT NULL, `focalPointId` int NULL, `profileId` int NULL, `organisationId` int NULL, `communityId` int NULL, UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `organisation` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `dIDId` int NULL, `profileId` int NULL, UNIQUE INDEX `REL_5e7d69b206e4aec1c4c2165563` (`dIDId`), UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `organisation` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `dIDId` int NULL, `profileId` int NULL, UNIQUE INDEX `REL_5e7d69b206e4aec1c4c2165563` (`dIDId`), UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `ecoverse` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `hostId` int NULL, `contextId` int NULL, `communityId` int NULL, `dIDId` int NULL, `tagsetId` int NULL, UNIQUE INDEX `REL_84d2ecca9924fb1b0d2fe2d2ad` (`hostId`), UNIQUE INDEX `REL_6db8627abbf00b1b986e359054` (`contextId`), UNIQUE INDEX `REL_f5ad15bcb06a95c2a109fbcce2` (`communityId`), UNIQUE INDEX `REL_f0198cf63a79ffc2bfab423249` (`dIDId`), UNIQUE INDEX `REL_3a69b0a6c67ead761763400990` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `ecoverse` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `hostId` int NULL, `contextId` int NULL, `communityId` int NULL, `dIDId` int NULL, `tagsetId` int NULL, UNIQUE INDEX `REL_84d2ecca9924fb1b0d2fe2d2ad` (`hostId`), UNIQUE INDEX `REL_6db8627abbf00b1b986e359054` (`contextId`), UNIQUE INDEX `REL_f5ad15bcb06a95c2a109fbcce2` (`communityId`), UNIQUE INDEX `REL_f0198cf63a79ffc2bfab423249` (`dIDId`), UNIQUE INDEX `REL_3a69b0a6c67ead761763400990` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `challenge` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `state` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `tagsetId` int NULL, `dIDId` int NULL, `ecoverseId` int NULL, UNIQUE INDEX `REL_1deebaabfc620e881858333b0d` (`contextId`), UNIQUE INDEX `REL_aa9668dd2340c2d794b414577b` (`communityId`), UNIQUE INDEX `REL_6b1bcaf365212806d8cc1f87b5` (`tagsetId`), UNIQUE INDEX `REL_b01faeff5b9c5d66d8c17abf52` (`dIDId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `challenge` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `state` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `tagsetId` int NULL, `dIDId` int NULL, `ecoverseId` int NULL, UNIQUE INDEX `REL_1deebaabfc620e881858333b0d` (`contextId`), UNIQUE INDEX `REL_aa9668dd2340c2d794b414577b` (`communityId`), UNIQUE INDEX `REL_6b1bcaf365212806d8cc1f87b5` (`tagsetId`), UNIQUE INDEX `REL_b01faeff5b9c5d66d8c17abf52` (`dIDId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `application_questions` (`applicationId` int NOT NULL, `nvpId` int NOT NULL, INDEX `IDX_8495fae86f13836b0745642baa` (`applicationId`), INDEX `IDX_fe50118fd82e7fe2f74f986a19` (`nvpId`), PRIMARY KEY (`applicationId`, `nvpId`)) ENGINE=InnoDB'

@@ -34,7 +34,6 @@ export class UserService {
     // Ok to create a new user + save
     const user = User.create(userData);
     await this.initialiseMembers(user);
-    this.updateLastModified(user);
     // Need to save to get the object identifiers assigned
     await this.userRepository.save(user);
     this.logger.verbose?.(
@@ -213,7 +212,6 @@ export class UserService {
       );
     }
 
-    this.updateLastModified(user);
     await this.userRepository.save(user);
 
     // Check the tagsets
@@ -227,10 +225,6 @@ export class UserService {
     const populatedUser = await this.getUserByIdOrFail(user.id);
 
     return populatedUser;
-  }
-
-  updateLastModified(user: IUser) {
-    user.lastModified = Math.floor(new Date().getTime() / 1000);
   }
 
   getCommunity(entity: ICommunityable): ICommunity {

@@ -1,4 +1,4 @@
-import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { DID } from '@domain/agent/did/did.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
@@ -12,6 +12,9 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { IUser } from './user.interface';
 import { Application } from '@domain/community/application/application.entity';
@@ -22,6 +25,15 @@ export class User extends BaseEntity implements IUser {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => String)
   @Column()
@@ -80,15 +92,6 @@ export class User extends BaseEntity implements IUser {
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
   profile?: Profile;
-
-  @Field(() => Int, {
-    nullable: true,
-    description:
-      'The last timestamp, in seconds, when this user was modified - either via creation or via update. Note: updating of profile data or group memberships does not update this field.',
-  })
-  @Column()
-  lastModified: number;
-
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.focalPoint,
@@ -106,6 +109,5 @@ export class User extends BaseEntity implements IUser {
   constructor(name: string) {
     super();
     this.name = name;
-    this.lastModified = 0;
   }
 }
