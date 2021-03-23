@@ -43,7 +43,7 @@ export const updateActorMutation = async (
   const requestParams = {
     operationName: null,
     query: `mutation updateActor($actorData: ActorInput!, $ID: Float!) {
-        updateActor(actorData: $actorData, ID: $ID) {          
+        updateActor(actorData: $actorData, ID: $ID) {
           id
           name
           description
@@ -79,10 +79,10 @@ export const removeActorMutation = async (actorId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getActorData = async (opportunityId: any) => {
+export const getActorData = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: ${parseFloat(opportunityId)}) {
+    query: `query {opportunity(ID: "${opportunityId}") {
       actorGroups{
         actors{
           id name description value impact

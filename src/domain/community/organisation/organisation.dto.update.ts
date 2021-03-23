@@ -4,7 +4,11 @@ import { MaxLength } from 'class-validator';
 import { ProfileInput } from '@domain/community/profile/profile.dto';
 
 @InputType()
-export class OrganisationInput {
+export class UpdateOrganisationInput {
+  @Field({ nullable: false })
+  @MaxLength(SMALL_TEXT_LENGTH)
+  ID!: string;
+
   @Field({ nullable: true, description: 'The name for this organisation' })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;

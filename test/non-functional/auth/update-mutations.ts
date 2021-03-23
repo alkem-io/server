@@ -1,5 +1,6 @@
 const userId = 4;
 const organisationId = 1;
+const communityId = 1;
 
 export const updateUserMutation = `
 mutation UpdateUser($userID: Float!, $userData: UserInput!) {
@@ -156,9 +157,9 @@ export const replaceTagsOnTagsetVariables = (id: number) => `
     "tags": ["tag1", "tag2"]
   }`;
 
-export const addUserToChallengeMutation = `
-mutation addUserToChallenge($userID: Float!, $challengeID: Float!) {
-    addUserToChallenge(challengeID: $challengeID, userID: $userID) {
+export const addUserToCommunityMutation = `
+  mutation addUserToCommunity($userID: Float!, $communityID: Float!) {
+    addUserToCommunity(communityID: $communityID, userID: $userID) {
       name,
       id,
       members {
@@ -168,10 +169,10 @@ mutation addUserToChallenge($userID: Float!, $challengeID: Float!) {
     }
   }`;
 
-export const addUserToChallengeVariables = (id: number) => `
+export const addUserToCommunityVariables = (id: number) => `
 {
     "userID": ${userId},
-    "challengeID": ${id}
+    "communityID": ${communityId}
   }`;
 
 export const addUserToGroupMutation = `
@@ -183,24 +184,6 @@ export const addUserToGroupVariables = (id: number) => `
 {
     "userID": ${userId},
     "groupID": ${id}
-  }`;
-
-export const addUserToOpportunityMutation = `
-mutation addUserToOpportunity($userID: Float!, $opportunityID: Float!) {
-    addUserToOpportunity(opportunityID: $opportunityID, userID: $userID) {
-      name,
-      id,
-      members {
-        id,
-        name
-      }
-    }
-  }`;
-
-export const addUserToOpportunityVariables = (id: number) => `
-{
-    "userID": ${userId},
-    "opportunityID": ${id}
   }`;
 
 export const assignGroupFocalPointMutation = `
@@ -275,9 +258,8 @@ const mutations: Record<string, string> = {
   updateActorMutation,
   addTagsOnTagsetMutation,
   replaceTagsOnTagsetMutation,
-  addUserToChallengeMutation,
+  addUserToCommunityMutation,
   addUserToGroupMutation,
-  addUserToOpportunityMutation,
   assignGroupFocalPointMutation,
   removeGroupFocalPointMutation,
   addChallengeLeadToOrganisationMutation,
@@ -294,9 +276,8 @@ const variables: Record<string, (id: number) => string> = {
   updateActorVariables,
   addTagsOnTagsetVariables,
   replaceTagsOnTagsetVariables,
-  addUserToChallengeVariables,
+  addUserToCommunityVariables,
   addUserToGroupVariables,
-  addUserToOpportunityVariables,
   assignGroupFocalPointVariables,
   removeGroupFocalPointVariables,
   addChallengeLeadToOrganisationVariables,

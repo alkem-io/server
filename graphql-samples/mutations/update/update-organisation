@@ -1,5 +1,5 @@
-mutation updateOrganisation($orgID: Float!, $organisationData: OrganisationInput!) {
-  updateOrganisation(orgID: $orgID, organisationData: $organisationData) {
+mutation updateOrganisation($organisationData: UpdateOrganisationInput!) {
+  updateOrganisation(organisationData: $organisationData) {
     name,
     id
   }
@@ -7,9 +7,9 @@ mutation updateOrganisation($orgID: Float!, $organisationData: OrganisationInput
 
 query variables:
 {
-  "orgID": 1,
   "organisationData":
   {
+    "ID": "1",
     "name": "Cherrytwist2",
     "profileData": {
       "description": "some description",

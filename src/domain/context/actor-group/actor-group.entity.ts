@@ -47,7 +47,7 @@ export class ActorGroup extends BaseEntity implements IActorGroup {
   @OneToMany(
     () => Actor,
     actor => actor.actorGroup,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   actors?: Actor[];
 

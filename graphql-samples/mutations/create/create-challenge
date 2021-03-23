@@ -1,12 +1,7 @@
 mutation CreateChallenge($challengeData: ChallengeInput!) {
   createChallenge(challengeData: $challengeData) {
     name,
-    id,
-    groups
-    {
-      id,
-      name
-    }
+    id
   }
 }
 

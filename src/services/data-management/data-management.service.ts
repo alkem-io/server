@@ -58,7 +58,7 @@ export class DataManagementService {
   async populatePageContent(message: string): Promise<string> {
     let ecoverseName = '<< No ecoverse >>';
     try {
-      const ecoverse = await this.ecoverseService.getEcoverse();
+      const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail();
       ecoverseName = ecoverse.name;
     } catch (e) {
       // ecoverse not yet initialised so just skip the name

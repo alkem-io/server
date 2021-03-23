@@ -1,6 +1,5 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
-
 export const createGroupMutation = async (testGroup: string) => {
   const requestParams = {
     operationName: 'CreateGroupOnEcoverse',
@@ -18,6 +17,7 @@ export const createGroupMutation = async (testGroup: string) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+
 export const createGroupOnOrganisationMutation = async (
   testGroup: string,
   organisationId: any
@@ -27,36 +27,12 @@ export const createGroupOnOrganisationMutation = async (
     query: `mutation createGroupOnOrganization($groupName: String!, $orgID: Float!) {
       createGroupOnOrganisation(groupName: $groupName, orgID: $orgID) {
         id
-        name        
+        name
       }
     }`,
     variables: {
       groupName: testGroup,
       orgID: parseFloat(organisationId),
-    },
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
-export const createGroupOnChallengeMutation = async (
-  testGroup: string,
-  challengeId: any
-) => {
-  const requestParams = {
-    operationName: null,
-    query: `mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
-      createGroupOnChallenge(groupName: $groupName, challengeID: $challengeID) {
-        name,
-        id
-        members {
-          name
-        }
-      }
-    }`,
-    variables: {
-      challengeID: parseFloat(challengeId),
-      groupName: testGroup,
     },
   };
 
@@ -165,7 +141,7 @@ export const getGroupParent = async (groupId: any) => {
     operationName: null,
     variables: {},
     query: `query { group (ID: ${groupId})
-    { id name 
+    { id name
       parent { __typename ... on Ecoverse {id name }},
       parent { __typename ... on Organisation {id name }},
       parent { __typename ... on Challenge {id name }},

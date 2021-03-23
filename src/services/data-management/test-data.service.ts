@@ -3,11 +3,11 @@ import { ActorGroupInput } from '@domain/context/actor-group/actor-group.dto';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { ActorInput } from '@domain/context/actor/actor.dto';
 import { AspectInput } from '@domain/context/aspect/aspect.dto';
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto';
+import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto';
+import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { ProjectInput } from '@domain/collaboration/project/project.dto';
 import { ProjectService } from '@domain/collaboration/project/project.service';
@@ -16,7 +16,9 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { DataManagementService } from './data-management.service';
-import { OrganisationInput } from '@domain/community/organisation/organisation.dto';
+import { OrganisationInput } from '@domain/community/organisation/organisation.dto.create';
+import { CommunityService } from '@domain/community/community/community.service';
+import { OrganisationService } from '@domain/community/organisation/organisation.service';
 
 export type TestDataServiceInitResult = {
   userId: number;
@@ -46,6 +48,8 @@ export class TestDataService {
     private ecoverseService: EcoverseService,
     private userService: UserService,
     private challengeService: ChallengeService,
+    private communityService: CommunityService,
+    private organisationService: OrganisationService,
     private opportunityService: OpportunityService,
     private userGroupService: UserGroupService,
     private projectService: ProjectService,
@@ -74,7 +78,7 @@ export class TestDataService {
   async initOrganisation(): Promise<number> {
     const organisation = new OrganisationInput();
     organisation.name = `${this.organisationName}`;
-    const response = await this.ecoverseService.createOrganisation(
+    const response = await this.organisationService.createOrganisation(
       organisation
     );
     return response.id;
@@ -118,6 +122,7 @@ export class TestDataService {
 
   async initOpportunity(challengeId: number): Promise<number> {
     const opportunity = new OpportunityInput();
+    opportunity.challengeID = `${challengeId}`;
     opportunity.name = 'init opportunity name';
     opportunity.state = 'init opportunity state';
     opportunity.textID = 'init-opport';
@@ -135,22 +140,17 @@ export class TestDataService {
       vision: 'test opportunity vision',
       who: 'test opportunity who',
     };
-    const response = await this.challengeService.createOpportunity(
-      challengeId,
-      opportunity
-    );
+    const response = await this.challengeService.createOpportunity(opportunity);
     return response.id;
   }
 
   async initRemoveOpportunity(challengeId: number): Promise<number> {
     const opportunity = new OpportunityInput();
+    opportunity.challengeID = `${challengeId}`;
     opportunity.name = 'init remove opportunity name';
     opportunity.state = 'init opportunity state';
     opportunity.textID = 'remove-opport';
-    const response = await this.challengeService.createOpportunity(
-      challengeId,
-      opportunity
-    );
+    const response = await this.challengeService.createOpportunity(opportunity);
     return response.id;
   }
 
@@ -206,25 +206,30 @@ export class TestDataService {
     const createdTestUser = (await this.userService.getUserByEmail(
       this.userEmail
     )) as IUser;
-    const response = await this.opportunityService.addMember(
+    const response = await this.communityService.addMember(
       createdTestUser?.id,
       opportunityId
     );
     return response.id;
   }
 
-  async initAddChallengeLead(challengeId: number) {
-    await this.challengeService.addChallengeLead(challengeId, 1);
-  }
-
   async initCreateGroupOnEcoverse(): Promise<number> {
-    const response = await this.ecoverseService.createGroup(this.groupName);
+    const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail({
+      relations: ['community'],
+    });
+    const community = ecoverse.community;
+    if (!community) throw new Error();
+    const response = await this.communityService.createGroup(
+      community.id,
+      this.groupName
+    );
     return response.id;
   }
 
   async initCreateGroupOnChallenge(challengeId: number): Promise<number> {
-    const response = await this.challengeService.createGroup(
-      challengeId,
+    const community = await this.challengeService.getCommunity(challengeId);
+    const response = await this.communityService.createGroup(
+      community.id,
       this.groupName
     );
     return response.id;
@@ -280,21 +285,21 @@ export class TestDataService {
   }
 
   async initGetTagsetId(challengeId: number): Promise<any> {
-    const response = await this.challengeService.getChallengeOrFail(
+    const response = await this.challengeService.getChallengeByIdOrFail(
       challengeId
     );
     return response.tagset?.id;
   }
 
   async initGetContextId(challengeId: number): Promise<any> {
-    const response = await this.challengeService.getChallengeOrFail(
+    const response = await this.challengeService.getChallengeByIdOrFail(
       challengeId
     );
     return response.context?.id;
   }
 
   async teardownChallenges(challengeId: number) {
-    const challengeToRemove = (await this.challengeService.getChallengeOrFail(
+    const challengeToRemove = (await this.challengeService.getChallengeByIdOrFail(
       challengeId
     )) as IChallenge;
     await this.challengeService.removeChallenge(challengeToRemove?.id);

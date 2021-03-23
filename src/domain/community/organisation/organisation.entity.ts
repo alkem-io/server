@@ -10,15 +10,13 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { DID } from '@domain/agent/did/did.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/community/user-group/user-group.entity';
+import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
+import { Challenge } from '@domain/challenge';
+import { AuthorizationRoles } from '@core/authorization';
 
 @Entity()
 @ObjectType()
@@ -36,17 +34,18 @@ export class Organisation extends BaseEntity
   @JoinColumn()
   DID!: DID;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'A short text identifier for this Organisation',
+  })
+  @Column()
+  textID: string;
+
   @OneToOne(
     () => Ecoverse,
     ecoverse => ecoverse.host
   )
   hostedEcoverse?: Ecoverse;
-
-  @ManyToMany(
-    () => Ecoverse,
-    ecoverse => ecoverse.organisations
-  )
-  ecoverses?: Ecoverse[];
 
   @OneToOne(() => Profile, { eager: true, cascade: true })
   @JoinColumn()
@@ -61,16 +60,18 @@ export class Organisation extends BaseEntity
 
   @ManyToMany(
     () => Challenge,
-    challenge => challenge.leadOrganisations
+    challenge => challenge.leadOrganisations,
+    { eager: false, cascade: false }
   )
   challenges!: Challenge[];
 
   // The restricted group names at the challenge level
   restrictedGroupNames?: string[];
 
-  constructor(name: string) {
+  constructor(textID: string) {
     super();
-    this.name = name;
-    this.restrictedGroupNames = [RestrictedGroupNames.Members];
+    this.name = '';
+    this.textID = textID;
+    this.restrictedGroupNames = [AuthorizationRoles.Members];
   }
 }

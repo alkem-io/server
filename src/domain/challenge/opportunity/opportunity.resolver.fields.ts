@@ -1,67 +1,32 @@
 import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
-import { Application } from '@domain/community/application/application.entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Relation } from '@domain/collaboration/relation/relation.entity';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { User } from '@domain/community/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
-import {
-  EntityNotInitializedException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { Profiling } from '@src/common/decorators';
 import { Opportunity } from './opportunity.entity';
 import { OpportunityService } from './opportunity.service';
+import { Community } from '@domain/community/community';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
-  constructor(
-    private userGroupService: UserGroupService,
-    private opportunityService: OpportunityService
-  ) {}
+  constructor(private opportunityService: OpportunityService) {}
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
-  @ResolveField('groups', () => [UserGroup], {
+  @ResolveField('community', () => Community, {
     nullable: true,
-    description: 'Groups of users related to a Opportunity.',
+    description: 'The community for the opportunity.',
   })
   @Profiling.api
-  async groups(@Parent() opportunity: Opportunity) {
-    const groups = await this.opportunityService.loadUserGroups(opportunity);
-    return groups;
-  }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('contributors', () => [User], {
-    nullable: true,
-    description: 'All users that are contributing to this Opportunity.',
-  })
-  @Profiling.api
-  async contributors(@Parent() opportunity: Opportunity) {
-    const group = await this.userGroupService.getGroupByName(
-      opportunity,
-      AuthorizationRoles.Members
+  async community(@Parent() opportunity: Opportunity) {
+    const community = await this.opportunityService.getCommunity(
+      opportunity.id
     );
-    if (!group)
-      throw new RelationshipNotFoundException(
-        `Unable to locate members group on Opportunity: ${Opportunity.name}`,
-        LogContext.COMMUNITY
-      );
-    const members = group.members;
-    if (!members)
-      throw new EntityNotInitializedException(
-        `Members group not initialised on Opportunity: ${Opportunity.name}`,
-        LogContext.COMMUNITY
-      );
-    return members;
+    return community;
   }
 
   @ResolveField('actorGroups', () => [ActorGroup], {
@@ -90,20 +55,5 @@ export class OpportunityResolverFields {
   @Profiling.api
   async relations(@Parent() opportunity: Opportunity) {
     return await this.opportunityService.loadRelations(opportunity);
-  }
-
-  @Roles(
-    AuthorizationRoles.GlobalAdmins,
-    AuthorizationRoles.EcoverseAdmins,
-    AuthorizationRoles.CommunityAdmins
-  )
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('applications', () => [Application], {
-    nullable: false,
-    description: 'Application available for this opportunity.',
-  })
-  @Profiling.api
-  async applications(@Parent() opportunity: Opportunity) {
-    return await this.opportunityService.getApplications(opportunity);
   }
 }

@@ -8,17 +8,19 @@ import {
 } from '@src/core/validation/constraints/unique.text.id';
 
 @InputType()
-export class OpportunityInput {
+export class ChallengeInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  name?: string;
+  name!: string;
 
   @Field({ nullable: true })
-  @IsUniqueTextId(TextIdType.challenge)
+  @IsUniqueTextId(TextIdType.challenge, {
+    message: 'Challenge with the textID: $value already exists!',
+  })
   @IsOptional()
   @MaxLength(TINY_TEXT_LENGTH)
-  textID?: string;
+  textID!: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -28,4 +30,8 @@ export class OpportunityInput {
   @Field(() => ContextInput, { nullable: true })
   @IsOptional()
   context?: ContextInput;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
 }

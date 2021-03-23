@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organisation } from './organisation.entity';
 import { OrganisationResolverFields } from './organisation.resolver.fields';
 import { ProfileModule } from '@domain/community/profile/profile.module';
+import { OrganisationResolverQueries } from './organisation.resolver.queries';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ProfileModule } from '@domain/community/profile/profile.module';
   ],
   providers: [
     OrganisationService,
+    OrganisationResolverQueries,
     OrganisationResolverMutations,
     OrganisationResolverFields,
   ],

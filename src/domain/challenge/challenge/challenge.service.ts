@@ -1,62 +1,47 @@
-import { ApplicationInput } from '@domain/community/application/application.dto';
-import { Application } from '@domain/community/application/application.entity';
-import { ApplicationFactoryService } from '@domain/community/application/application.factory';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto';
+import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  GroupNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ApolloError } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { ChallengeInput } from './challenge.dto';
+import { ChallengeInput } from './challenge.dto.create';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
-import { UpdateChallengeInput } from './update-challenge.dto';
+import { UpdateChallengeInput } from './challenge.dto.update';
+import { Community, ICommunity } from '@domain/community/community';
+import { CommunityService } from '@domain/community/community/community.service';
+import { AuthorizationRoles } from '@core/authorization';
+import { CommunityType } from '@common/enums/community.types';
+import validator from 'validator';
 
 @Injectable()
 export class ChallengeService {
   constructor(
-    private userService: UserService,
-    private userGroupService: UserGroupService,
     private contextService: ContextService,
+    private communityService: CommunityService,
     private tagsetService: TagsetService,
     private opportunityService: OpportunityService,
     private organisationService: OrganisationService,
-    private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async initialiseMembers(challenge: IChallenge): Promise<IChallenge> {
-    if (!challenge.groups) {
-      challenge.groups = [];
-    }
-    // Check that the mandatory groups for a challenge are created
-    await this.userGroupService.addMandatoryGroups(
-      challenge,
-      challenge.restrictedGroupNames
-    );
-
     if (!challenge.opportunities) {
       challenge.opportunities = [];
     }
@@ -67,61 +52,47 @@ export class ChallengeService {
     if (!challenge.context) {
       challenge.context = new Context();
     }
+
+    if (!challenge.community) {
+      challenge.community = new Community(
+        challenge.name,
+        CommunityType.CHALLENGE,
+        [AuthorizationRoles.Members]
+      );
+    }
+
     // Initialise contained objects
     this.contextService.initialiseMembers(challenge.context);
+    this.communityService.initialiseMembers(challenge.community);
 
     return challenge;
   }
 
-  async createGroup(
-    challengeID: number,
-    groupName: string
-  ): Promise<IUserGroup> {
-    // First find the Challenge
-
-    this.logger.verbose?.(
-      `Adding userGroup (${groupName}) to challenge (${challengeID})`,
-      LogContext.CHALLENGES
+  // Loads the challenges into the challenge entity if not already present
+  async getCommunity(challengeId: number): Promise<ICommunity> {
+    const challengeWithCommunity = await this.getChallengeByIdOrFail(
+      challengeId,
+      {
+        relations: ['community'],
+      }
     );
-
-    // Try to find the challenge
-    const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['groups'],
-    });
-
-    const group = await this.userGroupService.addGroupWithName(
-      challenge,
-      groupName
-    );
-    await this.challengeRepository.save(challenge);
-
-    return group;
-  }
-
-  // Loads the group into the challenge entity if not already present
-  async loadGroups(challenge: Challenge): Promise<IUserGroup[]> {
-    if (challenge.groups && challenge.groups.length > 0) {
-      // challenge already has groups loaded
-      return challenge.groups;
-    }
-    // challenge is not populated wih
-    const groups = await this.userGroupService.getGroups(challenge);
-    if (!groups)
-      throw new GroupNotInitializedException(
-        `No groups on challenge: ${challenge.name}`,
+    const community = challengeWithCommunity.community;
+    if (!community)
+      throw new RelationshipNotFoundException(
+        `Unable to load community for challenge ${challengeId} `,
         LogContext.COMMUNITY
       );
-    return groups;
+    return community;
   }
 
   // Loads the challenges into the challenge entity if not already present
-  async loadOpportunities(challenge: Challenge): Promise<IOpportunity[]> {
+  async getOpportunities(challenge: Challenge): Promise<IOpportunity[]> {
     if (challenge.opportunities && challenge.opportunities.length > 0) {
       // challenge already has groups loaded
       return challenge.opportunities;
     }
 
-    const challengeWithOpportunities = await this.getChallengeOrFail(
+    const challengeWithOpportunities = await this.getChallengeByIdOrFail(
       challenge.id,
       {
         relations: ['opportunities'],
@@ -137,19 +108,21 @@ export class ChallengeService {
   }
 
   async createOpportunity(
-    challengeID: number,
     opportunityData: OpportunityInput
   ): Promise<IOpportunity> {
     // First find the Challenge
 
     this.logger.verbose?.(
-      `Adding opportunity to challenge (${challengeID})`,
+      `Adding opportunity to challenge (${opportunityData.challengeID})`,
       LogContext.CHALLENGES
     );
     // Try to find the challenge
-    const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['opportunities'],
-    });
+    const challenge = await this.getChallengeOrFail(
+      opportunityData.challengeID,
+      {
+        relations: ['opportunities', 'community'],
+      }
+    );
 
     await this.validateOpportunity(challenge, opportunityData);
 
@@ -158,6 +131,13 @@ export class ChallengeService {
     );
 
     challenge.opportunities?.push(opportunity as Opportunity);
+
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      opportunity.community,
+      challenge.community
+    );
+
     await this.challengeRepository.save(challenge);
 
     return opportunity;
@@ -196,6 +176,18 @@ export class ChallengeService {
   }
 
   async getChallengeOrFail(
+    challengeID: string,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge> {
+    if (validator.isNumeric(challengeID)) {
+      const idInt: number = parseInt(challengeID);
+      return await this.getChallengeByIdOrFail(idInt, options);
+    }
+
+    return await this.getChallengeByTextIdOrFail(challengeID, options);
+  }
+
+  async getChallengeByIdOrFail(
     challengeID: number,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge> {
@@ -211,8 +203,24 @@ export class ChallengeService {
     return challenge;
   }
 
+  async getChallengeByTextIdOrFail(
+    challengeID: string,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeRepository.findOne(
+      { textID: challengeID },
+      options
+    );
+    if (!challenge)
+      throw new EntityNotFoundException(
+        `Unable to find challenge with ID: ${challengeID}`,
+        LogContext.CHALLENGES
+      );
+    return challenge;
+  }
+
   async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    await this.validateChallenge(challengeData);
+    await this.validateChallengeData(challengeData);
 
     const textID = challengeData.textID;
     // Ensure lower case
@@ -220,12 +228,12 @@ export class ChallengeService {
     // reate and initialise a new challenge using the first returned array item
     const challenge = Challenge.create(challengeData);
     await this.initialiseMembers(challenge);
-    await this.challengeRepository.save(challenge);
+    const savedChallenge = await this.challengeRepository.save(challenge);
 
-    return challenge;
+    return savedChallenge;
   }
 
-  async validateChallenge(challengeData: ChallengeInput) {
+  async validateChallengeData(challengeData: ChallengeInput) {
     const textID = challengeData.textID;
     if (!textID || textID.length < 3)
       throw new ValidationException(
@@ -301,8 +309,8 @@ export class ChallengeService {
 
   async removeChallenge(challengeID: number): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['opportunities', 'groups'],
+    const challenge = await this.getChallengeByIdOrFail(challengeID, {
+      relations: ['opportunities', 'community'],
     });
 
     // Do not remove a challenge that has opporutnities, require these to be individually first removed
@@ -312,149 +320,33 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    // Remove all groups
-    if (challenge.groups) {
-      for (const group of challenge.groups) {
-        await this.userGroupService.removeUserGroup(group.id);
-      }
+    // Remove the community
+    if (challenge.community) {
+      await this.communityService.removeCommunity(challenge.community.id);
+    }
+
+    // Remove the context
+    if (challenge.context) {
+      await this.contextService.removeContext(challenge.context.id);
+    }
+
+    if (challenge.tagset) {
+      await this.tagsetService.removeTagset(challenge.tagset.id);
     }
 
     await this.challengeRepository.remove(challenge as Challenge);
     return true;
   }
 
-  async addUserToOpportunity(
-    userID: number,
-    opportunityID: number
-  ): Promise<IUserGroup> {
-    // Get the ID of the challenge containing the provided opportunity ID
-    const challengeID = await this.opportunityService.getChallengeID(
-      opportunityID
-    );
-    const isMember = await this.isUserMember(userID, challengeID);
-    if (!isMember)
-      throw new ValidationException(
-        `User (${userID}) is not a member of parent challenge: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-
-    // Get the members group
-    return await this.opportunityService.addMember(userID, opportunityID);
-  }
-
-  async isUserMember(userID: number, challengeID: number): Promise<boolean> {
-    const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['groups'],
-    });
-    const membersGroup = await this.getMembersGroup(challenge);
-    const members = membersGroup.members;
-    if (!members)
-      throw new GroupNotInitializedException(
-        `Members group not initialised in challenge: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    const user = members.find(user => user.id == userID);
-    if (user) return true;
-    return false;
-  }
-
-  async addMember(userID: number, challengeID: number): Promise<IUserGroup> {
-    // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(userID);
-
-    const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['groups'],
-    });
-
-    // Get the members group
-    const membersGroup = await this.userGroupService.getGroupByName(
-      challenge,
-      RestrictedGroupNames.Members
-    );
-    await this.userGroupService.addUserToGroup(user, membersGroup);
-
-    return membersGroup;
-  }
-
-  async getMembersGroup(challenge: IChallenge): Promise<IUserGroup> {
-    const group = await this.userGroupService.getGroupByName(
-      challenge,
-      RestrictedGroupNames.Members
-    );
-    if (!group)
-      throw new RelationshipNotFoundException(
-        `Unable to locate members group on challenge: ${challenge.name}`,
-        LogContext.CHALLENGES
-      );
-    return group;
-  }
-
-  async getChallenges(ecoverseId: number): Promise<Challenge[]> {
-    const challenges = await this.challengeRepository.find({
-      where: { ecoverse: { id: ecoverseId } },
-    });
+  async getChallenges(): Promise<Challenge[]> {
+    const challenges = await this.challengeRepository.find();
     return challenges || [];
   }
 
   async addChallengeLead(
-    challengeID: number,
-    organisationID: number
+    challengeID: string,
+    organisationID: string
   ): Promise<boolean> {
-    let challenge, organisation;
-    // eslint-disable-next-line prefer-const
-    [challenge, organisation] = await this.getChallengeAndOrganisation(
-      challengeID,
-      organisationID
-    );
-
-    const existingOrg = challenge.leadOrganisations?.find(
-      existingOrg => existingOrg.id === organisationID
-    );
-    if (existingOrg)
-      throw new ValidationException(
-        `Challenge ${challengeID} already has an organisation with the provided organisation ID: ${organisationID}`,
-        LogContext.CHALLENGES
-      );
-    // ok to add the org
-    challenge.leadOrganisations?.push(organisation);
-    await this.challengeRepository.save(challenge);
-    return true;
-  }
-  async removeChallengeLead(
-    challengeID: number,
-    organisationID: number
-  ): Promise<boolean> {
-    let challenge;
-    // eslint-disable-next-line prefer-const
-    [challenge, {}] = await this.getChallengeAndOrganisation(
-      challengeID,
-      organisationID
-    );
-
-    const existingOrg = challenge.leadOrganisations?.find(
-      existingOrg => existingOrg.id === organisationID
-    );
-    if (!existingOrg)
-      throw new EntityNotInitializedException(
-        `Challenge ${challengeID} does not have a lead with the provided organisation ID: ${organisationID}`,
-        LogContext.CHALLENGES
-      );
-    // ok to add the org
-    const updatedLeads = [];
-    for (const existingOrg of challenge.leadOrganisations as IOrganisation[]) {
-      if (existingOrg.id != organisationID) {
-        updatedLeads.push(existingOrg);
-      }
-    }
-    challenge.leadOrganisations = updatedLeads;
-    await this.challengeRepository.save(challenge);
-    return true;
-  }
-
-  async getChallengeAndOrganisation(
-    challengeID: number,
-    organisationID: number
-  ): Promise<[IChallenge, IOrganisation]> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       organisationID,
       { relations: ['groups'] }
@@ -462,47 +354,46 @@ export class ChallengeService {
 
     const challenge = await this.getChallengeOrFail(challengeID);
 
-    // Check the org is not already added
-    if (!challenge.leadOrganisations)
-      throw new EntityNotInitializedException(
-        `Challenge not fully initialised: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-
-    return [challenge, organisation];
-  }
-
-  async createApplication(
-    id: number,
-    applicationData: ApplicationInput
-  ): Promise<Application> {
-    const challenge = (await this.getChallengeOrFail(id, {
-      relations: ['applications'],
-    })) as Challenge;
-
-    const existingApplication = challenge.applications?.find(
-      x => x.user.id === applicationData.userId
+    const existingOrg = challenge.leadOrganisations?.find(
+      existingOrg => existingOrg.id === organisation.id
     );
-
-    if (existingApplication) {
-      throw new ApolloError(
-        `An application for user ${existingApplication.user.email} already exists for challenge: ${challenge.name}. Application status: ${existingApplication.status}`
+    if (existingOrg)
+      throw new ValidationException(
+        `Community ${challengeID} already has an organisation with the provided organisation ID: ${organisationID}`,
+        LogContext.COMMUNITY
       );
-    }
-
-    const application = await this.applicationFactoryService.createApplication(
-      applicationData
-    );
-
-    challenge.applications?.push(application);
+    // ok to add the org
+    challenge.leadOrganisations?.push(organisation);
     await this.challengeRepository.save(challenge);
-    return application;
+    return true;
   }
 
-  async getApplications(challenge: Challenge) {
-    const _challenge = await this.getChallengeOrFail(challenge.id, {
-      relations: ['applications'],
-    });
-    return _challenge?.applications || [];
+  async removeChallengeLead(
+    challengeID: string,
+    organisationID: string
+  ): Promise<boolean> {
+    const challenge = await this.getChallengeOrFail(challengeID);
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      organisationID
+    );
+
+    const existingOrg = challenge.leadOrganisations?.find(
+      existingOrg => existingOrg.id === organisation.id
+    );
+    if (!existingOrg)
+      throw new EntityNotInitializedException(
+        `Community ${challengeID} does not have a lead with the provided organisation ID: ${organisationID}`,
+        LogContext.COMMUNITY
+      );
+    // ok to add the org
+    const updatedLeads = [];
+    for (const existingOrg of challenge.leadOrganisations as IOrganisation[]) {
+      if (existingOrg.id != organisation.id) {
+        updatedLeads.push(existingOrg);
+      }
+    }
+    challenge.leadOrganisations = updatedLeads;
+    await this.challengeRepository.save(challenge);
+    return true;
   }
 }

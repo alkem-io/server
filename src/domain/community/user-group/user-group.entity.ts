@@ -1,6 +1,4 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { User } from '@domain/community/user/user.entity';
 import {
@@ -16,7 +14,7 @@ import {
 } from 'typeorm';
 import { IUserGroup } from './user-group.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
+import { Community } from '../community';
 
 @Entity()
 @ObjectType()
@@ -29,10 +27,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @Column()
   name: string;
 
-  @Field(() => [User], {
-    nullable: true,
-    description: 'The set of users that are members of this group',
-  })
   @ManyToMany(
     () => User,
     user => user.userGroups,
@@ -41,10 +35,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @JoinTable({ name: 'user_group_members' })
   members?: User[];
 
-  @Field(() => User, {
-    nullable: true,
-    description: 'The focal point for this group',
-  })
   @ManyToOne(
     () => User,
     user => user.focalPoints,
@@ -56,16 +46,9 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     nullable: true,
     description: 'The profile for the user group',
   })
-  @OneToOne(() => Profile, { eager: true, cascade: true })
+  @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
-
-  @ManyToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.groups,
-    { eager: false }
-  )
-  ecoverse?: Ecoverse;
 
   @Column()
   includeInSearch: boolean;
@@ -78,18 +61,11 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   organisation?: Organisation;
 
   @ManyToOne(
-    () => Challenge,
-    challenge => challenge.groups,
-    { eager: false }
+    () => Community,
+    community => community.groups,
+    { eager: false, onDelete: 'CASCADE' }
   )
-  challenge?: Challenge;
-
-  @ManyToOne(
-    () => Opportunity,
-    opportunity => opportunity.groups,
-    { eager: false }
-  )
-  opportunity?: Opportunity;
+  community?: Community;
 
   // Flag to say whether members field should be populated
   membersPopulationEnabled = true;
@@ -99,11 +75,4 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     this.name = name;
     this.includeInSearch = true;
   }
-}
-
-export enum RestrictedGroupNames {
-  Members = 'members',
-  CommunityAdmins = 'community-admins',
-  EcoverseAdmins = 'ecoverse-admins',
-  GlobalAdmins = 'global-admins',
 }

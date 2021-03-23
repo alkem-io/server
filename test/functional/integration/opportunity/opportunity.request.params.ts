@@ -1,16 +1,17 @@
+import { AnyNsRecord } from 'dns';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
 import { TestUser } from '../../../utils/token.helper';
 
 export const createOpportunityOnChallengeMutation = async (
-  challengeId: string,
+  challengeId: any,
   oppName: string,
   oppTextId: string,
   contextTagline?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createOpportunityOnChallenge($opportunityData: OpportunityInput!, $challengeID: Float!) {
-      createOpportunityOnChallenge(opportunityData: $opportunityData, challengeID: $challengeID) {
+    query: `mutation createOpportunity($opportunityData: OpportunityInput!) {
+      createOpportunity(opportunityData: $opportunityData) {
         id
         name
         textID
@@ -29,12 +30,12 @@ export const createOpportunityOnChallengeMutation = async (
             description
           }
         }
-        contributors{id }
+        community{id members{id} }
       }
     }`,
     variables: {
-      challengeID: parseFloat(challengeId),
       opportunityData: {
+        challengeID: challengeId,
         name: oppName,
         textID: oppTextId,
         state: 'reserved',
@@ -58,12 +59,12 @@ export const createOpportunityOnChallengeMutation = async (
 };
 
 export const updateOpportunityOnChallengeMutation = async (
-  opportunityId: any
+  opportunityId: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
-      updateOpportunity(opportunityData: $opportunityData, ID: $ID) {
+    query: `mutation updateOpportunity($opportunityData: UpdateOpportunityInput!) {
+      updateOpportunity(opportunityData: $opportunityData) {
         id
         name
         textID
@@ -82,14 +83,13 @@ export const updateOpportunityOnChallengeMutation = async (
             description
           }
         }
-        contributors{id }
+        community{id members{id} }
       }
     }`,
     variables: {
-      ID: parseFloat(opportunityId),
       opportunityData: {
+        ID: opportunityId,
         name: '1',
-        textID: '1',
         state: '1',
         context: {
           background: '1',
@@ -149,11 +149,11 @@ export const removeOpportunityMutation = async (opportunityId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const queryOpportunity = async (opportunityId: any) => {
+export const queryOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
     query: `query {
-      opportunity(ID: ${parseFloat(opportunityId)}) {
+      opportunity(ID: "${opportunityId}") {
         id
         name
         textID
@@ -172,7 +172,7 @@ export const queryOpportunity = async (opportunityId: any) => {
             description
           }
         }
-        contributors{id }
+        community{id members{id} }
       }
     }`,
   };
@@ -203,6 +203,7 @@ export const queryOpportunities = async () => {
             description
           }
         }
+        community{id members{id} }
       }
     }`,
   };
@@ -214,8 +215,8 @@ export const queryOpportunityGroups = async (opportunityId: any) => {
   const requestParams = {
     operationName: null,
     query: `query {
-      opportunity(ID: ${parseFloat(opportunityId)}) {
-        groups{id name members{id name}}
+      opportunity(ID: "${opportunityId}") {
+        community{id name groups{id name members{id name}}}
       }
     }`,
   };
@@ -223,33 +224,34 @@ export const queryOpportunityGroups = async (opportunityId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const queryOpportunitySubEntities = async (opportunityId: any) => {
+export const queryOpportunitySubEntities = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
     query: `query {
-      opportunity(ID: ${parseFloat(opportunityId)}) {
+      opportunity(ID: "${opportunityId}") {
         aspects {
-          
+
           title
         }
         projects {
-          
+
           name
         }
         actorGroups {
-          
+
           name
         }
         relations {
-          
+
           actorName
         }
-        groups {
-          
-          name
+        community {
+          groups {
+            name
+          }
         }
         context{
-          
+
           tagline
         }
       }
@@ -264,27 +266,23 @@ export const queryOpportunitiesSubEntities = async () => {
     query: `query {
       opportunities {
         aspects {
-          
           title
         }
         projects {
-          
           name
         }
         actorGroups {
-          
           name
         }
         relations {
-          
           actorName
         }
-        groups {
-          
-          name
+        community {
+          groups {
+            name
+          }
         }
-        context{
-          
+        context {
           tagline
         }
       }

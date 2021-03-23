@@ -1,10 +1,8 @@
 import { createUnionType } from '@nestjs/graphql';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
+import { Community } from '../community';
 
 export const UserGroupParent = createUnionType({
   name: 'UserGroupParent',
-  types: () => [Ecoverse, Challenge, Opportunity, Organisation],
+  types: () => [Community, Organisation],
 });

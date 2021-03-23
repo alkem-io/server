@@ -2,6 +2,7 @@
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
+import { Organisation } from '@domain/community/organisation/organisation.entity';
 import {
   registerDecorator,
   ValidationArguments,
@@ -17,6 +18,7 @@ export enum TextIdType {
   challenge,
   opportunity,
   project,
+  organisation,
 }
 
 @ValidatorConstraint({ name: IS_UNIQ_TEXT_ID, async: true })
@@ -38,6 +40,12 @@ export class IsUniqueTextIdConstraint implements ValidatorConstraintInterface {
     } else if (target === TextIdType.project) {
       return (
         (await getRepository(Project).findOne({
+          where: { textID: textId },
+        })) === undefined
+      );
+    } else if (target === TextIdType.organisation) {
+      return (
+        (await getRepository(Organisation).findOne({
           where: { textID: textId },
         })) === undefined
       );

@@ -13,7 +13,7 @@ export const typeormCliConfig: ConnectionOptions = {
   synchronize: false,
   logger: 'advanced-console',
   logging: process.env.ENABLE_ORM_LOGGING === 'true',
-  entities: [join('src', 'domain', '*', '*.entity.{ts,js}')],
+  entities: [join('src', 'domain', '*', '*', '*.entity.{ts,js}')],
   migrations: [join('src', 'migrations', '*.{ts,js}')],
   migrationsTableName: 'migrations_typeorm',
   migrationsRun: true,

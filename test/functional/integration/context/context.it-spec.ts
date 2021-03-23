@@ -4,13 +4,10 @@ import {
   createChallangeMutation,
   updateChallangeMutation,
 } from '@test/functional/integration/challenge/challenge.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
 import { getContextQuery } from './context.request.params';
 import { createReferenceOnContextMutation } from '../references/references.request.params';
 
-let opportunityName = '';
-let opportunityTextId = '';
-let opportunityId = '';
+
 let challengeName = '';
 let challengeId = '';
 let uniqueTextId = '';
@@ -32,8 +29,6 @@ beforeEach(async () => {
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
-  opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
 });
 
 
@@ -62,17 +57,6 @@ beforeEach(async () => {
     responseCreateChallenge.body.data.createChallenge.context.references[0].uri;
   contextIdChallenge =
     responseCreateChallenge.body.data.createChallenge.context.id;
-
-  // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-    challengeId,
-    opportunityName,
-    opportunityTextId
-  );
-
-  opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunityOnChallenge
-      .id;
 });
 
 describe('Context', () => {

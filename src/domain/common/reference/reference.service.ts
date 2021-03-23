@@ -56,10 +56,9 @@ export class ReferenceService {
     return reference;
   }
 
-  async removeReference(referenceID: number): Promise<boolean> {
-    await this.getReferenceOrFail(referenceID);
-    await this.referenceRepository.delete(referenceID);
-    return true;
+  async removeReference(referenceID: number): Promise<IReference> {
+    const reference = await this.getReferenceOrFail(referenceID);
+    return await this.referenceRepository.remove(reference as Reference);
   }
 
   async updateReferences(

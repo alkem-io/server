@@ -4,28 +4,22 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { DID } from '@domain/agent/did/did.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/community/user-group/user-group.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { Application } from '@domain/community/application/application.entity';
+import { Community } from '@domain/community/community';
+import { ICommunityable } from '@interfaces/communityable.interface';
 
 @Entity()
 @ObjectType()
-export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
+export class Ecoverse extends BaseEntity implements IEcoverse, ICommunityable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -51,46 +45,20 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @JoinColumn()
   context?: Context;
 
+  @OneToOne(
+    () => Community,
+    community => community.ecoverse,
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
+  )
+  @JoinColumn()
+  community?: Community;
+
   // The digital identity for the Ecoverse - critical for its trusted role
   @OneToOne(() => DID, { eager: true, cascade: true })
   @JoinColumn()
   DID!: DID;
 
-  @Field(() => [UserGroup], {
-    nullable: true,
-    description: 'The set of groups at the Ecoverse level',
-  })
-  @OneToMany(
-    () => UserGroup,
-    userGroup => userGroup.ecoverse,
-    { eager: false, cascade: true }
-  )
-  groups?: UserGroup[];
-
-  @Field(() => [Organisation], {
-    nullable: true,
-    description:
-      'The set of partner organisations associated with this Ecoverse',
-  })
-  @ManyToMany(
-    () => Organisation,
-    organisation => organisation.ecoverses,
-    { eager: false, cascade: true }
-  )
-  @JoinTable({
-    name: 'ecoverse_partner',
-    joinColumns: [{ name: 'ecoverseId', referencedColumnName: 'id' }],
-    inverseJoinColumns: [
-      { name: 'organisationId', referencedColumnName: 'id' },
-    ],
-  })
-  organisations?: Organisation[];
-
   //
-  @Field(() => [Challenge], {
-    nullable: true,
-    description: 'The Challenges hosted by the Ecoverse',
-  })
   @OneToMany(
     () => Challenge,
     challenge => challenge.ecoverse,
@@ -106,28 +74,9 @@ export class Ecoverse extends BaseEntity implements IEcoverse, IGroupable {
   @JoinColumn()
   tagset?: Tagset;
 
-  @ManyToMany(
-    () => Application,
-    application => application.ecoverse,
-    { eager: false, cascade: true, onDelete: 'CASCADE' }
-  )
-  @JoinTable({
-    name: 'ecoverse_application',
-  })
-  applications?: Application[];
-
-  // The restricted group names at the ecoverse level
-  restrictedGroupNames: string[];
-
   // Create the ecoverse with enough defaults set/ members populated
   constructor() {
     super();
     this.name = '';
-    this.restrictedGroupNames = [
-      RestrictedGroupNames.Members,
-      RestrictedGroupNames.EcoverseAdmins,
-      RestrictedGroupNames.GlobalAdmins,
-      RestrictedGroupNames.CommunityAdmins,
-    ];
   }
 }

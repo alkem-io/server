@@ -1,9 +1,6 @@
 import { ActorGroupInput } from '@domain/context/actor-group/actor-group.dto';
 import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { ApplicationInput } from '@domain/community/application/application.dto';
-import { Application } from '@domain/community/application/application.entity';
-import { ApplicationFactoryService } from '@domain/community/application/application.factory';
 import { AspectInput } from '@domain/context/aspect/aspect.dto';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';
@@ -15,37 +12,37 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { RelationInput } from '@domain/collaboration/relation/relation.dto';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  GroupNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ApolloError } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { OpportunityInput } from './opportunity.dto';
+import { OpportunityInput } from './opportunity.dto.create';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
-
+import { Community, ICommunity } from '@domain/community/community';
+import { CommunityService } from '@domain/community/community/community.service';
+import { AuthorizationRoles } from '@core/authorization';
+import { CommunityType } from '@common/enums/community.types';
+import { TagsetService } from '@domain/common/tagset';
+import validator from 'validator';
+import { UpdateOpportunityInput } from './opportunity.dto.update';
 @Injectable()
 export class OpportunityService {
   constructor(
     private actorGroupService: ActorGroupService,
-    private userGroupService: UserGroupService,
-    private userService: UserService,
     private aspectService: AspectService,
     private projectService: ProjectService,
     private contextService: ContextService,
+    private communityService: CommunityService,
+    private tagsetService: TagsetService,
     private relationService: RelationService,
-    private applicationFactoryService: ApplicationFactoryService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -68,28 +65,55 @@ export class OpportunityService {
       opportunity.aspects = [];
     }
 
-    if (!opportunity.groups) {
-      opportunity.groups = [];
-    }
-
     if (!opportunity.context) {
       opportunity.context = new Context();
     }
 
-    // Check that the mandatory groups for a Opportunity are created
-    await this.userGroupService.addMandatoryGroups(
-      opportunity,
-      opportunity.restrictedGroupNames
-    );
+    if (!opportunity.community) {
+      opportunity.community = new Community(
+        opportunity.name,
+        CommunityType.OPPORTUNITY,
+        [AuthorizationRoles.Members]
+      );
+    }
 
     // Initialise contained objects
     await this.contextService.initialiseMembers(opportunity.context);
+    await this.communityService.initialiseMembers(opportunity.community);
     await this.createRestrictedActorGroups(opportunity);
 
     return opportunity;
   }
 
   async getOpportunityOrFail(
+    opportunityID: string,
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity> {
+    if (validator.isNumeric(opportunityID)) {
+      const idInt: number = parseInt(opportunityID);
+      return await this.getOpportunityByIdOrFail(idInt, options);
+    }
+
+    return await this.getOpportunityByTextIdOrFail(opportunityID, options);
+  }
+
+  async getOpportunityByTextIdOrFail(
+    opportunityID: string,
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityRepository.findOne(
+      { textID: opportunityID },
+      options
+    );
+    if (!opportunity)
+      throw new EntityNotFoundException(
+        `Unable to find opportunity with ID: ${opportunityID}`,
+        LogContext.CHALLENGES
+      );
+    return opportunity;
+  }
+
+  async getOpportunityByIdOrFail(
     opportunityID: number,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity> {
@@ -110,22 +134,6 @@ export class OpportunityService {
     return opportunites || [];
   }
 
-  // Loads the group into the Opportunity entity if not already present
-  async loadUserGroups(opportunity: Opportunity): Promise<IUserGroup[]> {
-    if (opportunity.groups && opportunity.groups.length > 0) {
-      // opportunity already has groups loaded
-      return opportunity.groups;
-    }
-    // Opportunity is not populated wih
-    const groups = await this.userGroupService.getGroups(opportunity);
-    if (!groups)
-      throw new GroupNotInitializedException(
-        `No groups on Opportunity: ${opportunity.name}`,
-        LogContext.CHALLENGES
-      );
-    return groups;
-  }
-
   // Loads the actorGroups into the Opportunity entity if not already present
   async loadActorGroups(opportunity: Opportunity): Promise<IActorGroup[]> {
     if (opportunity.actorGroups && opportunity.actorGroups.length > 0) {
@@ -133,9 +141,12 @@ export class OpportunityService {
       return opportunity.actorGroups;
     }
     // Opportunity is not populated so load it with actorGroups
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['actorGroups'],
-    });
+    const opportunityLoaded = await this.getOpportunityByIdOrFail(
+      opportunity.id,
+      {
+        relations: ['actorGroups'],
+      }
+    );
     if (!opportunityLoaded.actorGroups)
       throw new EntityNotInitializedException(
         `Opportunity not initialised: ${opportunity.id}`,
@@ -152,9 +163,12 @@ export class OpportunityService {
       return opportunity.aspects;
     }
     // Opportunity is not populated so load it with actorGroups
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['aspects'],
-    });
+    const opportunityLoaded = await this.getOpportunityByIdOrFail(
+      opportunity.id,
+      {
+        relations: ['aspects'],
+      }
+    );
     if (!opportunityLoaded.aspects)
       throw new EntityNotFoundException(
         `Opportunity not initialised: ${opportunity.id}`,
@@ -171,9 +185,12 @@ export class OpportunityService {
       return opportunity.relations;
     }
     // Opportunity is not populated so load it with actorGroups
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['relations'],
-    });
+    const opportunityLoaded = await this.getOpportunityByIdOrFail(
+      opportunity.id,
+      {
+        relations: ['relations'],
+      }
+    );
 
     if (!opportunityLoaded.relations)
       throw new EntityNotInitializedException(
@@ -195,9 +212,9 @@ export class OpportunityService {
     // reate and initialise a new Opportunity using the first returned array item
     const opportunity = Opportunity.create(opportunityData);
     await this.initialiseMembers(opportunity);
-    await this.opportunityRepository.save(opportunity);
+    const savedOpp = await this.opportunityRepository.save(opportunity);
 
-    return opportunity;
+    return savedOpp;
   }
 
   async validateOpportunity(opportunityData: OpportunityInput) {
@@ -218,10 +235,9 @@ export class OpportunityService {
   }
 
   async updateOpportunity(
-    opportunityID: number,
-    opportunityData: OpportunityInput
+    opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID);
+    const opportunity = await this.getOpportunityOrFail(opportunityData.ID);
 
     // Copy over the received data
     if (opportunityData.name) {
@@ -246,17 +262,11 @@ export class OpportunityService {
 
   async removeOpportunity(opportunityID: number): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['actorGroups', 'aspects', 'relations', 'groups'],
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
+      relations: ['actorGroups', 'aspects', 'relations', 'community'],
     });
 
     // First remove all groups
-    if (opportunity.groups) {
-      for (const group of opportunity.groups) {
-        await this.userGroupService.removeUserGroup(group.id);
-      }
-    }
-
     if (opportunity.aspects) {
       for (const aspect of opportunity.aspects) {
         await this.aspectService.removeAspect(aspect.id);
@@ -275,12 +285,26 @@ export class OpportunityService {
       }
     }
 
+    // Remove the community
+    if (opportunity.community) {
+      await this.communityService.removeCommunity(opportunity.community.id);
+    }
+
+    // Remove the context
+    if (opportunity.context) {
+      await this.contextService.removeContext(opportunity.context.id);
+    }
+
+    if (opportunity.tagset) {
+      await this.tagsetService.removeTagset(opportunity.tagset.id);
+    }
+
     await this.opportunityRepository.remove(opportunity as Opportunity);
     return true;
   }
 
   async getChallengeID(opportunityID: number): Promise<number> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['challenge'],
     });
     const challenge = (opportunity as Opportunity).challenge;
@@ -314,6 +338,20 @@ export class OpportunityService {
     return true;
   }
 
+  // Loads the challenges into the challenge entity if not already present
+  async getCommunity(opportunityId: number): Promise<ICommunity> {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
+      relations: ['community'],
+    });
+    const community = opportunity.community;
+    if (!community)
+      throw new RelationshipNotFoundException(
+        `Unable to load community for opportunity ${opportunityId}`,
+        LogContext.COMMUNITY
+      );
+    return community;
+  }
+
   async createProject(
     opportunityId: number,
     projectData: ProjectInput
@@ -323,7 +361,7 @@ export class OpportunityService {
       LogContext.CHALLENGES
     );
 
-    const opportunity = await this.getOpportunityOrFail(opportunityId);
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId);
 
     // Check that do not already have an Project with the same name
     const name = projectData.name;
@@ -352,7 +390,7 @@ export class OpportunityService {
     opportunityID: number,
     aspectData: AspectInput
   ): Promise<IAspect> {
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['aspects'],
     });
     if (!opportunity.aspects)
@@ -383,7 +421,7 @@ export class OpportunityService {
     opportunityId: number,
     actorGroupData: ActorGroupInput
   ): Promise<IActorGroup> {
-    const opportunity = await this.getOpportunityOrFail(opportunityId, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['actorGroups'],
     });
 
@@ -415,7 +453,7 @@ export class OpportunityService {
     opportunityId: number,
     relationData: RelationInput
   ): Promise<IRelation> {
-    const opportunity = await this.getOpportunityOrFail(opportunityId, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['relations'],
     });
 
@@ -429,79 +467,5 @@ export class OpportunityService {
     opportunity.relations.push(relation);
     await this.opportunityRepository.save(opportunity);
     return relation;
-  }
-
-  async createUserGroup(
-    opportunityID: number,
-    groupName: string
-  ): Promise<IUserGroup> {
-    // First find the Opportunity
-    this.logger.verbose?.(
-      `Adding userGroup (${groupName}) to Opportunity (${opportunityID})`,
-      LogContext.CHALLENGES
-    );
-
-    // Try to find the Opportunity
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['groups'],
-    });
-
-    const group = await this.userGroupService.addGroupWithName(
-      opportunity,
-      groupName
-    );
-    await this.opportunityRepository.save(opportunity);
-
-    return group;
-  }
-
-  async addMember(userID: number, opportunityID: number): Promise<IUserGroup> {
-    // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(userID);
-
-    const opportunity = await this.getOpportunityOrFail(opportunityID);
-
-    // Get the members group
-    const membersGroup = await this.userGroupService.getGroupByName(
-      opportunity,
-      RestrictedGroupNames.Members
-    );
-    await this.userGroupService.addUserToGroup(user, membersGroup);
-
-    return membersGroup;
-  }
-
-  async createApplication(
-    id: number,
-    applicationData: ApplicationInput
-  ): Promise<Application> {
-    const opportunity = (await this.getOpportunityOrFail(id, {
-      relations: ['applications'],
-    })) as Opportunity;
-
-    const existingApplication = opportunity.applications?.find(
-      x => x.user.id === applicationData.userId
-    );
-
-    if (existingApplication) {
-      throw new ApolloError(
-        `An application for user ${existingApplication.user.email} already exists for opportunity: ${opportunity.name}. Application status: ${existingApplication.status}`
-      );
-    }
-
-    const application = await this.applicationFactoryService.createApplication(
-      applicationData
-    );
-
-    opportunity.applications?.push(application);
-    await this.opportunityRepository.save(opportunity);
-    return application;
-  }
-
-  async getApplications(opportunity: Opportunity) {
-    const _opportunity = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['applications'],
-    });
-    return _opportunity?.applications || [];
   }
 }

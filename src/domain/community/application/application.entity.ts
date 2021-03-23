@@ -1,7 +1,4 @@
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { NVP } from '@domain/common/nvp/nvp.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
 import {
@@ -14,6 +11,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Question } from '@domain/community/application/application.dto';
+import { Community } from '../community';
 
 export enum ApplicationStatus {
   new,
@@ -40,7 +38,7 @@ export class Application extends BaseEntity {
   @ManyToOne(
     () => User,
     user => user.focalPoints,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   user!: User;
 
@@ -48,26 +46,15 @@ export class Application extends BaseEntity {
   @ManyToMany(
     () => NVP,
     nvp => nvp.id,
-    { eager: true, cascade: true, onDelete: 'CASCADE' }
+    { eager: true, cascade: true }
   )
   @JoinTable({ name: 'application_questions' })
   questions?: Question[];
 
-  @ManyToMany(
-    () => Ecoverse,
-    ecoverse => ecoverse.applications
+  @ManyToOne(
+    () => Community,
+    community => community.applications,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
-  ecoverse?: Ecoverse[];
-
-  @ManyToMany(
-    () => Challenge,
-    challenge => challenge.applications
-  )
-  challenge?: Challenge[];
-
-  @ManyToMany(
-    () => Opportunity,
-    opportunity => opportunity.applications
-  )
-  opportunity?: Opportunity[];
+  community?: Community;
 }

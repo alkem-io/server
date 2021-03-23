@@ -99,20 +99,20 @@ export const removeAspectMutation = async (aspectId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getAspectPerOpportunity = async (opportunityId: any) => {
+export const getAspectPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: ${parseFloat(opportunityId)}) {
+    query: `query {opportunity(ID: "${opportunityId}") {
         aspects { id title framing explanation }}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getAspectPerProject = async (opportunityId: any) => {
+export const getAspectPerProject = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: ${parseFloat(opportunityId)}) {
+    query: `query {opportunity(ID: "${opportunityId}") {
       projects{
         aspects{
           id title framing explanation

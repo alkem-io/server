@@ -4,6 +4,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
@@ -16,6 +17,8 @@ import { IUser } from './user.interface';
 import validator from 'validator';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
+import { ICommunityable } from '@interfaces/communityable.interface';
+import { ICommunity } from '../community/community.interface';
 @Injectable()
 export class UserService {
   constructor(
@@ -68,6 +71,11 @@ export class UserService {
   async removeUser(userID: number): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userID);
     const { id } = user;
+
+    if (user.profile) {
+      await this.profileService.removeProfile(user.profile.id);
+    }
+
     const result = await this.userRepository.remove(user as User);
     return {
       ...result,
@@ -169,73 +177,6 @@ export class UserService {
     return (await this.userRepository.find()) || [];
   }
 
-  addGroupToEntity(
-    entities: IGroupable[],
-    entity: IGroupable,
-    group: IUserGroup
-  ) {
-    const existingEntity = entities.find(e => e.id === entity.id);
-    if (!existingEntity) {
-      //first time through
-      entities.push(entity);
-      entity.groups = [group];
-    } else {
-      existingEntity.groups?.push(group);
-    }
-  }
-
-  async getMemberOf(user: User): Promise<MemberOf> {
-    const membership = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.userGroups', 'userGroup')
-      .leftJoinAndSelect('userGroup.ecoverse', 'ecoverse')
-      .leftJoinAndSelect('userGroup.challenge', 'challenge')
-      .leftJoinAndSelect('userGroup.opportunity', 'opportunity')
-      .leftJoinAndSelect('userGroup.organisation', 'organisation')
-      .where('user.id = :userId')
-      .setParameters({ userId: `${user.id}` })
-      .getOne();
-
-    const memberOf = new MemberOf();
-    memberOf.groups = [];
-    memberOf.challenges = [];
-    memberOf.opportunities = [];
-    memberOf.organisations = [];
-
-    if (!membership) return memberOf;
-    if (!membership.userGroups) return memberOf;
-
-    // First get the list of challenges + orgs + groups to return
-    for (const group of membership?.userGroups) {
-      // Set flag on the group to block population of the members field
-      group.membersPopulationEnabled = false;
-      const ecoverse = group.ecoverse;
-      const challenge = group.challenge;
-      const opportunity = group.opportunity;
-      const organisation = group.organisation;
-
-      if (ecoverse) {
-        // ecoverse group
-        memberOf.groups.push(group);
-      }
-      if (challenge) {
-        // challenge group
-        this.addGroupToEntity(memberOf.challenges, challenge, group);
-        group.challenge = undefined;
-      }
-      if (opportunity) {
-        this.addGroupToEntity(memberOf.opportunities, opportunity, group);
-        group.opportunity = undefined;
-      }
-      if (organisation) {
-        this.addGroupToEntity(memberOf.organisations, organisation, group);
-        group.organisation = undefined;
-      }
-    }
-
-    return memberOf;
-  }
-
   // Note: explicitly do not support updating of email addresses
   async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userID);
@@ -290,5 +231,68 @@ export class UserService {
 
   updateLastModified(user: IUser) {
     user.lastModified = Math.floor(new Date().getTime() / 1000);
+  }
+
+  getCommunity(entity: ICommunityable): ICommunity {
+    const community = entity.community;
+    if (!community)
+      throw new EntityNotInitializedException(
+        `Community not initialised on entity: ${entity.id}`,
+        LogContext.COMMUNITY
+      );
+    return community;
+  }
+
+  // Membership related functionality
+
+  addGroupToEntity(
+    entities: IGroupable[],
+    entity: IGroupable,
+    group: IUserGroup
+  ) {
+    const existingEntity = entities.find(e => e.id === entity.id);
+    if (!existingEntity) {
+      //first time through
+      entities.push(entity);
+      entity.groups = [group];
+    } else {
+      existingEntity.groups?.push(group);
+    }
+  }
+
+  async getMemberOf(user: User): Promise<MemberOf> {
+    const membership = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userGroups', 'userGroup')
+      .leftJoinAndSelect('userGroup.community', 'community')
+      .leftJoinAndSelect('userGroup.organisation', 'organisation')
+      .where('user.id = :userId')
+      .setParameters({ userId: `${user.id}` })
+      .getOne();
+
+    const memberOf = new MemberOf();
+    memberOf.communities = [];
+    memberOf.organisations = [];
+
+    if (!membership) return memberOf;
+    if (!membership.userGroups) return memberOf;
+
+    // Iterate over the groups
+    for (const group of membership?.userGroups) {
+      // Set flag on the group to block population of the members field
+      group.membersPopulationEnabled = false;
+      const community = group.community;
+      const organisation = group.organisation;
+
+      if (community) {
+        this.addGroupToEntity(memberOf.communities, community, group);
+        group.community = undefined;
+      } else if (organisation) {
+        this.addGroupToEntity(memberOf.organisations, organisation, group);
+        group.organisation = undefined;
+      }
+    }
+
+    return memberOf;
   }
 }

@@ -2,19 +2,15 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
-import { RestrictedGroupNames, UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { getConnection } from 'typeorm';
 import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { UserGroupParent } from './user-group-parent.dto';
 import {
   EntityNotFoundException,
@@ -24,14 +20,18 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { UserGroupInput } from './user-group.dto';
+import { Community } from '../community';
+import { UserGroup } from './user-group.entity';
+import { TagsetService } from '@domain/common';
 
 @Injectable()
 export class UserGroupService {
   constructor(
     private userService: UserService,
     private profileService: ProfileService,
+    private tagsetService: TagsetService,
     @InjectRepository(UserGroup)
-    private groupRepository: Repository<UserGroup>,
+    private userGroupRepository: Repository<UserGroup>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -43,7 +43,7 @@ export class UserGroupService {
       );
     const group = new UserGroup(name);
     await this.initialiseMembers(group);
-    await this.groupRepository.save(group);
+    await this.userGroupRepository.save(group);
     this.logger.verbose?.(
       `Created new group (${group.id}) with name: ${group.name}`,
       LogContext.COMMUNITY
@@ -76,7 +76,11 @@ export class UserGroupService {
         LogContext.COMMUNITY
       );
 
-    await this.groupRepository.remove(group);
+    if (group.profile) {
+      await this.profileService.removeProfile(group.profile.id);
+    }
+
+    await this.userGroupRepository.remove(group);
     return true;
   }
 
@@ -105,7 +109,7 @@ export class UserGroupService {
         );
       } else {
         group.name = newName;
-        await this.groupRepository.save(group);
+        await this.userGroupRepository.save(group);
       }
     }
 
@@ -139,11 +143,9 @@ export class UserGroupService {
 
   async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
     const groupWithParent = (await this.getUserGroupOrFail(group.id, {
-      relations: ['ecoverse', 'challenge', 'organisation', 'opportunity'],
+      relations: ['community', 'organisation'],
     })) as UserGroup;
-    if (groupWithParent?.ecoverse) return groupWithParent?.ecoverse;
-    if (groupWithParent?.challenge) return groupWithParent?.challenge;
-    if (groupWithParent?.opportunity) return groupWithParent?.opportunity;
+    if (groupWithParent?.community) return groupWithParent?.community;
     if (groupWithParent?.organisation) return groupWithParent?.organisation;
     throw new EntityNotFoundException(
       `Unable to locate parent for user group: ${group.name}`,
@@ -151,28 +153,17 @@ export class UserGroupService {
     );
   }
 
-  async getGroups(groupable: IGroupable): Promise<IUserGroup[]> {
-    if (groupable instanceof Ecoverse) {
-      return await this.groupRepository.find({
-        where: { ecoverse: { id: groupable.id } },
+  async getGroupsOnGroupable(groupable: IGroupable): Promise<IUserGroup[]> {
+    if (groupable instanceof Community) {
+      return await this.userGroupRepository.find({
+        where: { community: { id: groupable.id } },
         relations: ['members', 'focalPoint'],
       });
     }
-    if (groupable instanceof Challenge) {
-      return await this.groupRepository.find({
-        where: { challenge: { id: groupable.id } },
-        relations: ['members', 'focalPoint'],
-      });
-    }
+
     if (groupable instanceof Organisation) {
-      return await this.groupRepository.find({
+      return await this.userGroupRepository.find({
         where: { organisation: { id: groupable.id } },
-        relations: ['members', 'focalPoint'],
-      });
-    }
-    if (groupable instanceof Opportunity) {
-      return await this.groupRepository.find({
-        where: { opportunity: { id: groupable.id } },
         relations: ['members', 'focalPoint'],
       });
     }
@@ -190,7 +181,7 @@ export class UserGroupService {
 
     // Have both user + group so do the add
     group.focalPoint = user;
-    await this.groupRepository.save(group);
+    await this.userGroupRepository.save(group);
 
     return group;
   }
@@ -200,7 +191,10 @@ export class UserGroupService {
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
     //const t1 = performance.now()
-    const group = await this.groupRepository.findOne({ id: groupID }, options);
+    const group = await this.userGroupRepository.findOne(
+      { id: groupID },
+      options
+    );
     if (!group)
       throw new EntityNotFoundException(
         `Unable to find group with ID: ${groupID}`,
@@ -221,7 +215,7 @@ export class UserGroupService {
     await this.userService.getUserByIdOrFail(userID);
     await this.getUserGroupOrFail(groupID);
 
-    const userGroup = await this.groupRepository.findOne({
+    const userGroup = await this.userGroupRepository.findOne({
       where: { members: { id: userID }, id: groupID },
       relations: ['members'],
     });
@@ -235,12 +229,12 @@ export class UserGroupService {
   async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
     const entityManager = getManager();
     const rawData = await entityManager.query(
-      `SELECT * from user_group_members where userId=${user.id} and userGroupId=${group.id}`
+      `SELECT * from user_group_members where userId=${user.id} and userGroupId= ${group.id}`
     );
 
     if (rawData.length > 0) {
       this.logger.verbose?.(
-        `User ${user.email} already exists in group ${group.name}!`,
+        `User ${user.email} already exists in group  ${group.name}!`,
         LogContext.COMMUNITY
       );
       return false;
@@ -271,18 +265,8 @@ export class UserGroupService {
 
     // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
     const group = await this.getUserGroupOrFail(groupID, {
-      relations: ['members', 'ecoverse'],
+      relations: ['members', 'community'],
     });
-
-    // Check that the group being removed from is not the ecoverse members group, would leave the ecoverse in an inconsistent state
-    if (group.name === RestrictedGroupNames.Members) {
-      // Check if ecoverse members
-      if (group.ecoverse)
-        throw new NotSupportedException(
-          `Attempting to remove a user from the ecoverse members group: ${groupID}`,
-          LogContext.COMMUNITY
-        );
-    }
 
     // Have both user + group so do the add
     await this.removeUserFromGroup(user, group);
@@ -307,7 +291,7 @@ export class UserGroupService {
       await this.removeFocalPoint(group.id);
     }
 
-    await this.groupRepository.save(group);
+    await this.userGroupRepository.save(group);
 
     return group;
   }
@@ -319,7 +303,7 @@ export class UserGroupService {
     // More information: https://github.com/typeorm/typeorm/issues/5454
     group.focalPoint = null;
 
-    await this.groupRepository.save(group);
+    await this.userGroupRepository.save(group);
 
     return group;
   }
@@ -328,29 +312,16 @@ export class UserGroupService {
     groupable: IGroupable,
     name: string
   ): Promise<IUserGroup> {
-    if (groupable instanceof Ecoverse) {
-      const userGroup = (await this.groupRepository.findOne({
-        where: { ecoverse: { id: groupable.id }, name: name },
-        relations: ['ecoverse', 'members'],
-      })) as IUserGroup;
-      return userGroup;
-    }
-    if (groupable instanceof Challenge) {
-      return (await this.groupRepository.findOne({
-        where: { challenge: { id: groupable.id }, name: name },
-        relations: ['challenge', 'members'],
-      })) as IUserGroup;
-    }
     if (groupable instanceof Organisation) {
-      return (await this.groupRepository.findOne({
+      return (await this.userGroupRepository.findOne({
         where: { organisation: { id: groupable.id }, name: name },
         relations: ['organisation', 'members'],
       })) as IUserGroup;
     }
-    if (groupable instanceof Opportunity) {
-      return (await this.groupRepository.findOne({
-        where: { opportunity: { id: groupable.id }, name: name },
-        relations: ['opportunity', 'members'],
+    if (groupable instanceof Community) {
+      return (await this.userGroupRepository.findOne({
+        where: { community: { id: groupable.id }, name: name },
+        relations: ['community', 'members'],
       })) as IUserGroup;
     }
 
@@ -461,5 +432,26 @@ export class UserGroupService {
       relations: ['members', 'profile'],
     });
     return group?.members as IUser[];
+  }
+
+  async getGroups(): Promise<IUserGroup[]> {
+    return (await this.userGroupRepository.find()) || [];
+  }
+
+  async getGroupsWithTag(tagFilter: string): Promise<IUserGroup[]> {
+    const groups = await this.getGroups();
+    return groups.filter(g => {
+      if (!tagFilter) {
+        return true;
+      }
+
+      if (!g.profile) return false;
+
+      const tagset = this.tagsetService.defaultTagset(g.profile);
+
+      return (
+        tagset !== undefined && this.tagsetService.hasTag(tagset, tagFilter)
+      );
+    });
   }
 }

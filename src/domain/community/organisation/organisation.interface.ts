@@ -6,6 +6,7 @@ import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 export interface IOrganisation {
   id: number;
   name: string;
+  textID: string;
   DID: IDID;
   profile?: IProfile;
   challenges?: IChallenge[];

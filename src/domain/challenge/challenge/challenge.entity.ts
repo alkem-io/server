@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { ID } from '@nestjs/graphql/dist';
-import { Field, ObjectType } from '@nestjs/graphql/dist/decorators';
+import { ID, Field, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
@@ -13,23 +12,20 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { DID } from '@domain/agent/did/did.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
-import {
-  RestrictedGroupNames,
-  UserGroup,
-} from '@domain/community/user-group/user-group.entity';
 import { IChallenge } from './challenge.interface';
-import { Application } from '@domain/community/application/application.entity';
+import { Community } from '@domain/community/community';
+import { ICommunityable } from '@interfaces/communityable.interface';
+import { Organisation } from '@domain/community';
 
 @Entity()
 @ObjectType()
-export class Challenge extends BaseEntity implements IChallenge, IGroupable {
+export class Challenge extends BaseEntity
+  implements IChallenge, ICommunityable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -56,10 +52,21 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   @JoinColumn()
   context?: Context;
 
+  @Field(() => Community, {
+    nullable: true,
+    description: 'The community for the challenge',
+  })
+  @OneToOne(
+    () => Community,
+    community => community.challenge,
+    { eager: false, cascade: true, onDelete: 'CASCADE' }
+  )
+  @JoinColumn()
+  community?: Community;
+
   // Community
   @Field(() => [Organisation], {
-    description:
-      'The leads for the challenge. The focal point for the user group is the primary challenge lead.',
+    description: 'The Organisations that are leading this Challenge.',
   })
   @ManyToMany(
     () => Organisation,
@@ -68,13 +75,6 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
   )
   @JoinTable({ name: 'challenge_lead' })
   leadOrganisations?: Organisation[];
-
-  @OneToMany(
-    () => UserGroup,
-    userGroup => userGroup.challenge,
-    { eager: false, cascade: true }
-  )
-  groups?: UserGroup[];
 
   // Other
   @Field(() => String, {
@@ -106,29 +106,15 @@ export class Challenge extends BaseEntity implements IChallenge, IGroupable {
 
   @ManyToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.challenges
+    ecoverse => ecoverse.challenges,
+    { eager: false, cascade: false }
   )
   ecoverse?: Ecoverse;
-
-  @Field(() => [Application])
-  @ManyToMany(
-    () => Application,
-    application => application.challenge,
-    { eager: false, cascade: true, onDelete: 'CASCADE' }
-  )
-  @JoinTable({
-    name: 'challenge_application',
-  })
-  applications?: Application[];
-
-  // The restricted group names at the challenge level
-  restrictedGroupNames: string[];
 
   constructor(name: string, textID: string) {
     super();
     this.name = name;
     this.state = '';
     this.textID = textID;
-    this.restrictedGroupNames = [RestrictedGroupNames.Members];
   }
 }

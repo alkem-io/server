@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
@@ -12,30 +12,8 @@ import { IProject } from './project.interface';
 import { ProjectService } from './project.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 @Resolver()
-export class ProjectResolver {
+export class ProjectResolverMutations {
   constructor(private projectService: ProjectService) {}
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @Query(() => [Project], {
-    nullable: false,
-    description: 'All projects within this ecoverse',
-  })
-  @Profiling.api
-  async projects(): Promise<IProject[]> {
-    return await this.projectService.getProjects();
-  }
-
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @Query(() => Project, {
-    nullable: false,
-    description: 'A particular Project, identified by the ID',
-  })
-  @Profiling.api
-  async project(@Args('ID') id: number): Promise<IProject> {
-    return await this.projectService.getProjectByID(id);
-  }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)

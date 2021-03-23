@@ -6,15 +6,11 @@ import {
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { User } from '@domain/community/user/user.entity';
 import { UserService } from '@domain/community/user/user.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class ApplicationFactoryService {
-  constructor(
-    private userService: UserService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+  constructor(private userService: UserService) {}
 
   async createApplication(
     applicationData: ApplicationInput

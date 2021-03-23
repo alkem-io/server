@@ -10,7 +10,7 @@ import { UserGroupInput } from './user-group.dto';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 
 @Resolver(() => UserGroup)
-export class UserGroupResolver {
+export class UserGroupResolverMutations {
   constructor(private groupService: UserGroupService) {}
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

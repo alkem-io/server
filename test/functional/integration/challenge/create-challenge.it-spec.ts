@@ -54,12 +54,13 @@ describe('Create Challenge', () => {
       'challengeName',
       'chal-texti'
     );
+    let challengeDataCreate = response.body.data.createChallenge
     let challengeIdTest = response.body.data.createChallenge.id;
 
     // Assert
     expect(response.status).toBe(200);
-    expect(response.body.data.createChallenge.name).toEqual('challengeName');
-    expect(response.body.data.createChallenge).toEqual(
+    expect(challengeDataCreate.name).toEqual('challengeName');
+    expect(challengeDataCreate).toEqual(
       await challangeData(challengeIdTest)
     );
   });
@@ -124,13 +125,14 @@ describe('Create Challenge', () => {
 
     // Assert
     expect(responseChallenge.status).toBe(200);
-    expect(responseChallenge.body.data.createChallenge.groups[0].name).toEqual(
+    expect(responseChallenge.body.data.createChallenge.community.groups[0].name).toEqual(
       'members'
     );
     expect(
-      responseChallenge.body.data.createChallenge.groups[0].id
+      responseChallenge.body.data.createChallenge.community.groups[0].id
     ).not.toBeNull();
   });
+
 
   describe('DDT invalid textId', () => {
     // Arrange

@@ -27,7 +27,7 @@ export class UserGroupResolverFields {
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
-  @ResolveField('members', () => User, {
+  @ResolveField('members', () => [User], {
     nullable: true,
     description: 'The Users that are members of this User Group.',
   })
@@ -37,5 +37,24 @@ export class UserGroupResolverFields {
 
     const members = await this.userGroupService.getMembers(group.id);
     return (members || []) as User[];
+  }
+
+  @Roles(AuthorizationRoles.Members)
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('focalPoint', () => User, {
+    nullable: true,
+    description: 'The User that is the focal point of this User Group.',
+  })
+  @Profiling.api
+  async focalPoint(
+    @Parent() group: UserGroup
+  ): Promise<User | null | undefined> {
+    const groupWithFocalPoint = await this.userGroupService.getUserGroupOrFail(
+      group.id,
+      {
+        relations: ['focalPoint'],
+      }
+    );
+    return groupWithFocalPoint.focalPoint as User;
   }
 }

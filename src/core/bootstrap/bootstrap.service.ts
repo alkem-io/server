@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { RestrictedGroupNames } from '@domain/community/user-group/user-group.entity';
 import { UserInput } from '@domain/community/user/user.dto';
 import { UserService } from '@domain/community/user/user.service';
 import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
@@ -20,6 +19,7 @@ import { ValidationException } from '@common/exceptions/validation.exception';
 import { BaseException } from '@common/exceptions/base.exception';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
+import { AuthorizationRoles } from '@core/authorization';
 @Injectable()
 export class BootstrapService {
   constructor(
@@ -143,7 +143,7 @@ export class BootstrapService {
       );
     else {
       await this.createGroupProfiles(
-        RestrictedGroupNames.EcoverseAdmins,
+        AuthorizationRoles.EcoverseAdmins,
         ecoverseAdmins
       );
     }
@@ -155,7 +155,7 @@ export class BootstrapService {
       );
     } else {
       await this.createGroupProfiles(
-        RestrictedGroupNames.GlobalAdmins,
+        AuthorizationRoles.GlobalAdmins,
         globalAdmins
       );
     }
@@ -167,7 +167,7 @@ export class BootstrapService {
       );
     } else {
       await this.createGroupProfiles(
-        RestrictedGroupNames.CommunityAdmins,
+        AuthorizationRoles.CommunityAdmins,
         communityAdmins
       );
     }
@@ -178,7 +178,7 @@ export class BootstrapService {
         LogContext.BOOTSTRAP
       );
     } else {
-      await this.createGroupProfiles(RestrictedGroupNames.Members, members);
+      await this.createGroupProfiles(AuthorizationRoles.Members, members);
     }
   }
 
@@ -199,11 +199,11 @@ export class BootstrapService {
         if (!user) {
           // First create, then ensure groups are loaded - not optimal but only on bootstrap
           user = await this.userService.createUser(userInput);
-          if (groupName !== RestrictedGroupNames.Members) {
+          if (groupName !== AuthorizationRoles.Members) {
             // also need to add to members group
             await this.ecoverseService.addUserToRestrictedGroup(
               user,
-              RestrictedGroupNames.Members
+              AuthorizationRoles.Members
             );
           }
         }
@@ -223,11 +223,11 @@ export class BootstrapService {
             LogContext.BOOTSTRAP
           );
 
-        if (!groups.some(({ name }) => groupName === name))
+        if (!groups.some(({ name }) => groupName === name)) {
           await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
-        else
+        } else
           this.logger.verbose?.(
-            `User ${userInput.email} already exists in group ${groupName}`,
+            `User ${userInput.email} already exists in group  ${groupName}`,
             LogContext.BOOTSTRAP
           );
       }

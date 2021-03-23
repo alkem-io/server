@@ -5,7 +5,6 @@ import { ProfileModule } from '@domain/community/profile/profile.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user.entity';
 import { UserResolverFields } from './user.resolver.fields';
-import { IsUserAlreadyExistConstraint } from '@src/core/validation/constraints/user.exists.constraint';
 import { UserResolverMutations } from './user.resolver.mutations';
 
 @Module({
@@ -15,7 +14,6 @@ import { UserResolverMutations } from './user.resolver.mutations';
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
-    IsUserAlreadyExistConstraint,
   ],
   exports: [UserService],
 })
