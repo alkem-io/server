@@ -5,7 +5,7 @@ The easiest way to get going with custom development of the Cherrytwist Server i
 In this setup you are then using the docker composed stack for:
 
 - Database container
-- Simple auth provider
+- Demo auth provider
 
 Note that the CT Server from the docker composed stack is listening on port 4001 instead of port 4000, so it will not collide with running a second server locally - but do keep in mind those two server instances are sharing the same data / authentication provider.
 
@@ -37,6 +37,6 @@ If installing MySQL locally, please refer to [the data management document](Data
 
 Similarly the server is designed to allow it to work with multiple Authentication Providers.
 
-The default Authentication Provider for development / demonstration purposes is Simple Auth Provider - which is what is created by the Docker Composition.
+The default Authentication Provider for development / demonstration purposes is Demo Auth Provider - which is what is created by the Docker Composition.
 
-Please refer to the [configuration](docs/Configuation.md) for updating the Server to use an alternative instance of Simple Auth Provider or a an alternative Authentication Provider
+Please refer to the [configuration](docs/Configuation.md) for updating the Server to use an alternative instance of Demo Auth Provider or a an alternative Authentication Provider

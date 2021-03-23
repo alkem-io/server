@@ -7,7 +7,7 @@ To simplify setting up the Server development environment, a pre-configured dock
 ## Prerequisites:
 
 - Docker and docker-compose installed on x86 architecture (so not an ARM-based architecture like Raspberry pi)
-- ports 4000 (GRAPHQL_ENDPOINT_PORT), 3002 (Simple Auth Provider) and 3306 (MySQL database) free on localhost
+- ports 4000 (GRAPHQL_ENDPOINT_PORT), 3002 (Demo Auth Provider) and 3306 (MySQL database) free on localhost
 
 ## Steps:
 

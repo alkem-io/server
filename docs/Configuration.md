@@ -31,7 +31,7 @@ MYSQL_ROOT_PASSWORD=[password for root account]. Default is 'toor'.
 Cherrytwist relies on **Authentication Providers** to ensure that users are authenticated. The currently supported Authentication Providers are:
 
 - **Azure AD (AAD)**: Enterprise grade and suitable for production deployments.
-- **Simple Auth**: For simple evaluation / demonstration purposes. It is not suitable for production deployments.
+- **Demo Auth**: For simple evaluation / demonstration purposes. It is not suitable for production deployments.
 
 It is fairly straightforward to extend with additional Authentication Providers - these will be added on as needed basis. If interested please reach out.
 
@@ -67,14 +67,14 @@ Replace the content in [] with the guids from AAD - they can be retrieved from t
 
 **\*Disclaimer: The secret for the Cherrytwist playground environment is shared in .env.default. This is a playground environment and this secret is shared for demo purposes ONLY - make sure you always put your production variables in a safe place!**
 
-### **Simple Authentication Provider**
+### **Demo Authentication Provider**
 
-The following environment variables are used to configure Simple Auth Provider authentication:
+The following environment variables are used to configure Demo Auth Provider authentication:
 
 ```conf
-AUTH_SIMPLE_AUTH_ISSUER=[issuer end point]. Default is 'localhost:3002'
-AUTH_SIMPLE_AUTH_TOKEN_ENDPOINT=[issuer authentication end point]. Default is 'localhost:3002/auth/login'
-AUTH_SIMPLE_AUTH_CLIENT_SECRET=[secret shared by the simple authentication provider instance and the Cherrytwist server]. No default.
+AUTH_DEMO_AUTH_ISSUER=[issuer end point]. Default is 'localhost:3002'
+AUTH_DEMO_AUTH_TOKEN_ENDPOINT=[issuer authentication end point]. Default is 'localhost:3002/auth/login'
+AUTH_DEMO_AUTH_CLIENT_SECRET=[secret shared by the Demo authentication provider instance and the Cherrytwist server]. No default.
 ```
 
 ## Security: CORS
