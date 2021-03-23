@@ -30,6 +30,7 @@ export const createOpportunityOnChallengeMutation = async (
             description
           }
         }
+        community{id members{id} }
       }
     }`,
     variables: {
@@ -82,6 +83,7 @@ export const updateOpportunityOnChallengeMutation = async (
             description
           }
         }
+        community{id members{id} }
       }
     }`,
     variables: {
@@ -170,6 +172,7 @@ export const queryOpportunity = async (opportunityId: string) => {
             description
           }
         }
+        community{id members{id} }
       }
     }`,
   };
@@ -200,6 +203,7 @@ export const queryOpportunities = async () => {
             description
           }
         }
+        community{id members{id} }
       }
     }`,
   };

@@ -76,7 +76,7 @@ beforeEach(async () => {
     responseCreateGroupOnEcoverse.body.data.createGroupOnEcoverse.id;
 });
 
-describe('Query Challenge data', () => {
+describe.skip('Query Challenge data', () => {
   afterEach(async () => {
     //await removeUserMutation(userId);
     await removeUserGroupMutation(ecoverseGroupId);
