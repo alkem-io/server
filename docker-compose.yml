@@ -65,7 +65,7 @@ services:
 
   ct_demo_auth_provider:
     container_name: ct_server_dev_demo_auth
-    image: cherrytwist/simple-auth:v0.1.5
+    image: cherrytwist/demo-auth:v0.1.7
     networks:
       - ct_server_dev
     environment:
