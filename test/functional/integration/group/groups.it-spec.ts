@@ -48,7 +48,8 @@ beforeAll(async () => {
 
   // Create organisation
   const responseCreateOrganisation = await createOrganisationMutation(
-    organisationName
+    organisationName,
+    'org'+uniqueTextId
   );
   organisationId = responseCreateOrganisation.body.data.createOrganisation.id;
 

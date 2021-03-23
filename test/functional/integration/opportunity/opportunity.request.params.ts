@@ -152,7 +152,7 @@ export const removeOpportunityMutation = async (opportunityId: any) => {
 export const queryOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {
+    query: `query {ecoverse{
       opportunity(ID: "${opportunityId}") {
         id
         name
@@ -174,7 +174,7 @@ export const queryOpportunity = async (opportunityId: string) => {
         }
         community{id members{id} }
       }
-    }`,
+    }}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -184,6 +184,7 @@ export const queryOpportunities = async () => {
   const requestParams = {
     operationName: null,
     query: `query {
+      ecoverse{
       opportunities {
         id
         name
@@ -205,7 +206,8 @@ export const queryOpportunities = async () => {
         }
         community{id members{id} }
       }
-    }`,
+    }
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -214,11 +216,12 @@ export const queryOpportunities = async () => {
 export const queryOpportunityGroups = async (opportunityId: any) => {
   const requestParams = {
     operationName: null,
-    query: `query {
+    query: `query {ecoverse{
       opportunity(ID: "${opportunityId}") {
         community{id name groups{id name members{id name}}}
       }
-    }`,
+    }
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -228,6 +231,7 @@ export const queryOpportunitySubEntities = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
     query: `query {
+      ecoverse{
       opportunity(ID: "${opportunityId}") {
         aspects {
 
@@ -255,7 +259,8 @@ export const queryOpportunitySubEntities = async (opportunityId: string) => {
           tagline
         }
       }
-    }`,
+    }
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -264,6 +269,7 @@ export const queryOpportunitiesSubEntities = async () => {
   const requestParams = {
     operationName: null,
     query: `query {
+      ecoverse{
       opportunities {
         aspects {
           title
@@ -286,7 +292,8 @@ export const queryOpportunitiesSubEntities = async () => {
           tagline
         }
       }
-    }`,
+    }
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

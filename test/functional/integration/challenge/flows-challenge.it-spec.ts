@@ -38,7 +38,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('Create Challenge', () => {
+describe('Flows challenge', () => {
   test('should add "user" to "group" as focal point', async () => {
     // Arrange
 
@@ -62,11 +62,11 @@ describe('Create Challenge', () => {
     // Query focal point through challenge group
     const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
     const groupFocalPointFromChallenge =
-      responseChallengeGroupQuery.body.data.challenge.community.groups[0].focalPoint.name;
+      responseChallengeGroupQuery.body.data.ecoverse.challenge.community.groups[0].focalPoint.name;
 
     // Query focal point directly from group
     const responseGroupQuery = await getGroup(challengeGroupId);
-    const groupFocalPoint = responseGroupQuery.body.data.group.focalPoint.name;
+    const groupFocalPoint = responseGroupQuery.body.data.ecoverse.group.focalPoint.name;
 
     // Assert
     expect(responseAddUserToGroup.status).toBe(200);
@@ -96,12 +96,12 @@ describe('Create Challenge', () => {
     // Assert
     //expect(responseCreateUserOne.status).toBe(200);
     expect(responseGroupQuery.status).toBe(200);
-    expect(responseGroupQuery.body.data.challenge.community.members).toHaveLength(0);
-    expect(responseGroupQuery.body.data.challenge.community.groups[0].focalPoint).toEqual(
+    expect(responseGroupQuery.body.data.ecoverse.challenge.community.members).toHaveLength(0);
+    expect(responseGroupQuery.body.data.ecoverse.challenge.community.groups[0].focalPoint).toEqual(
       null
     );
     expect(
-      responseGroupQuery.body.data.challenge.community.groups[0].members
+      responseGroupQuery.body.data.ecoverse.challenge.community.groups[0].members
     ).toHaveLength(0);
   });
 
