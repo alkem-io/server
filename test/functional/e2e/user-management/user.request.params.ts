@@ -99,7 +99,7 @@ export const updateUserMutation = async (
 export const removeUserMutation = async (removeUserID: any) => {
   const requestParams = {
     operationName: 'removeUser',
-    query: 'mutation removeUser($userID: Float!) {removeUser(userID: $userID)}',
+    query: 'mutation removeUser($userID: Float!) {removeUser(userID: $userID){name}}',
     variables: {
       userID: parseFloat(removeUserID),
     },

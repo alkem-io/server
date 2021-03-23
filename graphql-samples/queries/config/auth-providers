@@ -1,0 +1,45 @@
+query
+{
+  configuration
+  {
+    authentication
+    {
+      enabled
+      providers
+      {
+        enabled
+      	name
+      	config
+      {
+        __typename
+      	... on AadAuthProviderConfig
+        {
+          msalConfig
+          {
+            auth
+            {
+              authority
+              clientId
+              redirectUri
+            }
+            cache
+            {
+              cacheLocation
+              storeAuthStateInCookie
+            }
+          }
+          apiConfig
+          {
+            resourceScope
+          }
+      	}
+      ... on DemoAuthProviderConfig
+        {
+        	issuer
+        	tokenEndpoint
+        }
+      	}
+    	}
+  	}
+	}
+}

@@ -1,9 +1,5 @@
 import { TestUser } from '@test/utils/token.helper';
-import {
-  graphqlRequest,
-  graphqlRequestAuth,
-} from '@test/utils/graphql.request';
-
+import { graphqlRequestAuth } from '@test/utils/graphql.request';
 export const createGroupMutation = async (testGroup: string) => {
   const requestParams = {
     operationName: 'CreateGroupOnEcoverse',
@@ -21,30 +17,27 @@ export const createGroupMutation = async (testGroup: string) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const createGroupOnChallengeMutation = async (
+
+export const createGroupOnOrganisationMutation = async (
   testGroup: string,
-  challengeId: any
+  organisationId: any
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createGroupOnChallenge($groupName: String!, $challengeID: Float!) {
-      createGroupOnChallenge(groupName: $groupName, challengeID: $challengeID) {
-        name,
+    query: `mutation createGroupOnOrganization($groupName: String!, $orgID: Float!) {
+      createGroupOnOrganisation(groupName: $groupName, orgID: $orgID) {
         id
-        members {
-          name
-        }
+        name
       }
     }`,
     variables: {
-      challengeID: parseFloat(challengeId),
       groupName: testGroup,
+      orgID: parseFloat(organisationId),
     },
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
-
 
 export const createGroupOnOpportunityMutation = async (
   testGroup: string,
@@ -70,11 +63,40 @@ export const createGroupOnOpportunityMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+export const updateGroupMutation = async (
+  groupId: any,
+  nameGroup: string,
+  descriptionText?: string,
+  avatarUrl?: string
+) => {
+  const requestParams = {
+    groupID: null,
+    query: `mutation UpdateUserGroup($ID: Float!, $userGroupData: UserGroupInput!) {
+      updateUserGroup(ID: $ID, userGroupData: $userGroupData) {
+        id
+        name
+      }
+    }`,
+    variables: {
+      ID: parseFloat(groupId),
+      userGroupData: {
+        name: nameGroup,
+        profileData: {
+          description: descriptionText,
+          avatar: avatarUrl,
+        },
+      },
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
 export const getGroups = async () => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: 'query{groups {name id}}',
+    query: 'query{groups {id name}}',
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -87,6 +109,7 @@ export const getGroup = async (groupId: any) => {
     query: `query {
       group(ID: ${groupId}) {
         id
+        name
         focalPoint {
           name
         }
@@ -97,6 +120,34 @@ export const getGroup = async (groupId: any) => {
       }
     }
     `,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const removeUserGroupMutation = async (groupId: any) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation {
+      removeUserGroup(ID: ${parseFloat(groupId)})
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getGroupParent = async (groupId: any) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query { group (ID: ${groupId})
+    { id name
+      parent { __typename ... on Ecoverse {id name }},
+      parent { __typename ... on Organisation {id name }},
+      parent { __typename ... on Challenge {id name }},
+      parent { __typename ... on Opportunity {id name }}
+    },
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

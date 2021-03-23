@@ -1,0 +1,25 @@
+mutation createApplication($communityId:Float!, $applicationData: ApplicationInput!) {
+  createApplication(communityID:$communityId, applicationData:$applicationData){
+    id
+	  questions {
+      id
+      name
+      value
+    }
+    status
+  }
+}
+
+query variables:
+{
+  "communityId": 1,
+  "applicationData": {
+    "userId": 4,
+    "questions": [
+      {"name": "Question 1", "value": "No"},
+      {"name": "Question 2", "value": "Yes"},
+      {"name": "Question 3", "value": "Maybe"},
+      {"name": "Question 4", "value": "Yes"}
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.8.2",
+  "version": "0.10.0",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -20,7 +20,9 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "tsc --noEmit && eslint src/**/*.ts{,x}",
+    "lint:prod": "tsc --noEmit && cross-env NODE_ENV=production eslint src/**/*.ts{,x}",
+    "lint:fix": "tsc --noEmit && eslint src/**/*.ts{,x} --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -38,18 +40,23 @@
     "migration:show": "npm run typeorm migration:show"
   },
   "dependencies": {
-    "@cmdbg/tokenator": "^0.1.0",
+    "@cmdbg/tokenator": "^0.1.1",
     "@microsoft/microsoft-graph-client": "^2.1.0",
     "@nestjs/common": "^7.6.5",
     "@nestjs/config": "^0.5.0",
     "@nestjs/core": "^7.6.5",
     "@nestjs/graphql": "^7.9.5",
+    "@nestjs/jwt": "^7.2.0",
     "@nestjs/passport": "^7.1.5",
     "@nestjs/platform-express": "^7.6.5",
     "@nestjs/typeorm": "^7.1.5",
+    "@types/express-session": "^1.17.3",
     "apollo-server-express": "^2.18.1",
+    "cd": "^0.3.3",
     "class-transformer": "^0.3.2",
     "class-validator": "^0.12.2",
+    "cross-env": "^7.0.3",
+    "express-session": "^1.17.1",
     "graphql": "^15.4.0",
     "graphql-tools": "^6.2.6",
     "helmet": "^4.3.1",
@@ -57,15 +64,15 @@
     "module-alias": "^2.2.2",
     "mysql": "^2.18.1",
     "nest-winston": "^1.4.0",
-    "node-cache": "^5.1.2",
     "nodemon": "^2.0.4",
     "normalizer": "^1.2.7",
     "passport": "^0.4.1",
     "passport-azure-ad": "^4.3.0",
+    "passport-jwt": "^4.0.0",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^6.6.3",
-    "typeorm": "^0.2.28",
+    "typeorm": "^0.2.31",
     "winston": "^3.3.3",
     "winston-elasticsearch": "^0.12.0"
   },
@@ -74,11 +81,13 @@
     "@nestjs/cli": "^7.0.0",
     "@nestjs/schematics": "^7.0.0",
     "@nestjs/testing": "^7.0.0",
+    "@types/cache-manager": "^3.4.0",
     "@types/express": "^4.17.3",
     "@types/jest": "^26.0.10",
     "@types/module-alias": "^2.0.0",
     "@types/node": "^13.9.1",
     "@types/passport-azure-ad": "^4.0.7",
+    "@types/passport-jwt": "^3.0.5",
     "@types/passport-local": "^1.0.33",
     "@types/supertest": "^2.0.8",
     "@typescript-eslint/eslint-plugin": "3.9.1",
@@ -88,7 +97,9 @@
     "eslint-config-prettier": "^6.10.0",
     "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-prettier": "^3.1.4",
+    "husky": "^4.3.8",
     "jest": "26.4.2",
+    "lint-staged": "^10.5.3",
     "prettier": "^1.19.1",
     "supertest": "^4.0.2",
     "ts-jest": "26.2.0",
@@ -99,5 +110,10 @@
   },
   "_moduleAliases": {
     "@src": "./dist"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   }
 }

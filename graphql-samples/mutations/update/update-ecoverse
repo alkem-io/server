@@ -1,0 +1,14 @@
+mutation UpdateEcoverse($ecoverseData: EcoverseInput!) {
+  updateEcoverse(ecoverseData: $ecoverseData) {
+    name,
+    id
+  }
+}
+
+{
+  "ecoverseData":
+		{
+  	"name": "New CT 3",
+    "hostID": 3
+		}
+}

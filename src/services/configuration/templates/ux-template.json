@@ -1,0 +1,80 @@
+{
+  "name": "default-ux-template",
+  "description": "sample ecoverse template based on Odyssey ecoverse setup; used by CT Web Client to configure the display / options to end users",
+  "users": [
+    {
+      "name": "default",
+      "tagsets": [
+        {
+          "name": "skills",
+          "placeholder": "Communication, Blockchain"
+        },
+        {
+          "name": "keywords",
+          "placeholder": "Innovation, AI, Technology"
+        }
+      ]
+    }
+  ],
+  "opportunities": [
+    {
+      "name": "default",
+      "actorGroups": ["key_users", "stakeholders"],
+      "aspects": [
+        "prototype",
+        "economic-win",
+        "board_member_feedback",
+        "building_blocks",
+        "legal_aspects",
+        "opensource_license",
+        "identity_role",
+        "cso",
+        "international_standards"
+      ],
+      "relations": ["members", "groups"],
+      "applications": [
+        {
+          "name": "default",
+          "questions": [
+            {
+              "question": "Why do you want to join?",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "ecoverses": [
+    {
+      "name": "default",
+      "applications": [
+        {
+          "name": "default",
+          "questions": [
+            {
+              "question": "Why do you want to join?",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "challenges": [
+    {
+      "name": "default",
+      "applications": [
+        {
+          "name": "default",
+          "questions": [
+            {
+              "question": "Why do you want to join?",
+              "required": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

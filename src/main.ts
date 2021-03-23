@@ -4,10 +4,10 @@ import helmet from 'helmet';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
 import './config/aliases';
-import { IServiceConfig } from './interfaces/service.config.interface';
-import { BootstrapService } from './utils/bootstrap/bootstrap.service';
-import { HttpExceptionsFilter } from './utils/error-handling/http.exceptions.filter';
-import { faviconMiddleware } from './utils/middleware/favicon.middleware';
+import { IServiceConfig } from './common/interfaces/service.config.interface';
+import { BootstrapService } from './core/bootstrap/bootstrap.service';
+import { HttpExceptionsFilter } from './core/error-handling/http.exceptions.filter';
+import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
 
 const bootstrap = async () => {

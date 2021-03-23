@@ -1,5 +1,7 @@
 import {
   createChallangeMutation,
+  getChallengeData,
+  getChallengesData,
   removeChallangeMutation,
 } from './challenge.request.params';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
@@ -9,11 +11,28 @@ import { TestUser } from '../../../utils/token.helper';
 
 let challengeName = '';
 let uniqueTextId = '';
+let challengeId = '';
+let challengeDataCreate = '';
+
+let challangeData = async (challengeId: string): Promise<String> => {
+  const responseQuery = await getChallengeData(challengeId);
+  let response = responseQuery.body.data.challenge;
+  return response;
+};
+
+let challengesList = async (): Promise<String> => {
+  const responseQuery = await getChallengesData();
+  let response = responseQuery.body.data.challenges;
+  return response;
+};
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
+  const response = await createChallangeMutation(challengeName, uniqueTextId);
+  challengeDataCreate = response.body.data.createChallenge;
+  challengeId = response.body.data.createChallenge.id;
 });
 
 beforeAll(async () => {
@@ -24,20 +43,31 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
+afterEach(async () => {
+  await removeChallangeMutation(challengeId);
+});
+
 describe('Create Challenge', () => {
   test('should create a successfull challenge', async () => {
     // Act
-    const response = await createChallangeMutation(challengeName, uniqueTextId);
+    const response = await createChallangeMutation(
+      'challengeName',
+      'chal-texti'
+    );
+    let challengeDataCreate = response.body.data.createChallenge
+    let challengeIdTest = response.body.data.createChallenge.id;
 
     // Assert
     expect(response.status).toBe(200);
-    expect(response.body.data.createChallenge.name).toEqual(challengeName);
+    expect(challengeDataCreate.name).toEqual('challengeName');
+    expect(challengeDataCreate).toEqual(
+      await challangeData(challengeIdTest)
+    );
   });
 
   test('should remove a challenge', async () => {
     // Arrange
-    const response = await createChallangeMutation(challengeName, uniqueTextId);
-    const challengeId = response.body.data.createChallenge.id;
+    let challangeDataBeforeRemove = await challangeData(challengeId);
 
     // Act
     const removeChallengeResponse = await removeChallangeMutation(challengeId);
@@ -45,84 +75,49 @@ describe('Create Challenge', () => {
     // Assert
     expect(removeChallengeResponse.status).toBe(200);
     expect(removeChallengeResponse.body.data.removeChallenge).toBe(true);
+    expect(await challengesList()).not.toContainObject(
+      challangeDataBeforeRemove
+    );
   });
 
   test('should create 2 challenges with different names and textIDs', async () => {
     // Act
-    const responseChallengeOne = await createChallangeMutation(
-      challengeName,
-      uniqueTextId
-    );
-
     const responseChallengeTwo = await createChallangeMutation(
       `${challengeName}change`,
       `${uniqueTextId}c`
     );
+    let responseChallengeTwoId =
+      responseChallengeTwo.body.data.createChallenge.id;
 
     // Assert
-    expect(responseChallengeOne.status).toBe(200);
-    expect(responseChallengeOne.body.data.createChallenge.name).toEqual(
-      challengeName
+    expect(await challengesList()).toContainObject(
+      await challangeData(challengeId)
     );
-
-    expect(responseChallengeTwo.status).toBe(200);
-    expect(responseChallengeTwo.body.data.createChallenge.name).toEqual(
-      `${challengeName}change`
+    expect(await challengesList()).toContainObject(
+      await challangeData(responseChallengeTwoId)
     );
   });
 
-  test('should create challenge without reference and context', async () => {
+  test('should create challenge with name and textId only', async () => {
     // Act
-    const requestParamsCreateChallenge = {
-      operationName: null,
-      query: `mutation CreateChallenge($challengeData: ChallengeInput!) {
-      createChallenge(challengeData: $challengeData) { name id } }`,
-      variables: {
-        challengeData: {
-          name: challengeName,
-          textID: uniqueTextId,
-        },
-      },
-    };
-    const response = await graphqlRequestAuth(
-      requestParamsCreateChallenge,
-      TestUser.GLOBAL_ADMIN
+    const responseSimpleChallenge = await createChallangeMutation(
+      `${challengeName}change`,
+      `${uniqueTextId}c`
     );
+    let responseSimpleChallengeId =
+      responseSimpleChallenge.body.data.createChallenge.id;
 
     // Assert
-    expect(response.status).toBe(200);
-    expect(response.body.data.createChallenge.name).toEqual(challengeName);
-  });
-
-  test('should create challenge with defined state', async () => {
-    // Act
-    const requestParamsCreateChallenge = {
-      operationName: null,
-      query: `mutation CreateChallenge($challengeData: ChallengeInput!) {
-      createChallenge(challengeData: $challengeData) { name id state} }`,
-      variables: {
-        challengeData: {
-          name: challengeName,
-          textID: uniqueTextId,
-          state: 'state value',
-        },
-      },
-    };
-    const response = await graphqlRequestAuth(
-      requestParamsCreateChallenge,
-      TestUser.GLOBAL_ADMIN
+    expect(await challengesList()).toContainObject(
+      await challangeData(responseSimpleChallengeId)
     );
-
-    // Assert
-    expect(response.status).toBe(200);
-    expect(response.body.data.createChallenge.state).toEqual('state value');
   });
 
   test('should create a group, when create a challenge', async () => {
     // // Arrange
     const responseChallenge = await createChallangeMutation(
-      challengeName,
-      uniqueTextId
+      challengeName + 'd',
+      uniqueTextId + 'd'
     );
 
     // Act
@@ -130,13 +125,14 @@ describe('Create Challenge', () => {
 
     // Assert
     expect(responseChallenge.status).toBe(200);
-    expect(responseChallenge.body.data.createChallenge.groups[0].name).toEqual(
+    expect(responseChallenge.body.data.createChallenge.community.groups[0].name).toEqual(
       'members'
     );
     expect(
-      responseChallenge.body.data.createChallenge.groups[0].id
+      responseChallenge.body.data.createChallenge.community.groups[0].id
     ).not.toBeNull();
   });
+
 
   describe('DDT invalid textId', () => {
     // Arrange
@@ -155,8 +151,8 @@ describe('Create Challenge', () => {
             createChallenge(challengeData: $challengeData) { name id } }`,
           variables: {
             challengeData: {
-              name: challengeName,
-              textID: textId,
+              name: challengeName + 'd',
+              textID: textId + 'd',
             },
           },
         };

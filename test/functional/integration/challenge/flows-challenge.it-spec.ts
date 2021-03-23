@@ -7,6 +7,7 @@ import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import { getGroup } from '@test/functional/integration/group/group.request.params';
 import { assignGroupFocalPointMutation } from '@test/functional/e2e/user-management/user.request.params';
+import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
 
 const userNameOne = 'Evgeni Dimitrov';
 const userIdOne = '6';
@@ -15,12 +16,16 @@ let userPhone = '';
 let userEmail = '';
 let challengeName = '';
 let challengeId = '';
+let opportunityName = '';
+let opportunityTextId = '';
 let uniqueTextId = '';
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
+  opportunityName = `opportunityName ${uniqueTextId}`;
+  opportunityTextId = `${uniqueTextId}`;
   userPhone = `userPhone ${uniqueTextId}`;
   userEmail = `${uniqueTextId}@test.com`;
 });
@@ -44,7 +49,7 @@ describe('Create Challenge', () => {
     );
     challengeId = responseCreateChallenge.body.data.createChallenge.id;
     const challengeGroupId =
-      responseCreateChallenge.body.data.createChallenge.groups[0].id;
+      responseCreateChallenge.body.data.createChallenge.community.groups[0].id;
 
     // Act
 
@@ -57,7 +62,7 @@ describe('Create Challenge', () => {
     // Query focal point through challenge group
     const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
     const groupFocalPointFromChallenge =
-      responseChallengeGroupQuery.body.data.challenge.groups[0].focalPoint.name;
+      responseChallengeGroupQuery.body.data.challenge.community.groups[0].focalPoint.name;
 
     // Query focal point directly from group
     const responseGroupQuery = await getGroup(challengeGroupId);
@@ -75,7 +80,7 @@ describe('Create Challenge', () => {
     expect(groupFocalPoint).not.toEqual(userNameTwo);
   });
 
-  test('should not result unassigned users (contributors) to a challenge', async () => {
+  test('should not result unassigned users to a challenge', async () => {
     // Arrange
 
     // Create a challenge and get its id
@@ -91,12 +96,12 @@ describe('Create Challenge', () => {
     // Assert
     //expect(responseCreateUserOne.status).toBe(200);
     expect(responseGroupQuery.status).toBe(200);
-    expect(responseGroupQuery.body.data.challenge.contributors).toHaveLength(0);
-    expect(responseGroupQuery.body.data.challenge.groups[0].focalPoint).toEqual(
+    expect(responseGroupQuery.body.data.challenge.community.members).toHaveLength(0);
+    expect(responseGroupQuery.body.data.challenge.community.groups[0].focalPoint).toEqual(
       null
     );
     expect(
-      responseGroupQuery.body.data.challenge.groups[0].members
+      responseGroupQuery.body.data.challenge.community.groups[0].members
     ).toHaveLength(0);
   });
 
@@ -165,5 +170,35 @@ describe('Create Challenge', () => {
     expect(response.text).toContain(
       'property textID has failed the following constraints: isUniqueTextId'
     );
+  });
+
+  test('should add "opportunity" to "challenge"', async () => {
+    // Arrange
+    // Create a challenge and get its challengeId
+    const responseCreateChallenge = await createChallangeMutation(
+      challengeName,
+      uniqueTextId
+    );
+    challengeId = responseCreateChallenge.body.data.createChallenge.id;
+
+    // Act
+    // Add opportunity to a challenge
+    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+      challengeId,
+      opportunityName,
+      opportunityTextId
+    );
+
+    const oportunityNameResponse =
+      responseCreateOpportunityOnChallenge.body.data
+        .createOpportunity.name;
+    const oportunityIdResponse =
+      responseCreateOpportunityOnChallenge.body.data
+        .createOpportunity.id;
+
+    // Assert
+    expect(responseCreateOpportunityOnChallenge.status).toBe(200);
+    expect(oportunityNameResponse).toEqual(opportunityName);
+    expect(oportunityIdResponse).not.toBeNull;
   });
 });

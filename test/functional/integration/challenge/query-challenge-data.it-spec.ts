@@ -5,21 +5,20 @@ import {
   getChallengeOpportunity,
 } from '@test/functional/integration/challenge/challenge.request.params';
 import {
-  addUserToOpportunityMutation,
   createOpportunityOnChallengeMutation,
   queryOpportunity,
-  queryOpportunityGroups,
 } from '../opportunity/opportunity.request.params';
 import {
-  addChallengeChallengeLeadToOrganisationMutation,
-  addUserToChallangeMutation,
+  addChallengeLeadToOrganisationMutation,
   getChallenge,
   getChallengeGroups,
-  removeChallengeChallengeLeadFromOrganisationMutation,
+  removeChallengeLeadFromOrganisationMutation,
   updateChallangeMutation,
 } from './challenge.request.params';
 import { createOrganisationMutation } from '../organisation/organisation.request.params';
+import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
 
+let data: TestDataServiceInitResult;
 let opportunityName = '';
 let opportunityTextId = '';
 let opportunityId = '';
@@ -28,14 +27,20 @@ let challengeId = '';
 let uniqueTextId = '';
 let challengeState = '';
 let organisationName = '';
+let organisationId = '';
+let organisationIdService = '';
 let taglineText = '';
-let refName = 'refName';
-let refUri = 'https://test.com';
-let tagsArray = ['tag1', 'tag2'];
+const refName = 'refName';
+const refUri = 'https://test.com';
+const tagsArray = ['tag1', 'tag2'];
 let groupName = '';
+let userId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+  data = appSingleton.Instance.getData();
+  organisationIdService = data.organisationId.toString();
+  userId = data.userId.toString();
 });
 
 afterAll(async () => {
@@ -66,20 +71,12 @@ describe('Query Challenge data', () => {
     const responseQueryData = await getChallengeGroups(challengeId);
 
     // Assert
-    expect(responseQueryData.body.data.challenge.groups).toHaveLength(1);
-    expect(responseQueryData.body.data.challenge.groups[0].name).toEqual(
-      'members'
+    expect(responseQueryData.body.data.challenge.community.groups).toHaveLength(
+      1
     );
-  });
-
-  test('should throw error query groups for wrong challengeId', async () => {
-    // Act
-    const responseQueryData = await getChallengeGroups(7000);
-
-    // Assert
-    expect(responseQueryData.text).toContain(
-      `Unable to find challenge with ID: 7000`
-    );
+    expect(
+      responseQueryData.body.data.challenge.community.groups[0].name
+    ).toEqual('members');
   });
 
   test('should query opportunity through challenge', async () => {
@@ -90,10 +87,8 @@ describe('Query Challenge data', () => {
       opportunityName,
       opportunityTextId
     );
-
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
     // Query Opportunity data through Challenge query
     const responseQueryData = await getChallengeOpportunity(challengeId);
@@ -121,12 +116,10 @@ describe('Query Challenge data', () => {
     );
 
     const createOpportunityData =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity;
 
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
     // Query Opportunity data
     const requestQueryOpportunity = await queryOpportunity(opportunityId);
@@ -136,67 +129,6 @@ describe('Query Challenge data', () => {
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
     expect(createOpportunityData).toEqual(requestOpportunityData);
-  });
-
-  test('should add user to challenge and to opportunity of it ', async () => {
-    // Arrange
-    await addUserToChallangeMutation(challengeId, '1');
-
-    // Act
-    // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-      challengeId,
-      opportunityName,
-      opportunityTextId
-    );
-
-    opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
-
-    const responseAddUserToOpp = await addUserToOpportunityMutation(
-      opportunityId,
-      1
-    );
-
-    // Query Opportunity data
-    const requestQueryOpportunity = await queryOpportunityGroups(opportunityId);
-    const requestOpportunityData =
-      requestQueryOpportunity.body.data.opportunity.groups[0].members;
-
-    // Assert
-    expect(requestOpportunityData).toHaveLength(1);
-    expect(requestOpportunityData[0].id).toContain(1);
-  });
-
-  test('should throw error adding user to opportunity without being part of a challenge ', async () => {
-    // Act
-    // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-      challengeId,
-      opportunityName,
-      opportunityTextId
-    );
-
-    opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunityOnChallenge.id;
-
-    const responseAddUserToOpp = await addUserToOpportunityMutation(
-      opportunityId,
-      1
-    );
-
-    // Query Opportunity data
-    const requestQueryOpportunity = await queryOpportunityGroups(opportunityId);
-    const requestOpportunityData =
-      requestQueryOpportunity.body.data.opportunity.groups[0].members;
-
-    // Assert
-    expect(requestOpportunityData).toHaveLength(0);
-    expect(responseAddUserToOpp.text).toContain(
-      `User (1) is not a member of parent challenge: ${challengeId}`
-    );
   });
 
   test('should update a challenge', async () => {
@@ -215,7 +147,6 @@ describe('Query Challenge data', () => {
       tagsArray
     );
     const updatedChallenge = response.body.data.updateChallenge;
-
 
     // Act
     const getChallengeData = await getChallenge(challengeId);
@@ -240,8 +171,8 @@ describe('Query Challenge data', () => {
 
   test('should add challange lead to organisation', async () => {
     // Act
-    const response = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const response = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
@@ -260,13 +191,13 @@ describe('Query Challenge data', () => {
       responseCreateSecondChallenge.body.data.createChallenge.id;
 
     // Act
-    const responseFirstChallengeLead = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseFirstChallengeLead = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
-    const responseSecondhallengeLead = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseSecondhallengeLead = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       secondChallengeId
     );
 
@@ -282,16 +213,15 @@ describe('Query Challenge data', () => {
     const createOrganisationResponse = await createOrganisationMutation(
       organisationName
     );
-    const organisationId =
-      createOrganisationResponse.body.data.createOrganisation.id;
+    organisationId = createOrganisationResponse.body.data.createOrganisation.id;
 
     // Act
-    const responseFirstOrganisation = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseFirstOrganisation = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
-    const responseSecondOrganisation = await addChallengeChallengeLeadToOrganisationMutation(
+    const responseSecondOrganisation = await addChallengeLeadToOrganisationMutation(
       organisationId,
       challengeId
     );
@@ -305,13 +235,13 @@ describe('Query Challenge data', () => {
 
   test('should throw error, when try to add the same challnge to organisation as a lead ', async () => {
     // Act
-    const responseOne = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseOne = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
-    const responseTwo = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseTwo = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
@@ -320,20 +250,20 @@ describe('Query Challenge data', () => {
     expect(responseOne.body.data.addChallengeLead).toEqual(true);
     expect(responseTwo.status).toBe(200);
     expect(responseTwo.text).toContain(
-      `Challenge ${challengeId} already has an organisation with the provided organisation ID: 1`
+      `Community ${challengeId} already has an organisation with the provided organisation ID: ${organisationIdService}`
     );
   });
 
   test('should remove challange lead from organisation', async () => {
     // Act
-    const responseAddCL = await addChallengeChallengeLeadToOrganisationMutation(
-      1,
+    const responseAddCL = await addChallengeLeadToOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 
     // Act
-    const responseRemoveCL = await removeChallengeChallengeLeadFromOrganisationMutation(
-      1,
+    const responseRemoveCL = await removeChallengeLeadFromOrganisationMutation(
+      organisationIdService,
       challengeId
     );
 

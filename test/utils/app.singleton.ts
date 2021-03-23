@@ -1,14 +1,17 @@
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { AadRopcStrategy } from '@utils/authentication/aad.ropc.strategy';
-import { TestDataService } from '@utils/data-management/test-data.service';
+import {
+  TestDataService,
+  TestDataServiceInitResult,
+} from '@src/services/data-management/test-data.service';
 import { TokenHelper } from './token.helper';
 
 export class appSingleton {
   private static _instance: appSingleton;
   private static testDataService: TestDataService;
-
+  private data!: TestDataServiceInitResult;
   private _app!: INestApplication;
   public get app(): INestApplication {
     return this._app;
@@ -34,6 +37,11 @@ export class appSingleton {
     return this._instance || (this._instance = new this());
   }
 
+  // Returns data generated in test-data.service.ts
+  getData() {
+    return this.data;
+  }
+
   async initServer() {
     const testModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -42,21 +50,20 @@ export class appSingleton {
     this.app = testModule.createNestApplication();
     await this.app.init();
     appSingleton.testDataService = await testModule.get(TestDataService);
-    const ropcStrategy = await testModule.get(AadRopcStrategy);
-    await this.getTokensForAllTestUsers(ropcStrategy);
+    const configService = await testModule.get(ConfigService);
+    await this.getTokensForAllTestUsers(configService);
 
     await appSingleton.testDataService.initDB();
-    await appSingleton.testDataService.initFunctions();
+    this.data = await appSingleton.testDataService.initFunctions();
   }
 
   async teardownServer() {
-    //await appSingleton.testDataService.teardownFunctions();
     await appSingleton.testDataService.teardownDB();
     await this.app.close();
   }
 
-  private async getTokensForAllTestUsers(ropcStrategy: AadRopcStrategy) {
-    const tokenHelper = new TokenHelper(ropcStrategy);
+  private async getTokensForAllTestUsers(configService: ConfigService) {
+    const tokenHelper = new TokenHelper(configService);
     this.userTokenMap = await tokenHelper.buildUserTokenMap();
   }
 }

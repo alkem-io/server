@@ -1,5 +1,5 @@
-mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
-  updateOpportunity(opportunityData: $opportunityData, ID: $ID) {
+mutation updateOpportunity($opportunityData: UpdateOpportunityInput!) {
+  updateOpportunity(opportunityData: $opportunityData) {
     name,
     id
   }
@@ -7,9 +7,9 @@ mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
 
 Variables:
 {
-  "ID": 1,
   "opportunityData":
   {
+    "ID": "1",
     "name": "AI for good222"
   }
 }

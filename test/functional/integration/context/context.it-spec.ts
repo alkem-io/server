@@ -4,25 +4,22 @@ import {
   createChallangeMutation,
   updateChallangeMutation,
 } from '@test/functional/integration/challenge/challenge.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
 import { getContextQuery } from './context.request.params';
 import { createReferenceOnContextMutation } from '../references/references.request.params';
 
-let opportunityName = '';
-let opportunityTextId = '';
-let opportunityId = '';
+
 let challengeName = '';
 let challengeId = '';
 let uniqueTextId = '';
-let challengeState = '';
-let taglineText = 'taglineText';
-let contextBackground = 'contextBackground';
-let contextVision = 'contextVision';
-let contextImpact = 'contextImpact';
-let contextWho = 'contextWho';
-let refName = 'refName';
-let refUri = 'https://test.cherrytwist.org/';
-let tagsArray = ['tag1', 'tag2'];
+const challengeState = '';
+const taglineText = 'taglineText';
+const contextBackground = 'contextBackground';
+const contextVision = 'contextVision';
+const contextImpact = 'contextImpact';
+const contextWho = 'contextWho';
+const refName = 'refName';
+const refUri = 'https://test.cherrytwist.org/';
+const tagsArray = ['tag1', 'tag2'];
 let challengeContextData = '';
 let challengeRefName = '';
 let challengeRefUri = '';
@@ -32,11 +29,8 @@ beforeEach(async () => {
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
-  opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
 });
 
-//let challengeNames ='';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -63,25 +57,15 @@ beforeEach(async () => {
     responseCreateChallenge.body.data.createChallenge.context.references[0].uri;
   contextIdChallenge =
     responseCreateChallenge.body.data.createChallenge.context.id;
-
-  // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-    challengeId,
-    opportunityName,
-    opportunityTextId
-  );
-
-  opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunityOnChallenge
-      .id;
 });
 
 describe('Context', () => {
   test('should update and query challenge context and references', async () => {
-    // Act
+    // Arrange
     // Query Challenge Context Data data
     const contextChallengeQuery = await getContextQuery(challengeId);
 
+    // Act
     // Update challenge context and references
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
@@ -99,7 +83,7 @@ describe('Context', () => {
     const updatedChallengeData =
       responseUpdateChallenge.body.data.updateChallenge.context;
 
-    // Query updated context data
+    // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
       contextUpdatedChallengeQuery.body.data.challenge.context;
@@ -113,10 +97,11 @@ describe('Context', () => {
   });
 
   test('should update the same reference and query challenge context and references', async () => {
-    // Act
+    // Arrange
     // Query Challenge Context Data data
     const contextChallengeQuery = await getContextQuery(challengeId);
 
+    // Act
     // Update challenge context and references
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
@@ -134,7 +119,7 @@ describe('Context', () => {
     const updatedChallengeData =
       responseUpdateChallenge.body.data.updateChallenge.context;
 
-    // Query updated context data
+    // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
       contextUpdatedChallengeQuery.body.data.challenge.context;
@@ -156,7 +141,7 @@ describe('Context', () => {
       refUri
     );
 
-    // Query updated context data
+    // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
       contextUpdatedChallengeQuery.body.data.challenge.context;
@@ -179,7 +164,7 @@ describe('Context', () => {
     // Update challenge context and references
     await createReferenceOnContextMutation(contextIdChallenge, refName, refUri);
 
-    // Query updated context data
+    // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
       contextUpdatedChallengeQuery.body.data.challenge.context;

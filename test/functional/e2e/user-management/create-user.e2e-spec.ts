@@ -230,7 +230,9 @@ describe('Create User', () => {
 
     // Assert
     expect(responseQuery.status).toBe(200);
-    expect(responseQuery.text).toContain('property name has failed the following constraints: maxLength');
+    expect(responseQuery.text).toContain(
+      'property name has failed the following constraints: maxLength'
+    );
   });
 
   test('should throw error - create user with invalid email', async () => {
