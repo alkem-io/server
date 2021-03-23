@@ -247,7 +247,7 @@ export const getChallengeData = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{challenge (ID: "${challengeId}") {
+    query: `query{ecoverse {challenge (ID: "${challengeId}") {
       name
       id
       textID
@@ -273,7 +273,8 @@ export const getChallengeData = async (challengeId: string) => {
         }
         }
       }
-    }`,
+    }
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -283,7 +284,7 @@ export const getChallengesData = async () => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{challenges{
+    query: `query{ecoverse{ challenges{
       name
       id
       textID
@@ -309,6 +310,7 @@ export const getChallengesData = async () => {
         }
         }
       }
+    }
     }`,
   };
 
@@ -319,7 +321,7 @@ export const getChallenge = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{challenge (ID: "${challengeId}") {
+    query: `query{ecoverse{ challenge (ID: "${challengeId}") {
       name
       id
       state
@@ -327,7 +329,7 @@ export const getChallenge = async (challengeId: string) => {
       {tagline}
         tagset{
       tags
-    }}}`,
+    }}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -338,6 +340,7 @@ export const getChallengeUsers = async (challengeId: string) => {
     operationName: null,
     variables: {},
     query: `query {
+      ecoverse{
       challenge(ID: "${challengeId}") {
         id
     community {
@@ -358,7 +361,7 @@ export const getChallengeUsers = async (challengeId: string) => {
       }
     }
   }
-}`,
+}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -368,11 +371,11 @@ export const getChallengeOpportunity = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query {
+    query: `query { ecoverse{
       challenge(ID: "${challengeId}") {
         id
         name
-        opportunities{id name textID state}}}`,
+        opportunities{id name textID state}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -382,12 +385,12 @@ export const getChallengeGroups = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query {
+    query: `query {ecoverse{
       challenge(ID: "${challengeId}") {
         id
         name
         community{ id
-        groups{id name}}}}`,
+        groups{id name}}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

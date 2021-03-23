@@ -78,6 +78,7 @@ export class TestDataService {
   async initOrganisation(): Promise<number> {
     const organisation = new OrganisationInput();
     organisation.name = `${this.organisationName}`;
+    organisation.textID = `${this.uniqueTextId}`;
     const response = await this.organisationService.createOrganisation(
       organisation
     );
