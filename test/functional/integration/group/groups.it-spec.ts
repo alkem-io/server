@@ -32,6 +32,7 @@ let challengeName = '';
 let challengeId = '';
 let challengeCommunityId = '';
 let opportunityCommunityId = '';
+let getParent = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -49,7 +50,7 @@ beforeAll(async () => {
   // Create organisation
   const responseCreateOrganisation = await createOrganisationMutation(
     organisationName,
-    'org'+uniqueTextId
+    'org' + uniqueTextId
   );
   organisationId = responseCreateOrganisation.body.data.createOrganisation.id;
 
@@ -83,7 +84,6 @@ describe('Groups', () => {
   afterEach(async () => {
     // await removeUserMutation(userId);
     let a = await removeUserGroupMutation(communityGroupId);
-    console.log(a.body);
   });
   test('should create community group', async () => {
     // Act
@@ -101,14 +101,14 @@ describe('Groups', () => {
     const groupsData = await getGroups();
 
     // Assert
-    expect(groupData.body.data.group.id).toEqual(
+    expect(groupData.body.data.ecoverse.group.id).toEqual(
       responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.id
     );
-    expect(groupData.body.data.group.name).toEqual(
+    expect(groupData.body.data.ecoverse.group.name).toEqual(
       responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.name
     );
 
-    expect(groupsData.body.data.groups).toContainObject({
+    expect(groupsData.body.data.ecoverse.groups).toContainObject({
       id: `${communityGroupId}`,
       name: `${groupName}`,
     });
@@ -135,7 +135,7 @@ describe('Groups', () => {
     // Assert
     expect(response.body.data.removeUserGroup).toEqual(true);
 
-    expect(groupsData.body.data.groups).not.toContainObject({
+    expect(groupsData.body.data.ecoverse.groups).not.toContainObject({
       id: `${communityGroupId}`,
       name: `${groupName}`,
     });
@@ -159,7 +159,7 @@ describe('Groups', () => {
     const groupsData = await getGroups();
 
     // Assert
-    expect(groupsData.body.data.groups).toContainObject(
+    expect(groupsData.body.data.ecoverse.groups).toContainObject(
       response.body.data.updateUserGroup
     );
   });
@@ -175,7 +175,7 @@ describe('Groups', () => {
       'Unable to remove User Group with the specified ID: 2; restricted group: ecoverse-admins'
     );
 
-    expect(groupsData.body.data.groups).not.toContainObject({
+    expect(groupsData.body.data.ecoverse.groups).not.toContainObject({
       id: 2,
       name: 'ecoverse-admins',
     });
@@ -233,7 +233,7 @@ describe('Groups', () => {
       `Unable to rename User Group with the specified ID: ${communityGroupId}; new name is a restricted name: members`
     );
 
-    expect(groupsData.body.data.groups).toContainObject({
+    expect(groupsData.body.data.ecoverse.groups).toContainObject({
       id: `${communityGroupId}`,
       name: `${groupName}`,
     });
@@ -251,12 +251,12 @@ describe('Groups', () => {
       'Unable to rename User Group with the specified ID: 2; restricted group: ecoverse-admins'
     );
 
-    expect(groupsData.body.data.groups).toContainObject({
+    expect(groupsData.body.data.ecoverse.groups).toContainObject({
       id: '2',
       name: 'ecoverse-admins',
     });
 
-    expect(groupsData.body.data.groups).not.toContainObject({
+    expect(groupsData.body.data.ecoverse.groups).not.toContainObject({
       id: '2',
       name: `${groupName}`,
     });
@@ -277,136 +277,58 @@ describe('Groups', () => {
       'Unable to create a group with an empty name'
     );
 
-    expect(groupsData.body.data.groups).not.toContainObject({
+    expect(groupsData.body.data.ecoverse.groups).not.toContainObject({
       id: `${communityGroupId}`,
       name: '',
     });
   });
 
-  // test('should get groups parent ecoverse', async () => {
-  //   // Arrange
-  //   // Create ecoverse group
-  //   const responseCreateGroupOnEcoverse = await createGroupMutation(groupName);
-  //   ecoverseGroupId =
-  //     responseCreateGroupOnEcoverse.body.data.createGroupOnEcoverse.id;
+  test('should get groups parent community', async () => {
+    // Arrange
+    // Create challenge community group
+    const responseCreateGroupOnCommunnity = await createGroupOnCommunityMutation(
+      challengeCommunityId,
+      groupName
+    );
+    communityGroupId =
+      responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.id;
 
-  //   // Act
-  //   const groupParent = await getGroupParent(ecoverseGroupId);
+    // Act
+    const groupParent = await getGroupParent(communityGroupId);
+    getParent = groupParent.body.data.ecoverse.group.parent;
 
-  //   // Assert
-  //   expect(groupParent.body.data.group.parent).toEqual({
-  //     __typename: 'Ecoverse',
-  //     id: '1',
-  //     name: 'Empty ecoverse',
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Organisation',
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Challenge',
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Opportunity',
-  //   });
-  // });
+    // Assert
+    expect(getParent).toEqual({
+      __typename: 'Community',
+      type: 'challenge',
+    });
+    expect(getParent).not.toContainObject({
+      __typename: 'Organisation',
+    });
+  });
 
-  // test('should get groups parent organisation', async () => {
-  //   // Arrange
-  //   // Create organisation group
-  //   const responseCreateGroupeOnOrganisation = await createGroupOnOrganisationMutation(
-  //     organisationName,
-  //     organisationId
-  //   );
-  //   const organisationGroupId =
-  //     responseCreateGroupeOnOrganisation.body.data.createGroupOnOrganisation.id;
+  test('should get groups parent organisation', async () => {
+    // Arrange
+    // Create organisation group
+    const responseCreateGroupeOnOrganisation = await createGroupOnOrganisationMutation(
+      organisationName,
+      organisationId
+    );
+    const organisationGroupId =
+      responseCreateGroupeOnOrganisation.body.data.createGroupOnOrganisation.id;
 
-  //   // Act
-  //   const groupParent = await getGroupParent(organisationGroupId);
+    // Act
+    const groupParent = await getGroupParent(organisationGroupId);
+    getParent = groupParent.body.data.ecoverse.group.parent;
 
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Ecoverse',
-  //     id: '1',
-  //     name: 'Cherrytwist dogfood',
-  //   });
-  //   expect(groupParent.body.data.group.parent).toEqual({
-  //     __typename: 'Organisation',
-  //     id: organisationId,
-  //     name: organisationName,
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Challenge',
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Opportunity',
-  //   });
-  // });
-
-  // test('should get groups parent challenge', async () => {
-  //   // Arrange
-
-  //   // Create challenge group
-  //   const responseCreateGroupeOnChallenge = await createGroupOnChallengeMutation(
-  //     challengeName,
-  //     challengeId
-  //   );
-  //   const challengeGroupId =
-  //     responseCreateGroupeOnChallenge.body.data.createGroupOnChallenge.id;
-
-  //   // Act
-  //   const groupParent = await getGroupParent(challengeGroupId);
-
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Ecoverse',
-  //     id: '1',
-  //     name: 'Cherrytwist dogfood',
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Organisation',
-  //     id: organisationId,
-  //     name: organisationName,
-  //   });
-  //   expect(groupParent.body.data.group.parent).toEqual({
-  //     __typename: 'Challenge',
-  //     id: challengeId,
-  //     name: challengeName,
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Opportunity',
-  //   });
-  // });
-
-  // test('should get groups parent opportunity', async () => {
-  //   // Arrange
-  //   // Create opportunity group
-  //   const responseCreateGroupeOnOpportunity = await createGroupOnOpportunityMutation(
-  //     opportunityName,
-  //     opportunityId
-  //   );
-  //   const opportunityGroupId =
-  //     responseCreateGroupeOnOpportunity.body.data.createGroupOnOpportunity.id;
-
-  //   // Act
-  //   const groupParent = await getGroupParent(opportunityGroupId);
-
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Ecoverse',
-  //     id: '1',
-  //     name: 'Cherrytwist dogfood',
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Organisation',
-  //     id: organisationId,
-  //     name: organisationName,
-  //   });
-  //   expect(groupParent.body.data.group.parent).not.toContainObject({
-  //     __typename: 'Challenge',
-  //     id: challengeId,
-  //     name: challengeName,
-  //   });
-  //   expect(groupParent.body.data.group.parent).toEqual({
-  //     __typename: 'Opportunity',
-  //     id: opportunityId,
-  //     name: opportunityName,
-  //   });
-  // });
+    expect(getParent).not.toEqual({
+      __typename: 'Community',
+      type: 'challenge',
+    });
+    expect(getParent).toEqual({
+      __typename: 'Organisation',
+      id: organisationId,
+      name: organisationName,
+    });
+  });
 });

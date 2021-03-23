@@ -17,7 +17,6 @@ export const createGroupMutation = async (testGroup: string) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-
 export const createGroupOnOrganisationMutation = async (
   testGroup: string,
   organisationId: any
@@ -143,10 +142,8 @@ export const getGroupParent = async (groupId: any) => {
     variables: {},
     query: `query { ecoverse {group (ID: ${groupId})
     { id name
-      parent { __typename ... on Ecoverse {id name }},
+      parent { __typename ... on Community {type }},
       parent { __typename ... on Organisation {id name }},
-      parent { __typename ... on Challenge {id name }},
-      parent { __typename ... on Opportunity {id name }}
     },
   }}`,
   };
