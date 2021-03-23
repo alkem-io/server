@@ -21,13 +21,13 @@ let actorGroupDataCreate = '';
 
 let getActorGroupData = async (): Promise<string> => {
   const getActor = await getActorGroupsPerOpportunity(opportunityId);
-  let response = getActor.body.data.opportunity.actorGroups[0];
+  let response = getActor.body.data.ecoverse.opportunity.actorGroups[0];
   return response;
 };
 
 let getActorGroupsCountPerOpportunityData = async (): Promise<string> => {
   const getActor = await getActorGroupsPerOpportunity(opportunityId);
-  let response = getActor.body.data.opportunity.actorGroups;
+  let response = getActor.body.data.ecoverse.opportunity.actorGroups;
   return response;
 };
 beforeEach(async () => {

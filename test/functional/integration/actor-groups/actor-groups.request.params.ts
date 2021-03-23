@@ -49,8 +49,8 @@ export const removeActorGroupMutation = async (actorGroupId: any) => {
 export const getActorGroupsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: "${opportunityId}") {
-        actorGroups { id name description actors { name }}}}`,
+    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
+        actorGroups { id name description actors { name }}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -59,14 +59,14 @@ export const getActorGroupsPerOpportunity = async (opportunityId: string) => {
 export const getActorData = async (opportunityId: any) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: "${opportunityId}") {
+    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
       actorGroups{
         actors{
           id name description value impact
         }
       }
     }
-  }`,
+  }}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
