@@ -27,14 +27,14 @@ export class KonfigService {
     const authProviders = [
       {
         name: 'Azure Active Directory',
-        label: '',
+        label: 'Log in with Azure AD',
         icon: '',
         enabled: true,
         config: await this.getAadConfig(),
       },
       {
         name: 'Demo Auth',
-        label: '',
+        label: 'Log in with Demo Authentication Provider',
         icon: '',
         enabled: true,
         config: await this.getDemoAuthProviderConfig(),
