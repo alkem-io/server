@@ -242,7 +242,6 @@ describe('Opportunities', () => {
     const responseUpdateOpportunity = await updateOpportunityOnChallengeMutation(
       opportunityId
     );
-    console.log(responseUpdateOpportunity.body)
     const updateOpportunityData =
       responseUpdateOpportunity.body.data.updateOpportunity;
 

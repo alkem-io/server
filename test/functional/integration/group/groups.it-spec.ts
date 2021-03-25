@@ -122,14 +122,11 @@ describe('Groups', () => {
       groupName
     );
 
-    console.log(responseCreateGroupOnCommunnity.body);
     communityGroupId =
       responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.id;
 
     // Act
     const response = await removeUserGroupMutation(communityGroupId);
-    console.log(response.body);
-
     const groupsData = await getGroups();
 
     // Assert

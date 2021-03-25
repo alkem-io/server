@@ -2,9 +2,10 @@ const communityId = 1;
 
 export const createOrganisationMutation = `
 mutation CreateOrganisation($organisationData: OrganisationInput!) {
-    createOrganisation(organisationData: $organisationData) {
-      name,
-      members
+  createOrganisation(organisationData: $organisationData) {
+    id
+    name
+    members
       {
         name
       }
@@ -14,7 +15,8 @@ mutation CreateOrganisation($organisationData: OrganisationInput!) {
 export const createOrganisationVariables = () => `
 {
     "organisationData": {
-        "name": "Cherrytwist7 "
+        "name": "Cherrytwist7 ",
+        "textID": "test-organ"
     }
 }`;
 
@@ -135,8 +137,8 @@ export const createGroupOnCommunityVariables = (id: number) => `
 }`;
 
 export const createOpportunityMutation = `
-mutation createOpportunityOnChallenge($opportunityData: OpportunityInput!, $challengeID: Float!) {
-    createOpportunityOnChallenge(opportunityData: $opportunityData, challengeID: $challengeID) {
+mutation createOpportunity($opportunityData: OpportunityInput!) {
+  createOpportunity(opportunityData: $opportunityData) {
       name,
       id
       }
@@ -144,8 +146,9 @@ mutation createOpportunityOnChallenge($opportunityData: OpportunityInput!, $chal
 
 export const createOpportunityVariables = (id: number) => `
 {
-    "challengeID": ${id},
+
     "opportunityData": {
+      "challengeID": "${id}",
         "name": "Test opportunity",
         "textID": "test-opp",
         "state": "reserved",
@@ -365,7 +368,7 @@ export const getCreateMutation = (name: string) => {
   return mutations[name];
 };
 
-export const getCreateVariables = (name: string, id: number) => {
+export const getCreateVariables = (name: string, id: any) => {
   console.log(variables[name](id));
   return variables[name](id);
 };
