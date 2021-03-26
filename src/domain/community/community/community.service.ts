@@ -180,6 +180,21 @@ export class CommunityService {
     return membersGroup;
   }
 
+  async removeMember(userID: number, communityID: number): Promise<IUserGroup> {
+    const community = await this.getCommunityOrFail(communityID, {
+      relations: ['groups'],
+    });
+
+    // Try to find the user
+    const user = await this.userService.getUserByIdOrFail(userID);
+
+    // Get the members group
+    const membersGroup = await this.getMembersGroupOrFail(community);
+    await this.userGroupService.removeUserFromGroup(user, membersGroup);
+
+    return membersGroup;
+  }
+
   async isMember(userID: number, communityID: number): Promise<boolean> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: ['groups'],

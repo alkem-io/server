@@ -49,6 +49,21 @@ export class CommunityResolverMutations {
     return group;
   }
 
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => UserGroup, {
+    description:
+      'Removes the user with the given identifier as a member of the specified Community',
+  })
+  @Profiling.api
+  async removeUserFromCommunity(
+    @Args('userID') userID: number,
+    @Args('communityID') communityID: number
+  ): Promise<IUserGroup> {
+    const group = await this.communityService.removeMember(userID, communityID);
+    return group;
+  }
+
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
