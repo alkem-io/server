@@ -53,7 +53,7 @@ export class CommunityResolverMutations {
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     description:
-      'Adds the user with the given identifier as a member of the specified Community',
+      'Removes the user with the given identifier as a member of the specified Community',
   })
   @Profiling.api
   async removeUserFromCommunity(
