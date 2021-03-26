@@ -1,4 +1,9 @@
-import { createUserMutation, removeUserMutation } from './user.request.params';
+import {
+  createUserMutation,
+  createUserMutationWithParams,
+  getUsersProfile,
+  removeUserMutation,
+} from './user.request.params';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
@@ -68,20 +73,11 @@ describe('Create User', () => {
     userId = response.body.data.createUser.id;
 
     // Act
-    const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") {
-          name
-          id
-        }}`,
-    };
-    const responseQuery = await graphqlRequestAuth(
-      requestParamsQueryUser,
-      TestUser.GLOBAL_ADMIN
-    );
+    const getUserData = await getUsersProfile(userId);
 
     // Assert
-    expect(responseQuery.status).toBe(200);
-    expect(responseQuery.body.data.user.name).toEqual(userName);
+    expect(getUserData.status).toBe(200);
+    expect(getUserData.body.data.user.name).toEqual(userName);
   });
 
   test('should query created user details', async () => {
@@ -89,7 +85,7 @@ describe('Create User', () => {
     const requestParams = {
       operationName: 'CreateUser',
       query: `mutation CreateUser($userData: UserInput!) {
-          createUser(userData: $userData) {
+        createUser(userData: $userData) {
             id
             name
             firstName
@@ -105,12 +101,14 @@ describe('Create User', () => {
               }
             }
             memberof {
+              communities {
               groups {
                 name
               }
             }
           }
-        }`,
+        }
+      }`,
       variables: {
         userData: {
           name: userName,
@@ -121,7 +119,7 @@ describe('Create User', () => {
           city: 'testCity',
           country: 'testCountry',
           gender: 'testGender',
-          aadPassword: `90!ds${uniqueId}`,
+          aadPassword: `90a!ds${uniqueId}`,
         },
       },
     };
@@ -130,11 +128,15 @@ describe('Create User', () => {
       requestParams,
       TestUser.GLOBAL_ADMIN
     );
+
     userId = responseQuery.body.data.createUser.id;
+    let createUserData = responseQuery.body.data.createUser;
+
     // Act
     const requestParamsQueryUser = {
       query: `{user(ID: "${userId}")
                   {
+                    id
                     name
                     firstName
                     lastName
@@ -149,8 +151,10 @@ describe('Create User', () => {
                       }
                     }
                     memberof {
-                      groups {
-                        name
+                      communities {
+                        groups {
+                          name
+                        }
                       }
                     }
                   }
@@ -161,25 +165,11 @@ describe('Create User', () => {
       TestUser.GLOBAL_ADMIN
     );
 
+    let queryUserData = responseParamsQueryUser.body.data.user;
     // Assert
+
     expect(responseParamsQueryUser.status).toBe(200);
-    expect(responseParamsQueryUser.body.data.user.name).toEqual(userName);
-    expect(responseParamsQueryUser.body.data.user.firstName).toEqual(
-      userFirstName
-    );
-    expect(responseParamsQueryUser.body.data.user.lastName).toEqual(
-      userLastName
-    );
-    expect(responseParamsQueryUser.body.data.user.email).toEqual(userEmail);
-    expect(responseParamsQueryUser.body.data.user.phone).toEqual(userPhone);
-    expect(responseParamsQueryUser.body.data.user.city).toEqual('testCity');
-    expect(responseParamsQueryUser.body.data.user.country).toEqual(
-      'testCountry'
-    );
-    expect(responseParamsQueryUser.body.data.user.gender).toEqual('testGender');
-    expect(responseParamsQueryUser.body.data.user.profile).toEqual({
-      references: [],
-    });
+    expect(createUserData).toEqual(queryUserData);
   });
 
   test('should throw error - create user with ID instead of name', async () => {
@@ -206,61 +196,26 @@ describe('Create User', () => {
   });
 
   test('should throw error - create user with LONG NAME', async () => {
-    // Arrange
-    const requestParams = {
-      operationName: 'CreateUser',
-      query:
-        'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name }}',
-      variables: {
-        userData: {
-          name:
-            'very loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong name',
-          email: userEmail,
-          firstName: 'testF',
-          lastName: 'testL',
-        },
-      },
-    };
-
     // Act
-    const responseQuery = await graphqlRequestAuth(
-      requestParams,
-      TestUser.GLOBAL_ADMIN
+    const response = await createUserMutationWithParams(
+      'very loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong name',
+      userEmail
     );
 
     // Assert
-    expect(responseQuery.status).toBe(200);
-    expect(responseQuery.text).toContain(
+    expect(response.status).toBe(200);
+    expect(response.text).toContain(
       'property name has failed the following constraints: maxLength'
     );
   });
 
   test('should throw error - create user with invalid email', async () => {
-    // Arrange
-    const requestParams = {
-      operationName: 'CreateUser',
-      query:
-        'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name }}',
-      variables: {
-        userData: {
-          name: 'name',
-          firstName: 'name',
-          lastName: 'name',
-          email: 'testEmail',
-          aadPassword: `90!ds${uniqueId}`,
-        },
-      },
-    };
-
     // Act
-    const responseQuery = await graphqlRequestAuth(
-      requestParams,
-      TestUser.GLOBAL_ADMIN
-    );
+    const response = await createUserMutationWithParams(userName, 'testEmail');
 
     // Assert
-    expect(responseQuery.status).toBe(200);
-    expect(responseQuery.text).toContain(
+    expect(response.status).toBe(200);
+    expect(response.text).toContain(
       'property email has failed the following constraints: isEmail'
     );
   });

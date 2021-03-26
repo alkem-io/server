@@ -29,7 +29,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('Update user', () => {
+describe.skip('Update user', () => {
   beforeEach(() => {
     uniqueId = Math.random()
       .toString(12)
@@ -190,6 +190,7 @@ describe('Update user', () => {
       userNameAfterUpdate,
       userPhone
     );
+    console.log(responseUpdateUser.body);
 
     const requestParamsQueryUsers = {
       query: `{users {
