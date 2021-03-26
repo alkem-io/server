@@ -1,0 +1,16 @@
+mutation removeUserFromCommunity($userID: Float!, $communityID: Float!) {
+  removeUserFromCommunity(communityID: $communityID, userID: $userID) {
+    name,
+    id,
+    members {
+      id,
+      name
+    }
+  }
+}
+
+Variables:
+{
+  "userID": 7,
+  "communityID": 1
+}
