@@ -3,9 +3,12 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { ITagset } from './tagset.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
@@ -21,6 +24,15 @@ export class Tagset extends BaseEntity implements ITagset {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => String)
   @Column({ default: RestrictedTagsetNames.Default })

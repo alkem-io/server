@@ -2,11 +2,14 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Context } from '@domain/context/context/context.entity';
@@ -23,6 +26,15 @@ export class Ecoverse extends BaseEntity implements IEcoverse, ICommunityable {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   // The context and host organisation
   @Field(() => String, { nullable: false, description: '' })

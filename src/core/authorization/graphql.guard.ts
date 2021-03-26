@@ -20,7 +20,7 @@ import { UserInfo } from '@src/core/authentication/user-info';
 import { AuthorizationRoles } from './authorization.roles';
 
 @Injectable()
-export class GqlAuthGuard extends AuthGuard(['azure-ad', 'simple-auth-jwt']) {
+export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
   JWT_EXPIRED = 'jwt is expired';
 
   private _roles!: string[];

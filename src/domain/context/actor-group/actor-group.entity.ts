@@ -3,10 +3,13 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { Actor } from '@domain/context/actor/actor.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
@@ -22,6 +25,15 @@ export class ActorGroup extends BaseEntity implements IActorGroup {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => String)
   @Column()

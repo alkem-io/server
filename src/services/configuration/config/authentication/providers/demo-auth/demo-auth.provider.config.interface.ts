@@ -1,4 +1,4 @@
-export interface ISimpleAuthProviderConfig {
+export interface IDemoAuthProviderConfig {
   issuer?: string;
   tokenEndpoint?: string;
 }

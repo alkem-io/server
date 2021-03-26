@@ -4,7 +4,7 @@ import { ITemplate } from './template/template.interface';
 import * as uxTemplate from '@templates/ux-template.json';
 import { IConfig } from './config.interface';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
-import { ISimpleAuthProviderConfig } from './authentication/providers/simple-auth/simple-auth.provider.config.interface';
+import { IDemoAuthProviderConfig } from './authentication/providers/demo-auth/demo-auth.provider.config.interface';
 import { IAadAuthProviderConfig } from './authentication/providers/aad/aad.config.interface';
 
 @Injectable()
@@ -27,17 +27,17 @@ export class KonfigService {
     const authProviders = [
       {
         name: 'Azure Active Directory',
-        label: '',
+        label: 'Log in with Azure AD',
         icon: '',
         enabled: true,
         config: await this.getAadConfig(),
       },
       {
-        name: 'Simple Auth',
-        label: '',
+        name: 'Demo Auth',
+        label: 'Log in with Demo Authentication Provider',
         icon: '',
         enabled: true,
-        config: await this.getSimpleAuthProviderConfig(),
+        config: await this.getDemoAuthProviderConfig(),
       },
     ];
 
@@ -58,10 +58,10 @@ export class KonfigService {
     )) as IAadAuthProviderConfig;
   }
 
-  async getSimpleAuthProviderConfig(): Promise<ISimpleAuthProviderConfig> {
-    const res = (await this.configService.get<ISimpleAuthProviderConfig>(
-      'simple_auth_provider'
-    )) as ISimpleAuthProviderConfig;
+  async getDemoAuthProviderConfig(): Promise<IDemoAuthProviderConfig> {
+    const res = (await this.configService.get<IDemoAuthProviderConfig>(
+      'demo_auth_provider'
+    )) as IDemoAuthProviderConfig;
     return res;
   }
 }

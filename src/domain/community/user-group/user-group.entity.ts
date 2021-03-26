@@ -4,6 +4,7 @@ import { User } from '@domain/community/user/user.entity';
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   JoinTable,
@@ -11,6 +12,8 @@ import {
   ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { IUserGroup } from './user-group.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
@@ -22,6 +25,15 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @CreateDateColumn()
+  createdDate?: Date;
+
+  @UpdateDateColumn()
+  updatedDate?: Date;
+
+  @VersionColumn()
+  version?: number;
 
   @Field(() => String)
   @Column()
