@@ -315,7 +315,10 @@ export class CommunityService {
 
   async approveApplication(applicationId: number) {
     const application = await this.applicationService.getApplicationOrFail(
-      applicationId
+      applicationId,
+      {
+        relations: ['community'],
+      }
     );
 
     if (application.status == ApplicationStatus.approved) {
