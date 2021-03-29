@@ -1,5 +1,9 @@
 mutation removeUser($userID: Float!) {
   removeUser(userID: $userID)
+  {
+    name
+    id
+  }
 }
 
 Variables:
