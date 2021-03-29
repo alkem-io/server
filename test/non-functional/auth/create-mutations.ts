@@ -369,6 +369,5 @@ export const getCreateMutation = (name: string) => {
 };
 
 export const getCreateVariables = (name: string, id: any) => {
-  console.log(variables[name](id));
   return variables[name](id);
 };

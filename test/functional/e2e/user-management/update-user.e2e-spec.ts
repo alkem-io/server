@@ -185,12 +185,7 @@ describe.skip('Update user', () => {
     userId = responseCreateUser.body.data.createUser.id;
 
     // Act
-    const responseUpdateUser = await updateUserMutation(
-      userId,
-      userNameAfterUpdate,
-      userPhone
-    );
-    console.log(responseUpdateUser.body);
+    await updateUserMutation(userId, userNameAfterUpdate, userPhone);
 
     const requestParamsQueryUsers = {
       query: `{users {
