@@ -88,8 +88,8 @@ export const removeRelationMutation = async (relationId: any) => {
 export const getRelationsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: "${opportunityId}") {
-      relations{id type actorName actorType actorRole description}}}`,
+    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
+      relations{id type actorName actorType actorRole description}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

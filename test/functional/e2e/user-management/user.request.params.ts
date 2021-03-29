@@ -9,13 +9,45 @@ export const createUserMutation = async (userName: string) => {
   const requestParams = {
     operationName: 'CreateUser',
     query:
-      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email }}',
+      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email profile{id} }}',
     variables: {
       userData: {
         firstName: `fN${uniqueId}`,
         lastName: `lN${uniqueId}`,
         name: userName,
         email: `${userName}@test.com`,
+        aadPassword: `90!ds${uniqueId}`,
+        profileData: {
+          description: 'x',
+          avatar: 'http://xProf.com',
+          tagsetsData: { tags: ['x1', 'x2'], name: 'x' },
+          referencesData: {
+            name: 'x',
+            description: 'x',
+            uri: 'https://xRef.com',
+          },
+        },
+      },
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const createUserMutationWithParams = async (
+  userName: string,
+  userEmail: string
+) => {
+  const requestParams = {
+    operationName: 'CreateUser',
+    query:
+      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email }}',
+    variables: {
+      userData: {
+        firstName: `fN${uniqueId}`,
+        lastName: `lN${uniqueId}`,
+        name: userName,
+        email: `${userEmail}`,
         aadPassword: `90!ds${uniqueId}`,
         profileData: {
           description: 'x',
@@ -99,7 +131,8 @@ export const updateUserMutation = async (
 export const removeUserMutation = async (removeUserID: any) => {
   const requestParams = {
     operationName: 'removeUser',
-    query: 'mutation removeUser($userID: Float!) {removeUser(userID: $userID){name}}',
+    query:
+      'mutation removeUser($userID: Float!) {removeUser(userID: $userID){name}}',
     variables: {
       userID: parseFloat(removeUserID),
     },
@@ -211,11 +244,10 @@ export const getUserMemberships = async () => {
       users {
         name
         memberof {
-          groups {
-            name
-          }
-          challenges {
-            name
+          communities {
+            groups {
+              name
+            }
           }
           organisations {
             name
@@ -233,6 +265,28 @@ export const getUsers = async () => {
     operationName: null,
     variables: {},
     query: 'query{users {name}}',
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getUsersFromChallengeCommunity = async (communityGroupId: any) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query {
+      ecoverse {
+        group(ID: ${parseFloat(communityGroupId)}) {
+          name
+          id
+          members {
+            name
+            id
+          }
+        }
+      }
+    }
+    `,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -280,6 +334,7 @@ export const getUsersProfile = async (userId: string) => {
     query: `query {
       user(ID: "${userId}") {
         id
+        name
         profile {
           id
           description

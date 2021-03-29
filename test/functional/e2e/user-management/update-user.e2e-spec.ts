@@ -29,7 +29,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('Update user', () => {
+describe.skip('Update user', () => {
   beforeEach(() => {
     uniqueId = Math.random()
       .toString(12)
@@ -185,11 +185,7 @@ describe('Update user', () => {
     userId = responseCreateUser.body.data.createUser.id;
 
     // Act
-    const responseUpdateUser = await updateUserMutation(
-      userId,
-      userNameAfterUpdate,
-      userPhone
-    );
+    await updateUserMutation(userId, userNameAfterUpdate, userPhone);
 
     const requestParamsQueryUsers = {
       query: `{users {

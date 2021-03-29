@@ -86,10 +86,10 @@ describe('Context', () => {
     // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
-      contextUpdatedChallengeQuery.body.data.challenge.context;
+      contextUpdatedChallengeQuery.body.data.ecoverse.challenge.context;
 
     // Assert
-    expect(contextChallengeQuery.body.data.challenge.context).toEqual(
+    expect(contextChallengeQuery.body.data.ecoverse.challenge.context).toEqual(
       challengeContextData
     );
     expect(updatedChallengeData).toEqual(queryAfterUpdate);
@@ -122,10 +122,10 @@ describe('Context', () => {
     // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
-      contextUpdatedChallengeQuery.body.data.challenge.context;
+      contextUpdatedChallengeQuery.body.data.ecoverse.challenge.context;
 
     // Assert
-    expect(contextChallengeQuery.body.data.challenge.context).toEqual(
+    expect(contextChallengeQuery.body.data.ecoverse.challenge.context).toEqual(
       challengeContextData
     );
     expect(updatedChallengeData).toEqual(queryAfterUpdate);
@@ -144,7 +144,7 @@ describe('Context', () => {
     // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
-      contextUpdatedChallengeQuery.body.data.challenge.context;
+      contextUpdatedChallengeQuery.body.data.ecoverse.challenge.context;
 
     // Assert
     expect(
@@ -167,7 +167,7 @@ describe('Context', () => {
     // Query - updated context data
     const contextUpdatedChallengeQuery = await getContextQuery(challengeId);
     const queryAfterUpdate =
-      contextUpdatedChallengeQuery.body.data.challenge.context;
+      contextUpdatedChallengeQuery.body.data.ecoverse.challenge.context;
 
     // Assert
     expect(queryAfterUpdate.references[0].name).toEqual(challengeRefName);

@@ -16,13 +16,13 @@ let challengeDataCreate = '';
 
 let challangeData = async (challengeId: string): Promise<String> => {
   const responseQuery = await getChallengeData(challengeId);
-  let response = responseQuery.body.data.challenge;
+  let response = responseQuery.body.data.ecoverse.challenge;
   return response;
 };
 
 let challengesList = async (): Promise<String> => {
   const responseQuery = await getChallengesData();
-  let response = responseQuery.body.data.challenges;
+  let response = responseQuery.body.data.ecoverse.challenges;
   return response;
 };
 beforeEach(async () => {

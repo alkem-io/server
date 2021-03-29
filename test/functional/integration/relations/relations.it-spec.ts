@@ -25,13 +25,13 @@ let uniqueTextId = '';
 let relationDataCreate = '';
 let relationCountPerOpportunity = async (): Promise<number> => {
   const responseQuery = await getRelationsPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.opportunity.relations;
+  let response = responseQuery.body.data.ecoverse.opportunity.relations;
   return response;
 };
 
 let relationDataPerOpportunity = async (): Promise<String> => {
   const responseQuery = await getRelationsPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.opportunity.relations[0];
+  let response = responseQuery.body.data.ecoverse.opportunity.relations[0];
   return response;
 };
 beforeEach(async () => {

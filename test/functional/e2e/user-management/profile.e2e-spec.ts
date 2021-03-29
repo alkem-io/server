@@ -64,10 +64,8 @@ describe('Create User', () => {
       profileRefDescription,
       profileRefUri
     );
-    console.log(updateProfileResponse.body);
 
     const getProfileDataResponse = await getUsersProfile(userId);
-    console.log(getProfileDataResponse.body.data.user.profile);
     const profileData = getProfileDataResponse.body.data.user.profile;
 
     // Assert
