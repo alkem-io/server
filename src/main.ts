@@ -9,6 +9,7 @@ import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { HttpExceptionsFilter } from './core/error-handling/http.exceptions.filter';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
+import { graphqlUploadExpress } from 'graphql-upload';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -32,6 +33,12 @@ const bootstrap = async () => {
   app.use(
     helmet({
       contentSecurityPolicy: false,
+    })
+  );
+
+  app.use(
+    graphqlUploadExpress({
+      maxFileSize: 2097152,
     })
   );
 

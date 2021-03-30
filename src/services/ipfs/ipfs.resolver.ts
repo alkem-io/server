@@ -1,19 +1,31 @@
 import { Inject } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GraphQLUpload } from 'apollo-server-express';
+import { createWriteStream } from 'fs';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { IpfsService } from './ipfs.service';
 
 @Resolver()
 export class IpfsResolver {
   constructor(@Inject(IpfsService) private ipfsService: IpfsService) {}
 
-  @Mutation(() => String, {
-    description: 'Uploads a file to IPFS endpoint',
-  })
-  async addFileToIpfs(
-    @Args({ name: 'fileName', type: () => String }) fileName: string,
-    @Args({ name: 'contents', type: () => GraphQLUpload }) contents: any
+  @Mutation(() => String)
+  async uploadFile(
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    { createReadStream, filename }: FileUpload
   ): Promise<string> {
-    return await this.ipfsService.addImage(fileName, contents);
+    const filePath = `./uploads/${filename}`;
+
+    const res = new Promise(async (resolve, reject) =>
+      createReadStream()
+        .pipe(createWriteStream(filePath))
+        .on('finish', () => resolve(true))
+        .on('error', () => reject(false))
+    );
+
+    if (await res) {
+      return await this.ipfsService.uploadFile(filePath);
+    }
+
+    throw new Error('File could not be saved to local disc!');
   }
 }

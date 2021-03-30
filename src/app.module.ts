@@ -77,6 +77,7 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
       useClass: WinstonConfigService,
     }),
     GraphQLModule.forRoot({
+      uploads: false,
       autoSchemaFile: true,
       playground: true,
       fieldResolverEnhancers: ['guards'],
