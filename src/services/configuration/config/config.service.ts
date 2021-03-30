@@ -28,7 +28,7 @@ export class KonfigService {
       {
         name: 'Azure Active Directory',
         label: 'Log in with Azure AD',
-        icon: '',
+        icon: '/images/azure.svg',
         enabled: true,
         config: await this.getAadConfig(),
       },
