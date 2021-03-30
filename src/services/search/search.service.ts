@@ -103,7 +103,7 @@ export class SearchService {
     const filteredTerms: string[] = [];
     for (const term of terms) {
       if (term.length < TERM_MINIMUM_LENGTH) {
-        this.logger.verbose?.(
+        throw new ValidationException(
           `Search: Skipping term below minimum length: ${term}`,
           LogContext.SEARCH
         );
