@@ -29,6 +29,7 @@ import aadOboConfig from '@src/config/aad.obo.config';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
+import { IpfsModule } from './services/ipfs/ipfs.module';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
     BootstrapModule,
     SearchModule,
     KonfigModule,
+    IpfsModule,
   ],
   controllers: [AppController],
   providers: [
