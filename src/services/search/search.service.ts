@@ -24,6 +24,7 @@ const SEARCH_ENTITIES: string[] = [
 ];
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
+const TERM_MINIMUM_LENGTH = 2;
 const SCORE_INCREMENT = 10;
 
 class Match {
@@ -124,6 +125,13 @@ export class SearchService {
 
   async searchUsersByTerms(terms: string[], userResults: Map<number, Match>) {
     for (const term of terms) {
+      if (term.length < TERM_MINIMUM_LENGTH) {
+        this.logger.verbose?.(
+          `Search: Skipping term below minimum length: ${term}`,
+          LogContext.SEARCH
+        );
+        continue;
+      }
       const userMatches = await this.userRepository
         .createQueryBuilder('user')
         .leftJoinAndSelect('user.profile', 'profile')
