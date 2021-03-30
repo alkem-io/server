@@ -50,7 +50,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @ManyToOne(
     () => User,
     user => user.focalPoints,
-    { eager: false, cascade: true, onDelete: 'CASCADE' }
+    { eager: false, cascade: true, onDelete: 'SET NULL' }
   )
   focalPoint?: User | null;
 

@@ -92,6 +92,7 @@ export class User extends BaseEntity implements IUser {
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
+
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.focalPoint,
