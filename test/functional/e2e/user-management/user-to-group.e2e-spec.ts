@@ -8,7 +8,10 @@ import {
 } from './user.request.params';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
-import { createGroupMutation } from '@test/functional/integration/group/group.request.params';
+import {
+  createGroupMutation,
+  getGroup,
+} from '@test/functional/integration/group/group.request.params';
 import { appSingleton } from '@test/utils/app.singleton';
 import { TestUser } from '../../../utils/token.helper';
 import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
@@ -169,7 +172,7 @@ describe('Users and Groups', () => {
     );
   });
 
-  test.skip('should remove/delete a "user" after added in a "group"', async () => {
+  test('should remove/delete a "user" after added in a "group"', async () => {
     // Arrange
     await addUserToGroup(userId, communityGroupId);
 
@@ -201,18 +204,23 @@ describe('Users and Groups', () => {
     ).toEqual(userName);
   });
 
-  // To be enabled when, there is implementation for cascade deletion
-  test.skip('should remove "user" assigned as focal point', async () => {
+  test('should remove "user" assigned as focal point', async () => {
     // Arrange
-    await assignGroupFocalPointMutation(userId, communityGroupId);
+    let groupIdWithFocalPoint = await assignGroupFocalPointMutation(
+      userId,
+      communityGroupId
+    );
+    let groupId = groupIdWithFocalPoint.body.data.assignGroupFocalPoint.id;
 
     // Act
     const responseDeleteUserFocalPoint = await removeUserMutation(userId);
+    const getFocalPoint = await getGroup(groupId);
 
     // Assert
     expect(responseDeleteUserFocalPoint.status).toBe(200);
     expect(responseDeleteUserFocalPoint.body.data.removeUser.name).toBe(
       userName
     );
+    expect(getFocalPoint.body.data.ecoverse.group.focalPoint).toBe(null);
   });
 });
