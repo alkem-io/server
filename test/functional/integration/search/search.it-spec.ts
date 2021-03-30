@@ -254,7 +254,7 @@ describe('Query Challenge data', () => {
     });
   });
 
-  test('should throw error for too terms limit', async () => {
+  test('should throw limit error for too many terms', async () => {
     // Act
     const responseSearchData = await searchMutation(termTooLong, filterAll);
 
@@ -274,12 +274,15 @@ describe('Query Challenge data', () => {
     );
   });
 
-  test.skip('should not return any results for for empty string', async () => {
+  test('should throw error for empty string search', async () => {
     // Act
     const responseSearchData = await searchMutation(' ', filterAll);
 
     // Assert
-    expect(responseSearchData.body.data.search).toEqual([]);
+
+    expect(responseSearchData.text).toContain(
+      `Search: Skipping term below minimum length: `
+    );
   });
 
   test('should not return any results for invalid term', async () => {

@@ -24,6 +24,7 @@ const SEARCH_ENTITIES: string[] = [
 ];
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
+const TERM_MINIMUM_LENGTH = 2;
 const SCORE_INCREMENT = 10;
 
 class Match {
@@ -52,7 +53,8 @@ export class SearchService {
     const groupResults: Map<number, Match> = new Map();
     const organisationResults: Map<number, Match> = new Map();
 
-    const terms = searchData.terms;
+    const filteredTerms = this.validateSearchTerms(searchData.terms);
+
     // By default search all entity types
     let searchUsers = true;
     let searchGroups = true;
@@ -71,17 +73,18 @@ export class SearchService {
     if (searchData.tagsetNames)
       await this.searchTagsets(
         searchData.tagsetNames,
-        terms,
+        filteredTerms,
         userResults,
         groupResults,
         organisationResults,
         entityTypesFilter
       );
 
-    if (searchUsers) await this.searchUsersByTerms(terms, userResults);
-    if (searchGroups) await this.searchGroupsByTerms(terms, groupResults);
+    if (searchUsers) await this.searchUsersByTerms(filteredTerms, userResults);
+    if (searchGroups)
+      await this.searchGroupsByTerms(filteredTerms, groupResults);
     if (searchOrganisations)
-      await this.searchOrganisationsByTerms(terms, organisationResults);
+      await this.searchOrganisationsByTerms(filteredTerms, organisationResults);
 
     this.logger.verbose?.(
       `Executed search query: ${userResults.size} users results; ${groupResults.size} group results ; ${organisationResults.size} organisation results found`,
@@ -94,6 +97,21 @@ export class SearchService {
     results.push(...(await this.buildSearchResults(organisationResults)));
     this.ensureUniqueTermsPerResult(results);
     return results;
+  }
+
+  validateSearchTerms(terms: string[]): string[] {
+    const filteredTerms: string[] = [];
+    for (const term of terms) {
+      if (term.length < TERM_MINIMUM_LENGTH) {
+        throw new ValidationException(
+          `Search: Skipping term below minimum length: ${term}`,
+          LogContext.SEARCH
+        );
+      } else {
+        filteredTerms.push(term);
+      }
+    }
+    return filteredTerms;
   }
 
   ensureUniqueTermsPerResult(results: ISearchResultEntry[]) {
