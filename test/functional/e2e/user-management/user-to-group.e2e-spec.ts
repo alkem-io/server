@@ -172,7 +172,7 @@ describe('Users and Groups', () => {
     );
   });
 
-  test.only('should remove/delete a "user" after added in a "group"', async () => {
+  test('should remove/delete a "user" after added in a "group"', async () => {
     // Arrange
     await addUserToGroup(userId, communityGroupId);
 
@@ -204,23 +204,23 @@ describe('Users and Groups', () => {
     ).toEqual(userName);
   });
 
-  // To be enabled when, there is implementation for cascade deletion
-  test.only('should remove "user" assigned as focal point', async () => {
+  test('should remove "user" assigned as focal point', async () => {
     // Arrange
-    let groupIdWithFocalPoint = await assignGroupFocalPointMutation(userId, communityGroupId);
-    console.log(groupIdWithFocalPoint.body)
-    let groupId = groupIdWithFocalPoint.body.data.assignGroupFocalPoint.id
+    let groupIdWithFocalPoint = await assignGroupFocalPointMutation(
+      userId,
+      communityGroupId
+    );
+    let groupId = groupIdWithFocalPoint.body.data.assignGroupFocalPoint.id;
 
     // Act
     const responseDeleteUserFocalPoint = await removeUserMutation(userId);
     const getFocalPoint = await getGroup(groupId);
-    console.log(getFocalPoint.body)
 
     // Assert
     expect(responseDeleteUserFocalPoint.status).toBe(200);
     expect(responseDeleteUserFocalPoint.body.data.removeUser.name).toBe(
       userName
     );
-    expect(getFocalPoint.body.data.ecoverse.group.focalPoint).toHaveLength(0);
+    expect(getFocalPoint.body.data.ecoverse.group.focalPoint).toBe(null);
   });
 });
