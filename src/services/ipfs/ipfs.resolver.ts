@@ -1,3 +1,4 @@
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { Inject } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { createWriteStream } from 'fs';
@@ -26,6 +27,6 @@ export class IpfsResolver {
       return await this.ipfsService.uploadFile(filePath);
     }
 
-    throw new Error('File could not be saved to local disc!');
+    throw new IpfsUploadFailedException(`Ipfs upload of ${filename} failed!`);
   }
 }

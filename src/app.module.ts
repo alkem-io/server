@@ -30,6 +30,7 @@ import { ValidationPipe } from '@common/pipes/validation.pipe';
 import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import { IpfsModule } from './services/ipfs/ipfs.module';
+import ipfsConfig from '@config/ipfs.config';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
         aadRopcConfig,
         aadOboConfig,
         demoAuthProviderConfig,
+        ipfsConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({
