@@ -4,6 +4,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { createWriteStream } from 'fs';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { IpfsService } from './ipfs.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Resolver()
 export class IpfsResolver {
@@ -14,7 +15,8 @@ export class IpfsResolver {
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename }: FileUpload
   ): Promise<string> {
-    const filePath = `./uploads/${filename}`;
+    const guid = uuidv4();
+    const filePath = `./uploads/${filename}-${guid}`;
 
     const res = new Promise(async (resolve, reject) =>
       createReadStream()
