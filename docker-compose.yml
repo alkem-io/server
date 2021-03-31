@@ -8,9 +8,9 @@ volumes:
   ct_server_dev_db:
 
 services:
-  ctserver.node:
+  ct_server:
     container_name: ct_server_dev
-    image: ctserver.node
+    image: ct_server
     build: .
     networks:
       - ct_server_dev
@@ -63,9 +63,19 @@ services:
     volumes:
       - ct_server_dev_db:/var/lib/mysql
 
+  ct_ipfs_server:
+    container_name: ct_ipfs_server
+    image: ipfs/go-ipfs
+    networks:
+      - ct_server_dev
+    restart: always
+    ports:
+      - 5001:5001
+      - 5002:8080
+
   ct_demo_auth_provider:
     container_name: ct_server_dev_demo_auth
-    image: cherrytwist/demo-auth:v0.1.7
+    image: cherrytwist/demo-auth:v0.1.8
     networks:
       - ct_server_dev
     environment:
