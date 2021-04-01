@@ -29,6 +29,8 @@ import aadOboConfig from '@src/config/aad.obo.config';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
+import { IpfsModule } from './services/ipfs/ipfs.module';
+import ipfsConfig from '@config/ipfs.config';
 
 @Module({
   imports: [
@@ -52,6 +54,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
         aadRopcConfig,
         aadOboConfig,
         demoAuthProviderConfig,
+        ipfsConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({
@@ -76,6 +79,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
       useClass: WinstonConfigService,
     }),
     GraphQLModule.forRoot({
+      uploads: false,
       autoSchemaFile: true,
       playground: true,
       fieldResolverEnhancers: ['guards'],
@@ -90,6 +94,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
     BootstrapModule,
     SearchModule,
     KonfigModule,
+    IpfsModule,
   ],
   controllers: [AppController],
   providers: [
