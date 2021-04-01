@@ -37,13 +37,14 @@ services:
       - NODE_ENV
       - AUTH_DEMO_AUTH_ISSUER
       - AUTH_DEMO_AUTH_TOKEN_ENDPOINT
-      - AUTH_DEMO_AUTH_CLIENT_SECRET
+      - AUTH_DEMO_AUTH_CLIENT_SECRET=12345678aAbB!
+      - IPFS_ENDPOINT
     depends_on:
       - db
       - ct_demo_auth_provider
     restart: always
     ports:
-      - 4001:4000
+      - 4002:4000
     command: sh -c "/wait && npm run migration:run && npm run start"
     volumes:
       - ct_server_dev:/usr/src/app/config
@@ -70,8 +71,11 @@ services:
       - ct_server_dev
     restart: always
     ports:
-      - 5001:5001
-      - 5002:8080
+      - 4001:4001
+      - 127.0.0.1:5001:5001
+      - 8080:8080
+    volumes:
+      - /tmp/ipfs-docker-data:/data/ipfs
 
   ct_demo_auth_provider:
     container_name: ct_server_dev_demo_auth
@@ -87,7 +91,7 @@ services:
       - WAIT_SLEEP_INTERVAL
       - WAIT_HOST_CONNECT_TIMEOUT
       - SERVICE_ENDPOINT_PORT
-      - SECRET=AUTH_DEMO_AUTH_CLIENT_SECRET
+      - SECRET=12345678aAbB!
     depends_on:
       - db
     restart: always

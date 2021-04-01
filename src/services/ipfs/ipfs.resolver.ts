@@ -1,20 +1,23 @@
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
-import { Inject } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { createWriteStream, unlinkSync } from 'fs';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { IpfsService } from './ipfs.service';
 import { v4 as uuidv4 } from 'uuid';
-import { CurrentUser } from '@common/decorators';
+import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthenticationException } from '@common/exceptions';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { UserInfo } from '@src/core/authentication/user-info';
+import { GqlAuthGuard } from '@core/authorization';
 
 @Resolver()
 export class IpfsResolver {
   constructor(@Inject(IpfsService) private ipfsService: IpfsService) {}
 
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => String)
+  @Profiling.api
   async uploadFile(
     @CurrentUser() userInfo: UserInfo,
     @Args({ name: 'file', type: () => GraphQLUpload })
