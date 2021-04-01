@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { IpfsResolver } from './ipfs.resolver';
 
 describe('IpfsResolver', () => {
@@ -6,7 +7,7 @@ describe('IpfsResolver', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [IpfsResolver],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<IpfsResolver>(IpfsResolver);

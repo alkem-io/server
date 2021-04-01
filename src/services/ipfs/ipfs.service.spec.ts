@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AppModule } from '@src/app.module';
 import { IpfsService } from './ipfs.service';
 
 describe('IpfsService', () => {
@@ -6,7 +7,7 @@ describe('IpfsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [IpfsService],
+      imports: [AppModule],
     }).compile();
 
     service = module.get<IpfsService>(IpfsService);
