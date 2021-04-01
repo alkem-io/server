@@ -104,7 +104,8 @@ export const createUserDetailsMutation = async (
 export const updateUserMutation = async (
   updateUserId: any,
   name: string,
-  phone: string
+  phone: string,
+  email?: string
 ) => {
   const requestParams = {
     operationName: 'UpdateUser',
@@ -121,6 +122,7 @@ export const updateUserMutation = async (
       userData: {
         name: name,
         phone: phone,
+        email: email,
       },
     },
   };
@@ -264,7 +266,7 @@ export const getUsers = async () => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: 'query{users {name}}',
+    query: 'query{users {id name email phone}}',
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -293,7 +295,7 @@ export const getUsersFromChallengeCommunity = async (communityGroupId: any) => {
 };
 
 export const updateProfileMutation = async (
-  userId: any,
+  profileId: any,
   descritpion: string,
   avatar?: string,
   tagsetDataName?: string,
@@ -307,7 +309,7 @@ export const updateProfileMutation = async (
     query: `mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
       updateProfile(profileData: $profileData, ID: $ID)}`,
     variables: {
-      ID: parseFloat(userId),
+      ID: parseFloat(profileId),
       profileData: {
         description: descritpion,
         avatar: avatar,
@@ -351,6 +353,23 @@ export const getUsersProfile = async (userId: string) => {
             description
           }
         }
+      }
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getUpdatedUserData = async (userId: string) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query {
+      user(ID: "${userId}") {
+        id
+        name
+        phone
+        email
       }
     }`,
   };
