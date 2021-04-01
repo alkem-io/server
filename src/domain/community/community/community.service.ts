@@ -243,7 +243,7 @@ export class CommunityService {
     applicationData: ApplicationInput
   ): Promise<Application> {
     const community = (await this.getCommunityOrFail(id, {
-      relations: ['applications'],
+      relations: ['applications', 'parentCommunity'],
     })) as Community;
 
     const existingApplication = community.applications?.find(
@@ -255,6 +255,19 @@ export class CommunityService {
         `An application for user ${existingApplication.user.email} already exists for Community: ${community.id}. Application status: ${existingApplication.status}`,
         LogContext.COMMUNITY
       );
+    }
+
+    const parentCommunity = community.parentCommunity;
+    if (parentCommunity) {
+      const isMember = await this.isMember(
+        applicationData.userId,
+        parentCommunity.id
+      );
+      if (!isMember)
+        throw new InvalidStateTransitionException(
+          `User ${applicationData.userId} is not a member of the parent Community: ${parentCommunity.name}.`,
+          LogContext.COMMUNITY
+        );
     }
 
     const application = await this.applicationFactoryService.createApplication(
