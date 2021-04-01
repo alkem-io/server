@@ -1,12 +1,12 @@
 import {
   createUserDetailsMutation,
+  getUpdatedUserData,
+  getUsers,
   removeUserMutation,
   updateUserMutation,
 } from './user.request.params';
-import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import { TestUser } from '../../../utils/token.helper';
 
 let userName = '';
 let userFirstName = '';
@@ -18,7 +18,8 @@ let userEmail = '';
 let userNameAfterUpdate = '';
 let phoneAfterUpdate = '';
 let emailAfterUpdate = '';
-
+let getUserData;
+let userDataCreate: any;
 let uniqueId = '';
 
 beforeAll(async () => {
@@ -29,8 +30,8 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe.skip('Update user', () => {
-  beforeEach(() => {
+describe('Update user', () => {
+  beforeEach(async () => {
     uniqueId = Math.random()
       .toString(12)
       .slice(-6);
@@ -42,6 +43,15 @@ describe.skip('Update user', () => {
     userNameAfterUpdate = `updateName${uniqueId}`;
     phoneAfterUpdate = `updatePhone${uniqueId}`;
     emailAfterUpdate = `updateEmail${uniqueId}@test.com`;
+    const responseCreateUser = await createUserDetailsMutation(
+      userName,
+      userFirstName,
+      userLastName,
+      userPhone,
+      userEmail
+    );
+    userId = responseCreateUser.body.data.createUser.id;
+    userDataCreate = responseCreateUser.body.data.createUser;
   });
 
   afterEach(async () => {
@@ -49,16 +59,6 @@ describe.skip('Update user', () => {
   });
 
   test('should update user "name" only', async () => {
-    // Arrange
-    const responseCreateUser = await createUserDetailsMutation(
-      userName,
-      userFirstName,
-      userLastName,
-      userPhone,
-      userEmail
-    );
-    userId = responseCreateUser.body.data.createUser.id;
-
     // Act
     const responseUpdateUser = await updateUserMutation(
       userId,
@@ -66,104 +66,40 @@ describe.skip('Update user', () => {
       userPhone
     );
 
-    const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") {
-          name
-          id
-          email
-          phone
-        }}`,
-    };
-    const responseParamsQueryUser = await graphqlRequestAuth(
-      requestParamsQueryUser,
-      TestUser.GLOBAL_ADMIN
-    );
+    getUserData = await getUpdatedUserData(userId);
 
     // Assert
-    expect(responseParamsQueryUser.status).toBe(200);
-    expect(responseCreateUser.body.data.createUser).not.toEqual(
-      responseUpdateUser.body.data.updateUser
-    );
-    expect(responseParamsQueryUser.body.data.user).toEqual(
+    expect(responseUpdateUser.status).toBe(200);
+    expect(userDataCreate).not.toEqual(responseUpdateUser.body.data.updateUser);
+    expect(getUserData.body.data.user).toEqual(
       responseUpdateUser.body.data.updateUser
     );
   });
 
   test('should update user "phone" only', async () => {
-    // Arrange
-    const responseCreateUser = await createUserDetailsMutation(
-      userName,
-      userFirstName,
-      userLastName,
-      userPhone,
-      userEmail
-    );
-    userId = responseCreateUser.body.data.createUser.id;
-
     // Act
     const responseUpdateUser = await updateUserMutation(
       userId,
       userName,
       phoneAfterUpdate
     );
-
-    const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") {
-          name
-          id
-          email
-          phone
-        }}`,
-    };
-    const responseParamsQueryUser = await graphqlRequestAuth(
-      requestParamsQueryUser,
-      TestUser.GLOBAL_ADMIN
-    );
+    getUserData = await getUpdatedUserData(userId);
 
     // Assert
-    expect(responseParamsQueryUser.status).toBe(200);
-    expect(responseCreateUser.body.data.createUser).not.toEqual(
-      responseUpdateUser.body.data.updateUser
-    );
-    expect(responseParamsQueryUser.body.data.user).toEqual(
+    expect(responseUpdateUser.status).toBe(200);
+    expect(userDataCreate).not.toEqual(responseUpdateUser.body.data.updateUser);
+    expect(getUserData.body.data.user).toEqual(
       responseUpdateUser.body.data.updateUser
     );
   });
 
   test('should throw message for updating user "email"', async () => {
-    // Arrange
-    const responseCreateUser = await createUserDetailsMutation(
-      userName,
-      userFirstName,
-      userLastName,
-      userPhone,
-      userEmail
-    );
-    userId = responseCreateUser.body.data.createUser.id;
-
     // Act
-    const updateUserRequestParams = {
-      operationName: 'UpdateUser',
-      query: `mutation UpdateUser($userID: Float!, $userData: UserInput!) {
-            updateUser(userID: $userID, userData: $userData) {
-              id
-              name
-              phone
-              email
-            }
-          }`,
-      variables: {
-        userID: parseFloat(userId),
-        userData: {
-          name: userName,
-          phone: userPhone,
-          email: emailAfterUpdate,
-        },
-      },
-    };
-    const responseUpdateUser = await graphqlRequestAuth(
-      updateUserRequestParams,
-      TestUser.GLOBAL_ADMIN
+    const responseUpdateUser = await updateUserMutation(
+      userId,
+      userName,
+      phoneAfterUpdate,
+      emailAfterUpdate
     );
 
     // Assert
@@ -174,35 +110,12 @@ describe.skip('Update user', () => {
   });
 
   test('should update user and be available in "users" query', async () => {
-    // Arrange
-    const responseCreateUser = await createUserDetailsMutation(
-      userName,
-      userFirstName,
-      userLastName,
-      userPhone,
-      userEmail
-    );
-    userId = responseCreateUser.body.data.createUser.id;
-
     // Act
     await updateUserMutation(userId, userNameAfterUpdate, userPhone);
-
-    const requestParamsQueryUsers = {
-      query: `{users {
-          name
-          id
-          email
-          phone
-        }}`,
-    };
-    const responseParamsQueryUsers = await graphqlRequestAuth(
-      requestParamsQueryUsers,
-      TestUser.GLOBAL_ADMIN
-    );
+    let getUsersData = await getUsers();
 
     // Assert
-    expect(responseParamsQueryUsers.status).toBe(200);
-    expect(responseParamsQueryUsers.body.data.users).toEqual(
+    expect(getUsersData.body.data.users).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           email: userEmail,
