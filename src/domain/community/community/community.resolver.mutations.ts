@@ -64,7 +64,7 @@ export class CommunityResolverMutations {
     return group;
   }
 
-  @Roles(AuthorizationRoles.Members)
+  // All registered users can create applications
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this Community',
