@@ -7,6 +7,8 @@ import { NVP } from '@domain/common/nvp/nvp.entity';
 import { User } from '@domain/community/user/user.entity';
 import { UserService } from '@domain/community/user/user.service';
 import { Injectable } from '@nestjs/common';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
+import { applicationLifecycle } from './application.lifecycle';
 
 @Injectable()
 export class ApplicationFactoryService {
@@ -23,6 +25,9 @@ export class ApplicationFactoryService {
     );
     application.user = user as User;
     application.status = ApplicationStatus.new;
+
+    application.lifecycle = new Lifecycle(JSON.stringify(applicationLifecycle));
+
     application.questions = questions.map(x => {
       const nvp = new NVP(x.name, x.value);
       return nvp;

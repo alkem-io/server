@@ -6,15 +6,18 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
 import { Question } from '@domain/community/application/application.dto';
 import { Community } from '../community';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 
 export enum ApplicationStatus {
   new,
@@ -45,6 +48,11 @@ export class Application extends BaseEntity {
   @Field(() => ApplicationStatus, { nullable: false })
   @Column()
   status!: ApplicationStatus;
+
+  @Field(() => Lifecycle, { nullable: false })
+  @OneToOne(() => Lifecycle, { eager: true, cascade: true })
+  @JoinColumn()
+  lifecycle!: Lifecycle;
 
   @Field(() => User)
   @ManyToOne(
