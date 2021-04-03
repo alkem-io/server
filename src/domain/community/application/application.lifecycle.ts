@@ -1,8 +1,9 @@
 export const applicationLifecycle = {
-  id: 'toggle',
-  initial: 'inactive',
+  id: 'user-application',
+  initial: 'new',
   states: {
-    inactive: { on: { TOGGLE: 'active' } },
-    active: { on: { TOGGLE2: 'inactive' } },
+    new: { on: { APPROVE: 'approved', REJECT: 'rejected' } },
+    approved: { type: 'final' },
+    rejected: { on: { REOPEN: 'new' } },
   },
 };

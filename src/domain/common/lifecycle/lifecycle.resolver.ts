@@ -13,7 +13,7 @@ export class LifecycleResolver {
   @Mutation(() => Lifecycle, {
     description: 'Update the state',
   })
-  async testState(
+  async updateState(
     @Args('ID') ID: number,
     @Args('event') event: string
   ): Promise<ILifecycle> {

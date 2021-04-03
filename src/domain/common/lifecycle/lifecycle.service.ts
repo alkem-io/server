@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  InvalidStateTransitionException,
+} from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { State, createMachine, interpret } from 'xstate';
@@ -21,11 +24,19 @@ export class LifecycleService {
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
     const restoredState = State.create(restoredStateDef);
 
+    const nextStates = machine.resolveState(restoredStateDef).nextEvents;
+    if (!nextStates.find(name => name === event)) {
+      throw new InvalidStateTransitionException(
+        `Unable to update state: provided event (${event}) not in valid set of next events: ${nextStates}`,
+        LogContext.LIFECYCLE
+      );
+    }
+
     const machineService = interpret(machine).start(restoredState);
 
-    machineService.subscribe(state => {
-      console.log(state.value);
-    });
+    // machineService.subscribe(state => {
+    //   console.log(state.value);
+    // });
 
     machineService.send(event);
 
