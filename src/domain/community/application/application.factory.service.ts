@@ -9,6 +9,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { Injectable } from '@nestjs/common';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { applicationLifecycle } from './application.lifecycle';
+import { LifecycleActionsTypes } from '@common/enums/lifecycle.actions.types';
 
 @Injectable()
 export class ApplicationFactoryService {
@@ -26,7 +27,10 @@ export class ApplicationFactoryService {
     application.user = user as User;
     application.status = ApplicationStatus.new;
 
-    application.lifecycle = new Lifecycle(JSON.stringify(applicationLifecycle));
+    application.lifecycle = new Lifecycle(
+      JSON.stringify(applicationLifecycle),
+      LifecycleActionsTypes.APPLICATION
+    );
 
     application.questions = questions.map(x => {
       const nvp = new NVP(x.name, x.value);

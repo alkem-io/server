@@ -276,7 +276,12 @@ export class CommunityService {
 
     community.applications?.push(application);
     await this.communityRepository.save(community);
-    return application;
+
+    // store the application ID on the lifecycle context so it knows what to approve
+    const machineDefJson = JSON.parse(application.lifecycle.machine);
+    machineDefJson.context.applicationID = application.id;
+    application.lifecycle.machine = JSON.stringify(machineDefJson);
+    return await this.applicationService.save(application);
   }
 
   async getApplications(community: Community): Promise<Application[]> {
@@ -354,6 +359,26 @@ export class CommunityService {
     await this.addMember(application.user.id, application.community?.id);
 
     application.status = ApplicationStatus.approved;
+
+    await this.applicationService.save(application);
+
+    return application;
+  }
+
+  async approveApplication2(applicationId: number) {
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationId,
+      {
+        relations: ['community'],
+      }
+    );
+
+    if (!application.community)
+      throw new RelationshipNotFoundException(
+        `Unable to load community for application ${applicationId} `,
+        LogContext.COMMUNITY
+      );
+    await this.addMember(application.user.id, application.community?.id);
 
     await this.applicationService.save(application);
 
