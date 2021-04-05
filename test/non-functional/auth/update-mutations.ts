@@ -22,6 +22,33 @@ export const updateUserVariables = (id: number) => `
     }
   }`;
 
+export const updateNonEcoverseMutation = `
+mutation UpdateUser($userID: Float!, $userData: UserInput!) {
+    updateUser(userID: $userID, userData: $userData) {
+      id
+      name
+      email
+      city
+      profile{
+        description
+      }
+    }
+  }`;
+
+export const updateNonEcoverseVariables = (id: any, emailName: any) => `
+{
+    "userID": ${id},
+    "userData":
+    {
+      "name": "TestName",
+      "city": "TestCity",
+      "email": "${emailName}",
+      "profileData":{
+        "description":"test"
+      }
+    }
+  }`;
+
 export const updateProfileMutation = `
 mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
     updateProfile(profileData: $profileData, ID: $ID)
@@ -266,9 +293,10 @@ const mutations: Record<string, string> = {
   removeGroupFocalPointMutation,
   addChallengeLeadToOrganisationMutation,
   removeUserFromGroupMutation,
+  updateNonEcoverseMutation,
 };
 
-const variables: Record<string, (id: number) => string> = {
+const variables: Record<string, (id: number, emailName?: any) => string> = {
   updateUserVariables,
   updateProfileVariables,
   updateOrganisationVariabls,
@@ -284,12 +312,13 @@ const variables: Record<string, (id: number) => string> = {
   removeGroupFocalPointVariables,
   addChallengeLeadToOrganisationVariables,
   removeUserFromGroupVariables,
+  updateNonEcoverseVariables,
 };
 
 export const getUpdateMutation = (name: string) => {
   return mutations[name];
 };
 
-export const getUpdateVariables = (name: string, id: number) => {
-  return variables[name](id);
+export const getUpdateVariables = (name: string, id: any, emailName?: any) => {
+  return variables[name](id, emailName);
 };

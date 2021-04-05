@@ -103,14 +103,14 @@ export const createUserDetailsMutation = async (
 
 export const updateUserMutation = async (
   updateUserId: any,
-  name: string,
-  phone: string,
-  email?: string
+  nameUser: string,
+  phoneUser: string,
+  emailUser?: string
 ) => {
   const requestParams = {
-    operationName: 'UpdateUser',
-    query: `mutation UpdateUser($userID: Float!, $userData: UserInput!) {
-        updateUser(userID: $userID, userData: $userData) {
+    operationName: null,
+    query: `mutation updateUser($userData: UserInput!, $userID: Float!) {
+      updateUser(userData: $userData, userID: $userID) {
           id
           name
           phone
@@ -120,9 +120,9 @@ export const updateUserMutation = async (
     variables: {
       userID: parseFloat(updateUserId),
       userData: {
-        name: name,
-        phone: phone,
-        email: email,
+        name: nameUser,
+        phone: phoneUser,
+        email: emailUser,
       },
     },
   };

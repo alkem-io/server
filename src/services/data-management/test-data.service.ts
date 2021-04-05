@@ -22,6 +22,11 @@ import { OrganisationService } from '@domain/community/organisation/organisation
 
 export type TestDataServiceInitResult = {
   userId: number;
+  ecoverseAdminId: number;
+  globalAdminId: number;
+  communityAdminId: number;
+  ecoverseMemberId: number;
+  nonEcoverseId: number;
   userProfileId: number;
   organisationId: number;
   challengeId: number;
@@ -74,6 +79,11 @@ export class TestDataService {
   avatar = 'https://dev.cherrytwist.org/graphql';
   description = 'TestDescription';
   userEmail = 'qa.user@cherrytwist.org';
+  ecoverseMemberEmail = 'ecoverse-member@cherrytwist.com';
+  ecoverseAdminEmail = 'ecoverse.admin@cherrytwist.org';
+  globalAdminEmail = 'admin@cherrytwist.org';
+  communityAdminEmail = 'community.admin@cherrytwist.org';
+  nonEcoverseEmail = 'non-ecoverse@cherrytwist.com';
 
   async initOrganisation(): Promise<number> {
     const organisation = new OrganisationInput();
@@ -306,7 +316,20 @@ export class TestDataService {
     await this.challengeService.removeChallenge(challengeToRemove?.id);
   }
 
+  async removeUserFromGroups() {
+    const response = await this.userService.getUserByEmailOrFail(
+      this.nonEcoverseEmail
+    );
+    await this.userGroupService.removeUser(response.id, 1);
+  }
+
+  async initUserId(usersEmail: string): Promise<number> {
+    const response = await this.userService.getUserByEmailOrFail(usersEmail);
+    return response.id;
+  }
+
   async initFunctions(): Promise<TestDataServiceInitResult> {
+    await this.removeUserFromGroups();
     const userProfileId = await this.initGetUserProfileId(this.userEmail);
     const userId = await this.initGetUserId(this.userEmail);
     const organisationId = await this.initOrganisation();
@@ -334,6 +357,11 @@ export class TestDataService {
     const actorId = await this.initActor(actorGroupId);
     const tagsetId = await this.initGetTagsetId(challengeId);
     const contextId = await this.initGetContextId(challengeId);
+    const ecoverseAdminId = await this.initUserId(this.ecoverseAdminEmail);
+    const globalAdminId = await this.initUserId(this.globalAdminEmail);
+    const communityAdminId = await this.initUserId(this.communityAdminEmail);
+    const ecoverseMemberId = await this.initUserId(this.ecoverseMemberEmail);
+    const nonEcoverseId = await this.initUserId(this.nonEcoverseEmail);
 
     return {
       userId,
@@ -355,6 +383,11 @@ export class TestDataService {
       actorId,
       tagsetId,
       contextId,
+      ecoverseAdminId,
+      globalAdminId,
+      communityAdminId,
+      ecoverseMemberId,
+      nonEcoverseId,
     };
   }
 }
