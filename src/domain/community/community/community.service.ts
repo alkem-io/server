@@ -25,6 +25,8 @@ import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
 import { ApplicationService } from '../application/application.service';
 import { AuthorizationRoles } from '@core/authorization';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { communityLifecycleApplicationOptions } from '@domain/community/community/community.lifecycle.application.options';
 
 @Injectable()
 export class CommunityService {
@@ -33,6 +35,7 @@ export class CommunityService {
     private userGroupService: UserGroupService,
     private applicationFactoryService: ApplicationFactoryService,
     private applicationService: ApplicationService,
+    private lifecycleService: LifecycleService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -278,10 +281,11 @@ export class CommunityService {
     await this.communityRepository.save(community);
 
     // store the application ID on the lifecycle context so it knows what to approve
-    const machineDefJson = JSON.parse(application.lifecycle.machine);
-    machineDefJson.context.applicationID = application.id;
-    application.lifecycle.machine = JSON.stringify(machineDefJson);
-    return await this.applicationService.save(application);
+    await this.lifecycleService.storeParentID(
+      application.lifecycle,
+      application.id.toString()
+    );
+    return application;
   }
 
   async getApplications(community: Community): Promise<Application[]> {
@@ -365,7 +369,10 @@ export class CommunityService {
     return application;
   }
 
-  async approveApplication2(applicationId: number) {
+  async updateApplicationState(
+    applicationId: number,
+    event: string
+  ): Promise<Application> {
     const application = await this.applicationService.getApplicationOrFail(
       applicationId,
       {
@@ -378,10 +385,24 @@ export class CommunityService {
         `Unable to load community for application ${applicationId} `,
         LogContext.COMMUNITY
       );
-    await this.addMember(application.user.id, application.community?.id);
+
+    await this.lifecycleService.updateState(
+      application.lifecycle,
+      event,
+      this.getLifecycleOptions()
+    );
 
     await this.applicationService.save(application);
 
     return application;
+  }
+
+  // The lifecycle definition can be serialized as a string and stored at instantiation.
+  // However the actions include functiton defitions which cannot be converted to JSON for
+  // storage so need to have this function below. Far from ideal, open to better solutions...
+  // Note: cannot look up on the parent of the lifecycle as there can be potentially
+  // multiple lifecycles per challenge etc.
+  getLifecycleOptions() {
+    return communityLifecycleApplicationOptions;
   }
 }

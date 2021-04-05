@@ -9,8 +9,6 @@ import { State, createMachine, interpret } from 'xstate';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
-import { applicationLifecycleActions } from '@domain/community/application/application.lifecycle.actions';
-import { LifecycleActionsTypes } from '@common/enums/lifecycle.actions.types';
 
 @Injectable()
 export class LifecycleService {
@@ -19,10 +17,12 @@ export class LifecycleService {
     private lifecycleRepository: Repository<Lifecycle>
   ) {}
 
-  async updateState(lifecycleID: number, event: string): Promise<ILifecycle> {
-    const lifecycle = await this.getLifecycleByIdOrFail(lifecycleID);
-    const actions = this.getActions(lifecycle);
-    const machine = createMachine(JSON.parse(lifecycle.machine), actions);
+  async updateState(
+    lifecycle: ILifecycle,
+    event: string,
+    options: any
+  ): Promise<ILifecycle> {
+    const machine = createMachine(JSON.parse(lifecycle.machine), options);
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
     const restoredState = State.create(restoredStateDef);
 
@@ -73,20 +73,6 @@ export class LifecycleService {
     return previousStateJson;
   }
 
-  // The lifecycle definition can be serialized as a string and stored at instantiation.
-  // However the actions include functiton defitions which cannot be converted to JSON for
-  // storage so need to have this function below. Far from ideal, open to better solutions...
-  // Note: cannot look up on the parent of the lifecycle as there can be potentially
-  // multiple lifecycles per challenge etc.
-  getActions(lifecycle: ILifecycle) {
-    if (lifecycle.actionsType === LifecycleActionsTypes.APPLICATION)
-      return applicationLifecycleActions;
-    throw new InvalidStateTransitionException(
-      `Not recognised actions type on lifecycle: ${lifecycle.actionsType}`,
-      LogContext.LIFECYCLE
-    );
-  }
-
   getState(lifecycle: ILifecycle): string {
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
     return State.create(restoredStateDef).value.toString();
@@ -99,5 +85,16 @@ export class LifecycleService {
     const restoredState = machine.resolveState(restoredStateDefinition);
     const next = restoredState.nextEvents;
     return next || [];
+  }
+
+  async storeParentID(lifecycle: ILifecycle, parentID: string) {
+    const machineDefJson = JSON.parse(lifecycle.machine);
+    machineDefJson.context.parentID = parentID;
+    lifecycle.machine = JSON.stringify(machineDefJson);
+    return await this.save(lifecycle as Lifecycle);
+  }
+
+  async save(lifecycle: Lifecycle): Promise<Lifecycle> {
+    return await this.lifecycleRepository.save(lifecycle);
   }
 }

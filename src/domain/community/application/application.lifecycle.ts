@@ -1,7 +1,7 @@
 export const applicationLifecycle = {
   id: 'user-application',
   context: {
-    applicationID: '-1',
+    parentID: '-1',
   },
   initial: 'new',
   states: {
@@ -13,7 +13,7 @@ export const applicationLifecycle = {
     },
     approved: {
       type: 'final',
-      entry: ['addMember'],
+      entry: ['communityAddMember'],
     },
     rejected: {
       on: {

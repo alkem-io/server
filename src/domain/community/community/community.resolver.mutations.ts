@@ -80,15 +80,16 @@ export class CommunityResolverMutations {
     );
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Create application to join this ecoverse',
+    description: 'Update the application state',
   })
-  @Profiling.api
-  async approveApplication(
-    @Args('ID') applicationID: number
+  async updateApplicationState(
+    @Args('lifecycleID') applicationID: number,
+    @Args('event') event: string
   ): Promise<Application> {
-    return await this.communityService.approveApplication(applicationID);
+    return await this.communityService.updateApplicationState(
+      applicationID,
+      event
+    );
   }
 }
