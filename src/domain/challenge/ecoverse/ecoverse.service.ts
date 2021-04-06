@@ -1,9 +1,9 @@
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
+import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { OrganisationInput } from '@domain/community/organisation/organisation.dto.create';
+import { CreateOrganisationInput } from '@domain/community/organisation/organisation.dto.create';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import {
   RestrictedTagsetNames,
@@ -22,7 +22,7 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EcoverseInput } from './ecoverse.dto';
+import { UpdateEcoverseInput } from './ecoverse.dto.update';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { Community, ICommunity } from '@domain/community/community';
@@ -86,7 +86,7 @@ export class EcoverseService {
     }
 
     if (!ecoverse.host) {
-      const organisationInput = new OrganisationInput();
+      const organisationInput = new CreateOrganisationInput();
       organisationInput.name = 'Default host organisation';
       organisationInput.textID = 'DefaultHostOrg';
       ecoverse.host = await this.organisationService.createOrganisation(
@@ -155,7 +155,9 @@ export class EcoverseService {
     return community;
   }
 
-  async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
+  async createChallenge(
+    challengeData: CreateChallengeInput
+  ): Promise<IChallenge> {
     const ecoverse = await this.getDefaultEcoverseOrFail({
       relations: ['challenges', 'community'],
     });
@@ -234,7 +236,7 @@ export class EcoverseService {
     );
   }
 
-  async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
+  async update(ecoverseData: UpdateEcoverseInput): Promise<IEcoverse> {
     const ecoverse = await this.getDefaultEcoverseOrFail();
 
     // Copy over the received data

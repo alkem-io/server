@@ -1,17 +1,16 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';
+import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateProfileInput } from '@domain/community/profile';
 
 @InputType()
-export class UpdateOrganisationInput {
+export class UpdateUserGroupInput {
   @Field({ nullable: false })
-  @MaxLength(SMALL_TEXT_LENGTH)
   ID!: string;
 
-  @Field({ nullable: true, description: 'The name for this organisation' })
+  @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  name!: string;
+  name?: string;
 
   @Field(() => UpdateProfileInput, { nullable: true })
   profileData?: UpdateProfileInput;

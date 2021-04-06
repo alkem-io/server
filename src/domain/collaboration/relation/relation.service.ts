@@ -6,7 +6,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { RelationInput } from './relation.dto';
+import { CreateRelationInput } from './relation.dto.create';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
 
@@ -19,7 +19,7 @@ export class RelationService {
     private relationRepository: Repository<Relation>
   ) {}
 
-  async createRelation(relationData: RelationInput): Promise<IRelation> {
+  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
     const relation = new Relation();
     // Check that the relation type is valie
     if (!allowedRelationTypes.includes(relationData.type))
@@ -40,7 +40,7 @@ export class RelationService {
 
   async updateRelation(
     relation: Relation,
-    relationData: RelationInput
+    relationData: CreateRelationInput
   ): Promise<boolean> {
     // Copy over the received data
     if (relationData.actorName) {

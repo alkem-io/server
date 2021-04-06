@@ -1,4 +1,4 @@
-mutation CreateProject($projectData: ProjectInput!, $opportunityID: Float!) {
+mutation CreateProject($projectData: CreateProjectInput!, $opportunityID: Float!) {
   createProject(projectData: $projectData, opportunityID: $opportunityID) {
     name,
     description,

@@ -10,7 +10,7 @@ import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { OrganisationInput } from './organisation.dto.create';
+import { CreateOrganisationInput } from './organisation.dto.create';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { AuthorizationRoles } from '@core/authorization';
@@ -28,7 +28,7 @@ export class OrganisationService {
   ) {}
 
   async createOrganisation(
-    organisationData: OrganisationInput
+    organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
     await this.validateOrganisationCreationRequest(organisationData);
 
@@ -67,7 +67,7 @@ export class OrganisationService {
   }
 
   async validateOrganisationCreationRequest(
-    organisationData: OrganisationInput
+    organisationData: CreateOrganisationInput
   ): Promise<boolean> {
     if (!organisationData.name || organisationData.name.length == 0)
       throw new ValidationException(
@@ -104,10 +104,7 @@ export class OrganisationService {
 
     // Check the tagsets
     if (organisationData.profileData && existingOrganisation.profile) {
-      await this.profileService.updateProfile(
-        existingOrganisation.profile.id,
-        organisationData.profileData
-      );
+      await this.profileService.updateProfile(organisationData.profileData);
     }
 
     // Reload the organisation for returning

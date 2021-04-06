@@ -3,7 +3,7 @@ import { SMALL_TEXT_LENGTH, LONG_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class RelationInput {
+export class CreateRelationInput {
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   type!: string;

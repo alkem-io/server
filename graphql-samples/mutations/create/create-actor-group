@@ -1,4 +1,4 @@
-mutation CreateActorGroup($actorGroupData: ActorGroupInput!, $opportunityID: Float!) {
+mutation createActorGroup($actorGroupData: CreateActorGroupInput!, $opportunityID: Float!) {
   createActorGroup(aspeactorGroupDatactData: $actorGroupData, opportunityID: $opportunityID) {
     title,
     framing,

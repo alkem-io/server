@@ -1,4 +1,4 @@
-mutation createApplication($communityId:Float!, $applicationData: ApplicationInput!) {
+mutation createApplication($communityId:Float!, $applicationData: CreateApplicationInput!) {
   createApplication(communityID:$communityId, applicationData:$applicationData){
     id
 	  questions {

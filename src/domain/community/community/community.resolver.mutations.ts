@@ -8,7 +8,7 @@ import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { CommunityService } from './community.service';
 import { Profiling } from '@src/common/decorators';
 import { Application } from '@domain/community/application/application.entity';
-import { ApplicationInput } from '@domain/community/application/application.dto';
+import { CreateApplicationInput } from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 
 @Resolver()
@@ -71,13 +71,9 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async createApplication(
-    @Args('communityID') communityID: number,
-    @Args('applicationData') applicationData: ApplicationInput
+    @Args('applicationData') applicationData: CreateApplicationInput
   ): Promise<Application> {
-    return await this.communityService.createApplication(
-      communityID,
-      applicationData
-    );
+    return await this.communityService.createApplication(applicationData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

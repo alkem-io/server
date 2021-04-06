@@ -1,4 +1,4 @@
-mutation createOpportunity($opportunityData: OpportunityInput!) {
+mutation createOpportunity($opportunityData: CreateOpportunityInput!) {
   createOpportunity(opportunityData: $opportunityData) {
     name,
     id

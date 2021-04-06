@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
-import { ContextInput } from '@domain/context/context/context.dto';
 import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@src/common/constants';
+import { UpdateContextInput } from '@domain/context/context/context.dto.update';
 
 @InputType()
 export class UpdateOpportunityInput {
@@ -19,9 +19,9 @@ export class UpdateOpportunityInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   state?: string;
 
-  @Field(() => ContextInput, { nullable: true })
+  @Field(() => UpdateContextInput, { nullable: true })
   @IsOptional()
-  context?: ContextInput;
+  context?: UpdateContextInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

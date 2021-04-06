@@ -11,14 +11,17 @@ import {
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { MemberOf } from './memberof.composite';
-import { UserInput } from './user.dto';
-import { User } from './user.entity';
-import { IUser } from './user.interface';
 import validator from 'validator';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { ICommunityable } from '@interfaces/communityable.interface';
 import { ICommunity } from '../community/community.interface';
+import {
+  UpdateUserInput,
+  CreateUserInput,
+  User,
+  IUser,
+} from '@domain/community/user';
 @Injectable()
 export class UserService {
   constructor(
@@ -28,7 +31,7 @@ export class UserService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createUser(userData: UserInput): Promise<IUser> {
+  async createUser(userData: CreateUserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
 
     // Ok to create a new user + save
@@ -44,7 +47,8 @@ export class UserService {
     // Now update the profile if needed
     const profileData = userData.profileData;
     if (profileData && user.profile) {
-      await this.profileService.updateProfile(user.profile.id, profileData);
+      // todo - need to fix this process
+      //await this.profileService.updateProfile(user.profile.id, profileData);
     }
     // reload the user to get it populated
     const populatedUser = await this.getUserByIdOrFail(user.id);
@@ -83,7 +87,7 @@ export class UserService {
   }
 
   async validateUserProfileCreationRequest(
-    userData: UserInput
+    userData: CreateUserInput
   ): Promise<boolean> {
     if (!userData.email || userData.email.length == 0)
       throw new ValidationException(
@@ -177,8 +181,8 @@ export class UserService {
   }
 
   // Note: explicitly do not support updating of email addresses
-  async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
-    const user = await this.getUserByIdOrFail(userID);
+  async updateUser(userInput: UpdateUserInput): Promise<IUser> {
+    const user = await this.getUserOrFail(userInput.ID);
 
     // Convert the data to json
     if (userInput.name) {
@@ -207,7 +211,7 @@ export class UserService {
       userInput.email.toLowerCase() !== user.email.toLowerCase()
     ) {
       throw new NotSupportedException(
-        `Updating of email addresses is not supported: ${userID}`,
+        `Updating of email addresses is not supported: ${userInput.ID}`,
         LogContext.COMMUNITY
       );
     }
@@ -216,10 +220,7 @@ export class UserService {
 
     // Check the tagsets
     if (userInput.profileData && user.profile) {
-      await this.profileService.updateProfile(
-        user.profile.id,
-        userInput.profileData
-      );
+      await this.profileService.updateProfile(userInput.profileData);
     }
 
     const populatedUser = await this.getUserByIdOrFail(user.id);

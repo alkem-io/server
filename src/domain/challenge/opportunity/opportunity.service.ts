@@ -1,15 +1,15 @@
-import { ActorGroupInput } from '@domain/context/actor-group/actor-group.dto';
+import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { AspectInput } from '@domain/context/aspect/aspect.dto';
+import { CreateAspectInput } from '@domain/context/aspect';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { ProjectInput } from '@domain/collaboration/project/project.dto';
+import { CreateProjectInput } from '@domain/collaboration/project';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { RelationInput } from '@domain/collaboration/relation/relation.dto';
+import { CreateRelationInput } from '@domain/collaboration/relation';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -23,7 +23,7 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { OpportunityInput } from './opportunity.dto.create';
+import { CreateOpportunityInput } from './opportunity.dto.create';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { Community, ICommunity } from '@domain/community/community';
@@ -202,7 +202,7 @@ export class OpportunityService {
   }
 
   async createOpportunity(
-    opportunityData: OpportunityInput
+    opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     await this.validateOpportunity(opportunityData);
 
@@ -217,7 +217,7 @@ export class OpportunityService {
     return savedOpp;
   }
 
-  async validateOpportunity(opportunityData: OpportunityInput) {
+  async validateOpportunity(opportunityData: CreateOpportunityInput) {
     // Verify that required textID field is present and that it has the right format
     const textID = opportunityData.textID;
     if (!textID || textID.length < 3)
@@ -326,7 +326,7 @@ export class OpportunityService {
       );
     }
     for (const name of opportunity.restrictedActorGroupNames) {
-      const actorGroupData = new ActorGroupInput();
+      const actorGroupData = new CreateActorGroupInput();
       actorGroupData.name = name;
       actorGroupData.description = 'Default actor group';
       const actorGroup = await this.actorGroupService.createActorGroup(
@@ -354,7 +354,7 @@ export class OpportunityService {
 
   async createProject(
     opportunityId: number,
-    projectData: ProjectInput
+    projectData: CreateProjectInput
   ): Promise<IProject> {
     this.logger.verbose?.(
       `Adding project to opportunity (${opportunityId})`,
@@ -388,7 +388,7 @@ export class OpportunityService {
 
   async createAspect(
     opportunityID: number,
-    aspectData: AspectInput
+    aspectData: CreateAspectInput
   ): Promise<IAspect> {
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['aspects'],
@@ -419,7 +419,7 @@ export class OpportunityService {
 
   async createActorGroup(
     opportunityId: number,
-    actorGroupData: ActorGroupInput
+    actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['actorGroups'],
@@ -451,7 +451,7 @@ export class OpportunityService {
 
   async createRelation(
     opportunityId: number,
-    relationData: RelationInput
+    relationData: CreateRelationInput
   ): Promise<IRelation> {
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['relations'],

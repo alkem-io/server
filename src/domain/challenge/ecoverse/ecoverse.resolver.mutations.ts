@@ -1,4 +1,4 @@
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
+import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Inject, UseGuards } from '@nestjs/common';
@@ -6,7 +6,7 @@ import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
-import { EcoverseInput } from './ecoverse.dto';
+import { UpdateEcoverseInput } from './ecoverse.dto.update';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
@@ -25,7 +25,7 @@ export class EcoverseResolverMutations {
   })
   @Profiling.api
   async updateEcoverse(
-    @Args('ecoverseData') ecoverseData: EcoverseInput
+    @Args('ecoverseData') ecoverseData: UpdateEcoverseInput
   ): Promise<IEcoverse> {
     const ctVerse = await this.ecoverseService.update(ecoverseData);
     return ctVerse;
@@ -38,7 +38,7 @@ export class EcoverseResolverMutations {
   })
   @Profiling.api
   async createChallenge(
-    @Args('challengeData') challengeData: ChallengeInput
+    @Args('challengeData') challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.ecoverseService.createChallenge(challengeData);
 

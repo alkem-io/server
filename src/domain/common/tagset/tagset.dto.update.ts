@@ -3,7 +3,10 @@ import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
-export class TagsetInput {
+export class UpdateTagsetInput {
+  @Field({ nullable: false })
+  ID!: string;
+
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;

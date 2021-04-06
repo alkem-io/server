@@ -3,7 +3,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
-import { ReferenceInput } from '@domain/common/reference/reference.dto';
+import { CreateReferenceInput } from '@domain/common/reference';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ContextService } from './context.service';
@@ -22,7 +22,7 @@ export class ContextResolver {
   @Profiling.api
   async createReferenceOnContext(
     @Args('contextID') profileID: number,
-    @Args('referenceInput') referenceInput: ReferenceInput
+    @Args('referenceInput') referenceInput: CreateReferenceInput
   ): Promise<IReference> {
     const reference = await this.contextService.createReference(
       profileID,

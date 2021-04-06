@@ -1,4 +1,4 @@
-mutation CreateAspect($aspectData: AspectInput!, $opportunityID: Float!) {
+mutation CreateAspect($aspectData: CreateAspectInput!, $opportunityID: Float!) {
   createAspect(aspectData: $aspectData, opportunityID: $opportunityID) {
     title,
     framing,

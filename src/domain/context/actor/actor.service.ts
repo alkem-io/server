@@ -1,15 +1,19 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Actor } from './actor.entity';
-import { IActor } from './actor.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ActorInput } from './actor.dto';
+import {
+  UpdateActorInput,
+  CreateActorInput,
+  Actor,
+  IActor,
+} from '@domain/context/actor';
 import {
   ValidationException,
   EntityNotFoundException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import validator from 'validator';
 
 @Injectable()
 export class ActorService {
@@ -19,7 +23,7 @@ export class ActorService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createActor(actorData: ActorInput): Promise<IActor> {
+  async createActor(actorData: CreateActorInput): Promise<IActor> {
     if (!actorData.name)
       throw new ValidationException(
         'A name is required to create an Actor',
@@ -36,7 +40,18 @@ export class ActorService {
     return actor;
   }
 
-  async getActorOrFail(actorID: number): Promise<IActor> {
+  async getActorOrFail(actorID: string): Promise<IActor> {
+    if (validator.isNumeric(actorID)) {
+      const idInt: number = parseInt(actorID);
+      return await this.getActorByIdOrFail(idInt);
+    }
+    throw new EntityNotFoundException(
+      `Not able to locate actor with the specified ID: ${actorID}`,
+      LogContext.CHALLENGES
+    );
+  }
+
+  async getActorByIdOrFail(actorID: number): Promise<IActor> {
     const actor = await this.actorRepository.findOne({ id: actorID });
     if (!actor)
       throw new EntityNotFoundException(
@@ -47,13 +62,13 @@ export class ActorService {
   }
 
   async removeActor(actorID: number): Promise<boolean> {
-    await this.getActorOrFail(actorID);
+    await this.getActorByIdOrFail(actorID);
     await this.actorRepository.delete(actorID);
     return true;
   }
 
-  async updateActor(actorID: number, actorData: ActorInput): Promise<IActor> {
-    const actor = await this.getActorOrFail(actorID);
+  async updateActor(actorData: UpdateActorInput): Promise<IActor> {
+    const actor = await this.getActorOrFail(actorData.ID);
 
     // Copy over the received data
     if (actorData.name) {

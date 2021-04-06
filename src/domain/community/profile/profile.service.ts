@@ -7,15 +7,20 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ReferenceInput } from '@domain/common/reference/reference.dto';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { ProfileInput } from './profile.dto';
-import { Profile } from './profile.entity';
-import { IProfile } from './profile.interface';
+import { CreateReferenceInput } from '@domain/common/reference';
+import {
+  UpdateProfileInput,
+  Profile,
+  IProfile,
+} from '@domain/community/profile';
+
+import validator from 'validator';
+import { CreateTagsetInput } from '@domain/common/tagset';
 
 @Injectable()
 export class ProfileService {
@@ -60,7 +65,7 @@ export class ProfileService {
 
   async removeProfile(profileID: number): Promise<IProfile> {
     // Note need to load it in with all contained entities so can remove fully
-    const profile = await this.getProfileOrFail(profileID);
+    const profile = await this.getProfileByIdOrFail(profileID);
 
     if (profile.tagsets) {
       for (const tagset of profile.tagsets) {
@@ -77,12 +82,15 @@ export class ProfileService {
     return await this.profileRepository.remove(profile as Profile);
   }
 
-  async createTagset(profileID: number, tagsetName: string): Promise<ITagset> {
-    const profile = await this.getProfileOrFail(profileID);
+  async createTagset(
+    profileID: number,
+    tagsetData: CreateTagsetInput
+  ): Promise<ITagset> {
+    const profile = await this.getProfileByIdOrFail(profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
-      tagsetName
+      tagsetData.name
     );
     await this.profileRepository.save(profile);
 
@@ -91,9 +99,9 @@ export class ProfileService {
 
   async createReference(
     profileID: number,
-    referenceInput: ReferenceInput
+    referenceInput: CreateReferenceInput
   ): Promise<IReference> {
-    const profile = await this.getProfileOrFail(profileID);
+    const profile = await this.getProfileByIdOrFail(profileID);
 
     if (!profile.references)
       throw new EntityNotInitializedException(
@@ -117,11 +125,8 @@ export class ProfileService {
     return newReference;
   }
 
-  async updateProfile(
-    profileID: number,
-    profileData: ProfileInput
-  ): Promise<boolean> {
-    const profile = await this.getProfileOrFail(profileID);
+  async updateProfile(profileData: UpdateProfileInput): Promise<boolean> {
+    const profile = await this.getProfileOrFail(profileData.ID);
 
     if (profileData.avatar) {
       profile.avatar = profileData.avatar;
@@ -134,7 +139,7 @@ export class ProfileService {
     const tagsetsData = profileData.tagsetsData;
     if (tagsetsData) {
       for (const tagsetData of tagsetsData) {
-        await this.tagsetService.updateOrCreateTagset(profile, tagsetData);
+        await this.tagsetService.updateTagset(profile, tagsetData);
       }
     }
 
@@ -162,7 +167,18 @@ export class ProfileService {
     return true;
   }
 
-  async getProfileOrFail(profileID: number): Promise<IProfile> {
+  async getProfileOrFail(profileID: string): Promise<IProfile> {
+    if (validator.isNumeric(profileID)) {
+      const idInt: number = parseInt(profileID);
+      return await this.getProfileByIdOrFail(idInt);
+    }
+    throw new EntityNotFoundException(
+      `Profile with id(${profileID}) not found!`,
+      LogContext.COMMUNITY
+    );
+  }
+
+  async getProfileByIdOrFail(profileID: number): Promise<IProfile> {
     const profile = await Profile.findOne({ id: profileID });
     if (!profile)
       throw new EntityNotFoundException(

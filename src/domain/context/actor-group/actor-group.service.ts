@@ -4,8 +4,7 @@ import { Repository } from 'typeorm';
 import { ActorGroup } from './actor-group.entity';
 import { IActorGroup } from './actor-group.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ActorInput } from '@domain/context/actor/actor.dto';
-import { ActorGroupInput } from './actor-group.dto';
+import { CreateActorGroupInput } from './actor-group.dto.create';
 import { ActorService } from '@domain/context/actor/actor.service';
 import { IActor } from '@domain/context/actor/actor.interface';
 import {
@@ -13,6 +12,7 @@ import {
   GroupNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { CreateActorInput } from '@domain/context/actor';
 
 @Injectable()
 export class ActorGroupService {
@@ -33,16 +33,13 @@ export class ActorGroupService {
     return actorGroup;
   }
 
-  async createActor(
-    actorGroupID: number,
-    actorData: ActorInput
-  ): Promise<IActor> {
-    const actorGroup = await this.getActorGroupOrFail(actorGroupID);
+  async createActor(actorData: CreateActorInput): Promise<IActor> {
+    const actorGroup = await this.getActorGroupOrFail(actorData.actorGroupId);
 
     const actor = await this.actorService.createActor(actorData);
     if (!actorGroup.actors)
       throw new GroupNotInitializedException(
-        `Non-initialised ActorGroup: ${actorGroupID}`,
+        `Non-initialised ActorGroup: ${actorData.actorGroupId}`,
         LogContext.CHALLENGES
       );
     actorGroup.actors.push(actor);
@@ -53,7 +50,7 @@ export class ActorGroupService {
   }
 
   async createActorGroup(
-    actorGroupData: ActorGroupInput
+    actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
     const actorGroup = new ActorGroup(actorGroupData.name);
     actorGroup.description = actorGroupData.description;

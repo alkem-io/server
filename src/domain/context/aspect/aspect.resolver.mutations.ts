@@ -3,13 +3,13 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
-import { AspectInput } from './aspect.dto';
 import { Aspect } from './aspect.entity';
 import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
+import { UpdateAspectInput } from '@domain/context/aspect';
 
 @Resolver()
-export class AspectResolver {
+export class AspectResolverMutations {
   constructor(private aspectService: AspectService) {}
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
@@ -27,9 +27,8 @@ export class AspectResolver {
     description: 'Updates the aspect with the specified ID',
   })
   async updateAspect(
-    @Args('ID') aspectID: number,
-    @Args('aspectData') aspectData: AspectInput
+    @Args('aspectData') aspectData: UpdateAspectInput
   ): Promise<IAspect> {
-    return await this.aspectService.updateAspect(aspectID, aspectData);
+    return await this.aspectService.updateAspect(aspectData);
   }
 }

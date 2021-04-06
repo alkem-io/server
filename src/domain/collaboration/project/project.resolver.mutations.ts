@@ -3,14 +3,16 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
-import { AspectInput } from '@domain/context/aspect/aspect.dto';
+import { CreateAspectInput } from '@domain/context/aspect';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
-import { ProjectInput } from './project.dto';
-import { Project } from './project.entity';
-import { IProject } from './project.interface';
 import { ProjectService } from './project.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import {
+  UpdateProjectInput,
+  Project,
+  IProject,
+} from '@domain/collaboration/project';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(private projectService: ProjectService) {}
@@ -30,10 +32,9 @@ export class ProjectResolverMutations {
     description: 'Updates the Project with the specified ID',
   })
   async updateProject(
-    @Args('ID') projectID: number,
-    @Args('projectData') projectData: ProjectInput
+    @Args('projectData') projectData: UpdateProjectInput
   ): Promise<IProject> {
-    return await this.projectService.updateProject(projectID, projectData);
+    return await this.projectService.updateProject(projectData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
@@ -44,7 +45,7 @@ export class ProjectResolverMutations {
   @Profiling.api
   async createAspectOnProject(
     @Args('projectID') projectId: number,
-    @Args('aspectData') aspectData: AspectInput
+    @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
     const aspect = await this.projectService.createAspect(
       projectId,

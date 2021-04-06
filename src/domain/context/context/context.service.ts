@@ -6,12 +6,12 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ReferenceInput } from '@domain/common/reference/reference.dto';
+import { CreateReferenceInput } from '@domain/common/reference';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { ContextInput } from './context.dto';
 import { Context } from './context.entity';
 import { IContext } from './context.interface';
+import { UpdateContextInput } from './context.dto.update';
 
 @Injectable()
 export class ContextService {
@@ -41,7 +41,7 @@ export class ContextService {
 
   async update(
     context: IContext,
-    contextInput: ContextInput
+    contextInput: UpdateContextInput
   ): Promise<IContext> {
     // Convert the data to json
     if (contextInput.tagline) {
@@ -93,7 +93,7 @@ export class ContextService {
 
   async createReference(
     contextID: number,
-    referenceInput: ReferenceInput
+    referenceInput: CreateReferenceInput
   ): Promise<IReference> {
     const context = await this.getContextOrFail(contextID);
 

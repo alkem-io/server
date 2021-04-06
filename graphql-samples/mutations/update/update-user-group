@@ -1,5 +1,5 @@
-mutation UpdateUserGroup($groupID: Float!, $userGroupData: UserGroupInput!) {
-  updateUserGroup(gID: $groupID, userGroupData: $userGroupData) {
+mutation UpdateUserGroup($userGroupData: UpdateUserGroupInput!) {
+  updateUserGroup(userGroupData: $userGroupData) {
     name
   }
 }
@@ -7,9 +7,9 @@ mutation UpdateUserGroup($groupID: Float!, $userGroupData: UserGroupInput!) {
 
 query variables:
 {
-  "groupID": 7,
   "userGroupData":
   {
+    "pID": 7,
     "name": "test2",
     "profileData": {
       "description": "some description",

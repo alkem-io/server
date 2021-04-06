@@ -1,4 +1,4 @@
-import { ApplicationInput } from '@domain/community/application/application.dto';
+import { CreateApplicationInput } from '@domain/community/application';
 import {
   Application,
   ApplicationStatus,
@@ -239,12 +239,14 @@ export class CommunityService {
   }
 
   async createApplication(
-    id: number,
-    applicationData: ApplicationInput
+    applicationData: CreateApplicationInput
   ): Promise<Application> {
-    const community = (await this.getCommunityOrFail(id, {
-      relations: ['applications', 'parentCommunity'],
-    })) as Community;
+    const community = (await this.getCommunityOrFail(
+      applicationData.communityId,
+      {
+        relations: ['applications', 'parentCommunity'],
+      }
+    )) as Community;
 
     const existingApplication = community.applications?.find(
       x => x.user.id === applicationData.userId

@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class NVPInput {
+export class CreateNVPInput {
   @Field(() => String)
   name!: string;
 

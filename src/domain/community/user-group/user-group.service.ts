@@ -1,14 +1,11 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { getConnection, getManager, FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
-import { IUserGroup } from './user-group.interface';
-import { getConnection } from 'typeorm';
-import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { UserGroupParent } from './user-group-parent.dto';
@@ -19,11 +16,15 @@ import {
   GroupNotInitializedException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { UserGroupInput } from './user-group.dto';
-import { Community } from '../community';
-import { UserGroup } from './user-group.entity';
+import { Community } from '@domain/community/community';
 import { TagsetService } from '@domain/common';
+import {
+  UpdateUserGroupInput,
+  UserGroup,
+  IUserGroup,
+} from '@domain/community/user-group';
 
+import validator from 'validator';
 @Injectable()
 export class UserGroupService {
   constructor(
@@ -67,7 +68,7 @@ export class UserGroupService {
     checkForRestricted = false
   ): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
-    const group = (await this.getUserGroupOrFail(groupID)) as UserGroup;
+    const group = (await this.getUserGroupByIdOrFail(groupID)) as UserGroup;
 
     // Cannot remove restricted groups
     if (checkForRestricted && (await this.isRestricted(group)))
@@ -86,10 +87,9 @@ export class UserGroupService {
 
   // Note: explicitly do not support updating of email addresses
   async updateUserGroup(
-    groupID: number,
-    userGroupInput: UserGroupInput
+    userGroupInput: UpdateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.getUserGroupOrFail(groupID);
+    const group = await this.getUserGroupOrFail(userGroupInput.ID);
 
     // Cannot rename restricted groups
     const newName = userGroupInput.name;
@@ -115,13 +115,10 @@ export class UserGroupService {
 
     // Check the tagsets
     if (userGroupInput.profileData && group.profile) {
-      await this.profileService.updateProfile(
-        group.profile.id,
-        userGroupInput.profileData
-      );
+      await this.profileService.updateProfile(userGroupInput.profileData);
     }
 
-    const populatedUserGroup = await this.getUserGroupOrFail(group.id);
+    const populatedUserGroup = await this.getUserGroupByIdOrFail(group.id);
 
     return populatedUserGroup;
   }
@@ -142,7 +139,7 @@ export class UserGroupService {
   }
 
   async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
-    const groupWithParent = (await this.getUserGroupOrFail(group.id, {
+    const groupWithParent = (await this.getUserGroupByIdOrFail(group.id, {
       relations: ['community', 'organisation'],
     })) as UserGroup;
     if (groupWithParent?.community) return groupWithParent?.community;
@@ -174,7 +171,7 @@ export class UserGroupService {
   async assignFocalPoint(userID: number, groupID: number): Promise<IUserGroup> {
     // Try to find the user + group
     const user = await this.userService.getUserByIdOrFail(userID);
-    const group = await this.getUserGroupOrFail(groupID);
+    const group = await this.getUserGroupByIdOrFail(groupID);
 
     // Add the user to the group if not already a member
     await this.addUserToGroup(user, group);
@@ -187,6 +184,21 @@ export class UserGroupService {
   }
 
   async getUserGroupOrFail(
+    groupID: string,
+    options?: FindOneOptions<UserGroup>
+  ): Promise<IUserGroup> {
+    if (!validator.isNumeric(groupID)) {
+      const idInt: number = parseInt(groupID);
+      return await this.getUserGroupByIdOrFail(idInt, options);
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find group with ID: ${groupID}`,
+      LogContext.COMMUNITY
+    );
+  }
+
+  async getUserGroupByIdOrFail(
     groupID: number,
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
@@ -206,14 +218,14 @@ export class UserGroupService {
   async addUser(userID: number, groupID: number): Promise<boolean> {
     const user = await this.userService.getUserByIdOrFail(userID);
 
-    const group = await this.getUserGroupOrFail(groupID);
+    const group = await this.getUserGroupByIdOrFail(groupID);
 
     return await this.addUserToGroup(user, group);
   }
 
   async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
     await this.userService.getUserByIdOrFail(userID);
-    await this.getUserGroupOrFail(groupID);
+    await this.getUserGroupByIdOrFail(groupID);
 
     const userGroup = await this.userGroupRepository.findOne({
       where: { members: { id: userID }, id: groupID },
@@ -264,7 +276,7 @@ export class UserGroupService {
     const user = await this.userService.getUserByIdOrFail(userID);
 
     // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
-    const group = await this.getUserGroupOrFail(groupID, {
+    const group = await this.getUserGroupByIdOrFail(groupID, {
       relations: ['members', 'community'],
     });
 
@@ -297,7 +309,7 @@ export class UserGroupService {
   }
 
   async removeFocalPoint(groupID: number): Promise<IUserGroup> {
-    const group = await this.getUserGroupOrFail(groupID);
+    const group = await this.getUserGroupByIdOrFail(groupID);
     // Set focalPoint to NULL will remove the relation.
     // For typeorm 'undefined' means - 'Not changed'
     // More information: https://github.com/typeorm/typeorm/issues/5454
@@ -428,7 +440,7 @@ export class UserGroupService {
   }
 
   async getMembers(groupID: number): Promise<IUser[]> {
-    const group = await this.getUserGroupOrFail(groupID, {
+    const group = await this.getUserGroupByIdOrFail(groupID, {
       relations: ['members', 'profile'],
     });
     return group?.members as IUser[];

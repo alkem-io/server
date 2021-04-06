@@ -1,14 +1,14 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
-import { ProfileInput } from '@domain/community/profile/profile.dto';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { CreateProfileInput } from '@domain/community/profile';
 
 @InputType()
-export class UserGroupInput {
+export class CreateUserGroupInput {
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
-  @Field(() => ProfileInput, { nullable: true })
-  profileData?: ProfileInput;
+  @Field(() => CreateProfileInput, { nullable: true })
+  profileData?: CreateProfileInput;
 }

@@ -1,16 +1,17 @@
-import { NVPInput } from '@domain/common/nvp/nvp.dto';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { IsOptional } from 'class-validator';
 import { NVP } from '@domain/common/nvp/nvp.entity';
+import { CreateNVPInput } from '@domain/common/nvp';
 
 @InputType()
-export class ApplicationInput {
+export class CreateApplicationInput {
   @Field()
-  @IsOptional()
   userId!: number;
 
-  @Field(() => [NVPInput])
-  questions!: NVPInput[];
+  @Field()
+  communityId!: number;
+
+  @Field(() => [CreateNVPInput])
+  questions!: CreateNVPInput[];
 }
 
 @ObjectType()

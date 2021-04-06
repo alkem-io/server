@@ -4,9 +4,13 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { AspectInput } from './aspect.dto';
-import { Aspect } from './aspect.entity';
-import { IAspect } from './aspect.interface';
+import {
+  UpdateAspectInput,
+  CreateAspectInput,
+  Aspect,
+  IAspect,
+} from '@domain/context/aspect';
+import validator from 'validator';
 
 @Injectable()
 export class AspectService {
@@ -16,7 +20,7 @@ export class AspectService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAspect(aspectInput: AspectInput): Promise<IAspect> {
+  async createAspect(aspectInput: CreateAspectInput): Promise<IAspect> {
     const aspect = new Aspect(
       aspectInput.title,
       aspectInput.framing,
@@ -27,12 +31,23 @@ export class AspectService {
   }
 
   async removeAspect(aspectID: number): Promise<boolean> {
-    await this.getAspectOrFail(aspectID);
+    await this.getAspectByIdOrFail(aspectID);
     await this.aspectRepository.delete(aspectID);
     return true;
   }
 
-  async getAspectOrFail(aspectID: number): Promise<IAspect> {
+  async getAspectOrFail(aspectID: string): Promise<IAspect> {
+    if (validator.isNumeric(aspectID)) {
+      const idInt: number = parseInt(aspectID);
+      return await this.getAspectByIdOrFail(idInt);
+    }
+    throw new EntityNotFoundException(
+      `Not able to locate aspect with the specified ID: ${aspectID}`,
+      LogContext.CHALLENGES
+    );
+  }
+
+  async getAspectByIdOrFail(aspectID: number): Promise<IAspect> {
     const aspect = await this.aspectRepository.findOne({ id: aspectID });
     if (!aspect)
       throw new EntityNotFoundException(
@@ -42,11 +57,8 @@ export class AspectService {
     return aspect;
   }
 
-  async updateAspect(
-    aspectID: number,
-    aspectData: AspectInput
-  ): Promise<IAspect> {
-    const aspect = await this.getAspectOrFail(aspectID);
+  async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
+    const aspect = await this.getAspectOrFail(aspectData.ID);
 
     // Copy over the received data
     if (aspectData.title) {

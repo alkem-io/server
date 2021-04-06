@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { UserInput } from '@domain/community/user/user.dto';
+import { CreateUserInput } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Repository } from 'typeorm';
@@ -186,7 +186,7 @@ export class BootstrapService {
   async createGroupProfiles(groupName: string, usersData: any[]) {
     try {
       for (const userData of usersData) {
-        const userInput = new UserInput();
+        const userInput = new CreateUserInput();
         userInput.email = userData.email;
         // For bootstrap puroposes also set the upn to the same as the email
         userInput.accountUpn = userData.email;

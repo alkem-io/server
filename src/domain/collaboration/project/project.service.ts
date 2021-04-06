@@ -8,12 +8,16 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { AspectInput } from '@domain/context/aspect/aspect.dto';
+import { CreateAspectInput } from '@domain/context/aspect';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import { ProjectInput } from './project.dto';
-import { Project } from './project.entity';
-import { IProject } from './project.interface';
+import validator from 'validator';
+import {
+  UpdateProjectInput,
+  CreateProjectInput,
+  Project,
+  IProject,
+} from '@domain/collaboration/project';
 
 @Injectable()
 export class ProjectService {
@@ -24,7 +28,7 @@ export class ProjectService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createProject(projectData: ProjectInput): Promise<IProject> {
+  async createProject(projectData: CreateProjectInput): Promise<IProject> {
     const textID = projectData.textID;
     if (!textID || textID.length < 3)
       throw new ValidationException(
@@ -48,7 +52,7 @@ export class ProjectService {
   }
 
   async removeProject(projectID: number): Promise<boolean> {
-    const Project = await this.getProjectByID(projectID);
+    const Project = await this.getProjectByIdOrFail(projectID);
     if (!Project)
       throw new EntityNotFoundException(
         `Not able to locate Project with the specified ID: ${projectID}`,
@@ -58,7 +62,7 @@ export class ProjectService {
     return true;
   }
 
-  async getProjectByID(projectID: number): Promise<IProject> {
+  async getProjectByIdOrFail(projectID: number): Promise<IProject> {
     const project = await this.projectRepository.findOne({ id: projectID });
     if (!project)
       throw new EntityNotFoundException(
@@ -68,16 +72,24 @@ export class ProjectService {
     return project;
   }
 
+  async getProjectOrFail(projectID: string): Promise<IProject> {
+    if (validator.isNumeric(projectID)) {
+      const idInt: number = parseInt(projectID);
+      return await this.getProjectByIdOrFail(idInt);
+    }
+    throw new EntityNotFoundException(
+      `Unable to find Project with ID: ${projectID}`,
+      LogContext.CHALLENGES
+    );
+  }
+
   async getProjects(): Promise<Project[]> {
     const projects = await this.projectRepository.find();
     return projects || [];
   }
 
-  async updateProject(
-    projectID: number,
-    projectData: ProjectInput
-  ): Promise<IProject> {
-    const project = await this.getProjectByID(projectID);
+  async updateProject(projectData: UpdateProjectInput): Promise<IProject> {
+    const project = await this.getProjectOrFail(projectData.ID);
 
     // Note: do not update the textID
 
@@ -99,9 +111,9 @@ export class ProjectService {
 
   async createAspect(
     projectId: number,
-    aspectData: AspectInput
+    aspectData: CreateAspectInput
   ): Promise<IAspect> {
-    const project = await this.getProjectByID(projectId);
+    const project = await this.getProjectByIdOrFail(projectId);
 
     // Check that do not already have an aspect with the same title
     const title = aspectData.title;

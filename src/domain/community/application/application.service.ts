@@ -1,4 +1,4 @@
-import { ApplicationInput } from '@domain/community/application/application.dto';
+import { CreateApplicationInput } from '@domain/community/application';
 import { Application } from '@domain/community/application/application.entity';
 import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -20,7 +20,7 @@ export class ApplicationService {
   ) {}
 
   async createApplication(
-    applicationData: ApplicationInput
+    applicationData: CreateApplicationInput
   ): Promise<Application> {
     const application = await this.applicationFactoryService.createApplication(
       applicationData

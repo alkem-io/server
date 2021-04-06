@@ -6,8 +6,8 @@ import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 import { Profiling } from '@src/common/decorators';
-import { UserGroupInput } from './user-group.dto';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { UpdateUserGroupInput } from '@domain/community/user-group';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolverMutations {
@@ -29,14 +29,9 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async updateUserGroup(
-    @Args('ID') groupID: number,
-    @Args('userGroupData') userGroupData: UserGroupInput
+    @Args('userGroupData') userGroupData: UpdateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.groupService.updateUserGroup(
-      groupID,
-      userGroupData
-    );
-    return group;
+    return await this.groupService.updateUserGroup(userGroupData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

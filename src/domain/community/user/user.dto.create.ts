@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
-import { ProfileInput } from '@domain/community/profile/profile.dto';
+import { CreateProfileInput } from '@domain/community/profile';
 import {
   LONG_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
@@ -8,7 +8,7 @@ import {
 } from '@src/common/constants';
 
 @InputType()
-export class UserInput {
+export class CreateUserInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
@@ -58,12 +58,7 @@ export class UserInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   gender?: string;
 
-  @Field({ nullable: true })
+  @Field(() => CreateProfileInput, { nullable: true })
   @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  aadPassword?: string;
-
-  @Field(() => ProfileInput, { nullable: true })
-  @IsOptional()
-  profileData?: ProfileInput;
+  profileData?: CreateProfileInput;
 }

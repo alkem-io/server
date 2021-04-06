@@ -3,7 +3,7 @@ import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class AspectInput {
+export class CreateAspectInput {
   @Field({ nullable: true })
   @MaxLength(MID_TEXT_LENGTH)
   title!: string;

@@ -3,18 +3,19 @@ import { Mutation, Args } from '@nestjs/graphql';
 import { Resolver } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { ReferenceInput } from '@domain/common/reference/reference.dto';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ProfileService } from './profile.service';
-import { ProfileInput } from './profile.dto';
 import { Profiling } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { CreateReferenceInput } from '@domain/common/reference';
+import { UpdateProfileInput } from '@domain/community/profile';
+import { CreateTagsetInput } from '@domain/common/tagset';
 
 @Resolver()
-export class ProfileResolver {
+export class ProfileResolverMutations {
   constructor(private profileService: ProfileService) {}
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -26,11 +27,11 @@ export class ProfileResolver {
   @Profiling.api
   async createTagsetOnProfile(
     @Args('profileID') profileID: number,
-    @Args('tagsetName') tagsetName: string
+    @Args('tagsetData') tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
     const tagset = await this.profileService.createTagset(
       profileID,
-      tagsetName
+      tagsetData
     );
     return tagset;
   }
@@ -44,7 +45,7 @@ export class ProfileResolver {
   @Profiling.api
   async createReferenceOnProfile(
     @Args('profileID') profileID: number,
-    @Args('referenceInput') referenceInput: ReferenceInput
+    @Args('referenceInput') referenceInput: CreateReferenceInput
   ): Promise<IReference> {
     const reference = await this.profileService.createReference(
       profileID,
@@ -61,9 +62,8 @@ export class ProfileResolver {
   })
   @Profiling.api
   async updateProfile(
-    @Args('ID') profileID: number,
-    @Args('profileData') profileData: ProfileInput
+    @Args('profileData') profileData: UpdateProfileInput
   ): Promise<boolean> {
-    return await this.profileService.updateProfile(profileID, profileData);
+    return await this.profileService.updateProfile(profileData);
   }
 }

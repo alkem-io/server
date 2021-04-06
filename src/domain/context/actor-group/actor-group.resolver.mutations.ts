@@ -2,14 +2,14 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
-import { ActorInput } from '@domain/context/actor/actor.dto';
+import { CreateActorInput } from '@domain/context/actor';
 import { Actor } from '@domain/context/actor/actor.entity';
 import { IActor } from '@domain/context/actor/actor.interface';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 
 @Resolver()
-export class ActorGroupResolver {
+export class ActorGroupResolverMutations {
   constructor(private actorGroupService: ActorGroupService) {}
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
@@ -18,13 +18,9 @@ export class ActorGroupResolver {
     description: 'Create a new actor on the ActorGroup with the specified ID',
   })
   async createActor(
-    @Args('actorGroupID') actorGroupID: number,
-    @Args('actorData') actorData: ActorInput
+    @Args('actorData') actorData: CreateActorInput
   ): Promise<IActor> {
-    const result = await this.actorGroupService.createActor(
-      actorGroupID,
-      actorData
-    );
+    const result = await this.actorGroupService.createActor(actorData);
 
     return result;
   }

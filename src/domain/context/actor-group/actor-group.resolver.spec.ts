@@ -1,16 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { ActorGroupResolver } from './actor-group.resolver';
+import { ActorGroupResolverMutations } from './actor-group.resolver.mutations';
 
 describe('ActorGroupResolver', () => {
-  let resolver: ActorGroupResolver;
+  let resolver: ActorGroupResolverMutations;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    resolver = module.get<ActorGroupResolver>(ActorGroupResolver);
+    resolver = module.get<ActorGroupResolverMutations>(
+      ActorGroupResolverMutations
+    );
   });
 
   it('should be defined', () => {

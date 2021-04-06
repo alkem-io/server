@@ -3,7 +3,11 @@ import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
-export class ActorInput {
+export class UpdateActorInput {
+  @Field({ nullable: false })
+  @MaxLength(SMALL_TEXT_LENGTH)
+  ID!: string;
+
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;

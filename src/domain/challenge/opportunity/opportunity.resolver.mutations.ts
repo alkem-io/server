@@ -5,17 +5,17 @@ import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
-import { AspectInput } from '@domain/context/aspect/aspect.dto';
+import { CreateAspectInput } from '@domain/context/aspect';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { ActorGroupInput } from '@domain/context/actor-group/actor-group.dto';
+import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { Profiling } from '@src/common/decorators';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { RelationInput } from '@domain/collaboration/relation/relation.dto';
+import { CreateRelationInput } from '@domain/collaboration/relation';
 import { Relation } from '@domain/collaboration/relation/relation.entity';
-import { ProjectInput } from '@domain/collaboration/project/project.dto';
+import { CreateProjectInput } from '@domain/collaboration/project';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
@@ -57,7 +57,7 @@ export class OpportunityResolverMutations {
   @Profiling.api
   async createProject(
     @Args('opportunityID') opportunityId: number,
-    @Args('projectData') projectData: ProjectInput
+    @Args('projectData') projectData: CreateProjectInput
   ): Promise<IProject> {
     const project = await this.opportunityService.createProject(
       opportunityId,
@@ -74,7 +74,7 @@ export class OpportunityResolverMutations {
   @Profiling.api
   async createAspect(
     @Args('opportunityID') opportunityId: number,
-    @Args('aspectData') aspectData: AspectInput
+    @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
     const aspect = await this.opportunityService.createAspect(
       opportunityId,
@@ -92,7 +92,7 @@ export class OpportunityResolverMutations {
   @Profiling.api
   async createActorGroup(
     @Args('opportunityID') opportunityId: number,
-    @Args('actorGroupData') actorGroupData: ActorGroupInput
+    @Args('actorGroupData') actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
     const actorGroup = await this.opportunityService.createActorGroup(
       opportunityId,
@@ -110,7 +110,7 @@ export class OpportunityResolverMutations {
   @Profiling.api
   async createRelation(
     @Args('opportunityID') opportunityId: number,
-    @Args('relationData') relationData: RelationInput
+    @Args('relationData') relationData: CreateRelationInput
   ): Promise<IRelation> {
     return await this.opportunityService.createRelation(
       opportunityId,

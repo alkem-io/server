@@ -7,7 +7,7 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { OrganisationInput } from './organisation.dto.create';
+import { CreateOrganisationInput } from './organisation.dto.create';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
@@ -30,7 +30,7 @@ export class OrganisationResolverMutations {
   })
   @Profiling.api
   async createOrganisation(
-    @Args('organisationData') organisationData: OrganisationInput
+    @Args('organisationData') organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
     const organisation = await this.organisationService.createOrganisation(
       organisationData

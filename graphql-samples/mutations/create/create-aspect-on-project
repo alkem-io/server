@@ -1,4 +1,4 @@
-mutation CreateAspectOnProject($aspectData: AspectInput!, $projectID: Float!) {
+mutation CreateAspectOnProject($aspectData: CreateAspectInput!, $projectID: Float!) {
   createAspectOnProject(aspectData: $aspectData, projectID: $projectID) {
     title,
     framing,

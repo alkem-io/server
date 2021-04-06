@@ -1,4 +1,4 @@
-mutation CreateChallenge($challengeData: ChallengeInput!) {
+mutation CreateChallenge($challengeData: CreateChallengeInput!) {
   createChallenge(challengeData: $challengeData) {
     name,
     id

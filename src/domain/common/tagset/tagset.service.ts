@@ -7,7 +7,6 @@ import { Project } from '@domain/collaboration/project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { TagsetInput } from './tagset.dto';
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
@@ -15,6 +14,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
+import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
 
 @Injectable()
 export class TagsetService {
@@ -71,9 +71,25 @@ export class TagsetService {
     return tagset;
   }
 
-  async updateOrCreateTagset(
+  async createTagset2(
     tagsetable: ITagsetable,
-    tagsetData: TagsetInput
+    tagsetData: CreateTagsetInput
+  ): Promise<ITagset> {
+    if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
+      throw new ValidationException(
+        `Unable to replace create tagset as already one with the provided name: ${tagsetData.name}`,
+        LogContext.COMMUNITY
+      );
+    }
+    // If get here then need to create a new tagset
+    const tagset = await this.createTagset(tagsetData);
+    tagsetable.tagsets?.push(tagset);
+    return tagset;
+  }
+
+  async updateTagset(
+    tagsetable: ITagsetable,
+    tagsetData: UpdateTagsetInput
   ): Promise<ITagset> {
     if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
       const tagset = await this.getTagsetByName(tagsetable, tagsetData.name);

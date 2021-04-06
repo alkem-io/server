@@ -103,8 +103,8 @@ export class EcoverseResolverFields {
     description: 'A particular Project, identified by the ID',
   })
   @Profiling.api
-  async project(@Args('ID') id: number): Promise<IProject> {
-    return await this.projectService.getProjectByID(id);
+  async project(@Args('ID') id: string): Promise<IProject> {
+    return await this.projectService.getProjectOrFail(id);
   }
 
   @Roles(AuthorizationRoles.Members)
@@ -137,7 +137,7 @@ export class EcoverseResolverFields {
       'The user group with the specified id anywhere in the ecoverse',
   })
   @Profiling.api
-  async group(@Args('ID') id: number): Promise<IUserGroup> {
+  async group(@Args('ID') id: string): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(id, {
       relations: ['members', 'focalPoint'],
     });

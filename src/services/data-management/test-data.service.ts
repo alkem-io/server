@@ -1,24 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { ActorGroupInput } from '@domain/context/actor-group/actor-group.dto';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { ActorInput } from '@domain/context/actor/actor.dto';
-import { AspectInput } from '@domain/context/aspect/aspect.dto';
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
+import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
+import { CreateOpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
-import { ProjectInput } from '@domain/collaboration/project/project.dto';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { RelationInput } from '@domain/collaboration/relation/relation.dto';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { DataManagementService } from './data-management.service';
-import { OrganisationInput } from '@domain/community/organisation/organisation.dto.create';
+import { CreateOrganisationInput } from '@domain/community/organisation/organisation.dto.create';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { CreateProjectInput } from '@domain/collaboration/project';
+import { CreateAspectInput } from '@domain/context/aspect';
+import { CreateRelationInput } from '@domain/collaboration/relation';
+import { CreateActorGroupInput } from '@domain/context/actor-group';
+import { CreateActorInput } from '@domain/context/actor';
 
 export type TestDataServiceInitResult = {
   userId: number;
@@ -76,7 +76,7 @@ export class TestDataService {
   userEmail = 'qa.user@cherrytwist.org';
 
   async initOrganisation(): Promise<number> {
-    const organisation = new OrganisationInput();
+    const organisation = new CreateOrganisationInput();
     organisation.name = `${this.organisationName}`;
     organisation.textID = `${this.uniqueTextId}`;
     const response = await this.organisationService.createOrganisation(
@@ -86,7 +86,7 @@ export class TestDataService {
   }
 
   async initChallenge(): Promise<number> {
-    const challenge = new ChallengeInput();
+    const challenge = new CreateChallengeInput();
 
     challenge.name = `${this.challengeName}`;
     challenge.state = 'init challenge state';
@@ -111,7 +111,7 @@ export class TestDataService {
   }
 
   async initRemoveChallenge(): Promise<number> {
-    const challenge = new ChallengeInput();
+    const challenge = new CreateChallengeInput();
 
     challenge.name = 'Remove-challemge';
     challenge.state = 'state';
@@ -122,7 +122,7 @@ export class TestDataService {
   }
 
   async initOpportunity(challengeId: number): Promise<number> {
-    const opportunity = new OpportunityInput();
+    const opportunity = new CreateOpportunityInput();
     opportunity.challengeID = `${challengeId}`;
     opportunity.name = 'init opportunity name';
     opportunity.state = 'init opportunity state';
@@ -146,7 +146,7 @@ export class TestDataService {
   }
 
   async initRemoveOpportunity(challengeId: number): Promise<number> {
-    const opportunity = new OpportunityInput();
+    const opportunity = new CreateOpportunityInput();
     opportunity.challengeID = `${challengeId}`;
     opportunity.name = 'init remove opportunity name';
     opportunity.state = 'init opportunity state';
@@ -156,7 +156,7 @@ export class TestDataService {
   }
 
   async initProject(opportunityId: number): Promise<number> {
-    const project = new ProjectInput();
+    const project = new CreateProjectInput();
     project.name = 'init project name';
     project.state = 'init project state';
     project.textID = 'init-project';
@@ -169,7 +169,7 @@ export class TestDataService {
   }
 
   async initAspect(opportunityId: number): Promise<number> {
-    const aspect = new AspectInput();
+    const aspect = new CreateAspectInput();
     aspect.explanation = 'init aspect explanation';
     aspect.framing = 'init aspect framing';
     aspect.title = 'init aspect title';
@@ -181,7 +181,7 @@ export class TestDataService {
   }
 
   async initAspectOnProject(projectId: number): Promise<number> {
-    const aspect = new AspectInput();
+    const aspect = new CreateAspectInput();
     aspect.explanation = 'init project aspect explanation';
     aspect.framing = 'init project aspect framing';
     aspect.title = 'init project aspect title';
@@ -190,7 +190,7 @@ export class TestDataService {
   }
 
   async initRelation(opportunityId: number): Promise<number> {
-    const relation = new RelationInput();
+    const relation = new CreateRelationInput();
     relation.actorName = 'init relation actor name';
     relation.actorRole = 'init relation actor role';
     relation.actorType = 'init relation actor type';
@@ -248,7 +248,7 @@ export class TestDataService {
   }
 
   async initActorGroup(opportunityId: number): Promise<number> {
-    const actorGroup = new ActorGroupInput();
+    const actorGroup = new CreateActorGroupInput();
     actorGroup.name = 'init actorGroup name';
     actorGroup.description = 'init actorGroup description';
     const response = await this.opportunityService.createActorGroup(
@@ -259,15 +259,13 @@ export class TestDataService {
   }
 
   async initActor(actorGroupId: number): Promise<number> {
-    const actorGroup = new ActorInput();
-    actorGroup.name = 'init actor name';
-    actorGroup.impact = 'init actor impact';
-    actorGroup.value = 'init actor value';
-    actorGroup.description = 'init actor description';
-    const response = await this.actorGroupService.createActor(
-      actorGroupId,
-      actorGroup
-    );
+    const actor = new CreateActorInput();
+    actor.actorGroupId = actorGroupId;
+    actor.name = 'init actor name';
+    actor.impact = 'init actor impact';
+    actor.value = 'init actor value';
+    actor.description = 'init actor description';
+    const response = await this.actorGroupService.createActor(actor);
     return response.id;
   }
 

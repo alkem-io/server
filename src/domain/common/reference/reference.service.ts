@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ReferenceInput } from './reference.dto';
+import { CreateReferenceInput } from './reference.dto.create';
 import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';
 
@@ -14,7 +14,9 @@ export class ReferenceService {
     private referenceRepository: Repository<Reference>
   ) {}
 
-  async createReference(referenceInput: ReferenceInput): Promise<IReference> {
+  async createReference(
+    referenceInput: CreateReferenceInput
+  ): Promise<IReference> {
     const reference = new Reference(
       referenceInput.name,
       referenceInput.uri || '',
@@ -26,7 +28,7 @@ export class ReferenceService {
 
   async updateReference(
     reference: IReference,
-    referenceData: ReferenceInput
+    referenceData: CreateReferenceInput
   ): Promise<IReference> {
     // Copy over the received data if a uri is supplied
     if (referenceData.uri) {
@@ -63,7 +65,7 @@ export class ReferenceService {
 
   async updateReferences(
     references: IReference[],
-    referenceDTOs: ReferenceInput[]
+    referenceDTOs: CreateReferenceInput[]
   ) {
     for (const referenceDTO of referenceDTOs) {
       const existingReference = await references.find(

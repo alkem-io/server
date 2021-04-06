@@ -6,7 +6,7 @@ import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
+import { CreateOpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Profiling } from '@src/common/decorators';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
@@ -27,7 +27,7 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async createOpportunity(
-    @Args('opportunityData') opportunityData: OpportunityInput
+    @Args('opportunityData') opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     const opportunity = await this.challengeService.createOpportunity(
       opportunityData

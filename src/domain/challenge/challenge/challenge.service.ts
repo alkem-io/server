@@ -1,6 +1,6 @@
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
+import { CreateOpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
@@ -18,7 +18,7 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { ChallengeInput } from './challenge.dto.create';
+import { CreateChallengeInput } from './challenge.dto.create';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { UpdateChallengeInput } from './challenge.dto.update';
@@ -108,7 +108,7 @@ export class ChallengeService {
   }
 
   async createOpportunity(
-    opportunityData: OpportunityInput
+    opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     // First find the Challenge
 
@@ -145,7 +145,7 @@ export class ChallengeService {
 
   async validateOpportunity(
     challenge: IChallenge,
-    opportunityData: OpportunityInput
+    opportunityData: CreateOpportunityInput
   ) {
     const opportunities = challenge.opportunities;
     if (!opportunities)
@@ -219,7 +219,9 @@ export class ChallengeService {
     return challenge;
   }
 
-  async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
+  async createChallenge(
+    challengeData: CreateChallengeInput
+  ): Promise<IChallenge> {
     await this.validateChallengeData(challengeData);
 
     const textID = challengeData.textID;
@@ -233,7 +235,7 @@ export class ChallengeService {
     return savedChallenge;
   }
 
-  async validateChallengeData(challengeData: ChallengeInput) {
+  async validateChallengeData(challengeData: CreateChallengeInput) {
     const textID = challengeData.textID;
     if (!textID || textID.length < 3)
       throw new ValidationException(
