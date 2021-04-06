@@ -63,7 +63,8 @@ describe('Update user', () => {
     const responseUpdateUser = await updateUserMutation(
       userId,
       userNameAfterUpdate,
-      userPhone
+      userPhone,
+      userEmail
     );
 
     getUserData = await getUpdatedUserData(userId);
@@ -81,7 +82,8 @@ describe('Update user', () => {
     const responseUpdateUser = await updateUserMutation(
       userId,
       userName,
-      phoneAfterUpdate
+      phoneAfterUpdate,
+      userEmail
     );
     getUserData = await getUpdatedUserData(userId);
 
@@ -111,7 +113,12 @@ describe('Update user', () => {
 
   test('should update user and be available in "users" query', async () => {
     // Act
-    await updateUserMutation(userId, userNameAfterUpdate, userPhone);
+    const test = await updateUserMutation(
+      userId,
+      userNameAfterUpdate,
+      userPhone,
+      userEmail
+    );
     let getUsersData = await getUsers();
 
     // Assert
