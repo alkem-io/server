@@ -103,13 +103,14 @@ export const createUserDetailsMutation = async (
 
 export const updateUserMutation = async (
   updateUserId: any,
-  name: string,
-  phone: string
+  nameUser: string,
+  phoneUser: string,
+  emailUser?: string
 ) => {
   const requestParams = {
-    operationName: 'UpdateUser',
-    query: `mutation UpdateUser($userID: Float!, $userData: UserInput!) {
-        updateUser(userID: $userID, userData: $userData) {
+    operationName: null,
+    query: `mutation updateUser($userData: UserInput!, $userID: Float!) {
+      updateUser(userData: $userData, userID: $userID) {
           id
           name
           phone
@@ -119,8 +120,9 @@ export const updateUserMutation = async (
     variables: {
       userID: parseFloat(updateUserId),
       userData: {
-        name: name,
-        phone: phone,
+        name: nameUser,
+        phone: phoneUser,
+        email: emailUser,
       },
     },
   };
@@ -264,7 +266,7 @@ export const getUsers = async () => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: 'query{users {name}}',
+    query: 'query{users {id name email phone}}',
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -293,7 +295,7 @@ export const getUsersFromChallengeCommunity = async (communityGroupId: any) => {
 };
 
 export const updateProfileMutation = async (
-  userId: any,
+  profileId: any,
   descritpion: string,
   avatar?: string,
   tagsetDataName?: string,
@@ -307,7 +309,7 @@ export const updateProfileMutation = async (
     query: `mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
       updateProfile(profileData: $profileData, ID: $ID)}`,
     variables: {
-      ID: parseFloat(userId),
+      ID: parseFloat(profileId),
       profileData: {
         description: descritpion,
         avatar: avatar,
@@ -351,6 +353,23 @@ export const getUsersProfile = async (userId: string) => {
             description
           }
         }
+      }
+    }`,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getUpdatedUserData = async (userId: string) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query {
+      user(ID: "${userId}") {
+        id
+        name
+        phone
+        email
       }
     }`,
   };

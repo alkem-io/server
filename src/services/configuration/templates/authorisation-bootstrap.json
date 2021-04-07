@@ -56,6 +56,11 @@
       "email": "ecoverse-member@cherrytwist.com",
       "firstName": "Ecoverse",
       "lastName": "Member"
+    },
+    {
+      "email": "non-ecoverse@cherrytwist.com",
+      "firstName": "Non",
+      "lastName": "Ecoverse"
     }
   ]
 }

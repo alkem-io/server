@@ -329,6 +329,40 @@ export const createTagsetOnProfileVariables = (id: number) => `
     "tagsetName": "testTagset"
   }`;
 
+export const createApplicationMutation = `
+  mutation createApplication(
+    $communityId: Float!
+    $applicationData: ApplicationInput!
+  ) {
+    createApplication(
+      communityID: $communityId
+      applicationData: $applicationData
+    ) {
+      id
+      user {
+        id
+        name
+      }
+      questions {
+        id
+        name
+        value
+      }
+      status
+    }
+  }`;
+
+export const createApplicationVariables = (id: number) => `
+{
+  "communityId": 1,
+  "applicationData": {
+    "userId": 11,
+    "questions": [
+      {"name": "Test Question 1", "value": "Test answer"}
+    ]
+  }
+}`;
+
 const mutations: Record<string, string> = {
   createOrganisationMutation,
   createUserMutation,
@@ -344,6 +378,7 @@ const mutations: Record<string, string> = {
   createAspectOnProjectMutation,
   createReferenceOnContextMutation,
   createTagsetOnProfileMutation,
+  createApplicationMutation,
 };
 
 const variables: Record<string, (id: number) => string> = {
@@ -362,6 +397,7 @@ const variables: Record<string, (id: number) => string> = {
   createAspectOnProjectVariables,
   createReferenceOnContextVariables,
   createTagsetOnProfileVariables,
+  createApplicationVariables
 };
 
 export const getCreateMutation = (name: string) => {
