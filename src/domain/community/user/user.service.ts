@@ -36,36 +36,27 @@ export class UserService {
 
     // Ok to create a new user + save
     const user = User.create(userData);
-    await this.initialiseMembers(user);
+    await this.initialiseMembers(user, userData);
     // Need to save to get the object identifiers assigned
-    await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
     this.logger.verbose?.(
-      `Created a new user with id: ${user.id}`,
+      `Created a new user with id: ${savedUser.id}`,
       LogContext.COMMUNITY
     );
 
-    // Now update the profile if needed
-    const profileData = userData.profileData;
-    if (profileData && user.profile) {
-      // todo - need to fix this process
-      //await this.profileService.updateProfile(user.profile.id, profileData);
-    }
-    // reload the user to get it populated
-    const populatedUser = await this.getUserByIdOrFail(user.id);
-
-    this.logger.verbose?.(
-      `User ${userData.email} was created!`,
-      LogContext.COMMUNITY
-    );
-
-    return populatedUser;
+    return savedUser;
   }
 
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(user: IUser): Promise<IUser> {
+  async initialiseMembers(
+    user: IUser,
+    userData: CreateUserInput
+  ): Promise<IUser> {
     if (!user.profile) {
-      user.profile = await this.profileService.createProfile();
+      user.profile = await this.profileService.createProfile(
+        userData.profileData
+      );
     }
 
     return user;

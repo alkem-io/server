@@ -25,6 +25,7 @@ import {
 } from '@domain/community/user-group';
 
 import validator from 'validator';
+import { CreateUserGroupInput } from './user-group.dto.create';
 @Injectable()
 export class UserGroupService {
   constructor(
@@ -36,14 +37,17 @@ export class UserGroupService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createUserGroup(name: string): Promise<IUserGroup> {
+  async createUserGroup(
+    userGroupData: CreateUserGroupInput
+  ): Promise<IUserGroup> {
+    const name = userGroupData.name;
     if (name.length == 0)
       throw new ValidationException(
         'Unable to create a group with an empty name',
         LogContext.COMMUNITY
       );
     const group = new UserGroup(name);
-    await this.initialiseMembers(group);
+    await this.initialiseMembers(group, userGroupData);
     await this.userGroupRepository.save(group);
     this.logger.verbose?.(
       `Created new group (${group.id}) with name: ${group.name}`,
@@ -52,15 +56,26 @@ export class UserGroupService {
     return group;
   }
 
-  async initialiseMembers(group: IUserGroup): Promise<IUserGroup> {
+  async initialiseMembers(
+    group: IUserGroup,
+    userGroupData: CreateUserGroupInput
+  ): Promise<IUserGroup> {
     if (!group.members) {
       group.members = [];
     }
     if (!group.profile) {
-      group.profile = await this.profileService.createProfile();
+      group.profile = await this.profileService.createProfile(
+        userGroupData.profileData
+      );
     }
 
     return group;
+  }
+
+  async createUserGroupByName(name: string): Promise<IUserGroup> {
+    const userGroupInput = new CreateUserGroupInput();
+    userGroupInput.name = name;
+    return await this.createUserGroup(userGroupInput);
   }
 
   async removeUserGroup(
@@ -363,7 +378,7 @@ export class UserGroupService {
     );
 
     for (const groupToAdd of newMandatoryGroups) {
-      const newGroup = await this.createUserGroup(groupToAdd);
+      const newGroup = await this.createUserGroupByName(groupToAdd);
       groupable.groups.push(newGroup);
     }
 
@@ -410,7 +425,7 @@ export class UserGroupService {
       );
     }
 
-    const newGroup = await this.createUserGroup(name);
+    const newGroup = await this.createUserGroupByName(name);
     await groupable.groups?.push(newGroup);
     return newGroup;
   }
@@ -424,8 +439,7 @@ export class UserGroupService {
       groupable.restrictedGroupNames = [];
     }
     for (const name of names) {
-      const group = await this.createUserGroup(name);
-      await this.initialiseMembers(group);
+      const group = await this.createUserGroupByName(name);
       groupable.groups?.push(group);
       groupable.restrictedGroupNames.push(name);
     }

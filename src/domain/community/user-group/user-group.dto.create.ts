@@ -7,7 +7,7 @@ import { CreateProfileInput } from '@domain/community/profile';
 export class CreateUserGroupInput {
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  name?: string;
+  name!: string;
 
   @Field(() => CreateProfileInput, { nullable: true })
   profileData?: CreateProfileInput;

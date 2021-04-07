@@ -35,7 +35,7 @@ export class OrganisationService {
     // No existing organisation found, create and initialise a new one!
     const organisation = new Organisation(organisationData.textID);
     organisation.name = organisationData.name;
-    await this.initialiseMembers(organisation);
+    await this.initialiseMembers(organisation, organisationData);
     await this.organisationRepository.save(organisation);
     this.logger.verbose?.(
       `Created new organisation with id ${organisation.id}`,
@@ -44,7 +44,10 @@ export class OrganisationService {
     return organisation;
   }
 
-  async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
+  async initialiseMembers(
+    organisation: IOrganisation,
+    organisationData: CreateOrganisationInput
+  ): Promise<IOrganisation> {
     if (!organisation.restrictedGroupNames) {
       organisation.restrictedGroupNames = [AuthorizationRoles.Members];
     }
@@ -60,7 +63,9 @@ export class OrganisationService {
 
     // Initialise contained singletons
     if (!organisation.profile) {
-      organisation.profile = await this.profileService.createProfile();
+      organisation.profile = await this.profileService.createProfile(
+        organisationData.profileData
+      );
     }
 
     return organisation;

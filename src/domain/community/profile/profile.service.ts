@@ -21,6 +21,7 @@ import {
 
 import validator from 'validator';
 import { CreateTagsetInput } from '@domain/common/tagset';
+import { CreateProfileInput } from './profile.dto.create';
 
 @Injectable()
 export class ProfileService {
@@ -32,8 +33,11 @@ export class ProfileService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createProfile(): Promise<IProfile> {
-    const profile = new Profile();
+  async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
+    let profile = new Profile();
+    if (profileData) {
+      profile = Profile.create(profileData);
+    }
     await this.initialiseMembers(profile);
     await this.profileRepository.save(profile);
     this.logger.verbose?.(
