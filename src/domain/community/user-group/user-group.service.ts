@@ -40,20 +40,15 @@ export class UserGroupService {
   async createUserGroup(
     userGroupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    const name = userGroupData.name;
-    if (name.length == 0)
-      throw new ValidationException(
-        'Unable to create a group with an empty name',
-        LogContext.COMMUNITY
-      );
-    const group = new UserGroup(name);
+    await this.validateUserGroupCreationRequest(userGroupData);
+    const group = new UserGroup(userGroupData.name);
     await this.initialiseMembers(group, userGroupData);
-    await this.userGroupRepository.save(group);
+    const savedUserGroup = await this.userGroupRepository.save(group);
     this.logger.verbose?.(
       `Created new group (${group.id}) with name: ${group.name}`,
       LogContext.COMMUNITY
     );
-    return group;
+    return savedUserGroup;
   }
 
   async initialiseMembers(
@@ -70,6 +65,18 @@ export class UserGroupService {
     }
 
     return group;
+  }
+
+  async validateUserGroupCreationRequest(
+    userGroupData: CreateUserGroupInput
+  ): Promise<boolean> {
+    const name = userGroupData.name;
+    if (name.length == 0)
+      throw new ValidationException(
+        'Unable to create a group with an empty name',
+        LogContext.COMMUNITY
+      );
+    return true;
   }
 
   async createUserGroupByName(name: string): Promise<IUserGroup> {

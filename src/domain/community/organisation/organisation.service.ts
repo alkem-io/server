@@ -16,6 +16,7 @@ import { IOrganisation } from './organisation.interface';
 import { AuthorizationRoles } from '@core/authorization';
 import validator from 'validator';
 import { UpdateOrganisationInput } from './organisation.dto.update';
+import { CreateUserGroupInput } from '../user-group';
 
 @Injectable()
 export class OrganisationService {
@@ -188,7 +189,9 @@ export class OrganisationService {
     return organisations || [];
   }
 
-  async createGroup(orgID: number, groupName: string): Promise<IUserGroup> {
+  async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
+    const orgID = groupData.parentId;
+    const groupName = groupData.name;
     // First find the Challenge
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to organisation (${orgID})`

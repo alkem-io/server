@@ -1,0 +1,22 @@
+mutation createGroupOnCommuity($groupData: CreateUserGroupInput!) {
+  createGroupOnCommuity(groupData: $groupData) {
+    name,
+    id
+    members {
+      name
+    }
+  }
+}
+
+Variables:
+{
+  "groupData":
+  {
+      "name": "Valentin",
+      "parentId": 1,
+      "profileData": {
+        "description": "some description",
+        "avatar": "http://someUri"
+      }
+  }
+}

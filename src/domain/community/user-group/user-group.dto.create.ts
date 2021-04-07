@@ -5,6 +5,9 @@ import { CreateProfileInput } from '@domain/community/profile';
 
 @InputType()
 export class CreateUserGroupInput {
+  @Field()
+  parentId!: number;
+
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;

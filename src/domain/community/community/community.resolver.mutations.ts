@@ -1,6 +1,6 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
-import { Args, Float, Mutation } from '@nestjs/graphql';
+import { Args, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
@@ -10,6 +10,7 @@ import { Profiling } from '@src/common/decorators';
 import { Application } from '@domain/community/application/application.entity';
 import { CreateApplicationInput } from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { CreateUserGroupInput } from '@domain/community/user-group';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -24,14 +25,9 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async createGroupOnCommunity(
-    @Args({ name: 'communityID', type: () => Float }) communityID: number,
-    @Args({ name: 'groupName', type: () => String }) groupName: string
+    @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.createGroup(
-      communityID,
-      groupName
-    );
-    return group;
+    return await this.communityService.createGroup(groupData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

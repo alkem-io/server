@@ -19,6 +19,7 @@ import { CreateAspectInput } from '@domain/context/aspect';
 import { CreateRelationInput } from '@domain/collaboration/relation';
 import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { CreateActorInput } from '@domain/context/actor';
+import { CreateUserGroupInput } from '@domain/community';
 
 export type TestDataServiceInitResult = {
   userId: number;
@@ -230,19 +231,19 @@ export class TestDataService {
     });
     const community = ecoverse.community;
     if (!community) throw new Error();
-    const response = await this.communityService.createGroup(
-      community.id,
-      this.groupName
-    );
+    const groupInput = new CreateUserGroupInput();
+    groupInput.name = this.groupName;
+    groupInput.parentId = community.id;
+    const response = await this.communityService.createGroup(groupInput);
     return response.id;
   }
 
   async initCreateGroupOnChallenge(challengeId: number): Promise<number> {
     const community = await this.challengeService.getCommunity(challengeId);
-    const response = await this.communityService.createGroup(
-      community.id,
-      this.groupName
-    );
+    const groupInput = new CreateUserGroupInput();
+    groupInput.name = this.groupName;
+    groupInput.parentId = community.id;
+    const response = await this.communityService.createGroup(groupInput);
     return response.id;
   }
 

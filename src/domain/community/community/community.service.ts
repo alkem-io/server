@@ -25,6 +25,7 @@ import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
 import { ApplicationService } from '../application/application.service';
 import { AuthorizationRoles } from '@core/authorization';
+import { CreateUserGroupInput } from '../user-group';
 
 @Injectable()
 export class CommunityService {
@@ -63,11 +64,10 @@ export class CommunityService {
     return community;
   }
 
-  async createGroup(
-    communityID: number,
-    groupName: string
-  ): Promise<IUserGroup> {
+  async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     // First find the Community
+    const communityID = groupData.parentId;
+    const groupName = groupData.name;
 
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to Community (${communityID})`,
