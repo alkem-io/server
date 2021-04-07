@@ -219,7 +219,7 @@ export class UserGroupService {
     groupID: string,
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
-    if (!validator.isNumeric(groupID)) {
+    if (validator.isNumeric(groupID)) {
       const idInt: number = parseInt(groupID);
       return await this.getUserGroupByIdOrFail(idInt, options);
     }
