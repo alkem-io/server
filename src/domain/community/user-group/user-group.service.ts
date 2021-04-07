@@ -17,7 +17,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { Community } from '@domain/community/community';
-import { TagsetService } from '@domain/common';
+import { UpdateMembershipInput, TagsetService } from '@domain/common';
 import {
   UpdateUserGroupInput,
   UserGroup,
@@ -196,10 +196,14 @@ export class UserGroupService {
     return [];
   }
 
-  async assignFocalPoint(userID: number, groupID: number): Promise<IUserGroup> {
+  async assignFocalPoint(
+    membershipData: UpdateMembershipInput
+  ): Promise<IUserGroup> {
     // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(userID);
-    const group = await this.getUserGroupByIdOrFail(groupID);
+    const user = await this.userService.getUserByIdOrFail(
+      membershipData.childID
+    );
+    const group = await this.getUserGroupByIdOrFail(membershipData.parentID);
 
     // Add the user to the group if not already a member
     await this.addUserToGroup(user, group);
@@ -243,10 +247,12 @@ export class UserGroupService {
     return group;
   }
 
-  async addUser(userID: number, groupID: number): Promise<boolean> {
-    const user = await this.userService.getUserByIdOrFail(userID);
+  async addUser(membershipData: UpdateMembershipInput): Promise<boolean> {
+    const user = await this.userService.getUserByIdOrFail(
+      membershipData.childID
+    );
 
-    const group = await this.getUserGroupByIdOrFail(groupID);
+    const group = await this.getUserGroupByIdOrFail(membershipData.parentID);
 
     return await this.addUserToGroup(user, group);
   }
@@ -299,12 +305,14 @@ export class UserGroupService {
     return true;
   }
 
-  async removeUser(userID: number, groupID: number): Promise<IUserGroup> {
+  async removeUser(membershipData: UpdateMembershipInput): Promise<IUserGroup> {
     // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(userID);
+    const user = await this.userService.getUserByIdOrFail(
+      membershipData.childID
+    );
 
     // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
-    const group = await this.getUserGroupByIdOrFail(groupID, {
+    const group = await this.getUserGroupByIdOrFail(membershipData.parentID, {
       relations: ['members', 'community'],
     });
 

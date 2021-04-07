@@ -41,6 +41,7 @@ export class ApplicationService {
     const result = await this.applicationRepository.remove(
       application as Application
     );
+    result.id = removeData.ID;
     return result;
   }
 

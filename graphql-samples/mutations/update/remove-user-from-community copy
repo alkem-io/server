@@ -1,5 +1,5 @@
-mutation removeUserFromCommunity($userID: Float!, $communityID: Float!) {
-  removeUserFromCommunity(communityID: $communityID, userID: $userID) {
+mutation removeUserFromCommunity($membershipData: UpdateMembershipInput!) {
+  removeUserFromCommunity(membershipData: $membershipData) {
     name,
     id,
     members {
@@ -11,6 +11,8 @@ mutation removeUserFromCommunity($userID: Float!, $communityID: Float!) {
 
 Variables:
 {
-  "userID": 7,
-  "communityID": 1
+  "membershipData": {
+    "childID": 7,
+    "parentID": 1
+  }
 }

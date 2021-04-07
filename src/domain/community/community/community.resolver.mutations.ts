@@ -13,6 +13,7 @@ import { AuthorizationRoles } from '@src/core/authorization/authorization.roles'
 import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '../application/application.service';
 import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { UpdateMembershipInput } from '@domain/common/entity.dto.update.membership';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -41,11 +42,9 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async addUserToCommunity(
-    @Args('userID') userID: number,
-    @Args('communityID') communityID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.addMember(userID, communityID);
-    return group;
+    return await this.communityService.addMember(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -56,11 +55,9 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async removeUserFromCommunity(
-    @Args('userID') userID: number,
-    @Args('communityID') communityID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.removeMember(userID, communityID);
-    return group;
+    return await this.communityService.removeMember(membershipData);
   }
 
   // All registered users can create applications

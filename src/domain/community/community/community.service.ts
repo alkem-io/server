@@ -26,6 +26,7 @@ import { IUser } from '../user/user.interface';
 import { ApplicationService } from '../application/application.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CreateUserGroupInput } from '../user-group';
+import { UpdateMembershipInput } from '@domain/common';
 
 @Injectable()
 export class CommunityService {
@@ -152,10 +153,11 @@ export class CommunityService {
     return community;
   }
 
-  async addMember(userID: number, communityID: number): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(communityID, {
+  async addMember(membershipData: UpdateMembershipInput): Promise<IUserGroup> {
+    const community = await this.getCommunityOrFail(membershipData.parentID, {
       relations: ['groups', 'parentCommunity'],
     });
+    const userID = membershipData.childID;
 
     // If the parent community is set, then check if the user is also a member there
     if (community.parentCommunity) {
@@ -180,13 +182,17 @@ export class CommunityService {
     return membersGroup;
   }
 
-  async removeMember(userID: number, communityID: number): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(communityID, {
+  async removeMember(
+    membershipData: UpdateMembershipInput
+  ): Promise<IUserGroup> {
+    const community = await this.getCommunityOrFail(membershipData.parentID, {
       relations: ['groups'],
     });
 
     // Try to find the user
-    const user = await this.userService.getUserByIdOrFail(userID);
+    const user = await this.userService.getUserByIdOrFail(
+      membershipData.childID
+    );
 
     // Get the members group
     const membersGroup = await this.getMembersGroupOrFail(community);
@@ -350,7 +356,10 @@ export class CommunityService {
         `Unable to load community for application ${applicationId} `,
         LogContext.COMMUNITY
       );
-    await this.addMember(application.user.id, application.community?.id);
+    await this.addMember({
+      childID: application.user.id,
+      parentID: application.community?.id,
+    });
 
     application.status = ApplicationStatus.approved;
 

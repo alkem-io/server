@@ -1,5 +1,5 @@
-mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
-  assignGroupFocalPoint(groupID: $groupID, userID: $userID) {
+mutation assignGroupFocalPoint($membershipData: UpdateMembershipInput!) {
+  assignGroupFocalPoint(membershipData: $membershipData) {
     name,
     id,
     focalPoint {
@@ -10,6 +10,8 @@ mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
 
 Variables:
 {
-  "userID": 7,
-  "groupID": 1
+  "membershipData": {
+    "childID": 7,
+    "parentID": 1
+  }
 }

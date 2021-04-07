@@ -9,6 +9,7 @@ import { Profiling } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { UpdateUserGroupInput } from '@domain/community/user-group';
 import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { UpdateMembershipInput } from '@domain/common/entity.dto.update.membership';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolverMutations {
@@ -45,11 +46,9 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async addUserToGroup(
-    @Args('userID') userID: number,
-    @Args('groupID') groupID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<boolean> {
-    const res = await this.groupService.addUser(userID, groupID);
-    return res;
+    return await this.groupService.addUser(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -60,11 +59,9 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async removeUserFromGroup(
-    @Args('userID') userID: number,
-    @Args('groupID') groupID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<IUserGroup> {
-    const group = await this.groupService.removeUser(userID, groupID);
-    return group;
+    return await this.groupService.removeUser(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -76,11 +73,9 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async assignGroupFocalPoint(
-    @Args('userID') userID: number,
-    @Args('groupID') groupID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<IUserGroup> {
-    const group = await this.groupService.assignFocalPoint(userID, groupID);
-    return group;
+    return await this.groupService.assignFocalPoint(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

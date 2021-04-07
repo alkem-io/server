@@ -213,10 +213,10 @@ export class TestDataService {
     const createdTestUser = (await this.userService.getUserByEmail(
       this.userEmail
     )) as IUser;
-    const response = await this.communityService.addMember(
-      createdTestUser?.id,
-      opportunityId
-    );
+    const response = await this.communityService.addMember({
+      childID: createdTestUser?.id,
+      parentID: opportunityId,
+    });
     return response.id;
   }
 
@@ -246,10 +246,10 @@ export class TestDataService {
     const createdTestUser = (await this.userService.getUserByEmail(
       this.userEmail
     )) as IUser;
-    const response = await this.userGroupService.assignFocalPoint(
-      createdTestUser?.id,
-      groupId
-    );
+    const response = await this.userGroupService.assignFocalPoint({
+      childID: createdTestUser?.id,
+      parentID: groupId,
+    });
     return response.id;
   }
 
@@ -312,7 +312,10 @@ export class TestDataService {
     const response = await this.userService.getUserByEmailOrFail(
       this.nonEcoverseEmail
     );
-    await this.userGroupService.removeUser(response.id, 1);
+    await this.userGroupService.removeUser({
+      childID: response.id,
+      parentID: 1,
+    });
   }
 
   async initUserId(usersEmail: string): Promise<number> {
