@@ -33,6 +33,9 @@ export class ProfileService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  private readonly minImageSize = 190;
+  private readonly maxImageSize = 410;
+
   async createProfile(): Promise<IProfile> {
     const profile = new Profile();
     await this.initialiseMembers(profile);
@@ -207,9 +210,15 @@ export class ProfileService {
 
     const buffer = await streamToBuffer(readStream);
 
-    if (!validateImageDimensions(buffer, 390, 410))
+    if (
+      !(await validateImageDimensions(
+        buffer,
+        this.minImageSize,
+        this.maxImageSize
+      ))
+    )
       throw new ValidationException(
-        'Upload file dimensions must be between 390 and 410 pixels!',
+        `Upload file dimensions must be between ${this.minImageSize} and ${this.maxImageSize} pixels!`,
         LogContext.COMMUNITY
       );
 
