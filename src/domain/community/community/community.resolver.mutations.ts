@@ -11,11 +11,14 @@ import { Application } from '@domain/community/application/application.entity';
 import { CreateApplicationInput } from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CreateUserGroupInput } from '@domain/community/user-group';
+import { ApplicationService } from '../application/application.service';
+
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    @Inject(CommunityService) private communityService: CommunityService
+    @Inject(CommunityService) private communityService: CommunityService,
+    private applicationService: ApplicationService
   ) {}
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
@@ -82,5 +85,17 @@ export class CommunityResolverMutations {
     @Args('ID') applicationID: number
   ): Promise<Application> {
     return await this.communityService.approveApplication(applicationID);
+  }
+
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Application, {
+    description: 'Removes user application with the specified applicationID',
+  })
+  //@Profiling.api
+  async removeUserApplication(
+    @Args('applicationID') applicationID: number
+  ): Promise<Application> {
+    return await this.applicationService.removeApplication(applicationID);
   }
 }

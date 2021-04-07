@@ -13,7 +13,7 @@ import { NVPService } from '@domain/common/nvp/nvp.service';
 export class ApplicationService {
   constructor(
     @InjectRepository(Application)
-    private applicationReposity: Repository<Application>,
+    private applicationRepository: Repository<Application>,
     private applicationFactoryService: ApplicationFactoryService,
     private nvpService: NVPService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -25,7 +25,7 @@ export class ApplicationService {
     const application = await this.applicationFactoryService.createApplication(
       applicationData
     );
-    return await this.applicationReposity.save(application);
+    return await this.applicationRepository.save(application);
   }
 
   async removeApplication(applicationID: number): Promise<Application> {
@@ -36,21 +36,21 @@ export class ApplicationService {
         await this.nvpService.removeNVP(question.id);
       }
     }
-    const result = await this.applicationReposity.remove(
+    const result = await this.applicationRepository.remove(
       application as Application
     );
     return result;
   }
 
   async getApplications() {
-    return (await this.applicationReposity.find()) || [];
+    return (await this.applicationRepository.find()) || [];
   }
 
   async getApplicationOrFail(
     applicationId: number,
     options?: FindOneOptions<Application>
   ): Promise<Application> {
-    const application = await this.applicationReposity.findOne(
+    const application = await this.applicationRepository.findOne(
       { id: applicationId },
       options
     );
@@ -63,6 +63,6 @@ export class ApplicationService {
   }
 
   async save(application: Application) {
-    await this.applicationReposity.save(application);
+    await this.applicationRepository.save(application);
   }
 }
