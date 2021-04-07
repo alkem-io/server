@@ -1,21 +1,30 @@
-import { UseGuards } from '@nestjs/common';
-import { Mutation, Args } from '@nestjs/graphql';
-import { Resolver } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { ReferenceInput } from '@domain/common/reference/reference.dto';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { ProfileService } from './profile.service';
-import { ProfileInput } from './profile.dto';
-import { Profiling } from '@src/common/decorators';
+import { UseGuards } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Profiling, SelfManagement } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
+import { IpfsService } from '@src/services/ipfs/ipfs.service';
+import { createWriteStream, unlinkSync } from 'fs';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { v4 as uuidv4 } from 'uuid';
+import { ProfileInput } from './profile.dto';
+import { ProfileService } from './profile.service';
+import { IProfile } from '@domain/community/profile/profile.interface';
+import { Profile } from '@domain/community/profile';
 
 @Resolver()
 export class ProfileResolver {
-  constructor(private profileService: ProfileService) {}
+  constructor(
+    private profileService: ProfileService,
+    private ipfsService: IpfsService
+  ) {}
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
@@ -65,5 +74,36 @@ export class ProfileResolver {
     @Args('profileData') profileData: ProfileInput
   ): Promise<boolean> {
     return await this.profileService.updateProfile(profileID, profileData);
+  }
+
+  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
+  @SelfManagement()
+  @Mutation(() => Profile)
+  async uploadAvatar(
+    @Args('profileID') profileID: number,
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    { createReadStream, filename }: FileUpload
+  ): Promise<IProfile> {
+    const guid = uuidv4();
+    const filePath = `./uploads/${filename}-${guid}`;
+
+    const res = new Promise(async (resolve, reject) =>
+      createReadStream()
+        .pipe(createWriteStream(filePath))
+        .on('finish', () => resolve(true))
+        .on('error', () => reject(false))
+    );
+
+    if (await res) {
+      const uri = await this.ipfsService.uploadFile(filePath);
+      unlinkSync(filePath);
+      const profileData: ProfileInput = {
+        avatar: uri,
+      };
+      await this.profileService.updateProfile(profileID, profileData);
+      return await this.profileService.getProfileOrFail(profileID);
+    }
+
+    throw new IpfsUploadFailedException(`Ipfs upload of ${filename} failed!`);
   }
 }
