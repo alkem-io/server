@@ -1,15 +1,8 @@
-import { UseGuards } from '@nestjs/common';
-import { Mutation, Args } from '@nestjs/graphql';
-import { Resolver } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { ProfileService } from './profile.service';
-import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CreateReferenceInput } from '@domain/common/reference';
 import {
   IProfile,
@@ -17,6 +10,13 @@ import {
   UpdateProfileInput,
 } from '@domain/community/profile';
 import { CreateTagsetInput } from '@domain/common/tagset';
+import { UseGuards } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Profiling, SelfManagement } from '@src/common/decorators';
+import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { ProfileService } from './profile.service';
 
 @Resolver()
 export class ProfileResolverMutations {
@@ -59,5 +59,22 @@ export class ProfileResolverMutations {
     @Args('profileData') profileData: UpdateProfileInput
   ): Promise<IProfile> {
     return await this.profileService.updateProfile(profileData);
+  }
+
+  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
+  @SelfManagement()
+  @Mutation(() => Profile)
+  async uploadAvatar(
+    @Args('profileID') profileID: number,
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    { createReadStream, filename, mimetype }: FileUpload
+  ): Promise<IProfile> {
+    const readStream = createReadStream();
+    return await this.profileService.uploadAvatar(
+      readStream,
+      filename,
+      mimetype,
+      profileID
+    );
   }
 }
