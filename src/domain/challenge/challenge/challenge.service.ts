@@ -113,16 +113,13 @@ export class ChallengeService {
     // First find the Challenge
 
     this.logger.verbose?.(
-      `Adding opportunity to challenge (${opportunityData.challengeID})`,
+      `Adding opportunity to challenge (${opportunityData.parentID})`,
       LogContext.CHALLENGES
     );
     // Try to find the challenge
-    const challenge = await this.getChallengeOrFail(
-      opportunityData.challengeID,
-      {
-        relations: ['opportunities', 'community'],
-      }
-    );
+    const challenge = await this.getChallengeOrFail(opportunityData.parentID, {
+      relations: ['opportunities', 'community'],
+    });
 
     await this.validateOpportunity(challenge, opportunityData);
 

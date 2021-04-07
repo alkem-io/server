@@ -9,7 +9,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 @InputType()
 export class UpdateReferenceInput {
   @Field({ nullable: false })
-  ID!: string;
+  ID!: number;
 
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)

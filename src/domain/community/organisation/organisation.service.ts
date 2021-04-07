@@ -190,7 +190,7 @@ export class OrganisationService {
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
-    const orgID = groupData.parentId;
+    const orgID = groupData.parentID;
     const groupName = groupData.name;
     // First find the Challenge
     this.logger.verbose?.(

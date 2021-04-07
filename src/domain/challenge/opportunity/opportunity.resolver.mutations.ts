@@ -52,50 +52,38 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Project, {
-    description: 'Create a new Project on the Opportunity identified by the ID',
+    description: 'Create a new Project on the Opportunity',
   })
   @Profiling.api
   async createProject(
-    @Args('opportunityID') opportunityId: number,
     @Args('projectData') projectData: CreateProjectInput
   ): Promise<IProject> {
-    const project = await this.opportunityService.createProject(
-      opportunityId,
-      projectData
-    );
+    const project = await this.opportunityService.createProject(projectData);
     return project;
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
-    description: 'Create a new aspect on the Opportunity identified by the ID',
+    description: 'Create a new aspect on the Opportunity',
   })
   @Profiling.api
   async createAspect(
-    @Args('opportunityID') opportunityId: number,
     @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
-    const aspect = await this.opportunityService.createAspect(
-      opportunityId,
-      aspectData
-    );
-    return aspect;
+    return await this.opportunityService.createAspect(aspectData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => ActorGroup, {
-    description:
-      'Create a new actor group on the Opportunity identified by the ID',
+    description: 'Create a new actor group on the Opportunity',
   })
   @Profiling.api
   async createActorGroup(
-    @Args('opportunityID') opportunityId: number,
     @Args('actorGroupData') actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
     const actorGroup = await this.opportunityService.createActorGroup(
-      opportunityId,
       actorGroupData
     );
     return actorGroup;
@@ -104,17 +92,12 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Relation, {
-    description:
-      'Create a new relation on the Opportunity identified by the ID',
+    description: 'Create a new relation on the Opportunity',
   })
   @Profiling.api
   async createRelation(
-    @Args('opportunityID') opportunityId: number,
     @Args('relationData') relationData: CreateRelationInput
   ): Promise<IRelation> {
-    return await this.opportunityService.createRelation(
-      opportunityId,
-      relationData
-    );
+    return await this.opportunityService.createRelation(relationData);
   }
 }

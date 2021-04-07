@@ -1,5 +1,5 @@
-mutation createActorGroup($actorGroupData: CreateActorGroupInput!, $opportunityID: Float!) {
-  createActorGroup(aspeactorGroupDatactData: $actorGroupData, opportunityID: $opportunityID) {
+mutation createActorGroup($actorGroupData: CreateActorGroupInput!) {
+  createActorGroup(aspeactorGroupDatactData: $actorGroupData) {
     title,
     framing,
     explanation
@@ -9,9 +9,9 @@ mutation createActorGroup($actorGroupData: CreateActorGroupInput!, $opportunityI
 
 query variables:
 {
-  "opportunityID": 1,
   "actorGroupData":
   {
+    "parentID": 1,
     "name": "TechStack2",
     "description": "How do I handle scalability?",
   }

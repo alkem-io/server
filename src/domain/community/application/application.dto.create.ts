@@ -8,7 +8,7 @@ export class CreateApplicationInput {
   userId!: number;
 
   @Field()
-  communityId!: number;
+  parentID!: number;
 
   @Field(() => [CreateNVPInput])
   questions!: CreateNVPInput[];

@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Reference } from '@domain/common/reference/reference.entity';
@@ -86,10 +87,8 @@ export class ProfileService {
     return await this.profileRepository.remove(profile as Profile);
   }
 
-  async createTagset(
-    profileID: number,
-    tagsetData: CreateTagsetInput
-  ): Promise<ITagset> {
+  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
+    const profileID = tagsetData.parentID;
     const profile = await this.getProfileByIdOrFail(profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
@@ -102,9 +101,14 @@ export class ProfileService {
   }
 
   async createReference(
-    profileID: number,
     referenceInput: CreateReferenceInput
   ): Promise<IReference> {
+    const profileID = referenceInput.parentID;
+    if (!profileID)
+      throw new ValidationException(
+        'No parendId specified for reference creation',
+        LogContext.COMMUNITY
+      );
     const profile = await this.getProfileByIdOrFail(profileID);
 
     if (!profile.references)
@@ -140,7 +144,7 @@ export class ProfileService {
     }
 
     // Iterate over the tagsets
-    const tagsetsData = profileData.tagsetsData;
+    const tagsetsData = profileData.updateTagsetsData;
     if (tagsetsData) {
       for (const tagsetData of tagsetsData) {
         await this.tagsetService.updateTagset(profile, tagsetData);
@@ -148,25 +152,22 @@ export class ProfileService {
     }
 
     // Iterate over the references
-    const referencesData = profileData.referencesData;
-    if (referencesData) {
-      for (const referenceData of referencesData) {
-        const existingReference = profile.references?.find(
-          reference => reference.name === referenceData.name
-        );
-        if (existingReference) {
-          await this.referenceService.updateReference(
-            existingReference,
-            referenceData
-          );
-        } else {
-          const newReference = await this.referenceService.createReference(
-            referenceData
-          );
-          profile.references?.push(newReference as Reference);
-        }
+    const updateReferencesData = profileData.updateReferencesData;
+    if (updateReferencesData) {
+      for (const referenceData of updateReferencesData) {
+        await this.referenceService.updateReference(referenceData);
       }
     }
+    const createReferencesData = profileData.createReferencesData;
+    if (createReferencesData) {
+      for (const referenceData of createReferencesData) {
+        const reference = await this.referenceService.createReference(
+          referenceData
+        );
+        profile.references?.push(reference as Reference);
+      }
+    }
+
     await this.profileRepository.save(profile);
     return true;
   }

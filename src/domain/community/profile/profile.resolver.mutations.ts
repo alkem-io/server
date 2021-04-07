@@ -26,14 +26,9 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async createTagsetOnProfile(
-    @Args('profileID') profileID: number,
     @Args('tagsetData') tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
-    const tagset = await this.profileService.createTagset(
-      profileID,
-      tagsetData
-    );
-    return tagset;
+    return await this.profileService.createTagset(tagsetData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -44,14 +39,9 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async createReferenceOnProfile(
-    @Args('profileID') profileID: number,
     @Args('referenceInput') referenceInput: CreateReferenceInput
   ): Promise<IReference> {
-    const reference = await this.profileService.createReference(
-      profileID,
-      referenceInput
-    );
-    return reference;
+    return await this.profileService.createReference(referenceInput);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)

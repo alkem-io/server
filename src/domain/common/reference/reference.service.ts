@@ -6,6 +6,7 @@ import { LogContext } from '@common/enums';
 import { CreateReferenceInput } from './reference.dto.create';
 import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';
+import { UpdateReferenceInput } from '@domain/common/reference';
 
 @Injectable()
 export class ReferenceService {
@@ -27,9 +28,9 @@ export class ReferenceService {
   }
 
   async updateReference(
-    reference: IReference,
-    referenceData: CreateReferenceInput
+    referenceData: UpdateReferenceInput
   ): Promise<IReference> {
+    const reference = await this.getReferenceOrFail(referenceData.ID);
     // Copy over the received data if a uri is supplied
     if (referenceData.uri) {
       reference.uri = referenceData.uri;
@@ -65,17 +66,18 @@ export class ReferenceService {
 
   async updateReferences(
     references: IReference[],
-    referenceDTOs: CreateReferenceInput[]
+    updateReferenceDTOs: UpdateReferenceInput[] | undefined,
+    createReferenceDTOs: CreateReferenceInput[] | undefined
   ) {
-    for (const referenceDTO of referenceDTOs) {
-      const existingReference = await references.find(
-        e => e.name === referenceDTO.name
-      );
-      if (!existingReference) {
-        const reference = await this.createReference(referenceDTO);
+    if (updateReferenceDTOs) {
+      for (const referenceDTO of updateReferenceDTOs) {
+        await this.updateReference(referenceDTO);
+      }
+    }
+    if (createReferenceDTOs) {
+      for (const createReferenceData of createReferenceDTOs) {
+        const reference = await this.createReference(createReferenceData);
         references.push(reference);
-      } else {
-        await this.updateReference(existingReference, referenceDTO);
       }
     }
   }

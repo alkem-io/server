@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { ContextResolver } from './context.resolver';
+import { ContextResolverMutations } from './context.resolver.mutations';
 
 describe('ContextResolver', () => {
-  let resolver: ContextResolver;
+  let resolver: ContextResolverMutations;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    resolver = module.get<ContextResolver>(ContextResolver);
+    resolver = module.get<ContextResolverMutations>(ContextResolverMutations);
   });
 
   it('should be defined', () => {

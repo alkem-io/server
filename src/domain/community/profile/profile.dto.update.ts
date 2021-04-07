@@ -1,8 +1,11 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { MID_TEXT_LENGTH, LONG_TEXT_LENGTH } from '@src/common/constants';
-import { UpdateReferenceInput } from '@domain/common/reference/reference.dto.update';
-import { UpdateTagsetInput } from '@domain/common/tagset';
+import {
+  UpdateReferenceInput,
+  CreateReferenceInput,
+} from '@domain/common/reference';
+import { UpdateTagsetInput, CreateTagsetInput } from '@domain/common/tagset';
 
 @InputType()
 export class UpdateProfileInput {
@@ -21,9 +24,17 @@ export class UpdateProfileInput {
 
   @Field(() => [UpdateTagsetInput], { nullable: true })
   @IsOptional()
-  tagsetsData?: UpdateTagsetInput[];
+  updateTagsetsData?: UpdateTagsetInput[];
+
+  @Field(() => [CreateTagsetInput], { nullable: true })
+  @IsOptional()
+  createTagsetsData?: CreateTagsetInput[];
 
   @Field(() => [UpdateReferenceInput], { nullable: true })
   @IsOptional()
-  referencesData?: UpdateReferenceInput[];
+  updateReferencesData?: UpdateReferenceInput[];
+
+  @Field(() => [CreateReferenceInput], { nullable: true })
+  @IsOptional()
+  createReferencesData?: CreateReferenceInput[];
 }

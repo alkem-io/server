@@ -352,10 +352,9 @@ export class OpportunityService {
     return community;
   }
 
-  async createProject(
-    opportunityId: number,
-    projectData: CreateProjectInput
-  ): Promise<IProject> {
+  async createProject(projectData: CreateProjectInput): Promise<IProject> {
+    const opportunityId = projectData.parentID;
+
     this.logger.verbose?.(
       `Adding project to opportunity (${opportunityId})`,
       LogContext.CHALLENGES
@@ -386,10 +385,8 @@ export class OpportunityService {
     return project;
   }
 
-  async createAspect(
-    opportunityID: number,
-    aspectData: CreateAspectInput
-  ): Promise<IAspect> {
+  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
+    const opportunityID = aspectData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['aspects'],
     });
@@ -418,9 +415,9 @@ export class OpportunityService {
   }
 
   async createActorGroup(
-    opportunityId: number,
     actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
+    const opportunityId = actorGroupData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['actorGroups'],
     });
@@ -449,10 +446,8 @@ export class OpportunityService {
     return actorGroup;
   }
 
-  async createRelation(
-    opportunityId: number,
-    relationData: CreateRelationInput
-  ): Promise<IRelation> {
+  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
+    const opportunityId = relationData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['relations'],
     });

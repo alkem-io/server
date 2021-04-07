@@ -1,5 +1,5 @@
-mutation CreateRelation($relationData: CreateRelationInput!, $opportunityID: Float!) {
-  createRelation(relationData: $relationData, opportunityID: $opportunityID) {
+mutation CreateRelation($relationData: CreateRelationInput!) {
+  createRelation(relationData: $relationData) {
     type
   }
 }
@@ -7,9 +7,9 @@ mutation CreateRelation($relationData: CreateRelationInput!, $opportunityID: Flo
 
 query variables:
 {
-  "opportunityID": 1,
   "relationData":
   {
+    "parentID": 1,
     "type": "incoming",
     "description": "How do I handle scalability?",
     "actorName": "Test",

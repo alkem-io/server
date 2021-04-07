@@ -109,10 +109,8 @@ export class ProjectService {
     return project;
   }
 
-  async createAspect(
-    projectId: number,
-    aspectData: CreateAspectInput
-  ): Promise<IAspect> {
+  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
+    const projectId = aspectData.parentID;
     const project = await this.getProjectByIdOrFail(projectId);
 
     // Check that do not already have an aspect with the same title

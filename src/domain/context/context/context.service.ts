@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CreateReferenceInput } from '@domain/common/reference';
@@ -60,18 +61,17 @@ export class ContextService {
       context.who = contextInput.who;
     }
 
-    if (contextInput.references) {
-      if (!context.references)
-        throw new EntityNotInitializedException(
-          `References for contex with id: ${context.id} not initialized properly!`,
-          LogContext.CHALLENGES
-        );
-
-      await this.referenceService.updateReferences(
-        context.references,
-        contextInput.references
+    if (!context.references)
+      throw new EntityNotInitializedException(
+        `References for contex with id: ${context.id} not initialized properly!`,
+        LogContext.CHALLENGES
       );
-    }
+
+    await this.referenceService.updateReferences(
+      context.references,
+      contextInput.updateReferences,
+      contextInput.createReferences
+    );
 
     await this.contextRepository.save(context);
     return context;
@@ -92,9 +92,14 @@ export class ContextService {
   }
 
   async createReference(
-    contextID: number,
     referenceInput: CreateReferenceInput
   ): Promise<IReference> {
+    const contextID = referenceInput.parentID;
+    if (!contextID)
+      throw new ValidationException(
+        'No parendId specified for reference creation',
+        LogContext.CHALLENGES
+      );
     const context = await this.getContextOrFail(contextID);
 
     if (!context.references)

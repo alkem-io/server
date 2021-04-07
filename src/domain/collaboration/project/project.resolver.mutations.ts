@@ -3,9 +3,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
-import { CreateAspectInput } from '@domain/context/aspect';
-import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { IAspect } from '@domain/context/aspect/aspect.interface';
+import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
 import { ProjectService } from './project.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import {
@@ -40,17 +38,13 @@ export class ProjectResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
-    description: 'Create a new aspect on the Project identified by the ID',
+    description: 'Create a new aspect on the Project',
   })
   @Profiling.api
   async createAspectOnProject(
-    @Args('projectID') projectId: number,
     @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
-    const aspect = await this.projectService.createAspect(
-      projectId,
-      aspectData
-    );
+    const aspect = await this.projectService.createAspect(aspectData);
     return aspect;
   }
 }

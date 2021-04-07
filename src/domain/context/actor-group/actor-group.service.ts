@@ -34,12 +34,12 @@ export class ActorGroupService {
   }
 
   async createActor(actorData: CreateActorInput): Promise<IActor> {
-    const actorGroup = await this.getActorGroupOrFail(actorData.actorGroupId);
+    const actorGroup = await this.getActorGroupOrFail(actorData.parentID);
 
     const actor = await this.actorService.createActor(actorData);
     if (!actorGroup.actors)
       throw new GroupNotInitializedException(
-        `Non-initialised ActorGroup: ${actorData.actorGroupId}`,
+        `Non-initialised ActorGroup: ${actorData.parentID}`,
         LogContext.CHALLENGES
       );
     actorGroup.actors.push(actor);

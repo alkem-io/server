@@ -134,7 +134,7 @@ export class TestDataService {
 
   async initOpportunity(challengeId: number): Promise<number> {
     const opportunity = new CreateOpportunityInput();
-    opportunity.challengeID = `${challengeId}`;
+    opportunity.parentID = `${challengeId}`;
     opportunity.name = 'init opportunity name';
     opportunity.state = 'init opportunity state';
     opportunity.textID = 'init-opport';
@@ -158,7 +158,7 @@ export class TestDataService {
 
   async initRemoveOpportunity(challengeId: number): Promise<number> {
     const opportunity = new CreateOpportunityInput();
-    opportunity.challengeID = `${challengeId}`;
+    opportunity.parentID = `${challengeId}`;
     opportunity.name = 'init remove opportunity name';
     opportunity.state = 'init opportunity state';
     opportunity.textID = 'remove-opport';
@@ -172,10 +172,8 @@ export class TestDataService {
     project.state = 'init project state';
     project.textID = 'init-project';
     project.description = 'init project description';
-    const response = await this.opportunityService.createProject(
-      opportunityId,
-      project
-    );
+    project.parentID = opportunityId;
+    const response = await this.opportunityService.createProject(project);
     return response.id;
   }
 
@@ -184,10 +182,8 @@ export class TestDataService {
     aspect.explanation = 'init aspect explanation';
     aspect.framing = 'init aspect framing';
     aspect.title = 'init aspect title';
-    const response = await this.opportunityService.createAspect(
-      opportunityId,
-      aspect
-    );
+    aspect.parentID = opportunityId;
+    const response = await this.opportunityService.createAspect(aspect);
     return response.id;
   }
 
@@ -196,7 +192,8 @@ export class TestDataService {
     aspect.explanation = 'init project aspect explanation';
     aspect.framing = 'init project aspect framing';
     aspect.title = 'init project aspect title';
-    const response = await this.projectService.createAspect(projectId, aspect);
+    aspect.parentID = projectId;
+    const response = await this.projectService.createAspect(aspect);
     return response.id;
   }
 
@@ -207,10 +204,8 @@ export class TestDataService {
     relation.actorType = 'init relation actor type';
     relation.description = 'init relation description';
     relation.type = 'incoming';
-    const response = await this.opportunityService.createRelation(
-      opportunityId,
-      relation
-    );
+    relation.parentID = opportunityId;
+    const response = await this.opportunityService.createRelation(relation);
     return response.id;
   }
 
@@ -233,7 +228,7 @@ export class TestDataService {
     if (!community) throw new Error();
     const groupInput = new CreateUserGroupInput();
     groupInput.name = this.groupName;
-    groupInput.parentId = community.id;
+    groupInput.parentID = community.id;
     const response = await this.communityService.createGroup(groupInput);
     return response.id;
   }
@@ -242,7 +237,7 @@ export class TestDataService {
     const community = await this.challengeService.getCommunity(challengeId);
     const groupInput = new CreateUserGroupInput();
     groupInput.name = this.groupName;
-    groupInput.parentId = community.id;
+    groupInput.parentID = community.id;
     const response = await this.communityService.createGroup(groupInput);
     return response.id;
   }
@@ -262,16 +257,14 @@ export class TestDataService {
     const actorGroup = new CreateActorGroupInput();
     actorGroup.name = 'init actorGroup name';
     actorGroup.description = 'init actorGroup description';
-    const response = await this.opportunityService.createActorGroup(
-      opportunityId,
-      actorGroup
-    );
+    actorGroup.parentID = opportunityId;
+    const response = await this.opportunityService.createActorGroup(actorGroup);
     return response.id;
   }
 
   async initActor(actorGroupId: number): Promise<number> {
     const actor = new CreateActorInput();
-    actor.actorGroupId = actorGroupId;
+    actor.parentID = actorGroupId;
     actor.name = 'init actor name';
     actor.impact = 'init actor impact';
     actor.value = 'init actor value';

@@ -66,7 +66,7 @@ export class CommunityService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     // First find the Community
-    const communityID = groupData.parentId;
+    const communityID = groupData.parentID;
     const groupName = groupData.name;
 
     this.logger.verbose?.(
@@ -241,12 +241,9 @@ export class CommunityService {
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<Application> {
-    const community = (await this.getCommunityOrFail(
-      applicationData.communityId,
-      {
-        relations: ['applications', 'parentCommunity'],
-      }
-    )) as Community;
+    const community = (await this.getCommunityOrFail(applicationData.parentID, {
+      relations: ['applications', 'parentCommunity'],
+    })) as Community;
 
     const existingApplication = community.applications?.find(
       x => x.user.id === applicationData.userId

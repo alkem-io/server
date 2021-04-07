@@ -9,9 +9,13 @@ query variables:
 {
   "userData":
   {
-     "name": "Valentin",
-    "firstName": "Valentin",
-    "lastName": "Valentin",
-    "email": "test@test.com"
+      "name": "Valentin",
+      "firstName": "Valentin",
+      "lastName": "Valentin",
+      "email": "test@test.com",
+      "profileData": {
+        "description": "some description",
+        "avatar": "http://someUri"
+      }
   }
 }

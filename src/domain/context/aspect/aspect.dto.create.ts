@@ -4,6 +4,9 @@ import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateAspectInput {
+  @Field()
+  parentID!: number;
+
   @Field({ nullable: true })
   @MaxLength(MID_TEXT_LENGTH)
   title!: string;

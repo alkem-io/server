@@ -12,7 +12,7 @@ export class CreateOpportunityInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  challengeID!: string;
+  parentID!: string;
 
   @Field({ nullable: true })
   @IsOptional()
