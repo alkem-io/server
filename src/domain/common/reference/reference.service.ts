@@ -28,13 +28,17 @@ export class ReferenceService {
     return reference;
   }
 
-  async updateReference(
+  updateReferenceValues(
+    reference: IReference,
     referenceData: UpdateReferenceInput
-  ): Promise<IReference> {
-    const reference = await this.getReferenceOrFail(referenceData.ID);
+  ) {
     // Copy over the received data if a uri is supplied
     if (referenceData.uri) {
       reference.uri = referenceData.uri;
+    }
+
+    if (referenceData.name) {
+      reference.name = referenceData.name;
     }
 
     if (referenceData.description) {
@@ -42,10 +46,15 @@ export class ReferenceService {
     } else {
       reference.description = '';
     }
+  }
 
-    const updatedReference = await this.referenceRepository.save(reference);
+  async updateReference(
+    referenceData: UpdateReferenceInput
+  ): Promise<IReference> {
+    const reference = await this.getReferenceOrFail(referenceData.ID);
+    this.updateReferenceValues(reference, referenceData);
 
-    return updatedReference;
+    return await this.referenceRepository.save(reference);
   }
 
   async getReferenceOrFail(referenceID: number): Promise<IReference> {
@@ -80,7 +89,16 @@ export class ReferenceService {
   ) {
     if (updateReferenceDTOs) {
       for (const referenceDTO of updateReferenceDTOs) {
-        await this.updateReference(referenceDTO);
+        const referenceID = referenceDTO.ID;
+        const existingReference = references.find(
+          reference => reference.id === referenceID
+        );
+        if (!existingReference)
+          throw new EntityNotFoundException(
+            `Not able to locate reference with the specified ID: ${referenceID} in existing references`,
+            LogContext.CHALLENGES
+          );
+        await this.updateReferenceValues(existingReference, referenceDTO);
       }
     }
     if (createReferenceDTOs) {
