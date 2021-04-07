@@ -33,6 +33,7 @@ import { CommunityType } from '@common/enums/community.types';
 import { TagsetService } from '@domain/common/tagset';
 import validator from 'validator';
 import { UpdateOpportunityInput } from './opportunity.dto.update';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -260,7 +261,10 @@ export class OpportunityService {
     return opportunity;
   }
 
-  async removeOpportunity(opportunityID: number): Promise<boolean> {
+  async removeOpportunity(
+    removeData: RemoveEntityInput
+  ): Promise<IOpportunity> {
+    const opportunityID = removeData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['actorGroups', 'aspects', 'relations', 'community'],
@@ -269,19 +273,19 @@ export class OpportunityService {
     // First remove all groups
     if (opportunity.aspects) {
       for (const aspect of opportunity.aspects) {
-        await this.aspectService.removeAspect(aspect.id);
+        await this.aspectService.removeAspect({ ID: aspect.id });
       }
     }
 
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        await this.relationService.removeRelation(relation.id);
+        await this.relationService.removeRelation({ ID: relation.id });
       }
     }
 
     if (opportunity.actorGroups) {
       for (const actorGroup of opportunity.actorGroups) {
-        await this.actorGroupService.removeActorGroup(actorGroup.id);
+        await this.actorGroupService.removeActorGroup({ ID: actorGroup.id });
       }
     }
 
@@ -296,11 +300,17 @@ export class OpportunityService {
     }
 
     if (opportunity.tagset) {
-      await this.tagsetService.removeTagset(opportunity.tagset.id);
+      await this.tagsetService.removeTagset({ ID: opportunity.tagset.id });
     }
 
-    await this.opportunityRepository.remove(opportunity as Opportunity);
-    return true;
+    const { id } = opportunity;
+    const result = await this.opportunityRepository.remove(
+      opportunity as Opportunity
+    );
+    return {
+      ...result,
+      id,
+    };
   }
 
   async getChallengeID(opportunityID: number): Promise<number> {

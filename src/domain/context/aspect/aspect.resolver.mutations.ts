@@ -7,6 +7,7 @@ import { Aspect } from './aspect.entity';
 import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
 import { UpdateAspectInput } from '@domain/context/aspect';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver()
 export class AspectResolverMutations {
@@ -14,11 +15,13 @@ export class AspectResolverMutations {
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Aspect, {
     description: 'Removes the aspect with the specified ID',
   })
-  async removeAspect(@Args('ID') aspectID: number): Promise<boolean> {
-    return await this.aspectService.removeAspect(aspectID);
+  async removeAspect(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IAspect> {
+    return await this.aspectService.removeAspect(removeData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)

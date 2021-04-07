@@ -74,13 +74,13 @@ export class ProfileService {
 
     if (profile.tagsets) {
       for (const tagset of profile.tagsets) {
-        await this.tagsetService.removeTagset(tagset.id);
+        await this.tagsetService.removeTagset({ ID: tagset.id });
       }
     }
 
     if (profile.references) {
       for (const reference of profile.references) {
-        await this.referenceService.removeReference(reference.id);
+        await this.referenceService.removeReference({ ID: reference.id });
       }
     }
 
@@ -133,7 +133,7 @@ export class ProfileService {
     return newReference;
   }
 
-  async updateProfile(profileData: UpdateProfileInput): Promise<boolean> {
+  async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
     const profile = await this.getProfileOrFail(profileData.ID);
 
     if (profileData.avatar) {
@@ -168,8 +168,7 @@ export class ProfileService {
       }
     }
 
-    await this.profileRepository.save(profile);
-    return true;
+    return await this.profileRepository.save(profile);
   }
 
   async getProfileOrFail(profileID: string): Promise<IProfile> {

@@ -5,6 +5,7 @@ import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Actor, IActor, UpdateActorInput } from '@domain/context/actor';
 import { ActorService } from './actor.service';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver()
 export class ActorResolverMutations {
@@ -12,11 +13,13 @@ export class ActorResolverMutations {
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Actor, {
     description: 'Removes the actor  with the specified ID',
   })
-  async removeActor(@Args('ID') actorID: number): Promise<boolean> {
-    return await this.actorService.removeActor(actorID);
+  async removeActor(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IActor> {
+    return await this.actorService.removeActor(removeData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)

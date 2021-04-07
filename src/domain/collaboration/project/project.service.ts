@@ -18,6 +18,7 @@ import {
   Project,
   IProject,
 } from '@domain/collaboration/project';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class ProjectService {
@@ -51,15 +52,20 @@ export class ProjectService {
     return project;
   }
 
-  async removeProject(projectID: number): Promise<boolean> {
-    const Project = await this.getProjectByIdOrFail(projectID);
-    if (!Project)
+  async removeProject(removeData: RemoveEntityInput): Promise<IProject> {
+    const projectID = removeData.ID;
+    const project = await this.getProjectByIdOrFail(projectID);
+    if (!project)
       throw new EntityNotFoundException(
         `Not able to locate Project with the specified ID: ${projectID}`,
         LogContext.CHALLENGES
       );
-    await this.projectRepository.remove(Project as Project);
-    return true;
+    const { id } = project;
+    const result = await this.projectRepository.remove(project as Project);
+    return {
+      ...result,
+      id,
+    };
   }
 
   async getProjectByIdOrFail(projectID: number): Promise<IProject> {

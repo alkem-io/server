@@ -26,6 +26,7 @@ import {
 
 import validator from 'validator';
 import { CreateUserGroupInput } from './user-group.dto.create';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 @Injectable()
 export class UserGroupService {
   constructor(
@@ -86,9 +87,10 @@ export class UserGroupService {
   }
 
   async removeUserGroup(
-    groupID: number,
+    removeData: RemoveEntityInput,
     checkForRestricted = false
-  ): Promise<boolean> {
+  ): Promise<IUserGroup> {
+    const groupID = removeData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const group = (await this.getUserGroupByIdOrFail(groupID)) as UserGroup;
 
@@ -103,8 +105,12 @@ export class UserGroupService {
       await this.profileService.removeProfile(group.profile.id);
     }
 
-    await this.userGroupRepository.remove(group);
-    return true;
+    const { id } = group;
+    const result = await this.userGroupRepository.remove(group);
+    return {
+      ...result,
+      id,
+    };
   }
 
   // Note: explicitly do not support updating of email addresses

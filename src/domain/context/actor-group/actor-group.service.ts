@@ -1,18 +1,20 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ActorGroup } from './actor-group.entity';
-import { IActorGroup } from './actor-group.interface';
+import {
+  ActorGroup,
+  IActorGroup,
+  CreateActorGroupInput,
+} from '@domain/context/actor-group';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CreateActorGroupInput } from './actor-group.dto.create';
 import { ActorService } from '@domain/context/actor/actor.service';
-import { IActor } from '@domain/context/actor/actor.interface';
 import {
   EntityNotFoundException,
   GroupNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateActorInput } from '@domain/context/actor';
+import { CreateActorInput, IActor } from '@domain/context/actor';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class ActorGroupService {
@@ -59,15 +61,19 @@ export class ActorGroupService {
     return actorGroup;
   }
 
-  async removeActorGroup(actorGroupID: number): Promise<boolean> {
+  async removeActorGroup(removeData: RemoveEntityInput): Promise<IActorGroup> {
+    const actorGroupID = removeData.ID;
     const actorGroup = await this.getActorGroupOrFail(actorGroupID);
     if (actorGroup.actors) {
       for (const actor of actorGroup.actors) {
-        await this.actorService.removeActor(actor.id);
+        await this.actorService.removeActor({ ID: actor.id });
       }
     }
-    await this.actorGroupRepository.remove(actorGroup as ActorGroup);
-    return true;
+    const result = await this.actorGroupRepository.remove(
+      actorGroup as ActorGroup
+    );
+    result.id = removeData.ID;
+    return result;
   }
 
   async getActorGroupOrFail(actorGroupID: number): Promise<IActorGroup> {

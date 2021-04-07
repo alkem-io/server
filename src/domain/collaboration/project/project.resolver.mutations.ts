@@ -11,17 +11,20 @@ import {
   Project,
   IProject,
 } from '@domain/collaboration/project';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(private projectService: ProjectService) {}
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Project, {
     description: 'Removes the Project with the specified ID',
   })
-  async removeProject(@Args('ID') ProjectID: number): Promise<boolean> {
-    return await this.projectService.removeProject(ProjectID);
+  async removeProject(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IProject> {
+    return await this.projectService.removeProject(removeData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

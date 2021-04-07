@@ -11,7 +11,11 @@ import { ProfileService } from './profile.service';
 import { Profiling } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CreateReferenceInput } from '@domain/common/reference';
-import { UpdateProfileInput } from '@domain/community/profile';
+import {
+  IProfile,
+  Profile,
+  UpdateProfileInput,
+} from '@domain/community/profile';
 import { CreateTagsetInput } from '@domain/common/tagset';
 
 @Resolver()
@@ -46,14 +50,14 @@ export class ProfileResolverMutations {
 
   @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Profile, {
     description:
       'Updates the fields on the Profile, such as avatar location or description',
   })
   @Profiling.api
   async updateProfile(
     @Args('profileData') profileData: UpdateProfileInput
-  ): Promise<boolean> {
+  ): Promise<IProfile> {
     return await this.profileService.updateProfile(profileData);
   }
 }

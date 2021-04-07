@@ -14,6 +14,7 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import validator from 'validator';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class ActorService {
@@ -61,10 +62,12 @@ export class ActorService {
     return actor;
   }
 
-  async removeActor(actorID: number): Promise<boolean> {
-    await this.getActorByIdOrFail(actorID);
-    await this.actorRepository.delete(actorID);
-    return true;
+  async removeActor(removeData: RemoveEntityInput): Promise<IActor> {
+    const actorID = removeData.ID;
+    const actor = await this.getActorByIdOrFail(actorID);
+    const result = await this.actorRepository.remove(actor as Actor);
+    result.id = removeData.ID;
+    return result;
   }
 
   async updateActor(actorData: UpdateActorInput): Promise<IActor> {

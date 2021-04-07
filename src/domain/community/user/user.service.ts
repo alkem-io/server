@@ -22,6 +22,7 @@ import {
   User,
   IUser,
 } from '@domain/community/user';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 @Injectable()
 export class UserService {
   constructor(
@@ -62,7 +63,8 @@ export class UserService {
     return user;
   }
 
-  async removeUser(userID: number): Promise<IUser> {
+  async removeUser(removeData: RemoveEntityInput): Promise<IUser> {
+    const userID = removeData.ID;
     const user = await this.getUserByIdOrFail(userID);
     const { id } = user;
 

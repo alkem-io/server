@@ -2,11 +2,11 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
-import { CreateActorInput } from '@domain/context/actor';
-import { Actor } from '@domain/context/actor/actor.entity';
-import { IActor } from '@domain/context/actor/actor.interface';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { ActorGroup, IActorGroup } from '@domain/context/actor-group';
+import { Actor, IActor, CreateActorInput } from '@domain/context/actor';
 
 @Resolver()
 export class ActorGroupResolverMutations {
@@ -27,10 +27,12 @@ export class ActorGroupResolverMutations {
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => ActorGroup, {
     description: 'Removes the actor group with the specified ID',
   })
-  async removeActorGroup(@Args('ID') actorGroupID: number): Promise<boolean> {
-    return await this.actorGroupService.removeActorGroup(actorGroupID);
+  async removeActorGroup(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IActorGroup> {
+    return await this.actorGroupService.removeActorGroup(removeData);
   }
 }

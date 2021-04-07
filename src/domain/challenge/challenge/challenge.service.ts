@@ -1,8 +1,10 @@
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { CreateOpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
+import {
+  Opportunity,
+  IOpportunity,
+  CreateOpportunityInput,
+} from '@domain/challenge/opportunity';
 import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
@@ -18,15 +20,18 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { CreateChallengeInput } from './challenge.dto.create';
-import { Challenge } from './challenge.entity';
-import { IChallenge } from './challenge.interface';
-import { UpdateChallengeInput } from './challenge.dto.update';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import validator from 'validator';
+import {
+  UpdateChallengeInput,
+  Challenge,
+  IChallenge,
+  CreateChallengeInput,
+} from '@domain/challenge/challenge';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class ChallengeService {
@@ -306,7 +311,8 @@ export class ChallengeService {
     return challenge;
   }
 
-  async removeChallenge(challengeID: number): Promise<boolean> {
+  async removeChallenge(removeData: RemoveEntityInput): Promise<IChallenge> {
+    const challengeID = removeData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeByIdOrFail(challengeID, {
       relations: ['opportunities', 'community'],
@@ -330,11 +336,17 @@ export class ChallengeService {
     }
 
     if (challenge.tagset) {
-      await this.tagsetService.removeTagset(challenge.tagset.id);
+      await this.tagsetService.removeTagset({ ID: challenge.tagset.id });
     }
 
-    await this.challengeRepository.remove(challenge as Challenge);
-    return true;
+    const { id } = challenge;
+    const result = await this.challengeRepository.remove(
+      challenge as Challenge
+    );
+    return {
+      ...result,
+      id,
+    };
   }
 
   async getChallenges(): Promise<Challenge[]> {

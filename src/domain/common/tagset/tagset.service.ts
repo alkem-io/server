@@ -16,6 +16,7 @@ import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
 import validator from 'validator';
 import { Ecoverse } from '@domain/challenge/ecoverse';
+import { RemoveEntityInput } from '../entity.dto.remove';
 
 @Injectable()
 export class TagsetService {
@@ -69,9 +70,12 @@ export class TagsetService {
     return tagset as ITagset;
   }
 
-  async removeTagset(tagsetID: number): Promise<ITagset> {
+  async removeTagset(removeData: RemoveEntityInput): Promise<ITagset> {
+    const tagsetID = removeData.ID;
     const tagset = await this.getTagsetByIdOrFail(tagsetID);
-    return await this.tagsetRepository.remove(tagset as Tagset);
+    const result = await this.tagsetRepository.remove(tagset as Tagset);
+    result.id = removeData.ID;
+    return result;
   }
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {

@@ -123,14 +123,14 @@ export class CommunityService {
     // Remove all groups
     if (community.groups) {
       for (const group of community.groups) {
-        await this.userGroupService.removeUserGroup(group.id);
+        await this.userGroupService.removeUserGroup({ ID: group.id });
       }
     }
 
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationService.removeApplication(application.id);
+        await this.applicationService.removeApplication({ ID: application.id });
       }
     }
 

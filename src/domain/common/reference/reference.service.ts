@@ -7,6 +7,7 @@ import { CreateReferenceInput } from './reference.dto.create';
 import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';
 import { UpdateReferenceInput } from '@domain/common/reference';
+import { RemoveEntityInput } from '../entity.dto.remove';
 
 @Injectable()
 export class ReferenceService {
@@ -59,9 +60,17 @@ export class ReferenceService {
     return reference;
   }
 
-  async removeReference(referenceID: number): Promise<IReference> {
+  async removeReference(removeData: RemoveEntityInput): Promise<IReference> {
+    const referenceID = removeData.ID;
     const reference = await this.getReferenceOrFail(referenceID);
-    return await this.referenceRepository.remove(reference as Reference);
+    const { id } = reference;
+    const result = await this.referenceRepository.remove(
+      reference as Reference
+    );
+    return {
+      ...result,
+      id,
+    };
   }
 
   async updateReferences(

@@ -84,7 +84,7 @@ export class ContextService {
     // Remove all references
     if (context.references) {
       for (const reference of context.references) {
-        await this.referenceService.removeReference(reference.id);
+        await this.referenceService.removeReference({ ID: reference.id });
       }
     }
 

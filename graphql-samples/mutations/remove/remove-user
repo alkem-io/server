@@ -1,12 +1,11 @@
-mutation removeUser($userID: Float!) {
-  removeUser(userID: $userID)
-  {
-    name
+mutation removeUser($removeData: RemoveEntityInput!) {
+  removeUser(removeData: $removeData) {
     id
   }
 }
-
 Variables:
 {
-  "userID": 7
+  "removeData": {
+    "ID": 7
+  }
 }

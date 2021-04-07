@@ -12,7 +12,7 @@ import { CreateApplicationInput } from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '../application/application.service';
-
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -94,8 +94,8 @@ export class CommunityResolverMutations {
   })
   //@Profiling.api
   async removeUserApplication(
-    @Args('applicationID') applicationID: number
+    @Args('removeData') removeData: RemoveEntityInput
   ): Promise<Application> {
-    return await this.applicationService.removeApplication(applicationID);
+    return await this.applicationService.removeApplication(removeData);
   }
 }

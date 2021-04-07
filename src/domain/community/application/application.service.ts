@@ -8,6 +8,7 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class ApplicationService {
@@ -28,7 +29,8 @@ export class ApplicationService {
     return await this.applicationRepository.save(application);
   }
 
-  async removeApplication(applicationID: number): Promise<Application> {
+  async removeApplication(removeData: RemoveEntityInput): Promise<Application> {
+    const applicationID = removeData.ID;
     const application = await this.getApplicationOrFail(applicationID);
 
     if (application.questions) {

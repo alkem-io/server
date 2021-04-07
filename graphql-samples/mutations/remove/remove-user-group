@@ -1,8 +1,12 @@
-mutation removeUserGroup($groupID: Float!) {
-  removeUserGroup(groupID: $groupID)
+mutation removeUserGroup($removeData: RemoveEntityInput!) {
+  removeUserGroup(removeData: $removeData) {
+    id
+  }
 }
 
 Variables:
 {
-  "groupID": 7
+  "removeData": {
+    "ID": 7
+  }
 }

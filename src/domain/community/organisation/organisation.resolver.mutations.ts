@@ -16,6 +16,7 @@ import {
   IUserGroup,
   UserGroup,
 } from '@domain/community/user-group';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -68,5 +69,16 @@ export class OrganisationResolverMutations {
       organisationData
     );
     return org;
+  }
+
+  @Roles(AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Organisation, {
+    description: 'Removes the Organisaiton with the specified ID',
+  })
+  async removeOrganisation(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IOrganisation> {
+    return await this.organisationService.removeOrganisation(removeData);
   }
 }

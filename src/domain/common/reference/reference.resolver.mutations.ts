@@ -4,6 +4,8 @@ import { AuthorizationRoles } from '@src/core/authorization/authorization.roles'
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { ReferenceService } from './reference.service';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { IReference, Reference } from '@domain/common/reference';
 
 @Resolver()
 export class ReferenceResolverMutations {
@@ -11,12 +13,12 @@ export class ReferenceResolverMutations {
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Reference, {
     description: 'Removes the reference  with the specified ID',
   })
-  async removeReference(@Args('ID') referenceID: number): Promise<boolean> {
-    const reference = await this.referenceService.removeReference(referenceID);
-    if (reference) return true;
-    return false;
+  async removeReference(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IReference> {
+    return await this.referenceService.removeReference(removeData);
   }
 }

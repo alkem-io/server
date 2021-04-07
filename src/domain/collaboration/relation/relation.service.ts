@@ -9,6 +9,7 @@ import { LogContext } from '@common/enums';
 import { CreateRelationInput } from './relation.dto.create';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 const allowedRelationTypes = ['incoming', 'outgoing'];
 
@@ -68,10 +69,15 @@ export class RelationService {
     return relation;
   }
 
-  async removeRelation(relationID: number): Promise<boolean> {
-    await this.getRelationOrFail(relationID);
+  async removeRelation(removeData: RemoveEntityInput): Promise<IRelation> {
+    const relationID = removeData.ID;
+    const relation = await this.getRelationOrFail(relationID);
 
-    await this.relationRepository.delete(relationID);
-    return true;
+    const { id } = relation;
+    const result = await this.relationRepository.remove(relation as Relation);
+    return {
+      ...result,
+      id,
+    };
   }
 }

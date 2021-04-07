@@ -8,6 +8,7 @@ import { UserGroupService } from './user-group.service';
 import { Profiling } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { UpdateUserGroupInput } from '@domain/community/user-group';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolverMutations {
@@ -15,11 +16,13 @@ export class UserGroupResolverMutations {
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => UserGroup, {
     description: 'Removes the user group with the specified ID',
   })
-  async removeUserGroup(@Args('ID') groupID: number): Promise<boolean> {
-    return await this.groupService.removeUserGroup(groupID, true);
+  async removeUserGroup(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IUserGroup> {
+    return await this.groupService.removeUserGroup(removeData, true);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

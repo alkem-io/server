@@ -20,6 +20,7 @@ import { Project } from '@domain/collaboration/project/project.entity';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { UpdateOpportunityInput } from './opportunity.dto.update';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver()
 export class OpportunityResolverMutations {
@@ -42,11 +43,13 @@ export class OpportunityResolverMutations {
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Opportunity, {
     description: 'Removes the Opportunity with the specified ID',
   })
-  async removeOpportunity(@Args('ID') opportunityID: number): Promise<boolean> {
-    return await this.opportunityService.removeOpportunity(opportunityID);
+  async removeOpportunity(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IOpportunity> {
+    return await this.opportunityService.removeOpportunity(removeData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)

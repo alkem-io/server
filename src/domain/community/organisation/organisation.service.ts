@@ -17,6 +17,7 @@ import { AuthorizationRoles } from '@core/authorization';
 import validator from 'validator';
 import { UpdateOrganisationInput } from './organisation.dto.update';
 import { CreateUserGroupInput } from '../user-group';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class OrganisationService {
@@ -117,9 +118,11 @@ export class OrganisationService {
     return await this.getOrganisationByIdOrFail(existingOrganisation.id);
   }
 
-  async removeOrganisation(orgID: number): Promise<IOrganisation> {
+  async removeOrganisation(
+    removeData: RemoveEntityInput
+  ): Promise<IOrganisation> {
+    const orgID = removeData.ID;
     const organisation = await this.getOrganisationByIdOrFail(orgID);
-    const { id } = organisation;
 
     if (organisation.profile) {
       await this.profileService.removeProfile(organisation.profile.id);
@@ -127,17 +130,15 @@ export class OrganisationService {
 
     if (organisation.groups) {
       for (const group of organisation.groups) {
-        await this.userGroupService.removeUserGroup(group.id);
+        await this.userGroupService.removeUserGroup({ ID: group.id });
       }
     }
 
     const result = await this.organisationRepository.remove(
       organisation as Organisation
     );
-    return {
-      ...result,
-      id,
-    };
+    result.id = removeData.ID;
+    return result;
   }
 
   async getOrganisationOrFail(

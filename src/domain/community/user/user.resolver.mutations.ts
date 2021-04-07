@@ -12,6 +12,7 @@ import {
   IUser,
 } from '@domain/community/user';
 import { UserService } from './user.service';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver(() => User)
 export class UserResolverMutations {
@@ -52,8 +53,9 @@ export class UserResolverMutations {
     description: 'Removes the specified user profile.',
   })
   @Profiling.api
-  async removeUser(@Args('userID') userID: number): Promise<IUser> {
-    const user = await this.userService.removeUser(userID);
-    return user;
+  async removeUser(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IUser> {
+    return await this.userService.removeUser(removeData);
   }
 }
