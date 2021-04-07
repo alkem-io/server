@@ -255,8 +255,8 @@ export class EcoverseService {
       if (!ecoverse.tagset) {
         ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
       }
-      await this.tagsetService.replaceTags(
-        ecoverse.tagset.id,
+      await this.tagsetService.replaceTagsOnEntity(
+        ecoverse as Ecoverse,
         ecoverseData.tags
       );
     }

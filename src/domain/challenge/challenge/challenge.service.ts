@@ -46,7 +46,7 @@ export class ChallengeService {
       challenge.opportunities = [];
     }
     if (!challenge.tagset) {
-      challenge.tagset = this.tagsetService.createTagset({});
+      challenge.tagset = this.tagsetService.createDefaultTagset();
     }
 
     if (!challenge.context) {

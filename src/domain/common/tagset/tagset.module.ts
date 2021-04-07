@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Tagset } from './tagset.entity';
-import { TagsetResolver } from './tagset.resolver';
+import { TagsetResolver } from './tagset.resolver.mutations';
 import { TagsetService } from './tagset.service';
 
 @Module({

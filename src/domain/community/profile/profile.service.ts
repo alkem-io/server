@@ -147,7 +147,7 @@ export class ProfileService {
     const tagsetsData = profileData.updateTagsetsData;
     if (tagsetsData) {
       for (const tagsetData of tagsetsData) {
-        await this.tagsetService.updateTagset(profile, tagsetData);
+        await this.tagsetService.updateTagset(tagsetData);
       }
     }
 

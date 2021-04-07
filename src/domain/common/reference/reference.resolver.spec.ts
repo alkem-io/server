@@ -1,16 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { ReferenceResolver } from './reference.resolver';
+import { ReferenceResolverMutations } from './reference.resolver.mutations';
 
 describe('ReferenceResolver', () => {
-  let resolver: ReferenceResolver;
+  let resolver: ReferenceResolverMutations;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    resolver = module.get<ReferenceResolver>(ReferenceResolver);
+    resolver = module.get<ReferenceResolverMutations>(
+      ReferenceResolverMutations
+    );
   });
 
   it('should be defined', () => {

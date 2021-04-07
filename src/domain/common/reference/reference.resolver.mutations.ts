@@ -6,7 +6,7 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { ReferenceService } from './reference.service';
 
 @Resolver()
-export class ReferenceResolver {
+export class ReferenceResolverMutations {
   constructor(private referenceService: ReferenceService) {}
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
