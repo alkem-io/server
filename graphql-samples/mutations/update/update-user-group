@@ -9,7 +9,7 @@ query variables:
 {
   "userGroupData":
   {
-    "pID": 7,
+    "ID": 7,
     "name": "test2",
     "profileData": {
       "description": "some description",
