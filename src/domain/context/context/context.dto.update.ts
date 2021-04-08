@@ -8,9 +8,6 @@ import {
 
 @InputType()
 export class UpdateContextInput {
-  @Field({ nullable: false })
-  ID!: string;
-
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
