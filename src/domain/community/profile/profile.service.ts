@@ -99,6 +99,11 @@ export class ProfileService {
 
   async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
     const profileID = tagsetData.parentID;
+    if (!profileID)
+      throw new ValidationException(
+        'No parendId specified for tagset creation',
+        LogContext.COMMUNITY
+      );
     const profile = await this.getProfileByIdOrFail(profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(

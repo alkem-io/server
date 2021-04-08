@@ -9,19 +9,16 @@ import { CreateContextInput } from '@domain/context/context';
 
 @InputType()
 export class CreateOpportunityInput {
-  @Field({ nullable: true })
-  @IsOptional()
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   parentID!: string;
 
-  @Field({ nullable: true })
-  @IsOptional()
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @IsUniqueTextId(TextIdType.challenge)
-  @IsOptional()
   @MaxLength(TINY_TEXT_LENGTH)
   textID!: string;
 
@@ -31,10 +28,8 @@ export class CreateOpportunityInput {
   state?: string;
 
   @Field(() => CreateContextInput, { nullable: true })
-  @IsOptional()
   context?: CreateContextInput;
 
   @Field(() => [String], { nullable: true })
-  @IsOptional()
   tags?: string[];
 }

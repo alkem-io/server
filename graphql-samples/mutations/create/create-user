@@ -15,7 +15,12 @@ query variables:
       "email": "test@test.com",
       "profileData": {
         "description": "some description",
-        "avatar": "http://someUri"
+        "avatar": "http://someUri",
+        "referencesData": {
+          "name": "wow",
+          "uri": "something",
+          "description": "this works"
+        }
       }
   }
 }
