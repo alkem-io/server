@@ -22,6 +22,33 @@ export const updateUserVariables = (id: number) => `
     }
   }`;
 
+export const updateNonEcoverseMutation = `
+mutation UpdateUser($userID: Float!, $userData: UserInput!) {
+    updateUser(userID: $userID, userData: $userData) {
+      id
+      name
+      email
+      city
+      profile{
+        description
+      }
+    }
+  }`;
+
+export const updateNonEcoverseVariables = (id: any, emailName: any) => `
+{
+    "userID": ${id},
+    "userData":
+    {
+      "name": "TestName",
+      "city": "TestCity",
+      "email": "${emailName}",
+      "profileData":{
+        "description":"test"
+      }
+    }
+  }`;
+
 export const updateProfileMutation = `
 mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
     updateProfile(profileData: $profileData, ID: $ID)
@@ -37,19 +64,20 @@ export const updateProfileVariables = (id: number) => `
   }`;
 
 export const updateOrganisationMutation = `
-mutation updateOrganisation($orgID: Float!, $organisationData: OrganisationInput!) {
-    updateOrganisation(orgID: $orgID, organisationData: $organisationData) {
-      name,
-      id
-    }
-  }`;
+mutation updateOrganisation($organisationData: UpdateOrganisationInput!) {
+  updateOrganisation(organisationData: $organisationData) {
+    name,
+    id
+  }
+}`;
 
 export const updateOrganisationVariabls = (id: number) => `
 {
-    "orgID": ${id},
+
     "organisationData":
     {
-      "name": "Cherrytwist2"
+      "ID": "${id}",
+    "name": "Cherrytwist77"
     }
   }`;
 
@@ -66,14 +94,14 @@ export const updateChallengeVariables = (id: number) => `
 
     "challengeData":
           {
-            "ID": ${id},
+            "ID": "${id}",
             "name": "Challenge with better name"
           }
   }`;
 
 export const updateOpportunityMutation = `
-mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
-    updateOpportunity(opportunityData: $opportunityData, ID: $ID) {
+mutation updateOpportunity($opportunityData: UpdateOpportunityInput!) {
+  updateOpportunity(opportunityData: $opportunityData) {
       name,
       id
     }
@@ -81,9 +109,10 @@ mutation updateOpportunity($opportunityData: OpportunityInput!, $ID: Float!) {
 
 export const updateOpportunityVariables = (id: number) => `
 {
-    "ID": ${id},
+
     "opportunityData":
     {
+      "ID": "${id}",
       "name": "Test Oportunity "
     }
   }`;
@@ -220,14 +249,14 @@ export const removeGroupFocalPointVariables = (id: number) => `
   }`;
 
 export const addChallengeLeadToOrganisationMutation = `
-mutation addChallengeLead($challengeID: Float!, $organisationID: Float!) {
-    addChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
-  }`;
+mutation addChallengeLead($challengeID: String!, $organisationID: String!) {
+  addChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
+}`;
 
 export const addChallengeLeadToOrganisationVariables = (id: number) => `
 {
-    "organisationID": ${organisationId},
-    "challengeID": ${id}
+    "organisationID": "${organisationId}",
+    "challengeID": "${id}"
   }`;
 
 export const removeUserFromGroupMutation = `
@@ -264,9 +293,10 @@ const mutations: Record<string, string> = {
   removeGroupFocalPointMutation,
   addChallengeLeadToOrganisationMutation,
   removeUserFromGroupMutation,
+  updateNonEcoverseMutation,
 };
 
-const variables: Record<string, (id: number) => string> = {
+const variables: Record<string, (id: number, emailName?: any) => string> = {
   updateUserVariables,
   updateProfileVariables,
   updateOrganisationVariabls,
@@ -282,12 +312,13 @@ const variables: Record<string, (id: number) => string> = {
   removeGroupFocalPointVariables,
   addChallengeLeadToOrganisationVariables,
   removeUserFromGroupVariables,
+  updateNonEcoverseVariables,
 };
 
 export const getUpdateMutation = (name: string) => {
   return mutations[name];
 };
 
-export const getUpdateVariables = (name: string, id: number) => {
-  return variables[name](id);
+export const getUpdateVariables = (name: string, id: any, emailName?: any) => {
+  return variables[name](id, emailName);
 };

@@ -143,7 +143,7 @@ describe('Opportunities', () => {
     // Act
     // Get all opportunities
     const responseOpSubEntities = await queryOpportunitiesSubEntities();
-    const baseResponse = responseOpSubEntities.body.data.opportunities;
+    const baseResponse = responseOpSubEntities.body.data.ecoverse.opportunities;
 
     expect(baseResponse.aspects).toBe(undefined);
     expect(baseResponse).not.toEqual(
@@ -217,14 +217,14 @@ describe('Opportunities', () => {
     // Query Opportunity data
     const requestQueryOpportunity = await queryOpportunity(opportunityId);
     const requestOpportunityData =
-      requestQueryOpportunity.body.data.opportunity;
+      requestQueryOpportunity.body.data.ecoverse.opportunity;
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
     expect(createOpportunityData).toEqual(requestOpportunityData);
   });
 
-  test.only('should update opportunity and query the data', async () => {
+  test('should update opportunity and query the data', async () => {
     // Arrange
     // Create Opportunity on Challenge
     const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
@@ -242,14 +242,13 @@ describe('Opportunities', () => {
     const responseUpdateOpportunity = await updateOpportunityOnChallengeMutation(
       opportunityId
     );
-    console.log(responseUpdateOpportunity.body)
     const updateOpportunityData =
       responseUpdateOpportunity.body.data.updateOpportunity;
 
     // Query Opportunity data
     const requestQueryOpportunity = await queryOpportunity(opportunityId);
     const requestOpportunityData =
-      requestQueryOpportunity.body.data.opportunity;
+      requestQueryOpportunity.body.data.ecoverse.opportunity;
 
     // Assert
     expect(responseUpdateOpportunity.status).toBe(200);
@@ -305,7 +304,7 @@ describe('Opportunities', () => {
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
-    expect(getAllOpportunityResponse.body.data.opportunities).toContainObject({
+    expect(getAllOpportunityResponse.body.data.ecoverse.opportunities).toContainObject({
       name: `${opportunityName}`,
     });
   });
@@ -388,7 +387,7 @@ describe('Opportunity sub entities', () => {
     const responseOpSubEntities = await queryOpportunitySubEntities(
       opportunityId
     );
-    const baseResponse = responseOpSubEntities.body.data.opportunity;
+    const baseResponse = responseOpSubEntities.body.data.ecoverse.opportunity;
 
     // Assert
     expect(baseResponse.projects).toHaveLength(1);
@@ -440,7 +439,7 @@ describe('Opportunity sub entities', () => {
     const responseOpSubEntities = await queryOpportunitySubEntities(
       opportunityId
     );
-    const baseResponse = responseOpSubEntities.body.data.opportunity;
+    const baseResponse = responseOpSubEntities.body.data.ecoverse.opportunity;
 
     // Assert
     expect(baseResponse.aspects).toHaveLength(1);
@@ -484,7 +483,7 @@ describe('Opportunity sub entities', () => {
     const responseOpSubEntities = await queryOpportunitySubEntities(
       opportunityId
     );
-    const baseResponse = responseOpSubEntities.body.data.opportunity;
+    const baseResponse = responseOpSubEntities.body.data.ecoverse.opportunity;
 
     // Assert
     expect(baseResponse.actorGroups).toHaveLength(1);
@@ -554,7 +553,7 @@ describe('Opportunity sub entities', () => {
     const responseOpSubEntities = await queryOpportunitySubEntities(
       opportunityId
     );
-    const baseResponse = responseOpSubEntities.body.data.opportunity;
+    const baseResponse = responseOpSubEntities.body.data.ecoverse.opportunity;
 
     // Assert
 

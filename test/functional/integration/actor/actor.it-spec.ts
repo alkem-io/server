@@ -31,13 +31,13 @@ let uniqueTextId = '';
 let actorDataCreate = '';
 let actorData = async (): Promise<string> => {
   const getActor = await getActorData(opportunityId);
-  let response = getActor.body.data.opportunity.actorGroups[0].actors[0];
+  let response = getActor.body.data.ecoverse.opportunity.actorGroups[0].actors[0];
   return response;
 };
 
 let actorsCountPerActorGroup = async (): Promise<number> => {
   const responseQuery = await getActorGroupsPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.opportunity.actorGroups[0].actors;
+  let response = responseQuery.body.data.ecoverse.opportunity.actorGroups[0].actors;
   return response;
 };
 beforeEach(async () => {

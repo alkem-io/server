@@ -10,11 +10,13 @@ import { Profiling } from '@src/common/decorators';
 import { Application } from '@domain/community/application/application.entity';
 import { ApplicationInput } from '@domain/community/application/application.dto';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { ApplicationService } from '../application/application.service';
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    @Inject(CommunityService) private communityService: CommunityService
+    @Inject(CommunityService) private communityService: CommunityService,
+    private applicationService: ApplicationService
   ) {}
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
@@ -49,7 +51,22 @@ export class CommunityResolverMutations {
     return group;
   }
 
-  @Roles(AuthorizationRoles.Members)
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => UserGroup, {
+    description:
+      'Removes the user with the given identifier as a member of the specified Community',
+  })
+  @Profiling.api
+  async removeUserFromCommunity(
+    @Args('userID') userID: number,
+    @Args('communityID') communityID: number
+  ): Promise<IUserGroup> {
+    const group = await this.communityService.removeMember(userID, communityID);
+    return group;
+  }
+
+  // All registered users can create applications
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Create application to join this Community',
@@ -75,5 +92,17 @@ export class CommunityResolverMutations {
     @Args('ID') applicationID: number
   ): Promise<Application> {
     return await this.communityService.approveApplication(applicationID);
+  }
+
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Application, {
+    description: 'Removes user application with the specified applicationID',
+  })
+  //@Profiling.api
+  async removeUserApplication(
+    @Args('applicationID') applicationID: number
+  ): Promise<Application> {
+    return await this.applicationService.removeApplication(applicationID);
   }
 }

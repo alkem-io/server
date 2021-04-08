@@ -82,14 +82,14 @@ export const removeActorMutation = async (actorId: any) => {
 export const getActorData = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {opportunity(ID: "${opportunityId}") {
+    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
       actorGroups{
         actors{
           id name description value impact
         }
       }
     }
-  }`,
+  }}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

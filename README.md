@@ -1,3 +1,8 @@
+<p align="center">
+  <a href="http://cherrytwist.org/" target="blank"><img src="https://cherrytwist.org/wp-content/uploads/2020/10/cherrytwist-2.png" width="240" alt="Cherrytwist Logo" /></a>
+</p>
+<p align="center"><i>Enabling society to collaborate. Building a better future, together.</i></p>
+
 # Cherrytwist Server
 
 Welcome to the Cherrytwist Server! This server is the heart of the Cherrytwist Platform, and manages the representation of the ecoverse and all the entities stored wthin it.
@@ -16,7 +21,7 @@ This api is used by the [Cherrytwist Web Client](http://github.com/cherrytwist/C
 
 - [Design - An overview of architectural layers and technologies used](docs/Design.md)
 - [Running - How to run the Server using containers (docker-compose and docker)](docs/Running.md)
-- [Developing - How to setup the Server for developing](docs/Development.md)
+- [Developing - How to setup the Server for developing](docs/Developing.md)
 - [Configuration - The Server is responsible for managing the majority of the configuration for the Cherrytwist Platform.](docs/Configuration.md)
 - [Data Management - How data representing the domain model used by Cherrytwist Platform is managed, including database migrations](docs/DataManagement.md)
 - [Quality Assurance - Details of the test harness around the server and how to execute the test suites](docs/QA.md).

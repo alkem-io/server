@@ -1,14 +1,17 @@
-import { createUserMutation, removeUserMutation } from './user.request.params';
-import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import {
+  createUserMutation,
+  getUsersProfile,
+  removeUserMutation,
+} from './user.request.params';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import { TestUser } from '../../../utils/token.helper';
 
 let userName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
 let uniqueId = '';
+let userData;
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -18,21 +21,20 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   uniqueId = Math.random()
     .toString(12)
     .slice(-6);
   userName = `testUser${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
   userEmail = `${uniqueId}@test.com`;
+
+  const response = await createUserMutation(userName);
+  userId = response.body.data.createUser.id;
 });
 
 describe('Remove user', () => {
   test('should remove created user', async () => {
-    // Arrange
-    const response = await createUserMutation(userName);
-    userId = response.body.data.createUser.id;
-
     // Act
     const responseQuery = await removeUserMutation(userId);
 
@@ -43,8 +45,6 @@ describe('Remove user', () => {
 
   test('should receive a message for removing already removed user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
-    userId = response.body.data.createUser.id;
     await removeUserMutation(userId);
 
     // Act
@@ -70,25 +70,14 @@ describe('Remove user', () => {
 
   test('should not get result for quering removed user', async () => {
     // Arrange
-    const response = await createUserMutation(userName);
-    userId = response.body.data.createUser.id;
     await removeUserMutation(userId);
 
     // Act
-    const requestParamsQueryUser = {
-      query: `{user(ID: "${userId}") {
-          name
-          id
-        }}`,
-    };
-    const responseQueryResult = await graphqlRequestAuth(
-      requestParamsQueryUser,
-      TestUser.GLOBAL_ADMIN
-    );
+    userData = await getUsersProfile(userId);
 
     // Assert
-    expect(responseQueryResult.status).toBe(200);
-    expect(responseQueryResult.text).toContain(
+    expect(userData.status).toBe(200);
+    expect(userData.text).toContain(
       `Unable to find user with given ID: ${userId}`
     );
   });

@@ -180,6 +180,21 @@ export class CommunityService {
     return membersGroup;
   }
 
+  async removeMember(userID: number, communityID: number): Promise<IUserGroup> {
+    const community = await this.getCommunityOrFail(communityID, {
+      relations: ['groups'],
+    });
+
+    // Try to find the user
+    const user = await this.userService.getUserByIdOrFail(userID);
+
+    // Get the members group
+    const membersGroup = await this.getMembersGroupOrFail(community);
+    await this.userGroupService.removeUserFromGroup(user, membersGroup);
+
+    return membersGroup;
+  }
+
   async isMember(userID: number, communityID: number): Promise<boolean> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: ['groups'],
@@ -228,7 +243,7 @@ export class CommunityService {
     applicationData: ApplicationInput
   ): Promise<Application> {
     const community = (await this.getCommunityOrFail(id, {
-      relations: ['applications'],
+      relations: ['applications', 'parentCommunity'],
     })) as Community;
 
     const existingApplication = community.applications?.find(
@@ -240,6 +255,19 @@ export class CommunityService {
         `An application for user ${existingApplication.user.email} already exists for Community: ${community.id}. Application status: ${existingApplication.status}`,
         LogContext.COMMUNITY
       );
+    }
+
+    const parentCommunity = community.parentCommunity;
+    if (parentCommunity) {
+      const isMember = await this.isMember(
+        applicationData.userId,
+        parentCommunity.id
+      );
+      if (!isMember)
+        throw new InvalidStateTransitionException(
+          `User ${applicationData.userId} is not a member of the parent Community: ${parentCommunity.name}.`,
+          LogContext.COMMUNITY
+        );
     }
 
     const application = await this.applicationFactoryService.createApplication(
@@ -300,7 +328,10 @@ export class CommunityService {
 
   async approveApplication(applicationId: number) {
     const application = await this.applicationService.getApplicationOrFail(
-      applicationId
+      applicationId,
+      {
+        relations: ['community'],
+      }
     );
 
     if (application.status == ApplicationStatus.approved) {

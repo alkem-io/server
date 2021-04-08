@@ -209,11 +209,12 @@ describe('DDT ecoverse member user - Create mutations - NOT authorized', () => {
 // Skipping the scanario: ${updateProfileMutation}| ${updateProfileVariables}| ${notAuthorizedCode} due to the following bugs:
 // https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/646
 // https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/647
+
+// ${'updateUserMutation'}                     | ${'updateUserVariables'}                     | ${'userId'}                   | ${forbiddenCode}
 describe('DDT ecoverse member user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName                        | expected
-    ${'updateUserMutation'}                     | ${'updateUserVariables'}                     | ${'userId'}                   | ${forbiddenCode}
     ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}            | ${forbiddenCode}
     ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}           | ${forbiddenCode}
     ${'updateChallengeMutation'}                | ${'updateChallengeVariables'}                | ${'challengeId'}              | ${forbiddenCode}

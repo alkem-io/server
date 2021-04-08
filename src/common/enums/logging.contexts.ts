@@ -8,5 +8,6 @@ export enum LogContext {
   CHALLENGES = 'challenges',
   SEARCH = 'search',
   OPPORTUNITY = 'opportunity',
+  IPFS = 'ipfs',
   UNSPECIFIED = 'not_specified',
 }

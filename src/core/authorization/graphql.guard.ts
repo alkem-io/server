@@ -106,6 +106,11 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
 
     if (err) throw new AuthenticationException(err);
 
+    if (!user) {
+      const msg = this.buildErrorMessage(err, info);
+      throw new AuthenticationException(msg);
+    }
+
     if (
       this.selfManagement &&
       this.email.toLowerCase() === user.email.toLowerCase()
@@ -113,15 +118,20 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       return user;
     }
 
-    if (!user)
-      throw new AuthenticationException(
-        'Failed to retrieve authenticated account information from the graphql context! '
-      );
-
     if (this.matchRoles(user)) return user;
     throw new ForbiddenException(
       `User '${user.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
+  }
+
+  private buildErrorMessage(err: any, info: any): string {
+    if (err) return err;
+    if (info) {
+      const msg = info[0] as string;
+      if (msg && msg.toLowerCase().includes('error')) return msg;
+    }
+
+    return 'Failed to retrieve authenticated account information from the graphql context! ';
   }
 }

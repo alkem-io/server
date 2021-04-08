@@ -4,23 +4,22 @@ import {
   removeUserMutation,
   updateProfileMutation,
 } from './user.request.params';
-import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import { TestUser } from '../../../utils/token.helper';
 
 let userFirstName = '';
 let userLastName = '';
 let userName = '';
 let userId = '';
+let profileId = '';
 let userPhone = '';
 let userEmail = '';
 let uniqueId = '';
 const profileDescritpion = 'y';
 const profileAvatar = 'http://yProf.com';
-const profileTagsetsName = 'y';
+const profileTagsetsName = 'x';
 const profileTagestTags = ['y1', 'y2'];
-const profileRefName = 'yRef';
+const profileRefName = 'x';
 const profileRefDescription = 'yRef';
 const profileRefUri = 'http://yRef.com';
 
@@ -48,26 +47,25 @@ describe('Create User', () => {
     await removeUserMutation(userId);
   });
 
-  test.skip('should update profile and query the updated data', async () => {
+  test('should update profile and query the updated data', async () => {
     // Arrange
     const response = await createUserMutation(userName);
+    profileId = response.body.data.createUser.profile.id;
     userId = response.body.data.createUser.id;
 
     // Act
     const updateProfileResponse = await updateProfileMutation(
-      userId,
+      profileId,
       profileDescritpion,
       profileAvatar,
       profileTagsetsName,
       profileTagestTags,
       profileRefName,
-      profileRefDescription,
-      profileRefUri
+      profileRefUri,
+      profileRefDescription
     );
-    console.log(updateProfileResponse.body);
 
     const getProfileDataResponse = await getUsersProfile(userId);
-    console.log(getProfileDataResponse.body.data.user.profile);
     const profileData = getProfileDataResponse.body.data.user.profile;
 
     // Assert
@@ -75,10 +73,12 @@ describe('Create User', () => {
     expect(updateProfileResponse.body.data.updateProfile).toEqual(true);
     expect(profileData.description).toEqual(profileDescritpion);
     expect(profileData.avatar).toEqual(profileAvatar);
-    expect(profileData.tagsets.name).toEqual(profileTagsetsName);
-    expect(profileData.tagsets.tags).toEqual(profileTagestTags);
-    expect(profileData.references.name).toEqual(profileRefName);
-    expect(profileData.references.description).toEqual(profileRefDescription);
-    expect(profileData.references.uri).toEqual(profileRefUri);
+    expect(profileData.tagsets[1].name).toEqual(profileTagsetsName);
+    expect(profileData.tagsets[1].tags).toEqual(profileTagestTags);
+    expect(profileData.references[0].name).toEqual(profileRefName);
+    expect(profileData.references[0].description).toEqual(
+      profileRefDescription
+    );
+    expect(profileData.references[0].uri).toEqual(profileRefUri);
   });
 });

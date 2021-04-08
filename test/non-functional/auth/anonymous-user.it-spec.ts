@@ -198,7 +198,6 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName                        | expected
-
     ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}            | ${notAuthorizedCode}
     ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}           | ${notAuthorizedCode}
     ${'updateChallengeMutation'}                | ${'updateChallengeVariables'}                | ${'challengeId'}              | ${notAuthorizedCode}

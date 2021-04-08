@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ReferenceInput } from '@domain/common/reference/reference.dto';
@@ -16,16 +17,24 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ProfileInput } from './profile.dto';
 import { Profile } from './profile.entity';
 import { IProfile } from './profile.interface';
+import { ReadStream } from 'fs';
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
+import { streamToBuffer, validateImageDimensions } from '@common/utils';
+import { IpfsService } from '@src/services/ipfs/ipfs.service';
 
 @Injectable()
 export class ProfileService {
   constructor(
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
+    private ipfsService: IpfsService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  private readonly minImageSize = 190;
+  private readonly maxImageSize = 410;
 
   async createProfile(): Promise<IProfile> {
     const profile = new Profile();
@@ -170,5 +179,60 @@ export class ProfileService {
         LogContext.COMMUNITY
       );
     return profile;
+  }
+
+  async uploadAvatar(
+    readStream: ReadStream,
+    fileName: string,
+    mimetype: string,
+    profileID: number
+  ): Promise<IProfile> {
+    if (
+      !(
+        mimetype === 'image/png' ||
+        mimetype === 'image/jpeg' ||
+        mimetype === 'image/jpg' ||
+        mimetype === 'image/svg+xml' ||
+        fileName === 'hello-cherrytwist.txt'
+      )
+    ) {
+      throw new ValidationException(
+        `Forbidden avatar upload file type ${mimetype}. File must be jpg / jpeg / png / svg.`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    if (!readStream)
+      throw new ValidationException(
+        'Readstream should be defined!',
+        LogContext.COMMUNITY
+      );
+
+    const buffer = await streamToBuffer(readStream);
+
+    if (
+      !(await validateImageDimensions(
+        buffer,
+        this.minImageSize,
+        this.maxImageSize
+      ))
+    )
+      throw new ValidationException(
+        `Upload file dimensions must be between ${this.minImageSize} and ${this.maxImageSize} pixels!`,
+        LogContext.COMMUNITY
+      );
+
+    try {
+      const uri = await this.ipfsService.uploadFileFromBuffer(buffer);
+      const profileData: ProfileInput = {
+        avatar: uri,
+      };
+      await this.updateProfile(profileID, profileData);
+      return await this.getProfileOrFail(profileID);
+    } catch (error) {
+      throw new IpfsUploadFailedException(
+        `Ipfs upload of ${fileName} failed! Error: ${error.message}`
+      );
+    }
   }
 }

@@ -8,9 +8,9 @@ volumes:
   ct_server_dev_db:
 
 services:
-  ctserver.node:
+  ct_server:
     container_name: ct_server_dev
-    image: ctserver.node
+    image: ct_server
     build: .
     networks:
       - ct_server_dev
@@ -38,12 +38,15 @@ services:
       - AUTH_DEMO_AUTH_ISSUER
       - AUTH_DEMO_AUTH_TOKEN_ENDPOINT
       - AUTH_DEMO_AUTH_CLIENT_SECRET
+      - IPFS_ENDPOINT
+      - IPFS_CLIENT_ENDPOINT
+      - IPFS_MAX_FILE_SIZE
     depends_on:
       - db
       - ct_demo_auth_provider
     restart: always
     ports:
-      - 4001:4000
+      - 4003:4000
     command: sh -c "/wait && npm run migration:run && npm run start"
     volumes:
       - ct_server_dev:/usr/src/app/config
@@ -63,9 +66,23 @@ services:
     volumes:
       - ct_server_dev_db:/var/lib/mysql
 
+  ct_ipfs_server:
+    container_name: ct_ipfs_server
+    image: ipfs/go-ipfs
+    networks:
+      - ct_server_dev
+    restart: always
+    ports:
+      - 4001:4001/tcp
+      - 4002:4002/udp
+      - 5001:5001
+      - 8080:8080
+    volumes:
+      - /tmp/ipfs-docker-data:/data/ipfs
+
   ct_demo_auth_provider:
     container_name: ct_server_dev_demo_auth
-    image: cherrytwist/demo-auth:v0.1.7
+    image: cherrytwist/demo-auth:v0.1.8
     networks:
       - ct_server_dev
     environment:
@@ -77,7 +94,7 @@ services:
       - WAIT_SLEEP_INTERVAL
       - WAIT_HOST_CONNECT_TIMEOUT
       - SERVICE_ENDPOINT_PORT
-      - SECRET=AUTH_DEMO_AUTH_CLIENT_SECRET
+      - SECRET=${AUTH_DEMO_AUTH_CLIENT_SECRET}
     depends_on:
       - db
     restart: always
