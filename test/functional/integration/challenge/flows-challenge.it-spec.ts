@@ -19,6 +19,7 @@ let challengeId = '';
 let opportunityName = '';
 let opportunityTextId = '';
 let uniqueTextId = '';
+let challengeGroupId = '';
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
@@ -28,6 +29,15 @@ beforeEach(async () => {
   opportunityTextId = `${uniqueTextId}`;
   userPhone = `userPhone ${uniqueTextId}`;
   userEmail = `${uniqueTextId}@test.com`;
+
+  // Create a challenge and get the created GroupId created within it
+  const responseCreateChallenge = await createChallangeMutation(
+    challengeName,
+    uniqueTextId
+  );
+  challengeId = responseCreateChallenge.body.data.createChallenge.id;
+  challengeGroupId =
+    responseCreateChallenge.body.data.createChallenge.community.groups[0].id;
 });
 
 beforeAll(async () => {
@@ -40,19 +50,7 @@ afterAll(async () => {
 
 describe('Flows challenge', () => {
   test('should add "user" to "group" as focal point', async () => {
-    // Arrange
-
-    // Create a challenge and get the created GroupId created within it
-    const responseCreateChallenge = await createChallangeMutation(
-      challengeName,
-      uniqueTextId
-    );
-    challengeId = responseCreateChallenge.body.data.createChallenge.id;
-    const challengeGroupId =
-      responseCreateChallenge.body.data.createChallenge.community.groups[0].id;
-
     // Act
-
     // Assign first User as a focal point to the group
     const responseAddUserToGroup = await assignGroupFocalPointMutation(
       userIdOne,
@@ -62,11 +60,13 @@ describe('Flows challenge', () => {
     // Query focal point through challenge group
     const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
     const groupFocalPointFromChallenge =
-      responseChallengeGroupQuery.body.data.ecoverse.challenge.community.groups[0].focalPoint.name;
+      responseChallengeGroupQuery.body.data.ecoverse.challenge.community
+        .groups[0].focalPoint.name;
 
     // Query focal point directly from group
     const responseGroupQuery = await getGroup(challengeGroupId);
-    const groupFocalPoint = responseGroupQuery.body.data.ecoverse.group.focalPoint.name;
+    const groupFocalPoint =
+      responseGroupQuery.body.data.ecoverse.group.focalPoint.name;
 
     // Assert
     expect(responseAddUserToGroup.status).toBe(200);
@@ -81,41 +81,28 @@ describe('Flows challenge', () => {
   });
 
   test('should not result unassigned users to a challenge', async () => {
-    // Arrange
-
-    // Create a challenge and get its id
-    const responseCreateChallenge = await createChallangeMutation(
-      challengeName,
-      uniqueTextId
-    );
-    const challengeId = responseCreateChallenge.body.data.createChallenge.id;
-
+    // Act
     // Get users assossiated with challenge or groups within challenge
     const responseGroupQuery = await getChallengeUsers(challengeId);
 
     // Assert
     //expect(responseCreateUserOne.status).toBe(200);
     expect(responseGroupQuery.status).toBe(200);
-    expect(responseGroupQuery.body.data.ecoverse.challenge.community.members).toHaveLength(0);
-    expect(responseGroupQuery.body.data.ecoverse.challenge.community.groups[0].focalPoint).toEqual(
-      null
-    );
     expect(
-      responseGroupQuery.body.data.ecoverse.challenge.community.groups[0].members
+      responseGroupQuery.body.data.ecoverse.challenge.community.members
+    ).toHaveLength(0);
+    expect(
+      responseGroupQuery.body.data.ecoverse.challenge.community.groups[0]
+        .focalPoint
+    ).toEqual(null);
+    expect(
+      responseGroupQuery.body.data.ecoverse.challenge.community.groups[0]
+        .members
     ).toHaveLength(0);
   });
 
   test('should not be able to modify challenge name to allready existing challenge name and/or textId', async () => {
     // Arrange
-
-    // Create first challenge and get its id and name
-    const responseFirstChallenge = await createChallangeMutation(
-      challengeName,
-      uniqueTextId
-    );
-    const firstChallengeId =
-      responseFirstChallenge.body.data.createChallenge.id;
-
     // Create second challenge and get its id and name
     const responseSecondChallenge = await createChallangeMutation(
       challengeName + challengeName,
@@ -127,10 +114,9 @@ describe('Flows challenge', () => {
     // Act
     // Get users assossiated with challenge or groups within challenge
     const responseUpdateChallenge = await updateChallangeMutation(
-      firstChallengeId,
+      challengeId,
       secondchallengeName
     );
-
     // Assert
     expect(responseUpdateChallenge.status).toBe(200);
     expect(responseUpdateChallenge.text).toContain(
@@ -139,10 +125,8 @@ describe('Flows challenge', () => {
   });
 
   test('should throw error - creating 2 challenges with same name', async () => {
-    // Arrange
-    await createChallangeMutation(challengeName, uniqueTextId);
-
     // Act
+    // Create second challenge with same name
     const response = await createChallangeMutation(
       challengeName,
       `${uniqueTextId}-2`
@@ -156,10 +140,8 @@ describe('Flows challenge', () => {
   });
 
   test('should throw error - creating 2 challenges with different name and same textId', async () => {
-    // Arrange
-    await createChallangeMutation(challengeName, uniqueTextId);
-
     // Act
+    // Create second challenge with same textId
     const response = await createChallangeMutation(
       challengeName + challengeName,
       uniqueTextId
@@ -173,14 +155,6 @@ describe('Flows challenge', () => {
   });
 
   test('should add "opportunity" to "challenge"', async () => {
-    // Arrange
-    // Create a challenge and get its challengeId
-    const responseCreateChallenge = await createChallangeMutation(
-      challengeName,
-      uniqueTextId
-    );
-    challengeId = responseCreateChallenge.body.data.createChallenge.id;
-
     // Act
     // Add opportunity to a challenge
     const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
@@ -188,13 +162,10 @@ describe('Flows challenge', () => {
       opportunityName,
       opportunityTextId
     );
-
     const oportunityNameResponse =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.name;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.name;
     const oportunityIdResponse =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
