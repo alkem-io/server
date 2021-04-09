@@ -2,14 +2,14 @@ import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
 export const createActorGroupMutation = async (
-  opportunityId: any,
-  actorGroupName: any,
-  actorDescritpion?: any
+  opportunityId: string,
+  actorGroupName: string,
+  actorDescritpion?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation CreateActorGroup($actorGroupData: ActorGroupInput! $opportunityID: Float!) {
-        createActorGroup( actorGroupData: $actorGroupData opportunityID: $opportunityID ) {
+    query: `mutation createActorGroup($actorGroupData: CreateActorGroupInput!) {
+      createActorGroup(actorGroupData: $actorGroupData) {
           id
           name
           description
@@ -21,8 +21,8 @@ export const createActorGroupMutation = async (
           }
       }`,
     variables: {
-      opportunityID: parseFloat(opportunityId),
       actorGroupData: {
+        parentID: parseFloat(opportunityId),
         name: `${actorGroupName}`,
         description: `${actorDescritpion}`,
       },
@@ -35,11 +35,14 @@ export const createActorGroupMutation = async (
 export const removeActorGroupMutation = async (actorGroupId: any) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeActorGroup($ID: Float!) {
-        removeActorGroup(ID: $ID)
-    }`,
+    query: `mutation removeActorGroup($removeData: RemoveEntityInput!) {
+      removeActorGroup(removeData: $removeData) {
+        id
+      }}`,
     variables: {
-      ID: parseFloat(actorGroupId),
+      removeData: {
+        ID: parseFloat(actorGroupId),
+      },
     },
   };
 

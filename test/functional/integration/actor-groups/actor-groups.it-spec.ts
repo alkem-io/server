@@ -125,6 +125,6 @@ describe('Actor groups', () => {
 
     // Assert
     expect(await getActorGroupsCountPerOpportunityData()).toHaveLength(0);
-    expect(responseRemoveActorGroup.body.data.removeActorGroup).toEqual(true);
+    expect(responseRemoveActorGroup.body.data.removeActorGroup.id).toEqual(actorGroupId);
   });
 });
