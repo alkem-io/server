@@ -1,5 +1,5 @@
-mutation createGroupOnCommuity($groupData: CreateUserGroupInput!) {
-  createGroupOnCommuity(groupData: $groupData) {
+mutation createGroupOnCommunity($groupData: CreateUserGroupInput!) {
+  createGroupOnCommunity(groupData: $groupData) {
     name,
     id
     members {
@@ -13,7 +13,7 @@ Variables:
   "groupData":
   {
       "name": "Valentin",
-      "parentId": 1,
+      "parentID": 1,
       "profileData": {
         "description": "some description",
         "avatar": "http://someUri"
