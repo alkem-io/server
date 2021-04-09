@@ -156,7 +156,7 @@ describe('Relations', () => {
 
     // Assert
     expect(await relationCountPerOpportunity()).toHaveLength(0);
-    expect(responseRemoveRelation.body.data.removeRelation).toEqual(true);
+    expect(responseRemoveRelation.body.data.removeRelation.id).toEqual(relationId);
   });
 
   test('should throw error for removing unexisting relation', async () => {
