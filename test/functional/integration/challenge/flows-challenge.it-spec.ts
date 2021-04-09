@@ -20,6 +20,7 @@ let opportunityName = '';
 let opportunityTextId = '';
 let uniqueTextId = '';
 let challengeGroupId = '';
+let refId = '';
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
@@ -38,6 +39,8 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
   challengeGroupId =
     responseCreateChallenge.body.data.createChallenge.community.groups[0].id;
+  refId =
+    responseCreateChallenge.body.data.createChallenge.context.references[0].id;
 });
 
 beforeAll(async () => {
@@ -115,8 +118,19 @@ describe('Flows challenge', () => {
     // Get users assossiated with challenge or groups within challenge
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
-      secondchallengeName
+      secondchallengeName,
+      'challengeState',
+      'taglineText',
+      'background',
+      'vision',
+      'impact',
+      'who',
+      'refName',
+      'refUri',
+      'tagsArray',
+      refId
     );
+
     // Assert
     expect(responseUpdateChallenge.status).toBe(200);
     expect(responseUpdateChallenge.text).toContain(

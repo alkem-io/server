@@ -112,7 +112,6 @@ export const createBasicChallangeMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-
 export const updateChallangeMutation = async (
   challengeId: string,
   challengeName: string,
@@ -172,13 +171,15 @@ export const updateChallangeMutation = async (
           vision: vision,
           impact: impact,
           who: who,
-          updateReferences: {
-            ID: parseFloat(refId),
-            name: refName,
-            uri: refUri,
-          },
+          updateReferences: [
+            {
+              ID: parseFloat(refId),
+              name: refName,
+              uri: refUri,
+            },
+          ],
         },
-         tags: tagsArrey,
+        tags: tagsArrey,
       },
     },
   };
