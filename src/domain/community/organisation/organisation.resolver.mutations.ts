@@ -10,13 +10,13 @@ import {
   UpdateOrganisationInput,
   Organisation,
   IOrganisation,
+  DeleteOrganisationInput,
 } from '@domain/community/organisation';
 import {
   CreateUserGroupInput,
   IUserGroup,
   UserGroup,
 } from '@domain/community/user-group';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -76,9 +76,9 @@ export class OrganisationResolverMutations {
   @Mutation(() => Organisation, {
     description: 'Removes the Organisaiton with the specified ID',
   })
-  async removeOrganisation(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteOrganisation(
+    @Args('deleteData') deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
-    return await this.organisationService.removeOrganisation(removeData);
+    return await this.organisationService.deleteOrganisation(deleteData);
   }
 }

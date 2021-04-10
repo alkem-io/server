@@ -31,7 +31,9 @@ import {
   IChallenge,
   CreateChallengeInput,
 } from '@domain/challenge/challenge';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { DeleteChallengeInput } from './challenge.dto.delete';
+import { AssignChallengeLeadInput } from './challenge.dto.assign.lead';
+import { RemoveChallengeLeadInput } from './challenge.dto.remove.lead';
 
 @Injectable()
 export class ChallengeService {
@@ -311,8 +313,8 @@ export class ChallengeService {
     return challenge;
   }
 
-  async removeChallenge(removeData: RemoveEntityInput): Promise<IChallenge> {
-    const challengeID = removeData.ID;
+  async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
+    const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeByIdOrFail(challengeID, {
       relations: ['opportunities', 'community'],
@@ -354,10 +356,11 @@ export class ChallengeService {
     return challenges || [];
   }
 
-  async addChallengeLead(
-    challengeID: string,
-    organisationID: string
-  ): Promise<boolean> {
+  async assignChallengeLead(
+    assignData: AssignChallengeLeadInput
+  ): Promise<IChallenge> {
+    const organisationID = assignData.organisationID;
+    const challengeID = assignData.challengeID;
     const organisation = await this.organisationService.getOrganisationOrFail(
       organisationID,
       { relations: ['groups'] }
@@ -375,17 +378,15 @@ export class ChallengeService {
       );
     // ok to add the org
     challenge.leadOrganisations?.push(organisation);
-    await this.challengeRepository.save(challenge);
-    return true;
+    return await this.challengeRepository.save(challenge);
   }
 
   async removeChallengeLead(
-    challengeID: string,
-    organisationID: string
-  ): Promise<boolean> {
-    const challenge = await this.getChallengeOrFail(challengeID);
+    removeData: RemoveChallengeLeadInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeOrFail(removeData.challengeID);
     const organisation = await this.organisationService.getOrganisationOrFail(
-      organisationID
+      removeData.organisationID
     );
 
     const existingOrg = challenge.leadOrganisations?.find(
@@ -393,7 +394,7 @@ export class ChallengeService {
     );
     if (!existingOrg)
       throw new EntityNotInitializedException(
-        `Community ${challengeID} does not have a lead with the provided organisation ID: ${organisationID}`,
+        `Community ${removeData.challengeID} does not have a lead with the provided organisation ID: ${removeData.organisationID}`,
         LogContext.COMMUNITY
       );
     // ok to add the org
@@ -404,7 +405,6 @@ export class ChallengeService {
       }
     }
     challenge.leadOrganisations = updatedLeads;
-    await this.challengeRepository.save(challenge);
-    return true;
+    return await this.challengeRepository.save(challenge);
   }
 }

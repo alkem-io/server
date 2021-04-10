@@ -1,0 +1,13 @@
+mutation deleteAspect($deleteData: DeleteAspectInput!) {
+  deleteAspect(deleteData: $deleteData) {
+    id
+  }
+}
+
+
+Variables:
+{
+  "deleteData": {
+    "ID": 7
+  }
+}

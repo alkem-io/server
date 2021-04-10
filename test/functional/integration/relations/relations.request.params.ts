@@ -74,12 +74,12 @@ export const updateRelationMutation = async (
 export const removeRelationMutation = async (relationId: any) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeRelation($removeData: RemoveEntityInput!) {
-      removeRelation(removeData: $removeData) {
+    query: `mutation removeRelation($deleteData: RemoveEntityInput!) {
+      removeRelation(deleteData: $deleteData) {
         id
       }}`,
     variables: {
-      removeData: {
+      deleteData: {
         ID: parseFloat(relationId),
       },
     },

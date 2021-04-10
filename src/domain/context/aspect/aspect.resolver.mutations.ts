@@ -6,8 +6,7 @@ import { Roles } from '@common/decorators/roles.decorator';
 import { Aspect } from './aspect.entity';
 import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
-import { UpdateAspectInput } from '@domain/context/aspect';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { DeleteAspectInput, UpdateAspectInput } from '@domain/context/aspect';
 
 @Resolver()
 export class AspectResolverMutations {
@@ -18,10 +17,10 @@ export class AspectResolverMutations {
   @Mutation(() => Aspect, {
     description: 'Removes the aspect with the specified ID',
   })
-  async removeAspect(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteAspect(
+    @Args('deleteData') deleteData: DeleteAspectInput
   ): Promise<IAspect> {
-    return await this.aspectService.removeAspect(removeData);
+    return await this.aspectService.removeAspect(deleteData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)

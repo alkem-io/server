@@ -10,8 +10,9 @@ import {
   UpdateProjectInput,
   Project,
   IProject,
+  DeleteProjectInput,
 } from '@domain/collaboration/project';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+
 @Resolver()
 export class ProjectResolverMutations {
   constructor(private projectService: ProjectService) {}
@@ -21,10 +22,10 @@ export class ProjectResolverMutations {
   @Mutation(() => Project, {
     description: 'Removes the Project with the specified ID',
   })
-  async removeProject(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteProject(
+    @Args('deleteData') deleteData: DeleteProjectInput
   ): Promise<IProject> {
-    return await this.projectService.removeProject(removeData);
+    return await this.projectService.deleteProject(deleteData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

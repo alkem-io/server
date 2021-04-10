@@ -3,9 +3,13 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
-import { Actor, IActor, UpdateActorInput } from '@domain/context/actor';
+import {
+  Actor,
+  DeleteActorInput,
+  IActor,
+  UpdateActorInput,
+} from '@domain/context/actor';
 import { ActorService } from './actor.service';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver()
 export class ActorResolverMutations {
@@ -16,10 +20,10 @@ export class ActorResolverMutations {
   @Mutation(() => Actor, {
     description: 'Removes the actor  with the specified ID',
   })
-  async removeActor(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteActor(
+    @Args('deleteData') deleteData: DeleteActorInput
   ): Promise<IActor> {
-    return await this.actorService.removeActor(removeData);
+    return await this.actorService.deleteActor(deleteData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)

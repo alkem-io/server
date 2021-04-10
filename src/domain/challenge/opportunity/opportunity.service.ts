@@ -33,7 +33,8 @@ import { CommunityType } from '@common/enums/community.types';
 import { TagsetService } from '@domain/common/tagset';
 import validator from 'validator';
 import { UpdateOpportunityInput } from './opportunity.dto.update';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { DeleteOpportunityInput } from './opportunity.dto.delete';
+
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -261,10 +262,10 @@ export class OpportunityService {
     return opportunity;
   }
 
-  async removeOpportunity(
-    removeData: RemoveEntityInput
+  async deleteOpportunity(
+    deleteData: DeleteOpportunityInput
   ): Promise<IOpportunity> {
-    const opportunityID = removeData.ID;
+    const opportunityID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['actorGroups', 'aspects', 'relations', 'community'],
@@ -279,13 +280,13 @@ export class OpportunityService {
 
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        await this.relationService.removeRelation({ ID: relation.id });
+        await this.relationService.deleteRelation({ ID: relation.id });
       }
     }
 
     if (opportunity.actorGroups) {
       for (const actorGroup of opportunity.actorGroups) {
-        await this.actorGroupService.removeActorGroup({ ID: actorGroup.id });
+        await this.actorGroupService.deleteActorGroup({ ID: actorGroup.id });
       }
     }
 

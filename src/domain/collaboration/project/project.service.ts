@@ -18,7 +18,7 @@ import {
   Project,
   IProject,
 } from '@domain/collaboration/project';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { DeleteProjectInput } from './project.dto.delete';
 
 @Injectable()
 export class ProjectService {
@@ -52,8 +52,8 @@ export class ProjectService {
     return project;
   }
 
-  async removeProject(removeData: RemoveEntityInput): Promise<IProject> {
-    const projectID = removeData.ID;
+  async deleteProject(deleteData: DeleteProjectInput): Promise<IProject> {
+    const projectID = deleteData.ID;
     const project = await this.getProjectByIdOrFail(projectID);
     if (!project)
       throw new EntityNotFoundException(

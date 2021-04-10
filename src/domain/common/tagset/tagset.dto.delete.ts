@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
-export class RemoveEntityInput {
+export class DeleteTagsetInput {
   @Field()
   ID!: number;
 }

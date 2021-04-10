@@ -1,4 +1,4 @@
-mutation assignGroupFocalPoint($membershipData: UpdateMembershipInput!) {
+mutation assignGroupFocalPoint($membershipData: AssignUserGroupFocalPointInput!) {
   assignGroupFocalPoint(membershipData: $membershipData) {
     name,
     id,

@@ -5,6 +5,7 @@ import {
   ActorGroup,
   IActorGroup,
   CreateActorGroupInput,
+  DeleteActorGroupInput,
 } from '@domain/context/actor-group';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorService } from '@domain/context/actor/actor.service';
@@ -14,7 +15,6 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CreateActorInput, IActor } from '@domain/context/actor';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class ActorGroupService {
@@ -61,18 +61,20 @@ export class ActorGroupService {
     return actorGroup;
   }
 
-  async removeActorGroup(removeData: RemoveEntityInput): Promise<IActorGroup> {
-    const actorGroupID = removeData.ID;
+  async deleteActorGroup(
+    deleteData: DeleteActorGroupInput
+  ): Promise<IActorGroup> {
+    const actorGroupID = deleteData.ID;
     const actorGroup = await this.getActorGroupOrFail(actorGroupID);
     if (actorGroup.actors) {
       for (const actor of actorGroup.actors) {
-        await this.actorService.removeActor({ ID: actor.id });
+        await this.actorService.deleteActor({ ID: actor.id });
       }
     }
     const result = await this.actorGroupRepository.remove(
       actorGroup as ActorGroup
     );
-    result.id = removeData.ID;
+    result.id = deleteData.ID;
     return result;
   }
 

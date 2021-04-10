@@ -26,7 +26,10 @@ import { IUser } from '../user/user.interface';
 import { ApplicationService } from '../application/application.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CreateUserGroupInput } from '../user-group';
-import { UpdateMembershipInput } from '@domain/common';
+import {
+  AssignCommunityMemberInput,
+  RemoveCommunityMemberInput,
+} from '@domain/community/community';
 
 @Injectable()
 export class CommunityService {
@@ -131,7 +134,7 @@ export class CommunityService {
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationService.removeApplication({ ID: application.id });
+        await this.applicationService.deleteApplication({ ID: application.id });
       }
     }
 
@@ -153,7 +156,9 @@ export class CommunityService {
     return community;
   }
 
-  async addMember(membershipData: UpdateMembershipInput): Promise<IUserGroup> {
+  async assignMember(
+    membershipData: AssignCommunityMemberInput
+  ): Promise<IUserGroup> {
     const community = await this.getCommunityOrFail(membershipData.parentID, {
       relations: ['groups', 'parentCommunity'],
     });
@@ -183,7 +188,7 @@ export class CommunityService {
   }
 
   async removeMember(
-    membershipData: UpdateMembershipInput
+    membershipData: RemoveCommunityMemberInput
   ): Promise<IUserGroup> {
     const community = await this.getCommunityOrFail(membershipData.parentID, {
       relations: ['groups'],
@@ -356,7 +361,7 @@ export class CommunityService {
         `Unable to load community for application ${applicationId} `,
         LogContext.COMMUNITY
       );
-    await this.addMember({
+    await this.assignMember({
       childID: application.user.id,
       parentID: application.community?.id,
     });

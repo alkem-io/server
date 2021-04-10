@@ -17,16 +17,21 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { Community } from '@domain/community/community';
-import { UpdateMembershipInput, TagsetService } from '@domain/common';
 import {
   UpdateUserGroupInput,
   UserGroup,
   IUserGroup,
+  RemoveUserGroupFocalPoint,
+  AssignUserGroupMemberInput,
+  AssignUserGroupFocalPointInput,
+  RemoveUserGroupMemberInput,
+  DeleteUserGroupInput,
+  CreateUserGroupInput,
 } from '@domain/community/user-group';
 
 import validator from 'validator';
-import { CreateUserGroupInput } from './user-group.dto.create';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { TagsetService } from '@domain/common/tagset';
+
 @Injectable()
 export class UserGroupService {
   constructor(
@@ -87,10 +92,10 @@ export class UserGroupService {
   }
 
   async removeUserGroup(
-    removeData: RemoveEntityInput,
+    deleteData: DeleteUserGroupInput,
     checkForRestricted = false
   ): Promise<IUserGroup> {
-    const groupID = removeData.ID;
+    const groupID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const group = (await this.getUserGroupByIdOrFail(groupID)) as UserGroup;
 
@@ -197,7 +202,7 @@ export class UserGroupService {
   }
 
   async assignFocalPoint(
-    membershipData: UpdateMembershipInput
+    membershipData: AssignUserGroupFocalPointInput
   ): Promise<IUserGroup> {
     // Try to find the user + group
     const user = await this.userService.getUserByIdOrFail(
@@ -247,14 +252,17 @@ export class UserGroupService {
     return group;
   }
 
-  async addUser(membershipData: UpdateMembershipInput): Promise<boolean> {
+  async assignUser(
+    membershipData: AssignUserGroupMemberInput
+  ): Promise<IUserGroup> {
     const user = await this.userService.getUserByIdOrFail(
       membershipData.childID
     );
 
     const group = await this.getUserGroupByIdOrFail(membershipData.parentID);
 
-    return await this.addUserToGroup(user, group);
+    await this.addUserToGroup(user, group);
+    return await this.getUserGroupByIdOrFail(group.id);
   }
 
   async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
@@ -305,7 +313,9 @@ export class UserGroupService {
     return true;
   }
 
-  async removeUser(membershipData: UpdateMembershipInput): Promise<IUserGroup> {
+  async removeUser(
+    membershipData: RemoveUserGroupMemberInput
+  ): Promise<IUserGroup> {
     // Try to find the user + group
     const user = await this.userService.getUserByIdOrFail(
       membershipData.childID
@@ -336,7 +346,7 @@ export class UserGroupService {
 
     // Also remove the user from being a focal point
     if (group.focalPoint && group.focalPoint.id === user.id) {
-      await this.removeFocalPoint(group.id);
+      await this.removeFocalPoint({ groupID: group.id });
     }
 
     await this.userGroupRepository.save(group);
@@ -344,8 +354,10 @@ export class UserGroupService {
     return group;
   }
 
-  async removeFocalPoint(groupID: number): Promise<IUserGroup> {
-    const group = await this.getUserGroupByIdOrFail(groupID);
+  async removeFocalPoint(
+    removeData: RemoveUserGroupFocalPoint
+  ): Promise<IUserGroup> {
+    const group = await this.getUserGroupByIdOrFail(removeData.groupID);
     // Set focalPoint to NULL will remove the relation.
     // For typeorm 'undefined' means - 'Not changed'
     // More information: https://github.com/typeorm/typeorm/issues/5454

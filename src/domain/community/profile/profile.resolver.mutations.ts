@@ -8,6 +8,7 @@ import {
   IProfile,
   Profile,
   UpdateProfileInput,
+  UploadProfileAvatarInput,
 } from '@domain/community/profile';
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { UseGuards } from '@nestjs/common';
@@ -65,7 +66,7 @@ export class ProfileResolverMutations {
   @SelfManagement()
   @Mutation(() => Profile)
   async uploadAvatar(
-    @Args('profileID') profileID: number,
+    @Args('uploadData') uploadData: UploadProfileAvatarInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IProfile> {
@@ -74,7 +75,7 @@ export class ProfileResolverMutations {
       readStream,
       filename,
       mimetype,
-      profileID
+      uploadData
     );
   }
 }

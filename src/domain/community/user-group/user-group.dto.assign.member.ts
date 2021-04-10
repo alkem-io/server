@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class UpdateMembershipInput {
+export class AssignUserGroupMemberInput {
   @Field()
   parentID!: number;
 

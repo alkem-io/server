@@ -1,4 +1,4 @@
-mutation removeUserFromGroup($membershipData: UpdateMembershipInput!) {
+mutation removeUserFromGroup($membershipData: RemoveUserGroupMemberInput!) {
   removeUserFromGroup(membershipData: $membershipData) {
     name,
     id,

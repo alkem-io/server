@@ -68,12 +68,12 @@ export const updateActorMutation = async (
 export const removeActorMutation = async (actorId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeActor($removeData: RemoveEntityInput!) {
-      removeActor(removeData: $removeData) {
+    query: `mutation removeActor($deleteData: RemoveEntityInput!) {
+      removeActor(deleteData: $deleteData) {
         id
       }}`,
     variables: {
-      removeData: {
+      deleteData: {
         ID: parseFloat(actorId),
       },
     },

@@ -9,9 +9,9 @@ import {
   CreateAspectInput,
   Aspect,
   IAspect,
+  DeleteAspectInput,
 } from '@domain/context/aspect';
 import validator from 'validator';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class AspectService {
@@ -31,11 +31,11 @@ export class AspectService {
     return aspect;
   }
 
-  async removeAspect(removeData: RemoveEntityInput): Promise<IAspect> {
-    const aspectID = removeData.ID;
+  async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
+    const aspectID = deleteData.ID;
     const aspect = await this.getAspectByIdOrFail(aspectID);
     const result = await this.aspectRepository.remove(aspect as Aspect);
-    result.id = removeData.ID;
+    result.id = deleteData.ID;
     return result;
   }
 

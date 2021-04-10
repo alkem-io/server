@@ -61,18 +61,6 @@ export class ContextService {
       context.who = contextInput.who;
     }
 
-    if (!context.references)
-      throw new EntityNotInitializedException(
-        `References for contex with id: ${context.id} not initialized properly!`,
-        LogContext.CHALLENGES
-      );
-
-    await this.referenceService.updateReferences(
-      context.references,
-      contextInput.updateReferences,
-      contextInput.createReferences
-    );
-
     await this.contextRepository.save(context);
     return context;
   }
@@ -84,7 +72,7 @@ export class ContextService {
     // Remove all references
     if (context.references) {
       for (const reference of context.references) {
-        await this.referenceService.removeReference({ ID: reference.id });
+        await this.referenceService.deleteReference({ ID: reference.id });
       }
     }
 

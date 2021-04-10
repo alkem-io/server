@@ -2,25 +2,33 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Opportunity } from './opportunity.entity';
-import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
-import { CreateAspectInput } from '@domain/context/aspect';
-import { IAspect } from '@domain/context/aspect/aspect.interface';
-import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { CreateActorGroupInput } from '@domain/context/actor-group';
-import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
-import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
+import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
+import {} from '@domain/context/actor-group';
+import {
+  CreateActorGroupInput,
+  IActorGroup,
+  ActorGroup,
+} from '@domain/context/actor-group';
 import { Profiling } from '@src/common/decorators';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { CreateRelationInput } from '@domain/collaboration/relation';
-import { Relation } from '@domain/collaboration/relation/relation.entity';
-import { CreateProjectInput } from '@domain/collaboration/project';
-import { Project } from '@domain/collaboration/project/project.entity';
-import { IProject } from '@domain/collaboration/project/project.interface';
+import {
+  CreateRelationInput,
+  IRelation,
+  Relation,
+} from '@domain/collaboration/relation';
+import {
+  CreateProjectInput,
+  Project,
+  IProject,
+} from '@domain/collaboration/project';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { UpdateOpportunityInput } from './opportunity.dto.update';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import {} from './opportunity.dto.update';
+import {
+  DeleteOpportunityInput,
+  UpdateOpportunityInput,
+  Opportunity,
+  IOpportunity,
+} from '@domain/challenge/opportunity';
 
 @Resolver()
 export class OpportunityResolverMutations {
@@ -46,10 +54,10 @@ export class OpportunityResolverMutations {
   @Mutation(() => Opportunity, {
     description: 'Removes the Opportunity with the specified ID',
   })
-  async removeOpportunity(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteOpportunity(
+    @Args('deleteData') deleteData: DeleteOpportunityInput
   ): Promise<IOpportunity> {
-    return await this.opportunityService.removeOpportunity(removeData);
+    return await this.opportunityService.deleteOpportunity(deleteData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)

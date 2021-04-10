@@ -10,9 +10,9 @@ import {
   UpdateUserInput,
   User,
   IUser,
+  DeleteUserInput,
 } from '@domain/community/user';
 import { UserService } from './user.service';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver(() => User)
 export class UserResolverMutations {
@@ -53,9 +53,9 @@ export class UserResolverMutations {
     description: 'Removes the specified user profile.',
   })
   @Profiling.api
-  async removeUser(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteUser(
+    @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
-    return await this.userService.removeUser(removeData);
+    return await this.userService.removeUser(deleteData);
   }
 }

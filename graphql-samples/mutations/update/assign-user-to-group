@@ -1,5 +1,5 @@
-mutation removeUserFromCommunity($membershipData: UpdateMembershipInput!) {
-  removeUserFromCommunity(membershipData: $membershipData) {
+mutation addUserToGroup($membershipData: AssignUserGroupMemberInput!) {
+  addUserToGroup(membershipData: $membershipData) {
     name,
     id,
     members {

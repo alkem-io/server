@@ -140,11 +140,11 @@ export const addUserToOpportunityMutation = async (
 export const removeOpportunityMutation = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeOpportunity($removeData: RemoveEntityInput!) {
-      removeOpportunity(removeData: $removeData){id}
+    query: `mutation removeOpportunity($deleteData: RemoveEntityInput!) {
+      removeOpportunity(deleteData: $deleteData){id}
     }`,
     variables: {
-      removeData: {
+      deleteData: {
         ID: parseFloat(opportunityId),
       },
     },

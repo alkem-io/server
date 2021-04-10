@@ -28,6 +28,7 @@ import { ReadStream } from 'fs';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { streamToBuffer, validateImageDimensions } from '@common/utils';
 import { IpfsService } from '@src/services/ipfs/ipfs.service';
+import { UploadProfileAvatarInput } from './profile.dto.upload.avatar';
 
 @Injectable()
 export class ProfileService {
@@ -90,7 +91,7 @@ export class ProfileService {
 
     if (profile.references) {
       for (const reference of profile.references) {
-        await this.referenceService.removeReference({ ID: reference.id });
+        await this.referenceService.deleteReference({ ID: reference.id });
       }
     }
 
@@ -158,31 +159,6 @@ export class ProfileService {
       profile.description = profileData.description;
     }
 
-    // Iterate over the tagsets
-    const tagsetsData = profileData.updateTagsetsData;
-    if (tagsetsData) {
-      for (const tagsetData of tagsetsData) {
-        await this.tagsetService.updateTagset(tagsetData);
-      }
-    }
-
-    // Iterate over the references
-    const updateReferencesData = profileData.updateReferencesData;
-    if (updateReferencesData) {
-      for (const referenceData of updateReferencesData) {
-        await this.referenceService.updateReference(referenceData);
-      }
-    }
-    const createReferencesData = profileData.createReferencesData;
-    if (createReferencesData) {
-      for (const referenceData of createReferencesData) {
-        const reference = await this.referenceService.createReference(
-          referenceData
-        );
-        profile.references?.push(reference as Reference);
-      }
-    }
-
     return await this.profileRepository.save(profile);
   }
 
@@ -211,8 +187,9 @@ export class ProfileService {
     readStream: ReadStream,
     fileName: string,
     mimetype: string,
-    profileID: number
+    uploadData: UploadProfileAvatarInput
   ): Promise<IProfile> {
+    const profileID = uploadData.profileID;
     if (
       !(
         mimetype === 'image/png' ||
