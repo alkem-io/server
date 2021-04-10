@@ -6,17 +6,32 @@ import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
-import { UpdateEcoverseInput } from './ecoverse.dto.update';
-import { Ecoverse } from './ecoverse.entity';
-import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import {
+  CreateEcoverseInput,
+  Ecoverse,
+  IEcoverse,
+  UpdateEcoverseInput,
+} from '@domain/challenge/ecoverse';
 
 @Resolver()
 export class EcoverseResolverMutations {
   constructor(
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
+
+  @Roles(AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Ecoverse, {
+    description: 'Creates a new Ecoverse.',
+  })
+  @Profiling.api
+  async createEcoverse(
+    @Args('ecoverseData') ecoverseData: CreateEcoverseInput
+  ): Promise<IEcoverse> {
+    return await this.ecoverseService.createEcoverse(ecoverseData);
+  }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)

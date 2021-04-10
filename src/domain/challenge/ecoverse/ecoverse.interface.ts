@@ -8,6 +8,7 @@ import { ICommunity } from '@domain/community/community';
 export interface IEcoverse {
   id: number;
   name: string;
+  textID: string;
   host?: IOrganisation;
   context?: IContext;
   community?: ICommunity;

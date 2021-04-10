@@ -1,5 +1,4 @@
-import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { IChallenge, CreateChallengeInput } from '@domain/challenge/challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
@@ -22,9 +21,12 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { UpdateEcoverseInput } from './ecoverse.dto.update';
-import { Ecoverse } from './ecoverse.entity';
-import { IEcoverse } from './ecoverse.interface';
+import {
+  Ecoverse,
+  IEcoverse,
+  CreateEcoverseInput,
+  UpdateEcoverseInput,
+} from '@domain/challenge/ecoverse';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
@@ -43,6 +45,13 @@ export class EcoverseService {
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
+    ecoverseData.textID = ecoverseData.textID.toLowerCase();
+    const ecoverse = Ecoverse.create(ecoverseData);
+    await this.initialiseMembers(ecoverse);
+    return await this.ecoverseRepository.save(ecoverse);
+  }
 
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
@@ -88,8 +97,8 @@ export class EcoverseService {
 
     if (!ecoverse.host) {
       const organisationInput = new CreateOrganisationInput();
-      organisationInput.name = 'Default host organisation';
-      organisationInput.textID = 'DefaultHostOrg';
+      organisationInput.name = `Default host - ${ecoverse.textID}`;
+      organisationInput.textID = `HostOrg_${ecoverse.textID}`;
       ecoverse.host = await this.organisationService.createOrganisation(
         organisationInput
       );

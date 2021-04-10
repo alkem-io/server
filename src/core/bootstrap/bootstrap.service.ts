@@ -246,7 +246,7 @@ export class BootstrapService {
     }
   }
 
-  async ensureEcoverseSingleton(): Promise<IEcoverse> {
+  async ensureEcoverseSingleton() {
     this.logger.verbose?.(
       '=== Ensuring single ecoverse is present ===',
       LogContext.BOOTSTRAP
@@ -259,34 +259,33 @@ export class BootstrapService {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // Create a new ecoverse
-      const ecoverse = new Ecoverse();
-      await this.ecoverseService.initialiseMembers(ecoverse);
-      // Save is needed so that the ecoverse is there for other methods
-      await this.ecoverseRepository.save(ecoverse);
+      const ecoverse = await this.ecoverseService.createEcoverse({
+        textID: 'Eco1',
+        name: 'Empty ecoverse',
+      });
 
       this.logger.verbose?.('........populating...', LogContext.BOOTSTRAP);
       await this.populateEmptyEcoverse(ecoverse);
       await this.ecoverseRepository.save(ecoverse);
-      return ecoverse;
+      return ecoverseArray[0];
     }
     if (ecoverseCount == 1) {
       this.logger.verbose?.(
         '...single ecoverse - verified',
         LogContext.BOOTSTRAP
       );
-      return ecoverseArray[0];
     }
-
-    throw new ValidationException(
-      'Cannot have more than one ecoverse',
-      LogContext.BOOTSTRAP
-    );
+    if (ecoverseCount > 1) {
+      this.logger.warn?.(
+        `...multiple ecoverses detected: ${ecoverseCount}`,
+        LogContext.BOOTSTRAP
+      );
+    }
   }
 
   // Populate an empty ecoverse
   async populateEmptyEcoverse(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Set the default values
-    ecoverse.name = 'Empty ecoverse';
     if (!ecoverse.context)
       throw new EntityNotInitializedException(
         'Non-initialised ecoverse',

@@ -1,7 +1,10 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';
-import { IsUniqueTextId, TextIdType } from '@core/validation';
+import {
+  IsUniqueTextId,
+  TextIdType,
+} from '@src/core/validation/constraints/unique.text.id';
 import { CreateProfileInput } from '@domain/community/profile';
 
 @InputType()
