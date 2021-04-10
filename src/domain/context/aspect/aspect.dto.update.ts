@@ -14,13 +14,13 @@ export class UpdateAspectInput {
 
   @Field({ nullable: true })
   @MaxLength(MID_TEXT_LENGTH)
-  title!: string;
+  title?: string;
 
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
-  framing!: string;
+  framing?: string;
 
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
-  explanation!: string;
+  explanation?: string;
 }

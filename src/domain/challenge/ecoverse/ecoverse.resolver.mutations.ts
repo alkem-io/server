@@ -21,7 +21,7 @@ export class EcoverseResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Ecoverse, {
-    description: 'Updates the Ecoverse with the provided data',
+    description: 'Updates the Ecoverse.',
   })
   @Profiling.api
   async updateEcoverse(
@@ -34,7 +34,7 @@ export class EcoverseResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
-    description: 'Creates a new challenge and registers it with the ecoverse',
+    description: 'Creates a new Challenge within the specified Ecoverse.',
   })
   @Profiling.api
   async createChallenge(

@@ -2,6 +2,6 @@ import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
 export class DeleteProjectInput {
-  @Field()
+  @Field({ nullable: false })
   ID!: number;
 }

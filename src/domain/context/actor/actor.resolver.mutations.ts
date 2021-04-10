@@ -18,7 +18,7 @@ export class ActorResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Actor, {
-    description: 'Removes the actor  with the specified ID',
+    description: 'Deletes the specified Actor.',
   })
   async deleteActor(
     @Args('deleteData') deleteData: DeleteActorInput
@@ -29,8 +29,7 @@ export class ActorResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Actor, {
-    description:
-      'Updates the actor with the specified ID with the supplied data',
+    description: 'Updates the specified Actor.',
   })
   async updateActor(
     @Args('actorData') actorData: UpdateActorInput

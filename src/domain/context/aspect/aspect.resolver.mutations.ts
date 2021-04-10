@@ -15,7 +15,7 @@ export class AspectResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
-    description: 'Removes the aspect with the specified ID',
+    description: 'Deletes the specified Aspect.',
   })
   async deleteAspect(
     @Args('deleteData') deleteData: DeleteAspectInput
@@ -26,7 +26,7 @@ export class AspectResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
-    description: 'Updates the aspect with the specified ID',
+    description: 'Updates the specified Aspect.',
   })
   async updateAspect(
     @Args('aspectData') aspectData: UpdateAspectInput

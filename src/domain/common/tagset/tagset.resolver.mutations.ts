@@ -14,7 +14,7 @@ export class TagsetResolver {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
-    description: 'Replace the set of tags in a tagset with the provided tags',
+    description: 'Updates the Tagset.',
   })
   @Profiling.api
   async updateTagset(

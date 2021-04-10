@@ -17,7 +17,7 @@ export class RelationResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Relation, {
-    description: 'Removes the relation with the specified ID',
+    description: 'Deletes the specified Relation.',
   })
   async deleteRelation(
     @Args('deleteData') deleteData: DeleteRelationInput

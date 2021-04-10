@@ -10,7 +10,7 @@ export class UpdateActorInput {
 
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  name!: string;
+  name?: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -19,9 +19,9 @@ export class UpdateActorInput {
 
   @Field({ nullable: true })
   @MaxLength(MID_TEXT_LENGTH)
-  value!: string;
+  value?: string;
 
   @Field({ nullable: true })
   @MaxLength(MID_TEXT_LENGTH)
-  impact!: string;
+  impact?: string;
 }

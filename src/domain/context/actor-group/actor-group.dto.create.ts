@@ -4,14 +4,14 @@ import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateActorGroupInput {
-  @Field()
+  @Field({ nullable: false })
   parentID!: number;
 
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
   @Field({ nullable: true })
   @MaxLength(MID_TEXT_LENGTH)
-  description!: string;
+  description?: string;
 }

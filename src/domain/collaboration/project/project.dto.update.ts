@@ -17,11 +17,11 @@ export class UpdateProjectInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   ID!: string;
 
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @MaxLength(TINY_TEXT_LENGTH)
   @IsUniqueTextId(TextIdType.project)
   textID!: string;

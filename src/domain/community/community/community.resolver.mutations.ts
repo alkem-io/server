@@ -28,7 +28,7 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description: 'Creates a new user group for the Community with the given id',
+    description: 'Creates a new User Group in the specified Community.',
   })
   @Profiling.api
   async createGroupOnCommunity(
@@ -40,8 +40,7 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Adds the user with the given identifier as a member of the specified Community',
+    description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api
   async assignUserToCommunity(
@@ -53,8 +52,7 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Removes the user with the given identifier as a member of the specified Community',
+    description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
   async removeUserFromCommunity(
@@ -66,7 +64,7 @@ export class CommunityResolverMutations {
   // All registered users can create applications
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Create application to join this Community',
+    description: 'Creates Application for a User to join this Community.',
   })
   @Profiling.api
   async createApplication(
@@ -78,7 +76,7 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Create application to join this ecoverse',
+    description: 'Approve a User Application to join this Community.',
   })
   @Profiling.api
   async approveApplication(
@@ -90,7 +88,7 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Removes user application with the specified applicationID',
+    description: 'Removes the specified User Application.',
   })
   //@Profiling.api
   async deleteUserApplication(

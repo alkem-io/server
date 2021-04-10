@@ -9,12 +9,12 @@ import { CreateContextInput } from '@domain/context/context';
 
 @InputType()
 export class CreateChallengeInput {
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @IsUniqueTextId(TextIdType.challenge, {
     message: 'Challenge with the textID: $value already exists!',
   })

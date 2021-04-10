@@ -9,10 +9,17 @@ import {
 
 @InputType()
 export class CreateUserInput {
+  @Field({
+    nullable: false,
+  })
+  @IsEmail()
+  @MaxLength(MID_TEXT_LENGTH)
+  email!: string;
+
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
-  accountUpn!: string;
+  accountUpn?: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -28,15 +35,6 @@ export class CreateUserInput {
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   lastName?: string;
-
-  @Field({
-    nullable: true,
-    description: 'Email address is required for mutations!',
-  })
-  @IsEmail()
-  @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
-  email!: string;
 
   @Field({ nullable: true })
   @IsOptional()

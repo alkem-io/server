@@ -29,8 +29,7 @@ export class ChallengeResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
-    description:
-      'Creates a new Opportunity for the challenge with the given id',
+    description: 'Creates a new Opportunity within the parent Challenge.',
   })
   @Profiling.api
   async createOpportunity(
@@ -45,8 +44,7 @@ export class ChallengeResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
-    description:
-      'Updates the specified Challenge with the provided data (merge)',
+    description: 'Updates the specified Challenge.',
   })
   @Profiling.api
   async updateChallenge(
@@ -61,7 +59,7 @@ export class ChallengeResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
-    description: 'Deletes the Challenge with the specified ID',
+    description: 'Deletes the specified Challenge.',
   })
   async deleteChallenge(
     @Args('deleteData') deleteData: DeleteChallengeInput
@@ -72,8 +70,7 @@ export class ChallengeResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
-    description:
-      'Assigns the specified organisation as a lead for the specified Community',
+    description: 'Assigns an organisation as a lead for the Challenge.',
   })
   @Profiling.api
   async assignChallengeLead(
@@ -85,8 +82,7 @@ export class ChallengeResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
-    description:
-      'Remove the specified organisation as a lead for the specified Challenge',
+    description: 'Remove an organisation as a lead for the Challenge.',
   })
   @Profiling.api
   async removeChallengeLead(

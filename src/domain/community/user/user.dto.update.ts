@@ -1,10 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsOptional, MaxLength } from 'class-validator';
-import {
-  LONG_TEXT_LENGTH,
-  SMALL_TEXT_LENGTH,
-  MID_TEXT_LENGTH,
-} from '@src/common/constants';
+import { IsOptional, MaxLength } from 'class-validator';
+import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateProfileInput } from '@domain/community/profile';
 
 @InputType()
@@ -15,7 +11,7 @@ export class UpdateUserInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
-  accountUpn!: string;
+  accountUpn?: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -31,15 +27,6 @@ export class UpdateUserInput {
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   lastName?: string;
-
-  @Field({
-    nullable: true,
-    description: 'Email address is required for mutations!',
-  })
-  @IsEmail()
-  @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
-  email!: string;
 
   @Field({ nullable: true })
   @IsOptional()

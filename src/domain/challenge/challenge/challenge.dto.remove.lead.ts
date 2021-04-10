@@ -2,9 +2,9 @@ import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
 export class RemoveChallengeLeadInput {
-  @Field()
+  @Field({ nullable: false })
   organisationID!: string;
 
-  @Field()
+  @Field({ nullable: false })
   challengeID!: string;
 }

@@ -21,18 +21,13 @@ export class RelationService {
   ) {}
 
   async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
-    const relation = new Relation();
     // Check that the relation type is valie
     if (!allowedRelationTypes.includes(relationData.type))
       throw new RelationshipNotFoundException(
         `Invalid relation type supplied: ${relationData.type}`,
         LogContext.CHALLENGES
       );
-    relation.type = relationData.type;
-    relation.description = relationData.description;
-    relation.actorName = relationData.actorName;
-    relation.actorType = relationData.actorType;
-    relation.actorRole = relationData.actorRole;
+    const relation = Relation.create(relationData);
 
     // to do: set the rest of the fields
     await this.relationRepository.save(relation);

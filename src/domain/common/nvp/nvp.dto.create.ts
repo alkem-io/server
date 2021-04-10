@@ -2,9 +2,9 @@ import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class CreateNVPInput {
-  @Field(() => String)
+  @Field(() => String, { nullable: false })
   name!: string;
 
-  @Field(() => String)
+  @Field(() => String, { nullable: false })
   value!: string;
 }

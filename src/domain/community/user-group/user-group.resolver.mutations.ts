@@ -23,7 +23,7 @@ export class UserGroupResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description: 'Removes the user group with the specified ID',
+    description: 'Deletes the specified User Group.',
   })
   async deleteUserGroup(
     @Args('deleteData') deleteData: DeleteUserGroupInput
@@ -34,7 +34,7 @@ export class UserGroupResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description: 'Update the user group information.',
+    description: 'Updates the specified User Group.',
   })
   @Profiling.api
   async updateUserGroup(
@@ -46,8 +46,7 @@ export class UserGroupResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Adds the user with the given identifier to the specified user group',
+    description: 'Assigns a User as a member of the specified User Group.',
   })
   @Profiling.api
   async assignUserToGroup(
@@ -59,8 +58,7 @@ export class UserGroupResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Remove the user with the given identifier to the specified user group',
+    description: 'Removes the specified User from specified user group',
   })
   @Profiling.api
   async removeUserFromGroup(
@@ -74,7 +72,7 @@ export class UserGroupResolverMutations {
   @Mutation(() => UserGroup, {
     nullable: true,
     description:
-      'Assign the user with the given ID as focal point for the given group',
+      'Assigns a User as the focal point of the specified User Group.',
   })
   @Profiling.api
   async assignGroupFocalPoint(
@@ -87,7 +85,7 @@ export class UserGroupResolverMutations {
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
     nullable: true,
-    description: 'Remove the focal point for the given group',
+    description: 'Removes the focal point for the specified User Group.',
   })
   @Profiling.api
   async removeGroupFocalPoint(

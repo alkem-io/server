@@ -18,7 +18,7 @@ export class ReferenceResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
-    description: 'Removes the reference  with the specified ID',
+    description: 'Deletes the specified Reference.',
   })
   async deleteReference(
     @Args('deleteData') deleteData: DeleteReferenceInput

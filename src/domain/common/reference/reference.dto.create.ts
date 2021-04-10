@@ -8,7 +8,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateReferenceInput {
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @IsOptional()
   parentID?: number;
 

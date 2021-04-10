@@ -28,8 +28,7 @@ export class OrganisationResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
-    description:
-      'Creates a new organisation and registers it with the ecoverse',
+    description: 'Creates a new Organisation on the platform.',
   })
   @Profiling.api
   async createOrganisation(
@@ -45,8 +44,7 @@ export class OrganisationResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Creates a new user group for the organisation with the given id',
+    description: 'Creates a new User Group for the specified Organisation.',
   })
   @Profiling.api
   async createGroupOnOrganisation(
@@ -59,7 +57,7 @@ export class OrganisationResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
-    description: 'Updates the organisation with the given data',
+    description: 'Updates the specified Organisation.',
   })
   @Profiling.api
   async updateOrganisation(
@@ -74,7 +72,7 @@ export class OrganisationResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
-    description: 'Removes the Organisaiton with the specified ID',
+    description: 'Deletes the specified Organisation.',
   })
   async deleteOrganisation(
     @Args('deleteData') deleteData: DeleteOrganisationInput

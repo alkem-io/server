@@ -36,8 +36,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
-    description:
-      'Updates the specified Opportunity with the provided data (merge)',
+    description: 'Updates the Opportunity.',
   })
   @Profiling.api
   async updateOpportunity(
@@ -52,7 +51,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
-    description: 'Removes the Opportunity with the specified ID',
+    description: 'Deletes the Opportunity.',
   })
   async deleteOpportunity(
     @Args('deleteData') deleteData: DeleteOpportunityInput
@@ -76,7 +75,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
-    description: 'Create a new aspect on the Opportunity',
+    description: 'Create a new Aspect on the Opportunity.',
   })
   @Profiling.api
   async createAspect(
@@ -88,7 +87,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => ActorGroup, {
-    description: 'Create a new actor group on the Opportunity',
+    description: 'Create a new Actor Group on the Opportunity.',
   })
   @Profiling.api
   async createActorGroup(
@@ -103,7 +102,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Relation, {
-    description: 'Create a new relation on the Opportunity',
+    description: 'Create a new Relation on the Opportunity.',
   })
   @Profiling.api
   async createRelation(

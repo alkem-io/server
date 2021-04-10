@@ -5,7 +5,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -199,15 +198,6 @@ export class UserService {
     }
     if (userInput.gender) {
       user.gender = userInput.gender;
-    }
-    if (
-      userInput.email &&
-      userInput.email.toLowerCase() !== user.email.toLowerCase()
-    ) {
-      throw new NotSupportedException(
-        `Updating of email addresses is not supported: ${userInput.ID}`,
-        LogContext.COMMUNITY
-      );
     }
 
     await this.userRepository.save(user);

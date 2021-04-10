@@ -11,7 +11,7 @@ export class UpdateOrganisationInput {
 
   @Field({ nullable: true, description: 'The name for this organisation' })
   @MaxLength(SMALL_TEXT_LENGTH)
-  name!: string;
+  name?: string;
 
   @Field(() => UpdateProfileInput, { nullable: true })
   profileData?: UpdateProfileInput;

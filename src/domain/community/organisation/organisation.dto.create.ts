@@ -6,7 +6,7 @@ import { CreateProfileInput } from '@domain/community/profile';
 
 @InputType()
 export class CreateOrganisationInput {
-  @Field({ nullable: true, description: 'The name for this organisation' })
+  @Field({ nullable: false, description: 'The name for this organisation' })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
@@ -15,7 +15,7 @@ export class CreateOrganisationInput {
     message: 'Challenge with the textID: $value already exists!',
   })
   @Field({
-    nullable: true,
+    nullable: false,
     description: 'The unique text based ID for this organisation',
   })
   @MaxLength(TINY_TEXT_LENGTH)

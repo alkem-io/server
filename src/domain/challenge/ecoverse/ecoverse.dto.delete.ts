@@ -2,6 +2,6 @@ import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
 export class DeleteEcoverseInput {
-  @Field()
+  @Field({ nullable: false })
   ID!: number;
 }

@@ -4,26 +4,26 @@ import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateRelationInput {
-  @Field()
+  @Field({ nullable: false })
   parentID!: number;
 
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   type!: string;
 
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   actorName!: string;
 
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  actorType!: string;
+  actorType?: string;
 
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  actorRole!: string;
+  actorRole?: string;
 
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
-  description!: string;
+  description?: string;
 }

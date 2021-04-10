@@ -2,9 +2,9 @@ import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class AssignCommunityMemberInput {
-  @Field()
+  @Field({ nullable: false })
   parentID!: number;
 
-  @Field()
+  @Field({ nullable: false })
   childID!: number;
 }

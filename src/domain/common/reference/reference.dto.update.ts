@@ -13,7 +13,7 @@ export class UpdateReferenceInput {
 
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  name!: string;
+  name?: string;
 
   @Field({ nullable: true })
   @IsOptional()
