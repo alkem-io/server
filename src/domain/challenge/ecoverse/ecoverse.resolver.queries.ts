@@ -20,7 +20,7 @@ export class EcoverseResolverQueries {
   async ecoverse(
     @Args('ID', { nullable: true }) ID?: number
   ): Promise<IEcoverse> {
-    if (ID) return await this.ecoverseService.getEcoverseOrFail(ID);
-    return await this.ecoverseService.getDefaultEcoverseOrFail();
+    if (ID) return await this.ecoverseService.getEcoverseByIdOrFail(ID);
+    return await this.ecoverseService.getFirstEcoverseOrFail();
   }
 }

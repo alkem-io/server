@@ -221,7 +221,7 @@ export class TestDataService {
   }
 
   async initCreateGroupOnEcoverse(): Promise<number> {
-    const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail({
+    const ecoverse = await this.ecoverseService.getFirstEcoverseOrFail({
       relations: ['community'],
     });
     const community = ecoverse.community;

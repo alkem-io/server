@@ -15,7 +15,6 @@ import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '@common/exceptions/validation.exception';
 import { BaseException } from '@common/exceptions/base.exception';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
@@ -184,7 +183,7 @@ export class BootstrapService {
 
   @Profiling.api
   async createGroupProfiles(groupName: string, usersData: any[]) {
-    const defaultEcoverse = await this.getDefaultEcoverseOrFail();
+    const defaultEcoverse = await this.ecoverseService.getFirstEcoverseOrFail();
     try {
       for (const userData of usersData) {
         const userInput = new CreateUserInput();
@@ -293,16 +292,6 @@ export class BootstrapService {
       );
     ecoverse.context.tagline = 'An empty ecoverse to be populated';
 
-    return ecoverse;
-  }
-
-  async getDefaultEcoverseOrFail(): Promise<IEcoverse> {
-    const ecoverse = await this.ecoverseRepository.findOne();
-    if (!ecoverse)
-      throw new ValidationException(
-        'Unable to find default ecoverse',
-        LogContext.BOOTSTRAP
-      );
     return ecoverse;
   }
 }

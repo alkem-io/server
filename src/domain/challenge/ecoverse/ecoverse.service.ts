@@ -32,6 +32,7 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import { IOpportunity } from '@domain/challenge/opportunity';
+import validator from 'validator';
 
 @Injectable()
 export class EcoverseService {
@@ -108,6 +109,21 @@ export class EcoverseService {
   }
 
   async getEcoverseOrFail(
+    ecoverseID: string,
+    options?: FindOneOptions<Ecoverse>
+  ): Promise<IEcoverse> {
+    if (validator.isNumeric(ecoverseID)) {
+      const idInt: number = parseInt(ecoverseID);
+      return await this.getEcoverseByIdOrFail(idInt, options);
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find Ecoverse with ID: ${ecoverseID}`,
+      LogContext.CHALLENGES
+    );
+  }
+
+  async getEcoverseByIdOrFail(
     ecoverseID: number,
     options?: FindOneOptions<Ecoverse>
   ): Promise<IEcoverse> {
@@ -124,9 +140,12 @@ export class EcoverseService {
   }
 
   async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {
-    const ecoverseWithChallenges = await this.getEcoverseOrFail(ecoverse.id, {
-      relations: ['challenges'],
-    });
+    const ecoverseWithChallenges = await this.getEcoverseByIdOrFail(
+      ecoverse.id,
+      {
+        relations: ['challenges'],
+      }
+    );
     return ecoverseWithChallenges.challenges || [];
   }
 
@@ -146,7 +165,7 @@ export class EcoverseService {
   }
 
   async getCommunity(ecoverseId: number): Promise<ICommunity> {
-    const ecoverse = await this.getEcoverseOrFail(ecoverseId, {
+    const ecoverse = await this.getEcoverseByIdOrFail(ecoverseId, {
       relations: ['community'],
     });
     const community = ecoverse.community;
@@ -161,7 +180,7 @@ export class EcoverseService {
   async createChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
-    const ecoverse = await this.getEcoverseOrFail(challengeData.parentID, {
+    const ecoverse = await this.getEcoverseByIdOrFail(challengeData.parentID, {
       relations: ['challenges', 'community'],
     });
 
@@ -236,7 +255,7 @@ export class EcoverseService {
   }
 
   async update(ecoverseData: UpdateEcoverseInput): Promise<IEcoverse> {
-    const ecoverse = await this.getDefaultEcoverseOrFail();
+    const ecoverse = await this.getEcoverseOrFail(ecoverseData.ID);
 
     // Copy over the received data
     if (ecoverseData.name) {
@@ -272,11 +291,11 @@ export class EcoverseService {
     return ecoverse;
   }
 
-  async getDefaultEcoverseOrFail(
+  async getFirstEcoverseOrFail(
     options?: FindOneOptions<Ecoverse>
   ): Promise<IEcoverse> {
     const ecoverseId = await this.getDefaultEcoverseId(); // todo - remove when can have multiple ecoverses
-    return await this.getEcoverseOrFail(ecoverseId, options);
+    return await this.getEcoverseByIdOrFail(ecoverseId, options);
   }
 
   async getDefaultEcoverseId(): Promise<number> {
