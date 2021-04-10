@@ -262,7 +262,7 @@ export class EcoverseService {
     }
 
     if (ecoverseData.hostID) {
-      const organisation = await this.organisationService.getOrganisationByIdOrFail(
+      const organisation = await this.organisationService.getOrganisationOrFail(
         ecoverseData.hostID
       );
       ecoverse.host = organisation;
