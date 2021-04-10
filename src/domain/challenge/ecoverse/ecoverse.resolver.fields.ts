@@ -125,10 +125,7 @@ export class EcoverseResolverFields {
     description: 'All groups on this Ecoverse that have the provided tag',
   })
   @Profiling.api
-  async groupsWithTag(
-    @Parent() ecoverse: Ecoverse,
-    @Args('tag') tag: string
-  ): Promise<IUserGroup[]> {
+  async groupsWithTag(@Args('tag') tag: string): Promise<IUserGroup[]> {
     return await this.groupService.getGroupsWithTag(tag);
   }
 
@@ -140,10 +137,7 @@ export class EcoverseResolverFields {
       'The user group with the specified id anywhere in the ecoverse',
   })
   @Profiling.api
-  async group(
-    @Parent() ecoverse: Ecoverse,
-    @Args('ID') id: string
-  ): Promise<IUserGroup> {
+  async group(@Args('ID') id: string): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(id, {
       relations: ['members', 'focalPoint'],
     });
@@ -156,10 +150,7 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'All applications to join',
   })
-  async application(
-    @Parent() ecoverse: Ecoverse,
-    @Args('ID') id: number
-  ): Promise<Application> {
+  async application(@Args('ID') id: number): Promise<Application> {
     return await this.applicationService.getApplicationOrFail(id);
   }
 }
