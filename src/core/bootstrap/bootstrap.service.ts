@@ -184,6 +184,7 @@ export class BootstrapService {
 
   @Profiling.api
   async createGroupProfiles(groupName: string, usersData: any[]) {
+    const defaultEcoverse = await this.getDefaultEcoverseOrFail();
     try {
       for (const userData of usersData) {
         const userInput = new CreateUserInput();
@@ -202,6 +203,7 @@ export class BootstrapService {
           if (groupName !== AuthorizationRoles.Members) {
             // also need to add to members group
             await this.ecoverseService.addUserToRestrictedGroup(
+              defaultEcoverse,
               user,
               AuthorizationRoles.Members
             );
@@ -224,7 +226,11 @@ export class BootstrapService {
           );
 
         if (!groups.some(({ name }) => groupName === name)) {
-          await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
+          await this.ecoverseService.addUserToRestrictedGroup(
+            defaultEcoverse,
+            user,
+            groupName
+          );
         } else
           this.logger.verbose?.(
             `User ${userInput.email} already exists in group  ${groupName}`,
@@ -288,6 +294,16 @@ export class BootstrapService {
       );
     ecoverse.context.tagline = 'An empty ecoverse to be populated';
 
+    return ecoverse;
+  }
+
+  async getDefaultEcoverseOrFail(): Promise<IEcoverse> {
+    const ecoverse = await this.ecoverseRepository.findOne();
+    if (!ecoverse)
+      throw new ValidationException(
+        'Unable to find default ecoverse',
+        LogContext.BOOTSTRAP
+      );
     return ecoverse;
   }
 }

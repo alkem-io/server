@@ -29,6 +29,7 @@ import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
+import { IOpportunity } from '@domain/challenge/opportunity';
 
 @Injectable()
 export class EcoverseService {
@@ -113,33 +114,26 @@ export class EcoverseService {
     return ecoverse;
   }
 
-  async getDefaultEcoverseOrFail(
-    options?: FindOneOptions<Ecoverse>
-  ): Promise<IEcoverse> {
-    const ecoverseId = await this.getEcoverseId(); // todo - remove when can have multiple ecoverses
-    return await this.getEcoverseOrFail(ecoverseId, options);
-  }
-
-  async getEcoverseId(): Promise<number> {
-    const ecoverse = await this.ecoverseRepository
-      .createQueryBuilder('ecoverse')
-      .select('ecoverse.id')
-      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
-
-    if (!ecoverse) {
-      throw new ValidationException(
-        'Ecoverse is missing!',
-        LogContext.BOOTSTRAP
-      );
-    }
-    return ecoverse.id;
-  }
-
-  async getChallenges(ecoverseID: number): Promise<IChallenge[]> {
-    const ecoverse = await this.getEcoverseOrFail(ecoverseID, {
+  async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {
+    const ecoverseWithChallenges = await this.getEcoverseOrFail(ecoverse.id, {
       relations: ['challenges'],
     });
-    return ecoverse.challenges || [];
+    return ecoverseWithChallenges.challenges || [];
+  }
+
+  async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
+    const opportunities: IOpportunity[] = [];
+    const challenges = await this.getChallenges(ecoverse);
+    for (let i = 0; i < challenges.length; i++) {
+      const challenge = challenges[i];
+      const childOpportunities = await this.challengeService.getOpportunities(
+        challenge
+      );
+      childOpportunities.forEach(opportunity =>
+        opportunities.push(opportunity)
+      );
+    }
+    return opportunities;
   }
 
   async getCommunity(ecoverseId: number): Promise<ICommunity> {
@@ -158,7 +152,7 @@ export class EcoverseService {
   async createChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
-    const ecoverse = await this.getDefaultEcoverseOrFail({
+    const ecoverse = await this.getEcoverseOrFail(challengeData.parentID, {
       relations: ['challenges', 'community'],
     });
 
@@ -194,41 +188,37 @@ export class EcoverseService {
     return challenge;
   }
 
-  async addAdmin(user: IUser): Promise<boolean> {
+  async addEcoverseAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
+      ecoverse,
       user,
       AuthorizationRoles.EcoverseAdmins
     );
   }
 
-  async addGlobalAdmin(user: IUser): Promise<boolean> {
+  async addGlobalAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
+      ecoverse,
       user,
       AuthorizationRoles.GlobalAdmins
     );
   }
 
-  async addCommunityAdmin(user: IUser): Promise<boolean> {
+  async addCommunityAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
+      ecoverse,
       user,
       AuthorizationRoles.CommunityAdmins
     );
   }
 
   async addUserToRestrictedGroup(
+    ecoverse: IEcoverse,
     user: IUser,
     groupName: string
   ): Promise<boolean> {
-    const ecoverse = await this.getDefaultEcoverseOrFail({
-      relations: ['community'],
-    });
-    const community = ecoverse.community;
-    if (!community) {
-      throw new RelationshipNotFoundException(
-        `Unable to load community for ecoverse  ${ecoverse.id}`,
-        LogContext.COMMUNITY
-      );
-    }
+    const community = await this.getCommunity(ecoverse.id);
+
     return await this.communityService.addUserToRestrictedGroup(
       community.id,
       user,
@@ -262,7 +252,7 @@ export class EcoverseService {
     }
 
     if (ecoverseData.hostID) {
-      const organisation = await this.organisationService.getOrganisationByIdOrFail(
+      const organisation = await this.organisationService.getOrganisationOrFail(
         ecoverseData.hostID
       );
       ecoverse.host = organisation;
@@ -271,5 +261,27 @@ export class EcoverseService {
     await this.ecoverseRepository.save(ecoverse);
 
     return ecoverse;
+  }
+
+  async getDefaultEcoverseOrFail(
+    options?: FindOneOptions<Ecoverse>
+  ): Promise<IEcoverse> {
+    const ecoverseId = await this.getDefaultEcoverseId(); // todo - remove when can have multiple ecoverses
+    return await this.getEcoverseOrFail(ecoverseId, options);
+  }
+
+  async getDefaultEcoverseId(): Promise<number> {
+    const ecoverse = await this.ecoverseRepository
+      .createQueryBuilder('ecoverse')
+      .select('ecoverse.id')
+      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
+
+    if (!ecoverse) {
+      throw new ValidationException(
+        'Ecoverse is missing!',
+        LogContext.BOOTSTRAP
+      );
+    }
+    return ecoverse.id;
   }
 }

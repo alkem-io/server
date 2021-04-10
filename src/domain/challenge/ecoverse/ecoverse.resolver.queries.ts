@@ -3,7 +3,7 @@ import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse } from './ecoverse.interface';
 import { Ecoverse } from './ecoverse.entity';
-import { Query, Resolver } from '@nestjs/graphql';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 
 @Resolver()
 export class EcoverseResolverQueries {
@@ -13,10 +13,14 @@ export class EcoverseResolverQueries {
 
   @Query(() => Ecoverse, {
     nullable: false,
-    description: 'The ecoverse.',
+    description:
+      'An ecoverse. If no ID is specified then the first Ecoverse is returned.',
   })
   @Profiling.api
-  async ecoverse(): Promise<IEcoverse> {
+  async ecoverse(
+    @Args('ID', { nullable: true }) ID?: number
+  ): Promise<IEcoverse> {
+    if (ID) return await this.ecoverseService.getEcoverseOrFail(ID);
     return await this.ecoverseService.getDefaultEcoverseOrFail();
   }
 }

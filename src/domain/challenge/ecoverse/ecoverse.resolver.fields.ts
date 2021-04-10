@@ -48,7 +48,7 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async challenges(@Parent() ecoverse: Ecoverse) {
-    const challenges = await this.ecoverseService.getChallenges(ecoverse.id);
+    const challenges = await this.ecoverseService.getChallenges(ecoverse);
     return challenges;
   }
 
@@ -66,8 +66,8 @@ export class EcoverseResolverFields {
     description: 'All opportunities within the ecoverse',
   })
   @Profiling.api
-  async opportunities(): Promise<IOpportunity[]> {
-    return await this.opportunityService.getOpportunites();
+  async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
+    return await this.ecoverseService.getOpportunities(ecoverse);
   }
 
   @ResolveField('opportunity', () => Opportunity, {
@@ -111,7 +111,7 @@ export class EcoverseResolverFields {
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: false,
-    description: 'The user groups on this Ecoverse',
+    description: 'The User Groups on this Ecoverse',
   })
   @Profiling.api
   async groups(): Promise<IUserGroup[]> {
@@ -125,7 +125,10 @@ export class EcoverseResolverFields {
     description: 'All groups on this Ecoverse that have the provided tag',
   })
   @Profiling.api
-  async groupsWithTag(@Args('tag') tag: string): Promise<IUserGroup[]> {
+  async groupsWithTag(
+    @Parent() ecoverse: Ecoverse,
+    @Args('tag') tag: string
+  ): Promise<IUserGroup[]> {
     return await this.groupService.getGroupsWithTag(tag);
   }
 
@@ -137,7 +140,10 @@ export class EcoverseResolverFields {
       'The user group with the specified id anywhere in the ecoverse',
   })
   @Profiling.api
-  async group(@Args('ID') id: string): Promise<IUserGroup> {
+  async group(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID') id: string
+  ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(id, {
       relations: ['members', 'focalPoint'],
     });
@@ -150,7 +156,10 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'All applications to join',
   })
-  async application(@Args('ID') id: number): Promise<Application> {
+  async application(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID') id: number
+  ): Promise<Application> {
     return await this.applicationService.getApplicationOrFail(id);
   }
 }
