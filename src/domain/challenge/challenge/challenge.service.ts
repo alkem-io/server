@@ -93,7 +93,7 @@ export class ChallengeService {
   }
 
   // Loads the challenges into the challenge entity if not already present
-  async getOpportunities(challenge: Challenge): Promise<IOpportunity[]> {
+  async getOpportunities(challenge: IChallenge): Promise<IOpportunity[]> {
     if (challenge.opportunities && challenge.opportunities.length > 0) {
       // challenge already has groups loaded
       return challenge.opportunities;

@@ -10,7 +10,9 @@ import { CreateContextInput } from '@domain/context/context';
 @InputType()
 export class CreateChallengeInput {
   @Field({ nullable: false })
-  @IsOptional()
+  parentID!: number;
+
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
@@ -18,7 +20,6 @@ export class CreateChallengeInput {
   @IsUniqueTextId(TextIdType.challenge, {
     message: 'Challenge with the textID: $value already exists!',
   })
-  @IsOptional()
   @MaxLength(TINY_TEXT_LENGTH)
   textID!: string;
 
