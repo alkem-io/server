@@ -2,16 +2,16 @@ import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
 export const createProjectMutation = async (
-  opportunityId: any,
-  projectName: any,
-  textId: any,
-  projectDescritpion?: any,
-  projectState?: any
+  opportunityId: string,
+  projectName: string,
+  textId: string,
+  projectDescritpion?: string,
+  projectState?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation CreateProject($projectData: ProjectInput!, $opportunityID: Float!) {
-      createProject(projectData: $projectData, opportunityID: $opportunityID) {
+    query: `mutation CreateProject($projectData: CreateProjectInput!) {
+      createProject(projectData: $projectData) {
           id,
         name,
         textID,
@@ -20,8 +20,8 @@ export const createProjectMutation = async (
       }
     }`,
     variables: {
-      opportunityID: parseFloat(opportunityId),
       projectData: {
+        parentID: parseFloat(opportunityId),
         name: `${projectName}`,
         textID: `${textId}`,
         description: `${projectDescritpion}`,

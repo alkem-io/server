@@ -44,7 +44,7 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
-  await removeChallangeMutation(challengeId);
+ await removeChallangeMutation(challengeId);
 });
 
 describe('Create Challenge', () => {
@@ -74,7 +74,7 @@ describe('Create Challenge', () => {
 
     // Assert
     expect(removeChallengeResponse.status).toBe(200);
-    expect(removeChallengeResponse.body.data.removeChallenge).toBe(true);
+    expect(removeChallengeResponse.body.data.removeChallenge.id).toEqual(challengeId);
     expect(await challengesList()).not.toContainObject(
       challangeDataBeforeRemove
     );
@@ -147,7 +147,7 @@ describe('Create Challenge', () => {
         // Act
         const requestParamsCreateChallenge = {
           operationName: null,
-          query: `mutation CreateChallenge($challengeData: ChallengeInput!) {
+          query: `mutation CreateChallenge($challengeData: CreateChallengeInput!) {
             createChallenge(challengeData: $challengeData) { name id } }`,
           variables: {
             challengeData: {

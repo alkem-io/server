@@ -23,21 +23,22 @@ export const createGroupOnOrganisationMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createGroupOnOrganization($groupName: String!, $orgID: Float!) {
-      createGroupOnOrganisation(groupName: $groupName, orgID: $orgID) {
+    query: `mutation createGroupOnOrganisation($groupData: CreateUserGroupInput!) {
+      createGroupOnOrganisation(groupData: $groupData) {
         id
         name
       }
     }`,
     variables: {
-      groupName: testGroup,
-      orgID: parseFloat(organisationId),
+      groupData: {
+        name: testGroup,
+        parentID: parseFloat(organisationId),
+      },
     },
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
-
 export const createGroupOnOpportunityMutation = async (
   testGroup: string,
   opportunityId: any
@@ -61,26 +62,27 @@ export const createGroupOnOpportunityMutation = async (
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
-
 export const updateGroupMutation = async (
-  groupId: any,
+  groupId: string,
   nameGroup: string,
+  profileId?: string,
   descriptionText?: string,
   avatarUrl?: string
 ) => {
   const requestParams = {
     groupID: null,
-    query: `mutation UpdateUserGroup($ID: Float!, $userGroupData: UserGroupInput!) {
-      updateUserGroup(ID: $ID, userGroupData: $userGroupData) {
+    query: `mutation UpdateUserGroup($userGroupData: UpdateUserGroupInput!) {
+      updateUserGroup(userGroupData: $userGroupData) {
         id
         name
       }
     }`,
     variables: {
-      ID: parseFloat(groupId),
       userGroupData: {
+        ID: groupId,
         name: nameGroup,
         profileData: {
+          ID: `${profileId}`,
           description: descriptionText,
           avatar: avatarUrl,
         },
@@ -101,13 +103,13 @@ export const getGroups = async () => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getGroup = async (groupId: any) => {
+export const getGroup = async (groupId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
     query: `query {
       ecoverse{
-      group(ID: ${groupId}) {
+      group(ID: "${groupId}") {
         id
         name
         focalPoint {
@@ -128,19 +130,25 @@ export const getGroup = async (groupId: any) => {
 export const removeUserGroupMutation = async (groupId: any) => {
   const requestParams = {
     operationName: null,
-    query: `mutation {
-      removeUserGroup(ID: ${parseFloat(groupId)})
-    }`,
+    query: `mutation removeUserGroup($removeData: RemoveEntityInput!) {
+      removeUserGroup(removeData: $removeData) {
+        id
+      }}`,
+    variables: {
+      removeData: {
+        ID: parseFloat(groupId),
+      },
+    },
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getGroupParent = async (groupId: any) => {
+export const getGroupParent = async (groupId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query { ecoverse {group (ID: ${groupId})
+    query: `query { ecoverse {group (ID: "${groupId}")
     { id name
       parent { __typename ... on Community {type }},
       parent { __typename ... on Organisation {id name }},

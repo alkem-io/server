@@ -11,14 +11,18 @@ import {
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { MemberOf } from './memberof.composite';
-import { UserInput } from './user.dto';
-import { User } from './user.entity';
-import { IUser } from './user.interface';
 import validator from 'validator';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { ICommunityable } from '@interfaces/communityable.interface';
 import { ICommunity } from '../community/community.interface';
+import {
+  UpdateUserInput,
+  CreateUserInput,
+  User,
+  IUser,
+} from '@domain/community/user';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 @Injectable()
 export class UserService {
   constructor(
@@ -28,46 +32,39 @@ export class UserService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createUser(userData: UserInput): Promise<IUser> {
+  async createUser(userData: CreateUserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
 
     // Ok to create a new user + save
     const user = User.create(userData);
-    await this.initialiseMembers(user);
+    await this.initialiseMembers(user, userData);
     // Need to save to get the object identifiers assigned
-    await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
     this.logger.verbose?.(
-      `Created a new user with id: ${user.id}`,
+      `Created a new user with id: ${savedUser.id}`,
       LogContext.COMMUNITY
     );
 
-    // Now update the profile if needed
-    const profileData = userData.profileData;
-    if (profileData && user.profile) {
-      await this.profileService.updateProfile(user.profile.id, profileData);
-    }
-    // reload the user to get it populated
-    const populatedUser = await this.getUserByIdOrFail(user.id);
-
-    this.logger.verbose?.(
-      `User ${userData.email} was created!`,
-      LogContext.COMMUNITY
-    );
-
-    return populatedUser;
+    return savedUser;
   }
 
   // Helper method to ensure all members that are arrays are initialised properly.
   // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(user: IUser): Promise<IUser> {
+  async initialiseMembers(
+    user: IUser,
+    userData: CreateUserInput
+  ): Promise<IUser> {
     if (!user.profile) {
-      user.profile = await this.profileService.createProfile();
+      user.profile = await this.profileService.createProfile(
+        userData.profileData
+      );
     }
 
     return user;
   }
 
-  async removeUser(userID: number): Promise<IUser> {
+  async removeUser(removeData: RemoveEntityInput): Promise<IUser> {
+    const userID = removeData.ID;
     const user = await this.getUserByIdOrFail(userID);
     const { id } = user;
 
@@ -83,7 +80,7 @@ export class UserService {
   }
 
   async validateUserProfileCreationRequest(
-    userData: UserInput
+    userData: CreateUserInput
   ): Promise<boolean> {
     if (!userData.email || userData.email.length == 0)
       throw new ValidationException(
@@ -177,8 +174,8 @@ export class UserService {
   }
 
   // Note: explicitly do not support updating of email addresses
-  async updateUser(userID: number, userInput: UserInput): Promise<IUser> {
-    const user = await this.getUserByIdOrFail(userID);
+  async updateUser(userInput: UpdateUserInput): Promise<IUser> {
+    const user = await this.getUserOrFail(userInput.ID);
 
     // Convert the data to json
     if (userInput.name) {
@@ -207,7 +204,7 @@ export class UserService {
       userInput.email.toLowerCase() !== user.email.toLowerCase()
     ) {
       throw new NotSupportedException(
-        `Updating of email addresses is not supported: ${userID}`,
+        `Updating of email addresses is not supported: ${userInput.ID}`,
         LogContext.COMMUNITY
       );
     }
@@ -216,10 +213,7 @@ export class UserService {
 
     // Check the tagsets
     if (userInput.profileData && user.profile) {
-      await this.profileService.updateProfile(
-        user.profile.id,
-        userInput.profileData
-      );
+      await this.profileService.updateProfile(userInput.profileData);
     }
 
     const populatedUser = await this.getUserByIdOrFail(user.id);

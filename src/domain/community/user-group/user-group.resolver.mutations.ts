@@ -6,8 +6,10 @@ import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 import { Profiling } from '@src/common/decorators';
-import { UserGroupInput } from './user-group.dto';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { UpdateUserGroupInput } from '@domain/community/user-group';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { UpdateMembershipInput } from '@domain/common/entity.dto.update.membership';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolverMutations {
@@ -15,11 +17,13 @@ export class UserGroupResolverMutations {
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => UserGroup, {
     description: 'Removes the user group with the specified ID',
   })
-  async removeUserGroup(@Args('ID') groupID: number): Promise<boolean> {
-    return await this.groupService.removeUserGroup(groupID, true);
+  async removeUserGroup(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IUserGroup> {
+    return await this.groupService.removeUserGroup(removeData, true);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -29,14 +33,9 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async updateUserGroup(
-    @Args('ID') groupID: number,
-    @Args('userGroupData') userGroupData: UserGroupInput
+    @Args('userGroupData') userGroupData: UpdateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.groupService.updateUserGroup(
-      groupID,
-      userGroupData
-    );
-    return group;
+    return await this.groupService.updateUserGroup(userGroupData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -47,11 +46,9 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async addUserToGroup(
-    @Args('userID') userID: number,
-    @Args('groupID') groupID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<boolean> {
-    const res = await this.groupService.addUser(userID, groupID);
-    return res;
+    return await this.groupService.addUser(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -62,11 +59,9 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async removeUserFromGroup(
-    @Args('userID') userID: number,
-    @Args('groupID') groupID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<IUserGroup> {
-    const group = await this.groupService.removeUser(userID, groupID);
-    return group;
+    return await this.groupService.removeUser(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -78,11 +73,9 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async assignGroupFocalPoint(
-    @Args('userID') userID: number,
-    @Args('groupID') groupID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<IUserGroup> {
-    const group = await this.groupService.assignFocalPoint(userID, groupID);
-    return group;
+    return await this.groupService.assignFocalPoint(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

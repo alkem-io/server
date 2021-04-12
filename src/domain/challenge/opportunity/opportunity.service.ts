@@ -1,15 +1,15 @@
-import { ActorGroupInput } from '@domain/context/actor-group/actor-group.dto';
+import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { AspectInput } from '@domain/context/aspect/aspect.dto';
+import { CreateAspectInput } from '@domain/context/aspect';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { ProjectInput } from '@domain/collaboration/project/project.dto';
+import { CreateProjectInput } from '@domain/collaboration/project';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { RelationInput } from '@domain/collaboration/relation/relation.dto';
+import { CreateRelationInput } from '@domain/collaboration/relation';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -23,7 +23,7 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { OpportunityInput } from './opportunity.dto.create';
+import { CreateOpportunityInput } from './opportunity.dto.create';
 import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { Community, ICommunity } from '@domain/community/community';
@@ -33,6 +33,7 @@ import { CommunityType } from '@common/enums/community.types';
 import { TagsetService } from '@domain/common/tagset';
 import validator from 'validator';
 import { UpdateOpportunityInput } from './opportunity.dto.update';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -202,7 +203,7 @@ export class OpportunityService {
   }
 
   async createOpportunity(
-    opportunityData: OpportunityInput
+    opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     await this.validateOpportunity(opportunityData);
 
@@ -217,7 +218,7 @@ export class OpportunityService {
     return savedOpp;
   }
 
-  async validateOpportunity(opportunityData: OpportunityInput) {
+  async validateOpportunity(opportunityData: CreateOpportunityInput) {
     // Verify that required textID field is present and that it has the right format
     const textID = opportunityData.textID;
     if (!textID || textID.length < 3)
@@ -260,7 +261,10 @@ export class OpportunityService {
     return opportunity;
   }
 
-  async removeOpportunity(opportunityID: number): Promise<boolean> {
+  async removeOpportunity(
+    removeData: RemoveEntityInput
+  ): Promise<IOpportunity> {
+    const opportunityID = removeData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['actorGroups', 'aspects', 'relations', 'community'],
@@ -269,19 +273,19 @@ export class OpportunityService {
     // First remove all groups
     if (opportunity.aspects) {
       for (const aspect of opportunity.aspects) {
-        await this.aspectService.removeAspect(aspect.id);
+        await this.aspectService.removeAspect({ ID: aspect.id });
       }
     }
 
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        await this.relationService.removeRelation(relation.id);
+        await this.relationService.removeRelation({ ID: relation.id });
       }
     }
 
     if (opportunity.actorGroups) {
       for (const actorGroup of opportunity.actorGroups) {
-        await this.actorGroupService.removeActorGroup(actorGroup.id);
+        await this.actorGroupService.removeActorGroup({ ID: actorGroup.id });
       }
     }
 
@@ -296,11 +300,17 @@ export class OpportunityService {
     }
 
     if (opportunity.tagset) {
-      await this.tagsetService.removeTagset(opportunity.tagset.id);
+      await this.tagsetService.removeTagset({ ID: opportunity.tagset.id });
     }
 
-    await this.opportunityRepository.remove(opportunity as Opportunity);
-    return true;
+    const { id } = opportunity;
+    const result = await this.opportunityRepository.remove(
+      opportunity as Opportunity
+    );
+    return {
+      ...result,
+      id,
+    };
   }
 
   async getChallengeID(opportunityID: number): Promise<number> {
@@ -326,7 +336,7 @@ export class OpportunityService {
       );
     }
     for (const name of opportunity.restrictedActorGroupNames) {
-      const actorGroupData = new ActorGroupInput();
+      const actorGroupData = new CreateActorGroupInput();
       actorGroupData.name = name;
       actorGroupData.description = 'Default actor group';
       const actorGroup = await this.actorGroupService.createActorGroup(
@@ -352,10 +362,9 @@ export class OpportunityService {
     return community;
   }
 
-  async createProject(
-    opportunityId: number,
-    projectData: ProjectInput
-  ): Promise<IProject> {
+  async createProject(projectData: CreateProjectInput): Promise<IProject> {
+    const opportunityId = projectData.parentID;
+
     this.logger.verbose?.(
       `Adding project to opportunity (${opportunityId})`,
       LogContext.CHALLENGES
@@ -386,10 +395,8 @@ export class OpportunityService {
     return project;
   }
 
-  async createAspect(
-    opportunityID: number,
-    aspectData: AspectInput
-  ): Promise<IAspect> {
+  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
+    const opportunityID = aspectData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['aspects'],
     });
@@ -418,9 +425,9 @@ export class OpportunityService {
   }
 
   async createActorGroup(
-    opportunityId: number,
-    actorGroupData: ActorGroupInput
+    actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
+    const opportunityId = actorGroupData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['actorGroups'],
     });
@@ -449,10 +456,8 @@ export class OpportunityService {
     return actorGroup;
   }
 
-  async createRelation(
-    opportunityId: number,
-    relationData: RelationInput
-  ): Promise<IRelation> {
+  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
+    const opportunityId = relationData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['relations'],
     });

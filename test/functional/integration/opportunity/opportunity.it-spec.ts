@@ -98,8 +98,7 @@ describe('Opportunities', () => {
     );
 
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
     // Create Aspect on opportunity group
     await createAspectOnOpportunityMutation(
@@ -207,12 +206,10 @@ describe('Opportunities', () => {
     );
 
     const createOpportunityData =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity;
 
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
     // Query Opportunity data
     const requestQueryOpportunity = await queryOpportunity(opportunityId);
@@ -234,13 +231,16 @@ describe('Opportunities', () => {
     );
 
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+    let refId =
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.context
+        .references[0].id;
 
     // Act
     // Update the created Opportunity
     const responseUpdateOpportunity = await updateOpportunityOnChallengeMutation(
-      opportunityId
+      opportunityId,
+      refId
     );
     const updateOpportunityData =
       responseUpdateOpportunity.body.data.updateOpportunity;
@@ -265,8 +265,7 @@ describe('Opportunities', () => {
     );
 
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
     // Act
     // Remove opportunity
@@ -279,7 +278,9 @@ describe('Opportunities', () => {
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
-    expect(removeOpportunityResponse.body.data.removeOpportunity).toEqual(true);
+    expect(removeOpportunityResponse.body.data.removeOpportunity.id).toEqual(
+      opportunityId
+    );
     expect(requestQueryOpportunity.body.errors[0].message).toEqual(
       `Unable to find Opportunity with ID: ${opportunityId}`
     );
@@ -295,8 +296,7 @@ describe('Opportunities', () => {
     );
 
     opportunityName =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.name;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.name;
 
     // Act
     // Get all opportunities
@@ -304,7 +304,9 @@ describe('Opportunities', () => {
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
-    expect(getAllOpportunityResponse.body.data.ecoverse.opportunities).toContainObject({
+    expect(
+      getAllOpportunityResponse.body.data.ecoverse.opportunities
+    ).toContainObject({
       name: `${opportunityName}`,
     });
   });
@@ -336,25 +338,20 @@ describe('Opportunities', () => {
     expect(responseCreateOpportunityOnChallengeOne.status).toBe(200);
     expect(responseCreateOpportunityOnChallengeTwo.status).toBe(200);
     expect(
-      responseCreateOpportunityOnChallengeOne.body.data
-        .createOpportunity.name
+      responseCreateOpportunityOnChallengeOne.body.data.createOpportunity.name
     ).toEqual(
-      responseCreateOpportunityOnChallengeTwo.body.data
-        .createOpportunity.name
+      responseCreateOpportunityOnChallengeTwo.body.data.createOpportunity.name
     );
     expect(
-      responseCreateOpportunityOnChallengeOne.body.data
-        .createOpportunity.textID
+      responseCreateOpportunityOnChallengeOne.body.data.createOpportunity.textID
     ).toEqual(
-      responseCreateOpportunityOnChallengeTwo.body.data
-        .createOpportunity.textID
+      responseCreateOpportunityOnChallengeTwo.body.data.createOpportunity.textID
     );
   });
 });
 
 describe('Opportunity sub entities', () => {
-  test('should throw error for creating 2 projects with same name/textId under the same opportunity', async () => {
-    // Arrange
+  beforeEach(async () => {
     // Create Opportunity
     const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
       challengeId,
@@ -362,11 +359,12 @@ describe('Opportunity sub entities', () => {
       opportunityTextId,
       contextTagline
     );
-
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+  });
 
+  test('should throw error for creating 2 projects with same name/textId under the same opportunity', async () => {
+    // Arrange
     // Create Project
     const responseCreateProject = await createProjectMutation(
       opportunityId,
@@ -403,18 +401,6 @@ describe('Opportunity sub entities', () => {
 
   test('should throw error for creating 2 aspects with same title under the same opportunity', async () => {
     // Arrange
-    // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-      challengeId,
-      opportunityName,
-      opportunityTextId,
-      contextTagline
-    );
-
-    opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
-
     // Create Aspect on opportunity group
     const createAspectResponse = await createAspectOnOpportunityMutation(
       opportunityId,
@@ -451,18 +437,6 @@ describe('Opportunity sub entities', () => {
 
   test('should throw error for creating 2 actor groups with same name/textId under the same opportunity', async () => {
     // Arrange
-    // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-      challengeId,
-      opportunityName,
-      opportunityTextId,
-      contextTagline
-    );
-
-    opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
-
     // Create Actor group
     const createActorGroupResponse = await createActorGroupMutation(
       opportunityId,
@@ -495,18 +469,6 @@ describe('Opportunity sub entities', () => {
 
   test('should get all opportunity sub entities', async () => {
     // Arrange
-    // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
-      challengeId,
-      opportunityName,
-      opportunityTextId,
-      contextTagline
-    );
-
-    opportunityId =
-      responseCreateOpportunityOnChallenge.body.data
-        .createOpportunity.id;
-
     // Create Aspect on opportunity group
     const createAspectResponse = await createAspectOnOpportunityMutation(
       opportunityId,

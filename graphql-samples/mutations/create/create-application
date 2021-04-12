@@ -1,5 +1,5 @@
-mutation createApplication($communityId:Float!, $applicationData: ApplicationInput!) {
-  createApplication(communityID:$communityId, applicationData:$applicationData){
+mutation createApplication($applicationData: CreateApplicationInput!) {
+  createApplication(applicationData:$applicationData){
     id
 	  questions {
       id
@@ -12,8 +12,8 @@ mutation createApplication($communityId:Float!, $applicationData: ApplicationInp
 
 query variables:
 {
-  "communityId": 1,
   "applicationData": {
+    "parentID": 1,
     "userId": 4,
     "questions": [
       {"name": "Question 1", "value": "No"},

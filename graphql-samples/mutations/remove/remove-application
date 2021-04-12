@@ -1,0 +1,12 @@
+mutation removeUserApplication($removeData: RemoveEntityInput!) {
+  removeUserApplication(removeData: $removeData) {
+    id
+  }
+}
+
+Variables:
+{
+  "removeData": {
+    "ID": 7
+  }
+}

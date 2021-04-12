@@ -3,15 +3,20 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Challenge } from './challenge.entity';
-import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Profiling } from '@src/common/decorators';
-import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
-import { UpdateChallengeInput } from './challenge.dto.update';
+import {
+  IOpportunity,
+  Opportunity,
+  CreateOpportunityInput,
+} from '@domain/challenge/opportunity';
+import {
+  UpdateChallengeInput,
+  IChallenge,
+  Challenge,
+} from '@domain/challenge/challenge';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -27,7 +32,7 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async createOpportunity(
-    @Args('opportunityData') opportunityData: OpportunityInput
+    @Args('opportunityData') opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     const opportunity = await this.challengeService.createOpportunity(
       opportunityData
@@ -53,11 +58,13 @@ export class ChallengeResolverMutations {
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => Challenge, {
     description: 'Removes the Challenge with the specified ID',
   })
-  async removeChallenge(@Args('ID') challengeID: number): Promise<boolean> {
-    return await this.challengeService.removeChallenge(challengeID);
+  async removeChallenge(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IChallenge> {
+    return await this.challengeService.removeChallenge(removeData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)

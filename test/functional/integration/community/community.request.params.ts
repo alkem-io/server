@@ -9,18 +9,27 @@ export const createGroupOnCommunityMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createGroupOnCommuity($groupName: String!, $communityID: Float!) {
-      createGroupOnCommunity(groupName: $groupName, communityID: $communityID) {
+    query: `mutation createGroupOnCommunity($groupData: CreateUserGroupInput!) {
+      createGroupOnCommunity(groupData: $groupData) {
         name,
         id
         members {
           name
         }
+        profile{
+          id
+        }
       }
     }`,
     variables: {
-      groupName: groupNameText,
-      communityID: parseFloat(communityId),
+      groupData: {
+        name: groupNameText,
+        parentID: parseFloat(communityId),
+        profileData: {
+          description: 'some description',
+          avatar: 'http://someUri',
+        },
+      },
     },
   };
 

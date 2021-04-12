@@ -10,12 +10,14 @@ import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { OrganisationInput } from './organisation.dto.create';
+import { CreateOrganisationInput } from './organisation.dto.create';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { AuthorizationRoles } from '@core/authorization';
 import validator from 'validator';
 import { UpdateOrganisationInput } from './organisation.dto.update';
+import { CreateUserGroupInput } from '../user-group';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class OrganisationService {
@@ -28,14 +30,14 @@ export class OrganisationService {
   ) {}
 
   async createOrganisation(
-    organisationData: OrganisationInput
+    organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
     await this.validateOrganisationCreationRequest(organisationData);
 
     // No existing organisation found, create and initialise a new one!
     const organisation = new Organisation(organisationData.textID);
     organisation.name = organisationData.name;
-    await this.initialiseMembers(organisation);
+    await this.initialiseMembers(organisation, organisationData);
     await this.organisationRepository.save(organisation);
     this.logger.verbose?.(
       `Created new organisation with id ${organisation.id}`,
@@ -44,7 +46,10 @@ export class OrganisationService {
     return organisation;
   }
 
-  async initialiseMembers(organisation: IOrganisation): Promise<IOrganisation> {
+  async initialiseMembers(
+    organisation: IOrganisation,
+    organisationData: CreateOrganisationInput
+  ): Promise<IOrganisation> {
     if (!organisation.restrictedGroupNames) {
       organisation.restrictedGroupNames = [AuthorizationRoles.Members];
     }
@@ -60,14 +65,16 @@ export class OrganisationService {
 
     // Initialise contained singletons
     if (!organisation.profile) {
-      organisation.profile = await this.profileService.createProfile();
+      organisation.profile = await this.profileService.createProfile(
+        organisationData.profileData
+      );
     }
 
     return organisation;
   }
 
   async validateOrganisationCreationRequest(
-    organisationData: OrganisationInput
+    organisationData: CreateOrganisationInput
   ): Promise<boolean> {
     if (!organisationData.name || organisationData.name.length == 0)
       throw new ValidationException(
@@ -104,19 +111,18 @@ export class OrganisationService {
 
     // Check the tagsets
     if (organisationData.profileData && existingOrganisation.profile) {
-      await this.profileService.updateProfile(
-        existingOrganisation.profile.id,
-        organisationData.profileData
-      );
+      await this.profileService.updateProfile(organisationData.profileData);
     }
 
     // Reload the organisation for returning
     return await this.getOrganisationByIdOrFail(existingOrganisation.id);
   }
 
-  async removeOrganisation(orgID: number): Promise<IOrganisation> {
+  async removeOrganisation(
+    removeData: RemoveEntityInput
+  ): Promise<IOrganisation> {
+    const orgID = removeData.ID;
     const organisation = await this.getOrganisationByIdOrFail(orgID);
-    const { id } = organisation;
 
     if (organisation.profile) {
       await this.profileService.removeProfile(organisation.profile.id);
@@ -124,17 +130,15 @@ export class OrganisationService {
 
     if (organisation.groups) {
       for (const group of organisation.groups) {
-        await this.userGroupService.removeUserGroup(group.id);
+        await this.userGroupService.removeUserGroup({ ID: group.id });
       }
     }
 
     const result = await this.organisationRepository.remove(
       organisation as Organisation
     );
-    return {
-      ...result,
-      id,
-    };
+    result.id = removeData.ID;
+    return result;
   }
 
   async getOrganisationOrFail(
@@ -186,7 +190,9 @@ export class OrganisationService {
     return organisations || [];
   }
 
-  async createGroup(orgID: number, groupName: string): Promise<IUserGroup> {
+  async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
+    const orgID = groupData.parentID;
+    const groupName = groupData.name;
     // First find the Challenge
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to organisation (${orgID})`

@@ -1,5 +1,5 @@
-mutation addUserToGroup($userID: Float!, $groupID: Float!) {
-  addUserToGroup(groupID: $groupID, userID: $userID) {
+mutation addUserToGroup($membershipData: UpdateMembershipInput!) {
+  addUserToGroup(membershipData: $membershipData) {
     name,
     id,
     members {
@@ -11,6 +11,8 @@ mutation addUserToGroup($userID: Float!, $groupID: Float!) {
 
 Variables:
 {
-  "userID": 7,
-  "groupID": 1
+  "membershipData": {
+    "childID": 7,
+    "parentID": 1
+  }
 }

@@ -1,8 +1,13 @@
-mutation removeAspect($ID: Float!) {
-  removeAspect(ID: $ID)
+mutation removeAspect($removeData: RemoveEntityInput!) {
+  removeAspect(removeData: $removeData) {
+    id
+  }
 }
+
 
 Variables:
 {
-  "ID": 7
+  "removeData": {
+    "ID": 7
+  }
 }

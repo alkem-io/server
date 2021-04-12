@@ -1,4 +1,5 @@
 export * from './tagset.entity';
 export * from './tagset.interface';
-export * from './tagset.dto';
+export * from './tagset.dto.create';
+export * from './tagset.dto.update';
 export * from './tagset.service';

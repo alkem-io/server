@@ -1,19 +1,22 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Mutation } from '@nestjs/graphql';
-import { Float } from '@nestjs/graphql';
-import { Args } from '@nestjs/graphql';
-import { Resolver } from '@nestjs/graphql';
+import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { OrganisationInput } from './organisation.dto.create';
-import { Organisation } from './organisation.entity';
-import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 import { Profiling } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { UpdateOrganisationInput } from './organisation.dto.update';
+import {
+  CreateOrganisationInput,
+  UpdateOrganisationInput,
+  Organisation,
+  IOrganisation,
+} from '@domain/community/organisation';
+import {
+  CreateUserGroupInput,
+  IUserGroup,
+  UserGroup,
+} from '@domain/community/user-group';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -30,7 +33,7 @@ export class OrganisationResolverMutations {
   })
   @Profiling.api
   async createOrganisation(
-    @Args('organisationData') organisationData: OrganisationInput
+    @Args('organisationData') organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
     const organisation = await this.organisationService.createOrganisation(
       organisationData
@@ -47,10 +50,9 @@ export class OrganisationResolverMutations {
   })
   @Profiling.api
   async createGroupOnOrganisation(
-    @Args({ name: 'orgID', type: () => Float }) orgID: number,
-    @Args({ name: 'groupName', type: () => String }) groupName: string
+    @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.organisationService.createGroup(orgID, groupName);
+    const group = await this.organisationService.createGroup(groupData);
     return group;
   }
 
@@ -67,5 +69,16 @@ export class OrganisationResolverMutations {
       organisationData
     );
     return org;
+  }
+
+  @Roles(AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Organisation, {
+    description: 'Removes the Organisaiton with the specified ID',
+  })
+  async removeOrganisation(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IOrganisation> {
+    return await this.organisationService.removeOrganisation(removeData);
   }
 }

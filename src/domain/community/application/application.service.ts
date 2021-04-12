@@ -1,4 +1,4 @@
-import { ApplicationInput } from '@domain/community/application/application.dto';
+import { CreateApplicationInput } from '@domain/community/application';
 import { Application } from '@domain/community/application/application.entity';
 import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -8,6 +8,7 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class ApplicationService {
@@ -20,7 +21,7 @@ export class ApplicationService {
   ) {}
 
   async createApplication(
-    applicationData: ApplicationInput
+    applicationData: CreateApplicationInput
   ): Promise<Application> {
     const application = await this.applicationFactoryService.createApplication(
       applicationData
@@ -28,7 +29,8 @@ export class ApplicationService {
     return await this.applicationRepository.save(application);
   }
 
-  async removeApplication(applicationID: number): Promise<Application> {
+  async removeApplication(removeData: RemoveEntityInput): Promise<Application> {
+    const applicationID = removeData.ID;
     const application = await this.getApplicationOrFail(applicationID);
 
     if (application.questions) {
@@ -39,6 +41,7 @@ export class ApplicationService {
     const result = await this.applicationRepository.remove(
       application as Application
     );
+    result.id = removeData.ID;
     return result;
   }
 

@@ -10,7 +10,7 @@ export const createChallangeMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation CreateChallenge($challengeData: ChallengeInput!) {
+    query: `mutation CreateChallenge($challengeData: CreateChallengeInput!) {
               createChallenge(challengeData: $challengeData) {
                 name
                 id
@@ -51,7 +51,6 @@ export const createChallangeMutation = async (
           vision: 'test vision' + uniqueId,
           impact: 'test impact' + uniqueId,
           who: 'test who' + uniqueId,
-
           references: [
             {
               name: 'test video' + uniqueId,
@@ -73,7 +72,7 @@ export const createBasicChallangeMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation CreateChallenge($challengeData: ChallengeInput!) {
+    query: `mutation CreateChallenge($challengeData: CreateChallengeInput!) {
               createChallenge(challengeData: $challengeData) {
                 name
                 id
@@ -114,7 +113,7 @@ export const createBasicChallangeMutation = async (
 };
 
 export const updateChallangeMutation = async (
-  challengeId: any,
+  challengeId: string,
   challengeName: string,
   challengeState?: string,
   taglineText?: string,
@@ -124,12 +123,13 @@ export const updateChallangeMutation = async (
   who?: string,
   refName?: string,
   refUri?: string,
-  tagsArrey?: any
+  tagsArrey?: any,
+  refId?: any
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation updateChallenge($challengeData: UpdateChallengeInput!) {
-      updateChallenge(challengeData: $challengeData) {
+    query: `mutation UpdateChallenge($challengeData: UpdateChallengeInput!) {
+      updateChallenge(challengeData: $challengeData)  {
         name
         id
         textID
@@ -171,8 +171,9 @@ export const updateChallangeMutation = async (
           vision: vision,
           impact: impact,
           who: who,
-          references: [
+          updateReferences: [
             {
+              ID: parseFloat(refId),
               name: refName,
               uri: refUri,
             },
@@ -186,12 +187,18 @@ export const updateChallangeMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const removeChallangeMutation = async (challengeId: any) => {
+export const removeChallangeMutation = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation {
-      removeChallenge(ID: ${parseFloat(challengeId)})
-    }`,
+    query: `mutation removeChallenge($removeData: RemoveEntityInput!) {
+      removeChallenge(removeData: $removeData) {
+        id
+      }}`,
+    variables: {
+      removeData: {
+        ID: parseFloat(challengeId),
+      },
+    },
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

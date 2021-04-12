@@ -3,9 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ReferenceInput } from './reference.dto';
+import { CreateReferenceInput } from './reference.dto.create';
 import { Reference } from './reference.entity';
 import { IReference } from './reference.interface';
+import { UpdateReferenceInput } from '@domain/common/reference';
+import { RemoveEntityInput } from '../entity.dto.remove';
 
 @Injectable()
 export class ReferenceService {
@@ -14,7 +16,9 @@ export class ReferenceService {
     private referenceRepository: Repository<Reference>
   ) {}
 
-  async createReference(referenceInput: ReferenceInput): Promise<IReference> {
+  async createReference(
+    referenceInput: CreateReferenceInput
+  ): Promise<IReference> {
     const reference = new Reference(
       referenceInput.name,
       referenceInput.uri || '',
@@ -24,13 +28,17 @@ export class ReferenceService {
     return reference;
   }
 
-  async updateReference(
+  updateReferenceValues(
     reference: IReference,
-    referenceData: ReferenceInput
-  ): Promise<IReference> {
+    referenceData: UpdateReferenceInput
+  ) {
     // Copy over the received data if a uri is supplied
     if (referenceData.uri) {
       reference.uri = referenceData.uri;
+    }
+
+    if (referenceData.name) {
+      reference.name = referenceData.name;
     }
 
     if (referenceData.description) {
@@ -38,10 +46,15 @@ export class ReferenceService {
     } else {
       reference.description = '';
     }
+  }
 
-    const updatedReference = await this.referenceRepository.save(reference);
+  async updateReference(
+    referenceData: UpdateReferenceInput
+  ): Promise<IReference> {
+    const reference = await this.getReferenceOrFail(referenceData.ID);
+    this.updateReferenceValues(reference, referenceData);
 
-    return updatedReference;
+    return await this.referenceRepository.save(reference);
   }
 
   async getReferenceOrFail(referenceID: number): Promise<IReference> {
@@ -56,24 +69,42 @@ export class ReferenceService {
     return reference;
   }
 
-  async removeReference(referenceID: number): Promise<IReference> {
+  async removeReference(removeData: RemoveEntityInput): Promise<IReference> {
+    const referenceID = removeData.ID;
     const reference = await this.getReferenceOrFail(referenceID);
-    return await this.referenceRepository.remove(reference as Reference);
+    const { id } = reference;
+    const result = await this.referenceRepository.remove(
+      reference as Reference
+    );
+    return {
+      ...result,
+      id,
+    };
   }
 
   async updateReferences(
     references: IReference[],
-    referenceDTOs: ReferenceInput[]
+    updateReferenceDTOs: UpdateReferenceInput[] | undefined,
+    createReferenceDTOs: CreateReferenceInput[] | undefined
   ) {
-    for (const referenceDTO of referenceDTOs) {
-      const existingReference = await references.find(
-        e => e.name === referenceDTO.name
-      );
-      if (!existingReference) {
-        const reference = await this.createReference(referenceDTO);
+    if (updateReferenceDTOs) {
+      for (const referenceDTO of updateReferenceDTOs) {
+        const referenceID = referenceDTO.ID;
+        const existingReference = references.find(
+          reference => reference.id === referenceID
+        );
+        if (!existingReference)
+          throw new EntityNotFoundException(
+            `Not able to locate reference with the specified ID: ${referenceID} in existing references`,
+            LogContext.CHALLENGES
+          );
+        await this.updateReferenceValues(existingReference, referenceDTO);
+      }
+    }
+    if (createReferenceDTOs) {
+      for (const createReferenceData of createReferenceDTOs) {
+        const reference = await this.createReference(createReferenceData);
         references.push(reference);
-      } else {
-        await this.updateReference(existingReference, referenceDTO);
       }
     }
   }

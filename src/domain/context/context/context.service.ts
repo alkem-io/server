@@ -4,14 +4,15 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ReferenceInput } from '@domain/common/reference/reference.dto';
+import { CreateReferenceInput } from '@domain/common/reference';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { ContextInput } from './context.dto';
 import { Context } from './context.entity';
 import { IContext } from './context.interface';
+import { UpdateContextInput } from './context.dto.update';
 
 @Injectable()
 export class ContextService {
@@ -41,7 +42,7 @@ export class ContextService {
 
   async update(
     context: IContext,
-    contextInput: ContextInput
+    contextInput: UpdateContextInput
   ): Promise<IContext> {
     // Convert the data to json
     if (contextInput.tagline) {
@@ -60,18 +61,17 @@ export class ContextService {
       context.who = contextInput.who;
     }
 
-    if (contextInput.references) {
-      if (!context.references)
-        throw new EntityNotInitializedException(
-          `References for contex with id: ${context.id} not initialized properly!`,
-          LogContext.CHALLENGES
-        );
-
-      await this.referenceService.updateReferences(
-        context.references,
-        contextInput.references
+    if (!context.references)
+      throw new EntityNotInitializedException(
+        `References for contex with id: ${context.id} not initialized properly!`,
+        LogContext.CHALLENGES
       );
-    }
+
+    await this.referenceService.updateReferences(
+      context.references,
+      contextInput.updateReferences,
+      contextInput.createReferences
+    );
 
     await this.contextRepository.save(context);
     return context;
@@ -84,7 +84,7 @@ export class ContextService {
     // Remove all references
     if (context.references) {
       for (const reference of context.references) {
-        await this.referenceService.removeReference(reference.id);
+        await this.referenceService.removeReference({ ID: reference.id });
       }
     }
 
@@ -92,9 +92,14 @@ export class ContextService {
   }
 
   async createReference(
-    contextID: number,
-    referenceInput: ReferenceInput
+    referenceInput: CreateReferenceInput
   ): Promise<IReference> {
+    const contextID = referenceInput.parentID;
+    if (!contextID)
+      throw new ValidationException(
+        'No parendId specified for reference creation',
+        LogContext.CHALLENGES
+      );
     const context = await this.getContextOrFail(contextID);
 
     if (!context.references)

@@ -3,12 +3,16 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
-import { UserInput } from './user.dto';
-import { User } from './user.entity';
-import { IUser } from './user.interface';
-import { UserService } from './user.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { SelfManagement } from '@common/decorators';
+import {
+  CreateUserInput,
+  UpdateUserInput,
+  User,
+  IUser,
+} from '@domain/community/user';
+import { UserService } from './user.service';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver(() => User)
 export class UserResolverMutations {
@@ -22,7 +26,9 @@ export class UserResolverMutations {
       'Creates a new user profile on behalf of an admin or the user account owner.',
   })
   @Profiling.api
-  async createUser(@Args('userData') userData: UserInput): Promise<IUser> {
+  async createUser(
+    @Args('userData') userData: CreateUserInput
+  ): Promise<IUser> {
     return await this.userService.createUser(userData);
   }
 
@@ -35,10 +41,9 @@ export class UserResolverMutations {
   })
   @Profiling.api
   async updateUser(
-    @Args('userID') userID: number,
-    @Args('userData') userData: UserInput
+    @Args('userData') userData: UpdateUserInput
   ): Promise<IUser> {
-    const user = await this.userService.updateUser(userID, userData);
+    const user = await this.userService.updateUser(userData);
     return user;
   }
 
@@ -48,8 +53,9 @@ export class UserResolverMutations {
     description: 'Removes the specified user profile.',
   })
   @Profiling.api
-  async removeUser(@Args('userID') userID: number): Promise<IUser> {
-    const user = await this.userService.removeUser(userID);
-    return user;
+  async removeUser(
+    @Args('removeData') removeData: RemoveEntityInput
+  ): Promise<IUser> {
+    return await this.userService.removeUser(removeData);
   }
 }

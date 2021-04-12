@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { TagsetResolver } from './tagset.resolver';
+import { TagsetResolver } from './tagset.resolver.mutations';
 
 describe('TagsetResolver', () => {
   let resolver: TagsetResolver;

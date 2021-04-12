@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';
-import { ProfileInput } from '@domain/community/profile/profile.dto';
+import { UpdateProfileInput } from '@domain/community/profile';
 
 @InputType()
 export class UpdateOrganisationInput {
@@ -13,6 +13,6 @@ export class UpdateOrganisationInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
-  @Field(() => ProfileInput, { nullable: true })
-  profileData?: ProfileInput;
+  @Field(() => UpdateProfileInput, { nullable: true })
+  profileData?: UpdateProfileInput;
 }

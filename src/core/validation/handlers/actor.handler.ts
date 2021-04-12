@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { ActorInput } from '@domain/context/actor/actor.dto';
+import { CreateActorInput } from '@domain/context/actor';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';
@@ -12,7 +12,7 @@ export class ActorHandler extends AbstractHandler {
     value: any,
     metatype: Function
   ): Promise<ValidationError[]> {
-    if (metatype === ActorInput) {
+    if (metatype === CreateActorInput) {
       if (!value.name)
         throw new ValidationException(
           'Actor name must be provided for mutations!',

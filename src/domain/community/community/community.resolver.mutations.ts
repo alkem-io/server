@@ -1,6 +1,6 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
-import { Args, Float, Mutation } from '@nestjs/graphql';
+import { Args, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
@@ -8,9 +8,12 @@ import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { CommunityService } from './community.service';
 import { Profiling } from '@src/common/decorators';
 import { Application } from '@domain/community/application/application.entity';
-import { ApplicationInput } from '@domain/community/application/application.dto';
+import { CreateApplicationInput } from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '../application/application.service';
+import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { UpdateMembershipInput } from '@domain/common/entity.dto.update.membership';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -26,14 +29,9 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async createGroupOnCommunity(
-    @Args({ name: 'communityID', type: () => Float }) communityID: number,
-    @Args({ name: 'groupName', type: () => String }) groupName: string
+    @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.createGroup(
-      communityID,
-      groupName
-    );
-    return group;
+    return await this.communityService.createGroup(groupData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -44,11 +42,9 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async addUserToCommunity(
-    @Args('userID') userID: number,
-    @Args('communityID') communityID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.addMember(userID, communityID);
-    return group;
+    return await this.communityService.addMember(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -59,11 +55,9 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async removeUserFromCommunity(
-    @Args('userID') userID: number,
-    @Args('communityID') communityID: number
+    @Args('membershipData') membershipData: UpdateMembershipInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.removeMember(userID, communityID);
-    return group;
+    return await this.communityService.removeMember(membershipData);
   }
 
   // All registered users can create applications
@@ -73,13 +67,9 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async createApplication(
-    @Args('communityID') communityID: number,
-    @Args('applicationData') applicationData: ApplicationInput
+    @Args('applicationData') applicationData: CreateApplicationInput
   ): Promise<Application> {
-    return await this.communityService.createApplication(
-      communityID,
-      applicationData
-    );
+    return await this.communityService.createApplication(applicationData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -101,8 +91,8 @@ export class CommunityResolverMutations {
   })
   //@Profiling.api
   async removeUserApplication(
-    @Args('applicationID') applicationID: number
+    @Args('removeData') removeData: RemoveEntityInput
   ): Promise<Application> {
-    return await this.applicationService.removeApplication(applicationID);
+    return await this.applicationService.removeApplication(removeData);
   }
 }

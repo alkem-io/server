@@ -7,14 +7,16 @@ import { Project } from '@domain/collaboration/project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { TagsetInput } from './tagset.dto';
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
-  ValidationException,
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
+import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
+import validator from 'validator';
+import { Ecoverse } from '@domain/challenge/ecoverse';
+import { RemoveEntityInput } from '../entity.dto.remove';
 
 @Injectable()
 export class TagsetService {
@@ -34,13 +36,31 @@ export class TagsetService {
     return tagset;
   }
 
-  createTagset({ name, tags }: { name?: string; tags?: string[] }) {
-    const tagset = new Tagset(name ? name : RestrictedTagsetNames.Default);
-    tagset.tags = tags ? [...tags] : [];
+  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
+    const tagset = Tagset.create(tagsetData);
+    await this.initialiseMembers(tagset);
+    return await this.tagsetRepository.save(tagset);
+  }
+
+  createDefaultTagset() {
+    const tagset = Tagset.create();
+    tagset.name = RestrictedTagsetNames.Default;
+    tagset.tags = [];
     return tagset;
   }
 
-  async getTagsetOrFail(tagsetID: number): Promise<ITagset> {
+  async getTagsetOrFail(tagsetID: string): Promise<ITagset> {
+    if (validator.isNumeric(tagsetID)) {
+      const idInt: number = parseInt(tagsetID);
+      return await this.getTagsetByIdOrFail(idInt);
+    }
+    throw new EntityNotFoundException(
+      `Tagset with id(${tagsetID}) not found!`,
+      LogContext.COMMUNITY
+    );
+  }
+
+  async getTagsetByIdOrFail(tagsetID: number): Promise<ITagset> {
     const tagset = await this.tagsetRepository.findOne({ id: tagsetID });
     if (!tagset)
       throw new EntityNotFoundException(
@@ -50,81 +70,35 @@ export class TagsetService {
     return tagset as ITagset;
   }
 
-  async removeTagset(tagsetID: number): Promise<ITagset> {
-    const tagset = await this.getTagsetOrFail(tagsetID);
-    return await this.tagsetRepository.remove(tagset as Tagset);
+  async removeTagset(removeData: RemoveEntityInput): Promise<ITagset> {
+    const tagsetID = removeData.ID;
+    const tagset = await this.getTagsetByIdOrFail(tagsetID);
+    const result = await this.tagsetRepository.remove(tagset as Tagset);
+    result.id = removeData.ID;
+    return result;
   }
 
-  async replaceTags(tagsetID: number, newTags: string[]): Promise<ITagset> {
-    const tagset = await this.getTagsetOrFail(tagsetID);
-
-    if (!newTags)
-      throw new ValidationException(
-        `Unable to replace tags on tagset(${tagsetID}`,
-        LogContext.COMMUNITY
-      );
-
+  async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
+    const tagsetID = tagsetData.ID;
+    const newTags = tagsetData.tags;
+    const tagset = await this.getTagsetByIdOrFail(tagsetID);
     // Check the incoming tags and replace if not null
-    tagset.tags = newTags;
+    if (newTags) tagset.tags = newTags;
+
+    // todo: also allow name of tagset to be updated
     await this.tagsetRepository.save(tagset);
 
     return tagset;
   }
 
-  async updateOrCreateTagset(
-    tagsetable: ITagsetable,
-    tagsetData: TagsetInput
-  ): Promise<ITagset> {
-    if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
-      const tagset = await this.getTagsetByName(tagsetable, tagsetData.name);
-      // Check the incoming tags and replace
-      if (tagsetData.tags) {
-        tagset.tags = tagsetData.tags;
-      } else {
-        tagset.tags = [];
-      }
-      await this.tagsetRepository.save(tagset);
-      return tagset;
-    }
-    // If get here then need to create a new tagset
-    const tagset = await this.createTagset(tagsetData);
-    tagsetable.tagsets?.push(tagset);
-    return tagset;
-  }
-
-  replaceTagsOnEntity(entity: Challenge | Project, tags: string[]) {
-    if (!entity.tagset) {
-      entity.tagset = this.createTagset({
-        tags: [...tags],
-      });
-    } else {
-      entity.tagset.tags = [...tags];
-    }
-    return entity;
-  }
-
-  async addTag(tagsetID: number, newTag: string): Promise<ITagset> {
-    const tagset = await this.getTagsetOrFail(tagsetID);
-
-    if (!tagset.tags)
+  replaceTagsOnEntity(entity: Challenge | Project | Ecoverse, tags: string[]) {
+    if (!entity.tagset)
       throw new EntityNotInitializedException(
-        `Tagset with id(${tagsetID}) not initialised!`,
+        `Entity with id(${entity.id}) not initialised with a tagset!`,
         LogContext.COMMUNITY
       );
-
-    // Check if the tag already exists or not
-    const existingTag = tagset.tags.find(
-      tag => tag.toLowerCase() === newTag.toLowerCase()
-    );
-    if (existingTag) {
-      // Tag already exists; just return
-      return tagset;
-    }
-    // Tag did not exist so add it
-    tagset.tags?.push(newTag);
-    await this.tagsetRepository.save(tagset);
-
-    return tagset;
+    entity.tagset.tags = [...tags];
+    return entity;
   }
 
   async createRestrictedTagsets(

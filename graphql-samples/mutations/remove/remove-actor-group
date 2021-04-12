@@ -1,8 +1,12 @@
-mutation removeActorGroup($ID: Float!) {
-  removeActorGroup(ID: $ID)
+mutation removeActorGroup($removeData: RemoveEntityInput!) {
+  removeActorGroup(removeData: $removeData) {
+    id
+  }
 }
 
 Variables:
 {
-  "ID": 7
+  "removeData": {
+    "ID": 7
+  }
 }

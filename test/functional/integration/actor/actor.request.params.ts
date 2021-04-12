@@ -2,16 +2,16 @@ import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
 export const createActorMutation = async (
-  actorGroupId: any,
-  actorName: any,
-  actorDescritpion?: any,
-  actorValue?: any,
-  actorImpact?: any
+  actorGroupId: string,
+  actorName: string,
+  actorDescritpion?: string,
+  actorValue?: string,
+  actorImpact?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createActor($actorData: ActorInput!, $actorGroupID: Float!) {
-        createActor(actorData: $actorData, actorGroupID: $actorGroupID) {
+    query: `mutation createActor($actorData: CreateActorInput!) {
+      createActor(actorData: $actorData) {
           id,
           name,
           description,
@@ -20,8 +20,8 @@ export const createActorMutation = async (
           }
       }`,
     variables: {
-      actorGroupID: parseFloat(actorGroupId),
       actorData: {
+        parentID: parseFloat(actorGroupId),
         name: `${actorName}`,
         description: `${actorDescritpion}`,
         value: `${actorValue}`,
@@ -34,16 +34,16 @@ export const createActorMutation = async (
 };
 
 export const updateActorMutation = async (
-  actorId: any,
-  actorName: any,
-  actorDescritpion?: any,
-  actorValue?: any,
-  actorImpact?: any
+  actorId: string,
+  actorName: string,
+  actorDescritpion?: string,
+  actorValue?: string,
+  actorImpact?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation updateActor($actorData: ActorInput!, $ID: Float!) {
-        updateActor(actorData: $actorData, ID: $ID) {
+    query: `mutation updateActor($actorData: UpdateActorInput!) {
+      updateActor(actorData: $actorData) {
           id
           name
           description
@@ -52,8 +52,8 @@ export const updateActorMutation = async (
         }
       }`,
     variables: {
-      ID: parseFloat(actorId),
       actorData: {
+        ID: actorId,
         name: `${actorName}`,
         description: `${actorDescritpion}`,
         value: `${actorValue}`,
@@ -65,14 +65,17 @@ export const updateActorMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const removeActorMutation = async (actorId: any) => {
+export const removeActorMutation = async (actorId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeActor($ID: Float!) {
-        removeActor(ID: $ID)
-      }`,
+    query: `mutation removeActor($removeData: RemoveEntityInput!) {
+      removeActor(removeData: $removeData) {
+        id
+      }}`,
     variables: {
-      ID: parseFloat(actorId),
+      removeData: {
+        ID: parseFloat(actorId),
+      },
     },
   };
 
