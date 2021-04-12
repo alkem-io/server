@@ -7,12 +7,14 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateReferenceInput } from '@domain/common/reference';
-import { IReference } from '@domain/common/reference/reference.interface';
+import { CreateReferenceInput, IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { Context } from './context.entity';
-import { IContext } from './context.interface';
-import { UpdateContextInput } from './context.dto.update';
+import {
+  CreateContextInput,
+  UpdateContextInput,
+  Context,
+  IContext,
+} from '@domain/context/context';
 
 @Injectable()
 export class ContextService {
@@ -22,11 +24,9 @@ export class ContextService {
     private contextRepository: Repository<Context>
   ) {}
 
-  initialiseMembers(context: IContext): IContext {
-    if (!context.references) {
-      context.references = [];
-    }
-
+  async createContext(contextData: CreateContextInput): Promise<IContext> {
+    const context: IContext = Context.create(contextData);
+    context.references = [];
     return context;
   }
 

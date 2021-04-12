@@ -35,9 +35,11 @@ export class UserService {
   async createUser(userData: CreateUserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
 
-    // Ok to create a new user + save
-    const user = User.create(userData);
-    await this.initialiseMembers(user, userData);
+    const user: IUser = User.create(userData);
+    user.profile = await this.profileService.createProfile(
+      userData.profileData
+    );
+
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);
     this.logger.verbose?.(
@@ -46,21 +48,6 @@ export class UserService {
     );
 
     return savedUser;
-  }
-
-  // Helper method to ensure all members that are arrays are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(
-    user: IUser,
-    userData: CreateUserInput
-  ): Promise<IUser> {
-    if (!user.profile) {
-      user.profile = await this.profileService.createProfile(
-        userData.profileData
-      );
-    }
-
-    return user;
   }
 
   async removeUser(deleteData: DeleteUserInput): Promise<IUser> {

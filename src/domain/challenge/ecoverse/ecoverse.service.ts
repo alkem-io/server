@@ -3,7 +3,6 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { CreateOrganisationInput } from '@domain/community/organisation/organisation.dto.create';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import {
   RestrictedTagsetNames,
@@ -25,7 +24,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { UpdateEcoverseInput } from './ecoverse.dto.update';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
-import { Community, ICommunity } from '@domain/community/community';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
@@ -60,14 +59,13 @@ export class EcoverseService {
     }
 
     if (!ecoverse.context) {
-      ecoverse.context = new Context();
-      await this.contextService.initialiseMembers(ecoverse.context);
+      ecoverse.context = await this.contextService.createContext({});
     }
 
     if (!ecoverse.community) {
       let communityName = ecoverse.name;
       if (communityName.length == 0) communityName = 'Ecoverse';
-      ecoverse.community = new Community(
+      ecoverse.community = await this.communityService.createCommunity(
         communityName,
         CommunityType.ECOVERSE,
         [
@@ -78,7 +76,6 @@ export class EcoverseService {
         ]
       );
 
-      await this.communityService.initialiseMembers(ecoverse.community);
       // Disable searching on the mandatory platform groups
       ecoverse.community.groups?.forEach(
         group => (group.includeInSearch = false)
@@ -86,12 +83,10 @@ export class EcoverseService {
     }
 
     if (!ecoverse.host) {
-      const organisationInput = new CreateOrganisationInput();
-      organisationInput.name = 'Default host organisation';
-      organisationInput.textID = 'DefaultHostOrg';
-      ecoverse.host = await this.organisationService.createOrganisation(
-        organisationInput
-      );
+      ecoverse.host = await this.organisationService.createOrganisation({
+        name: 'Default host organisation',
+        textID: 'DefaultHostOrg',
+      });
     }
 
     return ecoverse;

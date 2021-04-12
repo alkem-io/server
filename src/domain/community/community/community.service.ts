@@ -48,22 +48,14 @@ export class CommunityService {
     type: string,
     restrictedGroupNames: string[]
   ): Promise<ICommunity> {
-    // reate and initialise a new Community using the first returned array item
     const community = new Community(name, type, restrictedGroupNames);
-    await this.initialiseMembers(community);
-    await this.communityRepository.save(community);
 
-    return community;
-  }
-  async initialiseMembers(community: ICommunity): Promise<ICommunity> {
-    if (!community.groups) {
-      community.groups = [];
-    }
-    // Check that the mandatory groups for a Community are created
+    community.groups = [];
     await this.userGroupService.addMandatoryGroups(
       community,
       community.restrictedGroupNames
     );
+    await this.communityRepository.save(community);
 
     return community;
   }

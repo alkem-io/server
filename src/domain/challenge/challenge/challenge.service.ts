@@ -1,4 +1,3 @@
-import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
 import {
   Opportunity,
@@ -48,31 +47,126 @@ export class ChallengeService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async initialiseMembers(challenge: IChallenge): Promise<IChallenge> {
-    if (!challenge.opportunities) {
-      challenge.opportunities = [];
-    }
-    if (!challenge.tagset) {
-      challenge.tagset = this.tagsetService.createDefaultTagset();
+  async createChallenge(
+    challengeData: CreateChallengeInput
+  ): Promise<IChallenge> {
+    await this.validateChallengeData(challengeData);
+    challengeData.textID = challengeData.textID.toLowerCase();
+
+    // reate and initialise a new challenge using the first returned array item
+    const challenge: IChallenge = Challenge.create(challengeData);
+    challenge.opportunities = [];
+    challenge.community = new Community(
+      challenge.name,
+      CommunityType.CHALLENGE,
+      [AuthorizationRoles.Members]
+    );
+    if (!challengeData.context) challengeData.context = {};
+    if (!challenge.context)
+      challenge.context = await this.contextService.createContext(
+        challengeData.context
+      );
+    challenge.tagset = this.tagsetService.createDefaultTagset();
+
+    return await this.challengeRepository.save(challenge);
+  }
+
+  async validateChallengeData(challengeData: CreateChallengeInput) {
+    const challenge = await this.challengeRepository.findOne({
+      where: { textID: challengeData.textID },
+    });
+    if (challenge)
+      throw new ValidationException(
+        `Challenge with the textID: ${challengeData.textID} already exists!`,
+        LogContext.CHALLENGES
+      );
+  }
+
+  async updateChallenge(
+    challengeData: UpdateChallengeInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeOrFail(challengeData.ID);
+
+    const newName = challengeData.name;
+    if (newName) {
+      if (!(newName === challenge.name)) {
+        // challenge is being renamed...
+        const otherChallenge = await this.challengeRepository.findOne({
+          where: { name: newName },
+        });
+        // already have a challenge with the given name, not allowed
+        if (otherChallenge)
+          throw new ValidationException(
+            `Unable to update challenge: already have a challenge with the provided name (${challengeData.name})`,
+            LogContext.CHALLENGES
+          );
+        // Ok to rename
+        challenge.name = newName;
+      }
     }
 
-    if (!challenge.context) {
-      challenge.context = new Context();
+    if (challengeData.state) {
+      challenge.state = challengeData.state;
     }
 
-    if (!challenge.community) {
-      challenge.community = new Community(
-        challenge.name,
-        CommunityType.CHALLENGE,
-        [AuthorizationRoles.Members]
+    if (challengeData.context) {
+      if (!challenge.context)
+        throw new EntityNotInitializedException(
+          `Challenge not initialised: ${challengeData.ID}`,
+          LogContext.CHALLENGES
+        );
+      await this.contextService.update(
+        challenge.context,
+        challengeData.context
       );
     }
+    if (challengeData.tags)
+      this.tagsetService.replaceTagsOnEntity(
+        challenge as Challenge,
+        challengeData.tags
+      );
 
-    // Initialise contained objects
-    this.contextService.initialiseMembers(challenge.context);
-    this.communityService.initialiseMembers(challenge.community);
+    await this.challengeRepository.save(challenge);
 
     return challenge;
+  }
+
+  async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
+    const challengeID = deleteData.ID;
+    // Note need to load it in with all contained entities so can remove fully
+    const challenge = await this.getChallengeByIdOrFail(challengeID, {
+      relations: ['opportunities', 'community'],
+    });
+
+    // Do not remove a challenge that has opporutnities, require these to be individually first removed
+    if (challenge.opportunities && challenge.opportunities.length > 0)
+      throw new ValidationException(
+        `Unable to remove challenge (${challengeID}) as it contains ${challenge.opportunities.length} opportunities`,
+        LogContext.CHALLENGES
+      );
+
+    // Remove the community
+    if (challenge.community) {
+      await this.communityService.removeCommunity(challenge.community.id);
+    }
+
+    // Remove the context
+    if (challenge.context) {
+      await this.contextService.removeContext(challenge.context.id);
+    }
+
+    if (challenge.tagset) {
+      await this.tagsetService.removeTagset({ ID: challenge.tagset.id });
+    }
+
+    const { id } = challenge;
+    const result = await this.challengeRepository.remove(
+      challenge as Challenge
+    );
+    return {
+      ...result,
+      id,
+    };
   }
 
   // Loads the challenges into the challenge entity if not already present
@@ -221,134 +315,6 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
     return challenge;
-  }
-
-  async createChallenge(
-    challengeData: CreateChallengeInput
-  ): Promise<IChallenge> {
-    await this.validateChallengeData(challengeData);
-
-    const textID = challengeData.textID;
-    // Ensure lower case
-    challengeData.textID = textID?.toLowerCase();
-    // reate and initialise a new challenge using the first returned array item
-    const challenge = Challenge.create(challengeData);
-    await this.initialiseMembers(challenge);
-    const savedChallenge = await this.challengeRepository.save(challenge);
-
-    return savedChallenge;
-  }
-
-  async validateChallengeData(challengeData: CreateChallengeInput) {
-    const textID = challengeData.textID;
-    if (!textID || textID.length < 3)
-      throw new ValidationException(
-        `Required field textID not specified or long enough: ${textID}`,
-        LogContext.CHALLENGES
-      );
-    const expression = /^[a-zA-Z0-9.\-_]+$/;
-    const textIdCheck = expression.test(textID);
-    if (!textIdCheck)
-      throw new ValidationException(
-        `Required field textID provided not in the correct format: ${textID}`,
-        LogContext.CHALLENGES
-      );
-
-    const challenge = await this.challengeRepository.findOne({
-      where: { textID: challengeData.textID },
-    });
-    if (challenge)
-      throw new ValidationException(
-        `Challenge with the textID: ${challengeData.textID} already exists!`,
-        LogContext.CHALLENGES
-      );
-  }
-
-  async updateChallenge(
-    challengeData: UpdateChallengeInput
-  ): Promise<IChallenge> {
-    const challenge = await this.getChallengeOrFail(challengeData.ID);
-
-    const newName = challengeData.name;
-    if (newName) {
-      if (!(newName === challenge.name)) {
-        // challenge is being renamed...
-        const otherChallenge = await this.challengeRepository.findOne({
-          where: { name: newName },
-        });
-        // already have a challenge with the given name, not allowed
-        if (otherChallenge)
-          throw new ValidationException(
-            `Unable to update challenge: already have a challenge with the provided name (${challengeData.name})`,
-            LogContext.CHALLENGES
-          );
-        // Ok to rename
-        challenge.name = newName;
-      }
-    }
-
-    if (challengeData.state) {
-      challenge.state = challengeData.state;
-    }
-
-    if (challengeData.context) {
-      if (!challenge.context)
-        throw new EntityNotInitializedException(
-          `Challenge not initialised: ${challengeData.ID}`,
-          LogContext.CHALLENGES
-        );
-      await this.contextService.update(
-        challenge.context,
-        challengeData.context
-      );
-    }
-    if (challengeData.tags)
-      this.tagsetService.replaceTagsOnEntity(
-        challenge as Challenge,
-        challengeData.tags
-      );
-
-    await this.challengeRepository.save(challenge);
-
-    return challenge;
-  }
-
-  async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
-    const challengeID = deleteData.ID;
-    // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.getChallengeByIdOrFail(challengeID, {
-      relations: ['opportunities', 'community'],
-    });
-
-    // Do not remove a challenge that has opporutnities, require these to be individually first removed
-    if (challenge.opportunities && challenge.opportunities.length > 0)
-      throw new ValidationException(
-        `Unable to remove challenge (${challengeID}) as it contains ${challenge.opportunities.length} opportunities`,
-        LogContext.CHALLENGES
-      );
-
-    // Remove the community
-    if (challenge.community) {
-      await this.communityService.removeCommunity(challenge.community.id);
-    }
-
-    // Remove the context
-    if (challenge.context) {
-      await this.contextService.removeContext(challenge.context.id);
-    }
-
-    if (challenge.tagset) {
-      await this.tagsetService.removeTagset({ ID: challenge.tagset.id });
-    }
-
-    const { id } = challenge;
-    const result = await this.challengeRepository.remove(
-      challenge as Challenge
-    );
-    return {
-      ...result,
-      id,
-    };
   }
 
   async getChallenges(): Promise<Challenge[]> {

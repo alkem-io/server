@@ -47,30 +47,18 @@ export class UserGroupService {
     userGroupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
     await this.validateUserGroupCreationRequest(userGroupData);
-    const group = new UserGroup(userGroupData.name);
-    await this.initialiseMembers(group, userGroupData);
+
+    const group: IUserGroup = new UserGroup(userGroupData.name);
+    group.members = [];
+    group.profile = await this.profileService.createProfile(
+      userGroupData.profileData
+    );
     const savedUserGroup = await this.userGroupRepository.save(group);
     this.logger.verbose?.(
       `Created new group (${group.id}) with name: ${group.name}`,
       LogContext.COMMUNITY
     );
     return savedUserGroup;
-  }
-
-  async initialiseMembers(
-    group: IUserGroup,
-    userGroupData: CreateUserGroupInput
-  ): Promise<IUserGroup> {
-    if (!group.members) {
-      group.members = [];
-    }
-    if (!group.profile) {
-      group.profile = await this.profileService.createProfile(
-        userGroupData.profileData
-      );
-    }
-
-    return group;
   }
 
   async validateUserGroupCreationRequest(
