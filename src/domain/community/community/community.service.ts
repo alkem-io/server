@@ -151,10 +151,13 @@ export class CommunityService {
   async assignMember(
     membershipData: AssignCommunityMemberInput
   ): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(membershipData.parentID, {
-      relations: ['groups', 'parentCommunity'],
-    });
-    const userID = membershipData.childID;
+    const community = await this.getCommunityOrFail(
+      membershipData.communityID,
+      {
+        relations: ['groups', 'parentCommunity'],
+      }
+    );
+    const userID = membershipData.userID;
 
     // If the parent community is set, then check if the user is also a member there
     if (community.parentCommunity) {
@@ -182,13 +185,16 @@ export class CommunityService {
   async removeMember(
     membershipData: RemoveCommunityMemberInput
   ): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(membershipData.parentID, {
-      relations: ['groups'],
-    });
+    const community = await this.getCommunityOrFail(
+      membershipData.communityID,
+      {
+        relations: ['groups'],
+      }
+    );
 
     // Try to find the user
     const user = await this.userService.getUserByIdOrFail(
-      membershipData.childID
+      membershipData.userID
     );
 
     // Get the members group
@@ -354,8 +360,8 @@ export class CommunityService {
         LogContext.COMMUNITY
       );
     await this.assignMember({
-      childID: application.user.id,
-      parentID: application.community?.id,
+      userID: application.user.id,
+      communityID: application.community?.id,
     });
 
     application.status = ApplicationStatus.approved;

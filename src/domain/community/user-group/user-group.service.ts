@@ -194,9 +194,9 @@ export class UserGroupService {
   ): Promise<IUserGroup> {
     // Try to find the user + group
     const user = await this.userService.getUserByIdOrFail(
-      membershipData.childID
+      membershipData.userID
     );
-    const group = await this.getUserGroupByIdOrFail(membershipData.parentID);
+    const group = await this.getUserGroupByIdOrFail(membershipData.groupID);
 
     // Add the user to the group if not already a member
     await this.addUserToGroup(user, group);
@@ -244,10 +244,10 @@ export class UserGroupService {
     membershipData: AssignUserGroupMemberInput
   ): Promise<IUserGroup> {
     const user = await this.userService.getUserByIdOrFail(
-      membershipData.childID
+      membershipData.userID
     );
 
-    const group = await this.getUserGroupByIdOrFail(membershipData.parentID);
+    const group = await this.getUserGroupByIdOrFail(membershipData.groupID);
 
     await this.addUserToGroup(user, group);
     return await this.getUserGroupByIdOrFail(group.id);
@@ -306,11 +306,11 @@ export class UserGroupService {
   ): Promise<IUserGroup> {
     // Try to find the user + group
     const user = await this.userService.getUserByIdOrFail(
-      membershipData.childID
+      membershipData.userID
     );
 
     // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
-    const group = await this.getUserGroupByIdOrFail(membershipData.parentID, {
+    const group = await this.getUserGroupByIdOrFail(membershipData.groupID, {
       relations: ['members', 'community'],
     });
 

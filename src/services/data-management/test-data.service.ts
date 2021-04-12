@@ -214,8 +214,8 @@ export class TestDataService {
       this.userEmail
     )) as IUser;
     const response = await this.communityService.assignMember({
-      childID: createdTestUser?.id,
-      parentID: opportunityId,
+      userID: createdTestUser?.id,
+      communityID: opportunityId,
     });
     return response.id;
   }
@@ -247,8 +247,8 @@ export class TestDataService {
       this.userEmail
     )) as IUser;
     const response = await this.userGroupService.assignFocalPoint({
-      childID: createdTestUser?.id,
-      parentID: groupId,
+      userID: createdTestUser?.id,
+      groupID: groupId,
     });
     return response.id;
   }
@@ -313,8 +313,8 @@ export class TestDataService {
       this.nonEcoverseEmail
     );
     await this.userGroupService.removeUser({
-      childID: response.id,
-      parentID: 1,
+      userID: response.id,
+      groupID: 1,
     });
   }
 
