@@ -54,8 +54,9 @@ export class EcoverseService {
     }
 
     if (!ecoverse.tagset) {
-      ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
-      await this.tagsetService.initialiseMembers(ecoverse.tagset);
+      ecoverse.tagset = await this.tagsetService.createTagset({
+        name: RestrictedTagsetNames.Default,
+      });
     }
 
     if (!ecoverse.context) {

@@ -45,21 +45,9 @@ export class ProfileService {
   private readonly maxImageSize = 410;
 
   async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
-    let profile = new Profile();
-    if (profileData) {
-      profile = Profile.create(profileData);
-    }
-
-    await this.initialiseMembers(profile);
-    await this.profileRepository.save(profile);
-    this.logger.verbose?.(
-      `Created new profile with id: ${profile.id}`,
-      LogContext.COMMUNITY
-    );
-    return profile;
-  }
-
-  async initialiseMembers(profile: IProfile): Promise<IProfile> {
+    let data = profileData;
+    if (!data) data = {};
+    const profile: IProfile = Profile.create(data);
     if (!profile.references) {
       profile.references = [];
     }
@@ -68,7 +56,6 @@ export class ProfileService {
       profile.tagsets = [];
     }
 
-    // Check that the mandatory tagsets for a user are created
     if (profile.restrictedTagsetNames) {
       await this.tagsetService.createRestrictedTagsets(
         profile,
@@ -76,6 +63,11 @@ export class ProfileService {
       );
     }
 
+    await this.profileRepository.save(profile);
+    this.logger.verbose?.(
+      `Created new profile with id: ${profile.id}`,
+      LogContext.COMMUNITY
+    );
     return profile;
   }
 
