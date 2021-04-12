@@ -21,6 +21,6 @@ export class EcoverseResolverQueries {
     @Args('ID', { nullable: true }) ID?: number
   ): Promise<IEcoverse> {
     if (ID) return await this.ecoverseService.getEcoverseByIdOrFail(ID);
-    return await this.ecoverseService.getFirstEcoverseOrFail();
+    return await this.ecoverseService.getDefaultEcoverseOrFail();
   }
 }

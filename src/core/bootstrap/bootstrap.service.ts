@@ -183,7 +183,7 @@ export class BootstrapService {
 
   @Profiling.api
   async createGroupProfiles(groupName: string, usersData: any[]) {
-    const defaultEcoverse = await this.ecoverseService.getFirstEcoverseOrFail();
+    const defaultEcoverse = await this.ecoverseService.getDefaultEcoverseOrFail();
     try {
       for (const userData of usersData) {
         const userInput = new CreateUserInput();

@@ -290,7 +290,7 @@ export class EcoverseService {
     return ecoverse;
   }
 
-  async getFirstEcoverseOrFail(
+  async getDefaultEcoverseOrFail(
     options?: FindOneOptions<Ecoverse>
   ): Promise<IEcoverse> {
     const ecoverseId = await this.getDefaultEcoverseId(); // todo - remove when can have multiple ecoverses
