@@ -9,14 +9,13 @@ export const createUserMutation = async (userName: string) => {
   const requestParams = {
     operationName: 'CreateUser',
     query:
-      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email profile{id} }}',
+      'mutation CreateUser($userData: CreateUserInput!) {createUser(userData: $userData) { id name email profile{id} }}',
     variables: {
       userData: {
         firstName: `fN${uniqueId}`,
         lastName: `lN${uniqueId}`,
         name: userName,
         email: `${userName}@test.com`,
-        aadPassword: `90!ds${uniqueId}`,
         profileData: {
           description: 'x',
           avatar: 'http://xProf.com',
@@ -41,14 +40,14 @@ export const createUserMutationWithParams = async (
   const requestParams = {
     operationName: 'CreateUser',
     query:
-      'mutation CreateUser($userData: UserInput!) {createUser(userData: $userData) { id name email }}',
+      'mutation CreateUser($userData: CreateUserInput!) {createUser(userData: $userData) { id name email }}',
     variables: {
       userData: {
         firstName: `fN${uniqueId}`,
         lastName: `lN${uniqueId}`,
         name: userName,
         email: `${userEmail}`,
-        aadPassword: `90!ds${uniqueId}`,
+        //aadPassword: `90!ds${uniqueId}`,
         profileData: {
           description: 'x',
           avatar: 'http://xProf.com',
@@ -75,7 +74,7 @@ export const createUserDetailsMutation = async (
 ) => {
   const requestParams = {
     operationName: 'CreateUser',
-    query: `mutation CreateUser($userData: UserInput!) {
+    query: `mutation CreateUser($userData: CreateUserInput!) {
         createUser(userData: $userData) {
            id
            name
@@ -93,7 +92,7 @@ export const createUserDetailsMutation = async (
         city: 'testCity',
         country: 'testCountry',
         gender: 'testGender',
-        aadPassword: `90!ds${uniqueId}`,
+        //aadPassword: `90!ds${uniqueId}`,
       },
     },
   };
@@ -102,15 +101,15 @@ export const createUserDetailsMutation = async (
 };
 
 export const updateUserMutation = async (
-  updateUserId: any,
+  updateUserId: string,
   nameUser: string,
   phoneUser: string,
   emailUser?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation updateUser($userData: UserInput!, $userID: Float!) {
-      updateUser(userData: $userData, userID: $userID) {
+    query: `mutation UpdateUser($userData: UpdateUserInput!) {
+      updateUser(userData: $userData) {
           id
           name
           phone
@@ -118,8 +117,8 @@ export const updateUserMutation = async (
         }
       }`,
     variables: {
-      userID: parseFloat(updateUserId),
       userData: {
+        ID: updateUserId,
         name: nameUser,
         phone: phoneUser,
         email: emailUser,
@@ -133,10 +132,15 @@ export const updateUserMutation = async (
 export const removeUserMutation = async (removeUserID: any) => {
   const requestParams = {
     operationName: 'removeUser',
-    query:
-      'mutation removeUser($userID: Float!) {removeUser(userID: $userID){name}}',
+    query: `mutation removeUser($removeData: RemoveEntityInput!) {
+        removeUser(removeData: $removeData) {
+          id
+          name
+        }}`,
     variables: {
-      userID: parseFloat(removeUserID),
+      removeData: {
+        ID: parseFloat(removeUserID),
+      },
     },
   };
 
@@ -146,12 +150,14 @@ export const removeUserMutation = async (removeUserID: any) => {
 export const addUserToGroup = async (userId: any, groupId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation addUserToGroup($userID: Float!, $groupID: Float!) {
-      addUserToGroup(groupID: $groupID, userID: $userID)
+    query: `mutation addUserToGroup($membershipData: UpdateMembershipInput!) {
+      addUserToGroup(membershipData: $membershipData)
     }`,
     variables: {
-      userID: parseFloat(userId),
-      groupID: parseFloat(groupId),
+      membershipData: {
+        childID: parseFloat(userId),
+        parentID: parseFloat(groupId),
+      },
     },
   };
 
@@ -164,8 +170,8 @@ export const assignGroupFocalPointMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
-      assignGroupFocalPoint(groupID: $groupID, userID: $userID) {
+    query: `mutation assignGroupFocalPoint($membershipData: UpdateMembershipInput!) {
+      assignGroupFocalPoint(membershipData: $membershipData) {
         name,
         id,
         focalPoint {
@@ -174,8 +180,10 @@ export const assignGroupFocalPointMutation = async (
       }
     }`,
     variables: {
-      userID: parseFloat(userId),
-      groupID: parseFloat(groupId),
+      membershipData: {
+        childID: parseFloat(userId),
+        parentID: parseFloat(groupId),
+      },
     },
   };
 
@@ -202,8 +210,8 @@ export const createGroupMutation = async (testGroup: string) => {
 export const removeUserFromGroup = async (userId: any, groupId: string) => {
   const requestParams = {
     operationName: 'removeUserFromGroup',
-    query: `mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {
-      removeUserFromGroup(groupID: $groupID, userID: $userID) {
+    query: `mutation removeUserFromGroup($membershipData: UpdateMembershipInput!) {
+      removeUserFromGroup(membershipData: $membershipData) {
         name,
         id,
         members {
@@ -213,8 +221,10 @@ export const removeUserFromGroup = async (userId: any, groupId: string) => {
       }
     }`,
     variables: {
-      userID: parseFloat(userId),
-      groupID: parseFloat(groupId),
+      membershipData: {
+        childID: parseFloat(userId),
+        parentID: parseFloat(groupId),
+      },
     },
   };
 
@@ -272,13 +282,15 @@ export const getUsers = async () => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getUsersFromChallengeCommunity = async (communityGroupId: any) => {
+export const getUsersFromChallengeCommunity = async (
+  communityGroupId: string
+) => {
   const requestParams = {
     operationName: null,
     variables: {},
     query: `query {
       ecoverse {
-        group(ID: ${parseFloat(communityGroupId)}) {
+        group(ID: "${communityGroupId}") {
           name
           id
           members {
