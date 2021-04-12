@@ -152,8 +152,7 @@ export class EcoverseService {
   async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
     const opportunities: IOpportunity[] = [];
     const challenges = await this.getChallenges(ecoverse);
-    for (let i = 0; i < challenges.length; i++) {
-      const challenge = challenges[i];
+    for (const challenge of challenges) {
       const childOpportunities = await this.challengeService.getOpportunities(
         challenge
       );

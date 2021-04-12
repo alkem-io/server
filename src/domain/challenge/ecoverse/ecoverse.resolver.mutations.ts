@@ -21,7 +21,7 @@ export class EcoverseResolverMutations {
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.GlobalAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Ecoverse, {
     description: 'Creates a new Ecoverse.',

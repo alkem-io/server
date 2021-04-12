@@ -93,7 +93,7 @@ export class ChallengeService {
 
     const newName = challengeData.name;
     if (newName) {
-      if (!(newName === challenge.name)) {
+      if (newName !== challenge.name) {
         // challenge is being renamed...
         const otherChallenge = await this.challengeRepository.findOne({
           where: { name: newName },
