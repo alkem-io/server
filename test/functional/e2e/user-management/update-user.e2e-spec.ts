@@ -66,7 +66,6 @@ describe('Update user', () => {
       userPhone,
       userEmail
     );
-
     getUserData = await getUpdatedUserData(userId);
 
     // Assert

@@ -59,9 +59,14 @@ describe('Flows challenge', () => {
       userIdOne,
       challengeGroupId
     );
+    console.log(responseAddUserToGroup.body);
 
     // Query focal point through challenge group
     const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
+    console.log(
+      responseChallengeGroupQuery.body.data.ecoverse.challenge.community
+        .groups[0]
+    );
     const groupFocalPointFromChallenge =
       responseChallengeGroupQuery.body.data.ecoverse.challenge.community
         .groups[0].focalPoint.name;

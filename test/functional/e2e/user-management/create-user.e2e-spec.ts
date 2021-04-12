@@ -84,8 +84,7 @@ describe('Create User', () => {
     // Arrange
     const requestParams = {
       operationName: 'CreateUser',
-      query: `mutation CreateUser($userData: UserInput!) {
-        createUser(userData: $userData) {
+      query: `mutation CreateUser($userData: CreateUserInput!) {createUser(userData: $userData) {
             id
             name
             firstName
@@ -119,7 +118,6 @@ describe('Create User', () => {
           city: 'testCity',
           country: 'testCountry',
           gender: 'testGender',
-          aadPassword: `90a!ds${uniqueId}`,
         },
       },
     };
