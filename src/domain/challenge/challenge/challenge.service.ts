@@ -19,7 +19,7 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { Community, ICommunity } from '@domain/community/community';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
@@ -56,7 +56,7 @@ export class ChallengeService {
     // reate and initialise a new challenge using the first returned array item
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.opportunities = [];
-    challenge.community = new Community(
+    challenge.community = await this.communityService.createCommunity(
       challenge.name,
       CommunityType.CHALLENGE,
       [AuthorizationRoles.Members]
