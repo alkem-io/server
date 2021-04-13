@@ -120,7 +120,7 @@ export const createChallengeVariables = () => `
 }`;
 
 export const createGroupOnCommunityMutation = `
-mutation createGroupOnCommuity($groupName: String!, $communityID: Float!) {
+mutation createGroupOnCommunity($groupName: String!, $communityID: Float!) {
   createGroupOnCommunity(groupName: $groupName, communityID: $communityID) {
     name,
     id
@@ -148,7 +148,7 @@ export const createOpportunityVariables = (id: number) => `
 {
 
     "opportunityData": {
-      "challengeID": "${id}",
+      "parentID": "${id}",
         "name": "Test opportunity",
         "textID": "test-opp",
         "state": "reserved",

@@ -1,4 +1,3 @@
-import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
 import {
   Opportunity,
@@ -20,7 +19,7 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { Community, ICommunity } from '@domain/community/community';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
@@ -51,37 +50,82 @@ export class ChallengeService {
   async createChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
+     await this.validateChallengeData(challengeData);
     challengeData.textID = challengeData.textID.toLowerCase();
-    const challenge = Challenge.create(challengeData);
-    await this.initialiseMembers(challenge);
-    const savedChallenge = await this.challengeRepository.save(challenge);
 
-    return savedChallenge;
+    const challenge: IChallenge = Challenge.create(challengeData);
+    challenge.opportunities = [];
+    challenge.community = await this.communityService.createCommunity(
+      challenge.name,
+      CommunityType.CHALLENGE,
+      [AuthorizationRoles.Members]
+    );
+    if (!challengeData.context) challengeData.context = {};
+    if (!challenge.context)
+      challenge.context = await this.contextService.createContext(
+        challengeData.context
+      );
+    challenge.tagset = this.tagsetService.createDefaultTagset();
+
+    return await this.challengeRepository.save(challenge);
   }
 
-  async initialiseMembers(challenge: IChallenge): Promise<IChallenge> {
-    if (!challenge.opportunities) {
-      challenge.opportunities = [];
-    }
-    if (!challenge.tagset) {
-      challenge.tagset = this.tagsetService.createDefaultTagset();
+  async validateChallengeData(challengeData: CreateChallengeInput) {
+    const challenge = await this.challengeRepository.findOne({
+      where: { textID: challengeData.textID },
+    });
+    if (challenge)
+      throw new ValidationException(
+        `Challenge with the textID: ${challengeData.textID} already exists!`,
+        LogContext.CHALLENGES
+      );
+  }
+
+  async updateChallenge(
+    challengeData: UpdateChallengeInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeOrFail(challengeData.ID);
+
+    const newName = challengeData.name;
+    if (newName) {
+      if (!(newName === challenge.name)) {
+        // challenge is being renamed...
+        const otherChallenge = await this.challengeRepository.findOne({
+          where: { name: newName },
+        });
+        // already have a challenge with the given name, not allowed
+        if (otherChallenge)
+          throw new ValidationException(
+            `Unable to update challenge: already have a challenge with the provided name (${challengeData.name})`,
+            LogContext.CHALLENGES
+          );
+        // Ok to rename
+        challenge.name = newName;
+      }
     }
 
-    if (!challenge.context) {
-      challenge.context = new Context();
+    if (challengeData.state) {
+      challenge.state = challengeData.state;
     }
 
-    if (!challenge.community) {
-      challenge.community = new Community(
-        challenge.name,
-        CommunityType.CHALLENGE,
-        [AuthorizationRoles.Members]
+    if (challengeData.context) {
+      if (!challenge.context)
+        throw new EntityNotInitializedException(
+          `Challenge not initialised: ${challengeData.ID}`,
+          LogContext.CHALLENGES
+        );
+      await this.contextService.update(
+        challenge.context,
+        challengeData.context
       );
     }
+    if (challengeData.tags)
+      this.tagsetService.replaceTagsOnEntity(
+        challenge as Challenge,
+        challengeData.tags
+      );
 
-    // Initialise contained objects
-    this.contextService.initialiseMembers(challenge.context);
-    this.communityService.initialiseMembers(challenge.community);
+    await this.challengeRepository.save(challenge);
 
     return challenge;
   }

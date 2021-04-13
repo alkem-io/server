@@ -3,8 +3,8 @@ import { Field, InputType } from '@nestjs/graphql';
 @InputType()
 export class RemoveUserGroupMemberInput {
   @Field({ nullable: false })
-  parentID!: number;
+  groupID!: number;
 
   @Field({ nullable: false })
-  childID!: number;
+  userID!: number;
 }

@@ -2,7 +2,6 @@ import { IChallenge, CreateChallengeInput } from '@domain/challenge/challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { CreateOrganisationInput } from '@domain/community/organisation/organisation.dto.create';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import {
   RestrictedTagsetNames,
@@ -66,19 +65,19 @@ export class EcoverseService {
     }
 
     if (!ecoverse.tagset) {
-      ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
-      await this.tagsetService.initialiseMembers(ecoverse.tagset);
+      ecoverse.tagset = await this.tagsetService.createTagset({
+        name: RestrictedTagsetNames.Default,
+      });
     }
 
     if (!ecoverse.context) {
-      ecoverse.context = new Context();
-      await this.contextService.initialiseMembers(ecoverse.context);
+      ecoverse.context = await this.contextService.createContext({});
     }
 
     if (!ecoverse.community) {
       let communityName = ecoverse.name;
       if (communityName.length == 0) communityName = 'Ecoverse';
-      ecoverse.community = new Community(
+      ecoverse.community = await this.communityService.createCommunity(
         communityName,
         CommunityType.ECOVERSE,
         [
@@ -89,7 +88,6 @@ export class EcoverseService {
         ]
       );
 
-      await this.communityService.initialiseMembers(ecoverse.community);
       // Disable searching on the mandatory platform groups
       ecoverse.community.groups?.forEach(
         group => (group.includeInSearch = false)
@@ -97,12 +95,10 @@ export class EcoverseService {
     }
 
     if (!ecoverse.host) {
-      const organisationInput = new CreateOrganisationInput();
-      organisationInput.name = `Default host - ${ecoverse.textID}`;
-      organisationInput.textID = `HostOrg_${ecoverse.textID}`;
-      ecoverse.host = await this.organisationService.createOrganisation(
-        organisationInput
-      );
+      ecoverse.host = await this.organisationService.createOrganisation({
+        name: 'Default host organisation',
+        textID: 'DefaultHostOrg',
+      });
     }
 
     return ecoverse;

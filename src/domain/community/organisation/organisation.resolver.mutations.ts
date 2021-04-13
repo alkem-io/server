@@ -25,7 +25,7 @@ export class OrganisationResolverMutations {
     private organisationService: OrganisationService
   ) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.GlobalAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
     description: 'Creates a new Organisation on the platform.',

@@ -12,7 +12,7 @@ mutation removeUserFromCommunity($membershipData: RemoveCommunityMemberInput!) {
 Variables:
 {
   "membershipData": {
-    "childID": 7,
-    "parentID": 1
+    "userID": 7,
+    "groupID": 1
   }
 }

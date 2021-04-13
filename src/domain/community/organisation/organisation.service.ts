@@ -34,43 +34,25 @@ export class OrganisationService {
   ): Promise<IOrganisation> {
     await this.validateOrganisationCreationRequest(organisationData);
 
-    // No existing organisation found, create and initialise a new one!
-    const organisation = new Organisation(organisationData.textID);
-    organisation.name = organisationData.name;
-    await this.initialiseMembers(organisation, organisationData);
-    await this.organisationRepository.save(organisation);
+    const organisation: IOrganisation = Organisation.create(organisationData);
+    organisation.profile = await this.profileService.createProfile(
+      organisationData.profileData
+    );
+
+    // Check that the mandatory groups for a challenge are created
+    organisation.groups = [];
+    organisation.restrictedGroupNames = [AuthorizationRoles.Members];
+    await this.userGroupService.addMandatoryGroups(
+      organisation,
+      organisation.restrictedGroupNames
+    );
+
+    const savedOrg = await this.organisationRepository.save(organisation);
     this.logger.verbose?.(
       `Created new organisation with id ${organisation.id}`,
       LogContext.COMMUNITY
     );
-    return organisation;
-  }
-
-  async initialiseMembers(
-    organisation: IOrganisation,
-    organisationData: CreateOrganisationInput
-  ): Promise<IOrganisation> {
-    if (!organisation.restrictedGroupNames) {
-      organisation.restrictedGroupNames = [AuthorizationRoles.Members];
-    }
-
-    if (!organisation.groups) {
-      organisation.groups = [];
-      // Check that the mandatory groups for a challenge are created
-      await this.userGroupService.addMandatoryGroups(
-        organisation,
-        organisation.restrictedGroupNames
-      );
-    }
-
-    // Initialise contained singletons
-    if (!organisation.profile) {
-      organisation.profile = await this.profileService.createProfile(
-        organisationData.profileData
-      );
-    }
-
-    return organisation;
+    return savedOrg;
   }
 
   async validateOrganisationCreationRequest(

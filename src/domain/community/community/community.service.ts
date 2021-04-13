@@ -48,22 +48,14 @@ export class CommunityService {
     type: string,
     restrictedGroupNames: string[]
   ): Promise<ICommunity> {
-    // reate and initialise a new Community using the first returned array item
     const community = new Community(name, type, restrictedGroupNames);
-    await this.initialiseMembers(community);
-    await this.communityRepository.save(community);
 
-    return community;
-  }
-  async initialiseMembers(community: ICommunity): Promise<ICommunity> {
-    if (!community.groups) {
-      community.groups = [];
-    }
-    // Check that the mandatory groups for a Community are created
+    community.groups = [];
     await this.userGroupService.addMandatoryGroups(
       community,
       community.restrictedGroupNames
     );
+    await this.communityRepository.save(community);
 
     return community;
   }
@@ -159,10 +151,13 @@ export class CommunityService {
   async assignMember(
     membershipData: AssignCommunityMemberInput
   ): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(membershipData.parentID, {
-      relations: ['groups', 'parentCommunity'],
-    });
-    const userID = membershipData.childID;
+    const community = await this.getCommunityOrFail(
+      membershipData.communityID,
+      {
+        relations: ['groups', 'parentCommunity'],
+      }
+    );
+    const userID = membershipData.userID;
 
     // If the parent community is set, then check if the user is also a member there
     if (community.parentCommunity) {
@@ -190,13 +185,16 @@ export class CommunityService {
   async removeMember(
     membershipData: RemoveCommunityMemberInput
   ): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(membershipData.parentID, {
-      relations: ['groups'],
-    });
+    const community = await this.getCommunityOrFail(
+      membershipData.communityID,
+      {
+        relations: ['groups'],
+      }
+    );
 
     // Try to find the user
     const user = await this.userService.getUserByIdOrFail(
-      membershipData.childID
+      membershipData.userID
     );
 
     // Get the members group
@@ -362,8 +360,8 @@ export class CommunityService {
         LogContext.COMMUNITY
       );
     await this.assignMember({
-      childID: application.user.id,
-      parentID: application.community?.id,
+      userID: application.user.id,
+      communityID: application.community?.id,
     });
 
     application.status = ApplicationStatus.approved;

@@ -25,40 +25,12 @@ export class ActorGroupService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // Helper method to ensure all members are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(actorGroup: IActorGroup): Promise<IActorGroup> {
-    if (!actorGroup.actors) {
-      actorGroup.actors = [];
-    }
-
-    return actorGroup;
-  }
-
-  async createActor(actorData: CreateActorInput): Promise<IActor> {
-    const actorGroup = await this.getActorGroupOrFail(actorData.parentID);
-
-    const actor = await this.actorService.createActor(actorData);
-    if (!actorGroup.actors)
-      throw new GroupNotInitializedException(
-        `Non-initialised ActorGroup: ${actorData.parentID}`,
-        LogContext.CHALLENGES
-      );
-    actorGroup.actors.push(actor);
-
-    await this.actorGroupRepository.save(actorGroup);
-
-    return actor;
-  }
-
   async createActorGroup(
     actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
-    const actorGroup = new ActorGroup(actorGroupData.name);
-    actorGroup.description = actorGroupData.description;
-    await this.initialiseMembers(actorGroup);
-    await this.actorGroupRepository.save(actorGroup);
-    return actorGroup;
+    const actorGroup = ActorGroup.create(actorGroupData);
+    actorGroup.actors = [];
+    return await this.actorGroupRepository.save(actorGroup);
   }
 
   async deleteActorGroup(
@@ -88,5 +60,21 @@ export class ActorGroupService {
         LogContext.CHALLENGES
       );
     return actorGroup;
+  }
+
+  async createActor(actorData: CreateActorInput): Promise<IActor> {
+    const actorGroup = await this.getActorGroupOrFail(actorData.parentID);
+
+    const actor = await this.actorService.createActor(actorData);
+    if (!actorGroup.actors)
+      throw new GroupNotInitializedException(
+        `Non-initialised ActorGroup: ${actorData.parentID}`,
+        LogContext.CHALLENGES
+      );
+    actorGroup.actors.push(actor);
+
+    await this.actorGroupRepository.save(actorGroup);
+
+    return actor;
   }
 }
