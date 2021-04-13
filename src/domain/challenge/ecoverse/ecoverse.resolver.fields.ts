@@ -48,7 +48,7 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async challenges(@Parent() ecoverse: Ecoverse) {
-    const challenges = await this.ecoverseService.getChallenges(ecoverse.id);
+    const challenges = await this.ecoverseService.getChallenges(ecoverse);
     return challenges;
   }
 
@@ -66,8 +66,8 @@ export class EcoverseResolverFields {
     description: 'All opportunities within the ecoverse',
   })
   @Profiling.api
-  async opportunities(): Promise<IOpportunity[]> {
-    return await this.opportunityService.getOpportunites();
+  async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
+    return await this.ecoverseService.getOpportunities(ecoverse);
   }
 
   @ResolveField('opportunity', () => Opportunity, {
@@ -111,7 +111,7 @@ export class EcoverseResolverFields {
   @UseGuards(GqlAuthGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: false,
-    description: 'The user groups on this Ecoverse',
+    description: 'The User Groups on this Ecoverse',
   })
   @Profiling.api
   async groups(): Promise<IUserGroup[]> {

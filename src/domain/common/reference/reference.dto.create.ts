@@ -5,10 +5,10 @@ import {
   SMALL_TEXT_LENGTH,
 } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
-
 @InputType()
 export class CreateReferenceInput {
   @Field({ nullable: true })
+  @IsOptional()
   parentID?: number;
 
   @Field({ nullable: false })

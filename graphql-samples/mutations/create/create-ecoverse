@@ -1,0 +1,15 @@
+mutation CreateEcoverse($ecoverseData: CreateEcoverseInput!) {
+  createEcoverse(ecoverseData: $ecoverseData) {
+    name,
+    id
+  }
+}
+
+query variables:
+{
+  "ecoverseData":
+  {
+    "name": "Test ecoverse2",
+    "textID": "eco2"
+  }
+}

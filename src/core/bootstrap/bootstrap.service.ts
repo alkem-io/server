@@ -15,7 +15,6 @@ import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '@common/exceptions/validation.exception';
 import { BaseException } from '@common/exceptions/base.exception';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
@@ -184,6 +183,7 @@ export class BootstrapService {
 
   @Profiling.api
   async createGroupProfiles(groupName: string, usersData: any[]) {
+    const defaultEcoverse = await this.ecoverseService.getDefaultEcoverseOrFail();
     try {
       for (const userData of usersData) {
         const userInput = new CreateUserInput();
@@ -202,6 +202,7 @@ export class BootstrapService {
           if (groupName !== AuthorizationRoles.Members) {
             // also need to add to members group
             await this.ecoverseService.addUserToRestrictedGroup(
+              defaultEcoverse,
               user,
               AuthorizationRoles.Members
             );
@@ -224,7 +225,11 @@ export class BootstrapService {
           );
 
         if (!groups.some(({ name }) => groupName === name)) {
-          await this.ecoverseService.addUserToRestrictedGroup(user, groupName);
+          await this.ecoverseService.addUserToRestrictedGroup(
+            defaultEcoverse,
+            user,
+            groupName
+          );
         } else
           this.logger.verbose?.(
             `User ${userInput.email} already exists in group  ${groupName}`,
@@ -240,7 +245,7 @@ export class BootstrapService {
     }
   }
 
-  async ensureEcoverseSingleton(): Promise<IEcoverse> {
+  async ensureEcoverseSingleton() {
     this.logger.verbose?.(
       '=== Ensuring single ecoverse is present ===',
       LogContext.BOOTSTRAP
@@ -253,34 +258,33 @@ export class BootstrapService {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // Create a new ecoverse
-      const ecoverse = new Ecoverse();
-      await this.ecoverseService.initialiseMembers(ecoverse);
-      // Save is needed so that the ecoverse is there for other methods
-      await this.ecoverseRepository.save(ecoverse);
+      const ecoverse = await this.ecoverseService.createEcoverse({
+        textID: 'Eco1',
+        name: 'Empty ecoverse',
+      });
 
       this.logger.verbose?.('........populating...', LogContext.BOOTSTRAP);
       await this.populateEmptyEcoverse(ecoverse);
       await this.ecoverseRepository.save(ecoverse);
-      return ecoverse;
+      return ecoverseArray[0];
     }
     if (ecoverseCount == 1) {
       this.logger.verbose?.(
         '...single ecoverse - verified',
         LogContext.BOOTSTRAP
       );
-      return ecoverseArray[0];
     }
-
-    throw new ValidationException(
-      'Cannot have more than one ecoverse',
-      LogContext.BOOTSTRAP
-    );
+    if (ecoverseCount > 1) {
+      this.logger.warn?.(
+        `...multiple ecoverses detected: ${ecoverseCount}`,
+        LogContext.BOOTSTRAP
+      );
+    }
   }
 
   // Populate an empty ecoverse
   async populateEmptyEcoverse(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Set the default values
-    ecoverse.name = 'Empty ecoverse';
     if (!ecoverse.context)
       throw new EntityNotInitializedException(
         'Non-initialised ecoverse',

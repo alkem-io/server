@@ -53,7 +53,6 @@ export class ChallengeService {
     await this.validateChallengeData(challengeData);
     challengeData.textID = challengeData.textID.toLowerCase();
 
-    // reate and initialise a new challenge using the first returned array item
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.opportunities = [];
     challenge.community = await this.communityService.createCommunity(

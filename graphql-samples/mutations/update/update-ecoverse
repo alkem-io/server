@@ -8,8 +8,8 @@ mutation UpdateEcoverse($ecoverseData: UpdateEcoverseInput!) {
 {
   "ecoverseData":
 		{
-  	"ID": 1,
-    "name": "New CT 3",
-    "hostID": 3
+      "ID": 1,
+      "name": "New CT 3",
+      "hostID": 3
 		}
 }

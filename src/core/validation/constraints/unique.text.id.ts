@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { Ecoverse } from '@domain/challenge/ecoverse';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
@@ -15,6 +16,7 @@ import { getRepository } from 'typeorm';
 export const IS_UNIQ_TEXT_ID = 'isUniqueTextId';
 
 export enum TextIdType {
+  ecoverse,
   challenge,
   opportunity,
   project,
@@ -25,7 +27,13 @@ export enum TextIdType {
 export class IsUniqueTextIdConstraint implements ValidatorConstraintInterface {
   async validate(textId: any, args: ValidationArguments): Promise<boolean> {
     const [target] = args.constraints;
-    if (target === TextIdType.challenge) {
+    if (target === TextIdType.ecoverse) {
+      return (
+        (await getRepository(Ecoverse).findOne({
+          where: { textID: textId },
+        })) === undefined
+      );
+    } else if (target === TextIdType.challenge) {
       return (
         (await getRepository(Challenge).findOne({
           where: { textID: textId },
