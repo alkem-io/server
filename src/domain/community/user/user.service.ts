@@ -5,7 +5,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -22,7 +21,8 @@ import {
   User,
   IUser,
 } from '@domain/community/user';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { DeleteUserInput } from './user.dto.delete';
+
 @Injectable()
 export class UserService {
   constructor(
@@ -35,9 +35,11 @@ export class UserService {
   async createUser(userData: CreateUserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
 
-    // Ok to create a new user + save
-    const user = User.create(userData);
-    await this.initialiseMembers(user, userData);
+    const user: IUser = User.create(userData);
+    user.profile = await this.profileService.createProfile(
+      userData.profileData
+    );
+
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);
     this.logger.verbose?.(
@@ -48,23 +50,8 @@ export class UserService {
     return savedUser;
   }
 
-  // Helper method to ensure all members that are arrays are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(
-    user: IUser,
-    userData: CreateUserInput
-  ): Promise<IUser> {
-    if (!user.profile) {
-      user.profile = await this.profileService.createProfile(
-        userData.profileData
-      );
-    }
-
-    return user;
-  }
-
-  async removeUser(removeData: RemoveEntityInput): Promise<IUser> {
-    const userID = removeData.ID;
+  async removeUser(deleteData: DeleteUserInput): Promise<IUser> {
+    const userID = deleteData.ID;
     const user = await this.getUserByIdOrFail(userID);
     const { id } = user;
 
@@ -198,15 +185,6 @@ export class UserService {
     }
     if (userInput.gender) {
       user.gender = userInput.gender;
-    }
-    if (
-      userInput.email &&
-      userInput.email.toLowerCase() !== user.email.toLowerCase()
-    ) {
-      throw new NotSupportedException(
-        `Updating of email addresses is not supported: ${userInput.ID}`,
-        LogContext.COMMUNITY
-      );
     }
 
     await this.userRepository.save(user);

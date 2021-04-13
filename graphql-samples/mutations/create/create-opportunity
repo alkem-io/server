@@ -9,7 +9,7 @@ Variables:
 {
   "opportunityData":
   {
-    "parentID": 2,
+    "parentID": "2",
     "name": "AI for good",
     "textID": "ai-good"
   }

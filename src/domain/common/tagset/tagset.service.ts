@@ -16,7 +16,7 @@ import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
 import validator from 'validator';
 import { Ecoverse } from '@domain/challenge/ecoverse';
-import { RemoveEntityInput } from '../entity.dto.remove';
+import { DeleteTagsetInput } from './tagset.dto.delete';
 
 @Injectable()
 export class TagsetService {
@@ -26,19 +26,9 @@ export class TagsetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // Helper method to ensure all members are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(tagset: ITagset): Promise<ITagset> {
-    if (!tagset.tags) {
-      tagset.tags = [];
-    }
-
-    return tagset;
-  }
-
   async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
     const tagset = Tagset.create(tagsetData);
-    await this.initialiseMembers(tagset);
+    if (!tagset.tags) tagset.tags = [];
     return await this.tagsetRepository.save(tagset);
   }
 
@@ -70,11 +60,11 @@ export class TagsetService {
     return tagset as ITagset;
   }
 
-  async removeTagset(removeData: RemoveEntityInput): Promise<ITagset> {
-    const tagsetID = removeData.ID;
+  async removeTagset(deleteData: DeleteTagsetInput): Promise<ITagset> {
+    const tagsetID = deleteData.ID;
     const tagset = await this.getTagsetByIdOrFail(tagsetID);
     const result = await this.tagsetRepository.remove(tagset as Tagset);
-    result.id = removeData.ID;
+    result.id = deleteData.ID;
     return result;
   }
 
@@ -112,8 +102,9 @@ export class TagsetService {
       );
     }
     for (const name of names) {
-      const tagset = new Tagset(name);
-      await this.initialiseMembers(tagset);
+      const tagset = await this.createTagset({
+        name: name,
+      });
       tagsetable.tagsets?.push(tagset);
     }
     return true;
@@ -185,8 +176,7 @@ export class TagsetService {
       );
     }
 
-    const newTagset = new Tagset(name);
-    await this.initialiseMembers(newTagset);
+    const newTagset = await this.createTagset({ name: name });
     tagsetable.tagsets?.push(newTagset);
     return newTagset;
   }

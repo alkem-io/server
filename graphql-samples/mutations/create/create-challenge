@@ -9,6 +9,7 @@ query variables:
 {
   "challengeData":
   {
+    "parentID": 1,
     "name": "Balance the grid",
     "textID": "balance-grid",
     "context": {

@@ -10,9 +10,9 @@ import {
   UpdateUserInput,
   User,
   IUser,
+  DeleteUserInput,
 } from '@domain/community/user';
 import { UserService } from './user.service';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Resolver(() => User)
 export class UserResolverMutations {
@@ -22,8 +22,7 @@ export class UserResolverMutations {
   @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
-    description:
-      'Creates a new user profile on behalf of an admin or the user account owner.',
+    description: 'Creates a new User on the platform.',
   })
   @Profiling.api
   async createUser(
@@ -36,8 +35,7 @@ export class UserResolverMutations {
   @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
-    description:
-      'Update the base user information. Note: email address cannot be updated.',
+    description: 'Updates the User. Note: email address cannot be updated.',
   })
   @Profiling.api
   async updateUser(
@@ -50,12 +48,12 @@ export class UserResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
-    description: 'Removes the specified user profile.',
+    description: 'Deletes the specified User.',
   })
   @Profiling.api
-  async removeUser(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteUser(
+    @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
-    return await this.userService.removeUser(removeData);
+    return await this.userService.removeUser(deleteData);
   }
 }

@@ -17,7 +17,7 @@ import { AuthorizationRoles } from '@core/authorization';
 import validator from 'validator';
 import { UpdateOrganisationInput } from './organisation.dto.update';
 import { CreateUserGroupInput } from '../user-group';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { DeleteOrganisationInput } from './organisation.dto.delete';
 
 @Injectable()
 export class OrganisationService {
@@ -34,43 +34,25 @@ export class OrganisationService {
   ): Promise<IOrganisation> {
     await this.validateOrganisationCreationRequest(organisationData);
 
-    // No existing organisation found, create and initialise a new one!
-    const organisation = new Organisation(organisationData.textID);
-    organisation.name = organisationData.name;
-    await this.initialiseMembers(organisation, organisationData);
-    await this.organisationRepository.save(organisation);
+    const organisation: IOrganisation = Organisation.create(organisationData);
+    organisation.profile = await this.profileService.createProfile(
+      organisationData.profileData
+    );
+
+    // Check that the mandatory groups for a challenge are created
+    organisation.groups = [];
+    organisation.restrictedGroupNames = [AuthorizationRoles.Members];
+    await this.userGroupService.addMandatoryGroups(
+      organisation,
+      organisation.restrictedGroupNames
+    );
+
+    const savedOrg = await this.organisationRepository.save(organisation);
     this.logger.verbose?.(
       `Created new organisation with id ${organisation.id}`,
       LogContext.COMMUNITY
     );
-    return organisation;
-  }
-
-  async initialiseMembers(
-    organisation: IOrganisation,
-    organisationData: CreateOrganisationInput
-  ): Promise<IOrganisation> {
-    if (!organisation.restrictedGroupNames) {
-      organisation.restrictedGroupNames = [AuthorizationRoles.Members];
-    }
-
-    if (!organisation.groups) {
-      organisation.groups = [];
-      // Check that the mandatory groups for a challenge are created
-      await this.userGroupService.addMandatoryGroups(
-        organisation,
-        organisation.restrictedGroupNames
-      );
-    }
-
-    // Initialise contained singletons
-    if (!organisation.profile) {
-      organisation.profile = await this.profileService.createProfile(
-        organisationData.profileData
-      );
-    }
-
-    return organisation;
+    return savedOrg;
   }
 
   async validateOrganisationCreationRequest(
@@ -118,10 +100,10 @@ export class OrganisationService {
     return await this.getOrganisationByIdOrFail(existingOrganisation.id);
   }
 
-  async removeOrganisation(
-    removeData: RemoveEntityInput
+  async deleteOrganisation(
+    deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
-    const orgID = removeData.ID;
+    const orgID = deleteData.ID;
     const organisation = await this.getOrganisationByIdOrFail(orgID);
 
     if (organisation.profile) {
@@ -137,7 +119,7 @@ export class OrganisationService {
     const result = await this.organisationRepository.remove(
       organisation as Organisation
     );
-    result.id = removeData.ID;
+    result.id = deleteData.ID;
     return result;
   }
 

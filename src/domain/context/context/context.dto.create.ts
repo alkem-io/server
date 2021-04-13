@@ -32,7 +32,7 @@ export class CreateContextInput {
 
   @Field(() => [CreateReferenceInput], {
     nullable: true,
-    description: 'Set of references to _replace_ the existing references',
+    description: 'Set of References for the new Context.',
   })
   @IsOptional()
   references?: CreateReferenceInput[];

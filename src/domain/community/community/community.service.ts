@@ -26,7 +26,10 @@ import { IUser } from '../user/user.interface';
 import { ApplicationService } from '../application/application.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CreateUserGroupInput } from '../user-group';
-import { UpdateMembershipInput } from '@domain/common';
+import {
+  AssignCommunityMemberInput,
+  RemoveCommunityMemberInput,
+} from '@domain/community/community';
 
 @Injectable()
 export class CommunityService {
@@ -45,22 +48,14 @@ export class CommunityService {
     type: string,
     restrictedGroupNames: string[]
   ): Promise<ICommunity> {
-    // reate and initialise a new Community using the first returned array item
     const community = new Community(name, type, restrictedGroupNames);
-    await this.initialiseMembers(community);
-    await this.communityRepository.save(community);
 
-    return community;
-  }
-  async initialiseMembers(community: ICommunity): Promise<ICommunity> {
-    if (!community.groups) {
-      community.groups = [];
-    }
-    // Check that the mandatory groups for a Community are created
+    community.groups = [];
     await this.userGroupService.addMandatoryGroups(
       community,
       community.restrictedGroupNames
     );
+    await this.communityRepository.save(community);
 
     return community;
   }
@@ -131,7 +126,7 @@ export class CommunityService {
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationService.removeApplication({ ID: application.id });
+        await this.applicationService.deleteApplication({ ID: application.id });
       }
     }
 
@@ -153,11 +148,16 @@ export class CommunityService {
     return community;
   }
 
-  async addMember(membershipData: UpdateMembershipInput): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(membershipData.parentID, {
-      relations: ['groups', 'parentCommunity'],
-    });
-    const userID = membershipData.childID;
+  async assignMember(
+    membershipData: AssignCommunityMemberInput
+  ): Promise<IUserGroup> {
+    const community = await this.getCommunityOrFail(
+      membershipData.communityID,
+      {
+        relations: ['groups', 'parentCommunity'],
+      }
+    );
+    const userID = membershipData.userID;
 
     // If the parent community is set, then check if the user is also a member there
     if (community.parentCommunity) {
@@ -183,15 +183,18 @@ export class CommunityService {
   }
 
   async removeMember(
-    membershipData: UpdateMembershipInput
+    membershipData: RemoveCommunityMemberInput
   ): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(membershipData.parentID, {
-      relations: ['groups'],
-    });
+    const community = await this.getCommunityOrFail(
+      membershipData.communityID,
+      {
+        relations: ['groups'],
+      }
+    );
 
     // Try to find the user
     const user = await this.userService.getUserByIdOrFail(
-      membershipData.childID
+      membershipData.userID
     );
 
     // Get the members group
@@ -356,9 +359,9 @@ export class CommunityService {
         `Unable to load community for application ${applicationId} `,
         LogContext.COMMUNITY
       );
-    await this.addMember({
-      childID: application.user.id,
-      parentID: application.community?.id,
+    await this.assignMember({
+      userID: application.user.id,
+      communityID: application.community?.id,
     });
 
     application.status = ApplicationStatus.approved;

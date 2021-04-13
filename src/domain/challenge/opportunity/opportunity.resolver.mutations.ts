@@ -2,25 +2,33 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Opportunity } from './opportunity.entity';
-import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
-import { CreateAspectInput } from '@domain/context/aspect';
-import { IAspect } from '@domain/context/aspect/aspect.interface';
-import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { CreateActorGroupInput } from '@domain/context/actor-group';
-import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
-import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
+import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
+import {} from '@domain/context/actor-group';
+import {
+  CreateActorGroupInput,
+  IActorGroup,
+  ActorGroup,
+} from '@domain/context/actor-group';
 import { Profiling } from '@src/common/decorators';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { CreateRelationInput } from '@domain/collaboration/relation';
-import { Relation } from '@domain/collaboration/relation/relation.entity';
-import { CreateProjectInput } from '@domain/collaboration/project';
-import { Project } from '@domain/collaboration/project/project.entity';
-import { IProject } from '@domain/collaboration/project/project.interface';
+import {
+  CreateRelationInput,
+  IRelation,
+  Relation,
+} from '@domain/collaboration/relation';
+import {
+  CreateProjectInput,
+  Project,
+  IProject,
+} from '@domain/collaboration/project';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { UpdateOpportunityInput } from './opportunity.dto.update';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import {} from './opportunity.dto.update';
+import {
+  DeleteOpportunityInput,
+  UpdateOpportunityInput,
+  Opportunity,
+  IOpportunity,
+} from '@domain/challenge/opportunity';
 
 @Resolver()
 export class OpportunityResolverMutations {
@@ -28,8 +36,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
-    description:
-      'Updates the specified Opportunity with the provided data (merge)',
+    description: 'Updates the Opportunity.',
   })
   @Profiling.api
   async updateOpportunity(
@@ -44,12 +51,12 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
-    description: 'Removes the Opportunity with the specified ID',
+    description: 'Deletes the Opportunity.',
   })
-  async removeOpportunity(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteOpportunity(
+    @Args('deleteData') deleteData: DeleteOpportunityInput
   ): Promise<IOpportunity> {
-    return await this.opportunityService.removeOpportunity(removeData);
+    return await this.opportunityService.deleteOpportunity(deleteData);
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
@@ -68,7 +75,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
-    description: 'Create a new aspect on the Opportunity',
+    description: 'Create a new Aspect on the Opportunity.',
   })
   @Profiling.api
   async createAspect(
@@ -80,7 +87,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => ActorGroup, {
-    description: 'Create a new actor group on the Opportunity',
+    description: 'Create a new Actor Group on the Opportunity.',
   })
   @Profiling.api
   async createActorGroup(
@@ -95,7 +102,7 @@ export class OpportunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Relation, {
-    description: 'Create a new relation on the Opportunity',
+    description: 'Create a new Relation on the Opportunity.',
   })
   @Profiling.api
   async createRelation(

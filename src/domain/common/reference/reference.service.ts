@@ -3,12 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateReferenceInput } from './reference.dto.create';
-import { Reference } from './reference.entity';
-import { IReference } from './reference.interface';
-import { UpdateReferenceInput } from '@domain/common/reference';
-import { RemoveEntityInput } from '../entity.dto.remove';
-
+import {
+  UpdateReferenceInput,
+  CreateReferenceInput,
+  DeleteReferenceInput,
+  Reference,
+  IReference,
+} from '@domain/common/reference';
 @Injectable()
 export class ReferenceService {
   constructor(
@@ -69,8 +70,8 @@ export class ReferenceService {
     return reference;
   }
 
-  async removeReference(removeData: RemoveEntityInput): Promise<IReference> {
-    const referenceID = removeData.ID;
+  async deleteReference(deleteData: DeleteReferenceInput): Promise<IReference> {
+    const referenceID = deleteData.ID;
     const reference = await this.getReferenceOrFail(referenceID);
     const { id } = reference;
     const result = await this.referenceRepository.remove(
@@ -80,32 +81,5 @@ export class ReferenceService {
       ...result,
       id,
     };
-  }
-
-  async updateReferences(
-    references: IReference[],
-    updateReferenceDTOs: UpdateReferenceInput[] | undefined,
-    createReferenceDTOs: CreateReferenceInput[] | undefined
-  ) {
-    if (updateReferenceDTOs) {
-      for (const referenceDTO of updateReferenceDTOs) {
-        const referenceID = referenceDTO.ID;
-        const existingReference = references.find(
-          reference => reference.id === referenceID
-        );
-        if (!existingReference)
-          throw new EntityNotFoundException(
-            `Not able to locate reference with the specified ID: ${referenceID} in existing references`,
-            LogContext.CHALLENGES
-          );
-        await this.updateReferenceValues(existingReference, referenceDTO);
-      }
-    }
-    if (createReferenceDTOs) {
-      for (const createReferenceData of createReferenceDTOs) {
-        const reference = await this.createReference(createReferenceData);
-        references.push(reference);
-      }
-    }
   }
 }

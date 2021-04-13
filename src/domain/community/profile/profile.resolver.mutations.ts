@@ -8,6 +8,7 @@ import {
   IProfile,
   Profile,
   UpdateProfileInput,
+  UploadProfileAvatarInput,
 } from '@domain/community/profile';
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { UseGuards } from '@nestjs/common';
@@ -25,8 +26,7 @@ export class ProfileResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
-    description:
-      'Creates a new tagset with the specified name for the profile with given id',
+    description: 'Creates a new Tagset on the specified Profile',
   })
   @Profiling.api
   async createTagsetOnProfile(
@@ -38,8 +38,7 @@ export class ProfileResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
-    description:
-      'Creates a new reference with the specified name for the profile with given id',
+    description: 'Creates a new Reference on the specified Profile.',
   })
   @Profiling.api
   async createReferenceOnProfile(
@@ -51,8 +50,7 @@ export class ProfileResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Profile, {
-    description:
-      'Updates the fields on the Profile, such as avatar location or description',
+    description: 'Updates the specified Profile.',
   })
   @Profiling.api
   async updateProfile(
@@ -63,9 +61,11 @@ export class ProfileResolverMutations {
 
   @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
   @SelfManagement()
-  @Mutation(() => Profile)
+  @Mutation(() => Profile, {
+    description: 'Uploads and sets an avatar image for the specified Profile.',
+  })
   async uploadAvatar(
-    @Args('profileID') profileID: number,
+    @Args('uploadData') uploadData: UploadProfileAvatarInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IProfile> {
@@ -74,7 +74,7 @@ export class ProfileResolverMutations {
       readStream,
       filename,
       mimetype,
-      profileID
+      uploadData
     );
   }
 }

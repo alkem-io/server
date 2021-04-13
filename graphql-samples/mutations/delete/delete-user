@@ -1,0 +1,11 @@
+mutation deleteUser($deleteData: DeleteUserInput!) {
+  deleteUser(deleteData: $deleteData) {
+    id
+  }
+}
+Variables:
+{
+  "deleteData": {
+    "ID": 7
+  }
+}

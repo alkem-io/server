@@ -4,7 +4,6 @@ import { ActorGroupService } from '@domain/context/actor-group/actor-group.servi
 import { CreateAspectInput } from '@domain/context/aspect';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
 import { CreateProjectInput } from '@domain/collaboration/project';
 import { IProject } from '@domain/collaboration/project/project.interface';
@@ -23,17 +22,20 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { CreateOpportunityInput } from './opportunity.dto.create';
-import { Opportunity } from './opportunity.entity';
-import { IOpportunity } from './opportunity.interface';
-import { Community, ICommunity } from '@domain/community/community';
+import {
+  Opportunity,
+  IOpportunity,
+  CreateOpportunityInput,
+  DeleteOpportunityInput,
+  UpdateOpportunityInput,
+} from '@domain/challenge/opportunity';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import { TagsetService } from '@domain/common/tagset';
 import validator from 'validator';
-import { UpdateOpportunityInput } from './opportunity.dto.update';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -49,41 +51,28 @@ export class OpportunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async initialiseMembers(opportunity: IOpportunity): Promise<IOpportunity> {
-    if (!opportunity.projects) {
-      opportunity.projects = [];
-    }
+  async createOpportunity(
+    opportunityData: CreateOpportunityInput
+  ): Promise<IOpportunity> {
+    opportunityData.textID = opportunityData.textID.toLowerCase();
 
-    if (!opportunity.relations) {
-      opportunity.relations = [];
-    }
-
-    if (!opportunity.actorGroups) {
-      opportunity.actorGroups = [];
-    }
-
-    if (!opportunity.aspects) {
-      opportunity.aspects = [];
-    }
-
+    // reate and initialise a new Opportunity using the first returned array item
+    const opportunity: IOpportunity = Opportunity.create(opportunityData);
+    opportunity.projects = [];
+    opportunity.relations = [];
+    opportunity.actorGroups = [];
+    opportunity.aspects = [];
     if (!opportunity.context) {
-      opportunity.context = new Context();
+      opportunity.context = await this.contextService.createContext({});
     }
-
-    if (!opportunity.community) {
-      opportunity.community = new Community(
-        opportunity.name,
-        CommunityType.OPPORTUNITY,
-        [AuthorizationRoles.Members]
-      );
-    }
-
-    // Initialise contained objects
-    await this.contextService.initialiseMembers(opportunity.context);
-    await this.communityService.initialiseMembers(opportunity.community);
+    opportunity.community = await this.communityService.createCommunity(
+      opportunity.name,
+      CommunityType.OPPORTUNITY,
+      [AuthorizationRoles.Members]
+    );
     await this.createRestrictedActorGroups(opportunity);
 
-    return opportunity;
+    return await this.opportunityRepository.save(opportunity);
   }
 
   async getOpportunityOrFail(
@@ -202,39 +191,6 @@ export class OpportunityService {
     return opportunityLoaded.relations;
   }
 
-  async createOpportunity(
-    opportunityData: CreateOpportunityInput
-  ): Promise<IOpportunity> {
-    await this.validateOpportunity(opportunityData);
-
-    const textID = opportunityData.textID;
-    opportunityData.textID = textID?.toLowerCase();
-
-    // reate and initialise a new Opportunity using the first returned array item
-    const opportunity = Opportunity.create(opportunityData);
-    await this.initialiseMembers(opportunity);
-    const savedOpp = await this.opportunityRepository.save(opportunity);
-
-    return savedOpp;
-  }
-
-  async validateOpportunity(opportunityData: CreateOpportunityInput) {
-    // Verify that required textID field is present and that it has the right format
-    const textID = opportunityData.textID;
-    if (!textID || textID.length < 3)
-      throw new ValidationException(
-        `Required field textID not specified or long enough: ${textID}`,
-        LogContext.CHALLENGES
-      );
-    const expression = /^[a-zA-Z0-9.\-_]+$/;
-    const textIdCheck = expression.test(textID);
-    if (!textIdCheck)
-      throw new ValidationException(
-        `Required field textID provided not in the correct format: ${textID}`,
-        LogContext.CHALLENGES
-      ); // Ensure field is lower case
-  }
-
   async updateOpportunity(
     opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
@@ -261,10 +217,10 @@ export class OpportunityService {
     return opportunity;
   }
 
-  async removeOpportunity(
-    removeData: RemoveEntityInput
+  async deleteOpportunity(
+    deleteData: DeleteOpportunityInput
   ): Promise<IOpportunity> {
-    const opportunityID = removeData.ID;
+    const opportunityID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['actorGroups', 'aspects', 'relations', 'community'],
@@ -279,13 +235,13 @@ export class OpportunityService {
 
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        await this.relationService.removeRelation({ ID: relation.id });
+        await this.relationService.deleteRelation({ ID: relation.id });
       }
     }
 
     if (opportunity.actorGroups) {
       for (const actorGroup of opportunity.actorGroups) {
-        await this.actorGroupService.removeActorGroup({ ID: actorGroup.id });
+        await this.actorGroupService.deleteActorGroup({ ID: actorGroup.id });
       }
     }
 

@@ -7,12 +7,14 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateReferenceInput } from '@domain/common/reference';
-import { IReference } from '@domain/common/reference/reference.interface';
+import { CreateReferenceInput, IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { Context } from './context.entity';
-import { IContext } from './context.interface';
-import { UpdateContextInput } from './context.dto.update';
+import {
+  CreateContextInput,
+  UpdateContextInput,
+  Context,
+  IContext,
+} from '@domain/context/context';
 
 @Injectable()
 export class ContextService {
@@ -22,11 +24,9 @@ export class ContextService {
     private contextRepository: Repository<Context>
   ) {}
 
-  initialiseMembers(context: IContext): IContext {
-    if (!context.references) {
-      context.references = [];
-    }
-
+  async createContext(contextData: CreateContextInput): Promise<IContext> {
+    const context: IContext = Context.create(contextData);
+    context.references = [];
     return context;
   }
 
@@ -61,18 +61,6 @@ export class ContextService {
       context.who = contextInput.who;
     }
 
-    if (!context.references)
-      throw new EntityNotInitializedException(
-        `References for contex with id: ${context.id} not initialized properly!`,
-        LogContext.CHALLENGES
-      );
-
-    await this.referenceService.updateReferences(
-      context.references,
-      contextInput.updateReferences,
-      contextInput.createReferences
-    );
-
     await this.contextRepository.save(context);
     return context;
   }
@@ -84,7 +72,7 @@ export class ContextService {
     // Remove all references
     if (context.references) {
       for (const reference of context.references) {
-        await this.referenceService.removeReference({ ID: reference.id });
+        await this.referenceService.deleteReference({ ID: reference.id });
       }
     }
 

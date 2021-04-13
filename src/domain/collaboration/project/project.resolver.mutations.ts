@@ -10,8 +10,9 @@ import {
   UpdateProjectInput,
   Project,
   IProject,
+  DeleteProjectInput,
 } from '@domain/collaboration/project';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+
 @Resolver()
 export class ProjectResolverMutations {
   constructor(private projectService: ProjectService) {}
@@ -19,18 +20,18 @@ export class ProjectResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Project, {
-    description: 'Removes the Project with the specified ID',
+    description: 'Deletes the specified Project.',
   })
-  async removeProject(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteProject(
+    @Args('deleteData') deleteData: DeleteProjectInput
   ): Promise<IProject> {
-    return await this.projectService.removeProject(removeData);
+    return await this.projectService.deleteProject(deleteData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Project, {
-    description: 'Updates the Project with the specified ID',
+    description: 'Updates the specified Project.',
   })
   async updateProject(
     @Args('projectData') projectData: UpdateProjectInput
@@ -41,7 +42,7 @@ export class ProjectResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Aspect, {
-    description: 'Create a new aspect on the Project',
+    description: 'Create a new Aspect on the Project.',
   })
   @Profiling.api
   async createAspectOnProject(

@@ -19,7 +19,7 @@ export class UpdateEcoverseInput {
     description: 'The host Organisation for the ecoverse',
   })
   @IsOptional()
-  hostID?: number;
+  hostID?: string;
 
   @Field({
     nullable: true,

@@ -10,9 +10,9 @@ export class UpdateActorGroupInput {
 
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  name!: string;
+  name?: string;
 
   @Field({ nullable: true })
   @MaxLength(MID_TEXT_LENGTH)
-  description!: string;
+  description?: string;
 }

@@ -4,13 +4,13 @@ import { CreateNVPInput } from '@domain/common/nvp';
 
 @InputType()
 export class CreateApplicationInput {
-  @Field()
+  @Field({ nullable: false })
   userId!: number;
 
-  @Field()
+  @Field({ nullable: false })
   parentID!: number;
 
-  @Field(() => [CreateNVPInput])
+  @Field(() => [CreateNVPInput], { nullable: false })
   questions!: CreateNVPInput[];
 }
 

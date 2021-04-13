@@ -1,4 +1,4 @@
-mutation addUserToGroup($membershipData: UpdateMembershipInput!) {
+mutation addUserToGroup($membershipData: AssignUserGroupMemberInput!) {
   addUserToGroup(membershipData: $membershipData) {
     name,
     id,
@@ -12,7 +12,7 @@ mutation addUserToGroup($membershipData: UpdateMembershipInput!) {
 Variables:
 {
   "membershipData": {
-    "childID": 7,
-    "parentID": 1
+    "userID": 7,
+    "groupID": 1
   }
 }

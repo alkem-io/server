@@ -190,12 +190,12 @@ export const updateChallangeMutation = async (
 export const removeChallangeMutation = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeChallenge($removeData: RemoveEntityInput!) {
-      removeChallenge(removeData: $removeData) {
+    query: `mutation removeChallenge($deleteData: RemoveEntityInput!) {
+      removeChallenge(deleteData: $deleteData) {
         id
       }}`,
     variables: {
-      removeData: {
+      deleteData: {
         ID: parseFloat(challengeId),
       },
     },

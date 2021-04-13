@@ -1,4 +1,4 @@
-mutation addUserToCommunity($membershipData: UpdateMembershipInput!) {
+mutation addUserToCommunity($membershipData: AssignCommunityMemberInput!) {
   addUserToCommunity(membershipData: $membershipData) {
     name,
     id,
@@ -12,7 +12,7 @@ mutation addUserToCommunity($membershipData: UpdateMembershipInput!) {
 Variables:
 {
   "membershipData": {
-    "childID": 7,
-    "parentID": 1
+    "userID": 7,
+    "communityID": 1
   }
 }

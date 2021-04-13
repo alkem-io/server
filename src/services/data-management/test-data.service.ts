@@ -213,9 +213,9 @@ export class TestDataService {
     const createdTestUser = (await this.userService.getUserByEmail(
       this.userEmail
     )) as IUser;
-    const response = await this.communityService.addMember({
-      childID: createdTestUser?.id,
-      parentID: opportunityId,
+    const response = await this.communityService.assignMember({
+      userID: createdTestUser?.id,
+      communityID: opportunityId,
     });
     return response.id;
   }
@@ -247,8 +247,8 @@ export class TestDataService {
       this.userEmail
     )) as IUser;
     const response = await this.userGroupService.assignFocalPoint({
-      childID: createdTestUser?.id,
-      parentID: groupId,
+      userID: createdTestUser?.id,
+      groupID: groupId,
     });
     return response.id;
   }
@@ -274,7 +274,7 @@ export class TestDataService {
   }
 
   async teardownRemoveGroupFocalPoint(groupId: number) {
-    await this.userGroupService.removeFocalPoint(groupId);
+    await this.userGroupService.removeFocalPoint({ groupID: groupId });
   }
 
   async initGetUserId(userEmail: string): Promise<number> {
@@ -305,7 +305,7 @@ export class TestDataService {
     const challengeToRemove = (await this.challengeService.getChallengeByIdOrFail(
       challengeId
     )) as IChallenge;
-    await this.challengeService.removeChallenge({ ID: challengeToRemove?.id });
+    await this.challengeService.deleteChallenge({ ID: challengeToRemove?.id });
   }
 
   async removeUserFromGroups() {
@@ -313,8 +313,8 @@ export class TestDataService {
       this.nonEcoverseEmail
     );
     await this.userGroupService.removeUser({
-      childID: response.id,
-      parentID: 1,
+      userID: response.id,
+      groupID: 1,
     });
   }
 

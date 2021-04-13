@@ -9,7 +9,7 @@ import { LogContext } from '@common/enums';
 import { CreateRelationInput } from './relation.dto.create';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
+import { DeleteRelationInput } from './relation.dto.delete';
 
 const allowedRelationTypes = ['incoming', 'outgoing'];
 
@@ -21,18 +21,13 @@ export class RelationService {
   ) {}
 
   async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
-    const relation = new Relation();
     // Check that the relation type is valie
     if (!allowedRelationTypes.includes(relationData.type))
       throw new RelationshipNotFoundException(
         `Invalid relation type supplied: ${relationData.type}`,
         LogContext.CHALLENGES
       );
-    relation.type = relationData.type;
-    relation.description = relationData.description;
-    relation.actorName = relationData.actorName;
-    relation.actorType = relationData.actorType;
-    relation.actorRole = relationData.actorRole;
+    const relation = Relation.create(relationData);
 
     // to do: set the rest of the fields
     await this.relationRepository.save(relation);
@@ -69,8 +64,8 @@ export class RelationService {
     return relation;
   }
 
-  async removeRelation(removeData: RemoveEntityInput): Promise<IRelation> {
-    const relationID = removeData.ID;
+  async deleteRelation(deleteData: DeleteRelationInput): Promise<IRelation> {
+    const relationID = deleteData.ID;
     const relation = await this.getRelationOrFail(relationID);
 
     const { id } = relation;

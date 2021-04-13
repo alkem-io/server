@@ -5,6 +5,7 @@ import {
   ActorGroup,
   IActorGroup,
   CreateActorGroupInput,
+  DeleteActorGroupInput,
 } from '@domain/context/actor-group';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorService } from '@domain/context/actor/actor.service';
@@ -14,7 +15,6 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CreateActorInput, IActor } from '@domain/context/actor';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
 
 @Injectable()
 export class ActorGroupService {
@@ -25,13 +25,40 @@ export class ActorGroupService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // Helper method to ensure all members are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(actorGroup: IActorGroup): Promise<IActorGroup> {
-    if (!actorGroup.actors) {
-      actorGroup.actors = [];
-    }
+  async createActorGroup(
+    actorGroupData: CreateActorGroupInput
+  ): Promise<IActorGroup> {
+    const actorGroup = ActorGroup.create(actorGroupData);
+    actorGroup.actors = [];
+    return await this.actorGroupRepository.save(actorGroup);
+  }
 
+  async deleteActorGroup(
+    deleteData: DeleteActorGroupInput
+  ): Promise<IActorGroup> {
+    const actorGroupID = deleteData.ID;
+    const actorGroup = await this.getActorGroupOrFail(actorGroupID);
+    if (actorGroup.actors) {
+      for (const actor of actorGroup.actors) {
+        await this.actorService.deleteActor({ ID: actor.id });
+      }
+    }
+    const result = await this.actorGroupRepository.remove(
+      actorGroup as ActorGroup
+    );
+    result.id = deleteData.ID;
+    return result;
+  }
+
+  async getActorGroupOrFail(actorGroupID: number): Promise<IActorGroup> {
+    const actorGroup = await this.actorGroupRepository.findOne({
+      id: actorGroupID,
+    });
+    if (!actorGroup)
+      throw new EntityNotFoundException(
+        `Not able to locate actorGroup with the specified ID: ${actorGroupID}`,
+        LogContext.CHALLENGES
+      );
     return actorGroup;
   }
 
@@ -49,42 +76,5 @@ export class ActorGroupService {
     await this.actorGroupRepository.save(actorGroup);
 
     return actor;
-  }
-
-  async createActorGroup(
-    actorGroupData: CreateActorGroupInput
-  ): Promise<IActorGroup> {
-    const actorGroup = new ActorGroup(actorGroupData.name);
-    actorGroup.description = actorGroupData.description;
-    await this.initialiseMembers(actorGroup);
-    await this.actorGroupRepository.save(actorGroup);
-    return actorGroup;
-  }
-
-  async removeActorGroup(removeData: RemoveEntityInput): Promise<IActorGroup> {
-    const actorGroupID = removeData.ID;
-    const actorGroup = await this.getActorGroupOrFail(actorGroupID);
-    if (actorGroup.actors) {
-      for (const actor of actorGroup.actors) {
-        await this.actorService.removeActor({ ID: actor.id });
-      }
-    }
-    const result = await this.actorGroupRepository.remove(
-      actorGroup as ActorGroup
-    );
-    result.id = removeData.ID;
-    return result;
-  }
-
-  async getActorGroupOrFail(actorGroupID: number): Promise<IActorGroup> {
-    const actorGroup = await this.actorGroupRepository.findOne({
-      id: actorGroupID,
-    });
-    if (!actorGroup)
-      throw new EntityNotFoundException(
-        `Not able to locate actorGroup with the specified ID: ${actorGroupID}`,
-        LogContext.CHALLENGES
-      );
-    return actorGroup;
   }
 }

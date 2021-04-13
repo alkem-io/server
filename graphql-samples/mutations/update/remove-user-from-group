@@ -1,4 +1,4 @@
-mutation removeUserFromGroup($membershipData: UpdateMembershipInput!) {
+mutation removeUserFromGroup($membershipData: RemoveUserGroupMemberInput!) {
   removeUserFromGroup(membershipData: $membershipData) {
     name,
     id,
@@ -12,7 +12,7 @@ mutation removeUserFromGroup($membershipData: UpdateMembershipInput!) {
 Variables:
 {
   "membershipData": {
-    "childID": 7,
-    "parentID": 1
+    "userID": 7,
+    "groupID": 1
   }
 }

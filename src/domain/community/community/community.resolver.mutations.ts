@@ -7,13 +7,16 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { CommunityService } from './community.service';
 import { Profiling } from '@src/common/decorators';
-import { Application } from '@domain/community/application/application.entity';
-import { CreateApplicationInput } from '@domain/community/application';
+import {
+  CreateApplicationInput,
+  DeleteApplicationInput,
+  Application,
+} from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '../application/application.service';
-import { RemoveEntityInput } from '@domain/common/entity.dto.remove';
-import { UpdateMembershipInput } from '@domain/common/entity.dto.update.membership';
+import { AssignCommunityMemberInput } from '@domain/community/community';
+import { RemoveCommunityMemberInput } from './community.dto.remove.member';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -25,7 +28,7 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description: 'Creates a new user group for the Community with the given id',
+    description: 'Creates a new User Group in the specified Community.',
   })
   @Profiling.api
   async createGroupOnCommunity(
@@ -37,25 +40,23 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Adds the user with the given identifier as a member of the specified Community',
+    description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api
-  async addUserToCommunity(
-    @Args('membershipData') membershipData: UpdateMembershipInput
+  async assignUserToCommunity(
+    @Args('membershipData') membershipData: AssignCommunityMemberInput
   ): Promise<IUserGroup> {
-    return await this.communityService.addMember(membershipData);
+    return await this.communityService.assignMember(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Removes the user with the given identifier as a member of the specified Community',
+    description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
   async removeUserFromCommunity(
-    @Args('membershipData') membershipData: UpdateMembershipInput
+    @Args('membershipData') membershipData: RemoveCommunityMemberInput
   ): Promise<IUserGroup> {
     return await this.communityService.removeMember(membershipData);
   }
@@ -63,7 +64,7 @@ export class CommunityResolverMutations {
   // All registered users can create applications
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Create application to join this Community',
+    description: 'Creates Application for a User to join this Community.',
   })
   @Profiling.api
   async createApplication(
@@ -75,7 +76,7 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Create application to join this ecoverse',
+    description: 'Approve a User Application to join this Community.',
   })
   @Profiling.api
   async approveApplication(
@@ -87,12 +88,12 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Removes user application with the specified applicationID',
+    description: 'Removes the specified User Application.',
   })
   //@Profiling.api
-  async removeUserApplication(
-    @Args('removeData') removeData: RemoveEntityInput
+  async deleteUserApplication(
+    @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<Application> {
-    return await this.applicationService.removeApplication(removeData);
+    return await this.applicationService.deleteApplication(deleteData);
   }
 }

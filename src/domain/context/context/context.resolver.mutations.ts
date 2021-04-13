@@ -18,8 +18,7 @@ export class ContextResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
-    description:
-      'Creates a new reference with the specified name for the context with given id',
+    description: 'Creates a new Reference on the specified Context.',
   })
   @Profiling.api
   async createReferenceOnContext(
