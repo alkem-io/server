@@ -3,7 +3,6 @@ import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interfac
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ICommunity } from '@domain/community/community';
 import { IOrganisation } from '@domain/community';
-
 export interface IChallenge {
   id: number;
   name: string;

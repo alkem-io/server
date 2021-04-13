@@ -1,7 +1,8 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
-import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@src/common/constants';
+import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { CreateContextInput } from '@domain/context/context';
+import { TextID } from '@domain/common/scalars';
 // import {
 //   IsUniqueTextId,
 //   TextIdType,
@@ -9,14 +10,13 @@ import { CreateContextInput } from '@domain/context/context';
 
 @InputType()
 export class CreateEcoverseInput {
-  @Field({
+  @Field(() => TextID, {
     nullable: false,
     description: 'The unique text ID for the ecoverse',
   })
   // @IsUniqueTextId(TextIdType.ecoverse, {
   //   message: 'Ecoverse with the textID: $value already exists!',
   // })
-  @MaxLength(TINY_TEXT_LENGTH)
   textID!: string;
 
   @Field({ nullable: false, description: 'The name for the ecoverse' })

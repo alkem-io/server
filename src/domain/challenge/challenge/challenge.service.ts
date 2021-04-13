@@ -50,9 +50,6 @@ export class ChallengeService {
   async createChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
-    await this.validateChallengeData(challengeData);
-    challengeData.textID = challengeData.textID.toLowerCase();
-
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.opportunities = [];
     challenge.community = await this.communityService.createCommunity(
@@ -68,17 +65,6 @@ export class ChallengeService {
     challenge.tagset = this.tagsetService.createDefaultTagset();
 
     return await this.challengeRepository.save(challenge);
-  }
-
-  async validateChallengeData(challengeData: CreateChallengeInput) {
-    const challenge = await this.challengeRepository.findOne({
-      where: { textID: challengeData.textID },
-    });
-    if (challenge)
-      throw new ValidationException(
-        `Challenge with the textID: ${challengeData.textID} already exists!`,
-        LogContext.CHALLENGES
-      );
   }
 
   async updateChallenge(

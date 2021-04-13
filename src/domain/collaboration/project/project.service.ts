@@ -30,26 +30,11 @@ export class ProjectService {
   ) {}
 
   async createProject(projectData: CreateProjectInput): Promise<IProject> {
-    const textID = projectData.textID;
-    if (!textID || textID.length < 3)
-      throw new ValidationException(
-        `Text ID for the project is required and has a minimum length of 3: ${textID}`,
-        LogContext.CHALLENGES
-      );
-    const expression = /^[a-zA-Z0-9.\-_]+$/;
-    const textIdCheck = expression.test(textID);
-    if (!textIdCheck)
-      throw new ValidationException(
-        `Required field textID provided not in the correct format: ${textID}`,
-        LogContext.CHALLENGES
-      );
-
-    const project = new Project(projectData.name, textID.toLowerCase());
+    const project = new Project(projectData.name, projectData.textID);
     project.description = projectData.description;
     project.state = projectData.state;
 
-    await this.projectRepository.save(project);
-    return project;
+    return await this.projectRepository.save(project);
   }
 
   async deleteProject(deleteData: DeleteProjectInput): Promise<IProject> {

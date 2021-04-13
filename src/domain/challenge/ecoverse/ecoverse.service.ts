@@ -26,7 +26,7 @@ import {
   CreateEcoverseInput,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
-import { Community, ICommunity } from '@domain/community/community';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
@@ -47,15 +47,7 @@ export class EcoverseService {
   ) {}
 
   async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
-    ecoverseData.textID = ecoverseData.textID.toLowerCase();
-    const ecoverse = Ecoverse.create(ecoverseData);
-    await this.initialiseMembers(ecoverse);
-    return await this.ecoverseRepository.save(ecoverse);
-  }
-
-  // Helper method to ensure all members that are arrays are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(ecoverse: IEcoverse): Promise<IEcoverse> {
+    const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
     if (!ecoverse.challenges) {
       ecoverse.challenges = [];
     }
@@ -74,25 +66,21 @@ export class EcoverseService {
       ecoverse.context = await this.contextService.createContext({});
     }
 
-    if (!ecoverse.community) {
-      let communityName = ecoverse.name;
-      if (communityName.length == 0) communityName = 'Ecoverse';
-      ecoverse.community = await this.communityService.createCommunity(
-        communityName,
-        CommunityType.ECOVERSE,
-        [
-          AuthorizationRoles.Members,
-          AuthorizationRoles.EcoverseAdmins,
-          AuthorizationRoles.GlobalAdmins,
-          AuthorizationRoles.CommunityAdmins,
-        ]
-      );
+    ecoverse.community = await this.communityService.createCommunity(
+      ecoverse.name,
+      CommunityType.ECOVERSE,
+      [
+        AuthorizationRoles.Members,
+        AuthorizationRoles.EcoverseAdmins,
+        AuthorizationRoles.GlobalAdmins,
+        AuthorizationRoles.CommunityAdmins,
+      ]
+    );
 
-      // Disable searching on the mandatory platform groups
-      ecoverse.community.groups?.forEach(
-        group => (group.includeInSearch = false)
-      );
-    }
+    // Disable searching on the mandatory platform groups
+    ecoverse.community.groups?.forEach(
+      group => (group.includeInSearch = false)
+    );
 
     if (!ecoverse.host) {
       ecoverse.host = await this.organisationService.createOrganisation({
@@ -100,8 +88,7 @@ export class EcoverseService {
         textID: 'DefaultHostOrg',
       });
     }
-
-    return ecoverse;
+    return await this.ecoverseRepository.save(ecoverse);
   }
 
   async getEcoverseOrFail(
