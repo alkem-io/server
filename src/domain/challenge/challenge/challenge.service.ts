@@ -50,7 +50,7 @@ export class ChallengeService {
   async createChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
-     await this.validateChallengeData(challengeData);
+    await this.validateChallengeData(challengeData);
     challengeData.textID = challengeData.textID.toLowerCase();
 
     const challenge: IChallenge = Challenge.create(challengeData);
@@ -89,55 +89,6 @@ export class ChallengeService {
     const newName = challengeData.name;
     if (newName) {
       if (!(newName === challenge.name)) {
-        // challenge is being renamed...
-        const otherChallenge = await this.challengeRepository.findOne({
-          where: { name: newName },
-        });
-        // already have a challenge with the given name, not allowed
-        if (otherChallenge)
-          throw new ValidationException(
-            `Unable to update challenge: already have a challenge with the provided name (${challengeData.name})`,
-            LogContext.CHALLENGES
-          );
-        // Ok to rename
-        challenge.name = newName;
-      }
-    }
-
-    if (challengeData.state) {
-      challenge.state = challengeData.state;
-    }
-
-    if (challengeData.context) {
-      if (!challenge.context)
-        throw new EntityNotInitializedException(
-          `Challenge not initialised: ${challengeData.ID}`,
-          LogContext.CHALLENGES
-        );
-      await this.contextService.update(
-        challenge.context,
-        challengeData.context
-      );
-    }
-    if (challengeData.tags)
-      this.tagsetService.replaceTagsOnEntity(
-        challenge as Challenge,
-        challengeData.tags
-      );
-
-    await this.challengeRepository.save(challenge);
-
-    return challenge;
-  }
-
-  async updateChallenge(
-    challengeData: UpdateChallengeInput
-  ): Promise<IChallenge> {
-    const challenge = await this.getChallengeOrFail(challengeData.ID);
-
-    const newName = challengeData.name;
-    if (newName) {
-      if (newName !== challenge.name) {
         // challenge is being renamed...
         const otherChallenge = await this.challengeRepository.findOne({
           where: { name: newName },
