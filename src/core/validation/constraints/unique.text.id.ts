@@ -26,23 +26,24 @@ export enum TextIdType {
 @ValidatorConstraint({ name: IS_UNIQ_TEXT_ID, async: true })
 export class IsUniqueTextIdConstraint implements ValidatorConstraintInterface {
   async validate(textId: any, args: ValidationArguments): Promise<boolean> {
+    const valueToTest: string = textId.toString();
     const [target] = args.constraints;
     if (target === TextIdType.ecoverse) {
       return (
         (await getRepository(Ecoverse).findOne({
-          where: { textID: textId },
+          where: { textID: valueToTest },
         })) === undefined
       );
     } else if (target === TextIdType.challenge) {
       return (
         (await getRepository(Challenge).findOne({
-          where: { textID: textId },
+          where: { textID: valueToTest },
         })) === undefined
       );
     } else if (target === TextIdType.opportunity) {
       return (
         (await getRepository(Opportunity).findOne({
-          where: { textID: textId },
+          where: { textID: valueToTest },
         })) === undefined
       );
     } else if (target === TextIdType.project) {

@@ -1,9 +1,9 @@
+import { TextID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 import {
   LONG_TEXT_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
-  TINY_TEXT_LENGTH,
 } from '@src/common/constants';
 import {
   IsUniqueTextId,
@@ -20,8 +20,7 @@ export class CreateProjectInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
-  @Field({ nullable: false })
-  @MaxLength(TINY_TEXT_LENGTH)
+  @Field(() => TextID, { nullable: false })
   @IsUniqueTextId(TextIdType.project)
   textID!: string;
 

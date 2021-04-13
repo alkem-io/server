@@ -122,13 +122,13 @@ export class TestDataService {
   }
 
   async initRemoveChallenge(): Promise<number> {
-    const challenge = new CreateChallengeInput();
-
-    challenge.name = 'Remove-challemge';
-    challenge.state = 'state';
-    challenge.textID = 'remove-chall';
-    challenge.tags = ['test1', 'test2'];
-    const response = await this.ecoverseService.createChallenge(challenge);
+    const response = await this.ecoverseService.createChallenge({
+      parentID: 1,
+      name: 'Remove-challenge',
+      state: 'state',
+      textID: 'remove-chall',
+      tags: ['test1', 'test2'],
+    });
     return response.id;
   }
 

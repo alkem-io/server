@@ -54,9 +54,6 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
-    opportunityData.textID = opportunityData.textID.toLowerCase();
-
-    // reate and initialise a new Opportunity using the first returned array item
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.projects = [];
     opportunity.relations = [];
@@ -330,9 +327,8 @@ export class OpportunityService {
 
     // Check that do not already have an Project with the same name
     const name = projectData.name;
-    const textID = projectData.textID.toLowerCase();
     const existingProject = opportunity.projects?.find(
-      project => project.name === name || project.textID === textID
+      project => project.name === name || project.textID === projectData.textID
     );
     if (existingProject)
       throw new ValidationException(
