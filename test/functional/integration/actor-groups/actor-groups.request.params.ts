@@ -35,8 +35,8 @@ export const createActorGroupMutation = async (
 export const removeActorGroupMutation = async (actorGroupId: any) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeActorGroup($deleteData: RemoveEntityInput!) {
-      removeActorGroup(deleteData: $deleteData) {
+    query: `mutation deleteActorGroup($deleteData: DeleteActorGroupInput!) {
+      deleteActorGroup(deleteData: $deleteData) {
         id
       }}`,
     variables: {

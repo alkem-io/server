@@ -130,7 +130,7 @@ describe('Actors', () => {
     const removeActorResponse = await removeActorMutation(actorId);
 
     // Assert
-    expect(removeActorResponse.body.data.removeActor.id).toEqual(actorId);
+    expect(removeActorResponse.body.data.deleteActor.id).toEqual(actorId);
     expect(await actorsCountPerActorGroup()).toHaveLength(0);
   });
 

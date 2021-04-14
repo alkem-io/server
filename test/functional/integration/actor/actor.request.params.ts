@@ -68,8 +68,8 @@ export const updateActorMutation = async (
 export const removeActorMutation = async (actorId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeActor($deleteData: RemoveEntityInput!) {
-      removeActor(deleteData: $deleteData) {
+    query: `mutation deleteActor($deleteData: DeleteActorInput!) {
+      deleteActor(deleteData: $deleteData) {
         id
       }}`,
     variables: {

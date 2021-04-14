@@ -77,12 +77,8 @@ describe('Context', () => {
       contextVision,
       contextImpact,
       contextWho,
-      refName,
-      refUri,
-      tagsArray,
-      refId
+      tagsArray
     );
-    console.log(responseUpdateChallenge.body.data.updateChallenge.context.references)
     const updatedChallengeData =
       responseUpdateChallenge.body.data.updateChallenge.context;
 
@@ -115,10 +111,7 @@ describe('Context', () => {
       contextVision,
       contextImpact,
       contextWho,
-      challengeRefName,
-      refUri,
-      tagsArray,
-      refId
+      tagsArray
     );
 
     const updatedChallengeData =
