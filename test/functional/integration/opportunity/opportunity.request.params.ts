@@ -59,8 +59,7 @@ export const createOpportunityOnChallengeMutation = async (
 };
 
 export const updateOpportunityOnChallengeMutation = async (
-  opportunityId: string,
-  refId?: any
+  opportunityId: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -98,12 +97,6 @@ export const updateOpportunityOnChallengeMutation = async (
           tagline: '1',
           who: '1',
           impact: '1',
-          updateReferences: {
-            ID: parseFloat(refId),
-            name: 'test ref name',
-            uri: '1',
-            description: '1',
-          },
         },
       },
     },
@@ -140,9 +133,10 @@ export const addUserToOpportunityMutation = async (
 export const removeOpportunityMutation = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeOpportunity($deleteData: RemoveEntityInput!) {
-      removeOpportunity(deleteData: $deleteData){id}
-    }`,
+    query: `mutation deleteOpportunity($deleteData: DeleteOpportunityInput!) {
+      deleteOpportunity(deleteData: $deleteData) {
+        id
+      }}`,
     variables: {
       deleteData: {
         ID: parseFloat(opportunityId),

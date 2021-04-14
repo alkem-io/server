@@ -239,8 +239,7 @@ describe('Opportunities', () => {
     // Act
     // Update the created Opportunity
     const responseUpdateOpportunity = await updateOpportunityOnChallengeMutation(
-      opportunityId,
-      refId
+      opportunityId
     );
     const updateOpportunityData =
       responseUpdateOpportunity.body.data.updateOpportunity;
@@ -278,7 +277,7 @@ describe('Opportunities', () => {
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
-    expect(removeOpportunityResponse.body.data.removeOpportunity.id).toEqual(
+    expect(removeOpportunityResponse.body.data.deleteOpportunity.id).toEqual(
       opportunityId
     );
     expect(requestQueryOpportunity.body.errors[0].message).toEqual(
