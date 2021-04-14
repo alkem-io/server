@@ -121,7 +121,7 @@ export const updateUserMutation = async (
         ID: updateUserId,
         name: nameUser,
         phone: phoneUser,
-        email: emailUser,
+        // email: emailUser,
       },
     },
   };
@@ -131,14 +131,14 @@ export const updateUserMutation = async (
 
 export const removeUserMutation = async (removeUserID: any) => {
   const requestParams = {
-    operationName: 'removeUser',
-    query: `mutation removeUser($removeData: RemoveEntityInput!) {
-        removeUser(removeData: $removeData) {
+    operationName: null,
+    query: `mutation deleteUser($deleteData: DeleteUserInput!) {
+      deleteUser(deleteData: $deleteData) {
           id
           name
         }}`,
     variables: {
-      removeData: {
+      deleteData: {
         ID: parseFloat(removeUserID),
       },
     },
@@ -150,13 +150,13 @@ export const removeUserMutation = async (removeUserID: any) => {
 export const addUserToGroup = async (userId: any, groupId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation addUserToGroup($membershipData: UpdateMembershipInput!) {
-      addUserToGroup(membershipData: $membershipData)
+    query: `mutation assignUserToGroup($membershipData: AssignUserGroupMemberInput!) {
+      assignUserToGroup(membershipData: $membershipData){id name}
     }`,
     variables: {
       membershipData: {
-        childID: parseFloat(userId),
-        parentID: parseFloat(groupId),
+        userID: parseFloat(userId),
+        groupID: parseFloat(groupId),
       },
     },
   };
@@ -170,7 +170,7 @@ export const assignGroupFocalPointMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation assignGroupFocalPoint($membershipData: UpdateMembershipInput!) {
+    query: `mutation assignGroupFocalPoint($membershipData: AssignUserGroupFocalPointInput!) {
       assignGroupFocalPoint(membershipData: $membershipData) {
         name,
         id,
@@ -181,8 +181,8 @@ export const assignGroupFocalPointMutation = async (
     }`,
     variables: {
       membershipData: {
-        childID: parseFloat(userId),
-        parentID: parseFloat(groupId),
+        groupID: parseFloat(groupId),
+        userID: parseFloat(userId),
       },
     },
   };
@@ -210,7 +210,7 @@ export const createGroupMutation = async (testGroup: string) => {
 export const removeUserFromGroup = async (userId: any, groupId: string) => {
   const requestParams = {
     operationName: 'removeUserFromGroup',
-    query: `mutation removeUserFromGroup($membershipData: UpdateMembershipInput!) {
+    query: `mutation removeUserFromGroup($membershipData: RemoveUserGroupMemberInput!) {
       removeUserFromGroup(membershipData: $membershipData) {
         name,
         id,
@@ -222,8 +222,8 @@ export const removeUserFromGroup = async (userId: any, groupId: string) => {
     }`,
     variables: {
       membershipData: {
-        childID: parseFloat(userId),
-        parentID: parseFloat(groupId),
+        userID: parseFloat(userId),
+        groupID: parseFloat(groupId),
       },
     },
   };
@@ -307,33 +307,19 @@ export const getUsersFromChallengeCommunity = async (
 };
 
 export const updateProfileMutation = async (
-  profileId: any,
+  profileId: string,
   descritpion: string,
-  avatar?: string,
-  tagsetDataName?: string,
-  tags?: any,
-  nameRef?: string,
-  uriRef?: string,
-  descriptionRef?: string
+  avatar?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
-      updateProfile(profileData: $profileData, ID: $ID)}`,
+    query: `mutation updateProfile($profileData: UpdateProfileInput!) {
+      updateProfile(profileData: $profileData){id}}`,
     variables: {
-      ID: parseFloat(profileId),
       profileData: {
+        ID: profileId,
         description: descritpion,
         avatar: avatar,
-        tagsetsData: {
-          name: tagsetDataName,
-          tags: tags,
-        },
-        referencesData: {
-          name: nameRef,
-          uri: uriRef,
-          description: descriptionRef,
-        },
       },
     },
   };
