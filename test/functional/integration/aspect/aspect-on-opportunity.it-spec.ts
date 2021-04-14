@@ -144,6 +144,6 @@ describe('Aspect', () => {
 
     // Assert
     expect(await aspectCountPerOpportunity()).toHaveLength(0);
-    expect(responseRemoveAaspect.body.data.removeAspect.id).toEqual(aspectId);
+    expect(responseRemoveAaspect.body.data.deleteAspect.id).toEqual(aspectId);
   });
 });

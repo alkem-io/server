@@ -161,6 +161,6 @@ describe('Aspect on Project', () => {
 
     // Assert
     expect(await aspectCountPerProject()).toHaveLength(0);
-    expect(responseRemoveAaspect.body.data.removeAspect.id).toEqual(aspectId);
+    expect(responseRemoveAaspect.body.data.deleteAspect.id).toEqual(aspectId);
   });
 });
