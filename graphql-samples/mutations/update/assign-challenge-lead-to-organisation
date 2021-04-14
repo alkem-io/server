@@ -1,11 +1,14 @@
-mutation addChallengeLead($membershipData: AssignChallengeLeadInput!) {
-  addChallengeLead(membershipData: $membershipData)
+mutation assignChallengeLead($assignInput: AssignChallengeLeadInput!) {
+  assignChallengeLead(assignInput: $assignInput)
+  {
+    id
+  }
 }
 
 Variables:
 {
-  "membershipData": {
-    "organisationID": 1,
-    "challengeID": 1
+  "assignInput": {
+    "organisationID": "1",
+    "challengeID": "1"
   }
 }

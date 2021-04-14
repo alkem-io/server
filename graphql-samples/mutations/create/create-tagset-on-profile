@@ -1,13 +1,15 @@
-mutation createTagsetOnProfile($tagsetName: String!, $profileID: Float!) {
-  createTagsetOnProfile(tagsetName: $tagsetName, profileID: $profileID) {
-    name,
-    id
-    tags
+mutation createTagsetOnProfile($tagsetData: CreateTagsetInput!) {
+    createTagsetOnProfile(tagsetData: $tagsetData) {
+      name,
+      id
+      tags
+    }
   }
-}
 
 Variables:
 {
-  "profileID": 1,
-  "tagsetName": "testTagset"
+  "tagsetData":{
+    "parentID": 1,
+    "name": "testTagset"
+  }
 }
