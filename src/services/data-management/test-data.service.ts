@@ -98,7 +98,7 @@ export class TestDataService {
 
   async initChallenge(): Promise<number> {
     const challenge = new CreateChallengeInput();
-
+    challenge.parentID = 1;
     challenge.name = `${this.challengeName}`;
     challenge.state = 'init challenge state';
     challenge.textID = `${this.uniqueTextId}`;
