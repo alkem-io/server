@@ -41,6 +41,7 @@ export const createChallangeMutation = async (
             }`,
     variables: {
       challengeData: {
+        parentID: 1,
         name: challengeName,
         textID: uniqueTextId,
         state: challangeState,
@@ -103,6 +104,7 @@ export const createBasicChallangeMutation = async (
             }`,
     variables: {
       challengeData: {
+        parentID: 1,
         name: challengeName,
         textID: uniqueTextId,
       },
@@ -121,10 +123,7 @@ export const updateChallangeMutation = async (
   vision?: string,
   impact?: string,
   who?: string,
-  refName?: string,
-  refUri?: string,
-  tagsArrey?: any,
-  refId?: any
+  tagsArrey?: any
 ) => {
   const requestParams = {
     operationName: null,
@@ -171,13 +170,6 @@ export const updateChallangeMutation = async (
           vision: vision,
           impact: impact,
           who: who,
-          updateReferences: [
-            {
-              ID: parseFloat(refId),
-              name: refName,
-              uri: refUri,
-            },
-          ],
         },
         tags: tagsArrey,
       },
@@ -190,8 +182,8 @@ export const updateChallangeMutation = async (
 export const removeChallangeMutation = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeChallenge($deleteData: RemoveEntityInput!) {
-      removeChallenge(deleteData: $deleteData) {
+    query: `mutation deleteChallenge($deleteData: DeleteChallengeInput!) {
+      deleteChallenge(deleteData: $deleteData) {
         id
       }}`,
     variables: {
@@ -205,17 +197,19 @@ export const removeChallangeMutation = async (challengeId: string) => {
 };
 
 export const addChallengeLeadToOrganisationMutation = async (
-  organisationId: any,
-  challengeId: any
+  organisationId: string,
+  challengeId: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation addChallengeLead($challengeID: String!, $organisationID: String!) {
-      addChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
+    query: `mutation assignChallengeLead($assignInput: AssignChallengeLeadInput!) {
+      assignChallengeLead(assignInput: $assignInput){id}
     }`,
     variables: {
-      organisationID: organisationId,
-      challengeID: challengeId,
+      assignInput: {
+        organisationID: organisationId,
+        challengeID: challengeId,
+      },
     },
   };
 
@@ -228,12 +222,15 @@ export const removeChallengeLeadFromOrganisationMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeChallengeLead($challengeID: String!, $organisationID: String!) {
-      removeChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
-    }`,
+    query: `mutation removeChallengeLead($removeData: RemoveChallengeLeadInput!) {
+      removeChallengeLead(removeData: $removeData) {
+        id
+      }}`,
     variables: {
-      organisationID: organisationId,
-      challengeID: challengeId,
+      removeData: {
+        organisationID: organisationId,
+        challengeID: challengeId,
+      },
     },
   };
 
