@@ -14,13 +14,12 @@ export class CreateOrganisationInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
-  @Field(() => TextID, { nullable: true })
-  @IsUniqueTextId(TextIdType.organisation, {
-    message: 'Organisation with the textID: $value already exists!',
-  })
-  @Field({
+  @Field(() => TextID, {
     nullable: false,
     description: 'The unique text based ID for this organisation',
+  })
+  @IsUniqueTextId(TextIdType.organisation, {
+    message: 'Organisation with the textID: $value already exists!',
   })
   textID!: string;
 
