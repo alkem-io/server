@@ -1,8 +1,5 @@
 import { ApplicationInput } from '@domain/community/application/application.dto';
-import {
-  Application,
-  ApplicationStatus,
-} from '@domain/community/application/application.entity';
+import { Application } from '@domain/community/application/application.entity';
 import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -23,10 +20,13 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { Community } from './community.entity';
 import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
-import { ApplicationService } from '../application/application.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { communityLifecycleApplicationOptions } from '@domain/community/community/community.lifecycle.application.options';
+import {
+  ApproveApplication,
+  RejectApplication,
+} from '../application/state/application.lifecycle.events';
+import { ApplicationLifecycleMachineService } from '../application/state/application.lifecycle.service';
 
 @Injectable()
 export class CommunityService {
@@ -34,8 +34,8 @@ export class CommunityService {
     private userService: UserService,
     private userGroupService: UserGroupService,
     private applicationFactoryService: ApplicationFactoryService,
-    private applicationService: ApplicationService,
     private lifecycleService: LifecycleService,
+    private applicationLifecycleMachineService: ApplicationLifecycleMachineService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -133,7 +133,9 @@ export class CommunityService {
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationService.removeApplication(application.id);
+        await this.applicationLifecycleMachineService.send(
+          new RejectApplication(application.id)
+        );
       }
     }
 
@@ -336,73 +338,39 @@ export class CommunityService {
   }
 
   async approveApplication(applicationId: number) {
-    const application = await this.applicationService.getApplicationOrFail(
-      applicationId,
-      {
-        relations: ['community'],
-      }
+    const application = this.applicationLifecycleMachineService.send(
+      new ApproveApplication(applicationId)
     );
-
-    if (application.status == ApplicationStatus.approved) {
-      throw new InvalidStateTransitionException(
-        'Application has already been approved!',
-        LogContext.COMMUNITY
-      );
-    } else if (application.status == ApplicationStatus.rejected) {
-      throw new InvalidStateTransitionException(
-        'Application has already been rejected!',
-        LogContext.COMMUNITY
-      );
-    }
-
-    if (!application.community)
-      throw new RelationshipNotFoundException(
-        `Unable to load community for application ${applicationId} `,
-        LogContext.COMMUNITY
-      );
-    await this.addMember(application.user.id, application.community?.id);
-
-    application.status = ApplicationStatus.approved;
-
-    await this.applicationService.save(application);
 
     return application;
   }
 
-  async updateApplicationState(
-    applicationId: number,
-    event: string
-  ): Promise<Application> {
-    const application = await this.applicationService.getApplicationOrFail(
-      applicationId,
-      {
-        relations: ['community'],
-      }
-    );
+  // async updateApplicationState(
+  //   applicationId: number,
+  //   event: string
+  // ): Promise<Application> {
 
-    if (!application.community)
-      throw new RelationshipNotFoundException(
-        `Unable to load community for application ${applicationId} `,
-        LogContext.COMMUNITY
-      );
+  //   // await this.lifecycleService.updateState(
+  //   //   application.lifecycle,
+  //   //   event,
+  //   //   this.getLifecycleOptions()
+  //   // );
 
-    await this.lifecycleService.updateState(
-      application.lifecycle,
-      event,
-      this.getLifecycleOptions()
-    );
+  //   if (event === 'APPROVE') {
+  //     return this.approveApplication(applicationId);
+  //   }
 
-    await this.applicationService.save(application);
+  //   return await this.appl
 
-    return application;
-  }
+  //   return application;
+  // }
 
   // The lifecycle definition can be serialized as a string and stored at instantiation.
   // However the actions include functiton defitions which cannot be converted to JSON for
   // storage so need to have this function below. Far from ideal, open to better solutions...
   // Note: cannot look up on the parent of the lifecycle as there can be potentially
   // multiple lifecycles per challenge etc.
-  getLifecycleOptions() {
-    return communityLifecycleApplicationOptions;
-  }
+  // getLifecycleOptions() {
+  //   return communityLifecycleApplicationOptions;
+  // }
 }

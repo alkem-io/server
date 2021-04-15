@@ -31,6 +31,7 @@ import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import { IpfsModule } from './services/ipfs/ipfs.module';
 import ipfsConfig from '@config/ipfs.config';
+import { ApplicationLifecycleModule } from '@domain/community/application/state/application.lifecycle.module';
 
 @Module({
   imports: [
@@ -95,6 +96,7 @@ import ipfsConfig from '@config/ipfs.config';
     SearchModule,
     KonfigModule,
     IpfsModule,
+    ApplicationLifecycleModule,
   ],
   controllers: [AppController],
   providers: [

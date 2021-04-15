@@ -80,16 +80,18 @@ export class CommunityResolverMutations {
     );
   }
 
-  @Mutation(() => Application, {
+  @Mutation(() => String, {
     description: 'Update the application state',
   })
   async updateApplicationState(
     @Args('lifecycleID') applicationID: number,
-    @Args('event') event: string
-  ): Promise<Application> {
-    return await this.communityService.updateApplicationState(
-      applicationID,
-      event
-    );
+    @Args('event') _event: string
+  ): Promise<string> {
+    // return await this.communityService.updateApplicationState(
+    //   applicationID,
+    //   event
+    // );
+    await this.communityService.approveApplication(applicationID);
+    return 'ok';
   }
 }

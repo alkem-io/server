@@ -51,6 +51,7 @@
     "@nestjs/typeorm": "^7.1.5",
     "@types/express-session": "^1.17.3",
     "apollo-server-express": "^2.22.2",
+    "axios": "^0.21.1",
     "cd": "^0.3.3",
     "class-transformer": "^0.3.2",
     "class-validator": "^0.12.2",

@@ -23,18 +23,26 @@ export class LifecycleService {
     options: any
   ): Promise<ILifecycle> {
     const machine = createMachine(JSON.parse(lifecycle.machine), options);
+    const machineWithContext = machine.withContext({
+      ...machine.context,
+    });
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
     const restoredState = State.create(restoredStateDef);
 
-    const nextStates = machine.resolveState(restoredStateDef).nextEvents;
-    if (!nextStates.find(name => name === event)) {
+    const nextStates = machineWithContext.resolveState(restoredStateDef)
+      .nextEvents;
+    if (
+      !nextStates.find(name => {
+        return name === event;
+      })
+    ) {
       throw new InvalidStateTransitionException(
         `Unable to update state: provided event (${event}) not in valid set of next events: ${nextStates}`,
         LogContext.LIFECYCLE
       );
     }
 
-    const machineService = interpret(machine).start(restoredState);
+    const machineService = interpret(machineWithContext).start(restoredState);
 
     machineService.send(event);
 

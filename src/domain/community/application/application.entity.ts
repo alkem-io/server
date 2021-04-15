@@ -57,7 +57,7 @@ export class Application extends BaseEntity {
   @Field(() => User)
   @ManyToOne(
     () => User,
-    user => user.focalPoints,
+    user => user.applications,
     { eager: true, cascade: true }
   )
   user!: User;
