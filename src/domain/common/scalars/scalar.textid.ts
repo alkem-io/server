@@ -6,7 +6,7 @@ import { Kind, ValueNode } from 'graphql';
 @Scalar('TextID')
 export class TextID implements CustomScalar<string, string> {
   description =
-    'A short text based identifier, 3 <= length <= 20. Used for URL paths in clients. ';
+    'A short text based identifier, 3 <= length <= 20. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
 
   parseValue(value: string): string {
     return this.validate(value).toLowerCase();
@@ -41,6 +41,13 @@ export class TextID implements CustomScalar<string, string> {
       throw new ValidationException(
         `TextID type maximum length of 20: ${value}`,
         LogContext.API
+      );
+
+    const expression = /^[a-zA-Z0-9.\-_]+$/;
+    if (!expression.test(value))
+      throw new ValidationException(
+        `TextID has characters that are not allowed: ${value}`,
+        LogContext.CHALLENGES
       );
 
     return value;
