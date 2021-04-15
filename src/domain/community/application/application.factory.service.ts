@@ -1,4 +1,4 @@
-import { ApplicationInput } from '@domain/community/application/application.dto';
+import { CreateApplicationInput } from '@domain/community/application';
 import {
   Application,
   ApplicationStatus,
@@ -16,7 +16,7 @@ export class ApplicationFactoryService {
   constructor(private userService: UserService) {}
 
   async createApplication(
-    applicationData: ApplicationInput
+    applicationData: CreateApplicationInput
   ): Promise<Application> {
     const { questions } = applicationData;
 

@@ -1,14 +1,11 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { getConnection, getManager, FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
-import { IUserGroup } from './user-group.interface';
-import { getConnection } from 'typeorm';
-import { getManager } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { UserGroupParent } from './user-group-parent.dto';
@@ -19,10 +16,21 @@ import {
   GroupNotInitializedException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { UserGroupInput } from './user-group.dto';
-import { Community } from '../community';
-import { UserGroup } from './user-group.entity';
-import { TagsetService } from '@domain/common';
+import { Community } from '@domain/community/community';
+import {
+  UpdateUserGroupInput,
+  UserGroup,
+  IUserGroup,
+  RemoveUserGroupFocalPoint,
+  AssignUserGroupMemberInput,
+  AssignUserGroupFocalPointInput,
+  RemoveUserGroupMemberInput,
+  DeleteUserGroupInput,
+  CreateUserGroupInput,
+} from '@domain/community/user-group';
+
+import validator from 'validator';
+import { TagsetService } from '@domain/common/tagset';
 
 @Injectable()
 export class UserGroupService {
@@ -35,39 +43,49 @@ export class UserGroupService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createUserGroup(name: string): Promise<IUserGroup> {
+  async createUserGroup(
+    userGroupData: CreateUserGroupInput
+  ): Promise<IUserGroup> {
+    await this.validateUserGroupCreationRequest(userGroupData);
+
+    const group: IUserGroup = new UserGroup(userGroupData.name);
+    group.members = [];
+    group.profile = await this.profileService.createProfile(
+      userGroupData.profileData
+    );
+    const savedUserGroup = await this.userGroupRepository.save(group);
+    this.logger.verbose?.(
+      `Created new group (${group.id}) with name: ${group.name}`,
+      LogContext.COMMUNITY
+    );
+    return savedUserGroup;
+  }
+
+  async validateUserGroupCreationRequest(
+    userGroupData: CreateUserGroupInput
+  ): Promise<boolean> {
+    const name = userGroupData.name;
     if (name.length == 0)
       throw new ValidationException(
         'Unable to create a group with an empty name',
         LogContext.COMMUNITY
       );
-    const group = new UserGroup(name);
-    await this.initialiseMembers(group);
-    await this.userGroupRepository.save(group);
-    this.logger.verbose?.(
-      `Created new group (${group.id}) with name: ${group.name}`,
-      LogContext.COMMUNITY
-    );
-    return group;
+    return true;
   }
 
-  async initialiseMembers(group: IUserGroup): Promise<IUserGroup> {
-    if (!group.members) {
-      group.members = [];
-    }
-    if (!group.profile) {
-      group.profile = await this.profileService.createProfile();
-    }
-
-    return group;
+  async createUserGroupByName(name: string): Promise<IUserGroup> {
+    const userGroupInput = new CreateUserGroupInput();
+    userGroupInput.name = name;
+    return await this.createUserGroup(userGroupInput);
   }
 
   async removeUserGroup(
-    groupID: number,
+    deleteData: DeleteUserGroupInput,
     checkForRestricted = false
-  ): Promise<boolean> {
+  ): Promise<IUserGroup> {
+    const groupID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
-    const group = (await this.getUserGroupOrFail(groupID)) as UserGroup;
+    const group = (await this.getUserGroupByIdOrFail(groupID)) as UserGroup;
 
     // Cannot remove restricted groups
     if (checkForRestricted && (await this.isRestricted(group)))
@@ -80,16 +98,19 @@ export class UserGroupService {
       await this.profileService.removeProfile(group.profile.id);
     }
 
-    await this.userGroupRepository.remove(group);
-    return true;
+    const { id } = group;
+    const result = await this.userGroupRepository.remove(group);
+    return {
+      ...result,
+      id,
+    };
   }
 
   // Note: explicitly do not support updating of email addresses
   async updateUserGroup(
-    groupID: number,
-    userGroupInput: UserGroupInput
+    userGroupInput: UpdateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.getUserGroupOrFail(groupID);
+    const group = await this.getUserGroupOrFail(userGroupInput.ID);
 
     // Cannot rename restricted groups
     const newName = userGroupInput.name;
@@ -115,13 +136,10 @@ export class UserGroupService {
 
     // Check the tagsets
     if (userGroupInput.profileData && group.profile) {
-      await this.profileService.updateProfile(
-        group.profile.id,
-        userGroupInput.profileData
-      );
+      await this.profileService.updateProfile(userGroupInput.profileData);
     }
 
-    const populatedUserGroup = await this.getUserGroupOrFail(group.id);
+    const populatedUserGroup = await this.getUserGroupByIdOrFail(group.id);
 
     return populatedUserGroup;
   }
@@ -142,7 +160,7 @@ export class UserGroupService {
   }
 
   async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
-    const groupWithParent = (await this.getUserGroupOrFail(group.id, {
+    const groupWithParent = (await this.getUserGroupByIdOrFail(group.id, {
       relations: ['community', 'organisation'],
     })) as UserGroup;
     if (groupWithParent?.community) return groupWithParent?.community;
@@ -171,10 +189,14 @@ export class UserGroupService {
     return [];
   }
 
-  async assignFocalPoint(userID: number, groupID: number): Promise<IUserGroup> {
+  async assignFocalPoint(
+    membershipData: AssignUserGroupFocalPointInput
+  ): Promise<IUserGroup> {
     // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(userID);
-    const group = await this.getUserGroupOrFail(groupID);
+    const user = await this.userService.getUserByIdOrFail(
+      membershipData.userID
+    );
+    const group = await this.getUserGroupByIdOrFail(membershipData.groupID);
 
     // Add the user to the group if not already a member
     await this.addUserToGroup(user, group);
@@ -187,6 +209,21 @@ export class UserGroupService {
   }
 
   async getUserGroupOrFail(
+    groupID: string,
+    options?: FindOneOptions<UserGroup>
+  ): Promise<IUserGroup> {
+    if (validator.isNumeric(groupID)) {
+      const idInt: number = parseInt(groupID);
+      return await this.getUserGroupByIdOrFail(idInt, options);
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find group with ID: ${groupID}`,
+      LogContext.COMMUNITY
+    );
+  }
+
+  async getUserGroupByIdOrFail(
     groupID: number,
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
@@ -203,17 +240,22 @@ export class UserGroupService {
     return group;
   }
 
-  async addUser(userID: number, groupID: number): Promise<boolean> {
-    const user = await this.userService.getUserByIdOrFail(userID);
+  async assignUser(
+    membershipData: AssignUserGroupMemberInput
+  ): Promise<IUserGroup> {
+    const user = await this.userService.getUserByIdOrFail(
+      membershipData.userID
+    );
 
-    const group = await this.getUserGroupOrFail(groupID);
+    const group = await this.getUserGroupByIdOrFail(membershipData.groupID);
 
-    return await this.addUserToGroup(user, group);
+    await this.addUserToGroup(user, group);
+    return await this.getUserGroupByIdOrFail(group.id);
   }
 
   async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
     await this.userService.getUserByIdOrFail(userID);
-    await this.getUserGroupOrFail(groupID);
+    await this.getUserGroupByIdOrFail(groupID);
 
     const userGroup = await this.userGroupRepository.findOne({
       where: { members: { id: userID }, id: groupID },
@@ -259,12 +301,16 @@ export class UserGroupService {
     return true;
   }
 
-  async removeUser(userID: number, groupID: number): Promise<IUserGroup> {
+  async removeUser(
+    membershipData: RemoveUserGroupMemberInput
+  ): Promise<IUserGroup> {
     // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(userID);
+    const user = await this.userService.getUserByIdOrFail(
+      membershipData.userID
+    );
 
     // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
-    const group = await this.getUserGroupOrFail(groupID, {
+    const group = await this.getUserGroupByIdOrFail(membershipData.groupID, {
       relations: ['members', 'community'],
     });
 
@@ -288,7 +334,7 @@ export class UserGroupService {
 
     // Also remove the user from being a focal point
     if (group.focalPoint && group.focalPoint.id === user.id) {
-      await this.removeFocalPoint(group.id);
+      await this.removeFocalPoint({ groupID: group.id });
     }
 
     await this.userGroupRepository.save(group);
@@ -296,8 +342,10 @@ export class UserGroupService {
     return group;
   }
 
-  async removeFocalPoint(groupID: number): Promise<IUserGroup> {
-    const group = await this.getUserGroupOrFail(groupID);
+  async removeFocalPoint(
+    removeData: RemoveUserGroupFocalPoint
+  ): Promise<IUserGroup> {
+    const group = await this.getUserGroupByIdOrFail(removeData.groupID);
     // Set focalPoint to NULL will remove the relation.
     // For typeorm 'undefined' means - 'Not changed'
     // More information: https://github.com/typeorm/typeorm/issues/5454
@@ -351,7 +399,7 @@ export class UserGroupService {
     );
 
     for (const groupToAdd of newMandatoryGroups) {
-      const newGroup = await this.createUserGroup(groupToAdd);
+      const newGroup = await this.createUserGroupByName(groupToAdd);
       groupable.groups.push(newGroup);
     }
 
@@ -398,7 +446,7 @@ export class UserGroupService {
       );
     }
 
-    const newGroup = await this.createUserGroup(name);
+    const newGroup = await this.createUserGroupByName(name);
     await groupable.groups?.push(newGroup);
     return newGroup;
   }
@@ -412,8 +460,7 @@ export class UserGroupService {
       groupable.restrictedGroupNames = [];
     }
     for (const name of names) {
-      const group = await this.createUserGroup(name);
-      await this.initialiseMembers(group);
+      const group = await this.createUserGroupByName(name);
       groupable.groups?.push(group);
       groupable.restrictedGroupNames.push(name);
     }
@@ -428,7 +475,7 @@ export class UserGroupService {
   }
 
   async getMembers(groupID: number): Promise<IUser[]> {
-    const group = await this.getUserGroupOrFail(groupID, {
+    const group = await this.getUserGroupByIdOrFail(groupID, {
       relations: ['members', 'profile'],
     });
     return group?.members as IUser[];

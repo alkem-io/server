@@ -1,19 +1,22 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Mutation } from '@nestjs/graphql';
-import { Float } from '@nestjs/graphql';
-import { Args } from '@nestjs/graphql';
-import { Resolver } from '@nestjs/graphql';
+import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { OrganisationInput } from './organisation.dto.create';
-import { Organisation } from './organisation.entity';
-import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 import { Profiling } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { UpdateOrganisationInput } from './organisation.dto.update';
+import {
+  CreateOrganisationInput,
+  UpdateOrganisationInput,
+  Organisation,
+  IOrganisation,
+  DeleteOrganisationInput,
+} from '@domain/community/organisation';
+import {
+  CreateUserGroupInput,
+  IUserGroup,
+  UserGroup,
+} from '@domain/community/user-group';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -22,15 +25,14 @@ export class OrganisationResolverMutations {
     private organisationService: OrganisationService
   ) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @Roles(AuthorizationRoles.GlobalAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
-    description:
-      'Creates a new organisation and registers it with the ecoverse',
+    description: 'Creates a new Organisation on the platform.',
   })
   @Profiling.api
   async createOrganisation(
-    @Args('organisationData') organisationData: OrganisationInput
+    @Args('organisationData') organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
     const organisation = await this.organisationService.createOrganisation(
       organisationData
@@ -42,22 +44,20 @@ export class OrganisationResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Creates a new user group for the organisation with the given id',
+    description: 'Creates a new User Group for the specified Organisation.',
   })
   @Profiling.api
   async createGroupOnOrganisation(
-    @Args({ name: 'orgID', type: () => Float }) orgID: number,
-    @Args({ name: 'groupName', type: () => String }) groupName: string
+    @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.organisationService.createGroup(orgID, groupName);
+    const group = await this.organisationService.createGroup(groupData);
     return group;
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Organisation, {
-    description: 'Updates the organisation with the given data',
+    description: 'Updates the specified Organisation.',
   })
   @Profiling.api
   async updateOrganisation(
@@ -67,5 +67,16 @@ export class OrganisationResolverMutations {
       organisationData
     );
     return org;
+  }
+
+  @Roles(AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Organisation, {
+    description: 'Deletes the specified Organisation.',
+  })
+  async deleteOrganisation(
+    @Args('deleteData') deleteData: DeleteOrganisationInput
+  ): Promise<IOrganisation> {
+    return await this.organisationService.deleteOrganisation(deleteData);
   }
 }

@@ -1,5 +1,5 @@
-mutation UpdateUser($userID: Float!, $userData: UserInput!) {
-  updateUser(userID: $userID, userData: $userData) {
+mutation UpdateUser($userData: UpdateUserInput!) {
+  updateUser(userData: $userData) {
     name,
   	email
   }
@@ -8,9 +8,9 @@ mutation UpdateUser($userID: Float!, $userData: UserInput!) {
 
 query variables:
 {
-  "userID": 7,
   "userData":
   {
+    "ID": 7,
     "name": "Valentin",
     "city": "Sofia"
   }

@@ -1,13 +1,13 @@
-mutation updateAspect($aspectData: AspectInput!, $ID: Float!) {
-  updateAspect(aspectData: $aspectData, ID: $ID) {
+mutation updateAspect($aspectData: UpdateAspectInput!) {
+  updateAspect(aspectData: $aspectData) {
     title
   }
 }
 
 Variables:
 {
-  "ID": 1,
   "aspectData": {
+    "ID": 1,
     "title": "some description",
     "framing": "http://someUri",
     "explanation": "http://someUri"

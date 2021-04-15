@@ -5,40 +5,49 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ReferenceInput } from '@domain/common/reference/reference.dto';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { ProfileInput } from './profile.dto';
-import { Profile } from './profile.entity';
-import { IProfile } from './profile.interface';
+import { CreateReferenceInput } from '@domain/common/reference';
+import {
+  UpdateProfileInput,
+  Profile,
+  IProfile,
+} from '@domain/community/profile';
+
+import validator from 'validator';
+import { CreateTagsetInput } from '@domain/common/tagset';
+import { CreateProfileInput } from './profile.dto.create';
+
+import { ReadStream } from 'fs';
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
+import { streamToBuffer, validateImageDimensions } from '@common/utils';
+import { IpfsService } from '@src/services/ipfs/ipfs.service';
+import { UploadProfileAvatarInput } from './profile.dto.upload.avatar';
 
 @Injectable()
 export class ProfileService {
   constructor(
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
+    private ipfsService: IpfsService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createProfile(): Promise<IProfile> {
-    const profile = new Profile();
-    await this.initialiseMembers(profile);
-    await this.profileRepository.save(profile);
-    this.logger.verbose?.(
-      `Created new profile with id: ${profile.id}`,
-      LogContext.COMMUNITY
-    );
-    return profile;
-  }
+  private readonly minImageSize = 190;
+  private readonly maxImageSize = 410;
 
-  async initialiseMembers(profile: IProfile): Promise<IProfile> {
+  async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
+    let data = profileData;
+    if (!data) data = {};
+    const profile: IProfile = Profile.create(data);
     if (!profile.references) {
       profile.references = [];
     }
@@ -47,7 +56,6 @@ export class ProfileService {
       profile.tagsets = [];
     }
 
-    // Check that the mandatory tagsets for a user are created
     if (profile.restrictedTagsetNames) {
       await this.tagsetService.createRestrictedTagsets(
         profile,
@@ -55,34 +63,45 @@ export class ProfileService {
       );
     }
 
+    await this.profileRepository.save(profile);
+    this.logger.verbose?.(
+      `Created new profile with id: ${profile.id}`,
+      LogContext.COMMUNITY
+    );
     return profile;
   }
 
   async removeProfile(profileID: number): Promise<IProfile> {
     // Note need to load it in with all contained entities so can remove fully
-    const profile = await this.getProfileOrFail(profileID);
+    const profile = await this.getProfileByIdOrFail(profileID);
 
     if (profile.tagsets) {
       for (const tagset of profile.tagsets) {
-        await this.tagsetService.removeTagset(tagset.id);
+        await this.tagsetService.removeTagset({ ID: tagset.id });
       }
     }
 
     if (profile.references) {
       for (const reference of profile.references) {
-        await this.referenceService.removeReference(reference.id);
+        await this.referenceService.deleteReference({ ID: reference.id });
       }
     }
 
     return await this.profileRepository.remove(profile as Profile);
   }
 
-  async createTagset(profileID: number, tagsetName: string): Promise<ITagset> {
-    const profile = await this.getProfileOrFail(profileID);
+  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
+    const profileID = tagsetData.parentID;
+    if (!profileID)
+      throw new ValidationException(
+        'No parendId specified for tagset creation',
+        LogContext.COMMUNITY
+      );
+    const profile = await this.getProfileByIdOrFail(profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
-      tagsetName
+      tagsetData.name
     );
     await this.profileRepository.save(profile);
 
@@ -90,10 +109,15 @@ export class ProfileService {
   }
 
   async createReference(
-    profileID: number,
-    referenceInput: ReferenceInput
+    referenceInput: CreateReferenceInput
   ): Promise<IReference> {
-    const profile = await this.getProfileOrFail(profileID);
+    const profileID = referenceInput.parentID;
+    if (!profileID)
+      throw new ValidationException(
+        'No parendId specified for reference creation',
+        LogContext.COMMUNITY
+      );
+    const profile = await this.getProfileByIdOrFail(profileID);
 
     if (!profile.references)
       throw new EntityNotInitializedException(
@@ -117,11 +141,8 @@ export class ProfileService {
     return newReference;
   }
 
-  async updateProfile(
-    profileID: number,
-    profileData: ProfileInput
-  ): Promise<boolean> {
-    const profile = await this.getProfileOrFail(profileID);
+  async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
+    const profile = await this.getProfileOrFail(profileData.ID);
 
     if (profileData.avatar) {
       profile.avatar = profileData.avatar;
@@ -130,39 +151,21 @@ export class ProfileService {
       profile.description = profileData.description;
     }
 
-    // Iterate over the tagsets
-    const tagsetsData = profileData.tagsetsData;
-    if (tagsetsData) {
-      for (const tagsetData of tagsetsData) {
-        await this.tagsetService.updateOrCreateTagset(profile, tagsetData);
-      }
-    }
-
-    // Iterate over the references
-    const referencesData = profileData.referencesData;
-    if (referencesData) {
-      for (const referenceData of referencesData) {
-        const existingReference = profile.references?.find(
-          reference => reference.name === referenceData.name
-        );
-        if (existingReference) {
-          await this.referenceService.updateReference(
-            existingReference,
-            referenceData
-          );
-        } else {
-          const newReference = await this.referenceService.createReference(
-            referenceData
-          );
-          profile.references?.push(newReference as Reference);
-        }
-      }
-    }
-    await this.profileRepository.save(profile);
-    return true;
+    return await this.profileRepository.save(profile);
   }
 
-  async getProfileOrFail(profileID: number): Promise<IProfile> {
+  async getProfileOrFail(profileID: string): Promise<IProfile> {
+    if (validator.isNumeric(profileID)) {
+      const idInt: number = parseInt(profileID);
+      return await this.getProfileByIdOrFail(idInt);
+    }
+    throw new EntityNotFoundException(
+      `Profile with id(${profileID}) not found!`,
+      LogContext.COMMUNITY
+    );
+  }
+
+  async getProfileByIdOrFail(profileID: number): Promise<IProfile> {
     const profile = await Profile.findOne({ id: profileID });
     if (!profile)
       throw new EntityNotFoundException(
@@ -170,5 +173,62 @@ export class ProfileService {
         LogContext.COMMUNITY
       );
     return profile;
+  }
+
+  async uploadAvatar(
+    readStream: ReadStream,
+    fileName: string,
+    mimetype: string,
+    uploadData: UploadProfileAvatarInput
+  ): Promise<IProfile> {
+    const profileID = uploadData.profileID;
+    if (
+      !(
+        mimetype === 'image/png' ||
+        mimetype === 'image/jpeg' ||
+        mimetype === 'image/jpg' ||
+        mimetype === 'image/svg+xml' ||
+        fileName === 'hello-cherrytwist.txt'
+      )
+    ) {
+      throw new ValidationException(
+        `Forbidden avatar upload file type ${mimetype}. File must be jpg / jpeg / png / svg.`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    if (!readStream)
+      throw new ValidationException(
+        'Readstream should be defined!',
+        LogContext.COMMUNITY
+      );
+
+    const buffer = await streamToBuffer(readStream);
+
+    if (
+      !(await validateImageDimensions(
+        buffer,
+        this.minImageSize,
+        this.maxImageSize
+      ))
+    )
+      throw new ValidationException(
+        `Upload file dimensions must be between ${this.minImageSize} and ${this.maxImageSize} pixels!`,
+        LogContext.COMMUNITY
+      );
+
+    try {
+      const uri = await this.ipfsService.uploadFileFromBuffer(buffer);
+      const profileData: UpdateProfileInput = {
+        ID: profileID.toString(),
+        avatar: uri,
+      };
+      await this.updateProfile(profileData);
+      return await this.getProfileOrFail(profileID.toString());
+    } catch (error) {
+      throw new IpfsUploadFailedException(
+        `Ipfs upload of ${fileName} failed! Error: ${error.message}`
+      );
+    }
   }
 }

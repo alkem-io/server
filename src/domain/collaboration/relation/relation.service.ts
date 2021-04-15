@@ -6,9 +6,10 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { RelationInput } from './relation.dto';
+import { CreateRelationInput } from './relation.dto.create';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
+import { DeleteRelationInput } from './relation.dto.delete';
 
 const allowedRelationTypes = ['incoming', 'outgoing'];
 
@@ -19,19 +20,14 @@ export class RelationService {
     private relationRepository: Repository<Relation>
   ) {}
 
-  async createRelation(relationData: RelationInput): Promise<IRelation> {
-    const relation = new Relation();
+  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
     // Check that the relation type is valie
     if (!allowedRelationTypes.includes(relationData.type))
       throw new RelationshipNotFoundException(
         `Invalid relation type supplied: ${relationData.type}`,
         LogContext.CHALLENGES
       );
-    relation.type = relationData.type;
-    relation.description = relationData.description;
-    relation.actorName = relationData.actorName;
-    relation.actorType = relationData.actorType;
-    relation.actorRole = relationData.actorRole;
+    const relation = Relation.create(relationData);
 
     // to do: set the rest of the fields
     await this.relationRepository.save(relation);
@@ -40,7 +36,7 @@ export class RelationService {
 
   async updateRelation(
     relation: Relation,
-    relationData: RelationInput
+    relationData: CreateRelationInput
   ): Promise<boolean> {
     // Copy over the received data
     if (relationData.actorName) {
@@ -68,10 +64,15 @@ export class RelationService {
     return relation;
   }
 
-  async removeRelation(relationID: number): Promise<boolean> {
-    await this.getRelationOrFail(relationID);
+  async deleteRelation(deleteData: DeleteRelationInput): Promise<IRelation> {
+    const relationID = deleteData.ID;
+    const relation = await this.getRelationOrFail(relationID);
 
-    await this.relationRepository.delete(relationID);
-    return true;
+    const { id } = relation;
+    const result = await this.relationRepository.remove(relation as Relation);
+    return {
+      ...result,
+      id,
+    };
   }
 }

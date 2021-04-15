@@ -1,0 +1,18 @@
+mutation assignUserToGroup($membershipData: AssignUserGroupMemberInput!) {
+  assignUserToGroup(membershipData: $membershipData) {
+    name,
+    id,
+    members {
+      id,
+      name
+    }
+  }
+}
+
+Variables:
+{
+  "membershipData": {
+    "userID": 7,
+    "groupID": 1
+  }
+}

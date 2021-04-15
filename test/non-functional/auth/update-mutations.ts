@@ -3,8 +3,8 @@ const organisationId = 1;
 const communityId = 1;
 
 export const updateUserMutation = `
-mutation UpdateUser($userID: Float!, $userData: UserInput!) {
-    updateUser(userID: $userID, userData: $userData) {
+mutation UpdateUser($userData: UpdateUserInput!) {
+  updateUser(userData: $userData) {
       id
       name
       email
@@ -14,23 +14,51 @@ mutation UpdateUser($userID: Float!, $userData: UserInput!) {
 
 export const updateUserVariables = (id: number) => `
 {
-    "userID": ${userId},
     "userData":
     {
+      "ID": "${userId}",
+      "name": "TestName",
+      "city": "TestCity"
+    }
+  }`;
+
+export const updateNonEcoverseMutation = `
+mutation UpdateUser($userData: UpdateUserInput!) {
+  updateUser(userData: $userData) {
+      id
+      name
+      email
+      city
+      profile{
+        description
+      }
+    }
+  }`;
+
+export const updateNonEcoverseVariables = (id: any) => `
+{
+
+    "userData":
+    {
+      "ID": "${id}",
       "name": "TestName",
       "city": "TestCity"
     }
   }`;
 
 export const updateProfileMutation = `
-mutation updateProfile($profileData: ProfileInput!, $ID: Float!) {
-    updateProfile(profileData: $profileData, ID: $ID)
-  }`;
+
+mutation updateProfile($profileData: UpdateProfileInput!) {
+  updateProfile(profileData: $profileData)
+  {
+    id
+  }
+}`;
 
 export const updateProfileVariables = (id: number) => `
 {
-    "ID": ${id},
     "profileData": {
+      "ID": "${id}",
       "description": "some description",
       "avatar": "https://avatar.com"
     }
@@ -46,17 +74,16 @@ mutation updateOrganisation($organisationData: UpdateOrganisationInput!) {
 
 export const updateOrganisationVariabls = (id: number) => `
 {
-
     "organisationData":
     {
       "ID": "${id}",
-    "name": "Cherrytwist77"
+      "name": "Cherrytwist77"
     }
   }`;
 
 export const updateChallengeMutation = `
-mutation updateChallenge($challengeData: UpdateChallengeInput!) {
-    updateChallenge(challengeData: $challengeData) {
+mutation UpdateChallenge($challengeData: UpdateChallengeInput!) {
+  updateChallenge(challengeData: $challengeData) {
       name,
       id
     }
@@ -64,7 +91,6 @@ mutation updateChallenge($challengeData: UpdateChallengeInput!) {
 
 export const updateChallengeVariables = (id: number) => `
 {
-
     "challengeData":
           {
             "ID": "${id}",
@@ -82,7 +108,6 @@ mutation updateOpportunity($opportunityData: UpdateOpportunityInput!) {
 
 export const updateOpportunityVariables = (id: number) => `
 {
-
     "opportunityData":
     {
       "ID": "${id}",
@@ -91,8 +116,8 @@ export const updateOpportunityVariables = (id: number) => `
   }`;
 
 export const updateAspectMutation = `
-mutation updateAspect($aspectData: AspectInput!, $ID: Float!) {
-    updateAspect(aspectData: $aspectData, ID: $ID) {
+mutation updateAspect($aspectData: UpdateAspectInput!) {
+  updateAspect(aspectData: $aspectData) {
       title
       id
     }
@@ -100,8 +125,8 @@ mutation updateAspect($aspectData: AspectInput!, $ID: Float!) {
 
 export const updateAspectVariable = (id: number) => `
 {
-    "ID": ${id},
     "aspectData": {
+      "ID": "${id}",
       "title": "aspect some description",
       "framing": "https://aspect_framing.com",
       "explanation": "https://aspect_explanation.com"
@@ -109,8 +134,8 @@ export const updateAspectVariable = (id: number) => `
   }`;
 
 export const updateActorMutation = `
-mutation updateActor($actorData: ActorInput!, $ID: Float!) {
-    updateActor(actorData: $actorData, ID: $ID) {
+mutation updateActor($actorData: UpdateActorInput!) {
+  updateActor(actorData: $actorData) {
       name
       description
       value
@@ -121,8 +146,8 @@ mutation updateActor($actorData: ActorInput!, $ID: Float!) {
 
 export const updateActorVariables = (id: number) => `
 {
-    "ID": ${id},
     "actorData": {
+      "ID": "${id}",
       "name": "actor some description",
       "value": "https://actor_value.com",
       "impact": "https://actor_impact.com",
@@ -130,38 +155,9 @@ export const updateActorVariables = (id: number) => `
     }
   }`;
 
-export const addTagsOnTagsetMutation = `
-mutation addTagToTagset($tag: String!, $tagsetID: Float!) {
-    addTagToTagset(tag: $tag, tagsetID: $tagsetID) {
-      name
-      tags
-      id
-    }
-  }`;
-
-export const addTagsOnTagsetVariables = (id: number) => `
-{
-    "tagsetID": ${id},
-    "tag": "tagTest"
-  }`;
-
-export const replaceTagsOnTagsetMutation = `
-mutation replaceTagsOnTagset($tags: [String!]!, $tagsetID: Float!) {
-    replaceTagsOnTagset(tags: $tags, tagsetID: $tagsetID){
-      name
-      tags
-    }
-  }`;
-
-export const replaceTagsOnTagsetVariables = (id: number) => `
-{
-    "tagsetID": ${id},
-    "tags": ["tag1", "tag2"]
-  }`;
-
 export const addUserToCommunityMutation = `
-  mutation addUserToCommunity($userID: Float!, $communityID: Float!) {
-    addUserToCommunity(communityID: $communityID, userID: $userID) {
+mutation assignUserToCommunity($membershipData: AssignCommunityMemberInput!) {
+  assignUserToCommunity(membershipData: $membershipData) {
       name,
       id,
       members {
@@ -173,24 +169,36 @@ export const addUserToCommunityMutation = `
 
 export const addUserToCommunityVariables = (id: number) => `
 {
+  "membershipData": {
     "userID": ${userId},
     "communityID": ${communityId}
-  }`;
+  }
+}`;
 
 export const addUserToGroupMutation = `
-mutation addUserToGroup($userID: Float!, $groupID: Float!) {
-    addUserToGroup(groupID: $groupID, userID: $userID)
-  }`;
+mutation assignUserToGroup($membershipData: AssignUserGroupMemberInput!) {
+  assignUserToGroup(membershipData: $membershipData)
+  {
+    name,
+    id,
+    members {
+      id,
+      name
+    }
+  }
+}`;
 
 export const addUserToGroupVariables = (id: number) => `
 {
+  "membershipData": {
     "userID": ${userId},
     "groupID": ${id}
-  }`;
+  }
+}`;
 
 export const assignGroupFocalPointMutation = `
-mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
-    assignGroupFocalPoint(groupID: $groupID, userID: $userID) {
+mutation assignGroupFocalPoint($membershipData: AssignUserGroupFocalPointInput!) {
+  assignGroupFocalPoint(membershipData: $membershipData) {
       name,
       id,
       focalPoint {
@@ -200,14 +208,16 @@ mutation assignGroupFocalPoint($userID: Float!, $groupID: Float!) {
   }`;
 
 export const assignGroupFocalPointVariables = (id: number) => `
-  {
+{
+  "membershipData": {
     "userID": ${userId},
     "groupID": ${id}
-  }`;
+  }
+}`;
 
 export const removeGroupFocalPointMutation = `
-mutation removeGroupFocalPoint($groupID: Float!) {
-    removeGroupFocalPoint(groupID: $groupID) {
+mutation removeGroupFocalPoint($removeData: RemoveUserGroupFocalPoint!) {
+  removeGroupFocalPoint(removeData: $removeData) {
       name,
       id,
       focalPoint {
@@ -218,23 +228,30 @@ mutation removeGroupFocalPoint($groupID: Float!) {
 
 export const removeGroupFocalPointVariables = (id: number) => `
 {
+  "removeData": {
     "groupID": ${id}
-  }`;
+  }
+}`;
 
 export const addChallengeLeadToOrganisationMutation = `
-mutation addChallengeLead($challengeID: String!, $organisationID: String!) {
-  addChallengeLead(organisationID: $organisationID, challengeID: $challengeID)
+mutation assignChallengeLead($assignInput: AssignChallengeLeadInput!) {
+  assignChallengeLead(assignInput: $assignInput)
+  {
+    id
+  }
 }`;
 
 export const addChallengeLeadToOrganisationVariables = (id: number) => `
 {
+  "assignInput":{
     "organisationID": "${organisationId}",
     "challengeID": "${id}"
-  }`;
+  }
+}`;
 
 export const removeUserFromGroupMutation = `
-mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {
-    removeUserFromGroup(groupID: $groupID, userID: $userID) {
+mutation removeUserFromGroup($membershipData: RemoveUserGroupMemberInput!) {
+  removeUserFromGroup(membershipData: $membershipData) {
       name,
       id,
       members {
@@ -246,9 +263,11 @@ mutation removeUserFromGroup($userID: Float!, $groupID: Float!) {
 
 export const removeUserFromGroupVariables = (id: number) => `
 {
+  "membershipData": {
     "userID": ${userId},
     "groupID": ${id}
-  }`;
+  }
+}`;
 
 const mutations: Record<string, string> = {
   updateUserMutation,
@@ -258,17 +277,16 @@ const mutations: Record<string, string> = {
   updateOpportunityMutation,
   updateAspectMutation,
   updateActorMutation,
-  addTagsOnTagsetMutation,
-  replaceTagsOnTagsetMutation,
   addUserToCommunityMutation,
   addUserToGroupMutation,
   assignGroupFocalPointMutation,
   removeGroupFocalPointMutation,
   addChallengeLeadToOrganisationMutation,
   removeUserFromGroupMutation,
+  updateNonEcoverseMutation,
 };
 
-const variables: Record<string, (id: number) => string> = {
+const variables: Record<string, (id: number, emailName?: any) => string> = {
   updateUserVariables,
   updateProfileVariables,
   updateOrganisationVariabls,
@@ -276,20 +294,19 @@ const variables: Record<string, (id: number) => string> = {
   updateOpportunityVariables,
   updateAspectVariable,
   updateActorVariables,
-  addTagsOnTagsetVariables,
-  replaceTagsOnTagsetVariables,
   addUserToCommunityVariables,
   addUserToGroupVariables,
   assignGroupFocalPointVariables,
   removeGroupFocalPointVariables,
   addChallengeLeadToOrganisationVariables,
   removeUserFromGroupVariables,
+  updateNonEcoverseVariables,
 };
 
 export const getUpdateMutation = (name: string) => {
   return mutations[name];
 };
 
-export const getUpdateVariables = (name: string, id: number) => {
-  return variables[name](id);
+export const getUpdateVariables = (name: string, id: any, emailName?: any) => {
+  return variables[name](id, emailName);
 };

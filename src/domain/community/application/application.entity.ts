@@ -15,7 +15,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { Question } from '@domain/community/application/application.dto';
+import { Question } from '@domain/community/application';
 import { Community } from '../community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 

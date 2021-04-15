@@ -2,15 +2,15 @@ import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 
 export const createAspectOnProjectMutation = async (
-  projectId: any,
-  aspectTitle: any,
-  aspectFraming?: any,
-  aspectExplenation?: any
+  projectId: string,
+  aspectTitle: string,
+  aspectFraming?: string,
+  aspectExplenation?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation CreateAspectOnProject($aspectData: AspectInput!, $projectID: Float!) {
-      createAspectOnProject(aspectData: $aspectData, projectID: $projectID) {
+    query: `mutation CreateAspectOnProject($aspectData: CreateAspectInput!) {
+      createAspectOnProject(aspectData: $aspectData) {
         id,
         title,
         framing,
@@ -18,8 +18,8 @@ export const createAspectOnProjectMutation = async (
       }
     }`,
     variables: {
-      projectID: parseFloat(projectId),
       aspectData: {
+        parentID: parseFloat(projectId),
         title: `${aspectTitle}`,
         framing: `${aspectFraming}`,
         explanation: `${aspectExplenation}`,
@@ -31,15 +31,15 @@ export const createAspectOnProjectMutation = async (
 };
 
 export const createAspectOnOpportunityMutation = async (
-  opportunityId: any,
-  aspectTitle: any,
-  aspectFraming?: any,
-  aspectExplenation?: any
+  opportunityId: string,
+  aspectTitle: string,
+  aspectFraming?: string,
+  aspectExplenation?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation CreateAspect($aspectData: AspectInput!, $opportunityID: Float!) {
-      createAspect(aspectData: $aspectData, opportunityID: $opportunityID) {
+    query: `mutation CreateAspect($aspectData: CreateAspectInput!) {
+      createAspect(aspectData: $aspectData)  {
         id,
         title,
         framing,
@@ -47,8 +47,8 @@ export const createAspectOnOpportunityMutation = async (
       }
     }`,
     variables: {
-      opportunityID: parseFloat(opportunityId),
       aspectData: {
+        parentID: parseFloat(opportunityId),
         title: `${aspectTitle}`,
         framing: `${aspectFraming}`,
         explanation: `${aspectExplenation}`,
@@ -60,21 +60,21 @@ export const createAspectOnOpportunityMutation = async (
 };
 
 export const updateAspectMutation = async (
-  aspectId: any,
-  aspectTitle: any,
-  aspectFraming?: any,
-  aspectExplenation?: any
+  aspectId: string,
+  aspectTitle: string,
+  aspectFraming?: string,
+  aspectExplenation?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation updateAspect($aspectData: AspectInput!, $ID: Float!) {
-      updateAspect(aspectData: $aspectData, ID: $ID) {
+    query: `mutation updateAspect($aspectData: UpdateAspectInput!) {
+      updateAspect(aspectData: $aspectData) {
         id, title, framing, explanation
       }
     }`,
     variables: {
-      ID: parseFloat(aspectId),
       aspectData: {
+        ID: aspectId,
         title: `${aspectTitle}`,
         framing: `${aspectFraming}`,
         explanation: `${aspectExplenation}`,
@@ -85,14 +85,17 @@ export const updateAspectMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const removeAspectMutation = async (aspectId: any) => {
+export const removeAspectMutation = async (aspectId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeAspect($ID: Float!) {
-      removeAspect(ID: $ID)
-    }`,
+    query: `mutation deleteAspect($deleteData: DeleteAspectInput!) {
+      deleteAspect(deleteData: $deleteData) {
+        id
+      }}`,
     variables: {
-      ID: parseFloat(aspectId),
+      deleteData: {
+        ID: parseFloat(aspectId),
+      },
     },
   };
 

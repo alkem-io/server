@@ -3,12 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Profile } from './profile.entity';
-import { ProfileResolver } from './profile.resolver';
+import { ProfileResolverMutations } from './profile.resolver.mutations';
 import { ProfileService } from './profile.service';
+import { IpfsService } from '@src/services/ipfs/ipfs.service';
 
 @Module({
   imports: [TagsetModule, ReferenceModule, TypeOrmModule.forFeature([Profile])],
-  providers: [ProfileResolver, ProfileService],
+  providers: [ProfileResolverMutations, ProfileService, IpfsService],
   exports: [ProfileService],
 })
 export class ProfileModule {}

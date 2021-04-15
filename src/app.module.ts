@@ -32,6 +32,7 @@ import { ApplicationFactoryModule } from '@domain/community/application/applicat
 import { IpfsModule } from './services/ipfs/ipfs.module';
 import ipfsConfig from '@config/ipfs.config';
 import { ApplicationLifecycleModule } from '@domain/community/application/state/application.lifecycle.module';
+import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { ApplicationLifecycleModule } from '@domain/community/application/state/
       sortSchema: true,
       context: ({ req }) => ({ req }),
     }),
+    ScalarsModule,
     AuthenticationModule,
     ApplicationFactoryModule,
     EcoverseModule,

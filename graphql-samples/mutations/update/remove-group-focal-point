@@ -1,5 +1,5 @@
-mutation removeGroupFocalPoint($groupID: Float!) {
-  removeGroupFocalPoint(groupID: $groupID) {
+mutation removeGroupFocalPoint($removeData: RemoveUserGroupFocalPoint!) {
+  removeGroupFocalPoint(removeData: $removeData) {
     name,
     id,
     focalPoint {
@@ -10,5 +10,7 @@ mutation removeGroupFocalPoint($groupID: Float!) {
 
 Variables:
 {
-  "groupID": 1
+  "removeData": {
+    "groupID": 1
+  }
 }

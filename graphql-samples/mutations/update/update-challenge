@@ -5,10 +5,26 @@ mutation UpdateChallenge($challengeData: UpdateChallengeInput!) {
   }
 }
 
+variables:
 {
   "challengeData":
 		{
-  	  "ID": "4",
-      "name": "Balance the grid22"
+  	  "ID": "1",
+      "name": "Balance the grid22",
+      "context": {
+        "ID": "2",
+        "updateReferences": [
+              {
+                "ID": 11,
+        				"name": "videoxxxx",
+                "uri": "https://www.youtube.com/watch?v=v4qj6MRCdIo"
+              },
+              {
+                "ID": 12,
+        				"name": "visualxxxx",
+                "uri": "https://sdgs.un.org/sites/default/files/2020-07/The-Sustainable-Development-Goals-Report-2020_Page_09.png"
+              }
+            ]
+      }
 		}
 }

@@ -1,4 +1,4 @@
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
+import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Inject, UseGuards } from '@nestjs/common';
@@ -6,11 +6,14 @@ import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
-import { EcoverseInput } from './ecoverse.dto';
-import { Ecoverse } from './ecoverse.entity';
-import { IEcoverse } from './ecoverse.interface';
 import { EcoverseService } from './ecoverse.service';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import {
+  CreateEcoverseInput,
+  Ecoverse,
+  IEcoverse,
+  UpdateEcoverseInput,
+} from '@domain/challenge/ecoverse';
 
 @Resolver()
 export class EcoverseResolverMutations {
@@ -18,14 +21,26 @@ export class EcoverseResolverMutations {
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
+  @Roles(AuthorizationRoles.GlobalAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Ecoverse, {
+    description: 'Creates a new Ecoverse.',
+  })
+  @Profiling.api
+  async createEcoverse(
+    @Args('ecoverseData') ecoverseData: CreateEcoverseInput
+  ): Promise<IEcoverse> {
+    return await this.ecoverseService.createEcoverse(ecoverseData);
+  }
+
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Ecoverse, {
-    description: 'Updates the Ecoverse with the provided data',
+    description: 'Updates the Ecoverse.',
   })
   @Profiling.api
   async updateEcoverse(
-    @Args('ecoverseData') ecoverseData: EcoverseInput
+    @Args('ecoverseData') ecoverseData: UpdateEcoverseInput
   ): Promise<IEcoverse> {
     const ctVerse = await this.ecoverseService.update(ecoverseData);
     return ctVerse;
@@ -34,11 +49,11 @@ export class EcoverseResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
-    description: 'Creates a new challenge and registers it with the ecoverse',
+    description: 'Creates a new Challenge within the specified Ecoverse.',
   })
   @Profiling.api
   async createChallenge(
-    @Args('challengeData') challengeData: ChallengeInput
+    @Args('challengeData') challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.ecoverseService.createChallenge(challengeData);
 

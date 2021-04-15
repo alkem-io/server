@@ -27,6 +27,13 @@ export class Ecoverse extends BaseEntity implements IEcoverse, ICommunityable {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'A short text identifier for this Ecoverse',
+  })
+  @Column()
+  textID!: string;
+
   @CreateDateColumn()
   createdDate?: Date;
 

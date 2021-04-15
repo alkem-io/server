@@ -29,6 +29,7 @@ let challengeCommunityId = '';
 let opportunityCommunityId = '';
 let getParent = '';
 let communityGroupName = '';
+let communityGroupProfileID = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -85,6 +86,9 @@ describe('Groups - groups on community', () => {
       responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.id;
     communityGroupName =
       responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.name;
+    communityGroupProfileID =
+      responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.profile
+        .id;
   });
 
   afterEach(async () => {
@@ -108,10 +112,11 @@ describe('Groups - groups on community', () => {
   test('should remove community challenge group', async () => {
     // Act
     const response = await removeUserGroupMutation(communityGroupId);
+
     const groupsData = await getGroups();
 
     // Assert
-    expect(response.body.data.removeUserGroup).toEqual(true);
+    expect(response.body.data.deleteUserGroup.id).toEqual(communityGroupId);
 
     expect(groupsData.body.data.ecoverse.groups).not.toContainObject({
       id: `${communityGroupId}`,
@@ -123,7 +128,8 @@ describe('Groups - groups on community', () => {
     // Act
     const response = await updateGroupMutation(
       communityGroupId,
-      groupName + 'change'
+      groupName + 'change',
+      communityGroupProfileID
     );
     const groupsData = await getGroups();
 
@@ -230,7 +236,8 @@ describe('Groups - restricted groups', () => {
     // Update new group name to existing restricted group name
     const responseUpdateMutation = await updateGroupMutation(
       communityGroupId,
-      'members'
+      'members',
+      communityGroupProfileID
     );
     const groupsData = await getGroups();
 
@@ -247,7 +254,11 @@ describe('Groups - restricted groups', () => {
   test('should throw error for updating restricted group name', async () => {
     // Act
     // Update restricted group name
-    const responseUpdateMutation = await updateGroupMutation(2, groupName);
+    const responseUpdateMutation = await updateGroupMutation(
+      '2',
+      groupName,
+      communityGroupProfileID
+    );
     const groupsData = await getGroups();
 
     // Assert

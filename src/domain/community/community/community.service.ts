@@ -1,5 +1,9 @@
 import { ApplicationInput } from '@domain/community/application/application.dto';
-import { Application } from '@domain/community/application/application.entity';
+import { CreateApplicationInput } from '@domain/community/application';
+import {
+  Application,
+  ApplicationStatus,
+} from '@domain/community/application/application.entity';
 import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -27,6 +31,11 @@ import {
   RejectApplication,
 } from '../application/state/application.lifecycle.events';
 import { ApplicationLifecycleMachineService } from '../application/state/application.lifecycle.service';
+import { CreateUserGroupInput } from '../user-group';
+import {
+  AssignCommunityMemberInput,
+  RemoveCommunityMemberInput,
+} from '@domain/community/community';
 
 @Injectable()
 export class CommunityService {
@@ -46,31 +55,22 @@ export class CommunityService {
     type: string,
     restrictedGroupNames: string[]
   ): Promise<ICommunity> {
-    // reate and initialise a new Community using the first returned array item
     const community = new Community(name, type, restrictedGroupNames);
-    await this.initialiseMembers(community);
-    await this.communityRepository.save(community);
 
-    return community;
-  }
-  async initialiseMembers(community: ICommunity): Promise<ICommunity> {
-    if (!community.groups) {
-      community.groups = [];
-    }
-    // Check that the mandatory groups for a Community are created
+    community.groups = [];
     await this.userGroupService.addMandatoryGroups(
       community,
       community.restrictedGroupNames
     );
+    await this.communityRepository.save(community);
 
     return community;
   }
 
-  async createGroup(
-    communityID: number,
-    groupName: string
-  ): Promise<IUserGroup> {
+  async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     // First find the Community
+    const communityID = groupData.parentID;
+    const groupName = groupData.name;
 
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to Community (${communityID})`,
@@ -126,16 +126,18 @@ export class CommunityService {
     // Remove all groups
     if (community.groups) {
       for (const group of community.groups) {
-        await this.userGroupService.removeUserGroup(group.id);
+        await this.userGroupService.removeUserGroup({ ID: group.id });
       }
     }
 
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
+
         await this.applicationLifecycleMachineService.send(
           new RejectApplication(application.id)
         );
+
       }
     }
 
@@ -157,10 +159,16 @@ export class CommunityService {
     return community;
   }
 
-  async addMember(userID: number, communityID: number): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(communityID, {
-      relations: ['groups', 'parentCommunity'],
-    });
+  async assignMember(
+    membershipData: AssignCommunityMemberInput
+  ): Promise<IUserGroup> {
+    const community = await this.getCommunityOrFail(
+      membershipData.communityID,
+      {
+        relations: ['groups', 'parentCommunity'],
+      }
+    );
+    const userID = membershipData.userID;
 
     // If the parent community is set, then check if the user is also a member there
     if (community.parentCommunity) {
@@ -185,13 +193,20 @@ export class CommunityService {
     return membersGroup;
   }
 
-  async removeMember(userID: number, communityID: number): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(communityID, {
-      relations: ['groups'],
-    });
+  async removeMember(
+    membershipData: RemoveCommunityMemberInput
+  ): Promise<IUserGroup> {
+    const community = await this.getCommunityOrFail(
+      membershipData.communityID,
+      {
+        relations: ['groups'],
+      }
+    );
 
     // Try to find the user
-    const user = await this.userService.getUserByIdOrFail(userID);
+    const user = await this.userService.getUserByIdOrFail(
+      membershipData.userID
+    );
 
     // Get the members group
     const membersGroup = await this.getMembersGroupOrFail(community);
@@ -244,10 +259,9 @@ export class CommunityService {
   }
 
   async createApplication(
-    id: number,
-    applicationData: ApplicationInput
+    applicationData: CreateApplicationInput
   ): Promise<Application> {
-    const community = (await this.getCommunityOrFail(id, {
+    const community = (await this.getCommunityOrFail(applicationData.parentID, {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
 
@@ -341,6 +355,32 @@ export class CommunityService {
     const application = this.applicationLifecycleMachineService.send(
       new ApproveApplication(applicationId)
     );
+
+    if (application.status == ApplicationStatus.approved) {
+      throw new InvalidStateTransitionException(
+        'Application has already been approved!',
+        LogContext.COMMUNITY
+      );
+    } else if (application.status == ApplicationStatus.rejected) {
+      throw new InvalidStateTransitionException(
+        'Application has already been rejected!',
+        LogContext.COMMUNITY
+      );
+    }
+
+    if (!application.community)
+      throw new RelationshipNotFoundException(
+        `Unable to load community for application ${applicationId} `,
+        LogContext.COMMUNITY
+      );
+    await this.assignMember({
+      userID: application.user.id,
+      communityID: application.community?.id,
+    });
+
+    application.status = ApplicationStatus.approved;
+
+    await this.applicationService.save(application);
 
     return application;
   }

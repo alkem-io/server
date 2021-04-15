@@ -19,3 +19,13 @@ The technology stack is as follows:
 - authentication providers: via one or the support authentication providers (e.g. AAD)
 - Winston and Nest-Winston for logging
 - Elastic Cloud + Kibana for centralized log management
+
+## API Guidelines
+
+The api has a set of conventions / design guidelines that all extensions are required to follow:
+
+- Assign/Remove: for mutations that work on relations between two entities (e.g. User, UserGroup)
+- All mutations are required to take a single Input object
+- All Input objects are unique to a mutation i.e. they should not be re-used across mutations
+- For Update mutations, it is allowed to cascade updates to child entities only in the case where there is a one-one relationship. If the relationship is one-many (e.g. References on Context, Actors in ActorGroups) then the child entities should be modified by mutations acting directly on the child entity (e.g. Reference).
+- All mutations are required to have a description.

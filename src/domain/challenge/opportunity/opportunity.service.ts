@@ -1,15 +1,14 @@
-import { ActorGroupInput } from '@domain/context/actor-group/actor-group.dto';
+import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { AspectInput } from '@domain/context/aspect/aspect.dto';
+import { CreateAspectInput } from '@domain/context/aspect';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { ProjectInput } from '@domain/collaboration/project/project.dto';
+import { CreateProjectInput } from '@domain/collaboration/project';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { RelationInput } from '@domain/collaboration/relation/relation.dto';
+import { CreateRelationInput } from '@domain/collaboration/relation';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -23,16 +22,20 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { OpportunityInput } from './opportunity.dto.create';
-import { Opportunity } from './opportunity.entity';
-import { IOpportunity } from './opportunity.interface';
-import { Community, ICommunity } from '@domain/community/community';
+import {
+  Opportunity,
+  IOpportunity,
+  CreateOpportunityInput,
+  DeleteOpportunityInput,
+  UpdateOpportunityInput,
+} from '@domain/challenge/opportunity';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import { TagsetService } from '@domain/common/tagset';
 import validator from 'validator';
-import { UpdateOpportunityInput } from './opportunity.dto.update';
+
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -48,41 +51,25 @@ export class OpportunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async initialiseMembers(opportunity: IOpportunity): Promise<IOpportunity> {
-    if (!opportunity.projects) {
-      opportunity.projects = [];
-    }
-
-    if (!opportunity.relations) {
-      opportunity.relations = [];
-    }
-
-    if (!opportunity.actorGroups) {
-      opportunity.actorGroups = [];
-    }
-
-    if (!opportunity.aspects) {
-      opportunity.aspects = [];
-    }
-
+  async createOpportunity(
+    opportunityData: CreateOpportunityInput
+  ): Promise<IOpportunity> {
+    const opportunity: IOpportunity = Opportunity.create(opportunityData);
+    opportunity.projects = [];
+    opportunity.relations = [];
+    opportunity.actorGroups = [];
+    opportunity.aspects = [];
     if (!opportunity.context) {
-      opportunity.context = new Context();
+      opportunity.context = await this.contextService.createContext({});
     }
-
-    if (!opportunity.community) {
-      opportunity.community = new Community(
-        opportunity.name,
-        CommunityType.OPPORTUNITY,
-        [AuthorizationRoles.Members]
-      );
-    }
-
-    // Initialise contained objects
-    await this.contextService.initialiseMembers(opportunity.context);
-    await this.communityService.initialiseMembers(opportunity.community);
+    opportunity.community = await this.communityService.createCommunity(
+      opportunity.name,
+      CommunityType.OPPORTUNITY,
+      [AuthorizationRoles.Members]
+    );
     await this.createRestrictedActorGroups(opportunity);
 
-    return opportunity;
+    return await this.opportunityRepository.save(opportunity);
   }
 
   async getOpportunityOrFail(
@@ -201,39 +188,6 @@ export class OpportunityService {
     return opportunityLoaded.relations;
   }
 
-  async createOpportunity(
-    opportunityData: OpportunityInput
-  ): Promise<IOpportunity> {
-    await this.validateOpportunity(opportunityData);
-
-    const textID = opportunityData.textID;
-    opportunityData.textID = textID?.toLowerCase();
-
-    // reate and initialise a new Opportunity using the first returned array item
-    const opportunity = Opportunity.create(opportunityData);
-    await this.initialiseMembers(opportunity);
-    const savedOpp = await this.opportunityRepository.save(opportunity);
-
-    return savedOpp;
-  }
-
-  async validateOpportunity(opportunityData: OpportunityInput) {
-    // Verify that required textID field is present and that it has the right format
-    const textID = opportunityData.textID;
-    if (!textID || textID.length < 3)
-      throw new ValidationException(
-        `Required field textID not specified or long enough: ${textID}`,
-        LogContext.CHALLENGES
-      );
-    const expression = /^[a-zA-Z0-9.\-_]+$/;
-    const textIdCheck = expression.test(textID);
-    if (!textIdCheck)
-      throw new ValidationException(
-        `Required field textID provided not in the correct format: ${textID}`,
-        LogContext.CHALLENGES
-      ); // Ensure field is lower case
-  }
-
   async updateOpportunity(
     opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
@@ -260,7 +214,10 @@ export class OpportunityService {
     return opportunity;
   }
 
-  async removeOpportunity(opportunityID: number): Promise<boolean> {
+  async deleteOpportunity(
+    deleteData: DeleteOpportunityInput
+  ): Promise<IOpportunity> {
+    const opportunityID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['actorGroups', 'aspects', 'relations', 'community'],
@@ -269,19 +226,19 @@ export class OpportunityService {
     // First remove all groups
     if (opportunity.aspects) {
       for (const aspect of opportunity.aspects) {
-        await this.aspectService.removeAspect(aspect.id);
+        await this.aspectService.removeAspect({ ID: aspect.id });
       }
     }
 
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        await this.relationService.removeRelation(relation.id);
+        await this.relationService.deleteRelation({ ID: relation.id });
       }
     }
 
     if (opportunity.actorGroups) {
       for (const actorGroup of opportunity.actorGroups) {
-        await this.actorGroupService.removeActorGroup(actorGroup.id);
+        await this.actorGroupService.deleteActorGroup({ ID: actorGroup.id });
       }
     }
 
@@ -296,11 +253,17 @@ export class OpportunityService {
     }
 
     if (opportunity.tagset) {
-      await this.tagsetService.removeTagset(opportunity.tagset.id);
+      await this.tagsetService.removeTagset({ ID: opportunity.tagset.id });
     }
 
-    await this.opportunityRepository.remove(opportunity as Opportunity);
-    return true;
+    const { id } = opportunity;
+    const result = await this.opportunityRepository.remove(
+      opportunity as Opportunity
+    );
+    return {
+      ...result,
+      id,
+    };
   }
 
   async getChallengeID(opportunityID: number): Promise<number> {
@@ -326,7 +289,7 @@ export class OpportunityService {
       );
     }
     for (const name of opportunity.restrictedActorGroupNames) {
-      const actorGroupData = new ActorGroupInput();
+      const actorGroupData = new CreateActorGroupInput();
       actorGroupData.name = name;
       actorGroupData.description = 'Default actor group';
       const actorGroup = await this.actorGroupService.createActorGroup(
@@ -352,10 +315,9 @@ export class OpportunityService {
     return community;
   }
 
-  async createProject(
-    opportunityId: number,
-    projectData: ProjectInput
-  ): Promise<IProject> {
+  async createProject(projectData: CreateProjectInput): Promise<IProject> {
+    const opportunityId = projectData.parentID;
+
     this.logger.verbose?.(
       `Adding project to opportunity (${opportunityId})`,
       LogContext.CHALLENGES
@@ -365,9 +327,8 @@ export class OpportunityService {
 
     // Check that do not already have an Project with the same name
     const name = projectData.name;
-    const textID = projectData.textID.toLowerCase();
     const existingProject = opportunity.projects?.find(
-      project => project.name === name || project.textID === textID
+      project => project.name === name || project.textID === projectData.textID
     );
     if (existingProject)
       throw new ValidationException(
@@ -386,10 +347,8 @@ export class OpportunityService {
     return project;
   }
 
-  async createAspect(
-    opportunityID: number,
-    aspectData: AspectInput
-  ): Promise<IAspect> {
+  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
+    const opportunityID = aspectData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['aspects'],
     });
@@ -418,9 +377,9 @@ export class OpportunityService {
   }
 
   async createActorGroup(
-    opportunityId: number,
-    actorGroupData: ActorGroupInput
+    actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
+    const opportunityId = actorGroupData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['actorGroups'],
     });
@@ -449,10 +408,8 @@ export class OpportunityService {
     return actorGroup;
   }
 
-  async createRelation(
-    opportunityId: number,
-    relationData: RelationInput
-  ): Promise<IRelation> {
+  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
+    const opportunityId = relationData.parentID;
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['relations'],
     });

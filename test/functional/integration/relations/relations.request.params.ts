@@ -2,7 +2,7 @@ import { TestUser } from '../../../utils/token.helper';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
 
 export const createRelationMutation = async (
-  opportunityId: any,
+  opportunityId: string,
   relationType: string,
   relationDescription?: string,
   relationActorName?: string,
@@ -11,8 +11,8 @@ export const createRelationMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation CreateRelation($relationData: RelationInput!, $opportunityID: Float!) {
-      createRelation(relationData: $relationData, opportunityID: $opportunityID) {
+    query: `mutation CreateRelation($relationData: CreateRelationInput!) {
+      createRelation(relationData: $relationData) {
         id
         type
         description
@@ -22,8 +22,8 @@ export const createRelationMutation = async (
       }
     }`,
     variables: {
-      opportunityID: parseFloat(opportunityId),
       relationData: {
+        parentID: parseFloat(opportunityId),
         type: `${relationType}`,
         description: `${relationDescription}`,
         actorName: `${relationActorName}`,
@@ -74,11 +74,14 @@ export const updateRelationMutation = async (
 export const removeRelationMutation = async (relationId: any) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeRelation($ID: Float!) {
-      removeRelation(ID: $ID)
-    }`,
+    query: `mutation deleteRelation($deleteData: DeleteRelationInput!) {
+      deleteRelation(deleteData: $deleteData) {
+        id
+      }}`,
     variables: {
-      ID: parseFloat(relationId),
+      deleteData: {
+        ID: parseFloat(relationId),
+      },
     },
   };
 

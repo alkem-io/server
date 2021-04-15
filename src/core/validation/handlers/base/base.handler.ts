@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { ActorGroupInput } from '@domain/context/actor-group/actor-group.dto';
-import { AspectInput } from '@domain/context/aspect/aspect.dto';
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
-import { ContextInput } from '@domain/context/context/context.dto';
-import { EcoverseInput } from '@domain/challenge/ecoverse/ecoverse.dto';
-import { OrganisationInput } from '@domain/community/organisation/organisation.dto.create';
-import { ProfileInput } from '@domain/community/profile/profile.dto';
-import { ProjectInput } from '@domain/collaboration/project/project.dto';
-import { ReferenceInput } from '@domain/common/reference/reference.dto';
-import { RelationInput } from '@domain/collaboration/relation/relation.dto';
-import { TagsetInput } from '@domain/common/tagset/tagset.dto';
-import { UserInput } from '@domain/community/user/user.dto';
+import { CreateActorGroupInput } from '@domain/context/actor-group';
+import { CreateAspectInput } from '@domain/context/aspect';
+import { CreateChallengeInput } from '@domain/challenge/challenge';
+import { CreateContextInput } from '@domain/context/context';
+import { UpdateEcoverseInput } from '@domain/challenge/ecoverse';
+import { CreateOrganisationInput } from '@domain/community/organisation';
+import { CreateProfileInput } from '@domain/community/profile';
+import { CreateProjectInput } from '@domain/collaboration/project';
+import { CreateReferenceInput } from '@domain/common/reference';
+import { CreateRelationInput } from '@domain/collaboration/relation';
+import { CreateTagsetInput } from '@domain/common/tagset';
+import { CreateUserInput } from '@domain/community/user';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';
@@ -24,18 +24,18 @@ export class BaseHandler extends AbstractHandler {
     metatype: Function
   ): Promise<ValidationError[]> {
     const types: Function[] = [
-      ActorGroupInput,
-      AspectInput,
-      ChallengeInput,
-      ContextInput,
-      EcoverseInput,
-      OrganisationInput,
-      ProfileInput,
-      ProjectInput,
-      ReferenceInput,
-      RelationInput,
-      TagsetInput,
-      UserInput,
+      CreateActorGroupInput,
+      CreateAspectInput,
+      CreateChallengeInput,
+      CreateContextInput,
+      UpdateEcoverseInput,
+      CreateOrganisationInput,
+      CreateProfileInput,
+      CreateProjectInput,
+      CreateReferenceInput,
+      CreateRelationInput,
+      CreateTagsetInput,
+      CreateUserInput,
     ];
 
     if (types.includes(metatype)) {

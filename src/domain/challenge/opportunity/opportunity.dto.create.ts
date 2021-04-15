@@ -1,28 +1,25 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
-import { ContextInput } from '@domain/context/context/context.dto';
-import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@src/common/constants';
+import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import {
   IsUniqueTextId,
   TextIdType,
 } from '@src/core/validation/constraints/unique.text.id';
+import { CreateContextInput } from '@domain/context/context';
+import { TextID } from '@domain/common/scalars';
 
 @InputType()
-export class OpportunityInput {
-  @Field({ nullable: true })
-  @IsOptional()
+export class CreateOpportunityInput {
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
-  challengeID!: string;
+  parentID!: string;
 
-  @Field({ nullable: true })
-  @IsOptional()
+  @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
-  @Field({ nullable: true })
-  @IsUniqueTextId(TextIdType.challenge)
-  @IsOptional()
-  @MaxLength(TINY_TEXT_LENGTH)
+  @Field(() => TextID, { nullable: false })
+  @IsUniqueTextId(TextIdType.opportunity)
   textID!: string;
 
   @Field({ nullable: true })
@@ -30,11 +27,9 @@ export class OpportunityInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   state?: string;
 
-  @Field(() => ContextInput, { nullable: true })
-  @IsOptional()
-  context?: ContextInput;
+  @Field(() => CreateContextInput, { nullable: true })
+  context?: CreateContextInput;
 
   @Field(() => [String], { nullable: true })
-  @IsOptional()
   tags?: string[];
 }

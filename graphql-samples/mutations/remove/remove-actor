@@ -1,8 +1,0 @@
-mutation removeActor($ID: Float!) {
-  removeActor(ID: $ID)
-}
-
-Variables:
-{
-  "ID": 7
-}
