@@ -34,7 +34,10 @@ export class ApplicationLifecycleMachineService {
         const userID = application.user.id as number;
         const communityID = application.community?.id as number;
 
-        await this.communityService.addMember(userID, communityID);
+        await this.communityService.assignMember({
+          userID: userID,
+          communityID: communityID,
+        });
       },
     },
   };

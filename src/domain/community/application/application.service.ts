@@ -17,14 +17,11 @@ import { NVPService } from '@domain/common/nvp/nvp.service';
 export class ApplicationService {
   constructor(
     @InjectRepository(Application)
-
-    private applicationReposity: Repository<Application>,
-
+    private applicationRepository: Repository<Application>,
     private applicationFactoryService: ApplicationFactoryService,
     private nvpService: NVPService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
 
   async createApplication(
     applicationData: CreateApplicationInput
@@ -75,7 +72,6 @@ export class ApplicationService {
   }
 
   async save(application: Application): Promise<Application> {
-    return await this.applicationReposity.save(application);
-
+    return await this.applicationRepository.save(application);
   }
 }

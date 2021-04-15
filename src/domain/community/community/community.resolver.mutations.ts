@@ -73,13 +73,10 @@ export class CommunityResolverMutations {
     return await this.communityService.createApplication(applicationData);
   }
 
-  @Mutation(() => String, {
-    description: 'Update the application state',
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
     description: 'Approve a User Application to join this Community.',
-
   })
   async updateApplicationState(
     @Args('lifecycleID') applicationID: number,
@@ -98,7 +95,6 @@ export class CommunityResolverMutations {
   @Mutation(() => Application, {
     description: 'Removes the specified User Application.',
   })
-  //@Profiling.api
   async deleteUserApplication(
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<Application> {

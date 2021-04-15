@@ -1,9 +1,5 @@
-import { ApplicationInput } from '@domain/community/application/application.dto';
 import { CreateApplicationInput } from '@domain/community/application';
-import {
-  Application,
-  ApplicationStatus,
-} from '@domain/community/application/application.entity';
+import { Application } from '@domain/community/application/application.entity';
 import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -133,11 +129,9 @@ export class CommunityService {
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-
         await this.applicationLifecycleMachineService.send(
           new RejectApplication(application.id)
         );
-
       }
     }
 
@@ -356,31 +350,31 @@ export class CommunityService {
       new ApproveApplication(applicationId)
     );
 
-    if (application.status == ApplicationStatus.approved) {
-      throw new InvalidStateTransitionException(
-        'Application has already been approved!',
-        LogContext.COMMUNITY
-      );
-    } else if (application.status == ApplicationStatus.rejected) {
-      throw new InvalidStateTransitionException(
-        'Application has already been rejected!',
-        LogContext.COMMUNITY
-      );
-    }
+    // if (application.status == ApplicationStatus.approved) {
+    //   throw new InvalidStateTransitionException(
+    //     'Application has already been approved!',
+    //     LogContext.COMMUNITY
+    //   );
+    // } else if (application.status == ApplicationStatus.rejected) {
+    //   throw new InvalidStateTransitionException(
+    //     'Application has already been rejected!',
+    //     LogContext.COMMUNITY
+    //   );
+    // }
 
-    if (!application.community)
-      throw new RelationshipNotFoundException(
-        `Unable to load community for application ${applicationId} `,
-        LogContext.COMMUNITY
-      );
-    await this.assignMember({
-      userID: application.user.id,
-      communityID: application.community?.id,
-    });
+    // if (!application.community)
+    //   throw new RelationshipNotFoundException(
+    //     `Unable to load community for application ${applicationId} `,
+    //     LogContext.COMMUNITY
+    //   );
+    // await this.assignMember({
+    //   userID: application.user.id,
+    //   communityID: application.community?.id,
+    // });
 
-    application.status = ApplicationStatus.approved;
+    // application.status = ApplicationStatus.approved;
 
-    await this.applicationService.save(application);
+    // await this.applicationService.save(application);
 
     return application;
   }
