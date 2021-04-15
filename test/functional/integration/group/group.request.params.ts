@@ -130,8 +130,8 @@ export const getGroup = async (groupId: string) => {
 export const removeUserGroupMutation = async (groupId: any) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeUserGroup($deleteData: RemoveEntityInput!) {
-      removeUserGroup(deleteData: $deleteData) {
+    query: `mutation deleteUserGroup($deleteData: DeleteUserGroupInput!) {
+      deleteUserGroup(deleteData: $deleteData) {
         id
       }}`,
     variables: {

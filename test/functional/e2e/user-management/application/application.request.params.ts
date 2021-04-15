@@ -37,8 +37,8 @@ export const createApplicationMutation = async (
 export const removeApplicationMutation = async (appId: any) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeUserApplication($removeData: RemoveEntityInput!) {
-      removeUserApplication(removeData: $removeData) {
+    query: `mutation deleteUserApplication($deleteData: DeleteApplicationInput!) {
+      deleteUserApplication(deleteData: $deleteData) {
           questions {
             id
             name
@@ -48,7 +48,7 @@ export const removeApplicationMutation = async (appId: any) => {
             id
           }}}`,
     variables: {
-      removeData: {
+      deleteData: {
         ID: parseFloat(appId),
       },
     },

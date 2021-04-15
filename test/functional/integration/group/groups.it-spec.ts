@@ -116,7 +116,7 @@ describe('Groups - groups on community', () => {
     const groupsData = await getGroups();
 
     // Assert
-    expect(response.body.data.removeUserGroup.id).toEqual(communityGroupId);
+    expect(response.body.data.deleteUserGroup.id).toEqual(communityGroupId);
 
     expect(groupsData.body.data.ecoverse.groups).not.toContainObject({
       id: `${communityGroupId}`,

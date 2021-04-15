@@ -88,8 +88,8 @@ export const updateAspectMutation = async (
 export const removeAspectMutation = async (aspectId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeAspect($deleteData: RemoveEntityInput!) {
-      removeAspect(deleteData: $deleteData) {
+    query: `mutation deleteAspect($deleteData: DeleteAspectInput!) {
+      deleteAspect(deleteData: $deleteData) {
         id
       }}`,
     variables: {

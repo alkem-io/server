@@ -20,7 +20,6 @@ let opportunityName = '';
 let opportunityTextId = '';
 let uniqueTextId = '';
 let challengeGroupId = '';
-let refId = '';
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
@@ -39,8 +38,6 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
   challengeGroupId =
     responseCreateChallenge.body.data.createChallenge.community.groups[0].id;
-  refId =
-    responseCreateChallenge.body.data.createChallenge.context.references[0].id;
 });
 
 beforeAll(async () => {
@@ -59,14 +56,9 @@ describe('Flows challenge', () => {
       userIdOne,
       challengeGroupId
     );
-    console.log(responseAddUserToGroup.body);
 
     // Query focal point through challenge group
     const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
-    console.log(
-      responseChallengeGroupQuery.body.data.ecoverse.challenge.community
-        .groups[0]
-    );
     const groupFocalPointFromChallenge =
       responseChallengeGroupQuery.body.data.ecoverse.challenge.community
         .groups[0].focalPoint.name;
@@ -130,10 +122,7 @@ describe('Flows challenge', () => {
       'vision',
       'impact',
       'who',
-      'refName',
-      'refUri',
-      'tagsArray',
-      refId
+      'tagsArray'
     );
 
     // Assert

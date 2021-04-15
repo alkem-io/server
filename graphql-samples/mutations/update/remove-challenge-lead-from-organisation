@@ -1,0 +1,12 @@
+mutation removeChallengeLead($removeData: RemoveChallengeLeadInput!) {
+      removeChallengeLead(removeData: $removeData) {
+        id
+      }}
+
+Variables:
+{
+  "removeData": {
+    "organisationID": "1",
+    "challengeID": "1"
+  }
+}
