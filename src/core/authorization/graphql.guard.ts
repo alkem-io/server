@@ -39,6 +39,14 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     this._selfManagement = v;
   }
 
+  private _userID!: number;
+  public get userID(): number {
+    return this._userID;
+  }
+  public set userID(v: number) {
+    this._userID = v;
+  }
+
   private _email!: string;
   public get email(): string {
     return this._email;
@@ -65,6 +73,7 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     if (this.selfManagement) {
       const userData = ctx.getArgs().userData;
       this.email = userData.email;
+      this.userID = userData.ID;
     }
 
     // if (userData) email = userData.email;
@@ -89,13 +98,19 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     );
   }
 
-  handleRequest(err: any, user: any, info: any, _context: any, _status?: any) {
+  handleRequest(
+    err: any,
+    userInfo: any,
+    info: any,
+    _context: any,
+    _status?: any
+  ) {
     // Always handle the request if authentication is disabled
     if (
       this.configService.get<IServiceConfig>('service')
         ?.authenticationEnabled === 'false'
     ) {
-      return user;
+      return userInfo;
     }
 
     if (info === this.JWT_EXPIRED)
@@ -106,21 +121,26 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
 
     if (err) throw new AuthenticationException(err);
 
-    if (!user) {
+    if (!userInfo) {
       const msg = this.buildErrorMessage(err, info);
       throw new AuthenticationException(msg);
     }
 
-    if (
-      this.selfManagement &&
-      this.email.toLowerCase() === user.email.toLowerCase()
-    ) {
-      return user;
+    if (this.selfManagement) {
+      if (
+        this.email &&
+        this.email.toLowerCase() === userInfo.email.toLowerCase()
+      ) {
+        return userInfo;
+      }
+      if (this.userID && this.userID == userInfo.user.ID) {
+        return userInfo;
+      }
     }
 
-    if (this.matchRoles(user)) return user;
+    if (this.matchRoles(userInfo)) return userInfo;
     throw new ForbiddenException(
-      `User '${user.email}' is not authorised to access requested resources.`,
+      `User '${userInfo.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
   }
