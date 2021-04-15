@@ -161,11 +161,8 @@ describe('Create Challenge', () => {
           requestParamsCreateChallenge,
           TestUser.GLOBAL_ADMIN
         );
-        // const responseData = JSON.stringify(responseInvalidTextId.text).replace('', '\\');
-        console.log(responseInvalidTextId.text);
 
         // Assert
-        //expect(responseInvalidTextId.status).toBe(200);
         expect(responseInvalidTextId.text).toContain(expected);
       }
     );
