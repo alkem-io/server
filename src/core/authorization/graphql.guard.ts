@@ -39,20 +39,12 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     this._selfManagement = v;
   }
 
-  private _userID!: number;
-  public get userID(): number {
-    return this._userID;
+  private _mutationDTO!: any;
+  public get mutationDTO(): any {
+    return this._mutationDTO;
   }
-  public set userID(v: number) {
-    this._userID = v;
-  }
-
-  private _email!: string;
-  public get email(): string {
-    return this._email;
-  }
-  public set email(v: string) {
-    this._email = v;
+  public set mutationDTO(v: any) {
+    this._mutationDTO = v;
   }
 
   constructor(
@@ -71,9 +63,20 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       context.getHandler()
     );
     if (this.selfManagement) {
-      const userData = ctx.getArgs().userData;
-      this.email = userData.email;
-      this.userID = userData.ID;
+      // Store the incoming DTO
+      const args = ctx.getArgs();
+      // Mutations: createUser / updateUser
+      if (args.userData) this.mutationDTO = args.userData;
+      // Mutation: uploadAvatar
+      if (args.uploadData) this.mutationDTO = args.uploadData;
+      // Mutation: updateProfile
+      if (args.profileData) this.mutationDTO = args.profileData;
+      // Failsafe: if decorator SelfManagement was used then a DTO must have been set
+      if (!this.mutationDTO)
+        throw new ForbiddenException(
+          'User self-management not setup properly for requested access.',
+          LogContext.AUTH
+        );
     }
 
     // if (userData) email = userData.email;
@@ -113,7 +116,7 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       return userInfo;
     }
 
-    if (info === this.JWT_EXPIRED)
+    if (info && info[0] === this.JWT_EXPIRED)
       throw new TokenException(
         'Access token has expired!',
         CherrytwistErrorStatus.TOKEN_EXPIRED
@@ -127,13 +130,29 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     }
 
     if (this.selfManagement) {
+      // createUser mutation
       if (
-        this.email &&
-        this.email.toLowerCase() === userInfo.email.toLowerCase()
+        this.mutationDTO.email &&
+        this.mutationDTO.email.toLowerCase() === userInfo.email.toLowerCase()
       ) {
         return userInfo;
       }
-      if (this.userID && this.userID == userInfo.user.ID) {
+      // updateUser mutation
+      if (this.mutationDTO.ID && this.mutationDTO.ID == userInfo.user.ID) {
+        return userInfo;
+      }
+      // uploadAvatar mutation
+      if (
+        this.mutationDTO.profileID &&
+        this.mutationDTO.profileID == userInfo.user.profile.ID
+      ) {
+        return userInfo;
+      }
+      // updateProfile mutation
+      if (
+        this.mutationDTO.ID &&
+        this.mutationDTO.ID == userInfo.user.profile.ID
+      ) {
         return userInfo;
       }
     }
