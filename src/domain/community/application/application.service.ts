@@ -12,6 +12,9 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
+import { MachineOptions } from 'xstate';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { ApplicationEventInput } from './application.dto.event';
 
 @Injectable()
 export class ApplicationService {
@@ -19,6 +22,7 @@ export class ApplicationService {
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
     private applicationFactoryService: ApplicationFactoryService,
+    private lifecycleService: LifecycleService,
     private nvpService: NVPService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -82,4 +86,50 @@ export class ApplicationService {
     result.id = deleteData.ID;
     return result;
   }
+
+  async eventOnApplication(
+    applicationEventData: ApplicationEventInput
+  ): Promise<Application> {
+    const applicationID = applicationEventData.ID;
+    const application = await this.getApplicationOrFail(applicationID);
+
+    // Set any context needed
+
+    // Send the event, translated if needed
+    const lifecycle = await this.lifecycleService.event(
+      {
+        ID: application.lifecycle.id,
+        eventName: applicationEventData.eventName,
+      },
+      this.applicationLifecycleMachineOptions
+    );
+    this.logger.verbose?.(
+      `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${lifecycle.id}`,
+      LogContext.COMMUNITY
+    );
+
+    return await this.getApplicationOrFail(applicationID);
+  }
+
+  private applicationLifecycleMachineOptions: Partial<
+    MachineOptions<any, any>
+  > = {
+    actions: {
+      communityAddMember: async (_, event: any) => {
+        const application = await this.getApplicationOrFail(event.parentID, {
+          relations: ['community'],
+        });
+        const msg = `retrieved application ${application.id}`;
+        return msg;
+        //console.log(`retrieved application: ${application.id}`);
+        // const userID = application.user.id as number;
+        // const communityID = application.community?.id as number;
+
+        // await this.communityService.assignMember({
+        //   userID: userID,
+        //   communityID: communityID,
+        // });
+      },
+    },
+  };
 }

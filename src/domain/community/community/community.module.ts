@@ -2,7 +2,7 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApplicationModule } from '../application/application.module';
 import { Community } from './community.entity';
@@ -15,7 +15,7 @@ import { CommunityService } from './community.service';
     UserGroupModule,
     UserModule,
     ApplicationFactoryModule,
-    ApplicationModule,
+    forwardRef(() => ApplicationModule),
     LifecycleModule,
     TypeOrmModule.forFeature([Community]),
   ],

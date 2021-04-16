@@ -9,51 +9,24 @@ import { State, createMachine, interpret, MachineOptions } from 'xstate';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
-import { ApplicationService } from '@domain/community/application/application.service';
 import { LifecycleEventInput } from './lifecycle.dto.transition';
 
 @Injectable()
 export class LifecycleService {
   constructor(
     @InjectRepository(Lifecycle)
-    private lifecycleRepository: Repository<Lifecycle>,
-    private applicationService: ApplicationService
+    private lifecycleRepository: Repository<Lifecycle>
   ) {}
 
-  private applicationLifecycleMachineOptions: Partial<
-    MachineOptions<any, any>
-  > = {
-    actions: {
-      communityAddMember: async (_, event: any) => {
-        const application = await this.applicationService.getApplicationOrFail(
-          event.parentID,
-          {
-            relations: ['community'],
-          }
-        );
-        const msg = `retrieved application ${application.id}`;
-        return msg;
-        //console.log(`retrieved application: ${application.id}`);
-        // const userID = application.user.id as number;
-        // const communityID = application.community?.id as number;
-
-        // await this.communityService.assignMember({
-        //   userID: userID,
-        //   communityID: communityID,
-        // });
-      },
-    },
-  };
-
-  async event(lifecycleEventData: LifecycleEventInput): Promise<ILifecycle> {
+  async event(
+    lifecycleEventData: LifecycleEventInput,
+    options: Partial<MachineOptions<any, any>>
+  ): Promise<ILifecycle> {
     const lifecycle = await this.getLifecycleByIdOrFail(lifecycleEventData.ID);
     const eventName = lifecycleEventData.eventName;
     const machineDef = JSON.parse(lifecycle.machine);
 
-    const machine = createMachine(
-      machineDef,
-      this.applicationLifecycleMachineOptions
-    );
+    const machine = createMachine(machineDef, options);
     const machineWithContext = machine.withContext({
       ...machine.context,
     });
@@ -132,6 +105,11 @@ export class LifecycleService {
     machineDefJson.context.parentID = parentID;
     lifecycle.machine = JSON.stringify(machineDefJson);
     return await this.save(lifecycle as Lifecycle);
+  }
+
+  async getParentID(lifecycle: ILifecycle) {
+    const machineDefJson = JSON.parse(lifecycle.machine);
+    return machineDefJson.context.parentID;
   }
 
   async save(lifecycle: Lifecycle): Promise<Lifecycle> {

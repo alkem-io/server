@@ -4,12 +4,14 @@ import { Application } from '@domain/community/application/application.entity';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CommunityModule } from '../community/community.module';
 import { ApplicationFactoryModule } from './application.factory.module';
 
 @Module({
   imports: [
     ApplicationFactoryModule,
-    forwardRef(() => LifecycleModule),
+    forwardRef(() => CommunityModule),
+    LifecycleModule,
     NVPModule,
     TypeOrmModule.forFeature([Application]),
   ],
