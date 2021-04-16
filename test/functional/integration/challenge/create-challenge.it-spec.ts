@@ -134,13 +134,13 @@ describe('Create Challenge', () => {
   });
 
   // to be discussed
-  describe.skip('DDT invalid textId', () => {
+  describe('DDT invalid textId', () => {
     // Arrange
     test.each`
-      textId      | expected
-      ${''}       | ${'Required field textID not specified'}
-      ${'vvv,vv'} | ${'Required field textID provided not in the correct format: vvv,vv'}
-      ${'..-- '}  | ${'Required field textID provided not in the correct format: ..-- '}
+      textId       | expected
+      ${'d'}       | ${'Expected type \\"TextID\\". TextID type has a minimum length of 3: d'}
+      ${'vvv,vvd'} | ${'Expected type \\"TextID\\". TextID has characters that are not allowed: vvv,vvd'}
+      ${'..-- d'}  | ${'Expected type \\"TextID\\". TextID has characters that are not allowed: ..-- d'}
     `(
       'should throw error: "$expected" for textId value: "$textId"',
       async ({ textId, expected }) => {
@@ -163,7 +163,6 @@ describe('Create Challenge', () => {
         );
 
         // Assert
-        expect(responseInvalidTextId.status).toBe(200);
         expect(responseInvalidTextId.text).toContain(expected);
       }
     );

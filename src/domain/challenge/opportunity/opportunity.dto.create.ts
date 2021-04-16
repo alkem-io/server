@@ -19,7 +19,7 @@ export class CreateOpportunityInput {
   name!: string;
 
   @Field(() => TextID, { nullable: false })
-  @IsUniqueTextId(TextIdType.challenge)
+  @IsUniqueTextId(TextIdType.opportunity)
   textID!: string;
 
   @Field({ nullable: true })
