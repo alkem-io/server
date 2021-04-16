@@ -5,24 +5,55 @@ import {
 } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { State, createMachine, interpret } from 'xstate';
+import { State, createMachine, interpret, MachineOptions } from 'xstate';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
+import { ApplicationService } from '@domain/community/application/application.service';
+import { LifecycleEventInput } from './lifecycle.dto.transition';
 
 @Injectable()
 export class LifecycleService {
   constructor(
     @InjectRepository(Lifecycle)
-    private lifecycleRepository: Repository<Lifecycle>
+    private lifecycleRepository: Repository<Lifecycle>,
+    private applicationService: ApplicationService
   ) {}
 
-  async updateState(
-    lifecycle: ILifecycle,
-    event: string,
-    options: any
-  ): Promise<ILifecycle> {
-    const machine = createMachine(JSON.parse(lifecycle.machine), options);
+  private applicationLifecycleMachineOptions: Partial<
+    MachineOptions<any, any>
+  > = {
+    actions: {
+      communityAddMember: async (_, event: any) => {
+        const application = await this.applicationService.getApplicationOrFail(
+          event.parentID,
+          {
+            relations: ['community'],
+          }
+        );
+        const msg = `retrieved application ${application.id}`;
+        return msg;
+        //console.log(`retrieved application: ${application.id}`);
+        // const userID = application.user.id as number;
+        // const communityID = application.community?.id as number;
+
+        // await this.communityService.assignMember({
+        //   userID: userID,
+        //   communityID: communityID,
+        // });
+      },
+    },
+  };
+
+  async event(lifecycleEventData: LifecycleEventInput): Promise<ILifecycle> {
+    const lifecycle = await this.getLifecycleByIdOrFail(lifecycleEventData.ID);
+    const eventName = lifecycleEventData.eventName;
+    const machineDef = JSON.parse(lifecycle.machine);
+
+    const machine = createMachine(
+      machineDef,
+      this.applicationLifecycleMachineOptions
+    );
     const machineWithContext = machine.withContext({
       ...machine.context,
     });
@@ -33,18 +64,19 @@ export class LifecycleService {
       .nextEvents;
     if (
       !nextStates.find(name => {
-        return name === event;
+        return name === eventName;
       })
     ) {
       throw new InvalidStateTransitionException(
-        `Unable to update state: provided event (${event}) not in valid set of next events: ${nextStates}`,
+        `Unable to update state: provided event (${eventName}) not in valid set of next events: ${nextStates}`,
         LogContext.LIFECYCLE
       );
     }
 
     const machineService = interpret(machineWithContext).start(restoredState);
 
-    machineService.send(event);
+    // To do - pick or create the right event
+    machineService.send({ type: eventName, parentID: 2 });
 
     const newStateStr = JSON.stringify(machineService.state);
     lifecycle.state = newStateStr;

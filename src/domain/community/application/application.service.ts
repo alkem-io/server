@@ -74,4 +74,12 @@ export class ApplicationService {
   async save(application: Application): Promise<Application> {
     return await this.applicationRepository.save(application);
   }
+
+  async delete(deleteData: DeleteApplicationInput): Promise<Application> {
+    const applicationID = deleteData.ID;
+    const application = await this.getApplicationOrFail(applicationID);
+    const result = await this.applicationRepository.remove(application);
+    result.id = deleteData.ID;
+    return result;
+  }
 }

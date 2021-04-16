@@ -3,17 +3,12 @@ import { IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 
 @InputType()
-export class LifecycleTransitionInput {
+export class LifecycleEventInput {
   @Field({ nullable: false })
-  ID!: string;
+  ID!: number;
 
-  @Field({ nullable: true })
+  @Field({ nullable: false })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  state?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  targetState?: string;
+  eventName!: string;
 }

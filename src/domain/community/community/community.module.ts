@@ -5,7 +5,6 @@ import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApplicationModule } from '../application/application.module';
-import { ApplicationLifecycleModule } from '../application/state/application.lifecycle.module';
 import { Community } from './community.entity';
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
@@ -17,7 +16,6 @@ import { CommunityService } from './community.service';
     UserModule,
     ApplicationFactoryModule,
     ApplicationModule,
-    ApplicationLifecycleModule,
     LifecycleModule,
     TypeOrmModule.forFeature([Community]),
   ],

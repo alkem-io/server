@@ -1,0 +1,15 @@
+mutation updateLifecycle($lifecycleEventData: LifecycleEventInput!) {
+  updateLifecycle(lifecycleEventData: $lifecycleEventData) {
+    id
+    state
+  }
+}
+
+variables:
+{
+  "lifecycleEventData":
+  {
+    "ID": 2,
+  	"eventName": "APPROVE"
+  }
+}

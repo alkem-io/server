@@ -22,16 +22,12 @@ import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
 import { AuthorizationRoles } from '@core/authorization';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import {
-  ApproveApplication,
-  RejectApplication,
-} from '../application/state/application.lifecycle.events';
-import { ApplicationLifecycleMachineService } from '../application/state/application.lifecycle.service';
 import { CreateUserGroupInput } from '../user-group';
 import {
   AssignCommunityMemberInput,
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
+import { ApplicationService } from '../application/application.service';
 
 @Injectable()
 export class CommunityService {
@@ -39,8 +35,8 @@ export class CommunityService {
     private userService: UserService,
     private userGroupService: UserGroupService,
     private applicationFactoryService: ApplicationFactoryService,
+    private applicationService: ApplicationService,
     private lifecycleService: LifecycleService,
-    private applicationLifecycleMachineService: ApplicationLifecycleMachineService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -129,9 +125,12 @@ export class CommunityService {
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationLifecycleMachineService.send(
-          new RejectApplication(application.id)
-        );
+        await this.applicationService.delete({
+          ID: application.id,
+        });
+        // await this.applicationLifecycleMachineService.send(
+        //   new RejectApplication(application.id)
+        // );
       }
     }
 
@@ -346,8 +345,9 @@ export class CommunityService {
   }
 
   async approveApplication(applicationId: number) {
-    const application = this.applicationLifecycleMachineService.send(
-      new ApproveApplication(applicationId)
+    throw new InvalidStateTransitionException(
+      `something ${applicationId}`,
+      LogContext.COMMUNITY
     );
 
     // if (application.status == ApplicationStatus.approved) {
@@ -376,7 +376,7 @@ export class CommunityService {
 
     // await this.applicationService.save(application);
 
-    return application;
+    // return application;
   }
 
   // async updateApplicationState(

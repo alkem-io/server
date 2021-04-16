@@ -31,7 +31,6 @@ import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import { IpfsModule } from './services/ipfs/ipfs.module';
 import ipfsConfig from '@config/ipfs.config';
-import { ApplicationLifecycleModule } from '@domain/community/application/state/application.lifecycle.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 
 @Module({
@@ -66,7 +65,7 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
       useFactory: async (configService: ConfigService) => ({
         type: 'mysql',
         insecureAuth: true,
-        synchronize: false,
+        synchronize: true,
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         host: configService.get<IDatabaseConfig>('database')?.host,
@@ -98,7 +97,6 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
     SearchModule,
     KonfigModule,
     IpfsModule,
-    ApplicationLifecycleModule,
   ],
   controllers: [AppController],
   providers: [
