@@ -11,14 +11,13 @@ import {
   CreateApplicationInput,
   DeleteApplicationInput,
   Application,
+  IApplication,
 } from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '../application/application.service';
 import { AssignCommunityMemberInput } from '@domain/community/community';
 import { RemoveCommunityMemberInput } from './community.dto.remove.member';
-import { ApplicationEventInput } from '../application/application.dto.event';
-
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -70,7 +69,7 @@ export class CommunityResolverMutations {
   @Profiling.api
   async createApplication(
     @Args('applicationData') applicationData: CreateApplicationInput
-  ): Promise<Application> {
+  ): Promise<IApplication> {
     return await this.communityService.createApplication(applicationData);
   }
 
@@ -81,20 +80,7 @@ export class CommunityResolverMutations {
   })
   async deleteUserApplication(
     @Args('deleteData') deleteData: DeleteApplicationInput
-  ): Promise<Application> {
+  ): Promise<IApplication> {
     return await this.applicationService.deleteApplication(deleteData);
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Application, {
-    description: 'Trigger an event on the Application.',
-  })
-  async eventOnApplication(
-    @Args('applicationEventData') applicationEventData: ApplicationEventInput
-  ): Promise<Application> {
-    return await this.applicationService.eventOnApplication(
-      applicationEventData
-    );
   }
 }

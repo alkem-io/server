@@ -13,9 +13,9 @@ import {
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { ICommunity } from './community.interface';
-import { Application } from '@domain/community/application/application.entity';
+import { ICommunity } from '@domain/community/community';
 import { Challenge, Ecoverse, Opportunity } from '@domain/challenge';
+import { Application, IApplication } from '@domain/community/application';
 
 @Entity()
 @ObjectType()
@@ -59,7 +59,7 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
     application => application.community,
     { eager: true, cascade: true }
   )
-  applications?: Application[];
+  applications?: IApplication[];
 
   @OneToOne(
     () => Ecoverse,

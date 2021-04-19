@@ -18,6 +18,11 @@ export class LifecycleService {
     private lifecycleRepository: Repository<Lifecycle>
   ) {}
 
+  async createLifecycle(config: string): Promise<ILifecycle> {
+    const lifecycle = new Lifecycle(config);
+    return await this.lifecycleRepository.save(lifecycle);
+  }
+
   async event(
     lifecycleEventData: LifecycleEventInput,
     options: Partial<MachineOptions<any, any>>
@@ -48,8 +53,10 @@ export class LifecycleService {
 
     const machineService = interpret(machineWithContext).start(restoredState);
 
-    // To do - pick or create the right event
-    machineService.send({ type: eventName, parentID: 2 });
+    machineService.send({
+      type: eventName,
+      parentID: machineDef.context.parentID,
+    });
 
     const newStateStr = JSON.stringify(machineService.state);
     lifecycle.state = newStateStr;

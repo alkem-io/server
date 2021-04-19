@@ -33,14 +33,9 @@ export class Lifecycle extends BaseEntity {
   @Column('text', { nullable: true })
   machine: string;
 
-  // Stores the xstate actions type
-  @Column()
-  actionsType: string;
-
-  constructor(machine: any, actionsType: string) {
+  constructor(machine: any) {
     super();
     this.machine = machine;
     this.state = '';
-    this.actionsType = actionsType;
   }
 }

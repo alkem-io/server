@@ -1,5 +1,4 @@
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
-import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { forwardRef, Module } from '@nestjs/common';
@@ -9,14 +8,15 @@ import { Community } from './community.entity';
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
+import { CommunityLifecycleModule } from './lifecycle.options/community.lifecycle.module';
 
 @Module({
   imports: [
     UserGroupModule,
     UserModule,
-    ApplicationFactoryModule,
-    forwardRef(() => ApplicationModule),
+    ApplicationModule,
     LifecycleModule,
+    forwardRef(() => CommunityLifecycleModule),
     TypeOrmModule.forFeature([Community]),
   ],
   providers: [

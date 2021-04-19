@@ -1,9 +1,9 @@
 import { CreateApplicationInput } from '@domain/community/application';
 import {
   Application,
+  IApplication,
   DeleteApplicationInput,
 } from '@domain/community/application';
-import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
 
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,33 +12,40 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
-import { MachineOptions } from 'xstate';
+import { UserService } from '../user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { ApplicationEventInput } from './application.dto.event';
+import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
 
 @Injectable()
 export class ApplicationService {
   constructor(
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
-    private applicationFactoryService: ApplicationFactoryService,
     private lifecycleService: LifecycleService,
+    private userService: UserService,
     private nvpService: NVPService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createApplication(
     applicationData: CreateApplicationInput
-  ): Promise<Application> {
-    const application = await this.applicationFactoryService.createApplication(
-      applicationData
+  ): Promise<IApplication> {
+    const application: IApplication = Application.create(applicationData);
+    const user = await this.userService.getUserOrFail(
+      applicationData.userId.toString()
     );
+    application.user = user;
+
+    application.lifecycle = await this.lifecycleService.createLifecycle(
+      JSON.stringify(applicationLifecycleConfig)
+    );
+
     return await this.applicationRepository.save(application);
   }
 
   async deleteApplication(
     deleteData: DeleteApplicationInput
-  ): Promise<Application> {
+  ): Promise<IApplication> {
     const applicationID = deleteData.ID;
 
     const application = await this.getApplicationOrFail(applicationID);
@@ -62,7 +69,7 @@ export class ApplicationService {
   async getApplicationOrFail(
     applicationId: number,
     options?: FindOneOptions<Application>
-  ): Promise<Application> {
+  ): Promise<IApplication> {
     const application = await this.applicationRepository.findOne(
       { id: applicationId },
       options
@@ -79,57 +86,12 @@ export class ApplicationService {
     return await this.applicationRepository.save(application);
   }
 
-  async delete(deleteData: DeleteApplicationInput): Promise<Application> {
-    const applicationID = deleteData.ID;
-    const application = await this.getApplicationOrFail(applicationID);
-    const result = await this.applicationRepository.remove(application);
+  async delete(deleteData: DeleteApplicationInput): Promise<IApplication> {
+    const application = await this.getApplicationOrFail(deleteData.ID);
+    const result = await this.applicationRepository.remove(
+      application as Application
+    );
     result.id = deleteData.ID;
     return result;
   }
-
-  async eventOnApplication(
-    applicationEventData: ApplicationEventInput
-  ): Promise<Application> {
-    const applicationID = applicationEventData.ID;
-    const application = await this.getApplicationOrFail(applicationID);
-
-    // Set any context needed
-
-    // Send the event, translated if needed
-    const lifecycle = await this.lifecycleService.event(
-      {
-        ID: application.lifecycle.id,
-        eventName: applicationEventData.eventName,
-      },
-      this.applicationLifecycleMachineOptions
-    );
-    this.logger.verbose?.(
-      `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${lifecycle.id}`,
-      LogContext.COMMUNITY
-    );
-
-    return await this.getApplicationOrFail(applicationID);
-  }
-
-  private applicationLifecycleMachineOptions: Partial<
-    MachineOptions<any, any>
-  > = {
-    actions: {
-      communityAddMember: async (_, event: any) => {
-        const application = await this.getApplicationOrFail(event.parentID, {
-          relations: ['community'],
-        });
-        const msg = `retrieved application ${application.id}`;
-        return msg;
-        //console.log(`retrieved application: ${application.id}`);
-        // const userID = application.user.id as number;
-        // const communityID = application.community?.id as number;
-
-        // await this.communityService.assignMember({
-        //   userID: userID,
-        //   communityID: communityID,
-        // });
-      },
-    },
-  };
 }
