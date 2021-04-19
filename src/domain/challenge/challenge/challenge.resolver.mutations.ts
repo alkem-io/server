@@ -3,15 +3,22 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Challenge } from './challenge.entity';
-import { IChallenge } from './challenge.interface';
 import { ChallengeService } from './challenge.service';
-import { OpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Profiling } from '@src/common/decorators';
-import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
-import { UpdateChallengeInput } from './challenge.dto.update';
+import {
+  IOpportunity,
+  Opportunity,
+  CreateOpportunityInput,
+} from '@domain/challenge/opportunity';
+import {
+  UpdateChallengeInput,
+  IChallenge,
+  Challenge,
+  DeleteChallengeInput,
+} from '@domain/challenge/challenge';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { AssignChallengeLeadInput } from './challenge.dto.assign.lead';
+import { RemoveChallengeLeadInput } from './challenge.dto.remove.lead';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -22,12 +29,11 @@ export class ChallengeResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
-    description:
-      'Creates a new Opportunity for the challenge with the given id',
+    description: 'Creates a new Opportunity within the parent Challenge.',
   })
   @Profiling.api
   async createOpportunity(
-    @Args('opportunityData') opportunityData: OpportunityInput
+    @Args('opportunityData') opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     const opportunity = await this.challengeService.createOpportunity(
       opportunityData
@@ -38,8 +44,7 @@ export class ChallengeResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Challenge, {
-    description:
-      'Updates the specified Challenge with the provided data (merge)',
+    description: 'Updates the specified Challenge.',
   })
   @Profiling.api
   async updateChallenge(
@@ -53,44 +58,36 @@ export class ChallengeResolverMutations {
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
-    description: 'Removes the Challenge with the specified ID',
+  @Mutation(() => Challenge, {
+    description: 'Deletes the specified Challenge.',
   })
-  async removeChallenge(@Args('ID') challengeID: number): Promise<boolean> {
-    return await this.challengeService.removeChallenge(challengeID);
+  async deleteChallenge(
+    @Args('deleteData') deleteData: DeleteChallengeInput
+  ): Promise<IChallenge> {
+    return await this.challengeService.deleteChallenge(deleteData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Adds the specified organisation as a lead for the specified Community',
+  @Mutation(() => Challenge, {
+    description: 'Assigns an organisation as a lead for the Challenge.',
   })
   @Profiling.api
-  async addChallengeLead(
-    @Args('organisationID') organisationID: string,
-    @Args('challengeID') challengeID: string
-  ): Promise<boolean> {
-    return await this.challengeService.addChallengeLead(
-      challengeID,
-      organisationID
-    );
+  async assignChallengeLead(
+    @Args('assignInput') assignData: AssignChallengeLeadInput
+  ): Promise<IChallenge> {
+    return await this.challengeService.assignChallengeLead(assignData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean, {
-    description:
-      'Remove the specified organisation as a lead for the specified Challenge',
+  @Mutation(() => Challenge, {
+    description: 'Remove an organisation as a lead for the Challenge.',
   })
   @Profiling.api
   async removeChallengeLead(
-    @Args('organisationID') organisationID: string,
-    @Args('challengeID') chalengeID: string
-  ): Promise<boolean> {
-    return await this.challengeService.removeChallengeLead(
-      chalengeID,
-      organisationID
-    );
+    @Args('removeData') removeData: RemoveChallengeLeadInput
+  ): Promise<IChallenge> {
+    return await this.challengeService.removeChallengeLead(removeData);
   }
 }

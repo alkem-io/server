@@ -31,13 +31,15 @@ let uniqueTextId = '';
 let actorDataCreate = '';
 let actorData = async (): Promise<string> => {
   const getActor = await getActorData(opportunityId);
-  let response = getActor.body.data.ecoverse.opportunity.actorGroups[0].actors[0];
+  let response =
+    getActor.body.data.ecoverse.opportunity.actorGroups[0].actors[0];
   return response;
 };
 
 let actorsCountPerActorGroup = async (): Promise<number> => {
   const responseQuery = await getActorGroupsPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.ecoverse.opportunity.actorGroups[0].actors;
+  let response =
+    responseQuery.body.data.ecoverse.opportunity.actorGroups[0].actors;
   return response;
 };
 beforeEach(async () => {
@@ -77,8 +79,7 @@ beforeEach(async () => {
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunity
-      .id;
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
   // Create Actor Group
   const createActorGroupResponse = await createActorGroupMutation(
     opportunityId,
@@ -129,7 +130,7 @@ describe('Actors', () => {
     const removeActorResponse = await removeActorMutation(actorId);
 
     // Assert
-    expect(removeActorResponse.body.data.removeActor).toEqual(true);
+    expect(removeActorResponse.body.data.deleteActor.id).toEqual(actorId);
     expect(await actorsCountPerActorGroup()).toHaveLength(0);
   });
 

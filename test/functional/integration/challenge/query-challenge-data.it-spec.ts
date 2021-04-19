@@ -71,9 +71,9 @@ describe('Query Challenge data', () => {
     const responseQueryData = await getChallengeGroups(challengeId);
 
     // Assert
-    expect(responseQueryData.body.data.ecoverse.challenge.community.groups).toHaveLength(
-      1
-    );
+    expect(
+      responseQueryData.body.data.ecoverse.challenge.community.groups
+    ).toHaveLength(1);
     expect(
       responseQueryData.body.data.ecoverse.challenge.community.groups[0].name
     ).toEqual('members');
@@ -94,16 +94,18 @@ describe('Query Challenge data', () => {
     const responseQueryData = await getChallengeOpportunity(challengeId);
 
     // Assert
-    expect(responseQueryData.body.data.ecoverse.challenge.opportunities).toHaveLength(1);
-    expect(responseQueryData.body.data.ecoverse.challenge.opportunities[0].name).toEqual(
-      opportunityName
-    );
+    expect(
+      responseQueryData.body.data.ecoverse.challenge.opportunities
+    ).toHaveLength(1);
+    expect(
+      responseQueryData.body.data.ecoverse.challenge.opportunities[0].name
+    ).toEqual(opportunityName);
     expect(
       responseQueryData.body.data.ecoverse.challenge.opportunities[0].textID
     ).toEqual(opportunityTextId);
-    expect(responseQueryData.body.data.ecoverse.challenge.opportunities[0].id).toEqual(
-      opportunityId
-    );
+    expect(
+      responseQueryData.body.data.ecoverse.challenge.opportunities[0].id
+    ).toEqual(opportunityId);
   });
 
   test('should create opportunity and query the data', async () => {
@@ -142,8 +144,6 @@ describe('Query Challenge data', () => {
       'vision',
       'impact',
       'who',
-      refName,
-      refUri,
       tagsArray
     );
     const updatedChallenge = response.body.data.updateChallenge;
@@ -163,10 +163,12 @@ describe('Query Challenge data', () => {
     expect(getChallengeData.body.data.ecoverse.challenge.state).toEqual(
       challengeState + 'change'
     );
-    expect(getChallengeData.body.data.ecoverse.challenge.context.tagline).toEqual(
-      taglineText
+    expect(
+      getChallengeData.body.data.ecoverse.challenge.context.tagline
+    ).toEqual(taglineText);
+    expect(getChallengeData.body.data.ecoverse.challenge.tagset.tags).toEqual(
+      tagsArray
     );
-    expect(getChallengeData.body.data.ecoverse.challenge.tagset.tags).toEqual(tagsArray);
   });
 
   test('should add challange lead to organisation', async () => {
@@ -175,10 +177,9 @@ describe('Query Challenge data', () => {
       organisationIdService,
       challengeId
     );
-
     // Assert
     expect(response.status).toBe(200);
-    expect(response.body.data.addChallengeLead).toEqual(true);
+    expect(response.body.data.assignChallengeLead.id).toEqual(challengeId);
   });
 
   test('should add different challange leads to same organisation', async () => {
@@ -203,16 +204,16 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(responseFirstChallengeLead.status).toBe(200);
-    expect(responseFirstChallengeLead.body.data.addChallengeLead).toEqual(true);
+    expect(responseFirstChallengeLead.body.data.assignChallengeLead.id).toEqual(challengeId);
     expect(responseSecondhallengeLead.status).toBe(200);
-    expect(responseSecondhallengeLead.body.data.addChallengeLead).toEqual(true);
+    expect(responseSecondhallengeLead.body.data.assignChallengeLead.id).toEqual(secondChallengeId);
   });
 
   test('should add challange lead to 2 organisations', async () => {
     // Arrange
     const createOrganisationResponse = await createOrganisationMutation(
       organisationName,
-      uniqueTextId+'k'
+      uniqueTextId + 'k'
     );
     organisationId = createOrganisationResponse.body.data.createOrganisation.id;
 
@@ -229,9 +230,9 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(responseFirstOrganisation.status).toBe(200);
-    expect(responseFirstOrganisation.body.data.addChallengeLead).toEqual(true);
+    expect(responseFirstOrganisation.body.data.assignChallengeLead.id).toEqual(challengeId);
     expect(responseSecondOrganisation.status).toBe(200);
-    expect(responseSecondOrganisation.body.data.addChallengeLead).toEqual(true);
+    expect(responseSecondOrganisation.body.data.assignChallengeLead.id).toEqual(challengeId);
   });
 
   test('should throw error, when try to add the same challnge to organisation as a lead ', async () => {
@@ -248,7 +249,7 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(responseOne.status).toBe(200);
-    expect(responseOne.body.data.addChallengeLead).toEqual(true);
+    expect(responseOne.body.data.assignChallengeLead.id).toEqual(challengeId);
     expect(responseTwo.status).toBe(200);
     expect(responseTwo.text).toContain(
       `Community ${challengeId} already has an organisation with the provided organisation ID: ${organisationIdService}`
@@ -271,7 +272,7 @@ describe('Query Challenge data', () => {
     // Assert
     expect(responseAddCL.status).toBe(200);
     expect(responseRemoveCL.status).toBe(200);
-    expect(responseAddCL.body.data.addChallengeLead).toEqual(true);
-    expect(responseRemoveCL.body.data.removeChallengeLead).toEqual(true);
+    expect(responseAddCL.body.data.assignChallengeLead.id).toEqual(challengeId);
+    expect(responseRemoveCL.body.data.removeChallengeLead.id).toEqual(challengeId);
   });
 });

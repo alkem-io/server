@@ -1,63 +1,80 @@
 export const removeUserMutation = `
-mutation removeUser($userID: Float!) {
-    removeUser(userID: $userID)
-    {name}
-  }`;
+mutation deleteUser($deleteData: DeleteUserInput!) {
+  deleteUser(deleteData: $deleteData) {
+      id
+      name
+    }}`;
 
 export const removeUserVariables = (id: number) => `
 {
-    "userID": ${id}
-  }`;
+  "deleteData": {
+    "ID": ${id}
+  }
+}`;
 
 export const removeChallengeMutation = `
-mutation removeChallenge($ID: Float!) {
-    removeChallenge(ID: $ID)
-  }`;
+mutation deleteChallenge($deleteData: DeleteChallengeInput!) {
+  deleteChallenge(deleteData: $deleteData) {
+    id
+  }}`;
 
 export const removeChallengeVariables = (id: number) => `
 {
+  "deleteData": {
     "ID": ${id}
-  }`;
+  }
+}`;
 
 export const removeOpportunityMutation = `
-  mutation removeOpportunity($ID: Float!) {
-    removeOpportunity(ID: $ID)
-    }`;
+mutation deleteOpportunity($deleteData: DeleteOpportunityInput!) {
+  deleteOpportunity(deleteData: $deleteData) {
+    id
+  }}`;
 
 export const removeOpportunityVariables = (id: number) => `
-  {
-      "ID": ${id}
-    }`;
+{
+  "deleteData": {
+    "ID": ${id}
+  }
+}`;
 
 export const removeAspectMutation = `
-mutation removeAspect($ID: Float!) {
-    removeAspect(ID: $ID)
-  }`;
+mutation deleteAspect($deleteData: DeleteAspectInput!) {
+  deleteAspect(deleteData: $deleteData) {
+    id
+  }}`;
 
 export const removeAspectVariables = (id: number) => `
-  {
+{
+  "deleteData": {
     "ID": ${id}
-  }`;
+  }
+}`;
 
 export const removeActorMutation = `
-mutation removeActor($ID: Float!) {
-    removeActor(ID: $ID)
-  }`;
+mutation deleteActor($deleteData: DeleteActorInput!) {
+  deleteActor(deleteData: $deleteData)
+  {id}}`;
 
 export const removeActorVariables = (id: number) => `
 {
+  "deleteData": {
     "ID": ${id}
-  }`;
+  }
+}`;
 
 export const removeActorGroupMutation = `
-mutation removeActorGroup($ID: Float!) {
-    removeActorGroup(ID: $ID)
-  }`;
+mutation deleteActorGroup($deleteData: DeleteActorGroupInput!) {
+  deleteActorGroup(deleteData: $deleteData) {
+    id
+  }}`;
 
 export const removeActorGroupVariables = (id: number) => `
-  {
-      "ID": ${id}
-    }`;
+{
+  "deleteData": {
+    "ID": ${id}
+  }
+}`;
 
 const mutations: Record<string, string> = {
   removeAspectMutation,

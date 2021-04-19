@@ -3,14 +3,14 @@ import { graphqlRequestAuth } from '../../../utils/graphql.request';
 import { TestUser } from '../../../utils/token.helper';
 
 export const createOpportunityOnChallengeMutation = async (
-  challengeId: any,
+  challengeId: string,
   oppName: string,
   oppTextId: string,
   contextTagline?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createOpportunity($opportunityData: OpportunityInput!) {
+    query: `mutation createOpportunity($opportunityData: CreateOpportunityInput!) {
       createOpportunity(opportunityData: $opportunityData) {
         id
         name
@@ -35,7 +35,7 @@ export const createOpportunityOnChallengeMutation = async (
     }`,
     variables: {
       opportunityData: {
-        challengeID: challengeId,
+        parentID: challengeId,
         name: oppName,
         textID: oppTextId,
         state: 'reserved',
@@ -97,11 +97,6 @@ export const updateOpportunityOnChallengeMutation = async (
           tagline: '1',
           who: '1',
           impact: '1',
-          references: {
-            name: 'test ref name',
-            uri: '1',
-            description: '1',
-          },
         },
       },
     },
@@ -135,14 +130,17 @@ export const addUserToOpportunityMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const removeOpportunityMutation = async (opportunityId: any) => {
+export const removeOpportunityMutation = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `mutation removeOpportunity($ID: Float!) {
-      removeOpportunity(ID: $ID)
-    }`,
+    query: `mutation deleteOpportunity($deleteData: DeleteOpportunityInput!) {
+      deleteOpportunity(deleteData: $deleteData) {
+        id
+      }}`,
     variables: {
-      ID: parseFloat(opportunityId),
+      deleteData: {
+        ID: parseFloat(opportunityId),
+      },
     },
   };
 

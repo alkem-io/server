@@ -1,16 +1,22 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
-import { Args, Float, Mutation } from '@nestjs/graphql';
+import { Args, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { CommunityService } from './community.service';
 import { Profiling } from '@src/common/decorators';
-import { Application } from '@domain/community/application/application.entity';
-import { ApplicationInput } from '@domain/community/application/application.dto';
+import {
+  CreateApplicationInput,
+  DeleteApplicationInput,
+  Application,
+} from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '../application/application.service';
+import { AssignCommunityMemberInput } from '@domain/community/community';
+import { RemoveCommunityMemberInput } from './community.dto.remove.member';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -22,70 +28,55 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description: 'Creates a new user group for the Community with the given id',
+    description: 'Creates a new User Group in the specified Community.',
   })
   @Profiling.api
   async createGroupOnCommunity(
-    @Args({ name: 'communityID', type: () => Float }) communityID: number,
-    @Args({ name: 'groupName', type: () => String }) groupName: string
+    @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.createGroup(
-      communityID,
-      groupName
-    );
-    return group;
+    return await this.communityService.createGroup(groupData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Adds the user with the given identifier as a member of the specified Community',
+    description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api
-  async addUserToCommunity(
-    @Args('userID') userID: number,
-    @Args('communityID') communityID: number
+  async assignUserToCommunity(
+    @Args('membershipData') membershipData: AssignCommunityMemberInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.addMember(userID, communityID);
-    return group;
+    return await this.communityService.assignMember(membershipData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => UserGroup, {
-    description:
-      'Removes the user with the given identifier as a member of the specified Community',
+    description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
   async removeUserFromCommunity(
-    @Args('userID') userID: number,
-    @Args('communityID') communityID: number
+    @Args('membershipData') membershipData: RemoveCommunityMemberInput
   ): Promise<IUserGroup> {
-    const group = await this.communityService.removeMember(userID, communityID);
-    return group;
+    return await this.communityService.removeMember(membershipData);
   }
 
   // All registered users can create applications
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Create application to join this Community',
+    description: 'Creates Application for a User to join this Community.',
   })
   @Profiling.api
   async createApplication(
-    @Args('communityID') communityID: number,
-    @Args('applicationData') applicationData: ApplicationInput
+    @Args('applicationData') applicationData: CreateApplicationInput
   ): Promise<Application> {
-    return await this.communityService.createApplication(
-      communityID,
-      applicationData
-    );
+    return await this.communityService.createApplication(applicationData);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Create application to join this ecoverse',
+    description: 'Approve a User Application to join this Community.',
   })
   @Profiling.api
   async approveApplication(
@@ -97,12 +88,12 @@ export class CommunityResolverMutations {
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Application, {
-    description: 'Removes user application with the specified applicationID',
+    description: 'Removes the specified User Application.',
   })
   //@Profiling.api
-  async removeUserApplication(
-    @Args('applicationID') applicationID: number
+  async deleteUserApplication(
+    @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<Application> {
-    return await this.applicationService.removeApplication(applicationID);
+    return await this.applicationService.deleteApplication(deleteData);
   }
 }

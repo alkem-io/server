@@ -1,13 +1,13 @@
-mutation updateActor($actorData: ActorInput!, $ID: Float!) {
-  updateActor(actorData: $actorData, ID: $ID) {
+mutation updateActor($actorData: UpdateActorInput!) {
+  updateActor(actorData: $actorData) {
     title
   }
 }
 
 Variables:
 {
-  "ID": 1,
   "actorData": {
+    "ID": 1,
     "name": "some description",
     "value": "http://someUri",
     "impact": "http://someUri",

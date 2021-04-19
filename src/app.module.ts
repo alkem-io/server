@@ -31,6 +31,7 @@ import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import { IpfsModule } from './services/ipfs/ipfs.module';
 import ipfsConfig from '@config/ipfs.config';
+import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import ipfsConfig from '@config/ipfs.config';
       sortSchema: true,
       context: ({ req }) => ({ req }),
     }),
+    ScalarsModule,
     AuthenticationModule,
     ApplicationFactoryModule,
     EcoverseModule,

@@ -7,7 +7,7 @@ export const createOrganisationMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation CreateOrganisation($organisationData: OrganisationInput!) {
+    query: `mutation CreateOrganisation($organisationData: CreateOrganisationInput!) {
       createOrganisation(organisationData: $organisationData) {
         id
         name,

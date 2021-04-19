@@ -49,7 +49,7 @@ export class UserGroupResolverFields {
   async focalPoint(
     @Parent() group: UserGroup
   ): Promise<User | null | undefined> {
-    const groupWithFocalPoint = await this.userGroupService.getUserGroupOrFail(
+    const groupWithFocalPoint = await this.userGroupService.getUserGroupByIdOrFail(
       group.id,
       {
         relations: ['focalPoint'],

@@ -1,9 +1,7 @@
-import { ChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { IChallenge, CreateChallengeInput } from '@domain/challenge/challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { Context } from '@domain/context/context/context.entity';
 import { ContextService } from '@domain/context/context/context.service';
-import { OrganisationInput } from '@domain/community/organisation/organisation.dto.create';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import {
   RestrictedTagsetNames,
@@ -22,13 +20,18 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EcoverseInput } from './ecoverse.dto';
-import { Ecoverse } from './ecoverse.entity';
-import { IEcoverse } from './ecoverse.interface';
-import { Community, ICommunity } from '@domain/community/community';
+import {
+  Ecoverse,
+  IEcoverse,
+  CreateEcoverseInput,
+  UpdateEcoverseInput,
+} from '@domain/challenge/ecoverse';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
+import { IOpportunity } from '@domain/challenge/opportunity';
+import validator from 'validator';
 
 @Injectable()
 export class EcoverseService {
@@ -43,9 +46,8 @@ export class EcoverseService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // Helper method to ensure all members that are arrays are initialised properly.
-  // Note: has to be a seprate call due to restrictions from ORM.
-  async initialiseMembers(ecoverse: IEcoverse): Promise<IEcoverse> {
+  async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
+    const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
     if (!ecoverse.challenges) {
       ecoverse.challenges = [];
     }
@@ -55,49 +57,56 @@ export class EcoverseService {
     }
 
     if (!ecoverse.tagset) {
-      ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
-      await this.tagsetService.initialiseMembers(ecoverse.tagset);
+      ecoverse.tagset = await this.tagsetService.createTagset({
+        name: RestrictedTagsetNames.Default,
+      });
     }
 
     if (!ecoverse.context) {
-      ecoverse.context = new Context();
-      await this.contextService.initialiseMembers(ecoverse.context);
+      ecoverse.context = await this.contextService.createContext({});
     }
 
-    if (!ecoverse.community) {
-      let communityName = ecoverse.name;
-      if (communityName.length == 0) communityName = 'Ecoverse';
-      ecoverse.community = new Community(
-        communityName,
-        CommunityType.ECOVERSE,
-        [
-          AuthorizationRoles.Members,
-          AuthorizationRoles.EcoverseAdmins,
-          AuthorizationRoles.GlobalAdmins,
-          AuthorizationRoles.CommunityAdmins,
-        ]
-      );
+    ecoverse.community = await this.communityService.createCommunity(
+      ecoverse.name,
+      CommunityType.ECOVERSE,
+      [
+        AuthorizationRoles.Members,
+        AuthorizationRoles.EcoverseAdmins,
+        AuthorizationRoles.GlobalAdmins,
+        AuthorizationRoles.CommunityAdmins,
+      ]
+    );
 
-      await this.communityService.initialiseMembers(ecoverse.community);
-      // Disable searching on the mandatory platform groups
-      ecoverse.community.groups?.forEach(
-        group => (group.includeInSearch = false)
-      );
-    }
+    // Disable searching on the mandatory platform groups
+    ecoverse.community.groups?.forEach(
+      group => (group.includeInSearch = false)
+    );
 
     if (!ecoverse.host) {
-      const organisationInput = new OrganisationInput();
-      organisationInput.name = 'Default host organisation';
-      organisationInput.textID = 'DefaultHostOrg';
-      ecoverse.host = await this.organisationService.createOrganisation(
-        organisationInput
-      );
+      ecoverse.host = await this.organisationService.createOrganisation({
+        name: 'Default host organisation',
+        textID: 'DefaultHostOrg',
+      });
     }
-
-    return ecoverse;
+    return await this.ecoverseRepository.save(ecoverse);
   }
 
   async getEcoverseOrFail(
+    ecoverseID: string,
+    options?: FindOneOptions<Ecoverse>
+  ): Promise<IEcoverse> {
+    if (validator.isNumeric(ecoverseID)) {
+      const idInt: number = parseInt(ecoverseID);
+      return await this.getEcoverseByIdOrFail(idInt, options);
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find Ecoverse with ID: ${ecoverseID}`,
+      LogContext.CHALLENGES
+    );
+  }
+
+  async getEcoverseByIdOrFail(
     ecoverseID: number,
     options?: FindOneOptions<Ecoverse>
   ): Promise<IEcoverse> {
@@ -113,37 +122,32 @@ export class EcoverseService {
     return ecoverse;
   }
 
-  async getDefaultEcoverseOrFail(
-    options?: FindOneOptions<Ecoverse>
-  ): Promise<IEcoverse> {
-    const ecoverseId = await this.getEcoverseId(); // todo - remove when can have multiple ecoverses
-    return await this.getEcoverseOrFail(ecoverseId, options);
+  async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {
+    const ecoverseWithChallenges = await this.getEcoverseByIdOrFail(
+      ecoverse.id,
+      {
+        relations: ['challenges'],
+      }
+    );
+    return ecoverseWithChallenges.challenges || [];
   }
 
-  async getEcoverseId(): Promise<number> {
-    const ecoverse = await this.ecoverseRepository
-      .createQueryBuilder('ecoverse')
-      .select('ecoverse.id')
-      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
-
-    if (!ecoverse) {
-      throw new ValidationException(
-        'Ecoverse is missing!',
-        LogContext.BOOTSTRAP
+  async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
+    const opportunities: IOpportunity[] = [];
+    const challenges = await this.getChallenges(ecoverse);
+    for (const challenge of challenges) {
+      const childOpportunities = await this.challengeService.getOpportunities(
+        challenge
+      );
+      childOpportunities.forEach(opportunity =>
+        opportunities.push(opportunity)
       );
     }
-    return ecoverse.id;
-  }
-
-  async getChallenges(ecoverseID: number): Promise<IChallenge[]> {
-    const ecoverse = await this.getEcoverseOrFail(ecoverseID, {
-      relations: ['challenges'],
-    });
-    return ecoverse.challenges || [];
+    return opportunities;
   }
 
   async getCommunity(ecoverseId: number): Promise<ICommunity> {
-    const ecoverse = await this.getEcoverseOrFail(ecoverseId, {
+    const ecoverse = await this.getEcoverseByIdOrFail(ecoverseId, {
       relations: ['community'],
     });
     const community = ecoverse.community;
@@ -155,8 +159,10 @@ export class EcoverseService {
     return community;
   }
 
-  async createChallenge(challengeData: ChallengeInput): Promise<IChallenge> {
-    const ecoverse = await this.getDefaultEcoverseOrFail({
+  async createChallenge(
+    challengeData: CreateChallengeInput
+  ): Promise<IChallenge> {
+    const ecoverse = await this.getEcoverseByIdOrFail(challengeData.parentID, {
       relations: ['challenges', 'community'],
     });
 
@@ -192,41 +198,37 @@ export class EcoverseService {
     return challenge;
   }
 
-  async addAdmin(user: IUser): Promise<boolean> {
+  async addEcoverseAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
+      ecoverse,
       user,
       AuthorizationRoles.EcoverseAdmins
     );
   }
 
-  async addGlobalAdmin(user: IUser): Promise<boolean> {
+  async addGlobalAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
+      ecoverse,
       user,
       AuthorizationRoles.GlobalAdmins
     );
   }
 
-  async addCommunityAdmin(user: IUser): Promise<boolean> {
+  async addCommunityAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
     return await this.addUserToRestrictedGroup(
+      ecoverse,
       user,
       AuthorizationRoles.CommunityAdmins
     );
   }
 
   async addUserToRestrictedGroup(
+    ecoverse: IEcoverse,
     user: IUser,
     groupName: string
   ): Promise<boolean> {
-    const ecoverse = await this.getDefaultEcoverseOrFail({
-      relations: ['community'],
-    });
-    const community = ecoverse.community;
-    if (!community) {
-      throw new RelationshipNotFoundException(
-        `Unable to load community for ecoverse  ${ecoverse.id}`,
-        LogContext.COMMUNITY
-      );
-    }
+    const community = await this.getCommunity(ecoverse.id);
+
     return await this.communityService.addUserToRestrictedGroup(
       community.id,
       user,
@@ -234,8 +236,8 @@ export class EcoverseService {
     );
   }
 
-  async update(ecoverseData: EcoverseInput): Promise<IEcoverse> {
-    const ecoverse = await this.getDefaultEcoverseOrFail();
+  async update(ecoverseData: UpdateEcoverseInput): Promise<IEcoverse> {
+    const ecoverse = await this.getEcoverseOrFail(ecoverseData.ID);
 
     // Copy over the received data
     if (ecoverseData.name) {
@@ -253,14 +255,14 @@ export class EcoverseService {
       if (!ecoverse.tagset) {
         ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
       }
-      await this.tagsetService.replaceTags(
-        ecoverse.tagset.id,
+      await this.tagsetService.replaceTagsOnEntity(
+        ecoverse as Ecoverse,
         ecoverseData.tags
       );
     }
 
     if (ecoverseData.hostID) {
-      const organisation = await this.organisationService.getOrganisationByIdOrFail(
+      const organisation = await this.organisationService.getOrganisationOrFail(
         ecoverseData.hostID
       );
       ecoverse.host = organisation;
@@ -269,5 +271,27 @@ export class EcoverseService {
     await this.ecoverseRepository.save(ecoverse);
 
     return ecoverse;
+  }
+
+  async getDefaultEcoverseOrFail(
+    options?: FindOneOptions<Ecoverse>
+  ): Promise<IEcoverse> {
+    const ecoverseId = await this.getDefaultEcoverseId(); // todo - remove when can have multiple ecoverses
+    return await this.getEcoverseByIdOrFail(ecoverseId, options);
+  }
+
+  async getDefaultEcoverseId(): Promise<number> {
+    const ecoverse = await this.ecoverseRepository
+      .createQueryBuilder('ecoverse')
+      .select('ecoverse.id')
+      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
+
+    if (!ecoverse) {
+      throw new ValidationException(
+        'Ecoverse is missing!',
+        LogContext.BOOTSTRAP
+      );
+    }
+    return ecoverse.id;
   }
 }

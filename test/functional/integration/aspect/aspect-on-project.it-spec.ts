@@ -26,13 +26,15 @@ let uniqueTextId = '';
 let aspectDataCreate = '';
 let aspectCountPerProject = async (): Promise<number> => {
   const responseQuery = await getAspectPerProject(opportunityId);
-  let response = responseQuery.body.data.ecoverse.opportunity.projects[0].aspects;
+  let response =
+    responseQuery.body.data.ecoverse.opportunity.projects[0].aspects;
   return response;
 };
 
 let aspectDataPerPerproject = async (): Promise<String> => {
   const responseQuery = await getAspectPerProject(opportunityId);
-  let response = responseQuery.body.data.ecoverse.opportunity.projects[0].aspects[0];
+  let response =
+    responseQuery.body.data.ecoverse.opportunity.projects[0].aspects[0];
   return response;
 };
 beforeEach(async () => {
@@ -159,6 +161,6 @@ describe('Aspect on Project', () => {
 
     // Assert
     expect(await aspectCountPerProject()).toHaveLength(0);
-    expect(responseRemoveAaspect.body.data.removeAspect).toEqual(true);
+    expect(responseRemoveAaspect.body.data.deleteAspect.id).toEqual(aspectId);
   });
 });

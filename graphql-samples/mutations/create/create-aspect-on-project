@@ -1,5 +1,5 @@
-mutation CreateAspectOnProject($aspectData: AspectInput!, $projectID: Float!) {
-  createAspectOnProject(aspectData: $aspectData, projectID: $projectID) {
+mutation CreateAspectOnProject($aspectData: CreateAspectInput!) {
+  createAspectOnProject(aspectData: $aspectData) {
     title,
     framing,
     explanation
@@ -9,9 +9,9 @@ mutation CreateAspectOnProject($aspectData: AspectInput!, $projectID: Float!) {
 
 query variables:
 {
-  "projectID": 1,
   "aspectData":
   {
+    "parentID": 1,
     "title": "TechStack2",
     "framing": "How do I handle scalability?",
     "explanation": "Deployment is via a microservices architecture"
