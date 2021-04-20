@@ -24,7 +24,7 @@ import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options
 export class CommunityResolverMutations {
   constructor(
     @Inject(CommunityService) private communityService: CommunityService,
-    @Inject(CommunityService)
+    @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService
   ) {}

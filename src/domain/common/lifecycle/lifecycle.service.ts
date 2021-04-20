@@ -3,19 +3,21 @@ import {
   EntityNotFoundException,
   InvalidStateTransitionException,
 } from '@common/exceptions';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { State, createMachine, interpret, MachineOptions } from 'xstate';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
 import { LifecycleEventInput } from './lifecycle.dto.transition';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class LifecycleService {
   constructor(
     @InjectRepository(Lifecycle)
-    private lifecycleRepository: Repository<Lifecycle>
+    private lifecycleRepository: Repository<Lifecycle>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createLifecycle(config: string): Promise<ILifecycle> {
@@ -52,11 +54,19 @@ export class LifecycleService {
     }
 
     const machineService = interpret(machineWithContext).start(restoredState);
+    const parentID = machineDef.context.parentID;
 
+    const startState = restoredState.value.toString();
     machineService.send({
       type: eventName,
-      parentID: machineDef.context.parentID,
+      parentID: parentID,
     });
+    this.logger.verbose?.(
+      `Lifecycle (id: ${
+        lifecycle.id
+      }) event '${eventName}: from state '${startState}' to state '${machineService.state.value.toString()}', parentID: ${parentID}`,
+      LogContext.LIFECYCLE
+    );
 
     const newStateStr = JSON.stringify(machineService.state);
     lifecycle.state = newStateStr;
