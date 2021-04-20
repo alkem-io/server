@@ -60,7 +60,6 @@ export class CommunityService {
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
-    // First find the Community
     const communityID = groupData.parentID;
     const groupName = groupData.name;
 
@@ -89,7 +88,7 @@ export class CommunityService {
       // Community already has groups loaded
       return community.groups;
     }
-    // Community is not populated wih
+
     return await this.userGroupService.getGroupsOnGroupable(community);
   }
 
@@ -128,9 +127,6 @@ export class CommunityService {
         await this.applicationService.delete({
           ID: application.id,
         });
-        // await this.applicationLifecycleMachineService.send(
-        //   new RejectApplication(application.id)
-        // );
       }
     }
 
@@ -346,12 +342,5 @@ export class CommunityService {
   ): Promise<boolean> {
     if (community.restrictedGroupNames.includes(groupName)) return true;
     return false;
-  }
-
-  async approveApplication(applicationId: number) {
-    throw new InvalidStateTransitionException(
-      `something ${applicationId}`,
-      LogContext.COMMUNITY
-    );
   }
 }

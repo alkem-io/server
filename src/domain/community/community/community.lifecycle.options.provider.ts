@@ -9,7 +9,7 @@ import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { CommunityService } from '../community.service';
+import { CommunityService } from './community.service';
 
 @Injectable()
 export class CommunityLifecycleOptionsProvider {
