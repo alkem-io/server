@@ -9,7 +9,7 @@ import { State, createMachine, interpret, MachineOptions } from 'xstate';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
-import { LifecycleEventInput } from './lifecycle.dto.transition';
+import { LifecycleEventInput } from './lifecycle.dto.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
@@ -31,7 +31,7 @@ export class LifecycleService {
   ): Promise<ILifecycle> {
     const lifecycle = await this.getLifecycleByIdOrFail(lifecycleEventData.ID);
     const eventName = lifecycleEventData.eventName;
-    const machineDef = JSON.parse(lifecycle.machine);
+    const machineDef = JSON.parse(lifecycle.machineDef);
 
     const machine = createMachine(machineDef, options);
     const machineWithContext = machine.withContext({
@@ -69,7 +69,7 @@ export class LifecycleService {
     );
 
     const newStateStr = JSON.stringify(machineService.state);
-    lifecycle.state = newStateStr;
+    lifecycle.machineState = newStateStr;
 
     machineService.stop();
     return await this.lifecycleRepository.save(lifecycle);
@@ -92,15 +92,15 @@ export class LifecycleService {
   }
 
   getRestoredStateDefinition(lifecycle: ILifecycle) {
-    const machineDef = JSON.parse(lifecycle.machine);
+    const machineDef = JSON.parse(lifecycle.machineDef);
     const machine = createMachine(machineDef);
-    let previousStateJson = machine.initialState;
 
-    const stateStr = lifecycle.state;
-    if (stateStr.length > 0) {
-      previousStateJson = JSON.parse(stateStr);
+    const stateStr = lifecycle.machineState;
+    if (!stateStr) {
+      // no state stored, return initial state
+      return machine.initialState;
     }
-    return previousStateJson;
+    return JSON.parse(stateStr);
   }
 
   getState(lifecycle: ILifecycle): string {
@@ -109,7 +109,7 @@ export class LifecycleService {
   }
 
   getNextEvents(lifecycle: ILifecycle): string[] {
-    const machineDef = JSON.parse(lifecycle.machine);
+    const machineDef = JSON.parse(lifecycle.machineDef);
     const machine = createMachine(machineDef);
     const restoredStateDefinition = this.getRestoredStateDefinition(lifecycle);
     const restoredState = machine.resolveState(restoredStateDefinition);
@@ -118,14 +118,14 @@ export class LifecycleService {
   }
 
   async storeParentID(lifecycle: ILifecycle, parentID: string) {
-    const machineDefJson = JSON.parse(lifecycle.machine);
+    const machineDefJson = JSON.parse(lifecycle.machineDef);
     machineDefJson.context.parentID = parentID;
-    lifecycle.machine = JSON.stringify(machineDefJson);
+    lifecycle.machineDef = JSON.stringify(machineDefJson);
     return await this.save(lifecycle as Lifecycle);
   }
 
   async getParentID(lifecycle: ILifecycle) {
-    const machineDefJson = JSON.parse(lifecycle.machine);
+    const machineDefJson = JSON.parse(lifecycle.machineDef);
     return machineDefJson.context.parentID;
   }
 

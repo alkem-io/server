@@ -35,16 +35,16 @@ export class CommunityLifecycleOptionsProvider {
       );
 
     // Send the event, translated if needed
-    const lifecycle = await this.lifecycleService.event(
+    this.logger.verbose?.(
+      `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${application.lifecycle.id}`,
+      LogContext.COMMUNITY
+    );
+    await this.lifecycleService.event(
       {
         ID: application.lifecycle.id,
         eventName: applicationEventData.eventName,
       },
       this.applicationLifecycleMachineOptions
-    );
-    this.logger.verbose?.(
-      `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${lifecycle.id}`,
-      LogContext.COMMUNITY
     );
 
     return await this.applicationService.getApplicationOrFail(applicationID);

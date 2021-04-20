@@ -1,5 +1,5 @@
 export interface ILifecycle {
   id: number;
-  state: string;
-  machine: string;
+  machineState?: string;
+  machineDef: string;
 }

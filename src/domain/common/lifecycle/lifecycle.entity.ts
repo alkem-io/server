@@ -27,15 +27,14 @@ export class Lifecycle extends BaseEntity {
 
   // Stores the xstate current state representation
   @Column('text', { nullable: true })
-  state: string;
+  machineState?: string;
 
   // Stores the xstate engine definition
   @Column('text', { nullable: true })
-  machine: string;
+  machineDef: string;
 
   constructor(machine: any) {
     super();
-    this.machine = machine;
-    this.state = '';
+    this.machineDef = machine;
   }
 }
