@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: ct-server
-          image: ctdev.azurecr.io/ct-server:latest
+          image: ct-server
           envFrom:
             - secretRef:
                 name: ct-secrets
