@@ -6,7 +6,9 @@ mutation createApplication($applicationData: CreateApplicationInput!) {
       name
       value
     }
-    status
+    lifecycle {
+      state
+    }
   }
 }
 

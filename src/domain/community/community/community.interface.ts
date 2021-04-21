@@ -1,12 +1,12 @@
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { Application } from '@domain/community/application/application.entity';
+import { IApplication } from '@domain/community/application';
+import { IUserGroup } from '@domain/community/user-group';
 
 export interface ICommunity {
   id: number;
   name: string;
   groups?: IUserGroup[];
   restrictedGroupNames: string[];
-  applications?: Application[];
+  applications?: IApplication[];
   parentCommunity?: ICommunity;
   type: string;
 }
