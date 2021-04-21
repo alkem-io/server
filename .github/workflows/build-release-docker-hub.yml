@@ -1,4 +1,4 @@
-name: Deploy Cherrytwist Server to DockerHub
+name: Deploy to DockerHub
 
 on:
   release:
