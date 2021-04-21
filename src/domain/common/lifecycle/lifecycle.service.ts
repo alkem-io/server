@@ -20,8 +20,15 @@ export class LifecycleService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createLifecycle(config: string): Promise<ILifecycle> {
-    const lifecycle = new Lifecycle(config);
+  async createLifecycle(
+    parentID: string,
+    machineConfig: any
+  ): Promise<ILifecycle> {
+    // Ensure parent is set
+    machineConfig.context.parentID = parentID;
+    const machineConfigStr = JSON.stringify(machineConfig);
+    const lifecycle = new Lifecycle(machineConfigStr);
+
     return await this.lifecycleRepository.save(lifecycle);
   }
 
@@ -108,6 +115,11 @@ export class LifecycleService {
     return State.create(restoredStateDef).value.toString();
   }
 
+  getTemplateIdentifier(lifecycle: ILifecycle): string {
+    const templateID = JSON.parse(lifecycle.machineDef).id;
+    return templateID;
+  }
+
   getNextEvents(lifecycle: ILifecycle): string[] {
     const machineDef = JSON.parse(lifecycle.machineDef);
     const machine = createMachine(machineDef);
@@ -117,12 +129,12 @@ export class LifecycleService {
     return next || [];
   }
 
-  async storeParentID(lifecycle: ILifecycle, parentID: string) {
-    const machineDefJson = JSON.parse(lifecycle.machineDef);
-    machineDefJson.context.parentID = parentID;
-    lifecycle.machineDef = JSON.stringify(machineDefJson);
-    return await this.save(lifecycle as Lifecycle);
-  }
+  // async storeParentID(lifecycle: ILifecycle, parentID: string) {
+  //   const machineDefJson = JSON.parse(lifecycle.machineDef);
+  //   machineDefJson.context.parentID = parentID;
+  //   lifecycle.machineDef = JSON.stringify(machineDefJson);
+  //   return await this.save(lifecycle as Lifecycle);
+  // }
 
   async getParentID(lifecycle: ILifecycle) {
     const machineDefJson = JSON.parse(lifecycle.machineDef);

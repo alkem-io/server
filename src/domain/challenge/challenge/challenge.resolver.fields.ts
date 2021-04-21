@@ -8,6 +8,7 @@ import { Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 import { Community } from '@domain/community/community';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -23,6 +24,15 @@ export class ChallengeResolverFields {
   async community(@Parent() challenge: Challenge) {
     const community = await this.challengeService.getCommunity(challenge.id);
     return community;
+  }
+
+  @ResolveField('lifecycle', () => Lifecycle, {
+    nullable: true,
+    description: 'The lifeycle for the Challenge.',
+  })
+  @Profiling.api
+  async lifecycle(@Parent() challenge: Challenge) {
+    return await this.challengeService.getLifecycle(challenge.id);
   }
 
   @ResolveField('opportunities', () => [Opportunity], {

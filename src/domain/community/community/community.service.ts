@@ -281,16 +281,6 @@ export class CommunityService {
     const application = await this.applicationService.createApplication(
       applicationData
     );
-    if (!application.lifecycle)
-      throw new EntityNotInitializedException(
-        `Lifecycle not initialized on Application: ${application.id}`,
-        LogContext.COMMUNITY
-      );
-    // store the application ID on the lifecycle context so it knows what to approve
-    await this.lifecycleService.storeParentID(
-      application.lifecycle,
-      application.id.toString()
-    );
     community.applications?.push(application);
     await this.communityRepository.save(community);
 

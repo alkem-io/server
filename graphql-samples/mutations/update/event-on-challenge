@@ -1,0 +1,18 @@
+mutation eventOnChallenge($challengeEventData: ChallengeLifecycleEventInput!) {
+  eventOnChallenge(challengeEventData: $challengeEventData) {
+    id
+    lifecycle {
+      state
+      nextEvents
+    }
+  }
+}
+
+variables:
+{
+  "challengeEventData":
+  {
+    "ID": 2,
+  	"eventName": "REFINE"
+  }
+}

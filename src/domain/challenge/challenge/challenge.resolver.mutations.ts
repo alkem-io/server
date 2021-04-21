@@ -15,15 +15,19 @@ import {
   IChallenge,
   Challenge,
   DeleteChallengeInput,
+  ChallengeLifecycleEventInput,
 } from '@domain/challenge/challenge';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { AssignChallengeLeadInput } from './challenge.dto.assign.lead';
 import { RemoveChallengeLeadInput } from './challenge.dto.remove.lead';
+import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 
 @Resolver()
 export class ChallengeResolverMutations {
   constructor(
-    @Inject(ChallengeService) private challengeService: ChallengeService
+    @Inject(ChallengeService) private challengeService: ChallengeService,
+    @Inject(ChallengeLifecycleOptionsProvider)
+    private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider
   ) {}
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
@@ -89,5 +93,19 @@ export class ChallengeResolverMutations {
     @Args('removeData') removeData: RemoveChallengeLeadInput
   ): Promise<IChallenge> {
     return await this.challengeService.removeChallengeLead(removeData);
+  }
+
+  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.GlobalAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Challenge, {
+    description: 'Trigger an event on the Challenge.',
+  })
+  async eventOnChallenge(
+    @Args('challengeEventData')
+    challengeEventData: ChallengeLifecycleEventInput
+  ): Promise<IChallenge> {
+    return await this.challengeLifecycleOptionsProvider.eventOnChallenge(
+      challengeEventData
+    );
   }
 }

@@ -25,4 +25,13 @@ export class LifecycleResolverFields {
   async nextEvents(@Parent() lifecycle: Lifecycle) {
     return await this.lifecycleService.getNextEvents(lifecycle);
   }
+
+  @ResolveField('template', () => String, {
+    nullable: true,
+    description: 'The lifecycle template identifier.',
+  })
+  @Profiling.api
+  async template(@Parent() lifecycle: Lifecycle) {
+    return await this.lifecycleService.getTemplateIdentifier(lifecycle);
+  }
 }

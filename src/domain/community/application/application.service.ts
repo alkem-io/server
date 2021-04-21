@@ -37,7 +37,8 @@ export class ApplicationService {
     application.user = user;
 
     application.lifecycle = await this.lifecycleService.createLifecycle(
-      JSON.stringify(applicationLifecycleConfig)
+      application.id.toString(),
+      applicationLifecycleConfig
     );
 
     return await this.applicationRepository.save(application);

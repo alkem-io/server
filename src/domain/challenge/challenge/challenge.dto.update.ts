@@ -13,11 +13,6 @@ export class UpdateChallengeInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  state?: string;
-
   @Field(() => UpdateContextInput, { nullable: true })
   @IsOptional()
   context?: UpdateContextInput;

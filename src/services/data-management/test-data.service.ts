@@ -100,7 +100,6 @@ export class TestDataService {
     const challenge = new CreateChallengeInput();
     challenge.parentID = 1;
     challenge.name = `${this.challengeName}`;
-    challenge.state = 'init challenge state';
     challenge.textID = `${this.uniqueTextId}`;
     challenge.context = {
       background: 'test challenge background',
@@ -125,7 +124,6 @@ export class TestDataService {
     const response = await this.ecoverseService.createChallenge({
       parentID: 1,
       name: 'Remove-challenge',
-      state: 'state',
       textID: 'remove-chall',
       tags: ['test1', 'test2'],
     });
