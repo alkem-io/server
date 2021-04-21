@@ -9,5 +9,6 @@ export enum LogContext {
   SEARCH = 'search',
   OPPORTUNITY = 'opportunity',
   IPFS = 'ipfs',
+  LIFECYCLE = 'lifecycle',
   UNSPECIFIED = 'not_specified',
 }

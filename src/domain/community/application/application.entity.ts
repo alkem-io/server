@@ -1,34 +1,27 @@
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { User } from '@domain/community/user/user.entity';
-import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
-  Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
 import { Question } from '@domain/community/application';
 import { Community } from '../community';
-
-export enum ApplicationStatus {
-  new,
-  approved,
-  rejected,
-}
-
-registerEnumType(ApplicationStatus, {
-  name: 'ApplicationStatus',
-});
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
+import { IApplication } from './application.interface';
 
 @Entity()
 @ObjectType()
-export class Application extends BaseEntity {
+export class Application extends BaseEntity implements IApplication {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -42,14 +35,15 @@ export class Application extends BaseEntity {
   @VersionColumn()
   version?: number;
 
-  @Field(() => ApplicationStatus, { nullable: false })
-  @Column()
-  status!: ApplicationStatus;
+  @Field(() => Lifecycle, { nullable: false })
+  @OneToOne(() => Lifecycle, { eager: true, cascade: true })
+  @JoinColumn()
+  lifecycle!: Lifecycle;
 
   @Field(() => User)
   @ManyToOne(
     () => User,
-    user => user.focalPoints,
+    user => user.applications,
     { eager: true, cascade: true }
   )
   user!: User;
