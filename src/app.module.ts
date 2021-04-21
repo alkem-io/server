@@ -86,6 +86,7 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
       fieldResolverEnhancers: ['guards'],
       sortSchema: true,
       context: ({ req }) => ({ req }),
+      installSubscriptionHandlers: true,
     }),
     ScalarsModule,
     AuthenticationModule,

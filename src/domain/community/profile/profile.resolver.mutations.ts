@@ -12,15 +12,17 @@ import {
 } from '@domain/community/profile';
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Resolver, Subscription } from '@nestjs/graphql';
 import { Profiling, SelfManagement } from '@src/common/decorators';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
+import { PubSub } from 'apollo-server-express';
 
 @Resolver()
 export class ProfileResolverMutations {
+  pubSub = new PubSub();
   constructor(private profileService: ProfileService) {}
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -70,11 +72,18 @@ export class ProfileResolverMutations {
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IProfile> {
     const readStream = createReadStream();
-    return await this.profileService.uploadAvatar(
+    const updatedProfile = await this.profileService.uploadAvatar(
       readStream,
       filename,
       mimetype,
       uploadData
     );
+    this.pubSub.publish('avatarUploaded', { avatarUploaded: updatedProfile });
+    return updatedProfile;
+  }
+
+  @Subscription(() => Profile)
+  avatarUploaded() {
+    return this.pubSub.asyncIterator('avatarUploaded');
   }
 }
