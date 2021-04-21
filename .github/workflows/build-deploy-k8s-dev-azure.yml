@@ -43,7 +43,7 @@ jobs:
       - uses: Azure/k8s-deploy@v1
         with:
           manifests: |
-            manifests/25-server-deployment.yaml
+            manifests/25-server-deployment-dev.yaml
             manifests/30-server-service.yaml
           images: |
             ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }}
