@@ -10,6 +10,7 @@ import { Profiling } from '@src/common/decorators';
 import { Opportunity } from './opportunity.entity';
 import { OpportunityService } from './opportunity.service';
 import { Community } from '@domain/community/community';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
@@ -27,6 +28,15 @@ export class OpportunityResolverFields {
       opportunity.id
     );
     return community;
+  }
+
+  @ResolveField('lifecycle', () => Lifecycle, {
+    nullable: true,
+    description: 'The lifeycle for the Challenge.',
+  })
+  @Profiling.api
+  async lifecycle(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.getLifecycle(opportunity.id);
   }
 
   @ResolveField('actorGroups', () => [ActorGroup], {

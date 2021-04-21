@@ -23,6 +23,7 @@ import { IOpportunity } from './opportunity.interface';
 import { Community } from '@domain/community/community';
 import { ICommunityable } from '@interfaces/communityable.interface';
 import { Tagset } from '@domain/common/tagset';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 
 @Entity()
 @ObjectType()
@@ -55,14 +56,9 @@ export class Opportunity extends BaseEntity
   @Column()
   textID: string;
 
-  // Other
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The maturity phase of the Opportunity i.e. new, being refined, ongoing etc',
-  })
-  @Column()
-  state: string;
+  @OneToOne(() => Lifecycle, { eager: false, cascade: true })
+  @JoinColumn()
+  lifecycle!: Lifecycle;
 
   @Field(() => Context, {
     nullable: true,
@@ -72,10 +68,6 @@ export class Opportunity extends BaseEntity
   @JoinColumn()
   context?: Context;
 
-  @Field(() => Community, {
-    nullable: true,
-    description: 'The community for the opportunity',
-  })
   @OneToOne(
     () => Community,
     community => community.opportunity,
@@ -142,7 +134,6 @@ export class Opportunity extends BaseEntity
     super();
     this.name = name;
     this.textID = textID;
-    this.state = '';
     this.restrictedActorGroupNames = [];
   }
 }

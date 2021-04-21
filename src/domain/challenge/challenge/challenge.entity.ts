@@ -65,10 +65,6 @@ export class Challenge extends BaseEntity
   @JoinColumn()
   context?: Context;
 
-  @Field(() => Community, {
-    nullable: true,
-    description: 'The community for the challenge',
-  })
   @OneToOne(
     () => Community,
     community => community.challenge,
@@ -89,7 +85,6 @@ export class Challenge extends BaseEntity
   @JoinTable({ name: 'challenge_lead' })
   leadOrganisations?: Organisation[];
 
-  @Field(() => Lifecycle, { nullable: false })
   @OneToOne(() => Lifecycle, { eager: false, cascade: true })
   @JoinColumn()
   lifecycle!: Lifecycle;

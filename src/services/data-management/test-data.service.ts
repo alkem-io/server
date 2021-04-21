@@ -134,7 +134,6 @@ export class TestDataService {
     const opportunity = new CreateOpportunityInput();
     opportunity.parentID = `${challengeId}`;
     opportunity.name = 'init opportunity name';
-    opportunity.state = 'init opportunity state';
     opportunity.textID = 'init-opport';
     opportunity.context = {
       background: 'test opportunity background',
@@ -158,7 +157,6 @@ export class TestDataService {
     const opportunity = new CreateOpportunityInput();
     opportunity.parentID = `${challengeId}`;
     opportunity.name = 'init remove opportunity name';
-    opportunity.state = 'init opportunity state';
     opportunity.textID = 'remove-opport';
     const response = await this.challengeService.createOpportunity(opportunity);
     return response.id;
