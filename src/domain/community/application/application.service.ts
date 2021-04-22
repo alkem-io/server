@@ -36,6 +36,9 @@ export class ApplicationService {
     );
     application.user = user;
 
+    // save the user to get the id assigned
+    await this.applicationRepository.save(application);
+
     application.lifecycle = await this.lifecycleService.createLifecycle(
       application.id.toString(),
       applicationLifecycleConfig
