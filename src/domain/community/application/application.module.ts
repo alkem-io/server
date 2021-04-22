@@ -1,14 +1,16 @@
+import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { NVPModule } from '@domain/common/nvp/nvp.module';
 import { Application } from '@domain/community/application/application.entity';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ApplicationFactoryModule } from './application.factory.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
-    ApplicationFactoryModule,
     NVPModule,
+    LifecycleModule,
+    UserModule,
     TypeOrmModule.forFeature([Application]),
   ],
   providers: [ApplicationService],

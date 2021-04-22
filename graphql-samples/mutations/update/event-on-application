@@ -1,0 +1,17 @@
+mutation eventOnApplication($applicationEventData: ApplicationLifecycleEventInput!) {
+  eventOnApplication(applicationEventData: $applicationEventData) {
+    id
+    lifecycle {
+      state
+    }
+  }
+}
+
+variables:
+{
+  "applicationEventData":
+  {
+    "ID": 2,
+  	"eventName": "APPROVE"
+  }
+}
