@@ -29,8 +29,8 @@ import aadOboConfig from '@src/config/aad.obo.config';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import { IpfsModule } from './services/ipfs/ipfs.module';
-import ipfsConfig from '@config/ipfs.config';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import configuration from '@config/configuration';
 
 @Module({
   imports: [
@@ -41,7 +41,6 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
         '.env.aad.cherrytwist.api.default',
         '.env.aad.cherrytwist.client.default',
         '.env.logging.default',
-        '.env.demo.auth.provider.default',
       ],
       isGlobal: true,
       load: [
@@ -54,7 +53,7 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
         aadRopcConfig,
         aadOboConfig,
         demoAuthProviderConfig,
-        ipfsConfig,
+        configuration,
       ],
     }),
     TypeOrmModule.forRootAsync({

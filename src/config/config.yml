@@ -1,0 +1,15 @@
+ipfs:
+  endpoint: 'http://127.0.0.1:5001'
+  clientEndpoint: 'https://ipfs.io/ipfs'
+  maxFileSize: 2097152
+demo_auth_provider:
+  issuer: 'localhost'
+  tokenEndpoint: 'http://localhost:3002/auth/login'
+  clientSecret: '!#@$#SDFRSF'
+database:
+  host: 'localhost'
+  port: 3306
+  username: 'root'
+  password: 'toor'
+  schema: 'cherrytwist'
+  logging: 'true'
