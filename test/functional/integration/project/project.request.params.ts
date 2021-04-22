@@ -5,8 +5,7 @@ export const createProjectMutation = async (
   opportunityId: string,
   projectName: string,
   textId: string,
-  projectDescritpion?: string,
-  projectState?: string
+  projectDescritpion?: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -15,8 +14,8 @@ export const createProjectMutation = async (
           id,
         name,
         textID,
-        description,
-        state
+        description
+        lifecycle{state}
       }
     }`,
     variables: {
@@ -25,7 +24,6 @@ export const createProjectMutation = async (
         name: `${projectName}`,
         textID: `${textId}`,
         description: `${projectDescritpion}`,
-        state: `${projectState}`,
       },
     },
   };

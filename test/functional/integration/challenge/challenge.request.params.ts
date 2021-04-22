@@ -5,8 +5,7 @@ const uniqueId = (Date.now() + Math.random()).toString();
 
 export const createChallangeMutation = async (
   challengeName: string,
-  uniqueTextId: string,
-  challangeState?: string
+  uniqueTextId: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -15,7 +14,7 @@ export const createChallangeMutation = async (
                 name
                 id
                 textID
-                state
+                lifecycle{state}
                 community {
                   id
                   groups {
@@ -44,7 +43,6 @@ export const createChallangeMutation = async (
         parentID: 1,
         name: challengeName,
         textID: uniqueTextId,
-        state: challangeState,
         tags: 'testTags',
         context: {
           tagline: 'test tagline' + uniqueId,
@@ -78,7 +76,8 @@ export const createBasicChallangeMutation = async (
                 name
                 id
                 textID
-                state
+                lifecycle{state}
+
                 community {
                   id
                   groups {
@@ -117,7 +116,7 @@ export const createBasicChallangeMutation = async (
 export const updateChallangeMutation = async (
   challengeId: string,
   challengeName: string,
-  challengeState?: string,
+
   taglineText?: string,
   background?: string,
   vision?: string,
@@ -132,7 +131,8 @@ export const updateChallangeMutation = async (
         name
         id
         textID
-        state
+        lifecycle{state}
+
         community {
           id
           groups {
@@ -163,7 +163,6 @@ export const updateChallangeMutation = async (
       challengeData: {
         ID: challengeId,
         name: challengeName,
-        state: challengeState,
         context: {
           tagline: taglineText,
           background: background,
@@ -255,7 +254,8 @@ export const getChallengeData = async (challengeId: string) => {
       name
       id
       textID
-      state
+      lifecycle{state}
+
       community {
         id
         groups {
@@ -292,7 +292,8 @@ export const getChallengesData = async () => {
       name
       id
       textID
-      state
+      lifecycle{state}
+
       community {
         id
         groups {
@@ -328,7 +329,8 @@ export const getChallenge = async (challengeId: string) => {
     query: `query{ecoverse{ challenge (ID: "${challengeId}") {
       name
       id
-      state
+      lifecycle{state}
+
       context
       {tagline}
         tagset{
@@ -379,7 +381,7 @@ export const getChallengeOpportunity = async (challengeId: string) => {
       challenge(ID: "${challengeId}") {
         id
         name
-        opportunities{id name textID state}}}}`,
+        opportunities{id name textID lifecycle{state}}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
