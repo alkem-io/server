@@ -32,6 +32,11 @@ export class LifecycleService {
     return await this.lifecycleRepository.save(lifecycle);
   }
 
+  async deleteLifecycle(lifecycleID: number): Promise<ILifecycle> {
+    const lifecycle = await this.getLifecycleByIdOrFail(lifecycleID);
+    return await this.lifecycleRepository.remove(lifecycle as Lifecycle);
+  }
+
   async event(
     lifecycleEventData: LifecycleEventInput,
     options: Partial<MachineOptions<any, any>>
@@ -41,13 +46,13 @@ export class LifecycleService {
     const machineDef = JSON.parse(lifecycle.machineDef);
 
     const machine = createMachine(machineDef, options);
-    const machineWithContext = machine.withContext({
+    const machineWithLifecycle = machine.withContext({
       ...machine.context,
     });
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
     const restoredState = State.create(restoredStateDef);
 
-    const nextStates = machineWithContext.resolveState(restoredStateDef)
+    const nextStates = machineWithLifecycle.resolveState(restoredStateDef)
       .nextEvents;
     if (
       !nextStates.find(name => {
@@ -60,7 +65,7 @@ export class LifecycleService {
       );
     }
 
-    const machineService = interpret(machineWithContext).start(restoredState);
+    const machineService = interpret(machineWithLifecycle).start(restoredState);
     const parentID = machineDef.context.parentID;
 
     const startState = restoredState.value.toString();

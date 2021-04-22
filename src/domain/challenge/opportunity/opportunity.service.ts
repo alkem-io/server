@@ -240,7 +240,13 @@ export class OpportunityService {
     const opportunityID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
-      relations: ['actorGroups', 'aspects', 'relations', 'community'],
+      relations: [
+        'actorGroups',
+        'aspects',
+        'relations',
+        'community',
+        'lifecycle',
+      ],
     });
 
     // First remove all groups
@@ -270,6 +276,11 @@ export class OpportunityService {
     // Remove the context
     if (opportunity.context) {
       await this.contextService.removeContext(opportunity.context.id);
+    }
+
+    // Remove the lifecycle
+    if (opportunity.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(opportunity.lifecycle.id);
     }
 
     if (opportunity.tagset) {

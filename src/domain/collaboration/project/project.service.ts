@@ -48,18 +48,21 @@ export class ProjectService {
 
   async deleteProject(deleteData: DeleteProjectInput): Promise<IProject> {
     const projectID = deleteData.ID;
-    const project = await this.getProjectByIdOrFail(projectID);
+    const project = await this.getProjectByIdOrFail(projectID, {
+      relations: ['lifecycle'],
+    });
     if (!project)
       throw new EntityNotFoundException(
         `Not able to locate Project with the specified ID: ${projectID}`,
         LogContext.CHALLENGES
       );
-    const { id } = project;
+    // Remove the lifecycle
+    if (project.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(project.lifecycle.id);
+    }
     const result = await this.projectRepository.remove(project as Project);
-    return {
-      ...result,
-      id,
-    };
+    result.id = projectID;
+    return result;
   }
 
   async getProjectByIdOrFail(

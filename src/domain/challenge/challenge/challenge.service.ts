@@ -144,7 +144,7 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeByIdOrFail(challengeID, {
-      relations: ['opportunities', 'community'],
+      relations: ['opportunities', 'community', 'lifecycle'],
     });
 
     // Do not remove a challenge that has opporutnities, require these to be individually first removed
@@ -162,6 +162,11 @@ export class ChallengeService {
     // Remove the context
     if (challenge.context) {
       await this.contextService.removeContext(challenge.context.id);
+    }
+
+    // Remove the lifecycle
+    if (challenge.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(challenge.lifecycle.id);
     }
 
     if (challenge.tagset) {
