@@ -87,7 +87,7 @@ export const challengesName = () => '{ ecoverse{ challenges { name }}}';
 
 export const challengesTextId = () => '{ ecoverse{ challenges { textID }}}';
 
-export const challengesState = () => '{ ecoverse{ challenges { state }}}';
+export const challengesState = () => '{ ecoverse{ challenges { lifecycle{state} }}}';
 
 export const challengesContext = () =>
   '{ ecoverse{ challenges { context { who }}}}';
@@ -116,9 +116,8 @@ export const challengeName = (id: number) =>
 export const challengeTextId = (id: number) =>
   `{ecoverse{  challenge(ID: "${id}") { textID }}}`;
 
-export const challengeState = (id: number) =>
-  `{ecoverse{  challenge(ID: "${id}") { state }}}`;
-
+  export const challengeState = (id: number) =>
+  `{ecoverse{  challenge(ID: "${id}") { lifecycle{state} }}}`;
 export const challengeContext = (id: number) =>
   `{ecoverse{  challenge(ID: "${id}") { context { who }}}}`;
 
@@ -145,8 +144,7 @@ export const opportunitiesName = () => '{ecoverse{  opportunities { name }}}';
 export const opportunitiesTextId = () =>
   '{ecoverse{  opportunities { textID }}}';
 
-export const opportunitiesState = () => '{ecoverse{  opportunities { state }}}';
-
+  export const opportunitiesState = () => '{ecoverse{  opportunities { lifecycle{state} }}}';
 export const opportunitiesContext = () =>
   '{ecoverse{  opportunities { context { who }}}}';
 
@@ -181,9 +179,9 @@ export const projectsTextId = () => '{ecoverse{  projects { textID }}}';
 export const projectsDescription = () =>
   '{ecoverse{  projects { description }}}';
 
-export const projectsState = () => '{ecoverse{  projects { state }}}';
+  export const projectsState = () => '{ecoverse{  projects { lifecycle{state} }}}';
 
-export const projectsTagset = () => '{ecoverse{  projects { tagset { name }}}}';
+  export const projectsTagset = () => '{ecoverse{  projects { tagset { name }}}}';
 
 export const projectsAspects = () =>
   '{ecoverse{ projects { aspects { title }}}}';
@@ -263,81 +261,3 @@ const query: Record<string, (id: number) => string> = {
 export const getQueries = (name: string, id: number) => {
   return query[name](id);
 };
-
-// export {
-//   name,
-//   hostMembers,
-//   hostGroups,
-//   hostProfile,
-//   contextTagline,
-//   contextBackground,
-//   contextVision,
-//   contextImpact,
-//   contextWho,
-//   contextReferencesName,
-//   usersName,
-//   usersAccountUPN,
-//   usersProfile,
-//   usersMemberofGroupsName,
-//   usersMemberofChallengesName,
-//   usersMemberofOrganisationsName,
-//   userName,
-//   userAccountUPN,
-//   userProfile,
-//   userMemberofGroupsName,
-//   userMemberofChallengesName,
-//   userMemberofOrganisationsName,
-//   usersById,
-//   groupsName,
-//   groupsFocalPointName,
-//   groupsProfile,
-//   groupsMembersName,
-//   groupsParentChallenge,
-//   groupsParentEcoverse,
-//   groupsParentOpportunity,
-//   groupsWithTagName,
-//   groupsWithTagFocalPointName,
-//   groupsWithTagProfile,
-//   groupsWithTagMembersName,
-//   groupsWithTagParentChallenge,
-//   groupsWithTagParentEcoverse,
-//   groupsWithTagParentOpportunity,
-//   challengesName,
-//   challengesTextId,
-//   challengesState,
-//   challengesContext,
-//   challengesLeadOrganisation,
-//   challengesLeadOrganisationGroups,
-//   challengesContributors,
-//   challengesTagsets,
-//   challengesGroups,
-//   challengesOpportunities,
-//   challengeName,
-//   challengeTextId,
-//   challengeState,
-//   challengeContext,
-//   challengeLeadOrganisation,
-//   challengeLeadOrganisationGroups,
-//   challengeTagsets,
-//   challengeGroups,
-//   challengeContributors,
-//   challengeOpportunities,
-//   opportunitiesName,
-//   opportunitiesTextId,
-//   opportunitiesState,
-//   opportunitiesContext,
-//   opportunitiesGroups,
-//   opportunitiesContributors,
-//   opportunitiesProjectsName,
-//   opportunitiesProjectsAspectsName,
-//   opportunitiesActorgroupsName,
-//   opportunitiesActorGroupsActorsName,
-//   opportunitiesAspects,
-//   opportunitiesRelationsName,
-//   projectsName,
-//   projectsTextId,
-//   projectsDescription,
-//   projectsState,
-//   projectsTagset,
-//   projectsAspects,
-// };
