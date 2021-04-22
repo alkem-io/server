@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -17,22 +17,31 @@ import {
   CreateProjectInput,
   Project,
   IProject,
+  projectLifecycleConfigDefault,
 } from '@domain/collaboration/project';
 import { DeleteProjectInput } from './project.dto.delete';
+import { ILifecycle } from '@domain/common/lifecycle';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 
 @Injectable()
 export class ProjectService {
   constructor(
     private aspectService: AspectService,
+    private lifecycleService: LifecycleService,
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createProject(projectData: CreateProjectInput): Promise<IProject> {
-    const project = new Project(projectData.name, projectData.textID);
-    project.description = projectData.description;
-    project.state = projectData.state;
+    const project: IProject = Project.create(projectData);
+
+    await this.projectRepository.save(project);
+
+    project.lifecycle = await this.lifecycleService.createLifecycle(
+      project.id.toString(),
+      projectLifecycleConfigDefault
+    );
 
     return await this.projectRepository.save(project);
   }
@@ -53,8 +62,14 @@ export class ProjectService {
     };
   }
 
-  async getProjectByIdOrFail(projectID: number): Promise<IProject> {
-    const project = await this.projectRepository.findOne({ id: projectID });
+  async getProjectByIdOrFail(
+    projectID: number,
+    options?: FindOneOptions<Project>
+  ): Promise<IProject> {
+    const project = await this.projectRepository.findOne(
+      { id: projectID },
+      options
+    );
     if (!project)
       throw new EntityNotFoundException(
         `Unable to find Project with ID: ${projectID}`,
@@ -63,10 +78,13 @@ export class ProjectService {
     return project;
   }
 
-  async getProjectOrFail(projectID: string): Promise<IProject> {
+  async getProjectOrFail(
+    projectID: string,
+    options?: FindOneOptions<Project>
+  ): Promise<IProject> {
     if (validator.isNumeric(projectID)) {
       const idInt: number = parseInt(projectID);
-      return await this.getProjectByIdOrFail(idInt);
+      return await this.getProjectByIdOrFail(idInt, options);
     }
     throw new EntityNotFoundException(
       `Unable to find Project with ID: ${projectID}`,
@@ -91,13 +109,28 @@ export class ProjectService {
     if (projectData.description) {
       project.description = projectData.description;
     }
-    if (projectData.state) {
-      project.state = projectData.state;
-    }
 
     await this.projectRepository.save(project);
 
     return project;
+  }
+
+  // Lazy load the lifecycle
+  async getLifecycle(projectId: number): Promise<ILifecycle> {
+    const project = await this.getProjectByIdOrFail(projectId, {
+      relations: ['lifecycle'],
+    });
+
+    // if no lifecycle then create + save...
+    if (!project.lifecycle) {
+      project.lifecycle = await this.lifecycleService.createLifecycle(
+        projectId.toString(),
+        projectLifecycleConfigDefault
+      );
+      await this.projectRepository.save(project);
+    }
+
+    return project.lifecycle;
   }
 
   async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {

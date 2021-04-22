@@ -129,12 +129,9 @@ export class LifecycleService {
     return next || [];
   }
 
-  // async storeParentID(lifecycle: ILifecycle, parentID: string) {
-  //   const machineDefJson = JSON.parse(lifecycle.machineDef);
-  //   machineDefJson.context.parentID = parentID;
-  //   lifecycle.machineDef = JSON.stringify(machineDefJson);
-  //   return await this.save(lifecycle as Lifecycle);
-  // }
+  getMachineDefinition(lifecycle: ILifecycle): any {
+    return JSON.parse(lifecycle.machineDef);
+  }
 
   async getParentID(lifecycle: ILifecycle) {
     const machineDefJson = JSON.parse(lifecycle.machineDef);

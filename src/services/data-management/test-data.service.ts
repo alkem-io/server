@@ -165,7 +165,6 @@ export class TestDataService {
   async initProject(opportunityId: number): Promise<number> {
     const project = new CreateProjectInput();
     project.name = 'init project name';
-    project.state = 'init project state';
     project.textID = 'init-project';
     project.description = 'init project description';
     project.parentID = opportunityId;

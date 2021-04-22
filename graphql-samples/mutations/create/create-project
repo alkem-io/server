@@ -11,9 +11,9 @@ query variables:
 {
   "projectData":
   {
-    "parentID": "1",
+    "parentID": 1,
+    "name": "firstProject",
     "textID": "tech-stack",
-    "description": "How do I handle scalability?",
-    "state": "new"
+    "description": "How do I handle scalability?"
   }
 }
