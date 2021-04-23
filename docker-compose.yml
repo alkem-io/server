@@ -101,3 +101,19 @@ services:
     ports:
       - 3003:3002
     command: sh -c "/wait && /create_db.sh && npm run start:prod"
+
+  ct_synapse_server:
+    container_name: ct_synapse_server
+    image: matrixdotorg/synapse
+    restart: always
+    environment:
+      - SYNAPSE_NO_TLS
+      - SYNAPSE_SERVER_NAME
+      - SYNAPSE_ENABLE_REGISTRATION
+      - SYNAPSE_REGISTRATION_SHARED_SECRET
+    networks:
+      - ct_server_dev
+    ports:
+      - 8008:8008
+    volumes:
+      - /var/docker_data/matrix:/data
