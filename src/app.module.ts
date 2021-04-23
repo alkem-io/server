@@ -1,37 +1,38 @@
+import { ValidationPipe } from '@common/pipes/validation.pipe';
+import ipfsConfig from '@config/ipfs.config';
+import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
+import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
+import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
+import { MessageModule } from '@domain/community/message/message.module';
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config/dist/config.module';
+import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { GraphQLModule } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthenticationModule } from '@src/core/authentication/authentication.module';
-import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
-import { GraphQLModule } from '@nestjs/graphql';
-import { ConfigModule } from '@nestjs/config/dist/config.module';
-import aadConfig from '@src/config/aad.config';
-import { join } from 'path';
-import { ConfigService } from '@nestjs/config';
-import databaseConfig from '@src/config/database.config';
 import { IDatabaseConfig } from '@src/common/interfaces/database.config.interface';
-import { DataManagementModule } from '@src/services/data-management/data-management.module';
-import serviceConfig from '@src/config/service.config';
-import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
-import msGraphConfig from '@src/config/ms-graph.config';
-import { WinstonModule } from 'nest-winston';
 import aadClientConfig from '@src/config/aad.client.config';
-import { WinstonConfigService } from '@src/config/winston.config';
-import loggingConfig from '@src/config/logging.config';
-import { SearchModule } from '@src/services/search/search.module';
-import { APP_FILTER, APP_PIPE } from '@nestjs/core';
-import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
-import aadRopcConfig from '@src/config/aad.ropc.config';
-import { MetadataModule } from '@src/services/metadata/metadata.module';
-import { KonfigModule } from '@src/services/configuration/config/config.module';
+import aadConfig from '@src/config/aad.config';
 import aadOboConfig from '@src/config/aad.obo.config';
-import { ValidationPipe } from '@common/pipes/validation.pipe';
+import aadRopcConfig from '@src/config/aad.ropc.config';
+import databaseConfig from '@src/config/database.config';
 import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
-import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
+import loggingConfig from '@src/config/logging.config';
+import msGraphConfig from '@src/config/ms-graph.config';
+import serviceConfig from '@src/config/service.config';
+import { WinstonConfigService } from '@src/config/winston.config';
+import { AuthenticationModule } from '@src/core/authentication/authentication.module';
+import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
+import { KonfigModule } from '@src/services/configuration/config/config.module';
+import { DataManagementModule } from '@src/services/data-management/data-management.module';
+import { MetadataModule } from '@src/services/metadata/metadata.module';
+import { SearchModule } from '@src/services/search/search.module';
+import { WinstonModule } from 'nest-winston';
+import { join } from 'path';
 import { IpfsModule } from './services/ipfs/ipfs.module';
-import ipfsConfig from '@config/ipfs.config';
-import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 
 @Module({
   imports: [
@@ -87,6 +88,24 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
       sortSchema: true,
       context: ({ req }) => ({ req }),
       installSubscriptionHandlers: true,
+      subscriptions: {
+        keepAlive: 5000,
+        onConnect: (connectionParams, websocket, context) => {
+          // TODO Kolec
+          console.log(
+            'Connecting: ',
+            context.request.headers['sec-websocket-key'],
+            ' : ',
+            (connectionParams as any)['authToken']
+          );
+        },
+        onDisconnect: (websocket, context) => {
+          console.log(
+            'Disconnecting: ',
+            context.request.headers['sec-websocket-key']
+          );
+        },
+      },
     }),
     ScalarsModule,
     AuthenticationModule,
@@ -98,6 +117,7 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
     SearchModule,
     KonfigModule,
     IpfsModule,
+    MessageModule,
   ],
   controllers: [AppController],
   providers: [
