@@ -11,7 +11,7 @@ import {
   Project,
   IProject,
   DeleteProjectInput,
-  ProjectLifecycleEventInput,
+  ProjectEventInput,
 } from '@domain/collaboration/project';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 
@@ -64,7 +64,7 @@ export class ProjectResolverMutations {
   })
   async eventOnProject(
     @Args('projectEventData')
-    projectEventData: ProjectLifecycleEventInput
+    projectEventData: ProjectEventInput
   ): Promise<IProject> {
     return await this.projectLifecycleOptionsProvider.eventOnProject(
       projectEventData

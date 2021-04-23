@@ -6,7 +6,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { OpportunityService } from './opportunity.service';
 import {
   IOpportunity,
-  OpportunityLifecycleEventInput,
+  OpportunityEventInput,
 } from '@domain/challenge/opportunity';
 
 @Injectable()
@@ -18,7 +18,7 @@ export class OpportunityLifecycleOptionsProvider {
   ) {}
 
   async eventOnOpportunity(
-    opportunityEventData: OpportunityLifecycleEventInput
+    opportunityEventData: OpportunityEventInput
   ): Promise<IOpportunity> {
     const opportunityID = opportunityEventData.ID;
     const lifecycle = await this.opportunityService.getLifecycle(opportunityID);

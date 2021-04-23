@@ -28,7 +28,7 @@ import {
   UpdateOpportunityInput,
   Opportunity,
   IOpportunity,
-  OpportunityLifecycleEventInput,
+  OpportunityEventInput,
 } from '@domain/challenge/opportunity';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 
@@ -124,7 +124,7 @@ export class OpportunityResolverMutations {
   })
   async eventOnOpportunity(
     @Args('opportunityEventData')
-    opportunityEventData: OpportunityLifecycleEventInput
+    opportunityEventData: OpportunityEventInput
   ): Promise<IOpportunity> {
     return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity(
       opportunityEventData

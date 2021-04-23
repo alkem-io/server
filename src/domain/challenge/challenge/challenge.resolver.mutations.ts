@@ -15,7 +15,7 @@ import {
   IChallenge,
   Challenge,
   DeleteChallengeInput,
-  ChallengeLifecycleEventInput,
+  ChallengeEventInput,
 } from '@domain/challenge/challenge';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { AssignChallengeLeadInput } from './challenge.dto.assign.lead';
@@ -102,7 +102,7 @@ export class ChallengeResolverMutations {
   })
   async eventOnChallenge(
     @Args('challengeEventData')
-    challengeEventData: ChallengeLifecycleEventInput
+    challengeEventData: ChallengeEventInput
   ): Promise<IChallenge> {
     return await this.challengeLifecycleOptionsProvider.eventOnChallenge(
       challengeEventData

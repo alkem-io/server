@@ -3,7 +3,7 @@ import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 
 @InputType()
-export class ChallengeLifecycleEventInput {
+export class ProjectEventInput {
   @Field({ nullable: false })
   ID!: number;
 

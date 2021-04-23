@@ -1,4 +1,4 @@
-mutation eventOnChallenge($challengeEventData: ChallengeLifecycleEventInput!) {
+mutation eventOnChallenge($challengeEventData: ChallengeEventInput!) {
   eventOnChallenge(challengeEventData: $challengeEventData) {
     id
     lifecycle {

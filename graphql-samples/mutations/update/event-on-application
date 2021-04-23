@@ -1,4 +1,4 @@
-mutation eventOnApplication($applicationEventData: ApplicationLifecycleEventInput!) {
+mutation eventOnApplication($applicationEventData: ApplicationEventInput!) {
   eventOnApplication(applicationEventData: $applicationEventData) {
     id
     lifecycle {

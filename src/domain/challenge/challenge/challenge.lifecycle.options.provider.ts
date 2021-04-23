@@ -3,10 +3,7 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import {
-  ChallengeLifecycleEventInput,
-  IChallenge,
-} from '@domain/challenge/challenge';
+import { ChallengeEventInput, IChallenge } from '@domain/challenge/challenge';
 import { ChallengeService } from './challenge.service';
 
 @Injectable()
@@ -18,7 +15,7 @@ export class ChallengeLifecycleOptionsProvider {
   ) {}
 
   async eventOnChallenge(
-    challengeEventData: ChallengeLifecycleEventInput
+    challengeEventData: ChallengeEventInput
   ): Promise<IChallenge> {
     const challengeID = challengeEventData.ID;
     const lifecycle = await this.challengeService.getLifecycle(challengeID);

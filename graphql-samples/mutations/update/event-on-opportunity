@@ -1,4 +1,4 @@
-mutation eventOnOpportunity($opportunityEventData: OpportunityLifecycleEventInput!) {
+mutation eventOnOpportunity($opportunityEventData: OpportunityEventInput!) {
   eventOnOpportunity(opportunityEventData: $opportunityEventData) {
     id
     lifecycle {

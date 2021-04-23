@@ -1,4 +1,4 @@
-mutation eventOnProject($projectEventData: ProjectLifecycleEventInput!) {
+mutation eventOnProject($projectEventData: ProjectEventInput!) {
   eventOnProject(projectEventData: $projectEventData) {
     id
     lifecycle {

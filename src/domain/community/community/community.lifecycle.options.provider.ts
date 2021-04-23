@@ -1,6 +1,6 @@
 import {
   IApplication,
-  ApplicationLifecycleEventInput,
+  ApplicationEventInput,
 } from '@domain/community/application';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
@@ -21,7 +21,7 @@ export class CommunityLifecycleOptionsProvider {
   ) {}
 
   async eventOnApplication(
-    applicationEventData: ApplicationLifecycleEventInput
+    applicationEventData: ApplicationEventInput
   ): Promise<IApplication> {
     const applicationID = applicationEventData.ID;
     const application = await this.applicationService.getApplicationOrFail(
