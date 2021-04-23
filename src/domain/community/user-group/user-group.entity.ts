@@ -68,7 +68,7 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @ManyToOne(
     () => Organisation,
     organisation => organisation.groups,
-    { eager: false }
+    { eager: false, cascade: false, onDelete: 'SET NULL' }
   )
   organisation?: Organisation;
 

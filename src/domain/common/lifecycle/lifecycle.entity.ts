@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-
+import JSON from 'graphql-type-json';
 @Entity()
 @ObjectType()
 export class Lifecycle extends BaseEntity {
@@ -30,6 +30,10 @@ export class Lifecycle extends BaseEntity {
   machineState?: string;
 
   // Stores the xstate engine definition
+  @Field(() => JSON, {
+    description:
+      'The machine definition, describing the states, transitions etc for this Lifeycle.',
+  })
   @Column('text', { nullable: true })
   machineDef: string;
 
