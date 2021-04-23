@@ -8,10 +8,17 @@ import { User } from '@domain/community/user/user.entity';
 import { UserService } from './user.service';
 import { MemberOf } from './memberof.composite';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import {
+  CommunicationRoomResult,
+  CommunicationService,
+} from '@src/services/communication';
 
 @Resolver(() => User)
 export class UserResolverFields {
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private communicationService: CommunicationService
+  ) {}
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
@@ -25,5 +32,18 @@ export class UserResolverFields {
     const memberships = await this.userService.getMemberOf(user);
     // Find all challenges the user is a member of
     return memberships;
+  }
+
+  @Roles(AuthorizationRoles.Members)
+  @UseGuards(GqlAuthGuard)
+  @ResolveField('memberof', () => MemberOf, {
+    nullable: true,
+    description:
+      'An overview of the groups this user is a memberof. Note: all groups are returned without members to avoid recursion.',
+  })
+  @Profiling.api
+  async rooms(@Parent() user: User): Promise<CommunicationRoomResult[]> {
+    const rooms = await this.communicationService.getRooms(user.id.toString());
+    return rooms;
   }
 }

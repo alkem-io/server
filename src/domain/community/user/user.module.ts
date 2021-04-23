@@ -6,9 +6,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user.entity';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
+import { CommunicationModule } from '@src/services/communication/communication.module';
 
 @Module({
-  imports: [ProfileModule, TypeOrmModule.forFeature([User])],
+  imports: [
+    ProfileModule,
+    CommunicationModule,
+    TypeOrmModule.forFeature([User]),
+  ],
   providers: [
     UserService,
     UserResolverMutations,
