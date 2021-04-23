@@ -10,7 +10,6 @@ import { createReferenceOnContextMutation } from '../references/references.reque
 let challengeName = '';
 let challengeId = '';
 let uniqueTextId = '';
-const challengeState = '';
 const taglineText = 'taglineText';
 const contextBackground = 'contextBackground';
 const contextVision = 'contextVision';
@@ -71,7 +70,6 @@ describe('Context', () => {
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
       challengeName + 'change',
-      challengeState + 'change',
       taglineText,
       contextBackground,
       contextVision,
@@ -105,7 +103,6 @@ describe('Context', () => {
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
       challengeName + 'change',
-      challengeState + 'change',
       taglineText,
       contextBackground,
       contextVision,

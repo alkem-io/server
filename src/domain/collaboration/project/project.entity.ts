@@ -17,6 +17,7 @@ import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
+import { Lifecycle } from '@domain/common/lifecycle';
 
 @Entity()
 @ObjectType()
@@ -49,13 +50,9 @@ export class Project extends BaseEntity implements IProject {
   @Column('text', { nullable: true })
   description?: string;
 
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc',
-  })
-  @Column()
-  state: string;
+  @OneToOne(() => Lifecycle, { eager: false, cascade: true })
+  @JoinColumn()
+  lifecycle!: Lifecycle;
 
   @Field(() => Tagset, {
     nullable: true,
@@ -94,6 +91,5 @@ export class Project extends BaseEntity implements IProject {
     super();
     this.name = name;
     this.textID = textID;
-    this.state = '';
   }
 }

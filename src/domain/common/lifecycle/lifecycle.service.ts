@@ -20,9 +20,21 @@ export class LifecycleService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createLifecycle(config: string): Promise<ILifecycle> {
-    const lifecycle = new Lifecycle(config);
+  async createLifecycle(
+    parentID: string,
+    machineConfig: any
+  ): Promise<ILifecycle> {
+    // Ensure parent is set
+    machineConfig.context.parentID = parentID;
+    const machineConfigStr = JSON.stringify(machineConfig);
+    const lifecycle = new Lifecycle(machineConfigStr);
+
     return await this.lifecycleRepository.save(lifecycle);
+  }
+
+  async deleteLifecycle(lifecycleID: number): Promise<ILifecycle> {
+    const lifecycle = await this.getLifecycleByIdOrFail(lifecycleID);
+    return await this.lifecycleRepository.remove(lifecycle as Lifecycle);
   }
 
   async event(
@@ -34,13 +46,13 @@ export class LifecycleService {
     const machineDef = JSON.parse(lifecycle.machineDef);
 
     const machine = createMachine(machineDef, options);
-    const machineWithContext = machine.withContext({
+    const machineWithLifecycle = machine.withContext({
       ...machine.context,
     });
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
     const restoredState = State.create(restoredStateDef);
 
-    const nextStates = machineWithContext.resolveState(restoredStateDef)
+    const nextStates = machineWithLifecycle.resolveState(restoredStateDef)
       .nextEvents;
     if (
       !nextStates.find(name => {
@@ -53,7 +65,7 @@ export class LifecycleService {
       );
     }
 
-    const machineService = interpret(machineWithContext).start(restoredState);
+    const machineService = interpret(machineWithLifecycle).start(restoredState);
     const parentID = machineDef.context.parentID;
 
     const startState = restoredState.value.toString();
@@ -108,6 +120,11 @@ export class LifecycleService {
     return State.create(restoredStateDef).value.toString();
   }
 
+  getTemplateIdentifier(lifecycle: ILifecycle): string {
+    const templateID = JSON.parse(lifecycle.machineDef).id;
+    return templateID;
+  }
+
   getNextEvents(lifecycle: ILifecycle): string[] {
     const machineDef = JSON.parse(lifecycle.machineDef);
     const machine = createMachine(machineDef);
@@ -117,11 +134,8 @@ export class LifecycleService {
     return next || [];
   }
 
-  async storeParentID(lifecycle: ILifecycle, parentID: string) {
-    const machineDefJson = JSON.parse(lifecycle.machineDef);
-    machineDefJson.context.parentID = parentID;
-    lifecycle.machineDef = JSON.stringify(machineDefJson);
-    return await this.save(lifecycle as Lifecycle);
+  getMachineDefinition(lifecycle: ILifecycle): any {
+    return JSON.parse(lifecycle.machineDef);
   }
 
   async getParentID(lifecycle: ILifecycle) {

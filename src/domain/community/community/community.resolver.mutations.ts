@@ -12,7 +12,7 @@ import {
   DeleteApplicationInput,
   Application,
   IApplication,
-  ApplicationLifecycleEventInput,
+  ApplicationEventInput,
 } from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CreateUserGroupInput } from '@domain/community/user-group';
@@ -95,7 +95,7 @@ export class CommunityResolverMutations {
   })
   async eventOnApplication(
     @Args('applicationEventData')
-    applicationEventData: ApplicationLifecycleEventInput
+    applicationEventData: ApplicationEventInput
   ): Promise<IApplication> {
     return await this.communityLifecycleOptionsProvider.eventOnApplication(
       applicationEventData

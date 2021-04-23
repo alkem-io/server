@@ -15,7 +15,7 @@ export const createOpportunityOnChallengeMutation = async (
         id
         name
         textID
-        state
+        lifecycle{state}
         context {
           id
           tagline
@@ -38,7 +38,6 @@ export const createOpportunityOnChallengeMutation = async (
         parentID: challengeId,
         name: oppName,
         textID: oppTextId,
-        state: 'reserved',
         context: {
           background: 'test background',
           vision: 'test vision',
@@ -68,7 +67,7 @@ export const updateOpportunityOnChallengeMutation = async (
         id
         name
         textID
-        state
+        lifecycle{state}
         context {
           id
           tagline
@@ -90,7 +89,6 @@ export const updateOpportunityOnChallengeMutation = async (
       opportunityData: {
         ID: opportunityId,
         name: '1',
-        state: '1',
         context: {
           background: '1',
           vision: '1',
@@ -155,8 +153,8 @@ export const queryOpportunity = async (opportunityId: string) => {
         id
         name
         textID
-        state
-        context {
+        lifecycle{state}
+          context {
           id
           tagline
           background
@@ -187,7 +185,7 @@ export const queryOpportunities = async () => {
         id
         name
         textID
-        state
+        lifecycle{state}
         context {
           id
           tagline

@@ -25,7 +25,7 @@ export class CreateOpportunityInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  state?: string;
+  lifecycleTemplate?: string;
 
   @Field(() => CreateContextInput, { nullable: true })
   context?: CreateContextInput;

@@ -1,0 +1,18 @@
+mutation eventOnProject($projectEventData: ProjectEventInput!) {
+  eventOnProject(projectEventData: $projectEventData) {
+    id
+    lifecycle {
+      state
+      nextEvents
+    }
+  }
+}
+
+variables:
+{
+  "projectEventData":
+  {
+    "ID": 2,
+  	"eventName": "REFINE"
+  }
+}

@@ -14,7 +14,7 @@ import { IOpportunity, Opportunity } from '../opportunity';
 import { OpportunityService } from '../opportunity/opportunity.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ProjectService, Project, IProject } from '@domain/collaboration';
+import { Project, IProject } from '@domain/collaboration/project';
 import {
   UserGroup,
   IUserGroup,
@@ -23,6 +23,7 @@ import {
 } from '@domain/community';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ApplicationService } from '@domain/community/application/application.service';
+import { ProjectService } from '@domain/collaboration/project/project.service';
 
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {

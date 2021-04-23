@@ -11,11 +11,16 @@ import {
   Project,
   IProject,
   DeleteProjectInput,
+  ProjectEventInput,
 } from '@domain/collaboration/project';
+import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 
 @Resolver()
 export class ProjectResolverMutations {
-  constructor(private projectService: ProjectService) {}
+  constructor(
+    private projectService: ProjectService,
+    private projectLifecycleOptionsProvider: ProjectLifecycleOptionsProvider
+  ) {}
 
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
@@ -50,5 +55,19 @@ export class ProjectResolverMutations {
   ): Promise<IAspect> {
     const aspect = await this.projectService.createAspect(aspectData);
     return aspect;
+  }
+
+  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.GlobalAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Project, {
+    description: 'Trigger an event on the Project.',
+  })
+  async eventOnProject(
+    @Args('projectEventData')
+    projectEventData: ProjectEventInput
+  ): Promise<IProject> {
+    return await this.projectLifecycleOptionsProvider.eventOnProject(
+      projectEventData
+    );
   }
 }

@@ -116,7 +116,6 @@ describe('Flows challenge', () => {
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
       secondchallengeName,
-      'challengeState',
       'taglineText',
       'background',
       'vision',
