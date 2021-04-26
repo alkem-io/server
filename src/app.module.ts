@@ -20,6 +20,7 @@ import databaseConfig from '@src/config/database.config';
 import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import loggingConfig from '@src/config/logging.config';
 import msGraphConfig from '@src/config/ms-graph.config';
+import matrixClientConfig from '@src/config/matrix.client.config';
 import serviceConfig from '@src/config/service.config';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { AuthenticationModule } from '@src/core/authentication/authentication.module';
@@ -55,6 +56,7 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
         aadOboConfig,
         demoAuthProviderConfig,
         ipfsConfig,
+        matrixClientConfig,
       ],
     }),
     TypeOrmModule.forRootAsync({

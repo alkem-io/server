@@ -9,3 +9,4 @@ export * from './service.config';
 export * from './demo.auth.provider.config';
 export * from './typeorm.cli.config';
 export * from './winston.config';
+export * from './matrix.client.config';
