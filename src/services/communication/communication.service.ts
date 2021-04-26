@@ -1,12 +1,16 @@
-import { Inject, LoggerService, NotImplementedException } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MatrixCommunicationPool } from '../matrix/communication/communication.matrix.pool';
 import { CommunicationMessageResult } from './communication.dto.message.result';
 import { CommunicationRoomResult } from './communication.dto.room.result';
 import { CommunicationSendMessageInput } from './communication.dto.send.msg';
 
+@Injectable()
 export class CommunicationService {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @Inject() private readonly communicationPool: MatrixCommunicationPool
   ) {}
 
   async sendMsg(
@@ -21,7 +25,10 @@ export class CommunicationService {
     return room;
   }
 
-  async getRooms(userID: string): Promise<CommunicationRoomResult[]> {
-    throw new NotImplementedException(`Not yet implemented: ${userID}`);
+  async getRooms(matrixID: string): Promise<CommunicationRoomResult[]> {
+    this.logger.log(matrixID);
+    const communicationService = await this.communicationPool.acquire(matrixID);
+    this.logger.log(await communicationService.getRooms());
+    return [];
   }
 }
