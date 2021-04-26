@@ -10,7 +10,7 @@ export class CommunicationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject() private readonly communicationPool: MatrixCommunicationPool
+    private readonly communicationPool: MatrixCommunicationPool
   ) {}
 
   async sendMsg(
