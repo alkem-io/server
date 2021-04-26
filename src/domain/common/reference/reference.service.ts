@@ -58,6 +58,32 @@ export class ReferenceService {
     return await this.referenceRepository.save(reference);
   }
 
+  updateReferences(
+    references: IReference[] | undefined,
+    referencesData: UpdateReferenceInput[]
+  ): IReference[] {
+    if (!references)
+      throw new EntityNotFoundException(
+        'Not able to locate refernces',
+        LogContext.CHALLENGES
+      );
+    if (referencesData) {
+      for (const referenceData of referencesData) {
+        // check the reference being update is part of the current entity
+        const reference = references.find(
+          reference => reference.id == referenceData.ID
+        );
+        if (!reference)
+          throw new EntityNotFoundException(
+            `Unable to update reference with supplied ID: ${referenceData.ID} - no reference in parent entity.`,
+            LogContext.CHALLENGES
+          );
+        this.updateReferenceValues(reference, referenceData);
+      }
+    }
+    return references;
+  }
+
   async getReferenceOrFail(referenceID: number): Promise<IReference> {
     const reference = await this.referenceRepository.findOne({
       id: referenceID,
