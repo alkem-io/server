@@ -3,7 +3,6 @@ import ipfsConfig from '@config/ipfs.config';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { ApplicationFactoryModule } from '@domain/community/application/application.factory.module';
 import { MessageModule } from '@domain/community/message/message.module';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -109,7 +108,6 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
     }),
     ScalarsModule,
     AuthenticationModule,
-    ApplicationFactoryModule,
     EcoverseModule,
     MetadataModule,
     DataManagementModule,

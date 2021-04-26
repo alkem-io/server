@@ -1,9 +1,7 @@
-import { CreateApplicationInput } from '@domain/community/application';
 import {
-  Application,
-  ApplicationStatus,
-} from '@domain/community/application/application.entity';
-import { ApplicationFactoryService } from '@domain/community/application/application.factory.service';
+  CreateApplicationInput,
+  IApplication,
+} from '@domain/community/application';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -23,21 +21,22 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { Community } from './community.entity';
 import { ICommunity } from './community.interface';
 import { IUser } from '../user/user.interface';
-import { ApplicationService } from '../application/application.service';
 import { AuthorizationRoles } from '@core/authorization';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { CreateUserGroupInput } from '../user-group';
 import {
   AssignCommunityMemberInput,
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
+import { ApplicationService } from '../application/application.service';
 
 @Injectable()
 export class CommunityService {
   constructor(
     private userService: UserService,
     private userGroupService: UserGroupService,
-    private applicationFactoryService: ApplicationFactoryService,
     private applicationService: ApplicationService,
+    private lifecycleService: LifecycleService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -61,7 +60,6 @@ export class CommunityService {
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
-    // First find the Community
     const communityID = groupData.parentID;
     const groupName = groupData.name;
 
@@ -90,7 +88,7 @@ export class CommunityService {
       // Community already has groups loaded
       return community.groups;
     }
-    // Community is not populated wih
+
     return await this.userGroupService.getGroupsOnGroupable(community);
   }
 
@@ -126,7 +124,9 @@ export class CommunityService {
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationService.deleteApplication({ ID: application.id });
+        await this.applicationService.delete({
+          ID: application.id,
+        });
       }
     }
 
@@ -249,18 +249,18 @@ export class CommunityService {
 
   async createApplication(
     applicationData: CreateApplicationInput
-  ): Promise<Application> {
+  ): Promise<IApplication> {
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
 
     const existingApplication = community.applications?.find(
-      x => x.user.id === applicationData.userId
+      x => x.user?.id === applicationData.userId
     );
 
     if (existingApplication) {
       throw new InvalidStateTransitionException(
-        `An application for user ${existingApplication.user.email} already exists for Community: ${community.id}. Application status: ${existingApplication.status}`,
+        `An application for user ${existingApplication.user?.email} already exists for Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -278,16 +278,16 @@ export class CommunityService {
         );
     }
 
-    const application = await this.applicationFactoryService.createApplication(
+    const application = await this.applicationService.createApplication(
       applicationData
     );
-
     community.applications?.push(application);
     await this.communityRepository.save(community);
+
     return application;
   }
 
-  async getApplications(community: Community): Promise<Application[]> {
+  async getApplications(community: Community): Promise<IApplication[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
       relations: ['applications'],
     });
@@ -332,42 +332,5 @@ export class CommunityService {
   ): Promise<boolean> {
     if (community.restrictedGroupNames.includes(groupName)) return true;
     return false;
-  }
-
-  async approveApplication(applicationId: number) {
-    const application = await this.applicationService.getApplicationOrFail(
-      applicationId,
-      {
-        relations: ['community'],
-      }
-    );
-
-    if (application.status == ApplicationStatus.approved) {
-      throw new InvalidStateTransitionException(
-        'Application has already been approved!',
-        LogContext.COMMUNITY
-      );
-    } else if (application.status == ApplicationStatus.rejected) {
-      throw new InvalidStateTransitionException(
-        'Application has already been rejected!',
-        LogContext.COMMUNITY
-      );
-    }
-
-    if (!application.community)
-      throw new RelationshipNotFoundException(
-        `Unable to load community for application ${applicationId} `,
-        LogContext.COMMUNITY
-      );
-    await this.assignMember({
-      userID: application.user.id,
-      communityID: application.community?.id,
-    });
-
-    application.status = ApplicationStatus.approved;
-
-    await this.applicationService.save(application);
-
-    return application;
   }
 }

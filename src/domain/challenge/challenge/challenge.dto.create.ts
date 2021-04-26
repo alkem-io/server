@@ -23,14 +23,14 @@ export class CreateChallengeInput {
   })
   textID!: string;
 
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  state?: string;
-
   @Field(() => CreateContextInput, { nullable: true })
   @IsOptional()
   context?: CreateContextInput;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
+  lifecycleTemplate?: string;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

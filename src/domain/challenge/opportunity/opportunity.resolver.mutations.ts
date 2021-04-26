@@ -28,11 +28,17 @@ import {
   UpdateOpportunityInput,
   Opportunity,
   IOpportunity,
+  OpportunityEventInput,
 } from '@domain/challenge/opportunity';
+import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 
 @Resolver()
 export class OpportunityResolverMutations {
-  constructor(private opportunityService: OpportunityService) {}
+  constructor(
+    private opportunityService: OpportunityService,
+    private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
+  ) {}
+
   @Roles(AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Opportunity, {
@@ -109,5 +115,19 @@ export class OpportunityResolverMutations {
     @Args('relationData') relationData: CreateRelationInput
   ): Promise<IRelation> {
     return await this.opportunityService.createRelation(relationData);
+  }
+
+  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.GlobalAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Opportunity, {
+    description: 'Trigger an event on an Opportunity.',
+  })
+  async eventOnOpportunity(
+    @Args('opportunityEventData')
+    opportunityEventData: OpportunityEventInput
+  ): Promise<IOpportunity> {
+    return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity(
+      opportunityEventData
+    );
   }
 }

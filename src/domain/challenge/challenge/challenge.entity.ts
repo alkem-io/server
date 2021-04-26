@@ -24,6 +24,7 @@ import { IChallenge } from './challenge.interface';
 import { Community } from '@domain/community/community';
 import { ICommunityable } from '@interfaces/communityable.interface';
 import { Organisation } from '@domain/community';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 
 @Entity()
 @ObjectType()
@@ -64,10 +65,6 @@ export class Challenge extends BaseEntity
   @JoinColumn()
   context?: Context;
 
-  @Field(() => Community, {
-    nullable: true,
-    description: 'The community for the challenge',
-  })
   @OneToOne(
     () => Community,
     community => community.challenge,
@@ -88,14 +85,9 @@ export class Challenge extends BaseEntity
   @JoinTable({ name: 'challenge_lead' })
   leadOrganisations?: Organisation[];
 
-  // Other
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'The maturity phase of the challenge i.e. new, being refined, ongoing etc',
-  })
-  @Column()
-  state: string;
+  @OneToOne(() => Lifecycle, { eager: false, cascade: true })
+  @JoinColumn()
+  lifecycle!: Lifecycle;
 
   @Field(() => Tagset, {
     nullable: true,
@@ -126,7 +118,6 @@ export class Challenge extends BaseEntity
   constructor(name: string, textID: string) {
     super();
     this.name = name;
-    this.state = '';
     this.textID = textID;
   }
 }

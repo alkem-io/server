@@ -29,10 +29,15 @@ import {
   Challenge,
   IChallenge,
   CreateChallengeInput,
+  DeleteChallengeInput,
+  AssignChallengeLeadInput,
+  RemoveChallengeLeadInput,
+  challengeLifecycleConfigDefault,
+  challengeLifecycleConfigExtended,
 } from '@domain/challenge/challenge';
-import { DeleteChallengeInput } from './challenge.dto.delete';
-import { AssignChallengeLeadInput } from './challenge.dto.assign.lead';
-import { RemoveChallengeLeadInput } from './challenge.dto.remove.lead';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { ChallengeLifecycleTemplates } from '@common/enums/challenge.lifecycle.templates';
 
 @Injectable()
 export class ChallengeService {
@@ -41,6 +46,7 @@ export class ChallengeService {
     private communityService: CommunityService,
     private tagsetService: TagsetService,
     private opportunityService: OpportunityService,
+    private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -52,17 +58,39 @@ export class ChallengeService {
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.opportunities = [];
+
+    // Community
     challenge.community = await this.communityService.createCommunity(
       challenge.name,
       CommunityType.CHALLENGE,
       [AuthorizationRoles.Members]
     );
+
+    // Context
     if (!challengeData.context) challengeData.context = {};
     if (!challenge.context)
       challenge.context = await this.contextService.createContext(
         challengeData.context
       );
+
+    // Remaining initialisation
     challenge.tagset = this.tagsetService.createDefaultTagset();
+
+    // Lifecycle, that has both a default and extended version
+    let machineConfig: any = challengeLifecycleConfigDefault;
+    if (
+      challengeData.lifecycleTemplate &&
+      challengeData.lifecycleTemplate === ChallengeLifecycleTemplates.EXTENDED
+    ) {
+      machineConfig = challengeLifecycleConfigExtended;
+    }
+
+    await this.challengeRepository.save(challenge);
+
+    challenge.lifecycle = await this.lifecycleService.createLifecycle(
+      challenge.id.toString(),
+      machineConfig
+    );
 
     return await this.challengeRepository.save(challenge);
   }
@@ -88,10 +116,6 @@ export class ChallengeService {
         // Ok to rename
         challenge.name = newName;
       }
-    }
-
-    if (challengeData.state) {
-      challenge.state = challengeData.state;
     }
 
     if (challengeData.context) {
@@ -120,7 +144,7 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeByIdOrFail(challengeID, {
-      relations: ['opportunities', 'community'],
+      relations: ['opportunities', 'community', 'lifecycle'],
     });
 
     // Do not remove a challenge that has opporutnities, require these to be individually first removed
@@ -138,6 +162,11 @@ export class ChallengeService {
     // Remove the context
     if (challenge.context) {
       await this.contextService.removeContext(challenge.context.id);
+    }
+
+    // Remove the lifecycle
+    if (challenge.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(challenge.lifecycle.id);
     }
 
     if (challenge.tagset) {
@@ -169,6 +198,24 @@ export class ChallengeService {
         LogContext.COMMUNITY
       );
     return community;
+  }
+
+  // Lazy load the lifecycle
+  async getLifecycle(challengeId: number): Promise<ILifecycle> {
+    const challenge = await this.getChallengeByIdOrFail(challengeId, {
+      relations: ['lifecycle'],
+    });
+
+    // if no lifecycle then create + save...
+    if (!challenge.lifecycle) {
+      challenge.lifecycle = await this.lifecycleService.createLifecycle(
+        challengeId.toString(),
+        challengeLifecycleConfigDefault
+      );
+      await this.challengeRepository.save(challenge);
+    }
+
+    return challenge.lifecycle;
   }
 
   // Loads the challenges into the challenge entity if not already present
