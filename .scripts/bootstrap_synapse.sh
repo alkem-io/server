@@ -38,6 +38,7 @@ docker run -it --rm \
     matrixdotorg/synapse:latest generate
 
 synapse_data_docker_folder=$(docker volume inspect --format '{{ .Mountpoint }}' synapse-data)
+mkdir /var/docker_data
 cp -a "${synapse_data_docker_folder}/." /var/docker_data/matrix
 
 set_yaml_value "/var/docker_data/matrix/homeserver.yaml" "registration_shared_secret" $(read_var SYNAPSE_SHARED_SECRET)
