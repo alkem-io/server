@@ -40,7 +40,7 @@ export class ContextService {
     return context;
   }
 
-  async update(
+  async updateContext(
     context: IContext,
     contextInput: UpdateContextInput
   ): Promise<IContext> {
@@ -61,8 +61,14 @@ export class ContextService {
       context.who = contextInput.who;
     }
 
-    await this.contextRepository.save(context);
-    return context;
+    if (contextInput.references) {
+      context.references = await this.referenceService.updateReferences(
+        context.references,
+        contextInput.references
+      );
+    }
+
+    return await this.contextRepository.save(context);
   }
 
   async removeContext(contextID: number): Promise<IContext> {
