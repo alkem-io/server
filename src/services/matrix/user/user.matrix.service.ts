@@ -117,9 +117,13 @@ export class MatrixUserService implements IMatrixUserService {
   async isRegistered(email: string): Promise<boolean> {
     const username = MatrixTransforms.email2username(email);
 
-    const result = await this._matrixClient.isUsernameAvailable(username);
-
-    return !Boolean(result);
+    try {
+      await this._matrixClient.isUsernameAvailable(username);
+      return false;
+    } catch (_) {
+      // unfortunately instead of returning false the method throws exception
+      return true;
+    }
   }
 
   private resolveUser(email: string): IMatrixUser {

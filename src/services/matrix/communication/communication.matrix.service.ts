@@ -4,29 +4,17 @@ import { ConfigService } from '@nestjs/config';
 import { IMatrixAuthProviderConfig } from '@src/services/configuration/config/matrix';
 import { IOperationalMatrixUser } from '@src/services/matrix/user/user.matrix.interface';
 import { createClient } from 'matrix-js-sdk/lib';
+import { MatrixTransforms } from '../user/user.matrix.service';
 import {
   ICommunityMessageRequest,
   IDirectMessageRequest,
   IMatrixCommunicationService,
+  IMessageRequest,
   IResponseMessage,
 } from './communication.matrix.interface';
 import { MatrixGroupEntityAdapter } from './group/group.communication.matrix.adapter';
 import { MatrixRoomEntityAdapter } from './room/room.communication.matrix.adapter';
-
-type MatrixClient = {
-  startClient: () => void;
-  stopClient: () => void;
-  getGroups: () => Promise<any[]>;
-  getRooms: () => Promise<any[]>;
-  getRoom: (roomId: string) => Promise<any>;
-  getGroup: (groupId: string) => Promise<any>;
-  sendEvent: (
-    roomId: string,
-    type: string,
-    content: Record<string, any>,
-    _: string
-  ) => void;
-};
+import { MatrixClient } from './matrix.types';
 
 @Injectable()
 export class MatrixCommunicationService
@@ -82,15 +70,15 @@ export class MatrixCommunicationService
   }
 
   async getUserMessages(
-    userId: string
+    email: string
   ): Promise<{
     roomId: string | null;
     name: string | null;
     timeline: IResponseMessage[];
   }> {
-    const username = userId;
+    const matrixUsername = MatrixTransforms.email2id(email);
     // Need to implement caching for performance
-    const dmRoom = this._roomEntityAdapter.dmRooms()[username];
+    const dmRoom = this._roomEntityAdapter.dmRooms()[matrixUsername];
 
     // Check DMRoomMap implementation for details in react-sdk
     // avoid retrieving data - if we cannot retrieve dms for a room that is supposed to be dm then we might have reached an erroneous state
@@ -131,32 +119,45 @@ export class MatrixCommunicationService
     return await this.getMessages(community.roomId);
   }
 
-  async messageUser(content: IDirectMessageRequest): Promise<void> {
+  async messageUser(content: IDirectMessageRequest): Promise<string> {
     // there needs to be caching for dmRooms and event to update them
     const dmRooms = this._roomEntityAdapter.dmRooms();
-    const dmRoom = dmRooms[content.userId];
+    const matrixUsername = MatrixTransforms.email2id(content.email);
+    const dmRoom = dmRooms[matrixUsername];
     let targetRoomId = null;
 
     if (!dmRoom || !Boolean(dmRoom[0])) {
       targetRoomId = await this._roomEntityAdapter.createRoom({
-        dmUserId: content.userId,
+        dmUserId: matrixUsername,
       });
 
-      await this._roomEntityAdapter.setDmRoom(targetRoomId, content.userId);
+      await this._roomEntityAdapter.setDmRoom(targetRoomId, matrixUsername);
     } else {
       targetRoomId = dmRoom[0];
     }
 
-    return this.message(targetRoomId, { text: content.text });
+    await this.message(targetRoomId, { text: content.text });
+
+    return targetRoomId;
   }
 
-  async messageCommunity(content: ICommunityMessageRequest): Promise<void> {
-    // need to convert the community id to a room id
-    return this.message(content.communityId, { text: content.text });
+  async messageCommunity(content: ICommunityMessageRequest): Promise<string> {
+    const groupRooms = await this._matrixClient.getGroupRooms(
+      content.communityId
+    );
+    const room = groupRooms[0];
+
+    if (room) {
+      throw new Error('The community does not have a default room set');
+    }
+
+    await this.message(room.roomId, { text: content.text });
+
+    return room.roomId;
   }
 
-  private async message(roomId: string, content: { text: string }) {
-    return await this._matrixClient.sendEvent(
+  async message(roomId: string, content: IMessageRequest) {
+    await this._matrixClient.sendEvent(
       roomId,
       'm.room.message',
       { body: content.text, msgtype: 'm.text' },

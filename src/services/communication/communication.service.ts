@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixCommunicationPool } from '../matrix/communication/communication.matrix.pool';
-import { CommunicationMessageResult } from './communication.dto.message.result';
 import { CommunicationRoomResult } from './communication.dto.room.result';
 import { CommunicationSendMessageInput } from './communication.dto.send.msg';
 
@@ -14,20 +13,34 @@ export class CommunicationService {
   ) {}
 
   async sendMsg(
+    senderEmail: string,
     sendMsgData: CommunicationSendMessageInput
-  ): Promise<CommunicationRoomResult> {
-    const room = new CommunicationRoomResult();
-    room.messages = [];
-    const newMsg = new CommunicationMessageResult();
-    newMsg.message = sendMsgData.message;
-    room.messages.push(newMsg);
+  ): Promise<void> {
+    const { receiverEmail, message } = sendMsgData;
+    let { roomID } = sendMsgData;
 
-    return room;
+    const communicationService = await this.communicationPool.acquire(
+      senderEmail
+    );
+
+    if (!Boolean(roomID)) {
+      roomID = await communicationService.messageUser({
+        text: message,
+        email: receiverEmail,
+      });
+    } else {
+      await communicationService.message(roomID, { text: message });
+    }
   }
 
   async getRooms(email: string): Promise<CommunicationRoomResult[]> {
     const communicationService = await this.communicationPool.acquire(email);
-    this.logger.log(await communicationService.getRooms());
-    return [];
+    const roomResponse = await communicationService.getRooms();
+    return roomResponse.map(rr => {
+      const room = new CommunicationRoomResult();
+      room.id = rr.roomId;
+
+      return room;
+    });
   }
 }

@@ -1,11 +1,13 @@
-export interface ICommunityMessageRequest {
-  communityId: string;
+export interface IMessageRequest {
   text: string;
 }
 
-export interface IDirectMessageRequest {
-  userId: string;
-  text: string;
+export interface ICommunityMessageRequest extends IMessageRequest {
+  communityId: string;
+}
+
+export interface IDirectMessageRequest extends IMessageRequest {
+  email: string;
 }
 
 export interface IResponseMessage {
@@ -17,7 +19,7 @@ export interface IMatrixCommunicationService {
   getCommunities(): Promise<any[]>;
   getRooms(): Promise<any[]>;
   getUserMessages(
-    userId: string
+    email: string
   ): Promise<{
     roomId: string | null;
     name: string | null;
@@ -30,6 +32,7 @@ export interface IMatrixCommunicationService {
     name: string | null;
     timeline: IResponseMessage[];
   }>;
-  messageUser(content: IDirectMessageRequest): Promise<void>;
-  messageCommunity(content: ICommunityMessageRequest): Promise<void>;
+  message(room: string, content: IMessageRequest): Promise<void>;
+  messageUser(content: IDirectMessageRequest): Promise<string>;
+  messageCommunity(content: ICommunityMessageRequest): Promise<string>;
 }
