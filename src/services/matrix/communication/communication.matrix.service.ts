@@ -1,8 +1,8 @@
 import { Disposable } from '@interfaces/disposable.interface';
 import { ConfigService } from '@nestjs/config';
+import { IMatrixAuthProviderConfig } from '@src/services/configuration/config/matrix';
+import { IOperationalMatrixUser } from '@src/services/matrix/user/user.matrix.interface';
 import { createClient } from 'matrix-js-sdk/lib';
-import { IMatrixAuthProviderConfig } from '../../configuration/config/matrix';
-import { IOperationalMatrixUser } from '../user/user.matrix.interface';
 import {
   ICommunityMessageRequest,
   IDirectMessageRequest,

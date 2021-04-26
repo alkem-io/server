@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
-import { IMatrixAuthProviderConfig } from '../../configuration/config/matrix';
-import { MatrixCryptographyService } from '../cryptography/cryptography.matrix.service';
+import { IMatrixAuthProviderConfig } from '@src/services/configuration/config/matrix';
+import { MatrixCryptographyService } from '@src/services/matrix/cryptography/cryptography.matrix.service';
 import {
   IMatrixUser,
   IMatrixUserService,
