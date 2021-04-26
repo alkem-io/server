@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixUserService } from '../user/user.matrix.service';
 import { MatrixCommunicationService } from './communication.matrix.service';
@@ -10,7 +10,7 @@ export class MatrixCommunicationPool {
 
   constructor(
     private configService: ConfigService,
-    @Inject() private userService: MatrixUserService
+    private userService: MatrixUserService
   ) {
     /* TODO
       - need to create sliding expiration mechanism

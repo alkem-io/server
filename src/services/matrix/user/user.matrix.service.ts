@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
 import { IMatrixAuthProviderConfig } from '../../configuration/config/matrix';
@@ -24,7 +24,7 @@ export class MatrixUserService implements IMatrixUserService {
   _matrixClient: any;
   constructor(
     private configService: ConfigService,
-    @Inject() private cryptographyServive: MatrixCryptographyService
+    private cryptographyServive: MatrixCryptographyService
   ) {
     this._config = this.configService.get<IMatrixAuthProviderConfig>(
       'matrix'

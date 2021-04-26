@@ -8,10 +8,8 @@ import { User } from '@domain/community/user/user.entity';
 import { UserService } from './user.service';
 import { MemberOf } from './memberof.composite';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import {
-  CommunicationRoomResult,
-  CommunicationService,
-} from '@src/services/communication';
+import { CommunicationRoomResult } from '@src/services/communication';
+import { CommunicationService } from '@src/services/communication/communication.service';
 
 @Resolver(() => User)
 export class UserResolverFields {

@@ -1,4 +1,5 @@
 import { Disposable } from '@interfaces/disposable.interface';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
 import { IMatrixAuthProviderConfig } from '../../configuration/config/matrix';
@@ -27,6 +28,7 @@ type MatrixClient = {
   ) => void;
 };
 
+@Injectable()
 export class MatrixCommunicationService
   implements IMatrixCommunicationService, Disposable {
   private _config: IMatrixAuthProviderConfig;
