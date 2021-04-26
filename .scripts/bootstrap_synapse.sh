@@ -26,9 +26,7 @@ function set_yaml_value()
 function enable_registration()
 {
   pattern="enable_registration: false"
-  echo $pattern
   replacement="enable_registration: true"
-  echo $replacement
   sed -i "s/${pattern}/${replacement}/g" "/var/docker_data/matrix/homeserver.yaml"
   sed -i '/enable_registration:/s/^#//g' "/var/docker_data/matrix/homeserver.yaml"
 }
@@ -39,7 +37,8 @@ docker run -it --rm \
     -e SYNAPSE_REPORT_STATS=yes \
     matrixdotorg/synapse:latest generate
 
-cp -a /var/lib/docker/volumes/synapse-data/_data/. /var/docker_data/matrix
+synapse_data_docker_folder=$(docker volume inspect --format '{{ .Mountpoint }}' synapse-data)
+cp -a "${synapse_data_docker_folder}/." /var/docker_data/matrix
 
 set_yaml_value "/var/docker_data/matrix/homeserver.yaml" "registration_shared_secret" $(read_var SYNAPSE_SHARED_SECRET)
 enable_registration
