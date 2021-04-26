@@ -56,57 +56,6 @@ afterAll(async () => {
 });
 
 describe('Lifecycle', () => {
-  describe.skip('Negative scenarios', () => {
-    beforeEach(async () => {
-      // Create Challenge
-      const responseCreateChallenge = await createChallangeMutation(
-        challengeName,
-        uniqueTextId
-      );
-      challengeId = responseCreateChallenge.body.data.createChallenge.id;
-    });
-
-    afterEach(async () => {
-      await removeChallangeMutation(opportunityId);
-    });
-
-    test('should set lifecycle to abandoned', async () => {
-      // Act
-      // Create Opportunity
-      const projectData = await getProjectData(projectId);
-      console.log(projectData.body.data.ecoverse.project);
-      console.log(projectData.body.data.ecoverse.project.id);
-      console.log(projectData.body.data.ecoverse.project.lifecycle);
-
-      // Assert
-      expect(projectData.body.data.ecoverse.project.lifecycle).toEqual(
-        lifeCycleData
-      );
-      expect(projectData.status).toBe(200);
-    });
-
-    test('should update lifecycle state to "beingRefined"', async () => {
-      // Act
-      let updateState = await eventOnProjectMutation(projectId, 'REFINE');
-      console.log(updateState.body.data.eventOnProject.lifecycle);
-
-      // Create Opportunity
-      const projectData = await getProjectData(projectId);
-      console.log(projectData.body.data.ecoverse.project);
-      console.log(projectData.body.data.ecoverse.project.id);
-      console.log(projectData.body.data.ecoverse.project.lifecycle);
-
-      // Assert
-      expect(updateState.body.data.eventOnProject.lifecycle.state).toEqual(
-        'beingRefined'
-      );
-      expect(projectData.body.data.ecoverse.project.lifecycle.state).toEqual(
-        'beingRefined'
-      );
-      expect(projectData.status).toBe(200);
-    });
-  });
-
   describe('Update entity state - negative scenarios', () => {
     beforeAll(async () => {
       uniqueTextId = Math.random()
@@ -140,10 +89,8 @@ describe('Lifecycle', () => {
           challengeId,
           setInvalidEvent
         );
-        //let data = updateState.setInvalidEvent;
 
         // Assert
-        //expect(data.state).toEqual(state);
         expect(updateState.text).toContain(
           `Unable to update state: provided event (${setInvalidEvent}) not in valid set of next events: ${nextEvents}`
         );
