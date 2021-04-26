@@ -29,3 +29,10 @@ To simplify setting up the Server development environment, a pre-configured dock
 
 - The docker compose script puts the server listening on port 4001 - to avoid conflict with the default port that is used by local development.
 - The server will be empty after initially being created. To populate the Server with some sample data please use the [Cherrytwist Populator](http://github.com/cherrytwist/Populator) tool which allows easy population from a local file. Please remember to specify the correct port to connect to!
+- In order to use matrix synapse server, run from the root folder:
+
+```bash
+sudo bash ./.scripts/bootstrap_synapse.sh
+```
+
+It will use the SYNAPSE_XXX from env.docker, create a configuration in /var/lib/docker/volumes/synapse-data/\_data/, copy them to /var/docker_data/matrix and then map the latter to a volume used in docker-compose.
