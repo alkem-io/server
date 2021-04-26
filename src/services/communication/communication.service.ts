@@ -25,9 +25,8 @@ export class CommunicationService {
     return room;
   }
 
-  async getRooms(matrixID: string): Promise<CommunicationRoomResult[]> {
-    this.logger.log(matrixID);
-    const communicationService = await this.communicationPool.acquire(matrixID);
+  async getRooms(email: string): Promise<CommunicationRoomResult[]> {
+    const communicationService = await this.communicationPool.acquire(email);
     this.logger.log(await communicationService.getRooms());
     return [];
   }

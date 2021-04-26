@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpService, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
 import { IMatrixAuthProviderConfig } from '@src/services/configuration/config/matrix';
@@ -18,13 +18,28 @@ type LoggedInUserResponse = {
   access_token: string;
 };
 
+export class MatrixTransforms {
+  static mailRegex = /[@\.]/g;
+  static email2username(email: string) {
+    return email.replace(MatrixTransforms.mailRegex, '_');
+  }
+  // TODO - this needs to be a service that works with env.HOST_NAME
+  static username2id(username: string) {
+    return `@${username}:cherrytwist.matrix.host`;
+  }
+  static email2id(email: string) {
+    return MatrixTransforms.username2id(MatrixTransforms.email2username(email));
+  }
+}
+
 @Injectable()
 export class MatrixUserService implements IMatrixUserService {
   private _config: IMatrixAuthProviderConfig;
   _matrixClient: any;
   constructor(
     private configService: ConfigService,
-    private cryptographyServive: MatrixCryptographyService
+    private cryptographyServive: MatrixCryptographyService,
+    private httpService: HttpService
   ) {
     this._config = this.configService.get<IMatrixAuthProviderConfig>(
       'matrix'
@@ -41,42 +56,42 @@ export class MatrixUserService implements IMatrixUserService {
     });
   }
 
-  async register(user: IMatrixUser): Promise<IOperationalMatrixUser> {
+  async register(email: string): Promise<IOperationalMatrixUser> {
     const url = new URL(SynapseEndpoints.REGISTRATION, this._config?.baseUrl);
+    const user = this.resolveUser(email);
 
-    const nonceResponse = await fetch(url.href);
-    const nonce = (await nonceResponse.json())['nonce'];
+    const nonceResponse = await this.httpService
+      .get<{ nonce: string }>(url.href)
+      .toPromise();
+    const nonce = nonceResponse.data['nonce'];
     const hmac = this.cryptographyServive.generateHmac(user, nonce);
 
-    const registrationResponse = await fetch(url.href, {
-      method: 'POST',
-      body: JSON.stringify({
+    const registrationResponse = await this.httpService
+      .post<{ user_id: string; access_token: string }>(url.href, {
         nonce,
         username: user.name,
         password: user.password,
         mac: hmac,
-      }),
-    });
+      })
+      .toPromise();
 
     if (
-      registrationResponse.status >= 400 &&
+      registrationResponse.status > 400 &&
       registrationResponse.status < 600
     ) {
-      // TODO - handle details
-      throw new Error('Bad response from server');
+      throw new Error(`Unsuccessful registration for ${JSON.stringify(user)}`);
     }
-
-    const response = await registrationResponse.json();
 
     return {
       name: user.name,
       password: user.password,
-      username: response.user_id,
-      accessToken: response.access_token,
+      username: registrationResponse.data.user_id,
+      accessToken: registrationResponse.data.access_token,
     };
   }
 
-  async login(user: IMatrixUser): Promise<IOperationalMatrixUser> {
+  async login(email: string): Promise<IOperationalMatrixUser> {
+    const user = this.resolveUser(email);
     const operationalUser = await new Promise<LoggedInUserResponse>(
       (resolve, reject) =>
         this._matrixClient.loginWithPassword(
@@ -96,6 +111,22 @@ export class MatrixUserService implements IMatrixUserService {
       password: user.password,
       username: operationalUser.user_id,
       accessToken: operationalUser.access_token,
+    };
+  }
+
+  async isRegistered(email: string): Promise<boolean> {
+    const username = MatrixTransforms.email2username(email);
+
+    const result = await this._matrixClient.isUsernameAvailable(username);
+
+    return !Boolean(result);
+  }
+
+  private resolveUser(email: string): IMatrixUser {
+    return {
+      name: MatrixTransforms.email2username(email),
+      username: MatrixTransforms.email2id(email),
+      password: 'generated_password',
     };
   }
 }

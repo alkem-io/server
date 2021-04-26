@@ -1,6 +1,6 @@
 export interface IMatrixUserService {
-  register(user: IMatrixUser): Promise<IOperationalMatrixUser>;
-  login(user: IMatrixUser): Promise<IOperationalMatrixUser>;
+  register(email: string): Promise<IOperationalMatrixUser>;
+  login(email: string): Promise<IOperationalMatrixUser>;
 }
 
 export interface IMatrixUser {

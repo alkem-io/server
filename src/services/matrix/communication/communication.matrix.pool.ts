@@ -21,26 +21,32 @@ export class MatrixCommunicationPool {
     this._clients = {};
   }
 
-  async acquire(userId: string): Promise<MatrixCommunicationService> {
-    if (!this._clients[userId]) {
-      const operatingUser = await this.userService.login({
-        name: userId,
-        username: userId,
-        password: 'generated_password',
-      });
-      this._clients[userId] = new MatrixCommunicationService(
+  async acquire(email: string): Promise<MatrixCommunicationService> {
+    if (!this._clients[email]) {
+      const operatingUser = await this.acquireUser(email);
+      this._clients[email] = new MatrixCommunicationService(
         this.configService,
         operatingUser
       );
     }
 
-    return this._clients[userId];
+    return this._clients[email];
   }
 
-  release(userId: string): void {
-    if (this._clients[userId]) {
-      this._clients[userId].dispose();
-      delete this._clients[userId];
+  private async acquireUser(email: string) {
+    const isRegistered = await this.userService.isRegistered(email);
+
+    if (isRegistered) {
+      return await this.userService.login(email);
+    }
+
+    return await this.userService.register(email);
+  }
+
+  release(email: string): void {
+    if (this._clients[email]) {
+      this._clients[email].dispose();
+      delete this._clients[email];
     }
   }
 }

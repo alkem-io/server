@@ -1,7 +1,7 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { CommunicationMessageResult } from './communication.dto.message.result';
 
-@InputType()
+@ObjectType()
 export class CommunicationRoomResult {
   @Field(() => [String], {
     nullable: false,

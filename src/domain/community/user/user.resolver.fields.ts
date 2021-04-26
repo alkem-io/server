@@ -34,14 +34,13 @@ export class UserResolverFields {
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
-  @ResolveField('memberof', () => MemberOf, {
+  @ResolveField('rooms', () => [CommunicationRoomResult], {
     nullable: true,
-    description:
-      'An overview of the groups this user is a memberof. Note: all groups are returned without members to avoid recursion.',
+    description: 'An overview of the rooms this user is a member of',
   })
   @Profiling.api
   async rooms(@Parent() user: User): Promise<CommunicationRoomResult[]> {
-    const rooms = await this.communicationService.getRooms(user.id.toString());
+    const rooms = await this.communicationService.getRooms(user.email);
     return rooms;
   }
 }
