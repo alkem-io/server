@@ -19,9 +19,9 @@ type LoggedInUserResponse = {
 };
 
 export class MatrixTransforms {
-  static mailRegex = /[@\.]/g;
+  static mailRegex = /[@]/g;
   static email2username(email: string) {
-    return email.replace(MatrixTransforms.mailRegex, '_');
+    return email.replace(MatrixTransforms.mailRegex, '=');
   }
   // TODO - this needs to be a service that works with env.HOST_NAME
   static username2id(username: string) {
@@ -29,6 +29,9 @@ export class MatrixTransforms {
   }
   static email2id(email: string) {
     return MatrixTransforms.username2id(MatrixTransforms.email2username(email));
+  }
+  static username2email(username: string) {
+    return username.replace(/[=]/g, '@');
   }
 }
 
@@ -71,6 +74,7 @@ export class MatrixUserService implements IMatrixUserService {
         nonce,
         username: user.name,
         password: user.password,
+        bind_emails: [email],
         mac: hmac,
       })
       .toPromise();

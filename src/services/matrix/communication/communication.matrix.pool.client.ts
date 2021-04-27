@@ -3,26 +3,33 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IMatrixAuthProviderConfig } from '@src/services/configuration/config/matrix';
 import { IOperationalMatrixUser } from '@src/services/matrix/user/user.matrix.interface';
-import { createClient } from 'matrix-js-sdk/lib';
+import { createClient } from 'matrix-js-sdk';
 import { MatrixTransforms } from '../user/user.matrix.service';
+import {
+  IMatrixEventHandler,
+  MatrixEventDispatcher,
+} from './communication.event.dispatcher';
 import {
   ICommunityMessageRequest,
   IDirectMessageRequest,
-  IMatrixCommunicationService,
+  IMatrixCommunicationClient,
   IMessageRequest,
   IResponseMessage,
 } from './communication.matrix.interface';
+import { AutoAcceptGroupMembershipMonitorFactory } from './events/group.events.communication.matrix';
+import { AutoAcceptRoomMembershipMonitorFactory } from './events/room.events.communication.matrix';
 import { MatrixGroupEntityAdapter } from './group/group.communication.matrix.adapter';
-import { MatrixRoomEntityAdapter } from './room/room.communication.matrix.adapter';
 import { MatrixClient } from './matrix.types';
+import { MatrixRoomEntityAdapter } from './room/room.communication.matrix.adapter';
 
 @Injectable()
-export class MatrixCommunicationService
-  implements IMatrixCommunicationService, Disposable {
+export class MatrixCommunicationClient
+  implements IMatrixCommunicationClient, Disposable {
   private _config: IMatrixAuthProviderConfig;
   _matrixClient: MatrixClient;
   protected _roomEntityAdapter: MatrixRoomEntityAdapter;
   protected _groupEntityAdapter: MatrixGroupEntityAdapter;
+  protected _eventDispatcher: MatrixEventDispatcher;
 
   constructor(
     private configService: ConfigService,
@@ -45,9 +52,7 @@ export class MatrixCommunicationService
 
     this._roomEntityAdapter = new MatrixRoomEntityAdapter(this._matrixClient);
     this._groupEntityAdapter = new MatrixGroupEntityAdapter(this._matrixClient);
-
-    // The client needs to start and catch-up before any methods are invoked
-    this._matrixClient.startClient();
+    this._eventDispatcher = new MatrixEventDispatcher(this._matrixClient);
   }
 
   async getCommunities(): Promise<any[]> {
@@ -165,7 +170,46 @@ export class MatrixCommunicationService
     );
   }
 
+  attach(handler: IMatrixEventHandler) {
+    this._eventDispatcher.attach(handler);
+  }
+
+  detach(id: string) {
+    this._eventDispatcher.detach(id);
+  }
+
+  async start() {
+    const startComplete = new Promise<void>((resolve, reject) => {
+      const subscription = this._eventDispatcher.syncMonitor.subscribe(
+        ({ oldSyncState, syncState }) => {
+          if (syncState === 'SYNCING' && oldSyncState !== 'SYNCING') {
+            subscription.unsubscribe();
+            resolve();
+          } else if (syncState === 'ERROR') {
+            reject();
+          }
+        }
+      );
+    });
+
+    this.attach({
+      id: 'root',
+      roomMemberMembershipMonitor: AutoAcceptRoomMembershipMonitorFactory.create(
+        this._matrixClient,
+        this._roomEntityAdapter
+      ),
+      groupMyMembershipMonitor: AutoAcceptGroupMembershipMonitorFactory.create(
+        this._matrixClient
+      ),
+    });
+
+    await this._matrixClient.startClient();
+
+    return await startComplete;
+  }
+
   dispose() {
     this._matrixClient.stopClient();
+    this._eventDispatcher.dispose();
   }
 }

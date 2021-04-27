@@ -1,0 +1,13 @@
+mutation msgUser($msgData: CommunicationSendMessageInput!) {
+  message(msgData: $msgData) {
+    id
+  }
+}
+
+Variables:
+{
+  "msgData": {
+    "message": "example",
+    "receiverEmail": "example@email.com"
+  }
+}

@@ -7,4 +7,10 @@ export class CommunicationMessageResult {
     description: 'The message being sent',
   })
   message!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The sender email',
+  })
+  sender!: string;
 }

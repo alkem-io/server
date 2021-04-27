@@ -2,11 +2,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixUserService } from '@src/services/matrix/user/user.matrix.service';
-import { MatrixCommunicationService } from './communication.matrix.service';
+import { MatrixCommunicationClient } from './communication.matrix.pool.client';
 
 @Injectable()
 export class MatrixCommunicationPool {
-  private _clients: Record<string, MatrixCommunicationService>;
+  private _clients: Record<string, MatrixCommunicationClient>;
 
   constructor(
     private configService: ConfigService,
@@ -21,13 +21,16 @@ export class MatrixCommunicationPool {
     this._clients = {};
   }
 
-  async acquire(email: string): Promise<MatrixCommunicationService> {
+  async acquire(email: string): Promise<MatrixCommunicationClient> {
     if (!this._clients[email]) {
       const operatingUser = await this.acquireUser(email);
-      this._clients[email] = new MatrixCommunicationService(
+      const client = new MatrixCommunicationClient(
         this.configService,
         operatingUser
       );
+      await client.start();
+
+      this._clients[email] = client;
     }
 
     return this._clients[email];

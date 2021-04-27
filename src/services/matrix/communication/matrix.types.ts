@@ -1,4 +1,4 @@
-type eventHandler = <T = unknown, R = unknown>(args?: T) => R;
+export type eventHandler = (args0?: any, args1?: any, args2?: any) => void;
 
 export type MatrixClient = {
   startClient: () => void;
@@ -6,7 +6,9 @@ export type MatrixClient = {
   getGroups: () => Promise<any[]>;
   getRooms: () => Promise<any[]>;
   getRoom: (roomId: string) => Promise<any>;
+  joinRoom: (roomId: string) => Promise<void>;
   getGroup: (groupId: string) => Promise<any>;
+  acceptGroupInvite: (groupId: string) => Promise<void>;
   getGroupRooms: (groupId: string) => Promise<any[]>;
   sendEvent: (
     roomId: string,
@@ -17,4 +19,6 @@ export type MatrixClient = {
 
   on: (type: string, handler: eventHandler) => void;
   off: (type: string, handler: eventHandler) => void;
+
+  credentials: any;
 };

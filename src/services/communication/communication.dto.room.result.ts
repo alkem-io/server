@@ -3,7 +3,7 @@ import { CommunicationMessageResult } from './communication.dto.message.result';
 
 @ObjectType()
 export class CommunicationRoomResult {
-  @Field(() => [String], {
+  @Field(() => String, {
     nullable: false,
     description: 'The identifier of the room',
   })
