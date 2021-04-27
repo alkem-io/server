@@ -29,3 +29,10 @@ service:
   corsMethods: ${CORS_METHODS}:GET,HEAD,PUT,PATCH,POST,DELETE
   authenticationEnabled: ${AUTH_ENABLED}:true
   authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
+aad_ropc:
+  clientID: ${AUTH_AAD_CLIENT_APP_ID}
+  clientSecret: ${AUTH_AAD_CLIENT_APP_SECRET}
+  scope: ${AUTH_AAD_CHERRYTWIST_API_SCOPE}
+  tenant: ${AUTH_AAD_TENANT}
+  username: ${AUTH_AAD_USER_UPN}
+  password: ${AUTH_AAD_USER_PASSWORD}

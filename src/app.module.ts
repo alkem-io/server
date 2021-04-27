@@ -18,7 +18,6 @@ import { WinstonConfigService } from '@src/config/winston.config';
 import { SearchModule } from '@src/services/search/search.module';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
-import aadRopcConfig from '@src/config/aad.ropc.config';
 import { MetadataModule } from '@src/services/metadata/metadata.module';
 import { KonfigModule } from '@src/services/configuration/config/config.module';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
@@ -37,7 +36,7 @@ import configuration from '@config/configuration';
         '.env.logging.default',
       ],
       isGlobal: true,
-      load: [aadConfig, aadClientConfig, aadRopcConfig, configuration],
+      load: [aadConfig, aadClientConfig, configuration],
     }),
     TypeOrmModule.forRootAsync({
       name: 'default',
