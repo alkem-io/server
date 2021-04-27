@@ -6,14 +6,12 @@ import { AuthenticationModule } from '@src/core/authentication/authentication.mo
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
-import aadConfig from '@src/config/aad.config';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { IDatabaseConfig } from '@src/common/interfaces/database.config.interface';
 import { DataManagementModule } from '@src/services/data-management/data-management.module';
 import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
 import { WinstonModule } from 'nest-winston';
-import aadClientConfig from '@src/config/aad.client.config';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { SearchModule } from '@src/services/search/search.module';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
@@ -28,15 +26,9 @@ import configuration from '@config/configuration';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: [
-        '.env',
-        '.env.default',
-        '.env.aad.cherrytwist.api.default',
-        '.env.aad.cherrytwist.client.default',
-        '.env.logging.default',
-      ],
+      envFilePath: ['.env'],
       isGlobal: true,
-      load: [aadConfig, aadClientConfig, configuration],
+      load: [configuration],
     }),
     TypeOrmModule.forRootAsync({
       name: 'default',

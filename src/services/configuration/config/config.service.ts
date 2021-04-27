@@ -53,9 +53,31 @@ export class KonfigService {
   }
 
   async getAadConfig(): Promise<IAadAuthProviderConfig> {
-    return (await this.configService.get<IAadAuthProviderConfig>(
-      'aad_client'
-    )) as IAadAuthProviderConfig;
+    const aadConfig = await this.configService.get('aad');
+
+    return {
+      msalConfig: {
+        auth: {
+          ...aadConfig.client,
+        },
+        cache: {
+          cacheLocation: 'localStorage', // This configures where your cache will be stored
+          storeAuthStateInCookie: false, // Set this to "true" if you are having issues on IE11 or Edge
+        },
+      },
+      apiConfig: {
+        resourceScope: 'Cherrytwist-GraphQL',
+      },
+      loginRequest: {
+        scopes: ['openid', 'profile', 'offline_access'],
+      },
+      tokenRequest: {
+        scopes: [aadConfig.scope],
+      },
+      silentRequest: {
+        scopes: ['openid', 'profile', aadConfig.scope],
+      },
+    };
   }
 
   async getDemoAuthProviderConfig(): Promise<IDemoAuthProviderConfig> {
