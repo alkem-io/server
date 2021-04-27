@@ -40,7 +40,6 @@ export class UserResolverFields {
   })
   @Profiling.api
   async rooms(@Parent() user: User): Promise<CommunicationRoomResult[]> {
-    const rooms = await this.communicationService.getRooms(user.email);
-    return rooms;
+    return await this.communicationService.getRooms(user.email);
   }
 }

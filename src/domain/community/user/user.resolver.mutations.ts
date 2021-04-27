@@ -73,6 +73,6 @@ export class UserResolverMutations {
     @Args('msgData') msgData: CommunicationSendMessageInput,
     @CurrentUser() userInfo: UserInfo
   ): Promise<void> {
-    return await this.communicationService.sendMsg(userInfo.email, msgData);
+    await this.communicationService.sendMsg(userInfo.email, msgData);
   }
 }
