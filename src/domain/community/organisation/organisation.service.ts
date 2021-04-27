@@ -107,7 +107,7 @@ export class OrganisationService {
     const organisation = await this.getOrganisationByIdOrFail(orgID);
 
     if (organisation.profile) {
-      await this.profileService.removeProfile(organisation.profile.id);
+      await this.profileService.deleteProfile(organisation.profile.id);
     }
 
     if (organisation.groups) {

@@ -223,7 +223,7 @@ export class OpportunityService {
     }
 
     if (opportunityData.context && opportunity.context) {
-      await this.contextService.update(
+      opportunity.context = await this.contextService.updateContext(
         opportunity.context,
         opportunityData.context
       );
