@@ -1,7 +1,7 @@
 ipfs:
-  endpoint: 'http://127.0.0.1:5001'
-  clientEndpoint: 'https://ipfs.io/ipfs'
-  maxFileSize: 2097152
+  endpoint: ${IPFS_ENDPOINT}:http://ct_ipfs_server:5001
+  clientEndpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:8080/ipfs
+  maxFileSize: 1048576
 demo_auth_provider:
   issuer: ${AUTH_DEMO_AUTH_ISSUER}:localhost
   tokenEndpoint: ${AUTH_DEMO_AUTH_TOKEN_ENDPOINT}:http://localhost:3002/auth/login
@@ -10,15 +10,15 @@ database:
   host: ${DATABASE_HOST}:localhost
   port: 3306
   username: 'root'
-  password: 'toor'
-  schema: 'cherrytwist'
-  logging: 'true'
+  password: ${MYSQL_ROOT_PASSWORD}:toor
+  schema: ${MYSQL_DATABASE}:cherrytwist
+  logging: true
 logging:
   consoleLoggingEnabled: ${LOGGING_CONSOLE_ENABLED}:false
   loggingLevel: ${LOGGING_LEVEL_CONSOLE}:Error
   profilingEnabled: ${LOGGING_LEVEL_CONSOLE}:Error
   elkConfig:
-    enabled: ${LOGGING_ELK_ENABLED}:true
+    enabled: ${LOGGING_ELK_ENABLED}:false
     loggingLevel: ${LOGGING_LEVEL_ELK}:Error
     environment: ${ENVIRONMENT}:Dev
 service:
