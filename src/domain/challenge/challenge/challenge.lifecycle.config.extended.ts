@@ -27,13 +27,13 @@ export const challengeLifecycleConfigExtended = {
       entry: ['sampleEvent'],
       on: {
         COMPLETED: 'complete',
-        ABAONDONED: 'abandoned',
+        ABANDONED: 'abandoned',
       },
     },
     complete: {
       on: {
         ARCHIVE: 'archived',
-        ABAONDONED: 'archived',
+        ABANDONED: 'archived',
       },
     },
     abandoned: {

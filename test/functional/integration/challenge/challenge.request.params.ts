@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { lifecycleData } from '../lifecycle/lifecycle.request.params';
 
 const uniqueId = (Date.now() + Math.random()).toString();
 
@@ -14,7 +15,7 @@ export const createChallangeMutation = async (
                 name
                 id
                 textID
-                lifecycle{state}
+                ${lifecycleData}
                 community {
                   id
                   groups {
@@ -76,8 +77,7 @@ export const createBasicChallangeMutation = async (
                 name
                 id
                 textID
-                lifecycle{state}
-
+                ${lifecycleData}
                 community {
                   id
                   groups {
@@ -131,8 +131,7 @@ export const updateChallangeMutation = async (
         name
         id
         textID
-        lifecycle{state}
-
+        ${lifecycleData}
         community {
           id
           groups {
@@ -254,8 +253,7 @@ export const getChallengeData = async (challengeId: string) => {
       name
       id
       textID
-      lifecycle{state}
-
+      ${lifecycleData}
       community {
         id
         groups {
@@ -292,8 +290,7 @@ export const getChallengesData = async () => {
       name
       id
       textID
-      lifecycle{state}
-
+      ${lifecycleData}
       community {
         id
         groups {
@@ -329,8 +326,7 @@ export const getChallenge = async (challengeId: string) => {
     query: `query{ecoverse{ challenge (ID: "${challengeId}") {
       name
       id
-      lifecycle{state}
-
+      ${lifecycleData}
       context
       {tagline}
         tagset{
@@ -381,7 +377,7 @@ export const getChallengeOpportunity = async (challengeId: string) => {
       challenge(ID: "${challengeId}") {
         id
         name
-        opportunities{id name textID lifecycle{state}}}}}`,
+        opportunities{id name textID ${lifecycleData}}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
