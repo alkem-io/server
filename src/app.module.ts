@@ -32,6 +32,7 @@ import { SearchModule } from '@src/services/search/search.module';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { IpfsModule } from './services/ipfs/ipfs.module';
+import { MessageModule } from '@domain/community/message/message.module';
 
 @Module({
   imports: [
@@ -87,6 +88,25 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
       fieldResolverEnhancers: ['guards'],
       sortSchema: true,
       context: ({ req }) => ({ req }),
+      installSubscriptionHandlers: true,
+      subscriptions: {
+        keepAlive: 5000,
+        onConnect: (connectionParams, websocket, context) => {
+          // TODO Kolec
+          console.log(
+            'Connecting: ',
+            context.request.headers['sec-websocket-key'],
+            ' : ',
+            (connectionParams as any)['authToken']
+          );
+        },
+        onDisconnect: (websocket, context) => {
+          console.log(
+            'Disconnecting: ',
+            context.request.headers['sec-websocket-key']
+          );
+        },
+      },
     }),
     ScalarsModule,
     AuthenticationModule,
@@ -97,6 +117,7 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
     SearchModule,
     KonfigModule,
     IpfsModule,
+    MessageModule,
   ],
   controllers: [AppController],
   providers: [
