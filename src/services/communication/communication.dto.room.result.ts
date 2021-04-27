@@ -8,7 +8,10 @@ export class CommunicationRoomResult {
     description: 'The identifier of the room',
   })
   id!: string;
+}
 
+@ObjectType()
+export class CommunicationRoomDetailsResult extends CommunicationRoomResult {
   @Field(() => [CommunicationMessageResult], {
     nullable: false,
     description: 'The message being sent',

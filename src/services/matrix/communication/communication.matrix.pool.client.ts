@@ -63,6 +63,10 @@ export class MatrixCommunicationClient
     return this._matrixClient.getRooms() || [];
   }
 
+  async getRoom(roomId: string): Promise<any> {
+    return this._matrixClient.getRoom(roomId);
+  }
+
   async getMessages(
     roomId: string
   ): Promise<{ roomId: string; name: string; timeline: IResponseMessage[] }> {

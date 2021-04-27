@@ -63,7 +63,6 @@ export class UserResolverMutations {
     return await this.userService.removeUser(deleteData);
   }
 
-  @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User, {
     description: 'Sends a message on the specified User`s behalf.',
@@ -73,6 +72,10 @@ export class UserResolverMutations {
     @Args('msgData') msgData: CommunicationSendMessageInput,
     @CurrentUser() userInfo: UserInfo
   ): Promise<void> {
-    await this.communicationService.sendMsg(userInfo.email, msgData);
+    const receiver = await this.userService.getUserOrFail(msgData.receiverID);
+    await this.communicationService.sendMsg(userInfo.email, {
+      ...msgData,
+      receiverID: receiver.email,
+    });
   }
 }

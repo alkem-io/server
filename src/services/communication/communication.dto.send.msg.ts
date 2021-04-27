@@ -1,4 +1,4 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, ID, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class CommunicationSendMessageInput {
@@ -14,10 +14,10 @@ export class CommunicationSendMessageInput {
   })
   message!: string;
 
-  @Field(() => String, {
+  @Field(() => ID, {
     nullable: false,
     description:
-      'The email of the receiver if attempting to direct message someone',
+      'The user ID of the receiver if attempting to direct message someone',
   })
-  receiverEmail!: string;
+  receiverID!: string;
 }
