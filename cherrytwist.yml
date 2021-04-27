@@ -7,7 +7,7 @@ demo_auth_provider:
   tokenEndpoint: 'http://localhost:3002/auth/login'
   clientSecret: '!#@$#SDFRSF'
 database:
-  host: 'localhost'
+  host: ${DATABASE_HOST}:localhost
   port: 3306
   username: 'root'
   password: 'toor'
