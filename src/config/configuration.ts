@@ -44,6 +44,8 @@ function buildYamlNodeValue(nodeValue: any, envConfig: any) {
     const envVariableDefaultValue = found[2];
 
     updatedNodeValue = envConfig[envVariableKey] ?? envVariableDefaultValue;
+    if (updatedNodeValue.toLowerCase() === 'true') return true;
+    if (updatedNodeValue.toLowerCase() === 'false') return false;
   }
 
   return updatedNodeValue;

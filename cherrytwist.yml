@@ -3,9 +3,9 @@ ipfs:
   clientEndpoint: 'https://ipfs.io/ipfs'
   maxFileSize: 2097152
 demo_auth_provider:
-  issuer: 'localhost'
-  tokenEndpoint: 'http://localhost:3002/auth/login'
-  clientSecret: '!#@$#SDFRSF'
+  issuer: ${AUTH_DEMO_AUTH_ISSUER}:localhost
+  tokenEndpoint: ${AUTH_DEMO_AUTH_TOKEN_ENDPOINT}:http://localhost:3002/auth/login
+  clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
 database:
   host: ${DATABASE_HOST}:localhost
   port: 3306
@@ -13,3 +13,19 @@ database:
   password: 'toor'
   schema: 'cherrytwist'
   logging: 'true'
+logging:
+  consoleLoggingEnabled: ${LOGGING_CONSOLE_ENABLED}:false
+  loggingLevel: ${LOGGING_LEVEL_CONSOLE}:Error
+  profilingEnabled: ${LOGGING_LEVEL_CONSOLE}:Error
+  elkConfig:
+    enabled: ${LOGGING_ELK_ENABLED}:true
+    loggingLevel: ${LOGGING_LEVEL_ELK}:Error
+    environment: ${ENVIRONMENT}:Dev
+service:
+  authEnabled: ${AUTH_ENABLED}:true
+  graphqlEndpointPort: ${GRAPHQL_ENDPOINT}:4000
+  corsOrigin: ${CORS_ORIGIN}:*
+  corsAllowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
+  corsMethods: ${CORS_METHODS}:GET,HEAD,PUT,PATCH,POST,DELETE
+  authenticationEnabled: ${AUTH_ENABLED}:true
+  authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
