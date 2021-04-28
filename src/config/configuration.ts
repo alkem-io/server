@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs';
-import path, { join } from 'path';
-import * as dotenv from 'dotenv';
+import { join } from 'path';
 import YAML from 'yaml';
 
 const YAML_CONFIG_FILENAME = 'cherrytwist.yml';
@@ -12,7 +11,7 @@ export default () => {
   );
 
   const doc = YAML.parseDocument(rawYaml);
-  const envConfig = getEnvConfig();
+  const envConfig = process.env;
 
   YAML.visit(doc, {
     Scalar(key, node) {
@@ -25,14 +24,6 @@ export default () => {
   const config = doc.toJSON() as Record<string, any>;
   return config;
 };
-
-function getEnvConfig() {
-  const filePath = '.env';
-  const envFile = path.resolve(__dirname, '../../', filePath);
-  const envConfig = dotenv.parse(readFileSync(envFile));
-
-  return envConfig;
-}
 
 function buildYamlNodeValue(nodeValue: any, envConfig: any) {
   let updatedNodeValue = nodeValue;
