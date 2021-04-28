@@ -124,7 +124,7 @@ export class ChallengeService {
           `Challenge not initialised: ${challengeData.ID}`,
           LogContext.CHALLENGES
         );
-      await this.contextService.update(
+      challenge.context = await this.contextService.updateContext(
         challenge.context,
         challengeData.context
       );

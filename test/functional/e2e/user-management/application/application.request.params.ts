@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { lifecycleData } from '@test/functional/integration/lifecycle/lifecycle.request.params';
 
 export const appData = `{
       id
@@ -7,15 +8,15 @@ export const appData = `{
         name
         value
       }
-      status
+      ${lifecycleData}
       user {
         id
       }
     }`;
 
 export const createApplicationMutation = async (
-  communityid: number,
-  userid: any
+  communityid: string,
+  userid: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -24,7 +25,7 @@ export const createApplicationMutation = async (
       }`,
     variables: {
       applicationData: {
-        parentID: communityid,
+        parentID: parseFloat(communityid),
         userId: parseFloat(userid),
         questions: [{ name: 'Test Question 1', value: 'Test answer' }],
       },
@@ -43,7 +44,7 @@ export const removeApplicationMutation = async (appId: any) => {
             id
             name
           }
-          status
+          ${lifecycleData}
           user {
             id
           }}}`,
