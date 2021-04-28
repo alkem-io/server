@@ -29,12 +29,6 @@ service:
   corsMethods: ${CORS_METHODS}:GET,HEAD,PUT,PATCH,POST,DELETE
   authenticationEnabled: ${AUTH_ENABLED}:true
   authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
-aad_ropc:
-  clientID: ${AUTH_AAD_CLIENT_APP_ID}
-  scope: ${AUTH_AAD_CHERRYTWIST_API_SCOPE}
-  tenant: ${AUTH_AAD_TENANT}
-  username: ${AUTH_AAD_USER_UPN}
-  password: ${AUTH_AAD_USER_PASSWORD}
 aad:
   identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
   clientID: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38

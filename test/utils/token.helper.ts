@@ -1,4 +1,4 @@
-import { AadAuthenticationClient, AuthConfig, Token } from '@cmdbg/tokenator';
+import { AadAuthenticationClient, Token } from '@cmdbg/tokenator';
 import { ConfigService } from '@nestjs/config';
 
 export class TokenHelper {
@@ -6,9 +6,12 @@ export class TokenHelper {
   private aadAuthenticationClient: AadAuthenticationClient;
 
   constructor(configService: ConfigService) {
-    this.aadAuthenticationClient = new AadAuthenticationClient(
-      () => configService.get<AuthConfig>('aad_ropc') as AuthConfig
-    );
+    this.aadAuthenticationClient = new AadAuthenticationClient(() => ({
+      clientID: configService.get('aad').clientID,
+      scope: configService.get('aad').scope,
+      tenant: configService.get('aad').tenant,
+      ...configService.get('aad').ropc,
+    }));
   }
 
   private async buildUpn(user: string): Promise<string> {
