@@ -47,7 +47,7 @@ export class CommunicationService {
     const roomResponse = await communicationService.getRooms();
     return await Promise.all(
       roomResponse.map(rr =>
-        this.createRoom(rr.roomID, rr.isDirect, rr.receiverEmail, [])
+        this.bootstrapRoom(rr.roomID, rr.isDirect, rr.receiverEmail, [])
       )
     );
   }
@@ -64,7 +64,7 @@ export class CommunicationService {
       timeline,
     } = await communicationService.getRoom(roomId);
 
-    const room = await this.createRoom(
+    const room = await this.bootstrapRoom(
       roomID,
       isDirect,
       receiverEmail,
@@ -74,7 +74,7 @@ export class CommunicationService {
     return room;
   }
 
-  private async createRoom(
+  private async bootstrapRoom(
     roomId: string,
     isDirect: boolean,
     receiverEmail: string,

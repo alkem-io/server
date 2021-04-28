@@ -7,6 +7,7 @@ import { MatrixCommunicationClient } from './communication.matrix.pool.client';
 @Injectable()
 export class MatrixCommunicationPool {
   private _clients: Record<string, MatrixCommunicationClient>;
+  private _sessions: Record<string, string>;
 
   constructor(
     private configService: ConfigService,
@@ -18,9 +19,13 @@ export class MatrixCommunicationPool {
       - need to expose mechanism to subscribe (socket) using the event-dispatcher
     */
     this._clients = {};
+    this._sessions = {};
   }
 
-  async acquire(email: string): Promise<MatrixCommunicationClient> {
+  async acquire(
+    email: string,
+    session?: string
+  ): Promise<MatrixCommunicationClient> {
     if (!this._clients[email]) {
       const operatingUser = await this.acquireUser(email);
       const client = new MatrixCommunicationClient(
@@ -30,9 +35,22 @@ export class MatrixCommunicationPool {
       await client.start();
 
       this._clients[email] = client;
+      if (session) {
+        this._sessions[session] = email;
+      }
     }
 
     return this._clients[email];
+  }
+
+  async acquireSession(session: string) {
+    const email = this._sessions[session];
+
+    return this.acquire(email);
+  }
+
+  async releaseSession(session: string) {
+    delete this._sessions[session];
   }
 
   private async acquireUser(email: string) {

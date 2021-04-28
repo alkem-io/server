@@ -3,6 +3,7 @@ import ipfsConfig from '@config/ipfs.config';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import { MessageModule } from '@domain/community/message/message.module';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
@@ -19,8 +20,8 @@ import aadRopcConfig from '@src/config/aad.ropc.config';
 import databaseConfig from '@src/config/database.config';
 import demoAuthProviderConfig from '@src/config/demo.auth.provider.config';
 import loggingConfig from '@src/config/logging.config';
-import msGraphConfig from '@src/config/ms-graph.config';
 import matrixClientConfig from '@src/config/matrix.client.config';
+import msGraphConfig from '@src/config/ms-graph.config';
 import serviceConfig from '@src/config/service.config';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { AuthenticationModule } from '@src/core/authentication/authentication.module';
@@ -32,7 +33,9 @@ import { SearchModule } from '@src/services/search/search.module';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { IpfsModule } from './services/ipfs/ipfs.module';
-import { MessageModule } from '@domain/community/message/message.module';
+import { MatrixCommunicationModule } from './services/matrix/communication/communication.matrix.module';
+import { MatrixCommunicationPool } from './services/matrix/communication/communication.matrix.pool';
+import { decode } from 'jsonwebtoken';
 
 @Module({
   imports: [
@@ -81,32 +84,61 @@ import { MessageModule } from '@domain/community/message/message.module';
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
-    GraphQLModule.forRoot({
-      uploads: false,
-      autoSchemaFile: true,
-      playground: true,
-      fieldResolverEnhancers: ['guards'],
-      sortSchema: true,
-      context: ({ req }) => ({ req }),
-      installSubscriptionHandlers: true,
-      subscriptions: {
-        keepAlive: 5000,
-        onConnect: (connectionParams, websocket, context) => {
-          // TODO Kolec
-          console.log(
-            'Connecting: ',
-            context.request.headers['sec-websocket-key'],
-            ' : ',
-            (connectionParams as any)['authToken']
-          );
+    GraphQLModule.forRootAsync({
+      imports: [MatrixCommunicationModule],
+      inject: [MatrixCommunicationPool],
+      useFactory: async (communicationPool: MatrixCommunicationPool) => ({
+        uploads: false,
+        autoSchemaFile: true,
+        playground: true,
+        fieldResolverEnhancers: ['guards'],
+        sortSchema: true,
+        context: ({ req }) => ({ req }),
+        installSubscriptionHandlers: true,
+        subscriptions: {
+          keepAlive: 5000,
+          onConnect: async (connectionParams, websocket, context) => {
+            // TODO Kolec
+            const jwtToken = (connectionParams as any).authToken;
+            if (jwtToken) {
+              const { email } = decode(jwtToken) as any;
+              const session = context.request.headers['sec-websocket-key'];
+              const sessionKey = Array.isArray(session) ? session[0] : session;
+              const client = await communicationPool.acquire(email, sessionKey);
+
+              if (sessionKey) {
+                client.attach({
+                  id: sessionKey,
+                });
+                console.log(
+                  'Connecting: ',
+                  email,
+                  context.request.headers['sec-websocket-key'],
+                  ' : ',
+                  (connectionParams as any)['authToken']
+                );
+              }
+            }
+          },
+          onDisconnect: async (websocket, context) => {
+            const session = context.request.headers['sec-websocket-key'];
+            const sessionKey = Array.isArray(session) ? session[0] : session;
+
+            if (!sessionKey) {
+              return;
+            }
+
+            const client = await communicationPool.acquireSession(sessionKey);
+            if (client) {
+              client.detach(sessionKey);
+              console.log(
+                'Disconnecting: ',
+                context.request.headers['sec-websocket-key']
+              );
+            }
+          },
         },
-        onDisconnect: (websocket, context) => {
-          console.log(
-            'Disconnecting: ',
-            context.request.headers['sec-websocket-key']
-          );
-        },
-      },
+      }),
     }),
     ScalarsModule,
     AuthenticationModule,

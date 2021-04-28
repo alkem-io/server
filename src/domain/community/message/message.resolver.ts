@@ -99,11 +99,11 @@ export class MessageResolver {
   @Query(() => [Message])
   messages(): Message[] {
     const messsgeList = messages.map(toMessage);
-    const futureMessages = messsgeList.slice(2);
-    setTimeout(() => {
-      this.sendMessages(futureMessages);
-    }, 2000);
-    return messsgeList.slice(0, 2);
+    // const futureMessages = messsgeList.slice(2);
+    // setTimeout(() => {
+    //   this.sendMessages(futureMessages);
+    // }, 2000);
+    return messsgeList;
   }
 
   @Subscription(() => Message)
