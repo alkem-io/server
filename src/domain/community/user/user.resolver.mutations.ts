@@ -64,16 +64,18 @@ export class UserResolverMutations {
   }
 
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => User, {
-    description: 'Sends a message on the specified User`s behalf.',
+  @Mutation(() => String, {
+    description:
+      'Sends a message on the specified User`s behalf and returns the room id',
   })
   @Profiling.api
   async message(
     @Args('msgData') msgData: CommunicationSendMessageInput,
     @CurrentUser() userInfo: UserInfo
-  ): Promise<void> {
+  ): Promise<string> {
     const receiver = await this.userService.getUserOrFail(msgData.receiverID);
-    await this.communicationService.sendMsg(userInfo.email, {
+
+    return await this.communicationService.sendMsg(userInfo.email, {
       ...msgData,
       receiverID: receiver.email,
     });

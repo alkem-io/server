@@ -1,9 +1,10 @@
-import { Module } from '@nestjs/common';
+import { UserModule } from '@domain/community/user/user.module';
+import { forwardRef, Module } from '@nestjs/common';
 import { MatrixCommunicationModule } from '@src/services/matrix/communication/communication.matrix.module';
 import { CommunicationService } from './communication.service';
 
 @Module({
-  imports: [MatrixCommunicationModule],
+  imports: [MatrixCommunicationModule, forwardRef(() => UserModule)],
   providers: [CommunicationService],
   exports: [CommunicationService],
 })

@@ -33,6 +33,9 @@ export class MatrixTransforms {
   static username2email(username: string) {
     return username.replace(/[=]/g, '@');
   }
+  static id2email(id: string) {
+    return MatrixTransforms.username2email(id.replace('@', '').split(':')[0]);
+  }
 }
 
 @Injectable()

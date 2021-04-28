@@ -15,7 +15,6 @@ export class MatrixCommunicationPool {
     /* TODO
       - need to create sliding expiration mechanism
       - additionally have a maximum pool size and destroy clients to make space for new ones
-      - need to integrate event-dispatcher and wait for the client sync state
       - need to expose mechanism to subscribe (socket) using the event-dispatcher
     */
     this._clients = {};

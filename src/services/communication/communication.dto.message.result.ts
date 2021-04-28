@@ -13,4 +13,10 @@ export class CommunicationMessageResult {
     description: 'The sender email',
   })
   sender!: string;
+
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The server timestamp in UTC',
+  })
+  timestamp!: number;
 }

@@ -60,11 +60,34 @@ export class MatrixCommunicationClient
   }
 
   async getRooms(): Promise<any[]> {
-    return this._matrixClient.getRooms() || [];
+    const communityMap = await this._groupEntityAdapter.communityRooms();
+    const communityRooms = Object.keys(communityMap).map(x => ({
+      roomID: communityMap[x][0],
+    }));
+    const dmRoomMap = await this._roomEntityAdapter.dmRooms();
+    const dmRooms = Object.keys(dmRoomMap).map(x => ({
+      receiverEmail: MatrixTransforms.id2email(x),
+      isDirect: true,
+      roomID: dmRoomMap[x][0],
+    }));
+
+    return communityRooms.concat(dmRooms);
   }
 
   async getRoom(roomId: string): Promise<any> {
-    return this._matrixClient.getRoom(roomId);
+    const dmRoomMap = await this._roomEntityAdapter.dmRooms();
+    const dmRoom = Object.keys(dmRoomMap).find(
+      userID => dmRoomMap[userID].indexOf(roomId) !== -1
+    );
+
+    const room = await this._matrixClient.getRoom(roomId);
+
+    return {
+      roomID: room.roomId,
+      isDirect: Boolean(dmRoom),
+      receiverEmail: dmRoom && MatrixTransforms.id2email(dmRoom),
+      timeline: room.timeline,
+    };
   }
 
   async getMessages(
@@ -131,16 +154,16 @@ export class MatrixCommunicationClient
   async messageUser(content: IDirectMessageRequest): Promise<string> {
     // there needs to be caching for dmRooms and event to update them
     const dmRooms = this._roomEntityAdapter.dmRooms();
-    const matrixUsername = MatrixTransforms.email2id(content.email);
-    const dmRoom = dmRooms[matrixUsername];
+    const matrixId = MatrixTransforms.email2id(content.email);
+    const dmRoom = dmRooms[matrixId];
     let targetRoomId = null;
 
     if (!dmRoom || !Boolean(dmRoom[0])) {
       targetRoomId = await this._roomEntityAdapter.createRoom({
-        dmUserId: matrixUsername,
+        dmUserId: matrixId,
       });
 
-      await this._roomEntityAdapter.setDmRoom(targetRoomId, matrixUsername);
+      await this._roomEntityAdapter.setDmRoom(targetRoomId, matrixId);
     } else {
       targetRoomId = dmRoom[0];
     }

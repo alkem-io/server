@@ -1,3 +1,4 @@
+import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixCommunicationPool } from '../matrix/communication/communication.matrix.pool';
@@ -14,14 +15,15 @@ export class CommunicationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    private userService: UserService,
     private readonly communicationPool: MatrixCommunicationPool
   ) {}
 
   async sendMsg(
     senderEmail: string,
     sendMsgData: CommunicationSendMessageInput
-  ): Promise<void> {
-    const { receiverID, message } = sendMsgData;
+  ): Promise<string> {
+    const { receiverID: receiverEmail, message } = sendMsgData;
     let { roomID } = sendMsgData;
 
     const communicationService = await this.communicationPool.acquire(
@@ -31,22 +33,23 @@ export class CommunicationService {
     if (!Boolean(roomID)) {
       roomID = await communicationService.messageUser({
         text: message,
-        email: receiverID,
+        email: receiverEmail,
       });
     } else {
       await communicationService.message(roomID, { text: message });
     }
+
+    return roomID;
   }
 
   async getRooms(email: string): Promise<CommunicationRoomResult[]> {
     const communicationService = await this.communicationPool.acquire(email);
     const roomResponse = await communicationService.getRooms();
-    return roomResponse.map(rr => {
-      const room = new CommunicationRoomResult();
-      room.id = rr.roomId;
-
-      return room;
-    });
+    return await Promise.all(
+      roomResponse.map(rr =>
+        this.createRoom(rr.roomID, rr.isDirect, rr.receiverEmail, [])
+      )
+    );
   }
 
   async getRoom(
@@ -54,21 +57,65 @@ export class CommunicationService {
     email: string
   ): Promise<CommunicationRoomDetailsResult> {
     const communicationService = await this.communicationPool.acquire(email);
-    const roomResponse = await communicationService.getRoom(roomId);
+    const {
+      roomID,
+      isDirect,
+      receiverEmail,
+      timeline,
+    } = await communicationService.getRoom(roomId);
+
+    const room = await this.createRoom(
+      roomID,
+      isDirect,
+      receiverEmail,
+      timeline
+    );
+
+    return room;
+  }
+
+  private async createRoom(
+    roomId: string,
+    isDirect: boolean,
+    receiverEmail: string,
+    messages: Array<{ event: any; sender: any }>
+  ): Promise<CommunicationRoomDetailsResult> {
     const room = new CommunicationRoomDetailsResult();
-    room.id = roomResponse.roomId;
+    room.id = roomId;
+    room.isDirect = isDirect;
+
+    const receiver = await this.userService.getUserByEmail(receiverEmail);
+
+    if (!receiver) {
+      delete room.receiverID;
+    } else {
+      room.receiverID = `${receiver.id}`;
+    }
+
+    const senderEmails = [
+      ...new Set(messages.map(m => MatrixTransforms.id2email(m.sender.name))),
+    ];
+    const users = await Promise.all(
+      senderEmails.map(e => this.userService.getUserByEmail(e))
+    );
+
     room.messages = [];
 
-    roomResponse.timeline.map((m: any) => {
-      const { event, sender } = m;
-      if (event.content?.body) {
-        const message = new CommunicationMessageResult();
-        message.message = event.content.body;
-        //TODO [ATS]: replace email with db ID.
-        message.sender = MatrixTransforms.username2email(sender.name);
-        room.messages.push(message);
+    for (const { event: ev, sender } of messages) {
+      if (!ev.content?.body) {
+        continue;
       }
-    });
+      const user = users.find(
+        u => u && u.email === MatrixTransforms.id2email(sender.name)
+      );
+      const roomMessage: CommunicationMessageResult = {
+        message: ev.content.body,
+        sender: user ? `${user.id}` : 'unknown',
+        timestamp: ev.origin_server_ts,
+      };
+
+      room.messages.push(roomMessage);
+    }
 
     return room;
   }
