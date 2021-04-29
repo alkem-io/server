@@ -6,11 +6,14 @@ export class TokenHelper {
   private aadAuthenticationClient: AadAuthenticationClient;
 
   constructor(configService: ConfigService) {
+
+    const aadConfig = configService.get('aad');
+
     this.aadAuthenticationClient = new AadAuthenticationClient(() => ({
-      clientID: configService.get('aad').clientID,
-      scope: configService.get('aad').scope,
-      tenant: configService.get('aad').tenant,
-      ...configService.get('aad').ropc,
+      clientID: aadConfig.clientID,
+      scope: `api://${aadConfig.clientID}/.default`,
+      tenant: aadConfig.tenant,
+      ...aadConfig.ropc,
     }));
   }
 
