@@ -17,7 +17,7 @@ database:
 logging:
   consoleLoggingEnabled: ${LOGGING_CONSOLE_ENABLED}:false
   loggingLevel: ${LOGGING_LEVEL_CONSOLE}:Error
-  profilingEnabled: ${LOGGING_LEVEL_CONSOLE}:Error
+  profilingEnabled: ${LOGGING_PROFILING_ENABLED}:true
   elkConfig:
     enabled: ${LOGGING_ELK_ENABLED}:false
     loggingLevel: ${LOGGING_LEVEL_ELK}:Error
