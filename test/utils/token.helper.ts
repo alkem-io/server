@@ -1,4 +1,5 @@
-import { AadAuthenticationClient, Token } from '@cmdbg/tokenator';
+import { AadAuthenticationClient, Token, TokenError } from '@cmdbg/tokenator';
+import { AuthenticationException } from '@common/exceptions';
 import { ConfigService } from '@nestjs/config';
 
 export class TokenHelper {
@@ -10,7 +11,7 @@ export class TokenHelper {
     const aadConfig = configService.get('aad');
 
     this.aadAuthenticationClient = new AadAuthenticationClient(() => ({
-      clientID: aadConfig.clientID,
+      clientID: aadConfig.client.clientId,
       scope: `api://${aadConfig.clientID}/.default`,
       tenant: aadConfig.tenant,
       ...aadConfig.ropc,
@@ -47,6 +48,8 @@ export class TokenHelper {
       });
 
       const token = (res as Token).access_token;
+      if(!token)
+        throw new AuthenticationException(`ROPC flow failed with error: ${(res as TokenError).error_description} `);
 
       userTokenMap.set(user, token);
     }
