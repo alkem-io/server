@@ -1,4 +1,4 @@
-query
+query config
 {
   configuration
   {
@@ -7,39 +7,53 @@ query
       enabled
       providers
       {
+        name
+        label
+        icon
         enabled
-      	name
-      	config
-      {
-        __typename
-      	... on AadAuthProviderConfig
+        config
         {
-          msalConfig
+          __typename
+          ... on AadAuthProviderConfig
           {
-            auth
+            msalConfig
             {
-              authority
-              clientId
-              redirectUri
+              auth
+              {
+                authority
+                clientId
+                redirectUri
+              }
+              cache
+              {
+                cacheLocation
+                storeAuthStateInCookie
+              }
             }
-            cache
+            apiConfig
             {
-              cacheLocation
-              storeAuthStateInCookie
+              resourceScope
+            }
+            loginRequest
+            {
+              scopes
+            }
+            tokenRequest
+            {
+              scopes
+            }
+            silentRequest
+            {
+              scopes
             }
           }
-          apiConfig
+          ... on DemoAuthProviderConfig
           {
-            resourceScope
+            issuer
+            tokenEndpoint
           }
-      	}
-      ... on DemoAuthProviderConfig
-        {
-        	issuer
-        	tokenEndpoint
         }
-      	}
-    	}
-  	}
-	}
+      }
+    }
+  }
 }
