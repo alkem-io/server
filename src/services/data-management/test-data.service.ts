@@ -100,7 +100,6 @@ export class TestDataService {
     const challenge = new CreateChallengeInput();
     challenge.parentID = 1;
     challenge.name = `${this.challengeName}`;
-    challenge.state = 'init challenge state';
     challenge.textID = `${this.uniqueTextId}`;
     challenge.context = {
       background: 'test challenge background',
@@ -125,7 +124,6 @@ export class TestDataService {
     const response = await this.ecoverseService.createChallenge({
       parentID: 1,
       name: 'Remove-challenge',
-      state: 'state',
       textID: 'remove-chall',
       tags: ['test1', 'test2'],
     });
@@ -136,7 +134,6 @@ export class TestDataService {
     const opportunity = new CreateOpportunityInput();
     opportunity.parentID = `${challengeId}`;
     opportunity.name = 'init opportunity name';
-    opportunity.state = 'init opportunity state';
     opportunity.textID = 'init-opport';
     opportunity.context = {
       background: 'test opportunity background',
@@ -160,7 +157,6 @@ export class TestDataService {
     const opportunity = new CreateOpportunityInput();
     opportunity.parentID = `${challengeId}`;
     opportunity.name = 'init remove opportunity name';
-    opportunity.state = 'init opportunity state';
     opportunity.textID = 'remove-opport';
     const response = await this.challengeService.createOpportunity(opportunity);
     return response.id;
@@ -169,7 +165,6 @@ export class TestDataService {
   async initProject(opportunityId: number): Promise<number> {
     const project = new CreateProjectInput();
     project.name = 'init project name';
-    project.state = 'init project state';
     project.textID = 'init-project';
     project.description = 'init project description';
     project.parentID = opportunityId;

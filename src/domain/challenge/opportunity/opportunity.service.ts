@@ -28,6 +28,8 @@ import {
   CreateOpportunityInput,
   DeleteOpportunityInput,
   UpdateOpportunityInput,
+  opportunityLifecycleConfigDefault,
+  opportunityLifecycleConfigExtended,
 } from '@domain/challenge/opportunity';
 import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -35,6 +37,9 @@ import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import { TagsetService } from '@domain/common/tagset';
 import validator from 'validator';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { OpportunityLifecycleTemplates } from '@common/enums/opportunity.lifecycle.templates';
 
 @Injectable()
 export class OpportunityService {
@@ -45,6 +50,7 @@ export class OpportunityService {
     private contextService: ContextService,
     private communityService: CommunityService,
     private tagsetService: TagsetService,
+    private lifecycleService: LifecycleService,
     private relationService: RelationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -68,6 +74,24 @@ export class OpportunityService {
       [AuthorizationRoles.Members]
     );
     await this.createRestrictedActorGroups(opportunity);
+
+    // Lifecycle, that has both a default and extended version
+    let machineConfig: any = opportunityLifecycleConfigDefault;
+    if (
+      opportunityData.lifecycleTemplate &&
+      opportunityData.lifecycleTemplate ===
+        OpportunityLifecycleTemplates.EXTENDED
+    ) {
+      machineConfig = opportunityLifecycleConfigExtended;
+    }
+
+    // Save so get the ID for storing on the lifecycle
+    await this.opportunityRepository.save(opportunity);
+
+    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+      opportunity.id.toString(),
+      machineConfig
+    );
 
     return await this.opportunityRepository.save(opportunity);
   }
@@ -198,12 +222,8 @@ export class OpportunityService {
       opportunity.name = opportunityData.name;
     }
 
-    if (opportunityData.state) {
-      opportunity.state = opportunityData.state;
-    }
-
     if (opportunityData.context && opportunity.context) {
-      await this.contextService.update(
+      opportunity.context = await this.contextService.updateContext(
         opportunity.context,
         opportunityData.context
       );
@@ -220,7 +240,13 @@ export class OpportunityService {
     const opportunityID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
-      relations: ['actorGroups', 'aspects', 'relations', 'community'],
+      relations: [
+        'actorGroups',
+        'aspects',
+        'relations',
+        'community',
+        'lifecycle',
+      ],
     });
 
     // First remove all groups
@@ -250,6 +276,11 @@ export class OpportunityService {
     // Remove the context
     if (opportunity.context) {
       await this.contextService.removeContext(opportunity.context.id);
+    }
+
+    // Remove the lifecycle
+    if (opportunity.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(opportunity.lifecycle.id);
     }
 
     if (opportunity.tagset) {
@@ -424,5 +455,23 @@ export class OpportunityService {
     opportunity.relations.push(relation);
     await this.opportunityRepository.save(opportunity);
     return relation;
+  }
+
+  // Lazy load the lifecycle
+  async getLifecycle(opportunityId: number): Promise<ILifecycle> {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
+      relations: ['lifecycle'],
+    });
+
+    // if no lifecycle then create + save...
+    if (!opportunity.lifecycle) {
+      opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+        opportunityId.toString(),
+        opportunityLifecycleConfigDefault
+      );
+      await this.opportunityRepository.save(opportunity);
+    }
+
+    return opportunity.lifecycle;
   }
 }

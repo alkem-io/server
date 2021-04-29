@@ -11,6 +11,8 @@ import { OpportunityResolverFields } from './opportunity.resolver.fields';
 import { OpportunityService } from './opportunity.service';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
+import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
+import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
     ContextModule,
     CommunityModule,
     RelationModule,
+    LifecycleModule,
     TagsetModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
@@ -27,6 +30,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
     OpportunityService,
     OpportunityResolverMutations,
     OpportunityResolverFields,
+    OpportunityLifecycleOptionsProvider,
   ],
   exports: [OpportunityService],
 })

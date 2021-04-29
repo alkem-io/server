@@ -14,10 +14,16 @@ import { IOpportunity, Opportunity } from '../opportunity';
 import { OpportunityService } from '../opportunity/opportunity.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { ProjectService, Project, IProject } from '@domain/collaboration';
-import { UserGroup, IUserGroup, Application } from '@domain/community';
+import { Project, IProject } from '@domain/collaboration/project';
+import {
+  UserGroup,
+  IUserGroup,
+  Application,
+  IApplication,
+} from '@domain/community';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ApplicationService } from '@domain/community/application/application.service';
+import { ProjectService } from '@domain/collaboration/project/project.service';
 
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
@@ -150,7 +156,7 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'All applications to join',
   })
-  async application(@Args('ID') id: number): Promise<Application> {
+  async application(@Args('ID') id: number): Promise<IApplication> {
     return await this.applicationService.getApplicationOrFail(id);
   }
 }

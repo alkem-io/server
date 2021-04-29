@@ -154,7 +154,6 @@ export const createOpportunityVariables = (id: number) => `
       "parentID": "${id}",
         "name": "Test opportunity",
         "textID": "test-opp",
-        "state": "reserved",
         "context": {
             "background": "test",
             "vision": "test vision",
@@ -174,9 +173,9 @@ export const createProjectMutation = `
 mutation CreateProject($projectData: CreateProjectInput!) {
   createProject(projectData: $projectData)  {
         id
-      name,
-      description,
-      state
+      name
+      description
+      lifecycle{id state}
     }
   }`;
 
@@ -186,8 +185,7 @@ export const createProjectVariables = (id: number) => `
       "parentID":${id},
         "name": "Test-Name-Project",
         "textID": "Test-TextId2",
-        "description": "Test-Description--Proj-How do I handle scalability?",
-        "state": "test-status--Proj-new"
+        "description": "Test-Description--Proj-How do I handle scalability?"
     }
 }`;
 
@@ -341,7 +339,7 @@ mutation createApplication($applicationData: CreateApplicationInput!) {
         name
         value
       }
-      status
+      lifecycle{state}
     }
   }`;
 

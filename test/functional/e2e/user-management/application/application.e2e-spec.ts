@@ -82,14 +82,15 @@ describe('Application', () => {
 
   test('should create application', async () => {
     // Act
-    applicationData = await createApplicationMutation(1, userId);
+    applicationData = await createApplicationMutation("1", userId);
+    console.log(applicationData.body)
     applicationId = applicationData.body.data.createApplication.id;
 
     const getApp = await getApplication(applicationId);
 
     // Assert
     expect(applicationData.status).toBe(200);
-    expect(applicationData.body.data.createApplication.status).toEqual('new');
+    expect(applicationData.body.data.createApplication.lifecycle.state).toEqual('new');
     expect(applicationData.body.data.createApplication).toEqual(
       getApp.body.data.ecoverse.application
     );
@@ -97,13 +98,13 @@ describe('Application', () => {
 
   test('should throw error for creating the same application twice', async () => {
     // Act
-    let applicationDataOne = await createApplicationMutation(1, userId);
+    let applicationDataOne = await createApplicationMutation("1", userId);
     applicationId = applicationDataOne.body.data.createApplication.id;
-    let applicationDataTwo = await createApplicationMutation(1, userId);
+    let applicationDataTwo = await createApplicationMutation("1", userId);
 
     // Assert
     expect(applicationDataTwo.text).toContain(
-      `An application for user ${userEmail} already exists for Community: 1. Application status: 0`
+      `An application for user ${userEmail} already exists for Community: 1.`
     );
   });
 
@@ -121,7 +122,7 @@ describe('Application', () => {
 
   test('should remove application', async () => {
     // Arrange
-    applicationData = await createApplicationMutation(1, userId);
+    applicationData = await createApplicationMutation("1", userId);
     applicationId = applicationData.body.data.createApplication.id;
 
     // Act

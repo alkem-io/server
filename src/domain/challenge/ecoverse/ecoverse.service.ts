@@ -248,7 +248,10 @@ export class EcoverseService {
       if (!ecoverse.context) {
         ecoverse.context = new Context();
       }
-      await this.contextService.update(ecoverse.context, ecoverseData.context);
+      ecoverse.context = await this.contextService.updateContext(
+        ecoverse.context,
+        ecoverseData.context
+      );
     }
 
     if (ecoverseData.tags) {

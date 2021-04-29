@@ -1,7 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import {
   LONG_TEXT_LENGTH,
-  MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   TINY_TEXT_LENGTH,
 } from '@src/common/constants';
@@ -29,8 +28,4 @@ export class UpdateProjectInput {
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
   description!: string;
-
-  @Field({ nullable: true })
-  @MaxLength(MID_TEXT_LENGTH)
-  state!: string;
 }

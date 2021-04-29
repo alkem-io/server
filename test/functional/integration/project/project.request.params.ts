@@ -1,12 +1,12 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { lifecycleData } from '../lifecycle/lifecycle.request.params';
 
 export const createProjectMutation = async (
   opportunityId: string,
   projectName: string,
   textId: string,
-  projectDescritpion?: string,
-  projectState?: string
+  projectDescritpion?: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -15,8 +15,8 @@ export const createProjectMutation = async (
           id,
         name,
         textID,
-        description,
-        state
+        description
+        ${lifecycleData}
       }
     }`,
     variables: {
@@ -25,7 +25,6 @@ export const createProjectMutation = async (
         name: `${projectName}`,
         textID: `${textId}`,
         description: `${projectDescritpion}`,
-        state: `${projectState}`,
       },
     },
   };
@@ -42,6 +41,30 @@ export const removeProjectMutation = async (projectId: any) => {
     variables: {
       ID: parseFloat(projectId),
     },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const projectData = `
+{
+      id
+      name
+      textID
+      description
+      ${lifecycleData}
+      tagset {
+        id
+        name
+        tags
+      }
+}`;
+
+export const getProjectData = async (projectId: string) => {
+  const requestParams = {
+    operationName: null,
+    variables: {},
+    query: `query{ecoverse {project (ID: "${projectId}") ${projectData} }}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

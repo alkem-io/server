@@ -71,7 +71,34 @@ export class ProfileService {
     return profile;
   }
 
-  async removeProfile(profileID: number): Promise<IProfile> {
+  async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
+    const profile = await this.getProfileOrFail(profileData.ID);
+
+    if (profileData.avatar) {
+      profile.avatar = profileData.avatar;
+    }
+    if (profileData.description) {
+      profile.description = profileData.description;
+    }
+
+    if (profileData.references) {
+      profile.references = this.referenceService.updateReferences(
+        profile.references,
+        profileData.references
+      );
+    }
+
+    if (profileData.tagsets) {
+      profile.tagsets = this.tagsetService.updateTagsets(
+        profile.tagsets,
+        profileData.tagsets
+      );
+    }
+
+    return await this.profileRepository.save(profile);
+  }
+
+  async deleteProfile(profileID: number): Promise<IProfile> {
     // Note need to load it in with all contained entities so can remove fully
     const profile = await this.getProfileByIdOrFail(profileID);
 
@@ -139,19 +166,6 @@ export class ProfileService {
     await this.profileRepository.save(profile);
 
     return newReference;
-  }
-
-  async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
-    const profile = await this.getProfileOrFail(profileData.ID);
-
-    if (profileData.avatar) {
-      profile.avatar = profileData.avatar;
-    }
-    if (profileData.description) {
-      profile.description = profileData.description;
-    }
-
-    return await this.profileRepository.save(profile);
   }
 
   async getProfileOrFail(profileID: string): Promise<IProfile> {

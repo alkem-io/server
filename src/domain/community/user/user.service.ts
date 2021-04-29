@@ -56,7 +56,7 @@ export class UserService {
     const { id } = user;
 
     if (user.profile) {
-      await this.profileService.removeProfile(user.profile.id);
+      await this.profileService.deleteProfile(user.profile.id);
     }
 
     const result = await this.userRepository.remove(user as User);

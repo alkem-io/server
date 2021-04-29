@@ -95,7 +95,7 @@ export class UserGroupService {
       );
 
     if (group.profile) {
-      await this.profileService.removeProfile(group.profile.id);
+      await this.profileService.deleteProfile(group.profile.id);
     }
 
     const { id } = group;

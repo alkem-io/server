@@ -69,16 +69,45 @@ export class TagsetService {
   }
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
-    const tagsetID = tagsetData.ID;
-    const newTags = tagsetData.tags;
-    const tagset = await this.getTagsetByIdOrFail(tagsetID);
-    // Check the incoming tags and replace if not null
-    if (newTags) tagset.tags = newTags;
+    const tagset = await this.getTagsetByIdOrFail(tagsetData.ID);
+    this.updateTagsetValues(tagset, tagsetData);
+    return await this.tagsetRepository.save(tagset);
+  }
 
-    // todo: also allow name of tagset to be updated
-    await this.tagsetRepository.save(tagset);
+  updateTagsetValues(tagset: ITagset, tagsetData: UpdateTagsetInput): ITagset {
+    if (tagsetData.name) {
+      tagset.name = tagsetData.name;
+    }
+
+    if (tagsetData.tags) {
+      tagset.tags = tagsetData.tags;
+    }
 
     return tagset;
+  }
+
+  updateTagsets(
+    tagsets: ITagset[] | undefined,
+    tagsetsData: UpdateTagsetInput[]
+  ): ITagset[] {
+    if (!tagsets)
+      throw new EntityNotFoundException(
+        'Not able to locate Tagsets',
+        LogContext.CHALLENGES
+      );
+    if (tagsetsData) {
+      for (const tagsetData of tagsetsData) {
+        // check the Tagset being update is part of the current entity
+        const tagset = tagsets.find(tagset => tagset.id == tagsetData.ID);
+        if (!tagset)
+          throw new EntityNotFoundException(
+            `Unable to update Tagset with supplied ID: ${tagsetData.ID} - no such Tagset in parent entity.`,
+            LogContext.CHALLENGES
+          );
+        this.updateTagsetValues(tagset, tagsetData);
+      }
+    }
+    return tagsets;
   }
 
   replaceTagsOnEntity(entity: Challenge | Project | Ecoverse, tags: string[]) {

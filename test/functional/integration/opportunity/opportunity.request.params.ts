@@ -1,6 +1,7 @@
 import { AnyNsRecord } from 'dns';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
 import { TestUser } from '../../../utils/token.helper';
+import { lifecycleData } from '../lifecycle/lifecycle.request.params';
 
 export const createOpportunityOnChallengeMutation = async (
   challengeId: string,
@@ -15,7 +16,7 @@ export const createOpportunityOnChallengeMutation = async (
         id
         name
         textID
-        state
+        ${lifecycleData}
         context {
           id
           tagline
@@ -38,7 +39,6 @@ export const createOpportunityOnChallengeMutation = async (
         parentID: challengeId,
         name: oppName,
         textID: oppTextId,
-        state: 'reserved',
         context: {
           background: 'test background',
           vision: 'test vision',
@@ -68,7 +68,7 @@ export const updateOpportunityOnChallengeMutation = async (
         id
         name
         textID
-        state
+        ${lifecycleData}
         context {
           id
           tagline
@@ -90,7 +90,6 @@ export const updateOpportunityOnChallengeMutation = async (
       opportunityData: {
         ID: opportunityId,
         name: '1',
-        state: '1',
         context: {
           background: '1',
           vision: '1',
@@ -155,8 +154,8 @@ export const queryOpportunity = async (opportunityId: string) => {
         id
         name
         textID
-        state
-        context {
+        ${lifecycleData}
+          context {
           id
           tagline
           background
@@ -187,7 +186,7 @@ export const queryOpportunities = async () => {
         id
         name
         textID
-        state
+        ${lifecycleData}
         context {
           id
           tagline

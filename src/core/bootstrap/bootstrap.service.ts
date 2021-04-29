@@ -15,7 +15,6 @@ import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { BaseException } from '@common/exceptions/base.exception';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
 import { AuthorizationRoles } from '@core/authorization';
@@ -34,7 +33,6 @@ export class BootstrapService {
   async bootstrapEcoverse() {
     try {
       this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
-      this.logConfig();
 
       Profiling.logger = this.logger;
       const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
@@ -47,39 +45,6 @@ export class BootstrapService {
       await this.bootstrapProfiles();
     } catch (error) {
       this.logger.error(error, undefined, LogContext.BOOTSTRAP);
-    }
-  }
-
-  logConfig() {
-    const configs = [
-      'aad',
-      'aad_client',
-      'database',
-      'logging',
-      'ms-graph',
-      'service',
-    ];
-    for (const configName of configs) {
-      this.logger.verbose?.(`===== Configuration: ${configName}`);
-      const config = this.configService.get<ILoggingConfig>(configName);
-      if (!config)
-        throw new BaseException(
-          'Unable to obtain configuration: $${configName}',
-          LogContext.BOOTSTRAP
-        );
-      const entries = Object.entries(config);
-      for (const [key, value] of entries) {
-        if (
-          key === 'loggingNoPII' &&
-          value === false &&
-          process.env.AUTH_AAD_LOGGING_PII === 'false'
-        )
-          this.logger.warn(
-            'Overriding AUTH_AAD_LOGGING_PII to true due to Microsoft passportJs bearer strategy bug https://github.com/AzureAD/passport-azure-ad/issues/521.',
-            LogContext.BOOTSTRAP
-          );
-        this.logConfigLevel(key, value, '');
-      }
     }
   }
 

@@ -1,6 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
+import { UpdateReferenceInput } from '@domain/common/reference';
 
 @InputType()
 export class UpdateContextInput {
@@ -28,4 +29,11 @@ export class UpdateContextInput {
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   impact?: string;
+
+  @Field(() => [UpdateReferenceInput], {
+    nullable: true,
+    description: 'Update the set of References for the Context.',
+  })
+  @IsOptional()
+  references?: UpdateReferenceInput[];
 }

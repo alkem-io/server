@@ -11,17 +11,21 @@ import {
   CreateApplicationInput,
   DeleteApplicationInput,
   Application,
+  IApplication,
+  ApplicationEventInput,
 } from '@domain/community/application';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '../application/application.service';
 import { AssignCommunityMemberInput } from '@domain/community/community';
 import { RemoveCommunityMemberInput } from './community.dto.remove.member';
-
+import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
     @Inject(CommunityService) private communityService: CommunityService,
+    @Inject(CommunityLifecycleOptionsProvider)
+    private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService
   ) {}
 
@@ -69,20 +73,8 @@ export class CommunityResolverMutations {
   @Profiling.api
   async createApplication(
     @Args('applicationData') applicationData: CreateApplicationInput
-  ): Promise<Application> {
+  ): Promise<IApplication> {
     return await this.communityService.createApplication(applicationData);
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Application, {
-    description: 'Approve a User Application to join this Community.',
-  })
-  @Profiling.api
-  async approveApplication(
-    @Args('ID') applicationID: number
-  ): Promise<Application> {
-    return await this.communityService.approveApplication(applicationID);
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
@@ -90,10 +82,23 @@ export class CommunityResolverMutations {
   @Mutation(() => Application, {
     description: 'Removes the specified User Application.',
   })
-  //@Profiling.api
   async deleteUserApplication(
     @Args('deleteData') deleteData: DeleteApplicationInput
-  ): Promise<Application> {
+  ): Promise<IApplication> {
     return await this.applicationService.deleteApplication(deleteData);
+  }
+
+  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Application, {
+    description: 'Trigger an event on the Application.',
+  })
+  async eventOnApplication(
+    @Args('applicationEventData')
+    applicationEventData: ApplicationEventInput
+  ): Promise<IApplication> {
+    return await this.communityLifecycleOptionsProvider.eventOnApplication(
+      applicationEventData
+    );
   }
 }

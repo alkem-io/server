@@ -16,7 +16,7 @@ export class KonfigService {
       template: await this.getTemplate(),
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
-        enabled: this.configService.get('service').authEnabled,
+        enabled: this.configService.get('service').authenticationEnabled,
       },
     };
   }
@@ -53,9 +53,32 @@ export class KonfigService {
   }
 
   async getAadConfig(): Promise<IAadAuthProviderConfig> {
-    return (await this.configService.get<IAadAuthProviderConfig>(
-      'aad_client'
-    )) as IAadAuthProviderConfig;
+    const aadConfig = await this.configService.get('aad');
+    const apiScope = `api://${aadConfig.clientID}/.default`;
+
+    return {
+      msalConfig: {
+        auth: {
+          ...aadConfig.client,
+        },
+        cache: {
+          cacheLocation: 'localStorage', // This configures where your cache will be stored
+          storeAuthStateInCookie: false, // Set this to "true" if you are having issues on IE11 or Edge
+        },
+      },
+      apiConfig: {
+        resourceScope: apiScope,
+      },
+      loginRequest: {
+        scopes: ['openid', 'profile', 'offline_access'],
+      },
+      tokenRequest: {
+        scopes: [apiScope],
+      },
+      silentRequest: {
+        scopes: ['openid', 'profile', apiScope],
+      },
+    };
   }
 
   async getDemoAuthProviderConfig(): Promise<IDemoAuthProviderConfig> {

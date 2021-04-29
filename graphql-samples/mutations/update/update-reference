@@ -1,0 +1,18 @@
+mutation updateReference($updateData: UpdateReferenceInput!) {
+  updateReference(updateData: $updateData) {
+    id
+    name
+    uri
+  }
+}
+
+
+query variables:
+{
+  "updateData": {
+    "ID": 4,
+  	"name": "testName",
+  	"uri": "testUri",
+  	"description": "testDescription"
+  }
+}
