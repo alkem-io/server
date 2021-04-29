@@ -23,12 +23,11 @@ logging:
     loggingLevel: ${LOGGING_LEVEL_ELK}:Error
     environment: ${ENVIRONMENT}:Dev
 service:
-  authEnabled: ${AUTH_ENABLED}:true
+  authenticationEnabled: ${AUTH_ENABLED}:true
   graphqlEndpointPort: ${GRAPHQL_ENDPOINT}:4000
   corsOrigin: ${CORS_ORIGIN}:*
   corsAllowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
   corsMethods: ${CORS_METHODS}:GET,HEAD,PUT,PATCH,POST,DELETE
-  authenticationEnabled: ${AUTH_ENABLED}:true
   authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
 aad:
   identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
