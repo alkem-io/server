@@ -54,6 +54,7 @@ export class KonfigService {
 
   async getAadConfig(): Promise<IAadAuthProviderConfig> {
     const aadConfig = await this.configService.get('aad');
+    const apiScope = `api://${aadConfig.clientID}/.default`;
 
     return {
       msalConfig: {
@@ -66,16 +67,16 @@ export class KonfigService {
         },
       },
       apiConfig: {
-        resourceScope: `api://${aadConfig.clientID}/.default`,
+        resourceScope: apiScope,
       },
       loginRequest: {
         scopes: ['openid', 'profile', 'offline_access'],
       },
       tokenRequest: {
-        scopes: [aadConfig.scope],
+        scopes: [apiScope],
       },
       silentRequest: {
-        scopes: ['openid', 'profile', aadConfig.scope],
+        scopes: ['openid', 'profile', apiScope],
       },
     };
   }
