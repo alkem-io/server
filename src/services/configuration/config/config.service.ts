@@ -66,7 +66,7 @@ export class KonfigService {
         },
       },
       apiConfig: {
-        resourceScope: 'Cherrytwist-GraphQL',
+        resourceScope: `api://${aadConfig.clientID}/.default`,
       },
       loginRequest: {
         scopes: ['openid', 'profile', 'offline_access'],

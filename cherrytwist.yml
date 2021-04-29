@@ -3,7 +3,7 @@ ipfs:
   clientEndpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:8080/ipfs
   maxFileSize: 1048576
 demo_auth_provider:
-  issuer: ${AUTH_DEMO_AUTH_ISSUER}:localhost
+  issuer: ${AUTH_DEMO_AUTH_ISSUER}:http://localhost:3002
   tokenEndpoint: ${AUTH_DEMO_AUTH_TOKEN_ENDPOINT}:http://localhost:3002/auth/login
   clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
 database:
