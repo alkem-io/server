@@ -46,7 +46,7 @@ aad:
   ropc:
     clientSecret: ${AUTH_AAD_CLIENT_APP_SECRET}
     username: ${AUTH_AAD_USER_UPN}:admin@playgroundcherrytwist.onmicrosoft.com
-    password: ${AUTH_AAD_TEST_HARNESS_PASSWORD}
+    password: ${AUTH_AAD_USER_PASSWORD}
   client:
     clientId: ${AUTH_AAD_CLIENT_APP_ID}:feb6d8b1-8cc2-4e7d-a419-ad7b544b0832
     authority: ${AUTH_AAD_AUTHORITY}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c

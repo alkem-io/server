@@ -11,7 +11,8 @@ env:
     AUTH_AAD_CLIENT_APP_ID=6f4fcdb2-5792-4e17-bbdc-14ac0cf78496 AUTH_AAD_CHERRYTWIST_API_SCOPE=api://869e0dc2-907e-45fe-841f-34cc93beee63/.default
     AUTH_AAD_TENANT=22e3aada-5a09-4e2b-9e0e-dc4f02328b29 AUTH_AAD_CHERRYTWIST_API_APP_ID=869e0dc2-907e-45fe-841f-34cc93beee63
     AUTH_AAD_MSGRAPH_API_SCOPE="Directory.AccessAsUser.All Directory.ReadWrite.All
-    User.ReadWrite.All"
+    User.ReadWrite.All" AUTH_AAD_IDENTITY_METADATA=https://login.microsoftonline.com/22e3aada-5a09-4e2b-9e0e-dc4f02328b29/v2.0/.well-known/openid-configuration
+    AUTH_AAD_ISSUER=https://login.microsoftonline.com/22e3aada-5a09-4e2b-9e0e-dc4f02328b29/v2.0
   global:
     secure: k8KER/swiO5A4VgP6H+H5akvuWCmY1l6VeslLVX+lvYNFd7gtZgyxd6CF2x0WviRgnh9QYhuHfAjcYB+vS0Ix195hfBQgETgo9A0y6fmjwwEdqcrAY1KmPFFi8fudIUwf9iJhl9xZIHR/x1eigUx69qoqyG4/iFEYnMZvXCXNNMITVYWqCP5CDTiGCEeqzqlbqQ6I/qSaiIoyu/yyuVcxiLtOi9l4sXWgTekfJf3K2AefznObR4Lj5Yhu4T5IFoVeFeOB/jDCIjbTJv371KZrtmZZ4RaTtijkmRzifhsR1z+1/Zo39GBnwGe0SksOTenja5kyKHqdQbsoBqaErr0F5Nbpj25ZgOYzTFKWGvx9Od9GcSvgWuCl3vAXlkb9XXK1FHhG0J4dSZSvnZNmQGB+wPv3tPCMgCj6gZpFfUUkxqNqqHAbVoMFoQ0otH0WPnpi14/Due3WClDU4Zq4a1A14Ct3GVUtoxf3CN603c3D5TVw8l2V0iyWEKx2XnQPwLXOmS03pjUaQqmfP9GAjqlxdvMCBe8UNvGLCTxEEgaxV/YTrawD3oZvlTes2wk2fL4AoBDKNRLoye37xMt3cRLUvNVCcwVeZ2bj/OlY0JgQovtBi7UnPP2xo4H5+sJ4i+FsYOhg/ZIz3R5bmyxgn+tjLhfVCZxO7PEW5ZB4RNo7HU=
 install:
