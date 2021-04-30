@@ -71,12 +71,21 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       if (args.uploadData) this.mutationDTO = args.uploadData;
       // Mutation: updateProfile
       if (args.profileData) this.mutationDTO = args.profileData;
+      // Mutation: createReferenceOnProfile
+      if (args.referenceInput) this.mutationDTO = args.referenceInput;
+      // Mutation: createTagsetOnProfile
+      if (args.tagsetData) this.mutationDTO = args.tagsetData;
+      // Mutation: deleteReference
+      if (args.deleteData) this.mutationDTO = args.deleteData;
+
       // Failsafe: if decorator SelfManagement was used then a DTO must have been set
-      if (!this.mutationDTO)
+      if (!this.mutationDTO) {
+        console.log(`${this.mutationDTO}`);
         throw new ForbiddenException(
           'User self-management not setup properly for requested access.',
           LogContext.AUTH
         );
+      }
     }
 
     // if (userData) email = userData.email;
@@ -138,22 +147,42 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
         return userInfo;
       }
       // updateUser mutation
-      if (this.mutationDTO.ID && this.mutationDTO.ID == userInfo.user.ID) {
+      if (this.mutationDTO.ID && this.mutationDTO.ID == userInfo.user.id) {
         return userInfo;
       }
       // uploadAvatar mutation
       if (
         this.mutationDTO.profileID &&
-        this.mutationDTO.profileID == userInfo.user.profile.ID
+        this.mutationDTO.profileID == userInfo.user.profile.id
       ) {
         return userInfo;
       }
       // updateProfile mutation
       if (
         this.mutationDTO.ID &&
-        this.mutationDTO.ID == userInfo.user.profile.ID
+        this.mutationDTO.ID == userInfo.user.profile.id
       ) {
         return userInfo;
+      }
+      // createReferenceOnProfile mutation
+      if (
+        this.mutationDTO.parentID &&
+        this.mutationDTO.parentID == userInfo.user.profile.id
+      ) {
+        return userInfo;
+      }
+      // createTagsetOnProfile mutation
+      if (
+        this.mutationDTO.parentID &&
+        this.mutationDTO.parentID == userInfo.user.profile.id
+      ) {
+        return userInfo;
+      }
+      // deleteReference mutation
+      if (this.mutationDTO.ID) {
+        for (const reference of userInfo.user.profile.references) {
+          if (reference.id == this.mutationDTO.ID) return userInfo;
+        }
       }
     }
 
