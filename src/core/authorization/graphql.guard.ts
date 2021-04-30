@@ -117,10 +117,9 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     _status?: any
   ) {
     // Always handle the request if authentication is disabled
-    if (
-      this.configService.get<IServiceConfig>('service')
-        ?.authenticationEnabled === 'false'
-    ) {
+    const authEnabled = this.configService.get<IServiceConfig>('service')
+      ?.authenticationEnabled;
+    if (!authEnabled) {
       return userInfo;
     }
 
