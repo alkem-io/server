@@ -80,7 +80,6 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
 
       // Failsafe: if decorator SelfManagement was used then a DTO must have been set
       if (!this.mutationDTO) {
-        console.log(`${this.mutationDTO}`);
         throw new ForbiddenException(
           'User self-management not setup properly for requested access.',
           LogContext.AUTH
