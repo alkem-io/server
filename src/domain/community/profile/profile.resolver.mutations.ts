@@ -24,6 +24,7 @@ export class ProfileResolverMutations {
   constructor(private profileService: ProfileService) {}
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Tagset, {
     description: 'Creates a new Tagset on the specified Profile',
@@ -36,6 +37,7 @@ export class ProfileResolverMutations {
   }
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
     description: 'Creates a new Reference on the specified Profile.',
@@ -48,6 +50,7 @@ export class ProfileResolverMutations {
   }
 
   @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
+  @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Profile, {
     description: 'Updates the specified Profile.',
