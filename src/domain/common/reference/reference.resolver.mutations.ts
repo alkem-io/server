@@ -1,3 +1,4 @@
+import { SelfManagement } from '@common/decorators';
 import { Roles } from '@common/decorators/roles.decorator';
 import {
   DeleteReferenceInput,
@@ -16,6 +17,7 @@ export class ReferenceResolverMutations {
   constructor(private referenceService: ReferenceService) {}
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
+  @SelfManagement()
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Reference, {
     description: 'Deletes the specified Reference.',
