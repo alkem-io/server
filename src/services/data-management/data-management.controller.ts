@@ -13,11 +13,9 @@ export class DataManagementController {
   ) {}
 
   authenticationEnabled(): boolean {
-    if (
-      this.configService.get<IServiceConfig>('service')
-        ?.authenticationEnabled === 'false'
-    )
-      return false;
+    const authEnabled = this.configService.get<IServiceConfig>('service')
+      ?.authenticationEnabled;
+    if (!authEnabled) return false;
     return true;
   }
 
