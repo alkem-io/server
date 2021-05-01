@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.10.8",
+  "version": "0.10.8-p2",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,

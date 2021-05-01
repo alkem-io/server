@@ -3,6 +3,6 @@ export interface IServiceConfig {
   corsOrigin: string;
   corsMethods: string;
   corsAllowedHeaders: string;
-  authenticationEnabled: string;
+  authenticationEnabled: boolean;
   authorisationBootstrapPath: string;
 }
