@@ -22,6 +22,7 @@ import { ValidationPipe } from '@common/pipes/validation.pipe';
 import { IpfsModule } from './services/ipfs/ipfs.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 
 @Module({
   imports: [
@@ -37,7 +38,7 @@ import configuration from '@config/configuration';
       useFactory: async (configService: ConfigService) => ({
         type: 'mysql',
         insecureAuth: true,
-        synchronize: false,
+        synchronize: true,
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         host: configService.get<IDatabaseConfig>('database')?.host,
@@ -61,6 +62,7 @@ import configuration from '@config/configuration';
     }),
     ScalarsModule,
     AuthenticationModule,
+    AuthorizationModule,
     EcoverseModule,
     MetadataModule,
     DataManagementModule,

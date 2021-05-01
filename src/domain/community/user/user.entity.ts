@@ -18,6 +18,7 @@ import {
 } from 'typeorm';
 import { IUser } from './user.interface';
 import { Application } from '@domain/community/application/application.entity';
+import { Capability } from '@domain/common/capability';
 
 @Entity()
 @ObjectType()
@@ -99,6 +100,13 @@ export class User extends BaseEntity implements IUser {
     { eager: false }
   )
   focalPoints?: UserGroup[];
+
+  @OneToMany(
+    () => Capability,
+    capability => capability.user,
+    { eager: false }
+  )
+  capabilities?: Capability[];
 
   @OneToMany(
     () => Application,

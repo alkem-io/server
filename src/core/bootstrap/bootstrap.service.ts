@@ -173,7 +173,9 @@ export class BootstrapService {
             );
           }
         }
-        user = await this.userService.getUserWithGroups(userInput.email);
+        user = await this.userService.getUserWithGroupsCapabilities(
+          userInput.email
+        );
 
         if (!user)
           throw new EntityNotFoundException(

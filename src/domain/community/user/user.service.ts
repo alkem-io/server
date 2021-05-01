@@ -4,7 +4,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -13,8 +13,6 @@ import { MemberOf } from './memberof.composite';
 import validator from 'validator';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { ICommunityable } from '@interfaces/communityable.interface';
-import { ICommunity } from '../community/community.interface';
 import {
   UpdateUserInput,
   CreateUserInput,
@@ -22,6 +20,7 @@ import {
   IUser,
 } from '@domain/community/user';
 import { DeleteUserInput } from './user.dto.delete';
+import { ICapability } from '@domain/common/capability';
 
 @Injectable()
 export class UserService {
@@ -133,9 +132,12 @@ export class UserService {
     return user;
   }
 
-  async getUserWithGroups(email: string): Promise<IUser | undefined> {
+  // todo: rename to remove groups when all authorization is via capabilities
+  async getUserWithGroupsCapabilities(
+    email: string
+  ): Promise<IUser | undefined> {
     const user = await this.getUserByEmail(email, {
-      relations: ['userGroups'],
+      relations: ['userGroups', 'capabilities'],
     });
 
     if (!user) {
@@ -199,14 +201,17 @@ export class UserService {
     return populatedUser;
   }
 
-  getCommunity(entity: ICommunityable): ICommunity {
-    const community = entity.community;
-    if (!community)
-      throw new EntityNotInitializedException(
-        `Community not initialised on entity: ${entity.id}`,
+  async getCapabilities(user: IUser): Promise<ICapability[]> {
+    const userWithCapabilities = await this.getUserByIdOrFail(user.id, {
+      relations: ['capabilities'],
+    });
+    const capabilities = userWithCapabilities.capabilities;
+    if (!capabilities)
+      throw new RelationshipNotFoundException(
+        `Unable to load capabilities for user ${user.id} `,
         LogContext.COMMUNITY
       );
-    return community;
+    return capabilities;
   }
 
   // Membership related functionality
