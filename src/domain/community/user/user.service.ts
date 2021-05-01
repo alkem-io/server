@@ -4,7 +4,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
-  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -38,6 +37,8 @@ export class UserService {
     user.profile = await this.profileService.createProfile(
       userData.profileData
     );
+
+    user.capabilities = [];
 
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);
@@ -206,11 +207,8 @@ export class UserService {
       relations: ['capabilities'],
     });
     const capabilities = userWithCapabilities.capabilities;
-    if (!capabilities)
-      throw new RelationshipNotFoundException(
-        `Unable to load capabilities for user ${user.id} `,
-        LogContext.COMMUNITY
-      );
+    if (!capabilities) return [];
+
     return capabilities;
   }
 

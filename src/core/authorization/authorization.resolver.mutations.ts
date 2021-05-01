@@ -3,7 +3,6 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { Roles } from '@common/decorators/roles.decorator';
 import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { Profiling } from '@src/common/decorators';
 
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
@@ -12,7 +11,7 @@ import {
   AuthorizationRemoveCapabilityInput,
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
-import { IUser } from '@domain/community/user';
+import { IUser, User } from '@domain/community/user';
 
 @Resolver()
 export class AuthorizationResolverMutations {
@@ -20,7 +19,7 @@ export class AuthorizationResolverMutations {
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @Mutation(() => User, {
     description: 'Assigns an authorization capability to a User.',
   })
   @Profiling.api
@@ -35,7 +34,7 @@ export class AuthorizationResolverMutations {
 
   @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @Mutation(() => User, {
     description: 'Removes an authorization capability to a User.',
   })
   @Profiling.api
