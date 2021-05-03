@@ -1,5 +1,5 @@
 import { IDID } from '@domain/agent/did/did.interface';
-import { ICapability } from '@domain/common/capability';
+import { ICredential } from '@domain/common/credential';
 import { IProfile } from '@domain/community/profile/profile.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 
@@ -17,5 +17,5 @@ export interface IUser {
   DID: IDID;
   profile?: IProfile;
   userGroups?: IUserGroup[];
-  capabilities?: ICapability[];
+  capabilities?: ICredential[];
 }

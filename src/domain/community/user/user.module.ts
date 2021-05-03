@@ -6,9 +6,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user.entity';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
+import { CredentialModule } from '@domain/common/credential/credential.module';
 
 @Module({
-  imports: [ProfileModule, TypeOrmModule.forFeature([User])],
+  imports: [ProfileModule, CredentialModule, TypeOrmModule.forFeature([User])],
   providers: [
     UserService,
     UserResolverMutations,

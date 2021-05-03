@@ -1,6 +1,6 @@
 import { IUser } from '@domain/community/user';
 
-export interface ICapability {
+export interface ICredential {
   id: number;
   user?: IUser;
   subjectID: number;

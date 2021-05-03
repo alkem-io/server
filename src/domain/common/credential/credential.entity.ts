@@ -9,12 +9,12 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { ICapability } from './capability.interface';
+import { ICredential } from './credential.interface';
 import { User } from '@domain/community/user';
 
 @Entity()
 @ObjectType()
-export class Capability extends BaseEntity implements ICapability {
+export class Credential extends BaseEntity implements ICredential {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;

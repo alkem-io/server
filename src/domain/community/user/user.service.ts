@@ -19,7 +19,7 @@ import {
   IUser,
 } from '@domain/community/user';
 import { DeleteUserInput } from './user.dto.delete';
-import { ICapability } from '@domain/common/capability';
+import { ICredential } from '@domain/common/credential';
 
 @Injectable()
 export class UserService {
@@ -202,7 +202,7 @@ export class UserService {
     return populatedUser;
   }
 
-  async getCapabilities(user: IUser): Promise<ICapability[]> {
+  async getCapabilities(user: IUser): Promise<ICredential[]> {
     const userWithCapabilities = await this.getUserByIdOrFail(user.id, {
       relations: ['capabilities'],
     });

@@ -3,7 +3,7 @@ import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 
 @InputType()
-export class CreateCapabilityInput {
+export class CreateCredentialInput {
   @Field({
     nullable: false,
     description: 'The resource to which access is being delegated.',

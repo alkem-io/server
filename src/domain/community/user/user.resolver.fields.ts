@@ -8,7 +8,7 @@ import { User } from '@domain/community/user/user.entity';
 import { UserService } from './user.service';
 import { MemberOf } from './memberof.composite';
 import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { Capability, ICapability } from '@domain/common/capability';
+import { Credential, ICredential } from '@domain/common/credential';
 
 @Resolver(() => User)
 export class UserResolverFields {
@@ -30,13 +30,13 @@ export class UserResolverFields {
 
   @Roles(AuthorizationRoles.Members)
   @UseGuards(GqlAuthGuard)
-  @ResolveField('capabilities', () => [Capability], {
+  @ResolveField('capabilities', () => [Credential], {
     nullable: true,
     description:
       'A list of the Capabilities that have been assigned to this User.',
   })
   @Profiling.api
-  async capabilities(@Parent() user: User): Promise<ICapability[]> {
+  async capabilities(@Parent() user: User): Promise<ICredential[]> {
     return await this.userService.getCapabilities(user);
   }
 }

@@ -5,7 +5,7 @@ import {
   AuthorizationRemoveCapabilityInput,
 } from '@core/authorization';
 import { IUser } from '@domain/community/user';
-import { ICapability } from '@domain/common/capability';
+import { ICredential } from '@domain/common/credential';
 
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
@@ -46,7 +46,7 @@ export class AuthorizationService {
   }
 
   isAuthorized(
-    assignedCapabilities: ICapability[],
+    assignedCapabilities: ICredential[],
     acceptedPriviliges: string[]
   ): boolean {
     this.logger.verbose?.(
