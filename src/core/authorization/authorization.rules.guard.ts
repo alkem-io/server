@@ -74,7 +74,7 @@ export class AuthorizationRulesGuard extends AuthGuard([
     );
     if (selfManagement) {
       const args = context.getArgByIndex(1);
-      const fieldName = context.getArgByIndex(3);
+      const fieldName = context.getArgByIndex(3).fieldName;
       const rule = new AuthorizationRuleSelfManagement(fieldName, args);
       this.authorizationRules.push(rule);
     }

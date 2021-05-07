@@ -10,7 +10,6 @@ import { Profile } from '@domain/community/profile/profile.entity';
 import { OrganisationService } from './organisation.service';
 import {
   ValidationException,
-  GroupNotInitializedException,
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -53,26 +52,11 @@ export class OrganisationResolverFields {
   @UseGuards(AuthorizationRulesGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
-    description: 'Users that are contributing to this organisation.',
+    description: 'All users that are members of this Organisation.',
   })
   @Profiling.api
-  async contributors(@Parent() organisation: Organisation) {
-    const group = await this.userGroupService.getGroupByName(
-      organisation,
-      AuthorizationRolesGlobal.Registered
-    );
-    if (!group)
-      throw new GroupNotInitializedException(
-        `Unable to locate members group on organisation: ${organisation.name}`,
-        LogContext.COMMUNITY
-      );
-    const members = group.members;
-    if (!members)
-      throw new GroupNotInitializedException(
-        `Members group not initialised on organisation: ${organisation.name}`,
-        LogContext.COMMUNITY
-      );
-    return members;
+  async members(@Parent() organisation: Organisation) {
+    return await this.organisationService.getMembers(organisation);
   }
 
   @ResolveField('profile', () => Profile, {
