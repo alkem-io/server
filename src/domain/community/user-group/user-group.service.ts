@@ -21,9 +21,7 @@ import {
   UpdateUserGroupInput,
   UserGroup,
   IUserGroup,
-  RemoveUserGroupFocalPoint,
   AssignUserGroupMemberInput,
-  AssignUserGroupFocalPointInput,
   RemoveUserGroupMemberInput,
   DeleteUserGroupInput,
   CreateUserGroupInput,
@@ -146,25 +144,6 @@ export class UserGroupService {
     }
 
     return [];
-  }
-
-  async assignFocalPoint(
-    membershipData: AssignUserGroupFocalPointInput
-  ): Promise<IUserGroup> {
-    // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(
-      membershipData.userID
-    );
-    const group = await this.getUserGroupByIdOrFail(membershipData.groupID);
-
-    // Add the user to the group if not already a member
-    await this.addUserToGroup(user, group);
-
-    // Have both user + group so do the add
-    group.focalPoint = user;
-    await this.userGroupRepository.save(group);
-
-    return group;
   }
 
   async getUserGroupOrFail(
@@ -290,25 +269,6 @@ export class UserGroupService {
       );
 
     group.members = group.members.filter(member => !(member.id === user.id));
-
-    // Also remove the user from being a focal point
-    if (group.focalPoint && group.focalPoint.id === user.id) {
-      await this.removeFocalPoint({ groupID: group.id });
-    }
-
-    await this.userGroupRepository.save(group);
-
-    return group;
-  }
-
-  async removeFocalPoint(
-    removeData: RemoveUserGroupFocalPoint
-  ): Promise<IUserGroup> {
-    const group = await this.getUserGroupByIdOrFail(removeData.groupID);
-    // Set focalPoint to NULL will remove the relation.
-    // For typeorm 'undefined' means - 'Not changed'
-    // More information: https://github.com/typeorm/typeorm/issues/5454
-    group.focalPoint = null;
 
     await this.userGroupRepository.save(group);
 

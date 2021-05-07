@@ -47,13 +47,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @JoinTable({ name: 'user_group_members' })
   members?: User[];
 
-  @ManyToOne(
-    () => User,
-    user => user.focalPoints,
-    { eager: false, cascade: true, onDelete: 'SET NULL' }
-  )
-  focalPoint?: User | null;
-
   @Field(() => Profile, {
     nullable: true,
     description: 'The profile for the user group',
@@ -61,9 +54,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
-
-  @Column()
-  includeInSearch: boolean;
 
   @ManyToOne(
     () => Organisation,
@@ -85,6 +75,5 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   constructor(name: string) {
     super();
     this.name = name;
-    this.includeInSearch = true;
   }
 }

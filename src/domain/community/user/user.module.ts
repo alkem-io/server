@@ -3,13 +3,13 @@ import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/community/profile/profile.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './user.entity';
+import { User } from '@domain/community/user';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
-import { CredentialModule } from '@domain/common/credential/credential.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
-  imports: [ProfileModule, CredentialModule, TypeOrmModule.forFeature([User])],
+  imports: [ProfileModule, AgentModule, TypeOrmModule.forFeature([User])],
   providers: [
     UserService,
     UserResolverMutations,

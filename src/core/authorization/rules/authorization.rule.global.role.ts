@@ -9,7 +9,7 @@ export class AuthorizationRuleGlobalRole implements IAuthorizationRule {
   }
 
   evaluate(user: IUser): boolean {
-    const userCredentials = user.credentials;
+    const userCredentials = user.agent?.credentials;
     if (!userCredentials) return false;
     for (const userCredential of userCredentials) {
       if (userCredential.type === this.type) return true;

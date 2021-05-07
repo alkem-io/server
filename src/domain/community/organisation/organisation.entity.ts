@@ -13,7 +13,6 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { DID } from '@domain/agent/did/did.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
@@ -40,10 +39,6 @@ export class Organisation extends BaseEntity
   @Field(() => String, { nullable: false, description: '' })
   @Column()
   name: string;
-
-  @OneToOne(() => DID)
-  @JoinColumn()
-  DID!: DID;
 
   @Field(() => String, {
     nullable: false,

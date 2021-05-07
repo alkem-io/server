@@ -11,18 +11,20 @@ import {
   UsersWithAuthorizationCredentialInput,
 } from '@core/authorization';
 import { IUser } from '@domain/community/user';
-import { ICredential } from '@domain/common/credential';
+import { ICredential } from '@domain/agent/credential';
 
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { CredentialService } from '@domain/common/credential/credential.service';
+import { CredentialService } from '@domain/agent/credential/credential.service';
 import { AuthorizationCredentialGlobal } from './authorization.credential.global';
 import { ValidationException } from '@common/exceptions';
 import { AuthorizationCredential } from './authorization.credential';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class AuthorizationService {
   constructor(
+    private readonly agentService: AgentService,
     private readonly userService: UserService,
     private readonly credentialService: CredentialService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -31,21 +33,30 @@ export class AuthorizationService {
   async assignCredential(
     assignCredentialData: AssignAuthorizationCredentialInput
   ): Promise<IUser> {
-    return await this.userService.assignCredential({
-      userID: assignCredentialData.userID,
+    const { user, agent } = await this.userService.getUserAndAgent(
+      assignCredentialData.userID
+    );
+    user.agent = await this.agentService.assignCredential({
+      agentID: agent.id,
       type: assignCredentialData.type.toString(),
       resourceID: assignCredentialData.resourceID,
     });
+    return user;
   }
 
   async removeCredential(
     removeCredentialData: RemoveAuthorizationCredentialInput
   ): Promise<IUser> {
-    return await this.userService.removeCredential({
-      userID: removeCredentialData.userID,
+    const { user, agent } = await this.userService.getUserAndAgent(
+      removeCredentialData.userID
+    );
+
+    user.agent = await this.agentService.removeCredential({
+      agentID: agent.id,
       type: removeCredentialData.type.toString(),
       resourceID: removeCredentialData.resourceID,
     });
+    return user;
   }
 
   async usersWithCredentials(

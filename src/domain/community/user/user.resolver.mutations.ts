@@ -65,6 +65,6 @@ export class UserResolverMutations {
   async deleteUser(
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
-    return await this.userService.removeUser(deleteData);
+    return await this.userService.deleteUser(deleteData);
   }
 }

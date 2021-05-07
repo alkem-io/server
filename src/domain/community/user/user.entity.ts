@@ -1,5 +1,4 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { DID } from '@domain/agent/did/did.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 /* eslint-disable @typescript-eslint/no-inferrable-types */
@@ -18,7 +17,7 @@ import {
 } from 'typeorm';
 import { IUser } from './user.interface';
 import { Application } from '@domain/community/application/application.entity';
-import { Credential } from '@domain/common/credential';
+import { Agent } from '@domain/agent/agent';
 
 @Entity()
 @ObjectType()
@@ -75,10 +74,6 @@ export class User extends BaseEntity implements IUser {
   @Column()
   gender: string = '';
 
-  @OneToOne(() => DID)
-  @JoinColumn()
-  DID!: DID;
-
   @ManyToMany(
     () => UserGroup,
     userGroup => userGroup.members,
@@ -88,25 +83,19 @@ export class User extends BaseEntity implements IUser {
 
   @Field(() => Profile, {
     nullable: true,
-    description: 'The profile for this user',
+    description: 'The profile for this User',
   })
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
 
-  @OneToMany(
-    () => UserGroup,
-    userGroup => userGroup.focalPoint,
-    { eager: false }
-  )
-  focalPoints?: UserGroup[];
-
-  @OneToMany(
-    () => Credential,
-    credential => credential.user,
-    { eager: false }
-  )
-  credentials?: Credential[];
+  @Field(() => Agent, {
+    nullable: true,
+    description: 'The agent for this User',
+  })
+  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'CASCADE' })
+  @JoinColumn()
+  agent?: Agent;
 
   @OneToMany(
     () => Application,

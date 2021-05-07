@@ -18,19 +18,18 @@ import {
   CreateUserInput,
   User,
   IUser,
-  RemoveCredentialInput,
-  AssignCredentialInput,
 } from '@domain/community/user';
 import { DeleteUserInput } from './user.dto.delete';
-import { CredentialsSearchInput, ICredential } from '@domain/common/credential';
-import { CredentialService } from '@domain/common/credential/credential.service';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationCredential } from '@core/authorization';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { Agent, IAgent } from '@domain/agent/agent';
 
 @Injectable()
 export class UserService {
   constructor(
     private profileService: ProfileService,
-    private credentialService: CredentialService,
+    private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -44,7 +43,7 @@ export class UserService {
       userData.profileData
     );
 
-    user.credentials = [];
+    user.agent = await this.agentService.createAgent();
 
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);
@@ -54,21 +53,30 @@ export class UserService {
     );
 
     // Ensure the user has the global registered credential
-    await this.assignCredential({
+    if (!savedUser.agent)
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${savedUser.id}`,
+        LogContext.AUTH
+      );
+    await this.agentService.assignCredential({
       type: AuthorizationCredential.GlobalRegistered,
-      userID: savedUser.id,
+      agentID: savedUser.agent.id,
     });
 
     return savedUser;
   }
 
-  async removeUser(deleteData: DeleteUserInput): Promise<IUser> {
+  async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserByIdOrFail(userID);
     const { id } = user;
 
     if (user.profile) {
       await this.profileService.deleteProfile(user.profile.id);
+    }
+
+    if (user.agent) {
+      await this.agentService.deleteAgent(user.agent.id);
     }
 
     const result = await this.userRepository.remove(user as User);
@@ -102,13 +110,16 @@ export class UserService {
   }
 
   //Find a user either by id or email
-  async getUserOrFail(userID: string): Promise<IUser> {
+  async getUserOrFail(
+    userID: string,
+    options?: FindOneOptions<User>
+  ): Promise<IUser> {
     if (validator.isNumeric(userID)) {
       const idInt: number = parseInt(userID);
-      return await this.getUserByIdOrFail(idInt);
+      return await this.getUserByIdOrFail(idInt, options);
     }
 
-    return await this.getUserByEmailOrFail(userID);
+    return await this.getUserByEmailOrFail(userID, options);
   }
 
   async getUserByIdOrFail(
@@ -144,46 +155,64 @@ export class UserService {
     return user;
   }
 
-  // todo: rename to remove groups when all authorization is via credentials
-  async getUserWithGroupsCredentials(
-    email: string
-  ): Promise<IUser | undefined> {
-    const user = await this.getUserByEmail(email, {
-      relations: ['userGroups', 'credentials'],
-    });
-
-    if (!user) {
-      this.logger.verbose?.(
-        `No user with email ${email} exists!`,
-        LogContext.COMMUNITY
-      );
-      return undefined;
-    }
-
-    if (!user.userGroups) {
-      this.logger.verbose?.(
-        `User with email ${email} doesn't belong to any groups!`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return user;
-  }
-
-  async getUserCredentials(
+  async getUserAndCredentials(
     userID: number
   ): Promise<{ user: IUser; credentials: ICredential[] }> {
     const user = await this.getUserByIdOrFail(userID, {
-      relations: ['credentials'],
+      relations: ['agent'],
     });
 
-    if (!user.credentials) {
+    if (!user.agent || !user.agent.credentials) {
       throw new EntityNotInitializedException(
-        `User credentials not initialized: ${userID}`,
+        `User Agent not initialized: ${userID}`,
         LogContext.AUTH
       );
     }
-    return { user: user, credentials: user.credentials };
+    return { user: user, credentials: user.agent.credentials };
+  }
+
+  async getUserAndAgent(
+    userID: number
+  ): Promise<{ user: IUser; agent: IAgent }> {
+    const user = await this.getUserByIdOrFail(userID, {
+      relations: ['agent'],
+    });
+
+    if (!user.agent) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
+    return { user: user, agent: user.agent };
+  }
+
+  async getUserWithAgent(userID: string): Promise<IUser> {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['agent'],
+    });
+
+    if (!user.agent || !user.agent.credentials) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
+    return user;
+  }
+
+  async getUserByIdWithAgent(userID: number): Promise<IUser> {
+    const user = await this.getUserByIdOrFail(userID, {
+      relations: ['agent'],
+    });
+
+    if (!user.agent || !user.agent.credentials) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
+    return user;
   }
 
   async getUsers(): Promise<IUser[]> {
@@ -228,97 +257,34 @@ export class UserService {
     return populatedUser;
   }
 
-  async getCredentials(user: IUser): Promise<ICredential[]> {
-    const userWithCredentials = await this.getUserByIdOrFail(user.id, {
-      relations: ['credentials'],
+  async getAgent(user: IUser): Promise<IAgent> {
+    const userWithAgent = await this.getUserByIdOrFail(user.id, {
+      relations: ['agent'],
     });
-    const credentials = userWithCredentials.credentials;
-    if (!credentials) return [];
+    const agent = userWithAgent.agent;
+    if (!agent)
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${user.id}`,
+        LogContext.AUTH
+      );
 
-    return credentials;
-  }
-
-  async assignCredential(
-    assignCredentialData: AssignCredentialInput
-  ): Promise<IUser> {
-    const { user, credentials } = await this.getUserCredentials(
-      assignCredentialData.userID
-    );
-
-    if (!assignCredentialData.resourceID) assignCredentialData.resourceID = -1;
-
-    // Check if the user already has this credential type + Value
-    for (const credential of credentials) {
-      if (
-        credential.type === assignCredentialData.type &&
-        credential.resourceID == assignCredentialData.resourceID
-      ) {
-        throw new ValidationException(
-          `User (${user.email}) already has assigned credential: ${assignCredentialData.type}`,
-          LogContext.AUTH
-        );
-      }
-    }
-
-    const credential = await this.credentialService.createCredential({
-      type: assignCredentialData.type,
-      resourceID: assignCredentialData.resourceID,
-    });
-
-    user.credentials?.push(credential);
-
-    return await this.saveUser(user);
-  }
-
-  async removeCredential(
-    removeCredentialData: RemoveCredentialInput
-  ): Promise<IUser> {
-    const { user, credentials } = await this.getUserCredentials(
-      removeCredentialData.userID
-    );
-
-    if (!removeCredentialData.resourceID) removeCredentialData.resourceID = -1;
-
-    for (const credential of credentials) {
-      if (
-        credential.type === removeCredentialData.type &&
-        credential.resourceID == removeCredentialData.resourceID
-      ) {
-        await this.credentialService.deleteCredential(credential.id);
-      }
-    }
-
-    return user;
-  }
-
-  async hasValidCredential(
-    userID: number,
-    credentialCriteria: CredentialsSearchInput
-  ): Promise<boolean> {
-    const { credentials } = await this.getUserCredentials(userID);
-
-    for (const credential of credentials) {
-      if (credential.type === credentialCriteria.type) {
-        if (!credentialCriteria.resourceID) return true;
-        if (credentialCriteria.resourceID == credential.resourceID) return true;
-      }
-    }
-
-    return false;
+    return agent;
   }
 
   async usersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<IUser[]> {
-    const credentialMatchs = await this.credentialService.findMatchingCredentials(
+    const matchingAgents = await this.agentService.findAgentsWithMatchingCredentials(
       credentialCriteria
     );
 
     const users: IUser[] = [];
-    for (const match of credentialMatchs) {
-      const userID = match.user?.id;
+    for (const agent of matchingAgents) {
+      const userID = (agent as Agent).user?.id;
       if (userID) {
-        const user = await this.getUserByIdOrFail(userID);
+        const user = await this.getUserByIdOrFail(userID, {
+          relations: ['agent'],
+        });
         users.push(user);
       }
     }

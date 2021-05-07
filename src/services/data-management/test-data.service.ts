@@ -237,17 +237,6 @@ export class TestDataService {
     return response.id;
   }
 
-  async initAssignGroupFocalPoint(groupId: number): Promise<number> {
-    const createdTestUser = (await this.userService.getUserByEmail(
-      this.userEmail
-    )) as IUser;
-    const response = await this.userGroupService.assignFocalPoint({
-      userID: createdTestUser?.id,
-      groupID: groupId,
-    });
-    return response.id;
-  }
-
   async initActorGroup(opportunityId: number): Promise<number> {
     const actorGroup = new CreateActorGroupInput();
     actorGroup.name = 'init actorGroup name';
@@ -266,10 +255,6 @@ export class TestDataService {
     actor.description = 'init actor description';
     const response = await this.actorGroupService.createActor(actor);
     return response.id;
-  }
-
-  async teardownRemoveGroupFocalPoint(groupId: number) {
-    await this.userGroupService.removeFocalPoint({ groupID: groupId });
   }
 
   async initGetUserId(userEmail: string): Promise<number> {
@@ -340,9 +325,7 @@ export class TestDataService {
     const createGroupOnChallengeId = await this.initCreateGroupOnChallenge(
       challengeId
     );
-    const assignGroupFocalPointId = await this.initAssignGroupFocalPoint(
-      createGroupOnChallengeId
-    );
+
     const actorGroupId = await this.initActorGroup(opportunityId);
     const actorId = await this.initActor(actorGroupId);
     const tagsetId = await this.initGetTagsetId(challengeId);
@@ -352,6 +335,9 @@ export class TestDataService {
     const communityAdminId = await this.initUserId(this.communityAdminEmail);
     const ecoverseMemberId = await this.initUserId(this.ecoverseMemberEmail);
     const nonEcoverseId = await this.initUserId(this.nonEcoverseEmail);
+
+    // todo: hack to get code compiling
+    const assignGroupFocalPointId = -1;
 
     return {
       userId,

@@ -9,8 +9,8 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { ICredential } from './credential.interface';
-import { User } from '@domain/community/user';
+import { ICredential } from '@domain/agent/credential';
+import { Agent, IAgent } from '@domain/agent/agent';
 
 @Entity()
 @ObjectType()
@@ -37,11 +37,11 @@ export class Credential extends BaseEntity implements ICredential {
   type: string;
 
   @ManyToOne(
-    () => User,
-    user => user.credentials,
+    () => Agent,
+    agent => agent.credentials,
     { eager: false, cascade: false, onDelete: 'SET NULL' }
   )
-  user?: User;
+  agent?: IAgent;
 
   constructor(type: string, resourceID: number) {
     super();

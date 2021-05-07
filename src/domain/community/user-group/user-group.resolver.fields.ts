@@ -39,23 +39,4 @@ export class UserGroupResolverFields {
     const members = await this.userGroupService.getMembers(group.id);
     return (members || []) as User[];
   }
-
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
-  @ResolveField('focalPoint', () => User, {
-    nullable: true,
-    description: 'The User that is the focal point of this User Group.',
-  })
-  @Profiling.api
-  async focalPoint(
-    @Parent() group: UserGroup
-  ): Promise<User | null | undefined> {
-    const groupWithFocalPoint = await this.userGroupService.getUserGroupByIdOrFail(
-      group.id,
-      {
-        relations: ['focalPoint'],
-      }
-    );
-    return groupWithFocalPoint.focalPoint as User;
-  }
 }

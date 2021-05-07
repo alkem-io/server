@@ -1,8 +1,8 @@
-import { IUser } from '@domain/community/user';
+import { IAgent } from '@domain/agent/agent';
 
 export interface ICredential {
   id: number;
-  user?: IUser;
+  agent?: IAgent;
   resourceID: number;
   type: string;
 }

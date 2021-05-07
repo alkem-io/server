@@ -4,9 +4,9 @@ import { InputType, Field } from '@nestjs/graphql';
 export class AssignCredentialInput {
   @Field({
     nullable: false,
-    description: 'The user to whom the credential is being granted.',
+    description: 'The Agent to whom the credential is being granted.',
   })
-  userID!: number;
+  agentID!: number;
 
   @Field(() => String, { nullable: false })
   type!: string;

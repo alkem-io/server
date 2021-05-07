@@ -1,3 +1,4 @@
+import { AgentModule } from '@domain/agent/agent/agent.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { UserModule } from '@domain/community/user/user.module';
@@ -12,6 +13,7 @@ import { CommunityService } from './community.service';
 
 @Module({
   imports: [
+    AgentModule,
     UserGroupModule,
     UserModule,
     ApplicationModule,

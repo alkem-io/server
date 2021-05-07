@@ -69,11 +69,6 @@ export class EcoverseService {
       CommunityType.ECOVERSE
     );
 
-    // Disable searching on the mandatory platform groups
-    ecoverse.community.groups?.forEach(
-      group => (group.includeInSearch = false)
-    );
-
     if (!ecoverse.host) {
       ecoverse.host = await this.organisationService.createOrganisation({
         name: 'Default host organisation',

@@ -16,7 +16,6 @@ import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Context } from '@domain/context/context/context.entity';
-import { DID } from '@domain/agent/did/did.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { IOpportunity } from './opportunity.interface';
@@ -115,10 +114,6 @@ export class Opportunity extends BaseEntity
     { eager: false, cascade: true }
   )
   relations?: Relation[];
-
-  @OneToOne(() => DID, { eager: true, cascade: true })
-  @JoinColumn()
-  DID!: DID;
 
   @ManyToOne(
     () => Challenge,

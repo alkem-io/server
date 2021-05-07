@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Credential } from './credential.entity';
+import { Credential } from '@domain/agent/credential';
 import { CredentialService } from './credential.service';
 
 @Module({

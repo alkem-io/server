@@ -25,10 +25,12 @@ import {
 } from '@domain/community/community';
 import { ApplicationService } from '../application/application.service';
 import { AuthorizationCredential } from '@core/authorization/authorization.credential';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class CommunityService {
   constructor(
+    private agentService: AgentService,
     private userService: UserService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
@@ -167,25 +169,38 @@ export class CommunityService {
     }
 
     // Assign a credential for community membership
-    return await this.userService.assignCredential({
-      userID: userID,
+    const { user, agent } = await this.userService.getUserAndAgent(
+      membershipData.userID
+    );
+
+    user.agent = await this.agentService.assignCredential({
+      agentID: agent.id,
       type: AuthorizationCredential.CommunityMember,
       resourceID: membershipData.communityID,
     });
+    return user;
   }
 
   async removeMember(
     membershipData: RemoveCommunityMemberInput
   ): Promise<IUser> {
-    return await this.userService.removeCredential({
-      userID: membershipData.userID,
+    const { user, agent } = await this.userService.getUserAndAgent(
+      membershipData.userID
+    );
+
+    user.agent = await this.agentService.removeCredential({
+      agentID: agent.id,
       type: AuthorizationCredential.CommunityMember,
       resourceID: membershipData.communityID,
     });
+
+    return user;
   }
 
   async isMember(userID: number, communityID: number): Promise<boolean> {
-    return await this.userService.hasValidCredential(userID, {
+    const agent = await this.userService.getUserByIdWithAgent(userID);
+
+    return await this.agentService.hasValidCredential(agent.id, {
       type: AuthorizationCredential.CommunityMember,
       resourceID: communityID,
     });

@@ -1,7 +1,6 @@
-import { IDID } from '@domain/agent/did/did.interface';
-import { ICredential } from '@domain/common/credential';
 import { IProfile } from '@domain/community/profile/profile.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
+import { IAgent } from '@domain/agent';
 
 export interface IUser {
   id: number;
@@ -14,8 +13,7 @@ export interface IUser {
   city: string;
   country: string;
   gender: string;
-  DID: IDID;
   profile?: IProfile;
   userGroups?: IUserGroup[];
-  credentials?: ICredential[];
+  agent?: IAgent;
 }

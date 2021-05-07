@@ -8,7 +8,7 @@ import {
   CreateCredentialInput,
   ICredential,
   CredentialsSearchInput,
-} from '@domain/common/credential';
+} from '@domain/agent/credential';
 @Injectable()
 export class CredentialService {
   constructor(

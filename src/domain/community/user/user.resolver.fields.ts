@@ -5,11 +5,11 @@ import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import { User } from '@domain/community/user/user.entity';
 import { UserService } from './user.service';
 import { MemberOf } from './memberof.composite';
-import { Credential, ICredential } from '@domain/common/credential';
 import {
   AuthorizationRolesGlobal,
   AuthorizationRulesGuard,
 } from '@core/authorization';
+import { Agent, IAgent } from '@domain/agent/agent';
 
 @Resolver(() => User)
 export class UserResolverFields {
@@ -31,13 +31,12 @@ export class UserResolverFields {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
   @UseGuards(AuthorizationRulesGuard)
-  @ResolveField('credentials', () => [Credential], {
+  @ResolveField('agent', () => Agent, {
     nullable: true,
-    description:
-      'A list of the Credentials that have been assigned to this User.',
+    description: 'The Agent representing this User.',
   })
   @Profiling.api
-  async credentials(@Parent() user: User): Promise<ICredential[]> {
-    return await this.userService.getCredentials(user);
+  async agent(@Parent() user: User): Promise<IAgent> {
+    return await this.userService.getAgent(user);
   }
 }

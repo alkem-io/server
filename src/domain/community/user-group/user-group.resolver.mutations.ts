@@ -6,9 +6,7 @@ import { UserGroupService } from './user-group.service';
 import { Profiling } from '@src/common/decorators';
 import {
   AssignUserGroupMemberInput,
-  AssignUserGroupFocalPointInput,
   DeleteUserGroupInput,
-  RemoveUserGroupFocalPoint,
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group';
@@ -78,39 +76,5 @@ export class UserGroupResolverMutations {
     @Args('membershipData') membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
     return await this.groupService.removeUser(membershipData);
-  }
-
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
-  )
-  @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => UserGroup, {
-    nullable: true,
-    description:
-      'Assigns a User as the focal point of the specified User Group.',
-  })
-  @Profiling.api
-  async assignGroupFocalPoint(
-    @Args('membershipData') membershipData: AssignUserGroupFocalPointInput
-  ): Promise<IUserGroup> {
-    return await this.groupService.assignFocalPoint(membershipData);
-  }
-
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
-  )
-  @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => UserGroup, {
-    nullable: true,
-    description: 'Removes the focal point for the specified User Group.',
-  })
-  @Profiling.api
-  async removeGroupFocalPoint(
-    @Args('removeData') removeData: RemoveUserGroupFocalPoint
-  ): Promise<IUserGroup> {
-    const group = await this.groupService.removeFocalPoint(removeData);
-    return group;
   }
 }
