@@ -5,8 +5,7 @@ import { Kind, ValueNode } from 'graphql';
 
 @Scalar('DID')
 export class DID implements CustomScalar<string, string> {
-  description =
-    'A short text based identifier, 3 <= length <= 20. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
+  description = 'A decentralized identifier (DID) as per the W3C standard.';
 
   parseValue(value: string): string {
     return this.validate(value).toLowerCase();
@@ -31,10 +30,9 @@ export class DID implements CustomScalar<string, string> {
       );
     }
 
-    // todo: validation of DID format
-    if (value.length < 12)
+    if (value.length < 10)
       throw new ValidationException(
-        `DID type has a minimum length of 3: ${value}`,
+        `DID type has a minimum length of 10 characters: ${value}`,
         LogContext.API
       );
 
@@ -44,11 +42,11 @@ export class DID implements CustomScalar<string, string> {
         LogContext.API
       );
 
-    const expression = /^[a-zA-Z:0-9.\-_]+$/;
+    const expression = /^did:[a-zA-Z0-9.\-_]+:[a-zA-Z0-9.\-_]+$/;
     if (!expression.test(value))
       throw new ValidationException(
-        `DID has characters that are not allowed: ${value}`,
-        LogContext.CHALLENGES
+        `DID is not in the expected format: ${value}`,
+        LogContext.API
       );
 
     return value;
