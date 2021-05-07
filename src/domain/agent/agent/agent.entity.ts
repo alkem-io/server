@@ -38,7 +38,7 @@ export class Agent extends BaseEntity implements IAgent {
   @Column('varchar', { length: 255, nullable: true })
   did!: DID;
 
-  @Field(() => String, {
+  @Field(() => [Credential], {
     nullable: true,
     description: 'The Credentials held by this Agent.',
   })

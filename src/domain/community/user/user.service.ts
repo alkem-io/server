@@ -279,7 +279,10 @@ export class UserService {
     );
 
     const users: IUser[] = [];
-    for (const agent of matchingAgents) {
+    for (const matchedAgent of matchingAgents) {
+      const agent = await this.agentService.getAgentOrFail(matchedAgent.id, {
+        relations: ['user'],
+      });
       const userID = (agent as Agent).user?.id;
       if (userID) {
         const user = await this.getUserByIdOrFail(userID, {

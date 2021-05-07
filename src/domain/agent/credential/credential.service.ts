@@ -51,7 +51,7 @@ export class CredentialService {
     if (!credentialCriteria.resourceID) {
       const credentialMatches = await this.credentialRepository
         .createQueryBuilder('credential')
-        .leftJoinAndSelect('credential.user', 'user')
+        .leftJoinAndSelect('credential.agent', 'agent')
         .where({
           type: `${credentialCriteria.type}`,
         })
@@ -60,7 +60,7 @@ export class CredentialService {
     } else {
       const credentialMatches = await this.credentialRepository
         .createQueryBuilder('credential')
-        .leftJoinAndSelect('credential.user', 'user')
+        .leftJoinAndSelect('credential.agent', 'agent')
         .where({
           type: `${credentialCriteria.type}`,
           resourceID: `${credentialCriteria.resourceID}`,
