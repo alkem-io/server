@@ -13,7 +13,6 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { CreateOrganisationInput } from './organisation.dto.create';
 import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
-import { AuthorizationRoles } from '@core/authorization';
 import validator from 'validator';
 import { UpdateOrganisationInput } from './organisation.dto.update';
 import { CreateUserGroupInput } from '../user-group';
@@ -41,11 +40,6 @@ export class OrganisationService {
 
     // Check that the mandatory groups for a challenge are created
     organisation.groups = [];
-    organisation.restrictedGroupNames = [AuthorizationRoles.Members];
-    await this.userGroupService.addMandatoryGroups(
-      organisation,
-      organisation.restrictedGroupNames
-    );
 
     const savedOrg = await this.organisationRepository.save(organisation);
     this.logger.verbose?.(

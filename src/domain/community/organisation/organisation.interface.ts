@@ -11,5 +11,4 @@ export interface IOrganisation {
   profile?: IProfile;
   challenges?: IChallenge[];
   groups?: IUserGroup[];
-  restrictedGroupNames?: string[];
 }

@@ -7,7 +7,7 @@ export class AuthenticationService {
   constructor(private readonly userService: UserService) {}
 
   async createUserInfo(email: string): Promise<UserInfo> {
-    const knownUser = await this.userService.getUserWithGroupsCapabilities(
+    const knownUser = await this.userService.getUserWithGroupsCredentials(
       email
     );
     return { email, user: knownUser };

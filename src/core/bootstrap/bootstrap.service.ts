@@ -15,14 +15,14 @@ import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
-import { AuthorizationRoles } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationCredential } from '@core/authorization/authorization.credential';
 @Injectable()
 export class BootstrapService {
   constructor(
     private ecoverseService: EcoverseService,
     private userService: UserService,
+    private authorizationService: AuthorizationService,
     private configService: ConfigService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -99,18 +99,6 @@ export class BootstrapService {
       );
     }
 
-    const ecoverseAdmins = bootstrapJson.ecoverseAdmins;
-    if (!ecoverseAdmins)
-      this.logger.verbose?.(
-        'No ecoverse admins section in the authorisation bootstrap file!',
-        LogContext.BOOTSTRAP
-      );
-    else {
-      await this.createGroupProfiles(
-        AuthorizationRoles.EcoverseAdmins,
-        ecoverseAdmins
-      );
-    }
     const globalAdmins = bootstrapJson.globalAdmins;
     if (!globalAdmins) {
       this.logger.verbose?.(
@@ -118,9 +106,9 @@ export class BootstrapService {
         LogContext.BOOTSTRAP
       );
     } else {
-      await this.createGroupProfiles(
-        AuthorizationRoles.GlobalAdmins,
-        globalAdmins
+      await this.createUserProfiles(
+        globalAdmins,
+        AuthorizationCredential.GlobalAdmin
       );
     }
     const communityAdmins = bootstrapJson.communityAdmins;
@@ -130,9 +118,9 @@ export class BootstrapService {
         LogContext.BOOTSTRAP
       );
     } else {
-      await this.createGroupProfiles(
-        AuthorizationRoles.CommunityAdmins,
-        communityAdmins
+      await this.createUserProfiles(
+        communityAdmins,
+        AuthorizationCredential.GlobalAdminCommunity
       );
     }
     const members = bootstrapJson.members;
@@ -142,13 +130,18 @@ export class BootstrapService {
         LogContext.BOOTSTRAP
       );
     } else {
-      await this.createGroupProfiles(AuthorizationRoles.Members, members);
+      await this.createUserProfiles(
+        members,
+        AuthorizationCredential.GlobalRegistered
+      );
     }
   }
 
   @Profiling.api
-  async createGroupProfiles(groupName: string, usersData: any[]) {
-    const defaultEcoverse = await this.ecoverseService.getDefaultEcoverseOrFail();
+  async createUserProfiles(
+    usersData: any[],
+    credentialType: AuthorizationCredential
+  ) {
     try {
       for (const userData of usersData) {
         const userInput = new CreateUserInput();
@@ -164,44 +157,11 @@ export class BootstrapService {
         if (!user) {
           // First create, then ensure groups are loaded - not optimal but only on bootstrap
           user = await this.userService.createUser(userInput);
-          if (groupName !== AuthorizationRoles.Members) {
-            // also need to add to members group
-            await this.ecoverseService.addUserToRestrictedGroup(
-              defaultEcoverse,
-              user,
-              AuthorizationRoles.Members
-            );
-          }
         }
-        user = await this.userService.getUserWithGroupsCapabilities(
-          userInput.email
-        );
-
-        if (!user)
-          throw new EntityNotFoundException(
-            'Unable to create group profiles.',
-            LogContext.BOOTSTRAP,
-            CherrytwistErrorStatus.USER_PROFILE_NOT_FOUND
-          );
-
-        const groups = user.userGroups;
-        if (!groups)
-          throw new EntityNotInitializedException(
-            `User ${user.email} isn't initialised properly. The user doesn't belong to any groups!`,
-            LogContext.BOOTSTRAP
-          );
-
-        if (!groups.some(({ name }) => groupName === name)) {
-          await this.ecoverseService.addUserToRestrictedGroup(
-            defaultEcoverse,
-            user,
-            groupName
-          );
-        } else
-          this.logger.verbose?.(
-            `User ${userInput.email} already exists in group  ${groupName}`,
-            LogContext.BOOTSTRAP
-          );
+        await this.authorizationService.assignCredential({
+          userID: user.id,
+          type: credentialType,
+        });
       }
     } catch (error) {
       this.logger.error(

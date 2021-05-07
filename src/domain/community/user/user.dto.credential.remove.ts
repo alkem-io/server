@@ -3,20 +3,20 @@ import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 
 @InputType()
-export class AuthorizationAssignCapabilityInput {
+export class RemoveCredentialInput {
   @Field({
     nullable: false,
-    description: 'The resource to which access is being delegated.',
-  })
-  resourceID!: number;
-
-  @Field({
-    nullable: false,
-    description: 'The user to whom the capability is being granted.',
+    description: 'The user from whom the credential is being removed.',
   })
   userID!: number;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
-  privilege!: string;
+  type!: string;
+
+  @Field({
+    nullable: true,
+    description: 'The resource to which access is being removed.',
+  })
+  resourceID!: number;
 }

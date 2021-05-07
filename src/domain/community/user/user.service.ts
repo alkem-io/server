@@ -4,6 +4,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -17,14 +18,19 @@ import {
   CreateUserInput,
   User,
   IUser,
+  RemoveCredentialInput,
+  AssignCredentialInput,
 } from '@domain/community/user';
 import { DeleteUserInput } from './user.dto.delete';
-import { ICredential } from '@domain/common/credential';
+import { CredentialsSearchInput, ICredential } from '@domain/common/credential';
+import { CredentialService } from '@domain/common/credential/credential.service';
+import { AuthorizationCredential } from '@core/authorization';
 
 @Injectable()
 export class UserService {
   constructor(
     private profileService: ProfileService,
+    private credentialService: CredentialService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -38,7 +44,7 @@ export class UserService {
       userData.profileData
     );
 
-    user.capabilities = [];
+    user.credentials = [];
 
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);
@@ -46,6 +52,12 @@ export class UserService {
       `Created a new user with id: ${savedUser.id}`,
       LogContext.COMMUNITY
     );
+
+    // Ensure the user has the global registered credential
+    await this.assignCredential({
+      type: AuthorizationCredential.GlobalRegistered,
+      userID: savedUser.id,
+    });
 
     return savedUser;
   }
@@ -85,9 +97,8 @@ export class UserService {
     return true;
   }
 
-  async saveUser(user: IUser): Promise<boolean> {
-    await this.userRepository.save(user);
-    return true;
+  async saveUser(user: IUser): Promise<IUser> {
+    return await this.userRepository.save(user);
   }
 
   //Find a user either by id or email
@@ -133,12 +144,12 @@ export class UserService {
     return user;
   }
 
-  // todo: rename to remove groups when all authorization is via capabilities
-  async getUserWithGroupsCapabilities(
+  // todo: rename to remove groups when all authorization is via credentials
+  async getUserWithGroupsCredentials(
     email: string
   ): Promise<IUser | undefined> {
     const user = await this.getUserByEmail(email, {
-      relations: ['userGroups', 'capabilities'],
+      relations: ['userGroups', 'credentials'],
     });
 
     if (!user) {
@@ -159,11 +170,26 @@ export class UserService {
     return user;
   }
 
+  async getUserCredentials(
+    userID: number
+  ): Promise<{ user: IUser; credentials: ICredential[] }> {
+    const user = await this.getUserByIdOrFail(userID, {
+      relations: ['credentials'],
+    });
+
+    if (!user.credentials) {
+      throw new EntityNotInitializedException(
+        `User credentials not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
+    return { user: user, credentials: user.credentials };
+  }
+
   async getUsers(): Promise<IUser[]> {
     return (await this.userRepository.find()) || [];
   }
 
-  // Note: explicitly do not support updating of email addresses
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID);
 
@@ -202,14 +228,101 @@ export class UserService {
     return populatedUser;
   }
 
-  async getCapabilities(user: IUser): Promise<ICredential[]> {
-    const userWithCapabilities = await this.getUserByIdOrFail(user.id, {
-      relations: ['capabilities'],
+  async getCredentials(user: IUser): Promise<ICredential[]> {
+    const userWithCredentials = await this.getUserByIdOrFail(user.id, {
+      relations: ['credentials'],
     });
-    const capabilities = userWithCapabilities.capabilities;
-    if (!capabilities) return [];
+    const credentials = userWithCredentials.credentials;
+    if (!credentials) return [];
 
-    return capabilities;
+    return credentials;
+  }
+
+  async assignCredential(
+    assignCredentialData: AssignCredentialInput
+  ): Promise<IUser> {
+    const { user, credentials } = await this.getUserCredentials(
+      assignCredentialData.userID
+    );
+
+    if (!assignCredentialData.resourceID) assignCredentialData.resourceID = -1;
+
+    // Check if the user already has this credential type + Value
+    for (const credential of credentials) {
+      if (
+        credential.type === assignCredentialData.type &&
+        credential.resourceID == assignCredentialData.resourceID
+      ) {
+        throw new ValidationException(
+          `User (${user.email}) already has assigned credential: ${assignCredentialData.type}`,
+          LogContext.AUTH
+        );
+      }
+    }
+
+    const credential = await this.credentialService.createCredential({
+      type: assignCredentialData.type,
+      resourceID: assignCredentialData.resourceID,
+    });
+
+    user.credentials?.push(credential);
+
+    return await this.saveUser(user);
+  }
+
+  async removeCredential(
+    removeCredentialData: RemoveCredentialInput
+  ): Promise<IUser> {
+    const { user, credentials } = await this.getUserCredentials(
+      removeCredentialData.userID
+    );
+
+    if (!removeCredentialData.resourceID) removeCredentialData.resourceID = -1;
+
+    for (const credential of credentials) {
+      if (
+        credential.type === removeCredentialData.type &&
+        credential.resourceID == removeCredentialData.resourceID
+      ) {
+        await this.credentialService.deleteCredential(credential.id);
+      }
+    }
+
+    return user;
+  }
+
+  async hasValidCredential(
+    userID: number,
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<boolean> {
+    const { credentials } = await this.getUserCredentials(userID);
+
+    for (const credential of credentials) {
+      if (credential.type === credentialCriteria.type) {
+        if (!credentialCriteria.resourceID) return true;
+        if (credentialCriteria.resourceID == credential.resourceID) return true;
+      }
+    }
+
+    return false;
+  }
+
+  async usersWithCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<IUser[]> {
+    const credentialMatchs = await this.credentialService.findMatchingCredentials(
+      credentialCriteria
+    );
+
+    const users: IUser[] = [];
+    for (const match of credentialMatchs) {
+      const userID = match.user?.id;
+      if (userID) {
+        const user = await this.getUserByIdOrFail(userID);
+        users.push(user);
+      }
+    }
+    return users;
   }
 
   // Membership related functionality
@@ -230,6 +343,7 @@ export class UserService {
   }
 
   async getMemberOf(user: User): Promise<MemberOf> {
+    // Todo: expand to also include credentials for memberships
     const membership = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.userGroups', 'userGroup')

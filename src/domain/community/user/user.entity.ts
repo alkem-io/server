@@ -103,10 +103,10 @@ export class User extends BaseEntity implements IUser {
 
   @OneToMany(
     () => Credential,
-    capability => capability.user,
+    credential => credential.user,
     { eager: false }
   )
-  capabilities?: Credential[];
+  credentials?: Credential[];
 
   @OneToMany(
     () => Application,

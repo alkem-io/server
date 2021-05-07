@@ -1,49 +1,50 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Profiling } from '@src/common/decorators';
-
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import {
-  AuthorizationAssignCapabilityInput,
-  AuthorizationRemoveCapabilityInput,
+  AssignAuthorizationCredentialInput,
+  RemoveAuthorizationCredentialInput,
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
 import { IUser, User } from '@domain/community/user';
+import { AuthorizationRolesGlobal } from './authorization.roles.global';
+import { AuthorizationRulesGuard } from './authorization.rules.guard';
 
 @Resolver()
 export class AuthorizationResolverMutations {
   constructor(private authorizationService: AuthorizationService) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  // @AuthorizationGlobalRoles(AuthorizationRolesGlobal.CommunityAdmin, AuthorizationRolesGlobal.Admin)
+  // @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => User, {
-    description: 'Assigns an authorization capability to a User.',
+    description: 'Assigns an authorization credential to a User.',
   })
   @Profiling.api
-  async assignCapabilityToUser(
-    @Args('assignCapabilityData')
-    capabilityAssignData: AuthorizationAssignCapabilityInput
+  async assignCredentialToUser(
+    @Args('assignCredentialData')
+    credentialAssignData: AssignAuthorizationCredentialInput
   ): Promise<IUser> {
-    return await this.authorizationService.assignCapability(
-      capabilityAssignData
+    return await this.authorizationService.assignCredential(
+      credentialAssignData
     );
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => User, {
-    description: 'Removes an authorization capability to a User.',
+    description: 'Removes an authorization credential from a User.',
   })
   @Profiling.api
-  async removeCapabilityFromUser(
-    @Args('removeCapabilityData')
-    capabilityRemoveData: AuthorizationRemoveCapabilityInput
+  async removeCredentialFromUser(
+    @Args('removeCredentialData')
+    credentialRemoveData: RemoveAuthorizationCredentialInput
   ): Promise<IUser> {
-    return await this.authorizationService.removeCapability(
-      capabilityRemoveData
+    return await this.authorizationService.removeCredential(
+      credentialRemoveData
     );
   }
 }

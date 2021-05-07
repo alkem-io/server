@@ -30,22 +30,23 @@ export class Credential extends BaseEntity implements ICredential {
 
   @Field(() => Number)
   @Column()
-  subjectID: number;
+  resourceID: number;
 
   @Field(() => String)
-  @Column('text')
-  privilege: string;
+  @Column()
+  type: string;
 
   @ManyToOne(
     () => User,
-    user => user.capabilities,
+    user => user.credentials,
     { eager: false, cascade: false, onDelete: 'SET NULL' }
   )
   user?: User;
 
-  constructor(subjectID: number, privilege: string) {
+  constructor(type: string, resourceID: number) {
     super();
-    this.privilege = privilege;
-    this.subjectID = subjectID;
+    this.type = type;
+    this.resourceID = resourceID;
+    if (!this.resourceID) this.resourceID = -1;
   }
 }

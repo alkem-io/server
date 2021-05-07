@@ -1,9 +1,11 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import {
+  AuthorizationRolesGlobal,
+  AuthorizationRulesGuard,
+} from '@core/authorization';
 
 import {
   ActorGroup,
@@ -16,8 +18,8 @@ import { Actor, IActor, CreateActorInput } from '@domain/context/actor';
 export class ActorGroupResolverMutations {
   constructor(private actorGroupService: ActorGroupService) {}
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Actor, {
     description: 'Creates a new Actor in the specified ActorGroup.',
   })
@@ -29,8 +31,8 @@ export class ActorGroupResolverMutations {
     return result;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => ActorGroup, {
     description:
       'Deletes the specified Actor Group, including contained Actors.',

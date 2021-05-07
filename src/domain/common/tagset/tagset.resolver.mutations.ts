@@ -1,25 +1,27 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { TagsetService } from './tagset.service';
-import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { UpdateTagsetInput, Tagset, ITagset } from '@domain/common/tagset';
+// import { UseGuards } from '@nestjs/common';
+// import { Args, Mutation, Resolver } from '@nestjs/graphql';
+// import { TagsetService } from './tagset.service';
+// import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
+// import { UpdateTagsetInput, Tagset, ITagset } from '@domain/common/tagset';
+// import { AuthorizationRolesGlobal } from '@core/authorization/authorization.roles.global';
+// import { AuthorizationRulesGuard } from '@core/authorization/authorization.rules.guard';
 
-@Resolver(() => Tagset)
-export class TagsetResolver {
-  constructor(private tagsetService: TagsetService) {}
+// @Resolver(() => Tagset)
+// export class TagsetResolver {
+//   constructor(private tagsetService: TagsetService) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Tagset, {
-    description: 'Updates the Tagset.',
-  })
-  @Profiling.api
-  async updateTagset(
-    @Args('tagsetData') tagsetData: UpdateTagsetInput
-  ): Promise<ITagset> {
-    return await this.tagsetService.updateTagset(tagsetData);
-  }
-}
+//   // @AuthorizationGlobalRoles(
+//   //   AuthorizationRolesGlobal.CommunityAdmin,
+//   //   AuthorizationRolesGlobal.Admin
+//   // )
+//   // @UseGuards(AuthorizationRulesGuard)
+//   // @Mutation(() => Tagset, {
+//   //   description: 'Updates the Tagset.',
+//   // })
+//   // @Profiling.api
+//   // async updateTagset(
+//   //   @Args('tagsetData') tagsetData: UpdateTagsetInput
+//   // ): Promise<ITagset> {
+//   //   return await this.tagsetService.updateTagset(tagsetData);
+//   // }
+// }

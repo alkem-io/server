@@ -1,4 +1,3 @@
-import { Roles } from '@common/decorators/roles.decorator';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
@@ -13,19 +12,26 @@ import {
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Profiling, SelfManagement } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
+import { Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
+import {
+  AuthorizationRulesGuard,
+  AuthorizationRolesGlobal,
+  AuthorizationGlobalRoles,
+  AuthorizationSelfManagement,
+} from '@core/authorization';
 
 @Resolver()
 export class ProfileResolverMutations {
   constructor(private profileService: ProfileService) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @SelfManagement()
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @AuthorizationSelfManagement()
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Tagset, {
     description: 'Creates a new Tagset on the specified Profile',
   })
@@ -36,9 +42,12 @@ export class ProfileResolverMutations {
     return await this.profileService.createTagset(tagsetData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @SelfManagement()
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @AuthorizationSelfManagement()
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Reference, {
     description: 'Creates a new Reference on the specified Profile.',
   })
@@ -49,9 +58,12 @@ export class ProfileResolverMutations {
     return await this.profileService.createReference(referenceInput);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
-  @SelfManagement()
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationSelfManagement()
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Profile, {
     description: 'Updates the specified Profile.',
   })
@@ -62,8 +74,11 @@ export class ProfileResolverMutations {
     return await this.profileService.updateProfile(profileData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.CommunityAdmins)
-  @SelfManagement()
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationSelfManagement()
   @Mutation(() => Profile, {
     description: 'Uploads and sets an avatar image for the specified Profile.',
   })

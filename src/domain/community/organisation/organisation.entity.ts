@@ -19,7 +19,6 @@ import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge';
-import { AuthorizationRoles } from '@core/authorization';
 
 @Entity()
 @ObjectType()
@@ -77,13 +76,9 @@ export class Organisation extends BaseEntity
   )
   challenges!: Challenge[];
 
-  // The restricted group names at the challenge level
-  restrictedGroupNames?: string[];
-
   constructor(textID: string) {
     super();
     this.name = '';
     this.textID = textID;
-    this.restrictedGroupNames = [AuthorizationRoles.Members];
   }
 }

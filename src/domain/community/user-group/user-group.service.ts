@@ -79,20 +79,10 @@ export class UserGroupService {
     return await this.createUserGroup(userGroupInput);
   }
 
-  async removeUserGroup(
-    deleteData: DeleteUserGroupInput,
-    checkForRestricted = false
-  ): Promise<IUserGroup> {
+  async removeUserGroup(deleteData: DeleteUserGroupInput): Promise<IUserGroup> {
     const groupID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const group = (await this.getUserGroupByIdOrFail(groupID)) as UserGroup;
-
-    // Cannot remove restricted groups
-    if (checkForRestricted && (await this.isRestricted(group)))
-      throw new ValidationException(
-        `Unable to remove User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
-        LogContext.COMMUNITY
-      );
 
     if (group.profile) {
       await this.profileService.deleteProfile(group.profile.id);
@@ -112,26 +102,10 @@ export class UserGroupService {
   ): Promise<IUserGroup> {
     const group = await this.getUserGroupOrFail(userGroupInput.ID);
 
-    // Cannot rename restricted groups
     const newName = userGroupInput.name;
     if (newName && newName.length > 0 && newName !== group.name) {
-      // group being renamed; check if allowed
-      if (await this.isRestricted(group as UserGroup)) {
-        throw new ValidationException(
-          `Unable to rename User Group with the specified ID: ${group.id}; restricted group: ${group.name}`,
-          LogContext.COMMUNITY
-        );
-      } else if (
-        await this.isRestrictedGroupName(group as UserGroup, newName)
-      ) {
-        throw new ValidationException(
-          `Unable to rename User Group with the specified ID: ${group.id}; new name is a restricted name: ${newName}`,
-          LogContext.COMMUNITY
-        );
-      } else {
-        group.name = newName;
-        await this.userGroupRepository.save(group);
-      }
+      group.name = newName;
+      await this.userGroupRepository.save(group);
     }
 
     // Check the tagsets
@@ -142,21 +116,6 @@ export class UserGroupService {
     const populatedUserGroup = await this.getUserGroupByIdOrFail(group.id);
 
     return populatedUserGroup;
-  }
-
-  async isRestricted(group: UserGroup): Promise<boolean> {
-    return await this.isRestrictedGroupName(group, group.name);
-  }
-
-  async isRestrictedGroupName(
-    group: UserGroup,
-    groupName: string
-  ): Promise<boolean> {
-    const parent: IGroupable = await this.getParent(group);
-    if (parent.restrictedGroupNames?.includes(groupName)) {
-      return true;
-    }
-    return false;
   }
 
   async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
@@ -379,33 +338,6 @@ export class UserGroupService {
     );
   }
 
-  async addMandatoryGroups(
-    groupable: IGroupable,
-    mandatoryGroupNames: string[]
-  ): Promise<IGroupable> {
-    if (!groupable.groups)
-      throw new EntityNotInitializedException(
-        'Non-initialised Groupable submitted',
-        LogContext.COMMUNITY
-      );
-
-    const newMandatoryGroups = new Set(
-      [...mandatoryGroupNames].filter(
-        mandatoryGroupName =>
-          !groupable.groups?.find(
-            groupable => groupable.name === mandatoryGroupName
-          )
-      )
-    );
-
-    for (const groupToAdd of newMandatoryGroups) {
-      const newGroup = await this.createUserGroupByName(groupToAdd);
-      groupable.groups.push(newGroup);
-    }
-
-    return groupable;
-  }
-
   hasGroupWithName(groupable: IGroupable, name: string): boolean {
     // Double check groups array is initialised
     if (!groupable.groups) {
@@ -439,39 +371,9 @@ export class UserGroupService {
       );
     }
 
-    if (groupable.restrictedGroupNames?.includes(name)) {
-      throw new NotSupportedException(
-        `Unable to create user group with restricted name: ${name}`,
-        LogContext.COMMUNITY
-      );
-    }
-
     const newGroup = await this.createUserGroupByName(name);
     await groupable.groups?.push(newGroup);
     return newGroup;
-  }
-
-  /* Create the set of restricted group names for an entity that has groups */
-  async createRestrictedGroups(
-    groupable: IGroupable,
-    names: string[]
-  ): Promise<IUserGroup[]> {
-    if (!groupable.restrictedGroupNames) {
-      groupable.restrictedGroupNames = [];
-    }
-    for (const name of names) {
-      const group = await this.createUserGroupByName(name);
-      groupable.groups?.push(group);
-      groupable.restrictedGroupNames.push(name);
-    }
-
-    if (!groupable.groups) {
-      throw new GroupNotInitializedException(
-        'No restricted group names found!',
-        LogContext.COMMUNITY
-      );
-    }
-    return groupable.groups;
   }
 
   async getMembers(groupID: number): Promise<IUser[]> {

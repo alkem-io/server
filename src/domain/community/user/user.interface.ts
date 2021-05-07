@@ -17,5 +17,5 @@ export interface IUser {
   DID: IDID;
   profile?: IProfile;
   userGroups?: IUserGroup[];
-  capabilities?: ICredential[];
+  credentials?: ICredential[];
 }

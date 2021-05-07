@@ -10,25 +10,21 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  GroupNotInitializedException,
   InvalidStateTransitionException,
-  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { Community } from './community.entity';
-import { ICommunity } from './community.interface';
-import { IUser } from '../user/user.interface';
-import { AuthorizationRoles } from '@core/authorization';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { CreateUserGroupInput } from '../user-group';
+import { Community, ICommunity } from '@domain/community/community';
+import { IUser } from '@domain/community/user';
+import { CreateUserGroupInput } from '@domain/community/user-group';
 import {
   AssignCommunityMemberInput,
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
 import { ApplicationService } from '../application/application.service';
+import { AuthorizationCredential } from '@core/authorization/authorization.credential';
 
 @Injectable()
 export class CommunityService {
@@ -36,24 +32,15 @@ export class CommunityService {
     private userService: UserService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
-    private lifecycleService: LifecycleService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createCommunity(
-    name: string,
-    type: string,
-    restrictedGroupNames: string[]
-  ): Promise<ICommunity> {
-    const community = new Community(name, type, restrictedGroupNames);
+  async createCommunity(name: string, type: string): Promise<ICommunity> {
+    const community = new Community(name, type);
 
     community.groups = [];
-    await this.userGroupService.addMandatoryGroups(
-      community,
-      community.restrictedGroupNames
-    );
     await this.communityRepository.save(community);
 
     return community;
@@ -148,13 +135,20 @@ export class CommunityService {
     return community;
   }
 
+  async getMembers(community: Community): Promise<IUser[]> {
+    return await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.CommunityMember,
+      resourceID: community.id,
+    });
+  }
+
   async assignMember(
     membershipData: AssignCommunityMemberInput
-  ): Promise<IUserGroup> {
+  ): Promise<IUser> {
     const community = await this.getCommunityOrFail(
       membershipData.communityID,
       {
-        relations: ['groups', 'parentCommunity'],
+        relations: ['parentCommunity'],
       }
     );
     const userID = membershipData.userID;
@@ -172,72 +166,29 @@ export class CommunityService {
         );
     }
 
-    // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(userID);
-
-    // Get the members group
-    const membersGroup = await this.getMembersGroupOrFail(community);
-    await this.userGroupService.addUserToGroup(user, membersGroup);
-
-    return membersGroup;
+    // Assign a credential for community membership
+    return await this.userService.assignCredential({
+      userID: userID,
+      type: AuthorizationCredential.CommunityMember,
+      resourceID: membershipData.communityID,
+    });
   }
 
   async removeMember(
     membershipData: RemoveCommunityMemberInput
-  ): Promise<IUserGroup> {
-    const community = await this.getCommunityOrFail(
-      membershipData.communityID,
-      {
-        relations: ['groups'],
-      }
-    );
-
-    // Try to find the user
-    const user = await this.userService.getUserByIdOrFail(
-      membershipData.userID
-    );
-
-    // Get the members group
-    const membersGroup = await this.getMembersGroupOrFail(community);
-    await this.userGroupService.removeUserFromGroup(user, membersGroup);
-
-    return membersGroup;
+  ): Promise<IUser> {
+    return await this.userService.removeCredential({
+      userID: membershipData.userID,
+      type: AuthorizationCredential.CommunityMember,
+      resourceID: membershipData.communityID,
+    });
   }
 
   async isMember(userID: number, communityID: number): Promise<boolean> {
-    const community = await this.getCommunityOrFail(communityID, {
-      relations: ['groups'],
+    return await this.userService.hasValidCredential(userID, {
+      type: AuthorizationCredential.CommunityMember,
+      resourceID: communityID,
     });
-
-    const members = await this.getMembersOrFail(community);
-    const user = members.find(user => user.id == userID);
-    if (user) return true;
-    return false;
-  }
-
-  async getMembersGroupOrFail(community: ICommunity): Promise<IUserGroup> {
-    const group = await this.userGroupService.getGroupByName(
-      community,
-      AuthorizationRoles.Members
-    );
-    if (!group)
-      throw new RelationshipNotFoundException(
-        `Unable to locate members group on Community: ${community.id}`,
-        LogContext.COMMUNITY
-      );
-    return group;
-  }
-
-  async getMembersOrFail(community: ICommunity): Promise<IUser[]> {
-    const membersGroup = await this.getMembersGroupOrFail(community);
-    const members = membersGroup.members;
-    if (!members)
-      throw new GroupNotInitializedException(
-        `Members group not initialised in Community: ${community.id}`,
-        LogContext.COMMUNITY
-      );
-
-    return members;
   }
 
   async getCommunities(ecoverseId: number): Promise<Community[]> {
@@ -292,45 +243,5 @@ export class CommunityService {
       relations: ['applications'],
     });
     return communityApps?.applications || [];
-  }
-
-  async addUserToRestrictedGroup(
-    communityId: number,
-    user: IUser,
-    groupName: string
-  ): Promise<boolean> {
-    const community = await this.getCommunityOrFail(communityId, {
-      relations: ['groups'],
-    });
-
-    if (!(await this.groupIsRestricted(community, groupName)))
-      throw new ValidationException(
-        `${groupName} is not a restricted group name!`,
-        LogContext.COMMUNITY
-      );
-
-    const restrictedGroup = await this.userGroupService.getGroupByName(
-      community,
-      groupName
-    );
-    if (!restrictedGroup)
-      throw new EntityNotInitializedException(
-        `${groupName} not found!`,
-        LogContext.COMMUNITY
-      );
-
-    if (await this.userGroupService.addUserToGroup(user, restrictedGroup)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  async groupIsRestricted(
-    community: ICommunity,
-    groupName: string
-  ): Promise<boolean> {
-    if (community.restrictedGroupNames.includes(groupName)) return true;
-    return false;
   }
 }

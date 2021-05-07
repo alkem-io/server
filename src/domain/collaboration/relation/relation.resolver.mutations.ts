@@ -1,21 +1,25 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
 import { RelationService } from './relation.service';
 import {
   Relation,
   IRelation,
   DeleteRelationInput,
 } from '@domain/collaboration/relation';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import {
+  AuthorizationRolesGlobal,
+  AuthorizationRulesGuard,
+} from '@core/authorization';
 @Resolver()
 export class RelationResolverMutations {
   constructor(private relationService: RelationService) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Relation, {
     description: 'Deletes the specified Relation.',
   })

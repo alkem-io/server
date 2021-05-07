@@ -1,13 +1,11 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { Organisation } from './organisation.entity';
 import { User } from '@domain/community/user/user.entity';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { Profiling } from '@src/common/decorators';
+import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { OrganisationService } from './organisation.service';
 import {
@@ -16,8 +14,10 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-
+import {
+  AuthorizationRolesGlobal,
+  AuthorizationRulesGuard,
+} from '@core/authorization';
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
   constructor(
@@ -25,8 +25,8 @@ export class OrganisationResolverFields {
     private userGroupService: UserGroupService
   ) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @UseGuards(AuthorizationRulesGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
     description: 'Groups defined on this organisation.',
@@ -49,8 +49,8 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @UseGuards(AuthorizationRulesGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
     description: 'Users that are contributing to this organisation.',
@@ -59,7 +59,7 @@ export class OrganisationResolverFields {
   async contributors(@Parent() organisation: Organisation) {
     const group = await this.userGroupService.getGroupByName(
       organisation,
-      AuthorizationRoles.Members
+      AuthorizationRolesGlobal.Registered
     );
     if (!group)
       throw new GroupNotInitializedException(

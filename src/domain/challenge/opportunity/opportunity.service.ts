@@ -33,7 +33,6 @@ import {
 } from '@domain/challenge/opportunity';
 import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
-import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import { TagsetService } from '@domain/common/tagset';
 import validator from 'validator';
@@ -70,8 +69,7 @@ export class OpportunityService {
     }
     opportunity.community = await this.communityService.createCommunity(
       opportunity.name,
-      CommunityType.OPPORTUNITY,
-      [AuthorizationRoles.Members]
+      CommunityType.OPPORTUNITY
     );
     await this.createRestrictedActorGroups(opportunity);
 

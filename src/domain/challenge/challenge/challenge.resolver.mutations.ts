@@ -1,10 +1,8 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { ChallengeService } from './challenge.service';
-import { Profiling } from '@src/common/decorators';
+import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import {
   IOpportunity,
   Opportunity,
@@ -17,10 +15,11 @@ import {
   DeleteChallengeInput,
   ChallengeEventInput,
 } from '@domain/challenge/challenge';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import { AssignChallengeLeadInput } from './challenge.dto.assign.lead';
 import { RemoveChallengeLeadInput } from './challenge.dto.remove.lead';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
+import { AuthorizationRolesGlobal } from '@core/authorization/authorization.roles.global';
+import { AuthorizationRulesGuard } from '@core/authorization/authorization.rules.guard';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -30,8 +29,8 @@ export class ChallengeResolverMutations {
     private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider
   ) {}
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Opportunity, {
     description: 'Creates a new Opportunity within the parent Challenge.',
   })
@@ -45,8 +44,8 @@ export class ChallengeResolverMutations {
     return opportunity;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Challenge, {
     description: 'Updates the specified Challenge.',
   })
@@ -60,8 +59,8 @@ export class ChallengeResolverMutations {
     return challenge;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Challenge, {
     description: 'Deletes the specified Challenge.',
   })
@@ -71,8 +70,11 @@ export class ChallengeResolverMutations {
     return await this.challengeService.deleteChallenge(deleteData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Challenge, {
     description: 'Assigns an organisation as a lead for the Challenge.',
   })
@@ -83,8 +85,11 @@ export class ChallengeResolverMutations {
     return await this.challengeService.assignChallengeLead(assignData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Challenge, {
     description: 'Remove an organisation as a lead for the Challenge.',
   })
@@ -95,8 +100,8 @@ export class ChallengeResolverMutations {
     return await this.challengeService.removeChallengeLead(removeData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.GlobalAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Challenge, {
     description: 'Trigger an event on the Challenge.',
   })

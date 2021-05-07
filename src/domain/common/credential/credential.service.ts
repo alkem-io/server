@@ -7,6 +7,7 @@ import {
   Credential,
   CreateCredentialInput,
   ICredential,
+  CredentialsSearchInput,
 } from '@domain/common/credential';
 @Injectable()
 export class CredentialService {
@@ -29,7 +30,7 @@ export class CredentialService {
     });
     if (!credential)
       throw new EntityNotFoundException(
-        `Not able to locate capability with the specified ID: ${credentialID}`,
+        `Not able to locate credential with the specified ID: ${credentialID}`,
         LogContext.AUTH
       );
     return credential;
@@ -42,5 +43,30 @@ export class CredentialService {
     );
     result.id = credentialID;
     return result;
+  }
+
+  async findMatchingCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<Credential[]> {
+    if (!credentialCriteria.resourceID) {
+      const credentialMatches = await this.credentialRepository
+        .createQueryBuilder('credential')
+        .leftJoinAndSelect('credential.user', 'user')
+        .where({
+          type: `${credentialCriteria.type}`,
+        })
+        .getMany();
+      return credentialMatches;
+    } else {
+      const credentialMatches = await this.credentialRepository
+        .createQueryBuilder('credential')
+        .leftJoinAndSelect('credential.user', 'user')
+        .where({
+          type: `${credentialCriteria.type}`,
+          resourceID: `${credentialCriteria.resourceID}`,
+        })
+        .getMany();
+      return credentialMatches;
+    }
   }
 }

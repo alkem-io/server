@@ -1,12 +1,9 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
 import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import {
   AssignUserGroupMemberInput,
   AssignUserGroupFocalPointInput,
@@ -15,24 +12,34 @@ import {
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import {
+  AuthorizationRolesGlobal,
+  AuthorizationRulesGuard,
+} from '@core/authorization';
 @Resolver(() => UserGroup)
 export class UserGroupResolverMutations {
   constructor(private groupService: UserGroupService) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => UserGroup, {
     description: 'Deletes the specified User Group.',
   })
   async deleteUserGroup(
     @Args('deleteData') deleteData: DeleteUserGroupInput
   ): Promise<IUserGroup> {
-    return await this.groupService.removeUserGroup(deleteData, true);
+    return await this.groupService.removeUserGroup(deleteData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => UserGroup, {
     description: 'Updates the specified User Group.',
   })
@@ -43,8 +50,11 @@ export class UserGroupResolverMutations {
     return await this.groupService.updateUserGroup(userGroupData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => UserGroup, {
     description: 'Assigns a User as a member of the specified User Group.',
   })
@@ -55,8 +65,11 @@ export class UserGroupResolverMutations {
     return await this.groupService.assignUser(membershipData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => UserGroup, {
     description: 'Removes the specified User from specified user group',
   })
@@ -67,8 +80,11 @@ export class UserGroupResolverMutations {
     return await this.groupService.removeUser(membershipData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => UserGroup, {
     nullable: true,
     description:
@@ -81,8 +97,11 @@ export class UserGroupResolverMutations {
     return await this.groupService.assignFocalPoint(membershipData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => UserGroup, {
     nullable: true,
     description: 'Removes the focal point for the specified User Group.',

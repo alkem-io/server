@@ -1,10 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { SelfManagement } from '@common/decorators';
+import {
+  AuthorizationSelfManagement,
+  AuthorizationGlobalRoles,
+  AuthorizationRulesGuard,
+  AuthorizationRolesGlobal,
+} from '@core/authorization';
 import {
   CreateUserInput,
   UpdateUserInput,
@@ -18,9 +20,12 @@ import { UserService } from './user.service';
 export class UserResolverMutations {
   constructor(private readonly userService: UserService) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @SelfManagement()
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @AuthorizationSelfManagement()
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => User, {
     description: 'Creates a new User on the platform.',
   })
@@ -31,9 +36,12 @@ export class UserResolverMutations {
     return await this.userService.createUser(userData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @SelfManagement()
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @AuthorizationSelfManagement()
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => User, {
     description: 'Updates the User. Note: email address cannot be updated.',
   })
@@ -45,8 +53,11 @@ export class UserResolverMutations {
     return user;
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => User, {
     description: 'Deletes the specified User.',
   })
