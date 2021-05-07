@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="http://cherrytwist.org/" target="blank"><img src="https://cherrytwist.org/wp-content/uploads/2020/10/cherrytwist-2.png" width="240" alt="Cherrytwist Logo" /></a>
+  <a href="http://cherrytwist.org/" target="blank"><img src="https://cherrytwist.org/uploads/logos/CT-logo-teal-transparent.svg" width="400" alt="Cherrytwist Logo" /></a>
 </p>
 <p align="center"><i>Enabling society to collaborate. Building a better future, together.</i></p>
 
@@ -11,11 +11,15 @@ Welcome to the Cherrytwist Server! This server is the heart of the Cherrytwist P
 
 A high level overview of the Design of the Cherrytwist Server is shown below.
 
-![Component Diagram](docs/diagrams/ct-server-design.png)
+<p >
+<img src="docs/images/ct-server-design.png" alt="Component Diagram" width="600" />
+</p>
 
 The server primarily interacts via a _*GraphQL api*_' that it exposes. This can be found at the following location: <http://localhost:4000/graphql> (assuming default port).
 
 This api is used by the [Cherrytwist Web Client](http://github.com/cherrytwist/Client.Web), but also by any other clients / integrations that need to interact with the Cherrytwist server.
+
+The key takeaway is that the Cherrytwist server is designed to be integrated, so that other tools or user interfaces can make use of the logical domain model maintained by the server.
 
 ## **Additional information**:
 
