@@ -9,7 +9,6 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { MemberOf } from './memberof.composite';
 import validator from 'validator';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
@@ -309,42 +308,5 @@ export class UserService {
     } else {
       existingEntity.groups?.push(group);
     }
-  }
-
-  async getMemberOf(user: User): Promise<MemberOf> {
-    // Todo: expand to also include credentials for memberships
-    const membership = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.userGroups', 'userGroup')
-      .leftJoinAndSelect('userGroup.community', 'community')
-      .leftJoinAndSelect('userGroup.organisation', 'organisation')
-      .where('user.id = :userId')
-      .setParameters({ userId: `${user.id}` })
-      .getOne();
-
-    const memberOf = new MemberOf();
-    memberOf.communities = [];
-    memberOf.organisations = [];
-
-    if (!membership) return memberOf;
-    if (!membership.userGroups) return memberOf;
-
-    // Iterate over the groups
-    for (const group of membership?.userGroups) {
-      // Set flag on the group to block population of the members field
-      group.membersPopulationEnabled = false;
-      const community = group.community;
-      const organisation = group.organisation;
-
-      if (community) {
-        this.addGroupToEntity(memberOf.communities, community, group);
-        group.community = undefined;
-      } else if (organisation) {
-        this.addGroupToEntity(memberOf.organisations, organisation, group);
-        group.organisation = undefined;
-      }
-    }
-
-    return memberOf;
   }
 }
