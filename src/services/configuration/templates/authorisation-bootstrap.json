@@ -1,66 +1,48 @@
 {
-  "globalAdmins": [
+  "users": [
     {
       "email": "admin@cherrytwist.org",
       "firstName": "admin",
-      "lastName": "cherrytwist"
-    },
-
-    {
-      "email": "valentin_yanakiev@yahoo.co.uk",
-      "firstName": "Valentin",
-      "lastName": "Yanakiev"
-    }
-  ],
-  "ecoverseAdmins": [
-    {
-      "email": "neil@cherrytwist.org",
-      "firstName": "Neil",
-      "lastName": "Smyth"
+      "lastName": "cherrytwist",
+      "credentials": [
+        {
+          "type": "global-admin",
+          "resourceID": "-1"
+        }
+      ]
     },
     {
-      "email": "valentin@cherrytwist.org",
-      "firstName": "Valentin",
-      "lastName": "Yanakiev"
+      "email": "community-admin@cherrytwist.org",
+      "firstName": "community-admin",
+      "lastName": "cherrytwist",
+      "credentials": [
+        {
+          "type": "global-community-admin",
+          "resourceID": "-1"
+        }
+      ]
     },
     {
-      "email": "ecoverse.admin@cherrytwist.org",
-      "firstName": "Ecoverse",
-      "lastName": "Admin"
-    }
-  ],
-  "communityAdmins": [
-    {
-      "email": "evgeni@cherrytwist.org",
-      "firstName": "Evgeni",
-      "lastName": "Dimitrov"
-    },
-    {
-      "email": "comoque@gmail.com",
-      "firstName": "Evgeni",
-      "lastName": "Dimitrov"
-    },
-    {
-      "email": "community.admin@cherrytwist.org",
-      "firstName": "Community",
-      "lastName": "Admin"
+      "email": "ecoverse.member@cherrytwist.org",
+      "firstName": "ecoverse-member",
+      "lastName": "cherrytwist",
+      "credentials": [
+        {
+          "type": "community-member",
+          "resourceID": "1"
+        }
+      ]
     },
     {
       "email": "qa.user@cherrytwist.org",
       "firstName": "Qa",
-      "lastName": "User"
-    }
-  ],
-  "members": [
-    {
-      "email": "ecoverse-member@cherrytwist.com",
-      "firstName": "Ecoverse",
-      "lastName": "Member"
-    },
-    {
-      "email": "non-ecoverse@cherrytwist.com",
-      "firstName": "Non",
-      "lastName": "Ecoverse"
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "community-member",
+          "resourceID": "1"
+        }
+      ]
     }
   ]
 }
