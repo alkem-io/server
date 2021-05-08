@@ -49,6 +49,26 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
         logging: configService.get<IDatabaseConfig>('database')?.logging,
       }),
     }),
+    TypeOrmModule.forRootAsync({
+      name: 'jolocom',
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        type: 'mysql',
+        insecureAuth: true,
+        synchronize: true /* note: only for demo */,
+        cache: true,
+        entities: [
+          'node_modules/@jolocom/sdk-storage-typeorm/js/src/entities/*.js',
+        ],
+        host: configService.get<IDatabaseConfig>('database')?.host,
+        port: configService.get<IDatabaseConfig>('database')?.port,
+        username: configService.get<IDatabaseConfig>('database')?.username,
+        password: configService.get<IDatabaseConfig>('database')?.password,
+        database: 'jolocom',
+        logging: configService.get<IDatabaseConfig>('database')?.logging,
+      }),
+    }),
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),

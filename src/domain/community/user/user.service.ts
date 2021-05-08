@@ -43,6 +43,7 @@ export class UserService {
     );
 
     user.agent = await this.agentService.createAgent();
+    await this.agentService.createDidOnAgent(user.agent);
 
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);

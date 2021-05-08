@@ -12,7 +12,6 @@ import {
 } from 'typeorm';
 import { IAgent } from '@domain/agent/agent';
 import { ICredential, Credential } from '@domain/agent/credential';
-import { DID } from '@domain/common/scalars';
 import { User } from '@domain/community/user';
 
 @Entity()
@@ -31,12 +30,16 @@ export class Agent extends BaseEntity implements IAgent {
   @VersionColumn()
   version?: number;
 
+  //todo: replace with output DID that resolves to a string
   @Field(() => String, {
     nullable: true,
     description: 'The Decentralized Identifier (DID) for this Agent.',
   })
   @Column('varchar', { length: 255, nullable: true })
-  did!: DID;
+  did?: string;
+
+  @Column()
+  password?: string;
 
   @Field(() => [Credential], {
     nullable: true,
@@ -62,5 +65,7 @@ export class Agent extends BaseEntity implements IAgent {
   // Constructor
   constructor() {
     super();
+    this.did = '';
+    this.password = '';
   }
 }

@@ -15,11 +15,13 @@ import {
 import { LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+import { SsiAgentService } from '@src/services/ssi/agent/agent.service';
 
 @Injectable()
 export class AgentService {
   constructor(
     private credentialService: CredentialService,
+    private ssiAgentService: SsiAgentService,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>
   ) {}
@@ -164,5 +166,14 @@ export class AgentService {
     }
 
     return false;
+  }
+
+  async createDidOnAgent(agent: IAgent): Promise<IAgent> {
+    agent.password = Math.random()
+      .toString(36)
+      .substr(2, 10);
+
+    agent.did = await this.ssiAgentService.createIdentity(agent.password);
+    return await this.saveAgent(agent);
   }
 }
