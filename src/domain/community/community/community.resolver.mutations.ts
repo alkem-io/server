@@ -4,7 +4,11 @@ import { Args, Mutation } from '@nestjs/graphql';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { CommunityService } from './community.service';
-import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationGlobalRoles,
+  CurrentUser,
+  Profiling,
+} from '@src/common/decorators';
 import {
   CreateApplicationInput,
   DeleteApplicationInput,
@@ -24,6 +28,7 @@ import {
   AuthorizationRulesGuard,
 } from '@core/authorization';
 import { IUser } from '@domain/community/user';
+import { UserInfo } from '@core/authentication';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -75,7 +80,7 @@ export class CommunityResolverMutations {
     return await this.communityService.removeMember(membershipData);
   }
 
-  // All registered users can create applications
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
   @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Application, {
     description: 'Creates Application for a User to join this Community.',
@@ -111,10 +116,12 @@ export class CommunityResolverMutations {
   })
   async eventOnApplication(
     @Args('applicationEventData')
-    applicationEventData: ApplicationEventInput
+    applicationEventData: ApplicationEventInput,
+    @CurrentUser() userInfo: UserInfo
   ): Promise<IApplication> {
     return await this.communityLifecycleOptionsProvider.eventOnApplication(
-      applicationEventData
+      applicationEventData,
+      userInfo.user
     );
   }
 }

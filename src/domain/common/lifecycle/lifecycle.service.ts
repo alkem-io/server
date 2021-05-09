@@ -11,6 +11,7 @@ import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
 import { LifecycleEventInput } from './lifecycle.dto.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ICredential } from '@domain/agent';
 
 @Injectable()
 export class LifecycleService {
@@ -39,7 +40,8 @@ export class LifecycleService {
 
   async event(
     lifecycleEventData: LifecycleEventInput,
-    options: Partial<MachineOptions<any, any>>
+    options: Partial<MachineOptions<any, any>>,
+    credentials?: ICredential[]
   ): Promise<ILifecycle> {
     const lifecycle = await this.getLifecycleByIdOrFail(lifecycleEventData.ID);
     const eventName = lifecycleEventData.eventName;
@@ -72,6 +74,7 @@ export class LifecycleService {
     machineService.send({
       type: eventName,
       parentID: parentID,
+      credentials: credentials,
     });
     this.logger.verbose?.(
       `Lifecycle (id: ${
