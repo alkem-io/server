@@ -293,6 +293,27 @@ export class UserService {
     return users;
   }
 
+  getAgentOrFail(user: IUser): IAgent {
+    const agent = user.agent;
+    if (!agent)
+      throw new EntityNotInitializedException(
+        `Unable to find agent for user: ${user.id}`,
+        LogContext.AUTH
+      );
+    return agent;
+  }
+
+  async hasMatchingCredential(
+    user: IUser,
+    credentialCriteria: CredentialsSearchInput
+  ) {
+    const agent = this.getAgentOrFail(user);
+    return await this.agentService.hasValidCredential(
+      agent.id,
+      credentialCriteria
+    );
+  }
+
   // Membership related functionality
 
   addGroupToEntity(

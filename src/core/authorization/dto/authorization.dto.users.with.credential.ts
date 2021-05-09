@@ -3,7 +3,7 @@ import { AuthorizationCredential } from '@core/authorization';
 
 @InputType()
 export class UsersWithAuthorizationCredentialInput {
-  @Field({
+  @Field(() => AuthorizationCredential, {
     nullable: false,
     description: 'The type of credential.',
   })

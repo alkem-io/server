@@ -151,10 +151,10 @@ export class AgentService {
   }
 
   async hasValidCredential(
-    userID: number,
+    agentID: number,
     credentialCriteria: CredentialsSearchInput
   ): Promise<boolean> {
-    const { credentials } = await this.getAgentCredentials(userID);
+    const { credentials } = await this.getAgentCredentials(agentID);
 
     for (const credential of credentials) {
       if (credential.type === credentialCriteria.type) {

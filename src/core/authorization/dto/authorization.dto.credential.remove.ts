@@ -9,7 +9,9 @@ export class RemoveAuthorizationCredentialInput {
   })
   userID!: number;
 
-  @Field({ nullable: false })
+  @Field(() => AuthorizationCredential, {
+    nullable: false,
+  })
   type!: AuthorizationCredential;
 
   @Field({
