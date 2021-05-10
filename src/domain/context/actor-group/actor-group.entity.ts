@@ -48,7 +48,7 @@ export class ActorGroup extends BaseEntity implements IActorGroup {
 
   @ManyToOne(
     () => Opportunity,
-    opportunity => opportunity.projects
+    opportunity => opportunity.actorGroups
   )
   opportunity?: Opportunity;
 

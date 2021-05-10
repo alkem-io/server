@@ -7,6 +7,7 @@ export enum LogContext {
   BOOTSTRAP = 'bootstrap',
   DATA_MGMT = 'data-mgmt',
   CHALLENGES = 'challenges',
+  COLLABORATION = 'collaboration',
   SEARCH = 'search',
   OPPORTUNITY = 'opportunity',
   IPFS = 'ipfs',

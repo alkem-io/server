@@ -9,16 +9,6 @@ import {
   ActorGroup,
 } from '@domain/context/actor-group';
 import { Profiling } from '@src/common/decorators';
-import {
-  CreateRelationInput,
-  IRelation,
-  Relation,
-} from '@domain/collaboration/relation';
-import {
-  CreateProjectInput,
-  Project,
-  IProject,
-} from '@domain/collaboration/project';
 import {} from './opportunity.dto.update';
 import {
   DeleteOpportunityInput,
@@ -68,19 +58,6 @@ export class OpportunityResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => Project, {
-    description: 'Create a new Project on the Opportunity',
-  })
-  @Profiling.api
-  async createProject(
-    @Args('projectData') projectData: CreateProjectInput
-  ): Promise<IProject> {
-    const project = await this.opportunityService.createProject(projectData);
-    return project;
-  }
-
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new Aspect on the Opportunity.',
   })
@@ -104,18 +81,6 @@ export class OpportunityResolverMutations {
       actorGroupData
     );
     return actorGroup;
-  }
-
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => Relation, {
-    description: 'Create a new Relation on the Opportunity.',
-  })
-  @Profiling.api
-  async createRelation(
-    @Args('relationData') relationData: CreateRelationInput
-  ): Promise<IRelation> {
-    return await this.opportunityService.createRelation(relationData);
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)

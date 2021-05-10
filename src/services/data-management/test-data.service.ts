@@ -168,8 +168,9 @@ export class TestDataService {
     project.textID = 'init-project';
     project.description = 'init project description';
     project.parentID = opportunityId;
-    const response = await this.opportunityService.createProject(project);
-    return response.id;
+    // const response = await this.opportunityService.createProject(project);
+    // return response.id;
+    return -1;
   }
 
   async initAspect(opportunityId: number): Promise<number> {
@@ -200,8 +201,9 @@ export class TestDataService {
     relation.description = 'init relation description';
     relation.type = 'incoming';
     relation.parentID = opportunityId;
-    const response = await this.opportunityService.createRelation(relation);
-    return response.id;
+    // todo: const response = await this.opportunityService.createRelation(relation);
+    //todo: return response.id;
+    return -1;
   }
 
   async initAddUserToOpportunity(opportunityId: number): Promise<number> {

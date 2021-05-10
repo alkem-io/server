@@ -1,6 +1,5 @@
 import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
@@ -13,6 +12,7 @@ import {
   AuthorizationRolesGlobal,
   AuthorizationRulesGuard,
 } from '@core/authorization';
+import { Collaboration } from '@domain/collaboration/collaboration';
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
   constructor(private opportunityService: OpportunityService) {}
@@ -25,10 +25,18 @@ export class OpportunityResolverFields {
   })
   @Profiling.api
   async community(@Parent() opportunity: Opportunity) {
-    const community = await this.opportunityService.getCommunity(
-      opportunity.id
-    );
-    return community;
+    return await this.opportunityService.getCommunity(opportunity.id);
+  }
+
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @UseGuards(AuthorizationRulesGuard)
+  @ResolveField('collaboration', () => Collaboration, {
+    nullable: true,
+    description: 'The Collaboration for the opportunity.',
+  })
+  @Profiling.api
+  async collaboration(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.getCollaboration(opportunity.id);
   }
 
   @ResolveField('lifecycle', () => Lifecycle, {
@@ -57,14 +65,5 @@ export class OpportunityResolverFields {
   @Profiling.api
   async aspects(@Parent() opportunity: Opportunity) {
     return await this.opportunityService.loadAspects(opportunity);
-  }
-
-  @ResolveField('relations', () => [Relation], {
-    nullable: true,
-    description: 'The set of relations within the context of this Opportunity.',
-  })
-  @Profiling.api
-  async relations(@Parent() opportunity: Opportunity) {
-    return await this.opportunityService.loadRelations(opportunity);
   }
 }

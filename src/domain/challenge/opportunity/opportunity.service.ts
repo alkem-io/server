@@ -5,13 +5,7 @@ import { CreateAspectInput } from '@domain/context/aspect';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { ContextService } from '@domain/context/context/context.service';
-import { CreateProjectInput } from '@domain/collaboration/project';
-import { IProject } from '@domain/collaboration/project/project.interface';
-import { ProjectService } from '@domain/collaboration/project/project.service';
-import { CreateRelationInput } from '@domain/collaboration/relation';
-import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
@@ -20,7 +14,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   Opportunity,
@@ -39,29 +32,28 @@ import validator from 'validator';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { OpportunityLifecycleTemplates } from '@common/enums/opportunity.lifecycle.templates';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { ICollaboration } from '@domain/collaboration/collaboration';
 
 @Injectable()
 export class OpportunityService {
   constructor(
     private actorGroupService: ActorGroupService,
     private aspectService: AspectService,
-    private projectService: ProjectService,
     private contextService: ContextService,
     private communityService: CommunityService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
-    private relationService: RelationService,
+    private collaborationService: CollaborationService,
     @InjectRepository(Opportunity)
-    private opportunityRepository: Repository<Opportunity>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private opportunityRepository: Repository<Opportunity>
   ) {}
 
   async createOpportunity(
     opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
-    opportunity.projects = [];
-    opportunity.relations = [];
+
     opportunity.actorGroups = [];
     opportunity.aspects = [];
     if (!opportunity.context) {
@@ -72,6 +64,8 @@ export class OpportunityService {
       CommunityType.OPPORTUNITY
     );
     await this.createRestrictedActorGroups(opportunity);
+
+    opportunity.collaboration = await this.collaborationService.createCollaboration();
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = opportunityLifecycleConfigDefault;
@@ -187,29 +181,6 @@ export class OpportunityService {
     return opportunityLoaded.aspects;
   }
 
-  // Loads the aspects into the Opportunity entity if not already present
-  async loadRelations(opportunity: Opportunity): Promise<IRelation[]> {
-    if (opportunity.relations && opportunity.relations.length > 0) {
-      // opportunity already has relations loaded
-      return opportunity.relations;
-    }
-    // Opportunity is not populated so load it with actorGroups
-    const opportunityLoaded = await this.getOpportunityByIdOrFail(
-      opportunity.id,
-      {
-        relations: ['relations'],
-      }
-    );
-
-    if (!opportunityLoaded.relations)
-      throw new EntityNotInitializedException(
-        `Opportunity not initialised: ${opportunity.id}`,
-        LogContext.CHALLENGES
-      );
-
-    return opportunityLoaded.relations;
-  }
-
   async updateOpportunity(
     opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
@@ -240,8 +211,8 @@ export class OpportunityService {
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: [
         'actorGroups',
+        'collaboration',
         'aspects',
-        'relations',
         'community',
         'lifecycle',
       ],
@@ -254,12 +225,6 @@ export class OpportunityService {
       }
     }
 
-    if (opportunity.relations) {
-      for (const relation of opportunity.relations) {
-        await this.relationService.deleteRelation({ ID: relation.id });
-      }
-    }
-
     if (opportunity.actorGroups) {
       for (const actorGroup of opportunity.actorGroups) {
         await this.actorGroupService.deleteActorGroup({ ID: actorGroup.id });
@@ -269,6 +234,13 @@ export class OpportunityService {
     // Remove the community
     if (opportunity.community) {
       await this.communityService.removeCommunity(opportunity.community.id);
+    }
+
+    // Remove the collaboration
+    if (opportunity.collaboration) {
+      await this.collaborationService.deleteCollaboration(
+        opportunity.collaboration.id
+      );
     }
 
     // Remove the context
@@ -330,6 +302,19 @@ export class OpportunityService {
     return true;
   }
 
+  async getCollaboration(opportunityId: number): Promise<ICollaboration> {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
+      relations: ['collaboration'],
+    });
+    const collaboration = opportunity.collaboration;
+    if (!collaboration)
+      throw new RelationshipNotFoundException(
+        `Unable to load collaboration for opportunity ${opportunityId}`,
+        LogContext.COLLABORATION
+      );
+    return collaboration;
+  }
+
   // Loads the challenges into the challenge entity if not already present
   async getCommunity(opportunityId: number): Promise<ICommunity> {
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
@@ -342,38 +327,6 @@ export class OpportunityService {
         LogContext.COMMUNITY
       );
     return community;
-  }
-
-  async createProject(projectData: CreateProjectInput): Promise<IProject> {
-    const opportunityId = projectData.parentID;
-
-    this.logger.verbose?.(
-      `Adding project to opportunity (${opportunityId})`,
-      LogContext.CHALLENGES
-    );
-
-    const opportunity = await this.getOpportunityByIdOrFail(opportunityId);
-
-    // Check that do not already have an Project with the same name
-    const name = projectData.name;
-    const existingProject = opportunity.projects?.find(
-      project => project.name === name || project.textID === projectData.textID
-    );
-    if (existingProject)
-      throw new ValidationException(
-        `Already have an Project with the provided name or textID: ${name} - ${projectData.textID}`,
-        LogContext.CHALLENGES
-      );
-
-    const project = await this.projectService.createProject(projectData);
-    if (!opportunity.projects)
-      throw new EntityNotInitializedException(
-        `Opportunity (${opportunityId}) not initialised`,
-        LogContext.CHALLENGES
-      );
-    opportunity.projects.push(project);
-    await this.opportunityRepository.save(opportunity);
-    return project;
   }
 
   async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
@@ -435,24 +388,6 @@ export class OpportunityService {
     opportunity.actorGroups.push(actorGroup);
     await this.opportunityRepository.save(opportunity);
     return actorGroup;
-  }
-
-  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
-    const opportunityId = relationData.parentID;
-    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
-      relations: ['relations'],
-    });
-
-    if (!opportunity.relations)
-      throw new EntityNotInitializedException(
-        `Opportunity (${opportunityId}) not initialised`,
-        LogContext.CHALLENGES
-      );
-
-    const relation = await this.relationService.createRelation(relationData);
-    opportunity.relations.push(relation);
-    await this.opportunityRepository.save(opportunity);
-    return relation;
   }
 
   // Lazy load the lifecycle

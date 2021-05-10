@@ -14,10 +14,10 @@ import {
 } from 'typeorm';
 import { Agreement } from '@domain/collaboration/agreement/agreement.entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
 import { Lifecycle } from '@domain/common/lifecycle';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Entity()
 @ObjectType()
@@ -82,10 +82,10 @@ export class Project extends BaseEntity implements IProject {
   agreements?: Agreement[];
 
   @ManyToOne(
-    () => Opportunity,
-    opportunity => opportunity.projects
+    () => Collaboration,
+    collaboration => collaboration.projects
   )
-  opportunity?: Opportunity;
+  collaboration?: Collaboration;
 
   constructor(name: string, textID: string) {
     super();

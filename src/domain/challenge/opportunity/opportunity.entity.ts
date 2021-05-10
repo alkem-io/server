@@ -16,13 +16,12 @@ import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Context } from '@domain/context/context/context.entity';
-import { Project } from '@domain/collaboration/project/project.entity';
-import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { IOpportunity } from './opportunity.interface';
 import { Community } from '@domain/community/community';
 import { ICommunityable } from '@interfaces/communityable.interface';
 import { Tagset } from '@domain/common/tagset';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Entity()
 @ObjectType()
@@ -67,6 +66,18 @@ export class Opportunity extends BaseEntity
   @JoinColumn()
   context?: Context;
 
+  @Field(() => Collaboration, {
+    nullable: true,
+    description: 'The collaboration happening around this Opportunity.',
+  })
+  @OneToOne(() => Collaboration, {
+    eager: false,
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  collaboration?: Collaboration;
+
   @OneToOne(
     () => Community,
     community => community.opportunity,
@@ -74,17 +85,6 @@ export class Opportunity extends BaseEntity
   )
   @JoinColumn()
   community?: Community;
-
-  @Field(() => [Project], {
-    nullable: true,
-    description: 'The set of projects within the context of this Opportunity',
-  })
-  @OneToMany(
-    () => Project,
-    project => project.opportunity,
-    { eager: true, cascade: true }
-  )
-  projects?: Project[];
 
   @Field(() => Tagset, {
     nullable: true,
@@ -107,14 +107,6 @@ export class Opportunity extends BaseEntity
     { eager: false, cascade: true }
   )
   aspects?: Aspect[];
-
-  @OneToMany(
-    () => Relation,
-    relation => relation.opportunity,
-    { eager: false, cascade: true }
-  )
-  relations?: Relation[];
-
   @ManyToOne(
     () => Challenge,
     challenge => challenge.opportunities,

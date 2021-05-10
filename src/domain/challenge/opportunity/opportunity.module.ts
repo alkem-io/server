@@ -1,8 +1,6 @@
 import { ActorGroupModule } from '@domain/context/actor-group/actor-group.module';
 import { AspectModule } from '@domain/context/aspect/aspect.module';
 import { ContextModule } from '@domain/context/context/context.module';
-import { ProjectModule } from '@domain/collaboration/project/project.module';
-import { RelationModule } from '@domain/collaboration/relation/relation.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Opportunity } from './opportunity.entity';
@@ -13,15 +11,15 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
     ActorGroupModule,
     AspectModule,
-    ProjectModule,
     ContextModule,
     CommunityModule,
-    RelationModule,
+    CollaborationModule,
     LifecycleModule,
     TagsetModule,
     TypeOrmModule.forFeature([Opportunity]),
