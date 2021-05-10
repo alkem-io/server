@@ -1,13 +1,11 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import {
   BaseEntity,
   Column,
   Entity,
   JoinColumn,
-  ManyToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   OneToMany,
@@ -73,13 +71,6 @@ export class User extends BaseEntity implements IUser {
   @Field(() => String)
   @Column()
   gender: string = '';
-
-  @ManyToMany(
-    () => UserGroup,
-    userGroup => userGroup.members,
-    { eager: false }
-  )
-  userGroups?: UserGroup[];
 
   @Field(() => Profile, {
     nullable: true,

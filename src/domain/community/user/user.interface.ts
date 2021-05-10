@@ -1,5 +1,4 @@
-import { IProfile } from '@domain/community/profile/profile.interface';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
+import { IProfile } from '@domain/community/profile';
 import { IAgent } from '@domain/agent';
 
 export interface IUser {
@@ -14,6 +13,5 @@ export interface IUser {
   country: string;
   gender: string;
   profile?: IProfile;
-  userGroups?: IUserGroup[];
   agent?: IAgent;
 }

@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { getConnection, getManager, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { ProfileService } from '@domain/community/profile/profile.service';
@@ -8,12 +8,9 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { UserGroupParent } from './user-group-parent.dto';
 import {
   EntityNotFoundException,
-  ValidationException,
   NotSupportedException,
-  GroupNotInitializedException,
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { Community } from '@domain/community/community';
@@ -25,10 +22,13 @@ import {
   RemoveUserGroupMemberInput,
   DeleteUserGroupInput,
   CreateUserGroupInput,
+  UserGroupParent,
 } from '@domain/community/user-group';
 
 import validator from 'validator';
 import { TagsetService } from '@domain/common/tagset';
+import { AuthorizationCredential } from '@core/authorization';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class UserGroupService {
@@ -36,6 +36,7 @@ export class UserGroupService {
     private userService: UserService,
     private profileService: ProfileService,
     private tagsetService: TagsetService,
+    private agentService: AgentService,
     @InjectRepository(UserGroup)
     private userGroupRepository: Repository<UserGroup>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -44,10 +45,7 @@ export class UserGroupService {
   async createUserGroup(
     userGroupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    await this.validateUserGroupCreationRequest(userGroupData);
-
-    const group: IUserGroup = new UserGroup(userGroupData.name);
-    group.members = [];
+    const group: IUserGroup = UserGroup.create(userGroupData);
     group.profile = await this.profileService.createProfile(
       userGroupData.profileData
     );
@@ -57,24 +55,6 @@ export class UserGroupService {
       LogContext.COMMUNITY
     );
     return savedUserGroup;
-  }
-
-  async validateUserGroupCreationRequest(
-    userGroupData: CreateUserGroupInput
-  ): Promise<boolean> {
-    const name = userGroupData.name;
-    if (name.length == 0)
-      throw new ValidationException(
-        'Unable to create a group with an empty name',
-        LogContext.COMMUNITY
-      );
-    return true;
-  }
-
-  async createUserGroupByName(name: string): Promise<IUserGroup> {
-    const userGroupInput = new CreateUserGroupInput();
-    userGroupInput.name = name;
-    return await this.createUserGroup(userGroupInput);
   }
 
   async removeUserGroup(deleteData: DeleteUserGroupInput): Promise<IUserGroup> {
@@ -181,98 +161,46 @@ export class UserGroupService {
   async assignUser(
     membershipData: AssignUserGroupMemberInput
   ): Promise<IUserGroup> {
-    const user = await this.userService.getUserByIdOrFail(
+    const { user, agent } = await this.userService.getUserAndAgent(
       membershipData.userID
     );
 
-    const group = await this.getUserGroupByIdOrFail(membershipData.groupID);
-
-    await this.addUserToGroup(user, group);
-    return await this.getUserGroupByIdOrFail(group.id);
-  }
-
-  async isUserGroupMember(userID: number, groupID: number): Promise<boolean> {
-    await this.userService.getUserByIdOrFail(userID);
-    await this.getUserGroupByIdOrFail(groupID);
-
-    const userGroup = await this.userGroupRepository.findOne({
-      where: { members: { id: userID }, id: groupID },
-      relations: ['members'],
+    user.agent = await this.agentService.assignCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.UserGroupMember,
+      resourceID: membershipData.groupID,
     });
 
-    const members = userGroup?.members;
-    if (!members || members.length === 0) return false;
-
-    return true;
+    return await this.getUserGroupByIdOrFail(membershipData.groupID, {
+      relations: ['community'],
+    });
   }
 
-  async addUserToGroup(user: IUser, group: IUserGroup): Promise<boolean> {
-    const entityManager = getManager();
-    const rawData = await entityManager.query(
-      `SELECT * from user_group_members where userId=${user.id} and userGroupId= ${group.id}`
-    );
+  async isMember(userID: number, groupID: number): Promise<boolean> {
+    const agent = await this.userService.getUserByIdWithAgent(userID);
 
-    if (rawData.length > 0) {
-      this.logger.verbose?.(
-        `User ${user.email} already exists in group  ${group.name}!`,
-        LogContext.COMMUNITY
-      );
-      return false;
-    }
-    const res = await getConnection()
-      .createQueryBuilder()
-      .insert()
-      .into('user_group_members')
-      .values({
-        userGroupId: group.id,
-        userId: user.id,
-      })
-      .execute();
-
-    //this is a bit hacky
-    if (res.identifiers.length === 0)
-      throw new ValidationException(
-        'Unable to add user to groups!',
-        LogContext.COMMUNITY
-      );
-
-    return true;
+    return await this.agentService.hasValidCredential(agent.id, {
+      type: AuthorizationCredential.UserGroupMember,
+      resourceID: groupID,
+    });
   }
 
   async removeUser(
     membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
-    // Try to find the user + group
-    const user = await this.userService.getUserByIdOrFail(
+    const { user, agent } = await this.userService.getUserAndAgent(
       membershipData.userID
     );
 
-    // Note that also need to have ecoverse member to be able to avoid this path for removing users as members
-    const group = await this.getUserGroupByIdOrFail(membershipData.groupID, {
-      relations: ['members', 'community'],
+    user.agent = await this.agentService.removeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.UserGroupMember,
+      resourceID: membershipData.groupID,
     });
 
-    // Have both user + group so do the add
-    await this.removeUserFromGroup(user, group);
-
-    return group;
-  }
-
-  async removeUserFromGroup(
-    user: IUser,
-    group: IUserGroup
-  ): Promise<IUserGroup> {
-    if (!group.members)
-      throw new GroupNotInitializedException(
-        'Members not initialised',
-        LogContext.COMMUNITY
-      );
-
-    group.members = group.members.filter(member => !(member.id === user.id));
-
-    await this.userGroupRepository.save(group);
-
-    return group;
+    return await this.getUserGroupByIdOrFail(membershipData.groupID, {
+      relations: ['community'],
+    });
   }
 
   async getGroupByName(
@@ -282,13 +210,13 @@ export class UserGroupService {
     if (groupable instanceof Organisation) {
       return (await this.userGroupRepository.findOne({
         where: { organisation: { id: groupable.id }, name: name },
-        relations: ['organisation', 'members'],
+        relations: ['organisation'],
       })) as IUserGroup;
     }
     if (groupable instanceof Community) {
       return (await this.userGroupRepository.findOne({
         where: { community: { id: groupable.id }, name: name },
-        relations: ['community', 'members'],
+        relations: ['community'],
       })) as IUserGroup;
     }
 
@@ -331,16 +259,19 @@ export class UserGroupService {
       );
     }
 
-    const newGroup = await this.createUserGroupByName(name);
+    const newGroup = await this.createUserGroup({
+      name: name,
+      parentID: groupable.id,
+    });
     await groupable.groups?.push(newGroup);
     return newGroup;
   }
 
   async getMembers(groupID: number): Promise<IUser[]> {
-    const group = await this.getUserGroupByIdOrFail(groupID, {
-      relations: ['members', 'profile'],
+    return await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.UserGroupMember,
+      resourceID: groupID,
     });
-    return group?.members as IUser[];
   }
 
   async getGroups(): Promise<IUserGroup[]> {

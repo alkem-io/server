@@ -1,14 +1,11 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
-import { User } from '@domain/community/user/user.entity';
 import {
   BaseEntity,
   Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -39,14 +36,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @Column()
   name: string;
 
-  @ManyToMany(
-    () => User,
-    user => user.userGroups,
-    { eager: false, cascade: true }
-  )
-  @JoinTable({ name: 'user_group_members' })
-  members?: User[];
-
   @Field(() => Profile, {
     nullable: true,
     description: 'The profile for the user group',
@@ -68,9 +57,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     { eager: false, onDelete: 'CASCADE' }
   )
   community?: Community;
-
-  // Flag to say whether members field should be populated
-  membersPopulationEnabled = true;
 
   constructor(name: string) {
     super();

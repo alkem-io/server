@@ -10,6 +10,7 @@ import {
   AuthorizationRolesGlobal,
   AuthorizationRulesGuard,
 } from '@core/authorization';
+import { IUser } from '@domain/community/user';
 
 @Resolver(() => UserGroup)
 export class UserGroupResolverFields {
@@ -33,10 +34,7 @@ export class UserGroupResolverFields {
     description: 'The Users that are members of this User Group.',
   })
   @Profiling.api
-  async members(@Parent() group: UserGroup): Promise<User[]> {
-    if (!group || !group.membersPopulationEnabled) return [];
-
-    const members = await this.userGroupService.getMembers(group.id);
-    return (members || []) as User[];
+  async members(@Parent() group: UserGroup): Promise<IUser[]> {
+    return await this.userGroupService.getMembers(group.id);
   }
 }
