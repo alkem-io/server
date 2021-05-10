@@ -132,14 +132,14 @@ export class UserGroupService {
     if (groupable instanceof Community) {
       return await this.userGroupRepository.find({
         where: { community: { id: groupable.id } },
-        relations: ['members', 'focalPoint'],
+        relations: ['members'],
       });
     }
 
     if (groupable instanceof Organisation) {
       return await this.userGroupRepository.find({
         where: { organisation: { id: groupable.id } },
-        relations: ['members', 'focalPoint'],
+        relations: ['members'],
       });
     }
 

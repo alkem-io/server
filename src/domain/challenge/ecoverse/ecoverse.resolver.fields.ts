@@ -151,7 +151,7 @@ export class EcoverseResolverFields {
   @Profiling.api
   async group(@Args('ID') id: string): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(id, {
-      relations: ['members', 'focalPoint'],
+      relations: ['members'],
     });
     return group;
   }
