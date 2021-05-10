@@ -108,7 +108,7 @@ export class AgentService {
     for (const credential of credentials) {
       if (
         credential.type === assignCredentialData.type &&
-        credential.resourceID == assignCredentialData.resourceID
+        credential.resourceID === assignCredentialData.resourceID
       ) {
         throw new ValidationException(
           `Agent for user (${
@@ -141,7 +141,7 @@ export class AgentService {
     for (const credential of credentials) {
       if (
         credential.type === removeCredentialData.type &&
-        credential.resourceID == removeCredentialData.resourceID
+        credential.resourceID === removeCredentialData.resourceID
       ) {
         await this.credentialService.deleteCredential(credential.id);
       }
@@ -159,7 +159,8 @@ export class AgentService {
     for (const credential of credentials) {
       if (credential.type === credentialCriteria.type) {
         if (!credentialCriteria.resourceID) return true;
-        if (credentialCriteria.resourceID == credential.resourceID) return true;
+        if (credentialCriteria.resourceID === credential.resourceID)
+          return true;
       }
     }
 

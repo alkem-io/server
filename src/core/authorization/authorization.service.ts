@@ -10,10 +10,9 @@ import { IUser } from '@domain/community/user';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { AuthorizationCredentialGlobal } from './authorization.credential.global';
-import { ValidationException } from '@common/exceptions';
+import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AuthorizationCredential } from './authorization.credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationException } from '@common/exceptions/authorisation.exception';
 import { UserInfo } from '@core/authentication';
 
 @Injectable()
@@ -31,7 +30,7 @@ export class AuthorizationService {
     // check the inputs
     if (this.isGlobalAuthorizationCredential(assignCredentialData.type)) {
       if (assignCredentialData.resourceID)
-        throw new AuthorizationException(
+        throw new ForbiddenException(
           `resourceID should not be specified for global AuthorizationCredentials: ${assignCredentialData.type}`,
           LogContext.AUTH
         );
@@ -65,7 +64,7 @@ export class AuthorizationService {
     // check the inputs
     if (this.isGlobalAuthorizationCredential(removeCredentialData.type)) {
       if (removeCredentialData.resourceID)
-        throw new AuthorizationException(
+        throw new ForbiddenException(
           `resourceID should not be specified for global AuthorizationCredentials: ${removeCredentialData.type}`,
           LogContext.AUTH
         );
@@ -76,7 +75,7 @@ export class AuthorizationService {
     );
 
     // Check not the last global admin
-    await this.removalValidationSingleGlobalAdmin(removeCredentialData.type);
+    await this.removeValidationSingleGlobalAdmin(removeCredentialData.type);
 
     // Only a global-admin can assign/remove other global-admins
     if (removeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
@@ -102,7 +101,7 @@ export class AuthorizationService {
     credentialType: AuthorizationCredential
   ) {
     if (!user)
-      throw new AuthorizationException(
+      throw new ForbiddenException(
         `Current user could not be retried to check credential: ${credentialType}`,
         LogContext.AUTH
       );
@@ -110,13 +109,13 @@ export class AuthorizationService {
       type: credentialType,
     });
     if (!result)
-      throw new AuthorizationException(
+      throw new ForbiddenException(
         `User (${user.id}) does not have required credential assigned: ${credentialType}`,
         LogContext.AUTH
       );
   }
 
-  async removalValidationSingleGlobalAdmin(
+  async removeValidationSingleGlobalAdmin(
     credentialType: string
   ): Promise<boolean> {
     const globalAdminType = AuthorizationCredential.GlobalAdmin.toString();
@@ -126,7 +125,7 @@ export class AuthorizationService {
         type: AuthorizationCredential.GlobalAdmin,
       });
       if (globalAdmins.length < 2)
-        throw new AuthorizationException(
+        throw new ForbiddenException(
           `Not allowed to remove ${credentialType}: last global-admin`,
           LogContext.AUTH
         );

@@ -144,7 +144,7 @@ export class BootstrapService {
       '=== Ensuring single ecoverse is present ===',
       LogContext.BOOTSTRAP
     );
-    const [, ecoverseCount] = await this.ecoverseRepository.findAndCount();
+    const ecoverseCount = await this.ecoverseRepository.count();
     if (ecoverseCount == 0) {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
