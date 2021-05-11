@@ -1,8 +1,6 @@
 import { LogContext } from '@common/enums';
-import {
-  EntityNotInitializedException,
-  ForbiddenException,
-} from '@common/exceptions';
+import { ForbiddenException } from '@common/exceptions';
+import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { IAuthorizationRule } from '@core/authorization/rules';
 import { IUser } from '@domain/community/user';
 
@@ -38,9 +36,8 @@ export class AuthorizationRuleSelfManagement implements IAuthorizationRule {
 
   evaluate(user: IUser): boolean {
     if (!user.profile)
-      throw new EntityNotInitializedException(
-        `User Profile not initialized: ${user.email}`,
-        LogContext.AUTH
+      throw new UserNotRegisteredException(
+        `Error: Unable to find user with given email: ${user.email}`
       );
     // createUser mutation
     if (
