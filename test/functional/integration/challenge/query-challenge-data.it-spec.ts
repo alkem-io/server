@@ -64,7 +64,7 @@ beforeEach(async () => {
 });
 
 describe('Query Challenge data', () => {
-  test('should query groups through challenge', async () => {
+  test.skip('should query groups through challenge', async () => {
     // Act
     const responseQueryData = await getChallengeGroups(challengeId);
 

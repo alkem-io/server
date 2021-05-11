@@ -41,6 +41,12 @@
           "resourceID": "1"
         }
       ]
+    },
+    {
+      "email": "non-ecoverse@cherrytwist.com",
+      "firstName": "Non",
+      "lastName": "Ecoverse",
+      "credentials": []
     }
   ]
 }

@@ -16,7 +16,7 @@ export const searchMutation = async (terms: any, filter: any) => {
           }
           ... on UserGroup {
             name
-            id       
+            id
           }
           ... on Organisation {
             name

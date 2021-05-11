@@ -75,7 +75,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('Groups - groups on community', () => {
+describe.skip('Groups - groups on community', () => {
   beforeEach(async () => {
     // Create community group
     const responseCreateGroupOnCommunnity = await createGroupOnCommunityMutation(
@@ -179,7 +179,7 @@ describe('Groups - groups on community', () => {
     });
   });
 });
-describe('Groups - restricted groups', () => {
+describe.skip('Groups - restricted groups', () => {
   test('should throw error for removing restricted group', async () => {
     // Act
     const responseRemoveRestrictedGroup = await removeUserGroupMutation(2);
