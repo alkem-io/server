@@ -9,7 +9,7 @@ security:
     allowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
 identity:
   authentication:
-    enabled: true
+    enabled: ${AUTH_ENABLED}:true
     providers:
       aad:
         identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
