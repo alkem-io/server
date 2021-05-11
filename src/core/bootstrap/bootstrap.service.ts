@@ -4,14 +4,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { UserService } from '@domain/community/user/user.service';
-import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Repository } from 'typeorm';
 import fs from 'fs';
 import * as defaultRoles from '@templates/authorisation-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
-import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 @Injectable()
@@ -32,7 +30,7 @@ export class BootstrapService {
       this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
 
       Profiling.logger = this.logger;
-      const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
+      const profilingEnabled = this.configService.get('monitoring')?.logging
         ?.profilingEnabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
       this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
@@ -62,7 +60,7 @@ export class BootstrapService {
   }
 
   async bootstrapProfiles() {
-    const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
+    const bootstrapFilePath = this.configService.get('bootstrap')
       ?.authorisationBootstrapPath as string;
 
     let bootstrapJson = {

@@ -14,7 +14,8 @@ import { AadBearerStrategy } from './aad.bearer.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get('demo_auth_provider').clientSecret,
+        secret: configService.get('identity')?.authentication?.providers
+          ?.demo_auth_provider?.clientSecret,
         signOptions: { expiresIn: '1d' },
       }),
     }),

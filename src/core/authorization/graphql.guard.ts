@@ -8,7 +8,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import { ConfigService } from '@nestjs/config';
-import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
@@ -97,8 +96,8 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     _status?: any
   ) {
     // Always handle the request if authentication is disabled
-    const authEnabled = this.configService.get<IServiceConfig>('service')
-      ?.authenticationEnabled;
+    const authEnabled = this.configService.get('Identity')?.identity
+      ?.authentication?.enabled;
     if (!authEnabled) {
       return userInfo;
     }
