@@ -8,17 +8,14 @@ import { AuthenticationException } from '@common/exceptions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserInfo } from '@src/core/authentication/user-info';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => User)
 export class UserResolverQueries {
   constructor(private userService: UserService) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Query(() => [User], {
     nullable: false,
     description: 'The users who have profiles on this platform',
@@ -29,7 +26,7 @@ export class UserResolverQueries {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   //should be in user queries
   @Query(() => User, {
     nullable: false,
@@ -41,7 +38,7 @@ export class UserResolverQueries {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   //should be in user queries
   @Query(() => [User], {
     nullable: false,
@@ -58,7 +55,7 @@ export class UserResolverQueries {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Query(() => User, {
     nullable: false,
     description: 'The currently logged in user',

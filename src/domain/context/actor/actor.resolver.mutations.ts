@@ -8,17 +8,14 @@ import {
 } from '@domain/context/actor';
 import { ActorService } from './actor.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 
 @Resolver()
 export class ActorResolverMutations {
   constructor(private actorService: ActorService) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Actor, {
     description: 'Deletes the specified Actor.',
   })
@@ -29,7 +26,7 @@ export class ActorResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Actor, {
     description: 'Updates the specified Actor.',
   })

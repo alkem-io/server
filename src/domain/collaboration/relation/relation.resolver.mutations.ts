@@ -7,10 +7,7 @@ import {
   DeleteRelationInput,
 } from '@domain/collaboration/relation';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver()
 export class RelationResolverMutations {
   constructor(private relationService: RelationService) {}
@@ -19,7 +16,7 @@ export class RelationResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Relation, {
     description: 'Deletes the specified Relation.',
   })

@@ -23,10 +23,7 @@ import {
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user';
 import { UserInfo } from '@core/authentication';
 @Resolver()
@@ -39,7 +36,7 @@ export class CommunityResolverMutations {
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new User Group in the specified Community.',
   })
@@ -54,7 +51,7 @@ export class CommunityResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Assigns a User as a member of the specified Community.',
   })
@@ -69,7 +66,7 @@ export class CommunityResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Removes a User as a member of the specified Community.',
   })
@@ -81,7 +78,7 @@ export class CommunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Application, {
     description: 'Creates Application for a User to join this Community.',
   })
@@ -96,7 +93,7 @@ export class CommunityResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Application, {
     description: 'Removes the specified User Application.',
   })
@@ -110,7 +107,7 @@ export class CommunityResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Application, {
     description: 'Trigger an event on the Application.',
   })

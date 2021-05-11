@@ -16,7 +16,7 @@ import { Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
 import {
-  AuthorizationRulesGuard,
+  GraphqlGuard,
   AuthorizationRolesGlobal,
   AuthorizationGlobalRoles,
   AuthorizationSelfManagement,
@@ -31,7 +31,7 @@ export class ProfileResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Tagset, {
     description: 'Creates a new Tagset on the specified Profile',
   })
@@ -47,7 +47,7 @@ export class ProfileResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Reference, {
     description: 'Creates a new Reference on the specified Profile.',
   })
@@ -63,7 +63,7 @@ export class ProfileResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin
   )
   @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Profile, {
     description: 'Updates the specified Profile.',
   })

@@ -2,7 +2,7 @@ import {
   AuthorizationGlobalRoles,
   AuthorizationRolesGlobal,
   AuthorizationSelfManagement,
-  AuthorizationRulesGuard,
+  GraphqlGuard,
 } from '@core/authorization';
 import {
   DeleteReferenceInput,
@@ -22,7 +22,7 @@ export class ReferenceResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Reference, {
     description: 'Deletes the specified Reference.',
   })

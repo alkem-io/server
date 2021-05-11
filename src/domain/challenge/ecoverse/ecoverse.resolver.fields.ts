@@ -25,7 +25,7 @@ import { AuthorizationGlobalRoles } from '@common/decorators';
 import {
   AuthorizationEcoverseMember,
   AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
+  GraphqlGuard,
 } from '@core/authorization';
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
@@ -43,7 +43,7 @@ export class EcoverseResolverFields {
     AuthorizationRolesGlobal.CommunityAdmin
   )
   @AuthorizationEcoverseMember()
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => Community, {
     nullable: true,
     description: 'The community for the ecoverse.',
@@ -98,7 +98,7 @@ export class EcoverseResolverFields {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('projects', () => [Project], {
     nullable: false,
     description: 'All projects within this ecoverse',
@@ -109,7 +109,7 @@ export class EcoverseResolverFields {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('project', () => Project, {
     nullable: false,
     description: 'A particular Project, identified by the ID',
@@ -120,7 +120,7 @@ export class EcoverseResolverFields {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: false,
     description: 'The User Groups on this Ecoverse',
@@ -131,7 +131,7 @@ export class EcoverseResolverFields {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('groupsWithTag', () => [UserGroup], {
     nullable: false,
     description: 'All groups on this Ecoverse that have the provided tag',
@@ -142,7 +142,7 @@ export class EcoverseResolverFields {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('group', () => UserGroup, {
     nullable: false,
     description:
@@ -160,7 +160,7 @@ export class EcoverseResolverFields {
     AuthorizationRolesGlobal.Registered,
     AuthorizationRolesGlobal.CommunityAdmin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('application', () => Application, {
     nullable: false,
     description: 'All applications to join',

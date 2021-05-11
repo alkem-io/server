@@ -12,10 +12,7 @@ import {
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver()
 export class EcoverseResolverMutations {
   constructor(
@@ -23,7 +20,7 @@ export class EcoverseResolverMutations {
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Ecoverse, {
     description: 'Creates a new Ecoverse.',
   })
@@ -35,7 +32,7 @@ export class EcoverseResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Ecoverse, {
     description: 'Updates the Ecoverse.',
   })
@@ -48,7 +45,7 @@ export class EcoverseResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Creates a new Challenge within the specified Ecoverse.',
   })

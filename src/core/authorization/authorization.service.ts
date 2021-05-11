@@ -1,7 +1,7 @@
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import {
-  AssignAuthorizationCredentialInput,
+  GrantAuthorizationCredentialInput,
   RemoveAuthorizationCredentialInput,
   UsersWithAuthorizationCredentialInput,
 } from '@core/authorization';
@@ -24,7 +24,7 @@ export class AuthorizationService {
   ) {}
 
   async assignCredential(
-    assignCredentialData: AssignAuthorizationCredentialInput,
+    assignCredentialData: GrantAuthorizationCredentialInput,
     currentUserInfo?: UserInfo
   ): Promise<IUser> {
     // check the inputs

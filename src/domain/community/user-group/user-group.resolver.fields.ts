@@ -6,10 +6,7 @@ import { UserGroupService } from './user-group.service';
 import { UserGroupParent } from './user-group-parent.dto';
 import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import { User } from '@domain/community/user/user.entity';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user';
 
 @Resolver(() => UserGroup)
@@ -17,7 +14,7 @@ export class UserGroupResolverFields {
   constructor(private userGroupService: UserGroupService) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('parent', () => UserGroupParent, {
     nullable: true,
     description: 'Containing entity for this UserGroup.',
@@ -28,7 +25,7 @@ export class UserGroupResolverFields {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
     description: 'The Users that are members of this User Group.',

@@ -11,10 +11,7 @@ import {
   UpdateUserGroupInput,
 } from '@domain/community/user-group';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver(() => UserGroup)
 export class UserGroupResolverMutations {
   constructor(private groupService: UserGroupService) {}
@@ -23,7 +20,7 @@ export class UserGroupResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Deletes the specified User Group.',
   })
@@ -37,7 +34,7 @@ export class UserGroupResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Updates the specified User Group.',
   })
@@ -52,7 +49,7 @@ export class UserGroupResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Assigns a User as a member of the specified User Group.',
   })
@@ -67,7 +64,7 @@ export class UserGroupResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Removes the specified User from specified user group',
   })
