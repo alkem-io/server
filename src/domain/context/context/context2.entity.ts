@@ -1,4 +1,4 @@
-import { ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { Reference } from '@domain/common/reference/reference.entity';
 import {
   BaseEntity,
@@ -16,7 +16,7 @@ import { IContext } from './context.interface';
 @ObjectType({
   implements: () => [IContext],
 })
-export class Context extends BaseEntity implements IContext {
+export class Context2 extends BaseEntity implements IContext {
   @PrimaryGeneratedColumn()
   id!: number;
 
@@ -46,10 +46,17 @@ export class Context extends BaseEntity implements IContext {
 
   @OneToMany(
     () => Reference,
-    reference => reference.context,
+    reference => reference.context2,
     { eager: true, cascade: true }
   )
   references?: Reference[];
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'An extra field on this entity',
+  })
+  @Column('text', { nullable: true })
+  extra?: string = '';
 
   // Constructor
   constructor() {

@@ -15,7 +15,6 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { Context } from '@domain/context/context/context.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
@@ -24,6 +23,7 @@ import { Community } from '@domain/community/community';
 import { ICommunityable } from '@interfaces/communityable.interface';
 import { Organisation } from '@domain/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
+import { Context2, IContext } from '@domain/context';
 
 @Entity()
 @ObjectType()
@@ -56,13 +56,13 @@ export class Challenge extends BaseEntity
   @Column()
   textID: string;
 
-  @Field(() => Context, {
+  @Field(() => IContext, {
     nullable: true,
     description: 'The shared understanding for the challenge',
   })
-  @OneToOne(() => Context, { eager: true, cascade: true })
+  @OneToOne(() => Context2, { eager: true, cascade: true })
   @JoinColumn()
-  context?: Context;
+  context?: Context2;
 
   @OneToOne(
     () => Community,

@@ -14,6 +14,7 @@ import {
   UpdateContextInput,
   Context,
   IContext,
+  Context2,
 } from '@domain/context/context';
 
 @Injectable()
@@ -21,13 +22,23 @@ export class ContextService {
   constructor(
     private referenceService: ReferenceService,
     @InjectRepository(Context)
-    private contextRepository: Repository<Context>
+    private contextRepository: Repository<Context>,
+    @InjectRepository(Context2)
+    private context2Repository: Repository<Context2>
   ) {}
 
   async createContext(contextData: CreateContextInput): Promise<IContext> {
     const context: IContext = Context.create(contextData);
     context.references = [];
     return context;
+  }
+
+  async createContext2(contextData: CreateContextInput): Promise<Context2> {
+    const context = Context2.create(contextData);
+    context.extra = 'hello';
+    context.references = [];
+    const saved = await this.context2Repository.save(context);
+    return saved;
   }
 
   async getContextOrFail(contextID: number): Promise<IContext> {

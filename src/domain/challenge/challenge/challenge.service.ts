@@ -65,11 +65,13 @@ export class ChallengeService {
     );
 
     // Context
-    if (!challengeData.context) challengeData.context = {};
-    if (!challenge.context)
-      challenge.context = await this.contextService.createContext(
+    if (!challengeData.context) {
+      challengeData.context = {};
+    } else {
+      challenge.context = await this.contextService.createContext2(
         challengeData.context
       );
+    }
 
     // Remaining initialisation
     challenge.tagset = this.tagsetService.createDefaultTagset();
