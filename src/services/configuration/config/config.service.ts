@@ -16,7 +16,7 @@ export class KonfigService {
       template: await this.getTemplate(),
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
-        enabled: this.configService.get('service').authenticationEnabled,
+        enabled: this.configService.get('identity')?.authentication?.enabled,
       },
     };
   }
@@ -53,7 +53,8 @@ export class KonfigService {
   }
 
   async getAadConfig(): Promise<IAadAuthProviderConfig> {
-    const aadConfig = await this.configService.get('aad');
+    const aadConfig = await this.configService.get('identity')?.authentication
+      ?.providers?.aad;
     const apiScope = `api://${aadConfig.clientID}/.default`;
 
     return {
@@ -82,9 +83,8 @@ export class KonfigService {
   }
 
   async getDemoAuthProviderConfig(): Promise<IDemoAuthProviderConfig> {
-    const res = (await this.configService.get<IDemoAuthProviderConfig>(
-      'demo_auth_provider'
-    )) as IDemoAuthProviderConfig;
+    const res = (await this.configService.get('identity'))?.authentication
+      ?.providers?.demo_auth_provider as IDemoAuthProviderConfig;
     return res;
   }
 }

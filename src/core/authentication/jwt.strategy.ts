@@ -13,7 +13,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'demo-auth-jwt') {
     private readonly authService: AuthenticationService
   ) {
     super({
-      secretOrKey: configService.get('demo_auth_provider').clientSecret,
+      secretOrKey: configService.get('identity')?.authentication?.providers
+        ?.demo_auth_provider?.clientSecret,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: true,
     });

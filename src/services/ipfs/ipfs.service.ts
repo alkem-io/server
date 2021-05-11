@@ -12,11 +12,13 @@ export class IpfsService {
 
   public async uploadFile(filePath: string) {
     const ipfsClient = new IpfsHttpClient(
-      new URL(this.configService.get('ipfs').endpoint)
+      new URL(this.configService.get('storage')?.ipfs?.endpoint)
     );
     const image = fs.readFileSync(filePath);
     const res = await ipfsClient.add(image, { pin: true });
-    return `${this.configService.get('ipfs').clientEndpoint}/${res.cid.string}`;
+    return `${this.configService.get('storage')?.ipfs?.clientEndpoint}/${
+      res.cid.string
+    }`;
   }
 
   public async uploadFileFromStream(stream: ReadStream): Promise<string> {
@@ -26,10 +28,12 @@ export class IpfsService {
 
   public async uploadFileFromBuffer(buffer: Buffer): Promise<string> {
     const ipfsClient = new IpfsHttpClient(
-      new URL(this.configService.get('ipfs').endpoint)
+      new URL(this.configService.get('storage')?.ipfs?.endpoint)
     );
 
     const res = await ipfsClient.add(buffer, { pin: true });
-    return `${this.configService.get('ipfs').clientEndpoint}/${res.cid.string}`;
+    return `${this.configService.get('storage')?.ipfs?.clientEndpoint}/${
+      res.cid.string
+    }`;
   }
 }

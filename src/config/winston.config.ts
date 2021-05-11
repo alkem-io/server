@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import * as winston from 'winston';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
-import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import * as WinstonElasticsearch from 'winston-elasticsearch';
 
 @Injectable()
@@ -16,24 +15,23 @@ export class WinstonConfigService {
           winston.format.timestamp(),
           nestWinstonModuleUtilities.format.nestLike()
         ),
-        level: this.configService.get<ILoggingConfig>('logging')?.loggingLevel,
-        silent: !this.configService.get<ILoggingConfig>('logging')
+        level: this.configService.get('monitoring')?.logging?.level,
+        silent: !this.configService.get('monitoring')?.logging
           ?.consoleLoggingEnabled,
       }),
     ];
 
-    if (this.configService.get<ILoggingConfig>('logging')?.elkConfig?.enabled) {
+    if (this.configService.get('monitoring')?.elastic?.enabled) {
       transports.push(
         new WinstonElasticsearch.ElasticsearchTransport({
-          level: this.configService.get<ILoggingConfig>('logging')?.elkConfig
-            ?.loggingLevel,
+          level: this.configService.get('monitoring')?.elastic?.loggingLevel,
           transformer: logData => {
             return {
               '@timestamp': new Date().getTime(),
               severity: logData.level,
               message: `[${logData.level}] LOG Message: ${logData.message}`,
-              environment: this.configService.get<ILoggingConfig>('logging')
-                ?.elkConfig?.environment as string,
+              environment: this.configService.get('monitoring')?.elastic
+                ?.environment as string,
               fields: { ...logData.meta },
             };
           },
