@@ -13,6 +13,7 @@ import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 @Injectable()
 export class BootstrapService {
   constructor(
@@ -40,7 +41,7 @@ export class BootstrapService {
       await this.ensureEcoverseSingleton();
       await this.bootstrapProfiles();
     } catch (error) {
-      this.logger.error(error, undefined, LogContext.BOOTSTRAP);
+      throw new BootstrapException(error.message);
     }
   }
 
@@ -80,12 +81,9 @@ export class BootstrapService {
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
       this.logger.verbose?.(bootstratDataStr);
       if (!bootstratDataStr) {
-        this.logger.error(
-          'Specified authorisation bootstrap file not found!',
-          undefined,
-          LogContext.BOOTSTRAP
+        throw new BootstrapException(
+          'Specified authorisation bootstrap file not found!'
         );
-        return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
     } else {
@@ -131,10 +129,8 @@ export class BootstrapService {
         }
       }
     } catch (error) {
-      this.logger.error(
-        `Unable to create profiles ${error.message}`,
-        error,
-        LogContext.BOOTSTRAP
+      throw new BootstrapException(
+        `Unable to create profiles ${error.message}`
       );
     }
   }
