@@ -6,8 +6,7 @@
       "lastName": "cherrytwist",
       "credentials": [
         {
-          "type": "global-admin",
-          "resourceID": "-1"
+          "type": "global-admin"
         }
       ]
     },
@@ -17,8 +16,7 @@
       "lastName": "cherrytwist",
       "credentials": [
         {
-          "type": "global-community-admin",
-          "resourceID": "-1"
+          "type": "global-community-admin"
         }
       ]
     },
