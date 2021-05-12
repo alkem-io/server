@@ -1,4 +1,4 @@
-import { IUser } from '@domain/community';
+import { UserInfo } from '@core/authentication/user-info';
 import { IAuthorizationRule } from './authorization.rule.interface';
 
 export class AuthorizationRuleEngine {
@@ -8,7 +8,7 @@ export class AuthorizationRuleEngine {
     this.authorizationRules = authorizationRules;
   }
 
-  run(user: IUser): boolean {
+  run(user: UserInfo): boolean {
     const orderedRules = this.authorizationRules.sort((a, b) =>
       a.priority < b.priority ? -1 : a.priority > b.priority ? 1 : 0
     );

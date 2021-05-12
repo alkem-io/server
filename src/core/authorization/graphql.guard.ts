@@ -19,7 +19,6 @@ import {
   IAuthorizationRule,
   AuthorizationRuleGlobalRole,
 } from '@src/core/authorization/rules';
-import { IUser } from '@domain/community/user';
 import {
   AuthorizationRolesGlobal,
   AuthorizationRuleSelfManagement,
@@ -45,7 +44,7 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
   canActivate(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
     const { req } = ctx.getContext();
-    if (!this.authorizationRules) this.authorizationRules = [];
+    this.authorizationRules = [];
 
     const globalRoles = this.reflector.get<string[]>(
       'authorizationGlobalRoles',
@@ -118,12 +117,11 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       throw new AuthenticationException(msg);
     }
 
-    const user: IUser = userInfo.user;
     const authorizationRuleEngine = new AuthorizationRuleEngine(
       this.authorizationRules
     );
 
-    if (authorizationRuleEngine.run(user)) return userInfo;
+    if (authorizationRuleEngine.run(userInfo)) return userInfo;
 
     throw new ForbiddenException(
       `User '${userInfo.email}' is not authorised to access requested resources.`,
