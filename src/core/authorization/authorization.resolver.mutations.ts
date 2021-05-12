@@ -7,13 +7,13 @@ import {
   Profiling,
 } from '@src/common/decorators';
 import {
-  AssignAuthorizationCredentialInput,
+  GrantAuthorizationCredentialInput,
   RemoveAuthorizationCredentialInput,
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
 import { IUser, User } from '@domain/community/user';
 import { AuthorizationRolesGlobal } from './authorization.roles.global';
-import { AuthorizationRulesGuard } from './authorization.rules.guard';
+import { GraphqlGuard } from './graphql.guard';
 import { UserInfo } from '@core/authentication';
 
 @Resolver()
@@ -24,18 +24,18 @@ export class AuthorizationResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => User, {
-    description: 'Assigns an authorization credential to a User.',
+    description: 'Grants an authorization credential to a User.',
   })
   @Profiling.api
-  async assignCredentialToUser(
-    @Args('assignCredentialData')
-    credentialAssignData: AssignAuthorizationCredentialInput,
+  async grantCredentialToUser(
+    @Args('grantCredentialData')
+    grantCredentialData: GrantAuthorizationCredentialInput,
     @CurrentUser() userInfo: UserInfo
   ): Promise<IUser> {
-    return await this.authorizationService.assignCredential(
-      credentialAssignData,
+    return await this.authorizationService.grantCredential(
+      grantCredentialData,
       userInfo
     );
   }
@@ -44,17 +44,17 @@ export class AuthorizationResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => User, {
     description: 'Removes an authorization credential from a User.',
   })
   @Profiling.api
-  async removeCredentialFromUser(
-    @Args('removeCredentialData')
+  async revokeCredentialFromUser(
+    @Args('revokeCredentialData')
     credentialRemoveData: RemoveAuthorizationCredentialInput,
     @CurrentUser() userInfo: UserInfo
   ): Promise<IUser> {
-    return await this.authorizationService.removeCredential(
+    return await this.authorizationService.revokeCredential(
       credentialRemoveData,
       userInfo
     );

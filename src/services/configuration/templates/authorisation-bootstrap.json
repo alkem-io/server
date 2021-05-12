@@ -6,19 +6,17 @@
       "lastName": "cherrytwist",
       "credentials": [
         {
-          "type": "global-admin",
-          "resourceID": "-1"
+          "type": "global-admin"
         }
       ]
     },
     {
-      "email": "community-admin@cherrytwist.org",
+      "email": "community.admin@cherrytwist.org",
       "firstName": "community-admin",
       "lastName": "cherrytwist",
       "credentials": [
         {
-          "type": "global-community-admin",
-          "resourceID": "-1"
+          "type": "global-admin-community"
         }
       ]
     },
@@ -43,6 +41,12 @@
           "resourceID": "1"
         }
       ]
+    },
+    {
+      "email": "non.ecoverse@cherrytwist.com",
+      "firstName": "Non",
+      "lastName": "Ecoverse",
+      "credentials": []
     }
   ]
 }

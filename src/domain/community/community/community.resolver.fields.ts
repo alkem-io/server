@@ -1,5 +1,8 @@
+import {
+  AuthorizationCommunityMember,
+  GraphqlGuard,
+} from '@core/authorization';
 import { AuthorizationRolesGlobal } from '@core/authorization/authorization.roles.global';
-import { AuthorizationRulesGuard } from '@core/authorization/authorization.rules.guard';
 import { Application } from '@domain/community/application/application.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
@@ -13,8 +16,12 @@ import { CommunityService } from './community.service';
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationCommunityMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
     description: 'Groups of users related to a Community.',
@@ -24,8 +31,12 @@ export class CommunityResolverFields {
     return await this.communityService.loadGroups(community);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationCommunityMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
     description: 'All users that are contributing to this Community.',
@@ -39,7 +50,8 @@ export class CommunityResolverFields {
     AuthorizationRolesGlobal.Admin,
     AuthorizationRolesGlobal.CommunityAdmin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @AuthorizationCommunityMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [Application], {
     nullable: false,
     description: 'Application available for this community.',

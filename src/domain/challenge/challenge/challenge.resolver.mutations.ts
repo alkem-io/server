@@ -14,12 +14,11 @@ import {
   Challenge,
   DeleteChallengeInput,
   ChallengeEventInput,
+  AssignChallengeLeadInput,
+  RemoveChallengeLeadInput,
 } from '@domain/challenge/challenge';
-import { AssignChallengeLeadInput } from './challenge.dto.assign.lead';
-import { RemoveChallengeLeadInput } from './challenge.dto.remove.lead';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
-import { AuthorizationRolesGlobal } from '@core/authorization/authorization.roles.global';
-import { AuthorizationRulesGuard } from '@core/authorization/authorization.rules.guard';
+import { GraphqlGuard, AuthorizationRolesGlobal } from '@core/authorization';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -30,7 +29,7 @@ export class ChallengeResolverMutations {
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Creates a new Opportunity within the parent Challenge.',
   })
@@ -45,7 +44,7 @@ export class ChallengeResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Updates the specified Challenge.',
   })
@@ -60,7 +59,7 @@ export class ChallengeResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Deletes the specified Challenge.',
   })
@@ -74,7 +73,7 @@ export class ChallengeResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Assigns an organisation as a lead for the Challenge.',
   })
@@ -89,7 +88,7 @@ export class ChallengeResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Remove an organisation as a lead for the Challenge.',
   })
@@ -101,7 +100,7 @@ export class ChallengeResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Trigger an event on the Challenge.',
   })

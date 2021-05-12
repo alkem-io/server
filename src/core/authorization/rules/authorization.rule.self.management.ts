@@ -1,18 +1,21 @@
 import { LogContext } from '@common/enums';
-import {
-  EntityNotInitializedException,
-  ForbiddenException,
-} from '@common/exceptions';
+import { ForbiddenException } from '@common/exceptions';
+import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
+import { UserInfo } from '@core/authentication/user-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
-import { IUser } from '@domain/community/user';
 
 export class AuthorizationRuleSelfManagement implements IAuthorizationRule {
   userID?: number;
   userEmail?: string;
   profileID?: number;
   referenceID?: number;
+  operation!: string;
+  priority: number;
 
-  constructor(fieldName: string, args: any) {
+  constructor(fieldName: string, args: any, priority?: number) {
+    this.operation = fieldName;
+    this.priority = priority ?? 1000;
+
     if (fieldName === 'createUser') {
       this.userEmail = args.userData.email;
     } else if (fieldName === 'updateUser') {
@@ -36,32 +39,31 @@ export class AuthorizationRuleSelfManagement implements IAuthorizationRule {
     }
   }
 
-  evaluate(user: IUser): boolean {
-    if (!user.profile)
-      throw new EntityNotInitializedException(
-        `User Profile not initialized: ${user.email}`,
-        LogContext.AUTH
-      );
+  execute(userInfo: UserInfo): boolean {
     // createUser mutation
-    if (
-      this.userEmail &&
-      this.userEmail.toLowerCase() === user.email.toLowerCase()
-    ) {
+    if (this.userEmail && this.userEmail === userInfo.email) {
       return true;
     }
+
+    if (!userInfo.user || !userInfo.user.profile) {
+      throw new UserNotRegisteredException(
+        `Error: Unable to find user with given email: ${userInfo.email}`
+      );
+    }
+
     // updateUser mutation
-    if (this.userID && this.userID == user.id) {
+    if (this.userID && this.userID == userInfo.user.profile.id) {
       return true;
     }
     // uploadAvatar, updateProfile, createReferenceOnProfile, createTagsetOnProfile mutations
-    if (this.profileID && this.profileID == user.profile.id) {
+    if (this.profileID && this.profileID == userInfo.user.profile.id) {
       return true;
     }
 
     // deleteReference mutation
     if (this.referenceID) {
-      if (!user.profile.references) return false;
-      for (const reference of user.profile.references) {
+      if (!userInfo.user.profile.references) return false;
+      for (const reference of userInfo.user.profile.references) {
         if (reference.id == this.referenceID) return true;
       }
     }

@@ -8,7 +8,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import { ConfigService } from '@nestjs/config';
-import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
@@ -19,22 +18,21 @@ import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
 import {
   IAuthorizationRule,
   AuthorizationRuleGlobalRole,
+  AuthorizationRuleOrganisationMember,
 } from '@src/core/authorization/rules';
-import { IUser } from '@domain/community/user';
 import {
   AuthorizationRolesGlobal,
   AuthorizationRuleSelfManagement,
-  AuthorizationRuleEcoverseMember,
+  AuthorizationRuleCommunityMember,
 } from '@core/authorization';
+import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 
 @Injectable()
-export class AuthorizationRulesGuard extends AuthGuard([
-  'azure-ad',
-  'demo-auth-jwt',
-]) {
+export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
   JWT_EXPIRED = 'jwt is expired';
 
   private authorizationRules!: IAuthorizationRule[];
+  private fieldName!: string;
 
   constructor(
     private configService: ConfigService,
@@ -47,17 +45,30 @@ export class AuthorizationRulesGuard extends AuthGuard([
   canActivate(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
     const { req } = ctx.getContext();
-    if (!this.authorizationRules) this.authorizationRules = [];
+    this.authorizationRules = [];
 
     const globalRoles = this.reflector.get<string[]>(
       'authorizationGlobalRoles',
       context.getHandler()
     );
+    const selfManagement = this.reflector.get<boolean>(
+      'self-management',
+      context.getHandler()
+    );
+    const communityMember = this.reflector.get<boolean>(
+      'community-member',
+      context.getHandler()
+    );
+    const organisationMember = this.reflector.get<boolean>(
+      'organisation-member',
+      context.getHandler()
+    );
+
     if (globalRoles) {
       for (const role of globalRoles) {
         const allowedRoles: string[] = Object.values(AuthorizationRolesGlobal);
         if (allowedRoles.includes(role)) {
-          const rule = new AuthorizationRuleGlobalRole(role);
+          const rule = new AuthorizationRuleGlobalRole(role, 2);
           this.authorizationRules.push(rule);
         } else {
           throw new ForbiddenException(
@@ -68,24 +79,22 @@ export class AuthorizationRulesGuard extends AuthGuard([
       }
     }
 
-    const selfManagement = this.reflector.get<boolean>(
-      'self-management',
-      context.getHandler()
-    );
     if (selfManagement) {
       const args = context.getArgByIndex(1);
       const fieldName = context.getArgByIndex(3).fieldName;
-      const rule = new AuthorizationRuleSelfManagement(fieldName, args);
+      const rule = new AuthorizationRuleSelfManagement(fieldName, args, 1);
       this.authorizationRules.push(rule);
     }
 
-    const ecoverseMember = this.reflector.get<boolean>(
-      'ecoverse-member',
-      context.getHandler()
-    );
-    if (ecoverseMember) {
+    if (communityMember) {
       const parentArg = context.getArgByIndex(0);
-      const rule = new AuthorizationRuleEcoverseMember(parentArg);
+      const rule = new AuthorizationRuleCommunityMember(parentArg, 3);
+      this.authorizationRules.push(rule);
+    }
+
+    if (organisationMember) {
+      const parentArg = context.getArgByIndex(0);
+      const rule = new AuthorizationRuleOrganisationMember(parentArg, 3);
       this.authorizationRules.push(rule);
     }
 
@@ -100,8 +109,8 @@ export class AuthorizationRulesGuard extends AuthGuard([
     _status?: any
   ) {
     // Always handle the request if authentication is disabled
-    const authEnabled = this.configService.get<IServiceConfig>('service')
-      ?.authenticationEnabled;
+    const authEnabled = this.configService.get('identity')?.authentication
+      ?.enabled;
     if (!authEnabled) {
       return userInfo;
     }
@@ -119,10 +128,11 @@ export class AuthorizationRulesGuard extends AuthGuard([
       throw new AuthenticationException(msg);
     }
 
-    const user: IUser = userInfo.user;
-    for (const rule of this.authorizationRules) {
-      if (rule.evaluate(user)) return userInfo;
-    }
+    const authorizationRuleEngine = new AuthorizationRuleEngine(
+      this.authorizationRules
+    );
+
+    if (authorizationRuleEngine.run(userInfo)) return userInfo;
 
     throw new ForbiddenException(
       `User '${userInfo.email}' is not authorised to access requested resources.`,

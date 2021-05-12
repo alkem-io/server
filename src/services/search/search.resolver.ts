@@ -6,16 +6,13 @@ import { Profiling } from '@src/common/decorators';
 import { SearchInput } from './search-input.dto';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver()
 export class SearchResolver {
   constructor(private searchService: SearchService) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Query(() => [SearchResultEntry], {
     nullable: false,
     description: 'Search the ecoverse for terms supplied',

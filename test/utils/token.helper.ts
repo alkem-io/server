@@ -7,8 +7,8 @@ export class TokenHelper {
   private aadAuthenticationClient: AadAuthenticationClient;
 
   constructor(configService: ConfigService) {
-
-    const aadConfig = configService.get('aad');
+    const aadConfig = configService.get('identity')?.authentication?.providers
+      ?.aad;
 
     this.aadAuthenticationClient = new AadAuthenticationClient(() => ({
       clientID: aadConfig.client.clientId,
@@ -48,8 +48,12 @@ export class TokenHelper {
       });
 
       const token = (res as Token).access_token;
-      if(!token)
-        throw new AuthenticationException(`ROPC flow failed with error: ${(res as TokenError).error_description} `);
+      if (!token)
+        throw new AuthenticationException(
+          `ROPC flow failed with error: ${
+            (res as TokenError).error_description
+          } `
+        );
 
       userTokenMap.set(user, token);
     }

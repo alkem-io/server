@@ -12,10 +12,7 @@ import {
 } from '@domain/collaboration/project';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(
@@ -24,7 +21,7 @@ export class ProjectResolverMutations {
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Deletes the specified Project.',
   })
@@ -38,7 +35,7 @@ export class ProjectResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Updates the specified Project.',
   })
@@ -49,7 +46,7 @@ export class ProjectResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new Aspect on the Project.',
   })
@@ -62,7 +59,7 @@ export class ProjectResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Trigger an event on the Project.',
   })

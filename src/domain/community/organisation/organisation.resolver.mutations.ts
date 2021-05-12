@@ -14,10 +14,7 @@ import {
   IUserGroup,
   UserGroup,
 } from '@domain/community/user-group';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -27,7 +24,7 @@ export class OrganisationResolverMutations {
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Organisation, {
     description: 'Creates a new Organisation on the platform.',
   })
@@ -46,7 +43,7 @@ export class OrganisationResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new User Group for the specified Organisation.',
   })
@@ -62,7 +59,7 @@ export class OrganisationResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Organisation, {
     description: 'Updates the specified Organisation.',
   })
@@ -77,7 +74,7 @@ export class OrganisationResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Organisation, {
     description: 'Deletes the specified Organisation.',
   })

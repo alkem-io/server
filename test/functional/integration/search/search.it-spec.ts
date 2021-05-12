@@ -30,7 +30,7 @@ let communityGroupId = '';
 let challengeName = '';
 let challengeCommunityId = '';
 let uniqueTextId = '';
-const filterAll = ['user', 'group', 'organisation'];
+const typeFilterAll = ['user', 'organisation'];
 const filterOnlyUser = ['user'];
 const filterNo: never[] = [];
 const termUserOnly = ['User'];
@@ -101,7 +101,7 @@ describe('Query Challenge data', () => {
   });
   test('should search with all filters applied', async () => {
     // Act
-    const responseSearchData = await searchMutation(termAll, filterAll);
+    const responseSearchData = await searchMutation(termAll, typeFilterAll);
 
     // Assert
     expect(responseSearchData.body.data.search).toContainObject({
@@ -110,15 +110,6 @@ describe('Query Challenge data', () => {
       result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
     });
 
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: termAll,
-      score: 10,
-      result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
     expect(responseSearchData.body.data.search).toContainObject({
       terms: termAll,
       score: 10,
@@ -132,33 +123,11 @@ describe('Query Challenge data', () => {
 
   test('should search without filters', async () => {
     // Act
-    const responseSearchData = await searchMutation(termAll, filterNo);
+    const responseSearchData = await searchMutation(filterNo, typeFilterAll);
 
     // Assert
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: termAll,
-      score: 10,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
-    });
 
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: termAll,
-      score: 10,
-      result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: termAll,
-      score: 10,
-      result: {
-        __typename: 'Organisation',
-        name: `${organisationName}`,
-        id: `${organisationId}`,
-      },
-    });
+    expect(responseSearchData.body.data.search).toEqual([]);
   });
 
   test('should search only for filtered users', async () => {
@@ -176,15 +145,6 @@ describe('Query Challenge data', () => {
       terms: termAll,
       score: 10,
       result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
-    expect(responseSearchData.body.data.search).not.toContainObject({
-      terms: termAll,
-      score: 10,
-      result: {
         __typename: 'Organisation',
         name: `${organisationName}`,
         id: `${organisationId}`,
@@ -194,7 +154,10 @@ describe('Query Challenge data', () => {
 
   test('should search users triple score', async () => {
     // Act
-    const responseSearchData = await searchMutation(termAllScored, filterAll);
+    const responseSearchData = await searchMutation(
+      termAllScored,
+      typeFilterAll
+    );
 
     // Assert
     expect(responseSearchData.body.data.search).toContainObject({
@@ -203,15 +166,6 @@ describe('Query Challenge data', () => {
       result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
     });
 
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: ['QA'],
-      score: 20,
-      result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
     expect(responseSearchData.body.data.search).toContainObject({
       terms: ['QA'],
       score: 20,
@@ -225,7 +179,10 @@ describe('Query Challenge data', () => {
 
   test('should search term users only', async () => {
     // Act
-    const responseSearchData = await searchMutation(termUserOnly, filterAll);
+    const responseSearchData = await searchMutation(
+      termUserOnly,
+      typeFilterAll
+    );
 
     // Assert
     expect(responseSearchData.body.data.search).toContainObject({
@@ -234,15 +191,6 @@ describe('Query Challenge data', () => {
       result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
     });
 
-    expect(responseSearchData.body.data.search).not.toContainObject({
-      terms: termUserOnly,
-      score: 10,
-      result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
     expect(responseSearchData.body.data.search).not.toContainObject({
       terms: termUserOnly,
       score: 10,
@@ -256,7 +204,7 @@ describe('Query Challenge data', () => {
 
   test('should throw limit error for too many terms', async () => {
     // Act
-    const responseSearchData = await searchMutation(termTooLong, filterAll);
+    const responseSearchData = await searchMutation(termTooLong, typeFilterAll);
 
     // Assert
     expect(responseSearchData.text).toContain(
@@ -276,7 +224,7 @@ describe('Query Challenge data', () => {
 
   test('should throw error for empty string search', async () => {
     // Act
-    const responseSearchData = await searchMutation(' ', filterAll);
+    const responseSearchData = await searchMutation(' ', typeFilterAll);
 
     // Assert
 
@@ -287,7 +235,10 @@ describe('Query Challenge data', () => {
 
   test('should not return any results for invalid term', async () => {
     // Act
-    const responseSearchData = await searchMutation(termNotExisting, filterAll);
+    const responseSearchData = await searchMutation(
+      termNotExisting,
+      typeFilterAll
+    );
 
     // Assert
     expect(responseSearchData.body.data.search).toEqual([]);

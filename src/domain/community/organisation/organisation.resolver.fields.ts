@@ -15,7 +15,8 @@ import {
 import { LogContext } from '@common/enums';
 import {
   AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
+  GraphqlGuard,
+  AuthorizationOrganisationMember,
 } from '@core/authorization';
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
@@ -24,8 +25,12 @@ export class OrganisationResolverFields {
     private userGroupService: UserGroupService
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationOrganisationMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
     description: 'Groups defined on this organisation.',
@@ -48,8 +53,12 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationOrganisationMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
     description: 'All users that are members of this Organisation.',

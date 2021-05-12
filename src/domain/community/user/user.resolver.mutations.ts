@@ -4,7 +4,7 @@ import { Profiling } from '@src/common/decorators';
 import {
   AuthorizationSelfManagement,
   AuthorizationGlobalRoles,
-  AuthorizationRulesGuard,
+  GraphqlGuard,
   AuthorizationRolesGlobal,
 } from '@core/authorization';
 import {
@@ -25,7 +25,7 @@ export class UserResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => User, {
     description: 'Creates a new User on the platform.',
   })
@@ -41,7 +41,7 @@ export class UserResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => User, {
     description: 'Updates the User. Note: email address cannot be updated.',
   })
@@ -57,7 +57,7 @@ export class UserResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => User, {
     description: 'Deletes the specified User.',
   })

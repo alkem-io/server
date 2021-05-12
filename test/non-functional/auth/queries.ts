@@ -26,11 +26,8 @@ export const usersAccountUPN = () => '{ users { accountUpn }}';
 
 export const usersProfile = () => '{ users { profile { description }}}';
 
-export const usersMemberofGroupsName = () =>
-  '{ users {memberof{communities{groups{name}}}}}';
-
-export const usersMemberofOrganisationsName = () =>
-  '{ users { memberof { organisations { name }}}}';
+export const usersMemberofAgentCredentials = () =>
+  '{ users {agent {id credentials { id resourceID type }}}}';
 
 export const userName = (id: number) => `{ user ( ID: "${id}" ) { name }}`;
 
@@ -40,18 +37,12 @@ export const userAccountUPN = (id: number) =>
 export const userProfile = (id: number) =>
   `{ user ( ID: "${id}" ){ profile { description }}}`;
 
-export const userMemberofGroupsName = (id: number) =>
-  `{ user ( ID: "${id}" ){ memberof{communities{groups{name}}}}}`;
-
-export const userMemberofOrganisationsName = (id: number) =>
-  `{ user ( ID: "${id}" ){ memberof { organisations { name }}}}`;
+export const userMemberofAgentCredentials = (id: number) =>
+  `{ user ( ID: "${id}" ){ agent {id credentials { id resourceID type }}}}`;
 
 export const usersById = () => '{ usersById (IDs: ["1", "2"]) { id }}';
 
 export const groupsName = () => '{ ecoverse{ groups { name }}}';
-
-export const groupsFocalPointName = () =>
-  '{ ecoverse{ groups { focalPoint { name }}}}';
 
 export const groupsMembersName = () =>
   '{ ecoverse{ groups { members { name }}}}';
@@ -67,9 +58,6 @@ export const groupsParentOrganisation = () =>
 
 export const groupsWithTagName = () =>
   '{ecoverse{ groupsWithTag (tag: ""){ name }}}';
-
-export const groupsWithTagFocalPointName = () =>
-  '{ ecoverse{ groupsWithTag (tag: ""){ focalPoint { name }}}}';
 
 export const groupsWithTagProfile = () =>
   '{ ecoverse{ groupsWithTag (tag: ""){ profile { description }}}}';
@@ -200,22 +188,18 @@ const query: Record<string, (id: number) => string> = {
   usersName,
   usersAccountUPN,
   usersProfile,
-  usersMemberofGroupsName,
-  usersMemberofOrganisationsName,
+  usersMemberofAgentCredentials,
   userName,
   userAccountUPN,
   userProfile,
-  userMemberofGroupsName,
-  userMemberofOrganisationsName,
+  userMemberofAgentCredentials,
   usersById,
   groupsName,
-  groupsFocalPointName,
   groupsProfile,
   groupsMembersName,
   groupsParentCommunity,
   groupsParentOrganisation,
   groupsWithTagName,
-  groupsWithTagFocalPointName,
   groupsWithTagProfile,
   groupsWithTagMembersName,
   groupsWithTagParentCommunity,

@@ -1,52 +1,66 @@
-ipfs:
-  endpoint: ${IPFS_ENDPOINT}:http://ct_ipfs_server:5001
-  clientEndpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:8080/ipfs
-  maxFileSize: 1048576
-demo_auth_provider:
-  issuer: ${AUTH_DEMO_AUTH_ISSUER}:http://localhost:3002
-  tokenEndpoint: ${AUTH_DEMO_AUTH_TOKEN_ENDPOINT}:http://localhost:3002/auth/login
-  clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
-database:
-  host: ${DATABASE_HOST}:localhost
-  port: 3306
-  username: 'root'
-  password: ${MYSQL_ROOT_PASSWORD}:toor
-  schema: ${MYSQL_DATABASE}:cherrytwist
-  database: ${MYSQL_DATABASE}:cherrytwist
-  logging: false
-logging:
-  consoleLoggingEnabled: ${LOGGING_CONSOLE_ENABLED}:false
-  loggingLevel: ${LOGGING_LEVEL_CONSOLE}:Error
-  profilingEnabled: ${LOGGING_PROFILING_ENABLED}:true
-  elkConfig:
+hosting:
+  port: ${GRAPHQL_ENDPOINT}:4000
+bootstrap:
+  authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
+security:
+  cors:
+    origin: ${CORS_ORIGIN}:*
+    methods: ${CORS_METHODS}:GET,HEAD,PUT,PATCH,POST,DELETE
+    allowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
+identity:
+  authentication:
+    enabled: ${AUTH_ENABLED}:true
+    providers:
+      aad:
+        identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
+        clientID: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
+        validateIssuer: true
+        passReqToCallback: true
+        issuer: ${AUTH_AAD_ISSUER}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0
+        audience: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
+        allowMultiAudiencesInToken: false
+        loggingLevel: ${AUTH_AAD_LOGGING_LEVEL}:Error
+        scope: ['Cherrytwist-GraphQL']
+        loggingNoPII: false
+        upnDomain: ${AUTH_AAD_UPN_DOMAIN}:playgroundcherrytwist.onmicrosoft.com
+        tenant: ${AUTH_AAD_TENANT}
+        ropc:
+          clientSecret: ${AUTH_AAD_CLIENT_APP_SECRET}
+          username: ${AUTH_AAD_USER_UPN}:admin@playgroundcherrytwist.onmicrosoft.com
+          password: ${AUTH_AAD_USER_PASSWORD}
+        client:
+          clientId: ${AUTH_AAD_CLIENT_APP_ID}:feb6d8b1-8cc2-4e7d-a419-ad7b544b0832
+          authority: ${AUTH_AAD_AUTHORITY}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c
+          redirectUri: ${AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI}:http://localhost:3000
+      demo_auth_provider:
+        issuer: ${AUTH_DEMO_AUTH_ISSUER}:http://localhost:3002
+        tokenEndpoint: ${AUTH_DEMO_AUTH_TOKEN_ENDPOINT}:http://localhost:3002/auth/login
+        clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
+monitoring:
+  logging:
+    consoleLoggingEnabled: ${LOGGING_CONSOLE_ENABLED}:false
+    level: ${LOGGING_LEVEL_CONSOLE}:Error
+    profilingEnabled: ${LOGGING_PROFILING_ENABLED}:true
+  elastic:
     enabled: ${LOGGING_ELK_ENABLED}:false
     loggingLevel: ${LOGGING_LEVEL_ELK}:Error
     environment: ${ENVIRONMENT}:Dev
-service:
-  authenticationEnabled: ${AUTH_ENABLED}:true
-  graphqlEndpointPort: ${GRAPHQL_ENDPOINT}:4000
-  corsOrigin: ${CORS_ORIGIN}:*
-  corsAllowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
-  corsMethods: ${CORS_METHODS}:GET,HEAD,PUT,PATCH,POST,DELETE
-  authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
-aad:
-  identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
-  clientID: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
-  validateIssuer: true
-  passReqToCallback: true
-  issuer: ${AUTH_AAD_ISSUER}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0
-  audience: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
-  allowMultiAudiencesInToken: false
-  loggingLevel: ${AUTH_AAD_LOGGING_LEVEL}:Error
-  scope: ['Cherrytwist-GraphQL']
-  loggingNoPII: false
-  upnDomain: ${AUTH_AAD_UPN_DOMAIN}:playgroundcherrytwist.onmicrosoft.com
-  tenant: ${AUTH_AAD_TENANT}
-  ropc:
-    clientSecret: ${AUTH_AAD_CLIENT_APP_SECRET}
-    username: ${AUTH_AAD_USER_UPN}:admin@playgroundcherrytwist.onmicrosoft.com
-    password: ${AUTH_AAD_USER_PASSWORD}
-  client:
-    clientId: ${AUTH_AAD_CLIENT_APP_ID}:feb6d8b1-8cc2-4e7d-a419-ad7b544b0832
-    authority: ${AUTH_AAD_AUTHORITY}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c
-    redirectUri: ${AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI}:http://localhost:3000
+communications:
+  matrix:
+    server:
+      name: ${SYNAPSE_SERVER_NAME}:cherrytwist.matrix.host
+    shared:
+      secret: ${SYNAPSE_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+storage:
+  ipfs:
+    endpoint: ${IPFS_ENDPOINT}:http://ct_ipfs_server:5001
+    clientEndpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:8080/ipfs
+    maxFileSize: 1048576
+  database:
+    host: ${DATABASE_HOST}:localhost
+    port: 3306
+    username: 'root'
+    password: ${MYSQL_ROOT_PASSWORD}:toor
+    schema: ${MYSQL_DATABASE}:cherrytwist
+    database: ${MYSQL_DATABASE}:cherrytwist
+    logging: false

@@ -4,15 +4,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { UserService } from '@domain/community/user/user.service';
-import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Repository } from 'typeorm';
 import fs from 'fs';
 import * as defaultRoles from '@templates/authorisation-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
-import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 @Injectable()
 export class BootstrapService {
   constructor(
@@ -31,7 +30,7 @@ export class BootstrapService {
       this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
 
       Profiling.logger = this.logger;
-      const profilingEnabled = this.configService.get<ILoggingConfig>('logging')
+      const profilingEnabled = this.configService.get('monitoring')?.logging
         ?.profilingEnabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
       this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
@@ -40,7 +39,7 @@ export class BootstrapService {
       await this.ensureEcoverseSingleton();
       await this.bootstrapProfiles();
     } catch (error) {
-      this.logger.error(error, undefined, LogContext.BOOTSTRAP);
+      throw new BootstrapException(error.message);
     }
   }
 
@@ -61,7 +60,7 @@ export class BootstrapService {
   }
 
   async bootstrapProfiles() {
-    const bootstrapFilePath = this.configService.get<IServiceConfig>('service')
+    const bootstrapFilePath = this.configService.get('bootstrap')
       ?.authorisationBootstrapPath as string;
 
     let bootstrapJson = {
@@ -80,12 +79,9 @@ export class BootstrapService {
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
       this.logger.verbose?.(bootstratDataStr);
       if (!bootstratDataStr) {
-        this.logger.error(
-          'Specified authorisation bootstrap file not found!',
-          undefined,
-          LogContext.BOOTSTRAP
+        throw new BootstrapException(
+          'Specified authorisation bootstrap file not found!'
         );
-        return;
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
     } else {
@@ -122,7 +118,7 @@ export class BootstrapService {
           });
           const credentialsData = userData.credentials;
           for (const credentialData of credentialsData) {
-            await this.authorizationService.assignCredential({
+            await this.authorizationService.grantCredential({
               userID: user.id,
               type: credentialData.type,
               resourceID: credentialData.resourceID,
@@ -131,10 +127,8 @@ export class BootstrapService {
         }
       }
     } catch (error) {
-      this.logger.error(
-        `Unable to create profiles ${error.message}`,
-        error,
-        LogContext.BOOTSTRAP
+      throw new BootstrapException(
+        `Unable to create profiles ${error.message}`
       );
     }
   }

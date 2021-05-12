@@ -19,10 +19,7 @@ import {
 } from '@domain/challenge/opportunity';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
@@ -31,7 +28,7 @@ export class OpportunityResolverMutations {
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Updates the Opportunity.',
   })
@@ -46,7 +43,7 @@ export class OpportunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Deletes the Opportunity.',
   })
@@ -57,7 +54,7 @@ export class OpportunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new Aspect on the Opportunity.',
   })
@@ -69,7 +66,7 @@ export class OpportunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => ActorGroup, {
     description: 'Create a new Actor Group on the Opportunity.',
   })
@@ -84,7 +81,7 @@ export class OpportunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Trigger an event on an Opportunity.',
   })

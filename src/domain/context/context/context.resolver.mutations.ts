@@ -8,10 +8,7 @@ import {
 } from '@domain/common/reference';
 import { ContextService } from './context.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 
 @Resolver()
 export class ContextResolverMutations {
@@ -21,7 +18,7 @@ export class ContextResolverMutations {
     AuthorizationRolesGlobal.CommunityAdmin,
     AuthorizationRolesGlobal.Admin
   )
-  @UseGuards(AuthorizationRulesGuard)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Reference, {
     description: 'Creates a new Reference on the specified Context.',
   })
