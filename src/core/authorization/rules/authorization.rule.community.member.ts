@@ -5,7 +5,7 @@ import { UserInfo } from '@core/authentication/user-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
 import { AuthorizationCredential } from '../authorization.credential';
 
-export class AuthorizationRuleEcoverseMember implements IAuthorizationRule {
+export class AuthorizationRuleCommunityMember implements IAuthorizationRule {
   communityID: number;
   priority: number;
 
@@ -13,7 +13,7 @@ export class AuthorizationRuleEcoverseMember implements IAuthorizationRule {
     this.communityID = parentArg.id;
     if (this.communityID == -1) {
       throw new ForbiddenException(
-        'Ecoverse Member guard not set up properly.',
+        'Community Member guard not set up properly.',
         LogContext.AUTH
       );
     }

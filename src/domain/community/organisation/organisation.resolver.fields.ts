@@ -13,7 +13,11 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import {
+  AuthorizationRolesGlobal,
+  GraphqlGuard,
+  AuthorizationOrganisationMember,
+} from '@core/authorization';
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
   constructor(
@@ -21,7 +25,11 @@ export class OrganisationResolverFields {
     private userGroupService: UserGroupService
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationOrganisationMember()
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
@@ -45,7 +53,11 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationOrganisationMember()
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [User], {
     nullable: true,

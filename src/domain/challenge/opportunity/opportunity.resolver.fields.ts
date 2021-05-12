@@ -9,12 +9,20 @@ import { OpportunityService } from './opportunity.service';
 import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import {
+  AuthorizationCommunityMember,
+  AuthorizationRolesGlobal,
+  GraphqlGuard,
+} from '@core/authorization';
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
   constructor(private opportunityService: OpportunityService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => Community, {
     nullable: true,

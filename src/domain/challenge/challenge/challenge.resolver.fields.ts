@@ -6,13 +6,21 @@ import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
-import { GraphqlGuard, AuthorizationRolesGlobal } from '@core/authorization';
+import {
+  GraphqlGuard,
+  AuthorizationRolesGlobal,
+  AuthorizationCommunityMember,
+} from '@core/authorization';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
   constructor(private challengeService: ChallengeService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => Community, {
     nullable: true,

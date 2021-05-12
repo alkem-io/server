@@ -18,11 +18,12 @@ import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
 import {
   IAuthorizationRule,
   AuthorizationRuleGlobalRole,
+  AuthorizationRuleOrganisationMember,
 } from '@src/core/authorization/rules';
 import {
   AuthorizationRolesGlobal,
   AuthorizationRuleSelfManagement,
-  AuthorizationRuleEcoverseMember,
+  AuthorizationRuleCommunityMember,
 } from '@core/authorization';
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 
@@ -54,8 +55,12 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       'self-management',
       context.getHandler()
     );
-    const ecoverseMember = this.reflector.get<boolean>(
-      'ecoverse-member',
+    const communityMember = this.reflector.get<boolean>(
+      'community-member',
+      context.getHandler()
+    );
+    const organisationMember = this.reflector.get<boolean>(
+      'organisation-member',
       context.getHandler()
     );
 
@@ -81,9 +86,15 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       this.authorizationRules.push(rule);
     }
 
-    if (ecoverseMember) {
+    if (communityMember) {
       const parentArg = context.getArgByIndex(0);
-      const rule = new AuthorizationRuleEcoverseMember(parentArg, 3);
+      const rule = new AuthorizationRuleCommunityMember(parentArg, 3);
+      this.authorizationRules.push(rule);
+    }
+
+    if (organisationMember) {
+      const parentArg = context.getArgByIndex(0);
+      const rule = new AuthorizationRuleOrganisationMember(parentArg, 3);
       this.authorizationRules.push(rule);
     }
 

@@ -23,7 +23,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import {
-  AuthorizationEcoverseMember,
+  AuthorizationCommunityMember,
   AuthorizationRolesGlobal,
   GraphqlGuard,
 } from '@core/authorization';
@@ -42,7 +42,7 @@ export class EcoverseResolverFields {
     AuthorizationRolesGlobal.Admin,
     AuthorizationRolesGlobal.CommunityAdmin
   )
-  @AuthorizationEcoverseMember()
+  @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => Community, {
     nullable: true,
