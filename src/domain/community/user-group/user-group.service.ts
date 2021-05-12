@@ -163,7 +163,7 @@ export class UserGroupService {
       membershipData.userID
     );
 
-    user.agent = await this.agentService.assignCredential({
+    user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
       type: AuthorizationCredential.UserGroupMember,
       resourceID: membershipData.groupID,
@@ -190,7 +190,7 @@ export class UserGroupService {
       membershipData.userID
     );
 
-    user.agent = await this.agentService.removeCredential({
+    user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
       type: AuthorizationCredential.UserGroupMember,
       resourceID: membershipData.groupID,

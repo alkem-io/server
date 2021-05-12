@@ -49,12 +49,12 @@ export class AuthorizationResolverMutations {
     description: 'Removes an authorization credential from a User.',
   })
   @Profiling.api
-  async removeCredentialFromUser(
-    @Args('removeCredentialData')
+  async revokeCredentialFromUser(
+    @Args('revokeCredentialData')
     credentialRemoveData: RemoveAuthorizationCredentialInput,
     @CurrentUser() userInfo: UserInfo
   ): Promise<IUser> {
-    return await this.authorizationService.removeCredential(
+    return await this.authorizationService.revokeCredential(
       credentialRemoveData,
       userInfo
     );

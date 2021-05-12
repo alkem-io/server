@@ -24,23 +24,23 @@ export class AuthorizationService {
   ) {}
 
   async grantCredential(
-    assignCredentialData: GrantAuthorizationCredentialInput,
+    grantCredentialData: GrantAuthorizationCredentialInput,
     currentUserInfo?: UserInfo
   ): Promise<IUser> {
     // check the inputs
-    if (this.isGlobalAuthorizationCredential(assignCredentialData.type)) {
-      if (assignCredentialData.resourceID)
+    if (this.isGlobalAuthorizationCredential(grantCredentialData.type)) {
+      if (grantCredentialData.resourceID)
         throw new ForbiddenException(
-          `resourceID should not be specified for global AuthorizationCredentials: ${assignCredentialData.type}`,
+          `resourceID should not be specified for global AuthorizationCredentials: ${grantCredentialData.type}`,
           LogContext.AUTH
         );
     }
     const { user, agent } = await this.userService.getUserAndAgent(
-      assignCredentialData.userID
+      grantCredentialData.userID
     );
 
     // Only a global-admin can assign/remove other global-admins
-    if (assignCredentialData.type === AuthorizationCredential.GlobalAdmin) {
+    if (grantCredentialData.type === AuthorizationCredential.GlobalAdmin) {
       if (currentUserInfo) {
         await this.validateMandatedCredential(
           currentUserInfo.user,
@@ -49,36 +49,36 @@ export class AuthorizationService {
       }
     }
 
-    user.agent = await this.agentService.assignCredential({
+    user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: assignCredentialData.type,
-      resourceID: assignCredentialData.resourceID,
+      type: grantCredentialData.type,
+      resourceID: grantCredentialData.resourceID,
     });
     return user;
   }
 
-  async removeCredential(
-    removeCredentialData: RemoveAuthorizationCredentialInput,
+  async revokeCredential(
+    revokeCredentialData: RemoveAuthorizationCredentialInput,
     currentUserInfo?: UserInfo
   ): Promise<IUser> {
     // check the inputs
-    if (this.isGlobalAuthorizationCredential(removeCredentialData.type)) {
-      if (removeCredentialData.resourceID)
+    if (this.isGlobalAuthorizationCredential(revokeCredentialData.type)) {
+      if (revokeCredentialData.resourceID)
         throw new ForbiddenException(
-          `resourceID should not be specified for global AuthorizationCredentials: ${removeCredentialData.type}`,
+          `resourceID should not be specified for global AuthorizationCredentials: ${revokeCredentialData.type}`,
           LogContext.AUTH
         );
     }
 
     const { user, agent } = await this.userService.getUserAndAgent(
-      removeCredentialData.userID
+      revokeCredentialData.userID
     );
 
     // Check not the last global admin
-    await this.removeValidationSingleGlobalAdmin(removeCredentialData.type);
+    await this.removeValidationSingleGlobalAdmin(revokeCredentialData.type);
 
     // Only a global-admin can assign/remove other global-admins
-    if (removeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
+    if (revokeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
       if (currentUserInfo) {
         await this.validateMandatedCredential(
           currentUserInfo.user,
@@ -87,10 +87,10 @@ export class AuthorizationService {
       }
     }
 
-    user.agent = await this.agentService.removeCredential({
+    user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: removeCredentialData.type,
-      resourceID: removeCredentialData.resourceID,
+      type: revokeCredentialData.type,
+      resourceID: revokeCredentialData.resourceID,
     });
 
     return user;

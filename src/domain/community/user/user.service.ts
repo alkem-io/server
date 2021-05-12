@@ -59,7 +59,7 @@ export class UserService {
         `User Agent not initialized: ${savedUser.id}`,
         LogContext.AUTH
       );
-    await this.agentService.assignCredential({
+    await this.agentService.grantCredential({
       type: AuthorizationCredential.GlobalRegistered,
       agentID: savedUser.agent.id,
     });
