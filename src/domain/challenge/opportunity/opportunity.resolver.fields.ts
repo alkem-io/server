@@ -1,29 +1,16 @@
 import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Relation } from '@domain/collaboration/relation/relation.entity';
-import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { Opportunity } from './opportunity.entity';
 import { OpportunityService } from './opportunity.service';
 import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
-import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationCommunityMember,
-  AuthorizationRolesGlobal,
-  GraphqlGuard,
-} from '@core/authorization';
 @Resolver(() => Opportunity)
 export class OpportunityResolverFields {
   constructor(private opportunityService: OpportunityService) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
-  )
-  @AuthorizationCommunityMember()
-  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => Community, {
     nullable: true,
     description: 'The community for the opportunity.',

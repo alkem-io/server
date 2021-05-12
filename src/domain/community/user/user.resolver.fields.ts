@@ -1,18 +1,14 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import { User } from '@domain/community/user/user.entity';
 import { UserService } from './user.service';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { Agent, IAgent } from '@domain/agent/agent';
+import { Profiling } from '@common/decorators';
 
 @Resolver(() => User)
 export class UserResolverFields {
   constructor(private userService: UserService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => Agent, {
     nullable: true,
     description: 'The Agent representing this User.',
