@@ -255,14 +255,12 @@ export const getUserMemberships = async () => {
     query: `query {
       users {
         name
-        memberof {
-          communities {
-            groups {
-              name
-            }
-          }
-          organisations {
-            name
+        agent {
+          id
+          credentials {
+            id
+            resourceID
+            type
           }
         }
       }

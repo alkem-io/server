@@ -195,38 +195,4 @@ describe('Users and Groups', () => {
       getUsersForChallengeCommunity.body.data.ecoverse.group.members
     ).toHaveLength(0);
   });
-
-  test('should add "user" to "group" as focal point', async () => {
-    // Act
-    const responseAddUserToGroup = await assignGroupFocalPointMutation(
-      userId,
-      communityGroupId
-    );
-
-    // Assert
-    expect(responseAddUserToGroup.status).toBe(200);
-    expect(
-      responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name
-    ).toEqual(userName);
-  });
-
-  test('should remove "user" assigned as focal point', async () => {
-    // Arrange
-    let groupIdWithFocalPoint = await assignGroupFocalPointMutation(
-      userId,
-      communityGroupId
-    );
-    let groupId = groupIdWithFocalPoint.body.data.assignGroupFocalPoint.id;
-
-    // Act
-    const responseDeleteUserFocalPoint = await removeUserMutation(userId);
-    const getFocalPoint = await getGroup(groupId);
-
-    // Assert
-    expect(responseDeleteUserFocalPoint.status).toBe(200);
-    expect(responseDeleteUserFocalPoint.body.data.deleteUser.name).toBe(
-      userName
-    );
-    expect(getFocalPoint.body.data.ecoverse.group.focalPoint).toBe(null);
-  });
 });
