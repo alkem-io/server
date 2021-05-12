@@ -46,22 +46,18 @@ describe('DDT anonymous user - queries - Not authorized', () => {
     ${'usersName'}                       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersAccountUPN'}                 | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersProfile'}                    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'usersMemberofGroupsName'}         | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'usersMemberofOrganisationsName'}  | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'usersMemberofAgentCredentials'}   | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userName'}                        | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userAccountUPN'}                  | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userProfile'}                     | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'userMemberofGroupsName'}          | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'userMemberofOrganisationsName'}   | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'userMemberofAgentCredentials'}    | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersById'}                       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsName'}                      | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsFocalPointName'}            | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsProfile'}                   | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsMembersName'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsParentCommunity'}           | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsParentOrganisation'}        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagName'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsWithTagFocalPointName'}     | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagProfile'}            | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagMembersName'}        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagParentCommunity'}    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
@@ -241,19 +237,16 @@ describe('DDT anonymous user - Create mutations - authorized', () => {
 describe('DDT anonymous user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
-    mutation                                    | variables                                    | idName                        | expected
-    ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}            | ${forbiddenCode}
-    ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}           | ${forbiddenCode}
-    ${'updateChallengeMutation'}                | ${'updateChallengeVariables'}                | ${'challengeId'}              | ${forbiddenCode}
-    ${'updateOpportunityMutation'}              | ${'updateOpportunityVariables'}              | ${'opportunityId'}            | ${forbiddenCode}
-    ${'updateAspectMutation'}                   | ${'updateAspectVariable'}                    | ${'aspectId'}                 | ${forbiddenCode}
-    ${'updateActorMutation'}                    | ${'updateActorVariables'}                    | ${'actorId'}                  | ${forbiddenCode}
-    ${'addUserToCommunityMutation'}             | ${'addUserToCommunityVariables'}             | ${''}                         | ${forbiddenCode}
-    ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'}          | ${forbiddenCode}
-    ${'assignGroupFocalPointMutation'}          | ${'assignGroupFocalPointVariables'}          | ${'groupIdEcoverse'}          | ${forbiddenCode}
-    ${'removeGroupFocalPointMutation'}          | ${'removeGroupFocalPointVariables'}          | ${'createGroupOnChallengeId'} | ${forbiddenCode}
-    ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}              | ${forbiddenCode}
-    ${'removeUserFromGroupMutation'}            | ${'removeUserFromGroupVariables'}            | ${'addUserToOpportunityId'}   | ${forbiddenCode}
+    mutation                                    | variables                                    | idName               | expected
+    ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}   | ${forbiddenCode}
+    ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}  | ${forbiddenCode}
+    ${'updateChallengeMutation'}                | ${'updateChallengeVariables'}                | ${'challengeId'}     | ${forbiddenCode}
+    ${'updateOpportunityMutation'}              | ${'updateOpportunityVariables'}              | ${'opportunityId'}   | ${forbiddenCode}
+    ${'updateAspectMutation'}                   | ${'updateAspectVariable'}                    | ${'aspectId'}        | ${forbiddenCode}
+    ${'updateActorMutation'}                    | ${'updateActorVariables'}                    | ${'actorId'}         | ${forbiddenCode}
+    ${'addUserToCommunityMutation'}             | ${'addUserToCommunityVariables'}             | ${''}                | ${forbiddenCode}
+    ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'} | ${forbiddenCode}
+    ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}     | ${forbiddenCode}
   `(
     "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, idName, expected }) => {
