@@ -11,7 +11,7 @@
       ]
     },
     {
-      "email": "community-admin@cherrytwist.org",
+      "email": "community.admin@cherrytwist.org",
       "firstName": "community-admin",
       "lastName": "cherrytwist",
       "credentials": [
@@ -43,7 +43,7 @@
       ]
     },
     {
-      "email": "non-ecoverse@cherrytwist.com",
+      "email": "non.ecoverse@cherrytwist.com",
       "firstName": "Non",
       "lastName": "Ecoverse",
       "credentials": []
