@@ -16,7 +16,7 @@
       "lastName": "cherrytwist",
       "credentials": [
         {
-          "type": "global-community-admin"
+          "type": "global-admin-community"
         }
       ]
     },
