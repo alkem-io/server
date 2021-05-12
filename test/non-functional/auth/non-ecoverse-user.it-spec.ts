@@ -26,6 +26,7 @@ import { TestUser } from '@test/utils/token.helper';
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 const forbiddenCode = '"code":"FORBIDDEN"';
+const userNotRegistered = 'USER_NOT_REGISTERED';
 let nonEcoverseEmail = 'non-ecoverse@cherrytwist.com';
 let data: TestDataServiceInitResult;
 
@@ -38,7 +39,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT anonymous user - queries - Not authorized', () => {
+describe('DDT non-ecoverse user - queries - Not authorized', () => {
   // Arrange
   test.each`
     query                                | idName           | expectedAuth         | expectedForb
@@ -104,7 +105,7 @@ describe('DDT anonymous user - queries - Not authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT anonymous user - queries - authorized', () => {
+describe('DDT non-ecoverse user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expectedAuth         | expectedForb
@@ -158,11 +159,12 @@ describe('DDT anonymous user - queries - authorized', () => {
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expectedAuth);
       expect(responseData).not.toContain(expectedForb);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
-describe('DDT anonymous user - Create mutations - Not authorized', () => {
+describe('DDT non-ecoverse user - Create mutations - Not authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -204,7 +206,7 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
   );
 });
 
-describe('DDT anonymous user - Create mutations - authorized', () => {
+describe('DDT non-ecoverse user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName             | expected
@@ -230,11 +232,13 @@ describe('DDT anonymous user - Create mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(notAuthorizedCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
-describe('DDT anonymous user - Update mutations - NOT authorized', () => {
+describe('DDT non-ecoverse user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName               | expected
@@ -272,7 +276,7 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
   );
 });
 
-describe.skip('DDT anonymous user - Update mutations - authorized', () => {
+describe.skip('DDT non-ecoverse user - Update mutations - authorized', () => {
   // skipped due to bug with update user
   // Arrange
   test.each`
@@ -299,11 +303,13 @@ describe.skip('DDT anonymous user - Update mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(notAuthorizedCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
-describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
+describe('DDT non-ecoverse user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected
