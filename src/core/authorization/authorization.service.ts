@@ -23,7 +23,7 @@ export class AuthorizationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async assignCredential(
+  async grantCredential(
     assignCredentialData: GrantAuthorizationCredentialInput,
     currentUserInfo?: UserInfo
   ): Promise<IUser> {

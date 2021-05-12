@@ -26,16 +26,16 @@ export class AuthorizationResolverMutations {
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => User, {
-    description: 'Assigns an authorization credential to a User.',
+    description: 'Grants an authorization credential to a User.',
   })
   @Profiling.api
-  async assignCredentialToUser(
-    @Args('assignCredentialData')
-    credentialAssignData: GrantAuthorizationCredentialInput,
+  async grantCredentialToUser(
+    @Args('grantCredentialData')
+    grantCredentialData: GrantAuthorizationCredentialInput,
     @CurrentUser() userInfo: UserInfo
   ): Promise<IUser> {
-    return await this.authorizationService.assignCredential(
-      credentialAssignData,
+    return await this.authorizationService.grantCredential(
+      grantCredentialData,
       userInfo
     );
   }
