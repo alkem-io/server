@@ -6,8 +6,9 @@ import { AuthorizationCredential } from '../authorization.credential';
 
 export class AuthorizationRuleEcoverseMember implements IAuthorizationRule {
   communityID: number;
+  priority: number;
 
-  constructor(parentArg: any) {
+  constructor(parentArg: any, priority?: number) {
     this.communityID = parentArg.id;
     if (this.communityID == -1) {
       throw new ForbiddenException(
@@ -15,9 +16,11 @@ export class AuthorizationRuleEcoverseMember implements IAuthorizationRule {
         LogContext.AUTH
       );
     }
+
+    this.priority = priority ?? 1000;
   }
 
-  evaluate(user: IUser): boolean {
+  execute(user: IUser): boolean {
     const userCredentials = user.agent?.credentials;
     if (!userCredentials) return false;
     for (const userCredential of userCredentials) {

@@ -25,12 +25,14 @@ import {
   AuthorizationRuleSelfManagement,
   AuthorizationRuleEcoverseMember,
 } from '@core/authorization';
+import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
   JWT_EXPIRED = 'jwt is expired';
 
   private authorizationRules!: IAuthorizationRule[];
+  private fieldName!: string;
 
   constructor(
     private configService: ConfigService,
@@ -49,11 +51,20 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       'authorizationGlobalRoles',
       context.getHandler()
     );
+    const selfManagement = this.reflector.get<boolean>(
+      'self-management',
+      context.getHandler()
+    );
+    const ecoverseMember = this.reflector.get<boolean>(
+      'ecoverse-member',
+      context.getHandler()
+    );
+
     if (globalRoles) {
       for (const role of globalRoles) {
         const allowedRoles: string[] = Object.values(AuthorizationRolesGlobal);
         if (allowedRoles.includes(role)) {
-          const rule = new AuthorizationRuleGlobalRole(role);
+          const rule = new AuthorizationRuleGlobalRole(role, 2);
           this.authorizationRules.push(rule);
         } else {
           throw new ForbiddenException(
@@ -64,24 +75,16 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
       }
     }
 
-    const selfManagement = this.reflector.get<boolean>(
-      'self-management',
-      context.getHandler()
-    );
     if (selfManagement) {
       const args = context.getArgByIndex(1);
       const fieldName = context.getArgByIndex(3).fieldName;
-      const rule = new AuthorizationRuleSelfManagement(fieldName, args);
+      const rule = new AuthorizationRuleSelfManagement(fieldName, args, 1);
       this.authorizationRules.push(rule);
     }
 
-    const ecoverseMember = this.reflector.get<boolean>(
-      'ecoverse-member',
-      context.getHandler()
-    );
     if (ecoverseMember) {
       const parentArg = context.getArgByIndex(0);
-      const rule = new AuthorizationRuleEcoverseMember(parentArg);
+      const rule = new AuthorizationRuleEcoverseMember(parentArg, 3);
       this.authorizationRules.push(rule);
     }
 
@@ -116,9 +119,11 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     }
 
     const user: IUser = userInfo.user;
-    for (const rule of this.authorizationRules) {
-      if (rule.evaluate(user)) return userInfo;
-    }
+    const authorizationRuleEngine = new AuthorizationRuleEngine(
+      this.authorizationRules
+    );
+
+    if (authorizationRuleEngine.run(user)) return userInfo;
 
     throw new ForbiddenException(
       `User '${userInfo.email}' is not authorised to access requested resources.`,

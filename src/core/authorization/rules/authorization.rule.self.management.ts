@@ -9,8 +9,13 @@ export class AuthorizationRuleSelfManagement implements IAuthorizationRule {
   userEmail?: string;
   profileID?: number;
   referenceID?: number;
+  operation!: string;
+  priority: number;
 
-  constructor(fieldName: string, args: any) {
+  constructor(fieldName: string, args: any, priority?: number) {
+    this.operation = fieldName;
+    this.priority = priority ?? 1000;
+
     if (fieldName === 'createUser') {
       this.userEmail = args.userData.email;
     } else if (fieldName === 'updateUser') {
@@ -34,18 +39,17 @@ export class AuthorizationRuleSelfManagement implements IAuthorizationRule {
     }
   }
 
-  evaluate(user: IUser): boolean {
+  execute(user: IUser): boolean {
+    // createUser mutation
+    if (this.operation === 'createUser' && this.userEmail) {
+      return true;
+    }
+
     if (!user.profile)
       throw new UserNotRegisteredException(
         `Error: Unable to find user with given email: ${user.email}`
       );
-    // createUser mutation
-    if (
-      this.userEmail &&
-      this.userEmail.toLowerCase() === user.email.toLowerCase()
-    ) {
-      return true;
-    }
+
     // updateUser mutation
     if (this.userID && this.userID == user.id) {
       return true;
