@@ -144,6 +144,7 @@ export class AuthorizationService {
 
     return await this.userService.usersWithCredentials({
       type: credentialCriteria.type.toString(),
+      resourceID: credentialCriteria.resourceID,
     });
   }
 
