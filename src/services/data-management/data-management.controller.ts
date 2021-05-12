@@ -12,8 +12,8 @@ export class DataManagementController {
   ) {}
 
   authenticationEnabled(): boolean {
-    const authEnabled = this.configService.get('Identity')?.identity
-      ?.authentication?.enabled;
+    const authEnabled = this.configService.get('identity')?.authentication
+      ?.enabled;
     if (!authEnabled) return false;
     return true;
   }

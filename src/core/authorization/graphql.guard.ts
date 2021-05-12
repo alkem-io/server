@@ -96,8 +96,8 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     _status?: any
   ) {
     // Always handle the request if authentication is disabled
-    const authEnabled = this.configService.get('Identity')?.identity
-      ?.authentication?.enabled;
+    const authEnabled = this.configService.get('identity')?.authentication
+      ?.enabled;
     if (!authEnabled) {
       return userInfo;
     }
