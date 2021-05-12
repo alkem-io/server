@@ -42,7 +42,9 @@ export class UserService {
       userData.profileData
     );
 
-    user.agent = await this.agentService.createAgent();
+    user.agent = await this.agentService.createAgent({
+      parentDisplayID: user.email,
+    });
 
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);

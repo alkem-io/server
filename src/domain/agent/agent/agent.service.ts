@@ -11,6 +11,7 @@ import {
   IAgent,
   RemoveCredentialInput,
   AssignCredentialInput,
+  CreateAgentInput,
 } from '@domain/agent/agent';
 import { LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
@@ -24,8 +25,8 @@ export class AgentService {
     private agentRepository: Repository<Agent>
   ) {}
 
-  async createAgent(): Promise<IAgent> {
-    const agent: IAgent = new Agent();
+  async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
+    const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
 
     return await this.saveAgent(agent);
@@ -111,9 +112,7 @@ export class AgentService {
         credential.resourceID === assignCredentialData.resourceID
       ) {
         throw new ValidationException(
-          `Agent for user (${
-            (agent as Agent).user?.email
-          }) already has assigned credential: ${assignCredentialData.type}`,
+          `Agent (${agent.parentDisplayID}) already has assigned credential: ${assignCredentialData.type}`,
           LogContext.AUTH
         );
       }

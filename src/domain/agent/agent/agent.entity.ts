@@ -31,6 +31,9 @@ export class Agent extends BaseEntity implements IAgent {
   @VersionColumn()
   version?: number;
 
+  @Column('text', { nullable: true })
+  parentDisplayID?: string = '';
+
   @Field(() => String, {
     nullable: true,
     description: 'The Decentralized Identifier (DID) for this Agent.',
