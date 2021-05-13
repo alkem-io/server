@@ -30,6 +30,7 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CommunityType } from '@common/enums/community.types';
 import { IOpportunity } from '@domain/challenge/opportunity';
 import validator from 'validator';
+import { IUserGroup } from '@domain/community/user-group';
 
 @Injectable()
 export class EcoverseService {
@@ -117,6 +118,13 @@ export class EcoverseService {
       }
     );
     return ecoverseWithChallenges.challenges || [];
+  }
+
+  async getGroups(ecoverse: IEcoverse): Promise<IUserGroup[]> {
+    const ecoverseWithGroups = await this.getEcoverseByIdOrFail(ecoverse.id, {
+      relations: ['community'],
+    });
+    return ecoverseWithGroups.community?.groups || [];
   }
 
   async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {

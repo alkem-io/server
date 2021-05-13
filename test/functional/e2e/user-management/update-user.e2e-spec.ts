@@ -30,7 +30,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe.skip('Update user', () => {
+describe('Update user', () => {
   beforeEach(async () => {
     uniqueId = Math.random()
       .toString(12)

@@ -20,6 +20,7 @@ let opportunityName = '';
 let opportunityTextId = '';
 let uniqueTextId = '';
 let challengeGroupId = '';
+let challengeCommunityId = '';
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
@@ -36,8 +37,8 @@ beforeEach(async () => {
     uniqueTextId
   );
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
-  challengeGroupId =
-    responseCreateChallenge.body.data.createChallenge.community.groups[0].id;
+  challengeCommunityId =
+    responseCreateChallenge.body.data.createChallenge.community.id;
 });
 
 beforeAll(async () => {
@@ -49,7 +50,7 @@ afterAll(async () => {
 });
 
 describe('Flows challenge', () => {
-  test('should add "user" to "group" as focal point', async () => {
+  test.skip('should add "user" to "group" as focal point', async () => {
     // Act
     // Assign first User as a focal point to the group
     const responseAddUserToGroup = await assignGroupFocalPointMutation(
@@ -90,14 +91,6 @@ describe('Flows challenge', () => {
     expect(responseGroupQuery.status).toBe(200);
     expect(
       responseGroupQuery.body.data.ecoverse.challenge.community.members
-    ).toHaveLength(0);
-    expect(
-      responseGroupQuery.body.data.ecoverse.challenge.community.groups[0]
-        .focalPoint
-    ).toEqual(null);
-    expect(
-      responseGroupQuery.body.data.ecoverse.challenge.community.groups[0]
-        .members
     ).toHaveLength(0);
   });
 

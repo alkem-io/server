@@ -1,5 +1,6 @@
-import { IUser } from '@domain/community/user';
+import { UserInfo } from '@core/authentication/user-info';
 
 export interface IAuthorizationRule {
-  evaluate(user: IUser): boolean;
+  execute(user: UserInfo): boolean;
+  priority: number;
 }

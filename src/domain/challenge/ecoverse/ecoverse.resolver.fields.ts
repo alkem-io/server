@@ -22,11 +22,7 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationEcoverseMember,
-  AuthorizationRolesGlobal,
-  GraphqlGuard,
-} from '@core/authorization';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -38,12 +34,6 @@ export class EcoverseResolverFields {
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
-  )
-  @AuthorizationEcoverseMember()
-  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => Community, {
     nullable: true,
     description: 'The community for the ecoverse.',
@@ -97,8 +87,6 @@ export class EcoverseResolverFields {
     );
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(GraphqlGuard)
   @ResolveField('projects', () => [Project], {
     nullable: false,
     description: 'All projects within this ecoverse',
@@ -108,8 +96,6 @@ export class EcoverseResolverFields {
     return await this.projectService.getProjects();
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(GraphqlGuard)
   @ResolveField('project', () => Project, {
     nullable: false,
     description: 'A particular Project, identified by the ID',
@@ -150,10 +136,7 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async group(@Args('ID') id: string): Promise<IUserGroup> {
-    const group = await this.groupService.getUserGroupOrFail(id, {
-      relations: ['members'],
-    });
-    return group;
+    return await this.groupService.getUserGroupOrFail(id);
   }
 
   @AuthorizationGlobalRoles(

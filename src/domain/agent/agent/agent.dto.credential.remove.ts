@@ -3,7 +3,7 @@ import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 
 @InputType()
-export class RemoveCredentialInput {
+export class RevokeCredentialInput {
   @Field({
     nullable: false,
     description: 'The Agent from whom the credential is being removed.',

@@ -1,5 +1,6 @@
 hosting:
   port: ${GRAPHQL_ENDPOINT}:4000
+  environment: ${ENVIRONMENT}:Dev
 bootstrap:
   authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
 security:
@@ -9,7 +10,7 @@ security:
     allowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
 identity:
   authentication:
-    enabled: true
+    enabled: ${AUTH_ENABLED}:true
     providers:
       aad:
         identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
@@ -44,7 +45,10 @@ monitoring:
   elastic:
     enabled: ${LOGGING_ELK_ENABLED}:false
     loggingLevel: ${LOGGING_LEVEL_ELK}:Error
-    environment: ${ENVIRONMENT}:Dev
+    cloud:
+      id: ${ELASTIC_CLOUD_ID}
+      username: ${ELASTIC_CLOUD_USERNAME}
+      password: ${ELASTIC_CLOUD_PASSWORD}
 communications:
   matrix:
     server:

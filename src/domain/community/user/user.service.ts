@@ -42,7 +42,9 @@ export class UserService {
       userData.profileData
     );
 
-    user.agent = await this.agentService.createAgent();
+    user.agent = await this.agentService.createAgent({
+      parentDisplayID: user.email,
+    });
 
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);
@@ -57,7 +59,7 @@ export class UserService {
         `User Agent not initialized: ${savedUser.id}`,
         LogContext.AUTH
       );
-    await this.agentService.assignCredential({
+    await this.agentService.grantCredential({
       type: AuthorizationCredential.GlobalRegistered,
       agentID: savedUser.agent.id,
     });

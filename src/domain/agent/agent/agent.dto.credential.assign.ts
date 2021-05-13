@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
-export class AssignCredentialInput {
+export class GrantCredentialInput {
   @Field({
     nullable: false,
     description: 'The Agent to whom the credential is being granted.',

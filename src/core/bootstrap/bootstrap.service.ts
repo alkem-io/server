@@ -118,7 +118,7 @@ export class BootstrapService {
           });
           const credentialsData = userData.credentials;
           for (const credentialData of credentialsData) {
-            await this.authorizationService.assignCredential({
+            await this.authorizationService.grantCredential({
               userID: user.id,
               type: credentialData.type,
               resourceID: credentialData.resourceID,

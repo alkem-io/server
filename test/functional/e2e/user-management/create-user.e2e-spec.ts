@@ -99,15 +99,8 @@ describe('Create User', () => {
                 name
               }
             }
-            memberof {
-              communities {
-              groups {
-                name
-              }
-            }
           }
-        }
-      }`,
+        }`,
       variables: {
         userData: {
           name: userName,
@@ -146,13 +139,6 @@ describe('Create User', () => {
                     profile {
                       references {
                         name
-                      }
-                    }
-                    memberof {
-                      communities {
-                        groups {
-                          name
-                        }
                       }
                     }
                   }

@@ -4,6 +4,31 @@ import { lifecycleData } from '../lifecycle/lifecycle.request.params';
 
 const uniqueId = (Date.now() + Math.random()).toString();
 
+export const communityData = `
+community {
+  id
+  name
+  members{
+    id
+    name
+  }
+}`;
+
+export const contextData = `
+context {
+  id
+  tagline
+  background
+  vision
+  impact
+  who
+  references {
+    id
+    name
+    uri
+  }
+}`;
+
 export const createChallangeMutation = async (
   challengeName: string,
   uniqueTextId: string
@@ -16,27 +41,8 @@ export const createChallangeMutation = async (
                 id
                 textID
                 ${lifecycleData}
-                community {
-                  id
-                  groups {
-                    id
-                    name
-                  }
-                }
-                context {
-                  id
-                  tagline
-                  background
-                  vision
-                  impact
-                  who
-                  references {
-                    id
-                    name
-                    uri
-
-                  }
-                }
+                ${communityData}
+                ${contextData}
               }
             }`,
     variables: {
@@ -78,27 +84,8 @@ export const createBasicChallangeMutation = async (
                 id
                 textID
                 ${lifecycleData}
-                community {
-                  id
-                  groups {
-                    id
-                    name
-                  }
-                }
-                context {
-                  id
-                  tagline
-                  background
-                  vision
-                  impact
-                  who
-                  references {
-                    id
-                    name
-                    uri
-
-                  }
-                }
+                ${communityData}
+                ${contextData}
               }
             }`,
     variables: {
@@ -132,27 +119,8 @@ export const updateChallangeMutation = async (
         id
         textID
         ${lifecycleData}
-        community {
-          id
-          groups {
-            id
-            name
-          }
-        }
-        context {
-          id
-          tagline
-          background
-          vision
-          impact
-          who
-          references {
-            id
-            name
-            uri
-
-            }
-        }
+        ${communityData}
+        ${contextData}
         tagset{
           tags
         }
@@ -254,26 +222,8 @@ export const getChallengeData = async (challengeId: string) => {
       id
       textID
       ${lifecycleData}
-      community {
-        id
-        groups {
-          id
-          name
-        }
-      }
-      context {
-        id
-        tagline
-        background
-        vision
-        impact
-        who
-        references {
-          id
-          name
-          uri
-        }
-        }
+      ${communityData}
+      ${contextData}
       }
     }
   }`,
@@ -291,26 +241,8 @@ export const getChallengesData = async () => {
       id
       textID
       ${lifecycleData}
-      community {
-        id
-        groups {
-          id
-          name
-        }
-      }
-      context {
-        id
-        tagline
-        background
-        vision
-        impact
-        who
-        references {
-          id
-          name
-          uri
-        }
-        }
+      ${communityData}
+      ${contextData}
       }
     }
     }`,
@@ -345,25 +277,9 @@ export const getChallengeUsers = async (challengeId: string) => {
       ecoverse{
       challenge(ID: "${challengeId}") {
         id
-    community {
-      id
-      groups {
-        members{
-          id
-          name
-        }
-        id
-        name
-        focalPoint {
-          name
-        }
+        ${communityData}
       }
-      members {
-        name
-      }
-    }
-  }
-}}`,
+    }}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -391,8 +307,7 @@ export const getChallengeGroups = async (challengeId: string) => {
       challenge(ID: "${challengeId}") {
         id
         name
-        community{ id
-        groups{id name}}}}}`,
+        ${communityData}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

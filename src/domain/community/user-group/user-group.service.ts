@@ -112,14 +112,12 @@ export class UserGroupService {
     if (groupable instanceof Community) {
       return await this.userGroupRepository.find({
         where: { community: { id: groupable.id } },
-        relations: ['members'],
       });
     }
 
     if (groupable instanceof Organisation) {
       return await this.userGroupRepository.find({
         where: { organisation: { id: groupable.id } },
-        relations: ['members'],
       });
     }
 
@@ -165,7 +163,7 @@ export class UserGroupService {
       membershipData.userID
     );
 
-    user.agent = await this.agentService.assignCredential({
+    user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
       type: AuthorizationCredential.UserGroupMember,
       resourceID: membershipData.groupID,
@@ -192,7 +190,7 @@ export class UserGroupService {
       membershipData.userID
     );
 
-    user.agent = await this.agentService.removeCredential({
+    user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
       type: AuthorizationCredential.UserGroupMember,
       resourceID: membershipData.groupID,
