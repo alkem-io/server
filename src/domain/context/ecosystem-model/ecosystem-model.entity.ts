@@ -1,4 +1,4 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
   Column,
@@ -15,6 +15,7 @@ import { ActorGroup } from '@domain/context';
 @Entity()
 @ObjectType()
 export class EcosystemModel extends BaseEntity implements IEcosystemModel {
+  @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
 

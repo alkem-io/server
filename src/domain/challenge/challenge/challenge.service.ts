@@ -281,12 +281,9 @@ export class ChallengeService {
       LogContext.CHALLENGES
     );
     // Try to find the challenge
-    const challenge = await this.getChallengeByIdOrFail(
-      challengeData.parentID,
-      {
-        relations: ['childChallenges', 'community'],
-      }
-    );
+    const challenge = await this.getChallengeOrFail(challengeData.parentID, {
+      relations: ['childChallenges', 'community'],
+    });
 
     await this.validateChildChallenge(challenge, challengeData);
 

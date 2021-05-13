@@ -24,6 +24,7 @@ import { Activity } from '@domain/common/activity';
 import { NVP } from '@domain/common';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
+import { IContext } from '@domain/context';
 
 @Injectable()
 export class EcoverseService {
@@ -41,7 +42,7 @@ export class EcoverseService {
     await this.ecoverseRepository.save(ecoverse);
     ecoverse.challenge = await this.challengeService.createChallenge(
       {
-        parentID: ecoverse.id,
+        parentID: ecoverse.id.toString(),
         name: `ecoverse-${ecoverseData.name}`,
         context: ecoverseData.context,
         textID: `ecoverse-${ecoverseData.textID}`,
@@ -135,10 +136,15 @@ export class EcoverseService {
     return await this.challengeService.getCommunity(challenge.id);
   }
 
+  async getContext(ecoverse: IEcoverse): Promise<IContext> {
+    const challenge = this.getChallenge(ecoverse);
+    return await this.challengeService.getContext(challenge.id);
+  }
+
   async createChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
-    const ecoverse = await this.getEcoverseByIdOrFail(challengeData.parentID);
+    const ecoverse = await this.getEcoverseOrFail(challengeData.parentID);
     const challenges = await this.getChallenges(ecoverse);
 
     // First check if the challenge already exists on not...

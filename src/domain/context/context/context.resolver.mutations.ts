@@ -9,6 +9,7 @@ import {
 import { ContextService } from './context.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { Aspect, CreateAspectInput, IContext } from '@domain/context';
 
 @Resolver()
 export class ContextResolverMutations {
@@ -28,5 +29,17 @@ export class ContextResolverMutations {
   ): Promise<IReference> {
     const reference = await this.contextService.createReference(referenceInput);
     return reference;
+  }
+
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Aspect, {
+    description: 'Create a new Aspect on the Opportunity.',
+  })
+  @Profiling.api
+  async createAspect(
+    @Args('aspectData') aspectData: CreateAspectInput
+  ): Promise<IContext> {
+    return await this.contextService.createAspect(aspectData);
   }
 }

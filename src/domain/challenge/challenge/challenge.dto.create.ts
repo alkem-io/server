@@ -11,7 +11,7 @@ import { TextID } from '@domain/common/scalars';
 @InputType()
 export class CreateChallengeInput {
   @Field({ nullable: false })
-  parentID!: number;
+  parentID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

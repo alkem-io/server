@@ -21,6 +21,7 @@ import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { Tagset } from '@domain/common/tagset';
 import { Activity } from '@domain/common/activity';
+import { Context } from '@domain/context';
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -38,6 +39,15 @@ export class EcoverseResolverFields {
   @Profiling.api
   async community(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getCommunity(ecoverse);
+  }
+
+  @ResolveField('context', () => Context, {
+    nullable: true,
+    description: 'The context for the ecoverse.',
+  })
+  @Profiling.api
+  async context(@Parent() ecoverse: Ecoverse) {
+    return await this.ecoverseService.getContext(ecoverse);
   }
 
   @ResolveField('challenges', () => [Challenge], {
