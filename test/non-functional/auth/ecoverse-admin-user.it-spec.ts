@@ -23,6 +23,7 @@ import { TestDataServiceInitResult } from '@src/services/data-management/test-da
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 const forbiddenCode = '"code":"FORBIDDEN"';
+const userNotRegistered = 'USER_NOT_REGISTERED';
 let data: TestDataServiceInitResult;
 
 beforeAll(async () => {
@@ -34,7 +35,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT ecoverse admin user - queries - authorized', () => {
+describe.skip('DDT ecoverse admin user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expectedAuth         | expectedForb
@@ -122,6 +123,7 @@ describe('DDT ecoverse admin user - queries - authorized', () => {
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expectedAuth);
       expect(responseData).not.toContain(expectedForb);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
@@ -130,7 +132,7 @@ describe('DDT ecoverse admin user - queries - authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT ecoverse admin user - Create mutations - authorized', () => {
+describe.skip('DDT ecoverse admin user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -168,6 +170,8 @@ describe('DDT ecoverse admin user - Create mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(forbiddenCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
@@ -209,11 +213,13 @@ describe('DDT ecoverse admin user - Update mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(forbiddenCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
-describe('DDT ecoverse admin user - Remove mutations - authorized', () => {
+describe.skip('DDT ecoverse admin user - Remove mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected
@@ -244,6 +250,8 @@ describe('DDT ecoverse admin user - Remove mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(forbiddenCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });

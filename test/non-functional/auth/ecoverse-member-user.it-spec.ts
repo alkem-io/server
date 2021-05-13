@@ -24,6 +24,7 @@ import { TestDataServiceInitResult } from '@src/services/data-management/test-da
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 const forbiddenCode = '"code":"FORBIDDEN"';
+const userNotRegistered = 'USER_NOT_REGISTERED';
 let data: TestDataServiceInitResult;
 
 beforeAll(async () => {
@@ -35,7 +36,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT ecoverse member user - queries - authorized', () => {
+describe.skip('DDT ecoverse member user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expected             | expectedForb
@@ -123,6 +124,7 @@ describe('DDT ecoverse member user - queries - authorized', () => {
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expectedAuth);
       expect(responseData).not.toContain(expectedForb);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
@@ -155,6 +157,8 @@ describe.skip('DDT ecoverse member user - Create mutations - authorized', () => 
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(forbiddenCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
@@ -195,8 +199,7 @@ describe('DDT ecoverse member user - Create mutations - NOT authorized', () => {
 
       // Assert
       expect(response.status).toBe(200);
-     // expect(responseData).toContain(expected);
-      expect(responseData).toContain(notAuthorizedCode);
+      expect(responseData).toContain(expected);
     }
   );
 });
@@ -237,8 +240,7 @@ describe('DDT ecoverse member user - Update mutations - NOT authorized', () => {
 
       // Assert
       expect(response.status).toBe(200);
-      //expect(responseData).toContain(expected);
-      expect(responseData).toContain(notAuthorizedCode);
+      expect(responseData).toContain(expected);
     }
   );
 });
@@ -273,8 +275,7 @@ describe('DDT ecoverse member user - Remove mutations - NOT authorized', () => {
 
       // Assert
       expect(response.status).toBe(200);
-     // expect(responseData).toContain(expected);
-      expect(responseData).toContain(notAuthorizedCode);
+      expect(responseData).toContain(expected);
     }
   );
 });
