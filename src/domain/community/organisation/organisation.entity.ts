@@ -51,7 +51,7 @@ export class Organisation extends BaseEntity
     () => Ecoverse,
     ecoverse => ecoverse.host
   )
-  hostedEcoverse?: Ecoverse;
+  hostedEcoverses?: Ecoverse[];
 
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()

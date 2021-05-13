@@ -14,7 +14,7 @@ import {
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community';
-import { Challenge, Ecoverse } from '@domain/challenge';
+import { Challenge } from '@domain/challenge';
 import { Application, IApplication } from '@domain/community/application';
 
 @Entity()
@@ -60,13 +60,6 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
     { eager: true, cascade: true }
   )
   applications?: IApplication[];
-
-  @OneToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.community,
-    { eager: false, cascade: false }
-  )
-  ecoverse?: Ecoverse;
 
   @OneToOne(
     () => Challenge,

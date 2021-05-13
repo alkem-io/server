@@ -15,7 +15,6 @@ import {
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
 import validator from 'validator';
-import { Ecoverse } from '@domain/challenge/ecoverse';
 import { DeleteTagsetInput } from './tagset.dto.delete';
 
 @Injectable()
@@ -110,7 +109,7 @@ export class TagsetService {
     return tagsets;
   }
 
-  replaceTagsOnEntity(entity: Challenge | Project | Ecoverse, tags: string[]) {
+  replaceTagsOnEntity(entity: Challenge | Project, tags: string[]) {
     if (!entity.tagset)
       throw new EntityNotInitializedException(
         `Entity with id(${entity.id}) not initialised with a tagset!`,

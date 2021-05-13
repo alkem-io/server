@@ -113,9 +113,9 @@ export class Challenge extends BaseEntity
   )
   parentChallenge?: Challenge;
 
-  @ManyToOne(
+  @OneToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.challenges,
+    ecoverse => ecoverse.challenge,
     { eager: false, cascade: false }
   )
   ecoverse?: Ecoverse;

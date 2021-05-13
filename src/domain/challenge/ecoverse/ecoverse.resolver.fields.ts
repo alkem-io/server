@@ -19,6 +19,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { Tagset } from '@domain/common/tagset';
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -35,8 +36,7 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async community(@Parent() ecoverse: Ecoverse) {
-    const community = await this.ecoverseService.getCommunity(ecoverse.id);
-    return community;
+    return await this.ecoverseService.getCommunity(ecoverse);
   }
 
   @ResolveField('challenges', () => [Challenge], {
@@ -45,8 +45,16 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async challenges(@Parent() ecoverse: Ecoverse) {
-    const challenges = await this.ecoverseService.getChallenges(ecoverse);
-    return challenges;
+    return await this.ecoverseService.getChallenges(ecoverse);
+  }
+
+  @ResolveField('tagset', () => Tagset, {
+    nullable: true,
+    description: 'The set of tags for the  ecoverse.',
+  })
+  @Profiling.api
+  async tagset(@Parent() ecoverse: Ecoverse) {
+    return this.ecoverseService.getChallenge(ecoverse).tagset;
   }
 
   @ResolveField('challenge', () => Challenge, {

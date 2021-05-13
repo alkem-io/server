@@ -225,7 +225,7 @@ export class TestDataService {
     const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail({
       relations: ['community'],
     });
-    const community = ecoverse.community;
+    const community = this.ecoverseService.getChallenge(ecoverse).community;
     if (!community) throw new Error();
     const groupInput = new CreateUserGroupInput();
     groupInput.name = this.groupName;
