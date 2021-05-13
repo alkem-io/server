@@ -33,6 +33,8 @@ import { ChallengeLifecycleTemplates } from '@common/enums/challenge.lifecycle.t
 import { IContext } from '@domain/context/context';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { Activity } from '@domain/common/activity';
+import { NVP } from '@domain/common';
 
 @Injectable()
 export class ChallengeService {
@@ -437,5 +439,14 @@ export class ChallengeService {
     }
     challenge.leadOrganisations = updatedLeads;
     return await this.challengeRepository.save(challenge);
+  }
+
+  async getActivity(challenge: IChallenge): Promise<Activity> {
+    const activity = new Activity();
+    const community = await this.getCommunity(challenge.id);
+    const members = await this.communityService.getMembers(community);
+    const testNvp = new NVP('members', members.length.toString());
+    activity.topics.push(testNvp);
+    return activity;
   }
 }

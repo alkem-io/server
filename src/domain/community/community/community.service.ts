@@ -138,7 +138,7 @@ export class CommunityService {
     return community;
   }
 
-  async getMembers(community: Community): Promise<IUser[]> {
+  async getMembers(community: ICommunity): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
       type: AuthorizationCredential.CommunityMember,
       resourceID: community.id,

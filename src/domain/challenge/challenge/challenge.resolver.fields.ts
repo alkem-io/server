@@ -6,6 +6,7 @@ import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Context } from '@domain/context/context';
 import { Collaboration } from '@domain/collaboration/collaboration';
+import { Activity } from '@domain/common/activity';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -54,5 +55,14 @@ export class ChallengeResolverFields {
   @Profiling.api
   async challenges(@Parent() challenge: Challenge) {
     return await this.challengeService.getChildChallenges(challenge);
+  }
+
+  @ResolveField('activity', () => Activity, {
+    nullable: true,
+    description: 'The activity within this Challenge.',
+  })
+  @Profiling.api
+  async activity(@Parent() challenge: Challenge) {
+    return await this.challengeService.getActivity(challenge);
   }
 }

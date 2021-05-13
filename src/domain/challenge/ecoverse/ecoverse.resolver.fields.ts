@@ -20,6 +20,7 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { Tagset } from '@domain/common/tagset';
+import { Activity } from '@domain/common/activity';
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -86,7 +87,7 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async projects(@Parent() ecoverse: Ecoverse): Promise<IProject[]> {
-    return await this.projectService.getProjects(ecoverse.id.toString());
+    return await this.ecoverseService.getProjects(ecoverse);
   }
 
   @ResolveField('project', () => Project, {
@@ -165,5 +166,14 @@ export class EcoverseResolverFields {
     return await this.applicationService.getApplicationOrFail(applicationID, {
       where: { ecoverseID: ecoverse.id.toString() },
     });
+  }
+
+  @ResolveField('activity', () => Activity, {
+    nullable: true,
+    description: 'The activity within this Ecoverse.',
+  })
+  @Profiling.api
+  async activity(@Parent() ecoverse: Ecoverse) {
+    return await this.ecoverseService.getActivity(ecoverse);
   }
 }

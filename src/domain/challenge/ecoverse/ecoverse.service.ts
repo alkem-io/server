@@ -20,11 +20,16 @@ import {
 import { ICommunity } from '@domain/community/community';
 import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
+import { Activity } from '@domain/common/activity';
+import { NVP } from '@domain/common';
+import { ProjectService } from '@domain/collaboration/project/project.service';
+import { IProject } from '@domain/collaboration/project';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
+    private projectService: ProjectService,
     private challengeService: ChallengeService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -191,5 +196,30 @@ export class EcoverseService {
       );
     }
     return ecoverse.id;
+  }
+
+  async getProjects(ecoverse: IEcoverse): Promise<IProject[]> {
+    return await this.projectService.getProjects(ecoverse.id.toString());
+  }
+
+  // todo: optimize this method to get the counts directly from the ORM.
+  async getActivity(ecoverse: IEcoverse): Promise<Activity> {
+    const challenge = this.getChallenge(ecoverse);
+    const activity = await this.challengeService.getActivity(challenge);
+
+    // Challenges
+    const childChallenges = await this.getChallenges(ecoverse);
+    const challengesTopic = new NVP(
+      'challenges',
+      childChallenges.length.toString()
+    );
+    activity.topics.push(challengesTopic);
+
+    // Projects
+    const projects = await this.getProjects(ecoverse);
+    const projectsTopic = new NVP('projects', projects.length.toString());
+    activity.topics.push(projectsTopic);
+
+    return activity;
   }
 }
