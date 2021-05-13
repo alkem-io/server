@@ -441,12 +441,36 @@ export class ChallengeService {
     return await this.challengeRepository.save(challenge);
   }
 
+  async getAllChallengesCount(ecoverseID: number): Promise<number> {
+    const count = await this.challengeRepository.count({
+      where: { ecoverseID: ecoverseID },
+    });
+    return count;
+  }
+
+  async getChildChallengesCount(challengeID: number): Promise<number> {
+    return await this.challengeRepository.count({
+      where: { parentChallenge: challengeID },
+    });
+  }
+
+  async getMembersCount(challenge: IChallenge): Promise<number> {
+    const community = await this.getCommunity(challenge.id);
+    return await this.communityService.getMembersCount(community);
+  }
+
   async getActivity(challenge: IChallenge): Promise<Activity> {
     const activity = new Activity();
     const community = await this.getCommunity(challenge.id);
-    const members = await this.communityService.getMembers(community);
-    const testNvp = new NVP('members', members.length.toString());
-    activity.topics.push(testNvp);
+
+    const membersCount = await this.communityService.getMembersCount(community);
+    const membersTopic = new NVP('members', membersCount.toString());
+    activity.topics.push(membersTopic);
+
+    const challengesCount = await this.getChildChallengesCount(challenge.id);
+    const challengesTopic = new NVP('challenges', challengesCount.toString());
+    activity.topics.push(challengesTopic);
+
     return activity;
   }
 }

@@ -165,4 +165,12 @@ export class AgentService {
 
     return false;
   }
+
+  async countAgentsWithMatchingCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<number> {
+    return await this.credentialService.countMatchingCredentials(
+      credentialCriteria
+    );
+  }
 }

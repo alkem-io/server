@@ -202,23 +202,41 @@ export class EcoverseService {
     return await this.projectService.getProjects(ecoverse.id.toString());
   }
 
-  // todo: optimize this method to get the counts directly from the ORM.
   async getActivity(ecoverse: IEcoverse): Promise<Activity> {
     const challenge = this.getChallenge(ecoverse);
-    const activity = await this.challengeService.getActivity(challenge);
+    // this will have members + challenges populated
+    const activity = new Activity();
 
     // Challenges
-    const childChallenges = await this.getChallenges(ecoverse);
+    const childChallengesCount = await this.challengeService.getChildChallengesCount(
+      challenge.id
+    );
     const challengesTopic = new NVP(
       'challenges',
-      childChallenges.length.toString()
+      childChallengesCount.toString()
     );
     activity.topics.push(challengesTopic);
 
+    const allChallengesCount = await this.challengeService.getAllChallengesCount(
+      ecoverse.id
+    );
+    const opportunitiesTopic = new NVP(
+      'opportunities',
+      (allChallengesCount - childChallengesCount - 1).toString()
+    );
+    activity.topics.push(opportunitiesTopic);
+
     // Projects
-    const projects = await this.getProjects(ecoverse);
-    const projectsTopic = new NVP('projects', projects.length.toString());
+    const projectsCount = await this.projectService.getProjectsCount(
+      ecoverse.id
+    );
+    const projectsTopic = new NVP('projects', projectsCount.toString());
     activity.topics.push(projectsTopic);
+
+    // Members
+    const membersCount = await this.challengeService.getMembersCount(challenge);
+    const membersTopic = new NVP('members', membersCount.toString());
+    activity.topics.push(membersTopic);
 
     return activity;
   }

@@ -261,10 +261,17 @@ export class CommunityService {
     return application;
   }
 
-  async getApplications(community: Community): Promise<IApplication[]> {
+  async getApplications(community: ICommunity): Promise<IApplication[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
       relations: ['applications'],
     });
     return communityApps?.applications || [];
+  }
+
+  async getMembersCount(community: ICommunity): Promise<number> {
+    return await this.agentService.countAgentsWithMatchingCredentials({
+      type: AuthorizationCredential.CommunityMember,
+      resourceID: community.id,
+    });
   }
 }

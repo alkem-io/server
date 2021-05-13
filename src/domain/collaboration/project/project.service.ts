@@ -164,4 +164,11 @@ export class ProjectService {
     await this.projectRepository.save(project);
     return aspect;
   }
+
+  async getProjectsCount(ecoverseID: number): Promise<number> {
+    const count = await this.projectRepository.count({
+      where: { ecoverseID: ecoverseID },
+    });
+    return count;
+  }
 }
