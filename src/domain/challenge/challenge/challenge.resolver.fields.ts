@@ -47,7 +47,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getLifecycle(challenge.id);
   }
 
-  @ResolveField('childChallenges', () => [Challenge], {
+  @ResolveField('challenges', () => [Challenge], {
     nullable: true,
     description: 'The set of child Challenges within this challenge.',
   })
