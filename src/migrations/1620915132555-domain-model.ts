@@ -1,0 +1,394 @@
+import { MigrationInterface, QueryRunner } from 'typeorm';
+
+export class domainModel1620915132555 implements MigrationInterface {
+  name = 'domainModel1620915132555';
+
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      'CREATE TABLE `credential` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `resourceID` int NOT NULL, `type` varchar(255) NOT NULL, `agentId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `actor_group` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `ecosystemModelId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `actor` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `value` text NULL, `impact` varchar(255) NULL, `actorGroupId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      "CREATE TABLE `tagset` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL DEFAULT 'default', `tags` text NOT NULL, `profileId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB"
+    );
+    await queryRunner.query(
+      'CREATE TABLE `agreement` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `projectId` int NULL, `tagsetId` int NULL, UNIQUE INDEX `REL_22348b89c2f802a3d75d52fbd5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `lifecycle` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `machineState` text NULL, `machineDef` text NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `relation` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `type` varchar(255) NOT NULL, `actorName` varchar(255) NOT NULL, `actorType` varchar(255) NOT NULL, `actorRole` varchar(255) NOT NULL, `description` text NULL, `collaborationId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `nvp` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `value` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `application` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `ecoverseID` varchar(255) NOT NULL, `lifecycleId` int NULL, `userId` int NULL, `communityId` int NULL, UNIQUE INDEX `REL_7ec2857c7d8d16432ffca1cb3d` (`lifecycleId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `community` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `parentCommunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `user_group` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `profileId` int NULL, `organisationId` int NULL, `communityId` int NULL, UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `organisation` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `profileId` int NULL, UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `ecoverse` (`id` int NOT NULL AUTO_INCREMENT, `textID` varchar(255) NOT NULL, `name` varchar(255) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `hostId` int NULL, `challengeId` int NULL, UNIQUE INDEX `REL_70577156f8512a2573dcdb72fa` (`challengeId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `challenge` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `collaborationId` int NULL, `lifecycleId` int NULL, `tagsetId` int NULL, `parentChallengeId` int NULL, UNIQUE INDEX `REL_1deebaabfc620e881858333b0d` (`contextId`), UNIQUE INDEX `REL_aa9668dd2340c2d794b414577b` (`communityId`), UNIQUE INDEX `REL_d4551f18fed106ae2e20c70f7c` (`collaborationId`), UNIQUE INDEX `REL_3c535130cde781b69259eec7d8` (`lifecycleId`), UNIQUE INDEX `REL_6b1bcaf365212806d8cc1f87b5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `collaboration` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `project` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `textID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `lifecycleId` int NULL, `tagsetId` int NULL, `collaborationId` int NULL, UNIQUE INDEX `REL_f425931bb61a95ef6f6d89c9a8` (`lifecycleId`), UNIQUE INDEX `REL_d07535c59062f86e887de8f0a5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `aspect` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `title` varchar(255) NOT NULL, `framing` text NOT NULL, `explanation` text NOT NULL, `contextId` int NULL, `projectId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `ecosystem_model` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `description` varchar(255) NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `context` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `tagline` varchar(255) NULL, `background` text NULL, `vision` text NULL, `impact` text NULL, `who` text NULL, `ecosystemModelId` int NULL, UNIQUE INDEX `REL_a03169c3f86480ba3863924f4d` (`ecosystemModelId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `reference` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `uri` text NOT NULL, `description` text NULL, `contextId` int NULL, `profileId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `profile` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `avatar` text NULL, `description` text NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `user` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `accountUpn` varchar(255) NOT NULL, `firstName` varchar(255) NOT NULL, `lastName` varchar(255) NOT NULL, `email` varchar(255) NOT NULL, `phone` varchar(255) NOT NULL, `city` varchar(255) NOT NULL, `country` varchar(255) NOT NULL, `gender` varchar(255) NOT NULL, `profileId` int NULL, `agentId` int NULL, UNIQUE INDEX `REL_9466682df91534dd95e4dbaa61` (`profileId`), UNIQUE INDEX `REL_b61c694cacfab25533bd23d9ad` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `agent` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `parentDisplayID` text NULL, `did` varchar(255) NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `application_questions` (`applicationId` int NOT NULL, `nvpId` int NOT NULL, INDEX `IDX_8495fae86f13836b0745642baa` (`applicationId`), INDEX `IDX_fe50118fd82e7fe2f74f986a19` (`nvpId`), PRIMARY KEY (`applicationId`, `nvpId`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `challenge_lead` (`challengeId` int NOT NULL, `organisationId` int NOT NULL, INDEX `IDX_f457c1ae9eea70a87435cac56d` (`challengeId`), INDEX `IDX_617eb0632402d30eb93e9a5f9e` (`organisationId`), PRIMARY KEY (`challengeId`, `organisationId`)) ENGINE=InnoDB'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `credential` ADD CONSTRAINT `FK_dbe0929355f82e5995f0b7fd5e2` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `actor_group` ADD CONSTRAINT `FK_cbb1d7afa052a184471723d3297` FOREIGN KEY (`ecosystemModelId`) REFERENCES `ecosystem_model`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `actor` ADD CONSTRAINT `FK_0f9d41ee193d631a5439bb4f404` FOREIGN KEY (`actorGroupId`) REFERENCES `actor_group`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `tagset` ADD CONSTRAINT `FK_81fc213b2d9ad0cddeab1a9ce64` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `agreement` ADD CONSTRAINT `FK_8785b5a8510cabcc25d0f196783` FOREIGN KEY (`projectId`) REFERENCES `project`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `agreement` ADD CONSTRAINT `FK_22348b89c2f802a3d75d52fbd57` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `relation` ADD CONSTRAINT `FK_701a6f8e3e1da76354571767c3f` FOREIGN KEY (`collaborationId`) REFERENCES `collaboration`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application` ADD CONSTRAINT `FK_7ec2857c7d8d16432ffca1cb3d9` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application` ADD CONSTRAINT `FK_b4ae3fea4a24b4be1a86dacf8a2` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application` ADD CONSTRAINT `FK_500cee6f635849f50e19c7e2b76` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `community` ADD CONSTRAINT `FK_8e8283bdacc9e770918fe689333` FOREIGN KEY (`parentCommunityId`) REFERENCES `community`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_9912e4cfc1e09848a392a651514` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_2b8381df8c3a1680f50e4bc2351` FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_9fcc131f256e969d773327f07cb` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `organisation` ADD CONSTRAINT `FK_037ba4b170844c039e74aa22ecd` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_84d2ecca9924fb1b0d2fe2d2ad6` FOREIGN KEY (`hostId`) REFERENCES `organisation`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_70577156f8512a2573dcdb72fa8` FOREIGN KEY (`challengeId`) REFERENCES `challenge`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_1deebaabfc620e881858333b0d0` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_aa9668dd2340c2d794b414577b6` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_d4551f18fed106ae2e20c70f7cb` FOREIGN KEY (`collaborationId`) REFERENCES `collaboration`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_3c535130cde781b69259eec7d85` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_6b1bcaf365212806d8cc1f87b54` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_7d2b222d54b900071b0959f03ef` FOREIGN KEY (`parentChallengeId`) REFERENCES `challenge`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` ADD CONSTRAINT `FK_f425931bb61a95ef6f6d89c9a85` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` ADD CONSTRAINT `FK_d07535c59062f86e887de8f0a57` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` ADD CONSTRAINT `FK_534fac334526e373b95d3ae18e3` FOREIGN KEY (`collaborationId`) REFERENCES `collaboration`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `aspect` ADD CONSTRAINT `FK_6c57bb50b3b6fb4943c807c83ce` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `aspect` ADD CONSTRAINT `FK_37bfa2f3da493204ddc6e773e5a` FOREIGN KEY (`projectId`) REFERENCES `project`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `context` ADD CONSTRAINT `FK_a03169c3f86480ba3863924f4d7` FOREIGN KEY (`ecosystemModelId`) REFERENCES `ecosystem_model`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `reference` ADD CONSTRAINT `FK_07dbf4b02a078a59c216691f5eb` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `reference` ADD CONSTRAINT `FK_2f46c698fc4c19a8cc233c5f255` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user` ADD CONSTRAINT `FK_9466682df91534dd95e4dbaa616` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user` ADD CONSTRAINT `FK_b61c694cacfab25533bd23d9add` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application_questions` ADD CONSTRAINT `FK_8495fae86f13836b0745642baa8` FOREIGN KEY (`applicationId`) REFERENCES `application`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application_questions` ADD CONSTRAINT `FK_fe50118fd82e7fe2f74f986a195` FOREIGN KEY (`nvpId`) REFERENCES `nvp`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge_lead` ADD CONSTRAINT `FK_f457c1ae9eea70a87435cac56d6` FOREIGN KEY (`challengeId`) REFERENCES `challenge`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge_lead` ADD CONSTRAINT `FK_617eb0632402d30eb93e9a5f9e2` FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'CREATE TABLE `cherrytwist`.`query-result-cache` (`id` int NOT NULL AUTO_INCREMENT, `identifier` varchar(255) NULL, `time` bigint NOT NULL, `duration` int NOT NULL, `query` text NOT NULL, `result` text NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+    );
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query('DROP TABLE `cherrytwist`.`query-result-cache`');
+    await queryRunner.query(
+      'ALTER TABLE `challenge_lead` DROP FOREIGN KEY `FK_617eb0632402d30eb93e9a5f9e2`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge_lead` DROP FOREIGN KEY `FK_f457c1ae9eea70a87435cac56d6`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application_questions` DROP FOREIGN KEY `FK_fe50118fd82e7fe2f74f986a195`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application_questions` DROP FOREIGN KEY `FK_8495fae86f13836b0745642baa8`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user` DROP FOREIGN KEY `FK_b61c694cacfab25533bd23d9add`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user` DROP FOREIGN KEY `FK_9466682df91534dd95e4dbaa616`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `reference` DROP FOREIGN KEY `FK_2f46c698fc4c19a8cc233c5f255`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `reference` DROP FOREIGN KEY `FK_07dbf4b02a078a59c216691f5eb`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `context` DROP FOREIGN KEY `FK_a03169c3f86480ba3863924f4d7`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `aspect` DROP FOREIGN KEY `FK_37bfa2f3da493204ddc6e773e5a`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `aspect` DROP FOREIGN KEY `FK_6c57bb50b3b6fb4943c807c83ce`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` DROP FOREIGN KEY `FK_534fac334526e373b95d3ae18e3`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` DROP FOREIGN KEY `FK_d07535c59062f86e887de8f0a57`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` DROP FOREIGN KEY `FK_f425931bb61a95ef6f6d89c9a85`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_7d2b222d54b900071b0959f03ef`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_6b1bcaf365212806d8cc1f87b54`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_3c535130cde781b69259eec7d85`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_d4551f18fed106ae2e20c70f7cb`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_aa9668dd2340c2d794b414577b6`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_1deebaabfc620e881858333b0d0`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_70577156f8512a2573dcdb72fa8`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_84d2ecca9924fb1b0d2fe2d2ad6`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `organisation` DROP FOREIGN KEY `FK_037ba4b170844c039e74aa22ecd`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_9fcc131f256e969d773327f07cb`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_2b8381df8c3a1680f50e4bc2351`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_9912e4cfc1e09848a392a651514`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `community` DROP FOREIGN KEY `FK_8e8283bdacc9e770918fe689333`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application` DROP FOREIGN KEY `FK_500cee6f635849f50e19c7e2b76`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application` DROP FOREIGN KEY `FK_b4ae3fea4a24b4be1a86dacf8a2`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `application` DROP FOREIGN KEY `FK_7ec2857c7d8d16432ffca1cb3d9`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `relation` DROP FOREIGN KEY `FK_701a6f8e3e1da76354571767c3f`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `agreement` DROP FOREIGN KEY `FK_22348b89c2f802a3d75d52fbd57`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `agreement` DROP FOREIGN KEY `FK_8785b5a8510cabcc25d0f196783`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `tagset` DROP FOREIGN KEY `FK_81fc213b2d9ad0cddeab1a9ce64`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `actor` DROP FOREIGN KEY `FK_0f9d41ee193d631a5439bb4f404`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `actor_group` DROP FOREIGN KEY `FK_cbb1d7afa052a184471723d3297`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `credential` DROP FOREIGN KEY `FK_dbe0929355f82e5995f0b7fd5e2`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `IDX_617eb0632402d30eb93e9a5f9e` ON `challenge_lead`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `IDX_f457c1ae9eea70a87435cac56d` ON `challenge_lead`'
+    );
+    await queryRunner.query('DROP TABLE `challenge_lead`');
+    await queryRunner.query(
+      'DROP INDEX `IDX_fe50118fd82e7fe2f74f986a19` ON `application_questions`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `IDX_8495fae86f13836b0745642baa` ON `application_questions`'
+    );
+    await queryRunner.query('DROP TABLE `application_questions`');
+    await queryRunner.query('DROP TABLE `agent`');
+    await queryRunner.query(
+      'DROP INDEX `REL_b61c694cacfab25533bd23d9ad` ON `user`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_9466682df91534dd95e4dbaa61` ON `user`'
+    );
+    await queryRunner.query('DROP TABLE `user`');
+    await queryRunner.query('DROP TABLE `profile`');
+    await queryRunner.query('DROP TABLE `reference`');
+    await queryRunner.query(
+      'DROP INDEX `REL_a03169c3f86480ba3863924f4d` ON `context`'
+    );
+    await queryRunner.query('DROP TABLE `context`');
+    await queryRunner.query('DROP TABLE `ecosystem_model`');
+    await queryRunner.query('DROP TABLE `aspect`');
+    await queryRunner.query(
+      'DROP INDEX `REL_d07535c59062f86e887de8f0a5` ON `project`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_f425931bb61a95ef6f6d89c9a8` ON `project`'
+    );
+    await queryRunner.query('DROP TABLE `project`');
+    await queryRunner.query('DROP TABLE `collaboration`');
+    await queryRunner.query(
+      'DROP INDEX `REL_6b1bcaf365212806d8cc1f87b5` ON `challenge`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_3c535130cde781b69259eec7d8` ON `challenge`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_d4551f18fed106ae2e20c70f7c` ON `challenge`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_aa9668dd2340c2d794b414577b` ON `challenge`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_1deebaabfc620e881858333b0d` ON `challenge`'
+    );
+    await queryRunner.query('DROP TABLE `challenge`');
+    await queryRunner.query(
+      'DROP INDEX `REL_70577156f8512a2573dcdb72fa` ON `ecoverse`'
+    );
+    await queryRunner.query('DROP TABLE `ecoverse`');
+    await queryRunner.query(
+      'DROP INDEX `REL_037ba4b170844c039e74aa22ec` ON `organisation`'
+    );
+    await queryRunner.query('DROP TABLE `organisation`');
+    await queryRunner.query(
+      'DROP INDEX `REL_9912e4cfc1e09848a392a65151` ON `user_group`'
+    );
+    await queryRunner.query('DROP TABLE `user_group`');
+    await queryRunner.query('DROP TABLE `community`');
+    await queryRunner.query(
+      'DROP INDEX `REL_7ec2857c7d8d16432ffca1cb3d` ON `application`'
+    );
+    await queryRunner.query('DROP TABLE `application`');
+    await queryRunner.query('DROP TABLE `nvp`');
+    await queryRunner.query('DROP TABLE `relation`');
+    await queryRunner.query('DROP TABLE `lifecycle`');
+    await queryRunner.query(
+      'DROP INDEX `REL_22348b89c2f802a3d75d52fbd5` ON `agreement`'
+    );
+    await queryRunner.query('DROP TABLE `agreement`');
+    await queryRunner.query('DROP TABLE `tagset`');
+    await queryRunner.query('DROP TABLE `actor`');
+    await queryRunner.query('DROP TABLE `actor_group`');
+    await queryRunner.query('DROP TABLE `credential`');
+  }
+}
