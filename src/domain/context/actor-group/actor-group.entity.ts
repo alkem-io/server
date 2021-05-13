@@ -1,5 +1,4 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-
 import {
   BaseEntity,
   Column,
@@ -11,9 +10,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { Actor } from '@domain/context/actor/actor.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { IActorGroup } from './actor-group.interface';
+import { EcosystemModel, IActorGroup, Actor } from '@domain/context';
 
 export enum RestrictedActorGroupNames {
   Collaborators = 'collaborators',
@@ -47,10 +44,10 @@ export class ActorGroup extends BaseEntity implements IActorGroup {
   description?: string;
 
   @ManyToOne(
-    () => Opportunity,
-    opportunity => opportunity.actorGroups
+    () => EcosystemModel,
+    ecosystemModel => ecosystemModel.actorGroups
   )
-  opportunity?: Opportunity;
+  ecosystemModel?: EcosystemModel;
 
   @Field(() => [Actor], {
     nullable: true,

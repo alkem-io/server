@@ -28,7 +28,6 @@ import {
 import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.types';
-import { IOpportunity } from '@domain/challenge/opportunity';
 import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
 
@@ -127,18 +126,19 @@ export class EcoverseService {
     return ecoverseWithGroups.community?.groups || [];
   }
 
-  async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
-    const opportunities: IOpportunity[] = [];
+  // todo: replace with a single getChallenges with a flag for recursive
+  async getOpportunities(ecoverse: IEcoverse): Promise<IChallenge[]> {
     const challenges = await this.getChallenges(ecoverse);
+    const opportunitiyChallenges: IChallenge[] = [];
     for (const challenge of challenges) {
-      const childOpportunities = await this.challengeService.getOpportunities(
+      const childChallenges = await this.challengeService.getChildChallenges(
         challenge
       );
-      childOpportunities.forEach(opportunity =>
-        opportunities.push(opportunity)
+      childChallenges.forEach(challenge =>
+        opportunitiyChallenges.push(challenge)
       );
     }
-    return opportunities;
+    return opportunitiyChallenges;
   }
 
   async getCommunity(ecoverseId: number): Promise<ICommunity> {

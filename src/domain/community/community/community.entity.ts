@@ -14,7 +14,7 @@ import {
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community';
-import { Challenge, Ecoverse, Opportunity } from '@domain/challenge';
+import { Challenge, Ecoverse } from '@domain/challenge';
 import { Application, IApplication } from '@domain/community/application';
 
 @Entity()
@@ -74,13 +74,6 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
     { eager: false, cascade: false }
   )
   challenge?: Challenge;
-
-  @OneToOne(
-    () => Opportunity,
-    opportunity => opportunity.community,
-    { eager: false, cascade: false }
-  )
-  opportunity?: Opportunity;
 
   // The parent community can have many child communities; the relationship is controlled by the child.
   @ManyToOne(() => Community, { eager: false, cascade: false })

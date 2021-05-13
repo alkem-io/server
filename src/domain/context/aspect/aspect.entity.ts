@@ -10,8 +10,8 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { IAspect } from './aspect.interface';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
+import { Context } from '@domain/context';
 
 @Entity()
 @ObjectType()
@@ -42,10 +42,10 @@ export class Aspect extends BaseEntity implements IAspect {
   explanation: string;
 
   @ManyToOne(
-    () => Opportunity,
-    opportunity => opportunity.aspects
+    () => Context,
+    context => context.aspects
   )
-  opportunity?: Opportunity;
+  context?: Context;
 
   @ManyToOne(
     () => Project,

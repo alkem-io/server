@@ -1,10 +1,11 @@
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
+import { Context } from '@domain/context/context';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -16,8 +17,25 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async community(@Parent() challenge: Challenge) {
-    const community = await this.challengeService.getCommunity(challenge.id);
-    return community;
+    return await this.challengeService.getCommunity(challenge.id);
+  }
+
+  @ResolveField('context', () => Context, {
+    nullable: true,
+    description: 'The context for the challenge.',
+  })
+  @Profiling.api
+  async context(@Parent() challenge: Challenge) {
+    return await this.challengeService.getContext(challenge.id);
+  }
+
+  @ResolveField('collaboration', () => Collaboration, {
+    nullable: true,
+    description: 'The Collaboration for the challenge.',
+  })
+  @Profiling.api
+  async collaboration(@Parent() challenge: Challenge) {
+    return await this.challengeService.getCollaboration(challenge.id);
   }
 
   @ResolveField('lifecycle', () => Lifecycle, {
@@ -29,15 +47,12 @@ export class ChallengeResolverFields {
     return await this.challengeService.getLifecycle(challenge.id);
   }
 
-  @ResolveField('opportunities', () => [Opportunity], {
+  @ResolveField('opportunities', () => [Challenge], {
     nullable: true,
     description: 'The set of opportunities within this challenge.',
   })
   @Profiling.api
-  async opportunities(@Parent() challenge: Challenge) {
-    const opportunities = await this.challengeService.getOpportunities(
-      challenge
-    );
-    return opportunities;
+  async challenges(@Parent() challenge: Challenge) {
+    return await this.challengeService.getChildChallenges(challenge);
   }
 }

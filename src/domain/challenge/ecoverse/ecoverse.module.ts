@@ -10,7 +10,6 @@ import { EcoverseResolverQueries } from './ecoverse.resolver.queries';
 import { EcoverseService } from './ecoverse.service';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { EcoverseResolverFields } from './ecoverse.resolver.fields';
-import { OpportunityModule } from '../opportunity/opportunity.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
@@ -20,7 +19,6 @@ import { ApplicationModule } from '@domain/community/application/application.mod
     ContextModule,
     CommunityModule,
     ChallengeModule,
-    OpportunityModule,
     ProjectModule,
     OrganisationModule,
     TagsetModule,

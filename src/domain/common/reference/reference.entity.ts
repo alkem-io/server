@@ -12,7 +12,6 @@ import {
 import { IReference } from './reference.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { Context2 } from '@domain/context/context/context2.entity';
 
 @Entity()
 @ObjectType()
@@ -48,13 +47,6 @@ export class Reference extends BaseEntity implements IReference {
     { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   context?: Context;
-
-  @ManyToOne(
-    () => Context2,
-    context2 => context2.references,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
-  context2?: Context2;
 
   @ManyToOne(
     () => Profile,

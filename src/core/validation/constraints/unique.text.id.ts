@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import {
@@ -18,7 +17,6 @@ export const IS_UNIQ_TEXT_ID = 'isUniqueTextId';
 export enum TextIdType {
   ecoverse,
   challenge,
-  opportunity,
   project,
   organisation,
 }
@@ -37,12 +35,6 @@ export class IsUniqueTextIdConstraint implements ValidatorConstraintInterface {
     } else if (target === TextIdType.challenge) {
       return (
         (await getRepository(Challenge).findOne({
-          where: { textID: valueToTest },
-        })) === undefined
-      );
-    } else if (target === TextIdType.opportunity) {
-      return (
-        (await getRepository(Opportunity).findOne({
           where: { textID: valueToTest },
         })) === undefined
       );

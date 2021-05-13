@@ -1,10 +1,10 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
-import {
-  IsUniqueTextId,
-  TextIdType,
-} from '@src/core/validation/constraints/unique.text.id';
+// import {
+//   IsUniqueTextId,
+//   TextIdType,
+// } from '@src/core/validation/constraints/unique.text.id';
 import { CreateContextInput } from '@domain/context/context';
 import { TextID } from '@domain/common/scalars';
 
@@ -18,9 +18,9 @@ export class CreateChallengeInput {
   name!: string;
 
   @Field(() => TextID, { nullable: false })
-  @IsUniqueTextId(TextIdType.challenge, {
-    message: 'Challenge with the textID: $value already exists!',
-  })
+  // @IsUniqueTextId(TextIdType.challenge, {
+  //   message: 'Challenge with the textID: $value already exists!',
+  // })
   textID!: string;
 
   @Field(() => CreateContextInput, { nullable: true })

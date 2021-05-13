@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { OpportunityResolverMutations } from './opportunity.resolver.mutations';
+import { EcosystemModelResolverMutations } from './ecosystem-model.resolver.mutations';
 
-describe('OpportunityResolver', () => {
-  let resolver: OpportunityResolverMutations;
+describe('EcosystemModelResolver', () => {
+  let resolver: EcosystemModelResolverMutations;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    resolver = module.get<OpportunityResolverMutations>(
-      OpportunityResolverMutations
+    resolver = module.get<EcosystemModelResolverMutations>(
+      EcosystemModelResolverMutations
     );
   });
 

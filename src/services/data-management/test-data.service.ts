@@ -4,8 +4,6 @@ import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { CreateOpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -19,6 +17,8 @@ import { CreateRelationInput } from '@domain/collaboration/relation';
 import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { CreateActorInput } from '@domain/context/actor';
 import { CreateUserGroupInput } from '@domain/community';
+import { ContextService } from '@domain/context/context/context.service';
+import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
 
 export type TestDataServiceInitResult = {
   userId: number;
@@ -54,8 +54,9 @@ export class TestDataService {
     private userService: UserService,
     private challengeService: ChallengeService,
     private communityService: CommunityService,
+    private contextService: ContextService,
+    private ecosystemModelService: EcosystemModelService,
     private organisationService: OrganisationService,
-    private opportunityService: OpportunityService,
     private userGroupService: UserGroupService,
     private projectService: ProjectService,
     private actorGroupService: ActorGroupService,
@@ -129,9 +130,9 @@ export class TestDataService {
     return response.id;
   }
 
-  async initOpportunity(challengeId: number): Promise<number> {
-    const opportunity = new CreateOpportunityInput();
-    opportunity.parentID = `${challengeId}`;
+  async initChildChallenge(challengeId: number): Promise<number> {
+    const opportunity = new CreateChallengeInput();
+    opportunity.parentID = challengeId;
     opportunity.name = 'init opportunity name';
     opportunity.textID = 'init-opport';
     opportunity.context = {
@@ -148,16 +149,20 @@ export class TestDataService {
       vision: 'test opportunity vision',
       who: 'test opportunity who',
     };
-    const response = await this.challengeService.createOpportunity(opportunity);
+    const response = await this.challengeService.createChildChallenge(
+      opportunity
+    );
     return response.id;
   }
 
-  async initRemoveOpportunity(challengeId: number): Promise<number> {
-    const opportunity = new CreateOpportunityInput();
-    opportunity.parentID = `${challengeId}`;
+  async initRemoveChildChallenge(challengeId: number): Promise<number> {
+    const opportunity = new CreateChallengeInput();
+    opportunity.parentID = challengeId;
     opportunity.name = 'init remove opportunity name';
     opportunity.textID = 'remove-opport';
-    const response = await this.challengeService.createOpportunity(opportunity);
+    const response = await this.challengeService.createChildChallenge(
+      opportunity
+    );
     return response.id;
   }
 
@@ -178,7 +183,7 @@ export class TestDataService {
     aspect.framing = 'init aspect framing';
     aspect.title = 'init aspect title';
     aspect.parentID = opportunityId;
-    const response = await this.opportunityService.createAspect(aspect);
+    const response = await this.contextService.createAspect(aspect);
     return response.id;
   }
 
@@ -243,7 +248,9 @@ export class TestDataService {
     actorGroup.name = 'init actorGroup name';
     actorGroup.description = 'init actorGroup description';
     actorGroup.parentID = opportunityId;
-    const response = await this.opportunityService.createActorGroup(actorGroup);
+    const response = await this.ecosystemModelService.createActorGroup(
+      actorGroup
+    );
     return response.id;
   }
 
@@ -311,8 +318,8 @@ export class TestDataService {
     const organisationId = await this.initOrganisation();
     const challengeId = await this.initChallenge();
     const removeChallangeId = await this.initRemoveChallenge();
-    const opportunityId = await this.initOpportunity(challengeId);
-    const removeOpportunityId = await this.initRemoveOpportunity(
+    const opportunityId = await this.initChildChallenge(challengeId);
+    const removeOpportunityId = await this.initRemoveChildChallenge(
       removeChallangeId
     );
     const projectId = await this.initProject(opportunityId);

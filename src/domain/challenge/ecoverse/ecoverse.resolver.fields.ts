@@ -7,10 +7,6 @@ import { Community } from '@domain/community/community';
 import { Challenge } from '../challenge/challenge.entity';
 import { ChallengeService } from '../challenge/challenge.service';
 import { IChallenge } from '../challenge';
-import { IOpportunity, Opportunity } from '../opportunity';
-import { OpportunityService } from '../opportunity/opportunity.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { Project, IProject } from '@domain/collaboration/project';
 import {
   UserGroup,
@@ -27,7 +23,6 @@ import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 export class EcoverseResolverFields {
   constructor(
     private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private projectService: ProjectService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
@@ -63,28 +58,13 @@ export class EcoverseResolverFields {
     return await this.challengeService.getChallengeOrFail(id);
   }
 
-  @ResolveField('opportunities', () => [Opportunity], {
+  @ResolveField('opportunities', () => [Challenge], {
     nullable: false,
     description: 'All opportunities within the ecoverse',
   })
   @Profiling.api
-  async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
+  async opportunities(@Parent() ecoverse: Ecoverse): Promise<IChallenge[]> {
     return await this.ecoverseService.getOpportunities(ecoverse);
-  }
-
-  @ResolveField('opportunity', () => Opportunity, {
-    nullable: false,
-    description: 'A particular opportunitiy, identified by the ID or textID',
-  })
-  @Profiling.api
-  async opportunity(@Args('ID') id: string): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(id);
-    if (opportunity) return opportunity;
-
-    throw new EntityNotFoundException(
-      `Unable to locate opportunity with given id: ${id}`,
-      LogContext.CHALLENGES
-    );
   }
 
   @ResolveField('projects', () => [Project], {

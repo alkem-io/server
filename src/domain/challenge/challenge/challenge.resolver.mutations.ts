@@ -3,11 +3,7 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { ChallengeService } from './challenge.service';
 import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
-import {
-  IOpportunity,
-  Opportunity,
-  CreateOpportunityInput,
-} from '@domain/challenge/opportunity';
+
 import {
   UpdateChallengeInput,
   IChallenge,
@@ -19,6 +15,7 @@ import {
 } from '@domain/challenge/challenge';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 import { GraphqlGuard, AuthorizationRolesGlobal } from '@core/authorization';
+import { CreateChallengeInput } from './challenge.dto.create';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -30,17 +27,14 @@ export class ChallengeResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Opportunity, {
-    description: 'Creates a new Opportunity within the parent Challenge.',
+  @Mutation(() => Challenge, {
+    description: 'Creates a new child challenge within the parent Challenge.',
   })
   @Profiling.api
-  async createOpportunity(
-    @Args('opportunityData') opportunityData: CreateOpportunityInput
-  ): Promise<IOpportunity> {
-    const opportunity = await this.challengeService.createOpportunity(
-      opportunityData
-    );
-    return opportunity;
+  async createChildChallenge(
+    @Args('challengeData') challengeData: CreateChallengeInput
+  ): Promise<IChallenge> {
+    return await this.challengeService.createChildChallenge(challengeData);
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)

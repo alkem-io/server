@@ -1,5 +1,4 @@
 import { ContextModule } from '@domain/context/context/context.module';
-import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -17,7 +16,6 @@ import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options
     ContextModule,
     CommunityModule,
     TagsetModule,
-    OpportunityModule,
     OrganisationModule,
     LifecycleModule,
     TypeOrmModule.forFeature([Challenge]),

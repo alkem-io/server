@@ -16,14 +16,14 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IChallenge } from './challenge.interface';
 import { Community } from '@domain/community/community';
 import { ICommunityable } from '@interfaces/communityable.interface';
 import { Organisation } from '@domain/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
-import { Context2, IContext } from '@domain/context';
+import { Context } from '@domain/context/context';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Entity()
 @ObjectType()
@@ -56,13 +56,9 @@ export class Challenge extends BaseEntity
   @Column()
   textID: string;
 
-  @Field(() => IContext, {
-    nullable: true,
-    description: 'The shared understanding for the challenge',
-  })
-  @OneToOne(() => Context2, { eager: true, cascade: true })
+  @OneToOne(() => Context, { eager: false, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
-  context?: Context2;
+  context?: Context;
 
   @OneToOne(
     () => Community,
@@ -72,7 +68,14 @@ export class Challenge extends BaseEntity
   @JoinColumn()
   community?: Community;
 
-  // Community
+  @OneToOne(() => Collaboration, {
+    eager: false,
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  collaboration?: Collaboration;
+
   @Field(() => [Organisation], {
     description: 'The Organisations that are leading this Challenge.',
   })
@@ -97,11 +100,18 @@ export class Challenge extends BaseEntity
   tagset?: Tagset;
 
   @OneToMany(
-    () => Opportunity,
-    opportunity => opportunity.challenge,
+    () => Challenge,
+    challenge => challenge.parentChallenge,
     { eager: false, cascade: true }
   )
-  opportunities?: Opportunity[];
+  childChallenges?: Challenge[];
+
+  @ManyToOne(
+    () => Challenge,
+    challenge => challenge.childChallenges,
+    { eager: false, cascade: false }
+  )
+  parentChallenge?: Challenge;
 
   @ManyToOne(
     () => Ecoverse,
