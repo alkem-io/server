@@ -1,9 +1,5 @@
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
@@ -14,8 +10,6 @@ import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 export class ChallengeResolverFields {
   constructor(private challengeService: ChallengeService) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
   @ResolveField('community', () => Community, {
     nullable: true,
     description: 'The community for the challenge.',

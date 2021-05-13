@@ -21,7 +21,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
-import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import validator from 'validator';
 import {
@@ -62,8 +61,7 @@ export class ChallengeService {
     // Community
     challenge.community = await this.communityService.createCommunity(
       challenge.name,
-      CommunityType.CHALLENGE,
-      [AuthorizationRoles.Members]
+      CommunityType.CHALLENGE
     );
 
     // Context

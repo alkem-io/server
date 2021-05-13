@@ -8,7 +8,6 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
-import { IDatabaseConfig } from '@src/common/interfaces/database.config.interface';
 import { DataManagementModule } from '@src/services/data-management/data-management.module';
 import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
 import { WinstonModule } from 'nest-winston';
@@ -22,6 +21,7 @@ import { ValidationPipe } from '@common/pipes/validation.pipe';
 import { IpfsModule } from './services/ipfs/ipfs.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 
 @Module({
   imports: [
@@ -40,12 +40,12 @@ import configuration from '@config/configuration';
         synchronize: false,
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        host: configService.get<IDatabaseConfig>('database')?.host,
-        port: configService.get<IDatabaseConfig>('database')?.port,
-        username: configService.get<IDatabaseConfig>('database')?.username,
-        password: configService.get<IDatabaseConfig>('database')?.password,
-        database: configService.get<IDatabaseConfig>('database')?.schema,
-        logging: configService.get<IDatabaseConfig>('database')?.logging,
+        host: configService.get('storage')?.database?.host,
+        port: configService.get('storage')?.database?.port,
+        username: configService.get('storage')?.database?.username,
+        password: configService.get('storage')?.database?.password,
+        database: configService.get('storage')?.database?.schema,
+        logging: configService.get('storage')?.database?.logging,
       }),
     }),
     WinstonModule.forRootAsync({
@@ -61,6 +61,7 @@ import configuration from '@config/configuration';
     }),
     ScalarsModule,
     AuthenticationModule,
+    AuthorizationModule,
     EcoverseModule,
     MetadataModule,
     DataManagementModule,

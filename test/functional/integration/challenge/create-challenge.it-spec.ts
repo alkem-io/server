@@ -125,11 +125,11 @@ describe('Create Challenge', () => {
 
     // Assert
     expect(responseChallenge.status).toBe(200);
+    expect(responseChallenge.body.data.createChallenge.community.name).toEqual(
+      challengeName + 'd'
+    );
     expect(
-      responseChallenge.body.data.createChallenge.community.groups[0].name
-    ).toEqual('members');
-    expect(
-      responseChallenge.body.data.createChallenge.community.groups[0].id
+      responseChallenge.body.data.createChallenge.community.id
     ).not.toBeNull();
   });
 

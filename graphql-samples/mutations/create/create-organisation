@@ -14,7 +14,7 @@ query variables:
 {
   "organisationData":
   {
-    "name": "Cherrytwist"
+    "name": "Cherrytwist",
     "textID": "ctrocks"
   }
 }

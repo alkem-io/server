@@ -8,20 +8,24 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { CreateOrganisationInput } from './organisation.dto.create';
-import { Organisation } from './organisation.entity';
-import { IOrganisation } from './organisation.interface';
-import { AuthorizationRoles } from '@core/authorization';
 import validator from 'validator';
-import { UpdateOrganisationInput } from './organisation.dto.update';
-import { CreateUserGroupInput } from '../user-group';
-import { DeleteOrganisationInput } from './organisation.dto.delete';
+import {
+  IOrganisation,
+  Organisation,
+  UpdateOrganisationInput,
+  DeleteOrganisationInput,
+  CreateOrganisationInput,
+} from '@domain/community/organisation';
+import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
+import { IUser } from '@domain/community/user';
+import { UserService } from '../user/user.service';
+import { AuthorizationCredential } from '@core/authorization';
 
 @Injectable()
 export class OrganisationService {
   constructor(
+    private userService: UserService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     @InjectRepository(Organisation)
@@ -41,11 +45,6 @@ export class OrganisationService {
 
     // Check that the mandatory groups for a challenge are created
     organisation.groups = [];
-    organisation.restrictedGroupNames = [AuthorizationRoles.Members];
-    await this.userGroupService.addMandatoryGroups(
-      organisation,
-      organisation.restrictedGroupNames
-    );
 
     const savedOrg = await this.organisationRepository.save(organisation);
     this.logger.verbose?.(
@@ -58,14 +57,7 @@ export class OrganisationService {
   async validateOrganisationCreationRequest(
     organisationData: CreateOrganisationInput
   ): Promise<boolean> {
-    if (!organisationData.name || organisationData.name.length == 0)
-      throw new ValidationException(
-        'Organisation creation missing required name',
-        LogContext.COMMUNITY
-      );
-
     const organisations = await this.getOrganisations();
-
     const organisation = organisations.find(
       o => o.name === organisationData.name
     );
@@ -170,6 +162,13 @@ export class OrganisationService {
   async getOrganisations(): Promise<Organisation[]> {
     const organisations = await this.organisationRepository.find();
     return organisations || [];
+  }
+
+  async getMembers(organisation: Organisation): Promise<IUser[]> {
+    return await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.OrganisationMember,
+      resourceID: organisation.id,
+    });
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {

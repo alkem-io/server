@@ -1,12 +1,14 @@
+import {
+  AuthorizationCommunityMember,
+  GraphqlGuard,
+} from '@core/authorization';
+import { AuthorizationRolesGlobal } from '@core/authorization/authorization.roles.global';
 import { Application } from '@domain/community/application/application.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
-import { Profiling } from '@src/common/decorators';
+import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import { Community } from './community.entity';
 import { CommunityService } from './community.service';
 
@@ -14,8 +16,12 @@ import { CommunityService } from './community.service';
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationCommunityMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
     description: 'Groups of users related to a Community.',
@@ -25,23 +31,27 @@ export class CommunityResolverFields {
     return await this.communityService.loadGroups(community);
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationCommunityMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
     description: 'All users that are contributing to this Community.',
   })
   @Profiling.api
   async members(@Parent() community: Community) {
-    return await this.communityService.getMembersOrFail(community);
+    return await this.communityService.getMembers(community);
   }
 
-  @Roles(
-    AuthorizationRoles.GlobalAdmins,
-    AuthorizationRoles.EcoverseAdmins,
-    AuthorizationRoles.CommunityAdmins
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
   )
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationCommunityMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [Application], {
     nullable: false,
     description: 'Application available for this community.',

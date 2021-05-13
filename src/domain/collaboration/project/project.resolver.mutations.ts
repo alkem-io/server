@@ -1,11 +1,8 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
 import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
 import { ProjectService } from './project.service';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import {
   UpdateProjectInput,
   Project,
@@ -14,7 +11,8 @@ import {
   ProjectEventInput,
 } from '@domain/collaboration/project';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(
@@ -22,8 +20,8 @@ export class ProjectResolverMutations {
     private projectLifecycleOptionsProvider: ProjectLifecycleOptionsProvider
   ) {}
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Deletes the specified Project.',
   })
@@ -33,8 +31,11 @@ export class ProjectResolverMutations {
     return await this.projectService.deleteProject(deleteData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Updates the specified Project.',
   })
@@ -44,8 +45,8 @@ export class ProjectResolverMutations {
     return await this.projectService.updateProject(projectData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new Aspect on the Project.',
   })
@@ -57,8 +58,8 @@ export class ProjectResolverMutations {
     return aspect;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.GlobalAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Trigger an event on the Project.',
   })

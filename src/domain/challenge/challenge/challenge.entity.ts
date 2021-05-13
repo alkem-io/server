@@ -16,7 +16,6 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { Context } from '@domain/context/context/context.entity';
-import { DID } from '@domain/agent/did/did.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
@@ -103,10 +102,6 @@ export class Challenge extends BaseEntity
     { eager: false, cascade: true }
   )
   opportunities?: Opportunity[];
-
-  @OneToOne(() => DID, { eager: true, cascade: true })
-  @JoinColumn()
-  DID!: DID;
 
   @ManyToOne(
     () => Ecoverse,

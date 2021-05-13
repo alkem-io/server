@@ -4,5 +4,4 @@ export interface IGroupable {
   id: number;
   name: string;
   groups?: IUserGroup[];
-  restrictedGroupNames?: string[];
 }

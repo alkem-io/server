@@ -1,5 +1,6 @@
 export enum LogContext {
   COMMUNITY = 'community',
+  AGENT = 'agent',
   API = 'api',
   AUTH = 'auth',
   AUTH_TOKEN = 'auth_token',

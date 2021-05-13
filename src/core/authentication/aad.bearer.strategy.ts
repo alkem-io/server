@@ -5,7 +5,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BearerStrategy } from 'passport-azure-ad';
 import { AuthenticationException } from '@common/exceptions';
 import { ITokenPayload } from 'passport-azure-ad';
-import { IAzureADConfig } from '@src/common/interfaces/aad.config.interface';
 import { AuthenticationService } from './authentication.service';
 
 @Injectable()
@@ -19,7 +18,7 @@ export class AadBearerStrategy extends PassportStrategy(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super({
-      ...configService.get<IAzureADConfig>('aad'),
+      ...configService.get('identity')?.authentication?.providers?.aad,
     });
   }
 

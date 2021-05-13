@@ -1,23 +1,23 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { Organisation } from './organisation.entity';
 import { User } from '@domain/community/user/user.entity';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { Profiling } from '@src/common/decorators';
+import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { OrganisationService } from './organisation.service';
 import {
   ValidationException,
-  GroupNotInitializedException,
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-
+import {
+  AuthorizationRolesGlobal,
+  GraphqlGuard,
+  AuthorizationOrganisationMember,
+} from '@core/authorization';
 @Resolver(() => Organisation)
 export class OrganisationResolverFields {
   constructor(
@@ -25,8 +25,12 @@ export class OrganisationResolverFields {
     private userGroupService: UserGroupService
   ) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationOrganisationMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: true,
     description: 'Groups defined on this organisation.',
@@ -49,30 +53,19 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Admin,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @AuthorizationOrganisationMember()
+  @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [User], {
     nullable: true,
-    description: 'Users that are contributing to this organisation.',
+    description: 'All users that are members of this Organisation.',
   })
   @Profiling.api
-  async contributors(@Parent() organisation: Organisation) {
-    const group = await this.userGroupService.getGroupByName(
-      organisation,
-      AuthorizationRoles.Members
-    );
-    if (!group)
-      throw new GroupNotInitializedException(
-        `Unable to locate members group on organisation: ${organisation.name}`,
-        LogContext.COMMUNITY
-      );
-    const members = group.members;
-    if (!members)
-      throw new GroupNotInitializedException(
-        `Members group not initialised on organisation: ${organisation.name}`,
-        LogContext.COMMUNITY
-      );
-    return members;
+  async members(@Parent() organisation: Organisation) {
+    return await this.organisationService.getMembers(organisation);
   }
 
   @ResolveField('profile', () => Profile, {

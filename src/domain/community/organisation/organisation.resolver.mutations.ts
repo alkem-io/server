@@ -1,10 +1,7 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { OrganisationService } from './organisation.service';
-import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import {
   CreateOrganisationInput,
   UpdateOrganisationInput,
@@ -17,6 +14,7 @@ import {
   IUserGroup,
   UserGroup,
 } from '@domain/community/user-group';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => Organisation)
 export class OrganisationResolverMutations {
@@ -25,8 +23,8 @@ export class OrganisationResolverMutations {
     private organisationService: OrganisationService
   ) {}
 
-  @Roles(AuthorizationRoles.GlobalAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Organisation, {
     description: 'Creates a new Organisation on the platform.',
   })
@@ -41,8 +39,11 @@ export class OrganisationResolverMutations {
     return organisation;
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new User Group for the specified Organisation.',
   })
@@ -54,8 +55,11 @@ export class OrganisationResolverMutations {
     return group;
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.CommunityAdmin,
+    AuthorizationRolesGlobal.Admin
+  )
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Organisation, {
     description: 'Updates the specified Organisation.',
   })
@@ -69,8 +73,8 @@ export class OrganisationResolverMutations {
     return org;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Organisation, {
     description: 'Deletes the specified Organisation.',
   })

@@ -1,7 +1,5 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { OpportunityService } from './opportunity.service';
 import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
 import {} from '@domain/context/actor-group';
@@ -21,7 +19,6 @@ import {
   Project,
   IProject,
 } from '@domain/collaboration/project';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import {} from './opportunity.dto.update';
 import {
   DeleteOpportunityInput,
@@ -31,7 +28,8 @@ import {
   OpportunityEventInput,
 } from '@domain/challenge/opportunity';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
@@ -39,8 +37,8 @@ export class OpportunityResolverMutations {
     private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
   ) {}
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Updates the Opportunity.',
   })
@@ -54,8 +52,8 @@ export class OpportunityResolverMutations {
     return Opportunity;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Deletes the Opportunity.',
   })
@@ -65,8 +63,8 @@ export class OpportunityResolverMutations {
     return await this.opportunityService.deleteOpportunity(deleteData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Create a new Project on the Opportunity',
   })
@@ -78,8 +76,8 @@ export class OpportunityResolverMutations {
     return project;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new Aspect on the Opportunity.',
   })
@@ -90,8 +88,8 @@ export class OpportunityResolverMutations {
     return await this.opportunityService.createAspect(aspectData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => ActorGroup, {
     description: 'Create a new Actor Group on the Opportunity.',
   })
@@ -105,8 +103,8 @@ export class OpportunityResolverMutations {
     return actorGroup;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Relation, {
     description: 'Create a new Relation on the Opportunity.',
   })
@@ -117,8 +115,8 @@ export class OpportunityResolverMutations {
     return await this.opportunityService.createRelation(relationData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.GlobalAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Trigger an event on an Opportunity.',
   })

@@ -196,42 +196,42 @@ export const addUserToGroupVariables = (id: number) => `
   }
 }`;
 
-export const assignGroupFocalPointMutation = `
-mutation assignGroupFocalPoint($membershipData: AssignUserGroupFocalPointInput!) {
-  assignGroupFocalPoint(membershipData: $membershipData) {
-      name,
-      id,
-      focalPoint {
-        name
-      }
-    }
-  }`;
+// export const assignGroupFocalPointMutation = `
+// mutation assignGroupFocalPoint($membershipData: AssignUserGroupFocalPointInput!) {
+//   assignGroupFocalPoint(membershipData: $membershipData) {
+//       name,
+//       id,
+//       focalPoint {
+//         name
+//       }
+//     }
+//   }`;
 
-export const assignGroupFocalPointVariables = (id: number) => `
-{
-  "membershipData": {
-    "userID": ${userId},
-    "groupID": ${id}
-  }
-}`;
+// export const assignGroupFocalPointVariables = (id: number) => `
+// {
+//   "membershipData": {
+//     "userID": ${userId},
+//     "groupID": ${id}
+//   }
+// }`;
 
-export const removeGroupFocalPointMutation = `
-mutation removeGroupFocalPoint($removeData: RemoveUserGroupFocalPoint!) {
-  removeGroupFocalPoint(removeData: $removeData) {
-      name,
-      id,
-      focalPoint {
-        name
-      }
-    }
-  }`;
+// export const removeGroupFocalPointMutation = `
+// mutation removeGroupFocalPoint($removeData: RemoveUserGroupFocalPoint!) {
+//   removeGroupFocalPoint(removeData: $removeData) {
+//       name,
+//       id,
+//       focalPoint {
+//         name
+//       }
+//     }
+//   }`;
 
-export const removeGroupFocalPointVariables = (id: number) => `
-{
-  "removeData": {
-    "groupID": ${id}
-  }
-}`;
+// export const removeGroupFocalPointVariables = (id: number) => `
+// {
+//   "removeData": {
+//     "groupID": ${id}
+//   }
+// }`;
 
 export const addChallengeLeadToOrganisationMutation = `
 mutation assignChallengeLead($assignInput: AssignChallengeLeadInput!) {
@@ -279,8 +279,6 @@ const mutations: Record<string, string> = {
   updateActorMutation,
   addUserToCommunityMutation,
   addUserToGroupMutation,
-  assignGroupFocalPointMutation,
-  removeGroupFocalPointMutation,
   addChallengeLeadToOrganisationMutation,
   removeUserFromGroupMutation,
   updateNonEcoverseMutation,
@@ -296,8 +294,6 @@ const variables: Record<string, (id: number, emailName?: any) => string> = {
   updateActorVariables,
   addUserToCommunityVariables,
   addUserToGroupVariables,
-  assignGroupFocalPointVariables,
-  removeGroupFocalPointVariables,
   addChallengeLeadToOrganisationVariables,
   removeUserFromGroupVariables,
   updateNonEcoverseVariables,

@@ -5,7 +5,6 @@ export interface ICommunity {
   id: number;
   name: string;
   groups?: IUserGroup[];
-  restrictedGroupNames: string[];
   applications?: IApplication[];
   parentCommunity?: ICommunity;
   type: string;

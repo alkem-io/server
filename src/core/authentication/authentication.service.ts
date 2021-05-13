@@ -7,7 +7,10 @@ export class AuthenticationService {
   constructor(private readonly userService: UserService) {}
 
   async createUserInfo(email: string): Promise<UserInfo> {
-    const knownUser = await this.userService.getUserWithGroups(email);
+    let knownUser;
+    try {
+      knownUser = await this.userService.getUserWithAgent(email);
+    } catch (_error) {}
     return { email, user: knownUser };
   }
 }

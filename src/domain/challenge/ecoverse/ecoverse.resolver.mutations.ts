@@ -3,26 +3,24 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import {
   CreateEcoverseInput,
   Ecoverse,
   IEcoverse,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver()
 export class EcoverseResolverMutations {
   constructor(
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
-  @Roles(AuthorizationRoles.GlobalAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Ecoverse, {
     description: 'Creates a new Ecoverse.',
   })
@@ -33,8 +31,8 @@ export class EcoverseResolverMutations {
     return await this.ecoverseService.createEcoverse(ecoverseData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Ecoverse, {
     description: 'Updates the Ecoverse.',
   })
@@ -46,8 +44,8 @@ export class EcoverseResolverMutations {
     return ctVerse;
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Creates a new Challenge within the specified Ecoverse.',
   })

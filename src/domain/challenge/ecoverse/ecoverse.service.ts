@@ -8,7 +8,6 @@ import {
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -28,10 +27,10 @@ import {
 } from '@domain/challenge/ecoverse';
 import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
-import { AuthorizationRoles } from '@core/authorization';
 import { CommunityType } from '@common/enums/community.types';
 import { IOpportunity } from '@domain/challenge/opportunity';
 import validator from 'validator';
+import { IUserGroup } from '@domain/community/user-group';
 
 @Injectable()
 export class EcoverseService {
@@ -68,18 +67,7 @@ export class EcoverseService {
 
     ecoverse.community = await this.communityService.createCommunity(
       ecoverse.name,
-      CommunityType.ECOVERSE,
-      [
-        AuthorizationRoles.Members,
-        AuthorizationRoles.EcoverseAdmins,
-        AuthorizationRoles.GlobalAdmins,
-        AuthorizationRoles.CommunityAdmins,
-      ]
-    );
-
-    // Disable searching on the mandatory platform groups
-    ecoverse.community.groups?.forEach(
-      group => (group.includeInSearch = false)
+      CommunityType.ECOVERSE
     );
 
     if (!ecoverse.host) {
@@ -130,6 +118,13 @@ export class EcoverseService {
       }
     );
     return ecoverseWithChallenges.challenges || [];
+  }
+
+  async getGroups(ecoverse: IEcoverse): Promise<IUserGroup[]> {
+    const ecoverseWithGroups = await this.getEcoverseByIdOrFail(ecoverse.id, {
+      relations: ['community'],
+    });
+    return ecoverseWithGroups.community?.groups || [];
   }
 
   async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
@@ -196,44 +191,6 @@ export class EcoverseService {
     );
 
     return challenge;
-  }
-
-  async addEcoverseAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
-    return await this.addUserToRestrictedGroup(
-      ecoverse,
-      user,
-      AuthorizationRoles.EcoverseAdmins
-    );
-  }
-
-  async addGlobalAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
-    return await this.addUserToRestrictedGroup(
-      ecoverse,
-      user,
-      AuthorizationRoles.GlobalAdmins
-    );
-  }
-
-  async addCommunityAdmin(ecoverse: IEcoverse, user: IUser): Promise<boolean> {
-    return await this.addUserToRestrictedGroup(
-      ecoverse,
-      user,
-      AuthorizationRoles.CommunityAdmins
-    );
-  }
-
-  async addUserToRestrictedGroup(
-    ecoverse: IEcoverse,
-    user: IUser,
-    groupName: string
-  ): Promise<boolean> {
-    const community = await this.getCommunity(ecoverse.id);
-
-    return await this.communityService.addUserToRestrictedGroup(
-      community.id,
-      user,
-      groupName
-    );
   }
 
   async update(ecoverseData: UpdateEcoverseInput): Promise<IEcoverse> {

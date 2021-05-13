@@ -10,6 +10,9 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
+import { AuthorizationCredential } from '@core/authorization';
+import { ICredential } from '@domain/agent';
+import { IUser } from '@domain/community/user';
 
 @Injectable()
 export class CommunityLifecycleOptionsProvider {
@@ -21,7 +24,8 @@ export class CommunityLifecycleOptionsProvider {
   ) {}
 
   async eventOnApplication(
-    applicationEventData: ApplicationEventInput
+    applicationEventData: ApplicationEventInput,
+    user?: IUser
   ): Promise<IApplication> {
     const applicationID = applicationEventData.ID;
     const application = await this.applicationService.getApplicationOrFail(
@@ -34,6 +38,8 @@ export class CommunityLifecycleOptionsProvider {
         LogContext.COMMUNITY
       );
 
+    const credentials = user?.agent?.credentials;
+
     // Send the event, translated if needed
     this.logger.verbose?.(
       `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${application.lifecycle.id}`,
@@ -44,7 +50,8 @@ export class CommunityLifecycleOptionsProvider {
         ID: application.lifecycle.id,
         eventName: applicationEventData.eventName,
       },
-      this.applicationLifecycleMachineOptions
+      this.applicationLifecycleMachineOptions,
+      credentials
     );
 
     return await this.applicationService.getApplicationOrFail(applicationID);
@@ -68,6 +75,21 @@ export class CommunityLifecycleOptionsProvider {
           userID: userID,
           communityID: communityID,
         });
+      },
+    },
+    guards: {
+      communityUpdateAuthorized: (_, event) => {
+        const invokingUserCredentials: ICredential[] = event.credentials;
+        for (const credential of invokingUserCredentials) {
+          if (
+            credential.type === AuthorizationCredential.GlobalAdmin ||
+            credential.type === AuthorizationCredential.GlobalAdminCommunity
+          ) {
+            return true;
+          }
+        }
+
+        return false;
       },
     },
   };

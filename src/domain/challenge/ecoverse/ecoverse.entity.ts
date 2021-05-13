@@ -13,7 +13,6 @@ import {
 } from 'typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Context } from '@domain/context/context/context.entity';
-import { DID } from '@domain/agent/did/did.entity';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IEcoverse } from './ecoverse.interface';
@@ -71,11 +70,6 @@ export class Ecoverse extends BaseEntity implements IEcoverse, ICommunityable {
   )
   @JoinColumn()
   community?: Community;
-
-  // The digital identity for the Ecoverse - critical for its trusted role
-  @OneToOne(() => DID, { eager: true, cascade: true })
-  @JoinColumn()
-  DID!: DID;
 
   //
   @OneToMany(

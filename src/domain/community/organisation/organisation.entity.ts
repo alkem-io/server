@@ -13,13 +13,11 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { DID } from '@domain/agent/did/did.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge';
-import { AuthorizationRoles } from '@core/authorization';
 
 @Entity()
 @ObjectType()
@@ -41,10 +39,6 @@ export class Organisation extends BaseEntity
   @Field(() => String, { nullable: false, description: '' })
   @Column()
   name: string;
-
-  @OneToOne(() => DID)
-  @JoinColumn()
-  DID!: DID;
 
   @Field(() => String, {
     nullable: false,
@@ -77,13 +71,9 @@ export class Organisation extends BaseEntity
   )
   challenges!: Challenge[];
 
-  // The restricted group names at the challenge level
-  restrictedGroupNames?: string[];
-
   constructor(textID: string) {
     super();
     this.name = '';
     this.textID = textID;
-    this.restrictedGroupNames = [AuthorizationRoles.Members];
   }
 }

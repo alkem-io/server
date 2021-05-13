@@ -7,7 +7,10 @@ export const applicationLifecycleConfig = {
   states: {
     new: {
       on: {
-        APPROVE: 'approved',
+        APPROVE: {
+          target: 'approved',
+          cond: 'communityUpdateAuthorized',
+        },
         REJECT: 'rejected',
       },
     },

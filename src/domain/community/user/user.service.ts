@@ -9,12 +9,9 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { MemberOf } from './memberof.composite';
 import validator from 'validator';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { ICommunityable } from '@interfaces/communityable.interface';
-import { ICommunity } from '../community/community.interface';
 import {
   UpdateUserInput,
   CreateUserInput,
@@ -22,11 +19,16 @@ import {
   IUser,
 } from '@domain/community/user';
 import { DeleteUserInput } from './user.dto.delete';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+import { AuthorizationCredential } from '@core/authorization';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { Agent, IAgent } from '@domain/agent/agent';
 
 @Injectable()
 export class UserService {
   constructor(
     private profileService: ProfileService,
+    private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -40,6 +42,10 @@ export class UserService {
       userData.profileData
     );
 
+    user.agent = await this.agentService.createAgent({
+      parentDisplayID: user.email,
+    });
+
     // Need to save to get the object identifiers assigned
     const savedUser = await this.userRepository.save(user);
     this.logger.verbose?.(
@@ -47,16 +53,31 @@ export class UserService {
       LogContext.COMMUNITY
     );
 
+    // Ensure the user has the global registered credential
+    if (!savedUser.agent)
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${savedUser.id}`,
+        LogContext.AUTH
+      );
+    await this.agentService.grantCredential({
+      type: AuthorizationCredential.GlobalRegistered,
+      agentID: savedUser.agent.id,
+    });
+
     return savedUser;
   }
 
-  async removeUser(deleteData: DeleteUserInput): Promise<IUser> {
+  async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserByIdOrFail(userID);
     const { id } = user;
 
     if (user.profile) {
       await this.profileService.deleteProfile(user.profile.id);
+    }
+
+    if (user.agent) {
+      await this.agentService.deleteAgent(user.agent.id);
     }
 
     const result = await this.userRepository.remove(user as User);
@@ -85,19 +106,21 @@ export class UserService {
     return true;
   }
 
-  async saveUser(user: IUser): Promise<boolean> {
-    await this.userRepository.save(user);
-    return true;
+  async saveUser(user: IUser): Promise<IUser> {
+    return await this.userRepository.save(user);
   }
 
   //Find a user either by id or email
-  async getUserOrFail(userID: string): Promise<IUser> {
+  async getUserOrFail(
+    userID: string,
+    options?: FindOneOptions<User>
+  ): Promise<IUser> {
     if (validator.isNumeric(userID)) {
       const idInt: number = parseInt(userID);
-      return await this.getUserByIdOrFail(idInt);
+      return await this.getUserByIdOrFail(idInt, options);
     }
 
-    return await this.getUserByEmailOrFail(userID);
+    return await this.getUserByEmailOrFail(userID, options);
   }
 
   async getUserByIdOrFail(
@@ -133,26 +156,63 @@ export class UserService {
     return user;
   }
 
-  async getUserWithGroups(email: string): Promise<IUser | undefined> {
-    const user = await this.getUserByEmail(email, {
-      relations: ['userGroups'],
+  async getUserAndCredentials(
+    userID: number
+  ): Promise<{ user: IUser; credentials: ICredential[] }> {
+    const user = await this.getUserByIdOrFail(userID, {
+      relations: ['agent'],
     });
 
-    if (!user) {
-      this.logger.verbose?.(
-        `No user with email ${email} exists!`,
-        LogContext.COMMUNITY
-      );
-      return undefined;
-    }
-
-    if (!user.userGroups) {
-      this.logger.verbose?.(
-        `User with email ${email} doesn't belong to any groups!`,
-        LogContext.COMMUNITY
+    if (!user.agent || !user.agent.credentials) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
       );
     }
+    return { user: user, credentials: user.agent.credentials };
+  }
 
+  async getUserAndAgent(
+    userID: number
+  ): Promise<{ user: IUser; agent: IAgent }> {
+    const user = await this.getUserByIdOrFail(userID, {
+      relations: ['agent'],
+    });
+
+    if (!user.agent) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
+    return { user: user, agent: user.agent };
+  }
+
+  async getUserWithAgent(userID: string): Promise<IUser> {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['agent'],
+    });
+
+    if (!user.agent || !user.agent.credentials) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
+    return user;
+  }
+
+  async getUserByIdWithAgent(userID: number): Promise<IUser> {
+    const user = await this.getUserByIdOrFail(userID, {
+      relations: ['agent'],
+    });
+
+    if (!user.agent || !user.agent.credentials) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
     return user;
   }
 
@@ -160,7 +220,6 @@ export class UserService {
     return (await this.userRepository.find()) || [];
   }
 
-  // Note: explicitly do not support updating of email addresses
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID);
 
@@ -199,14 +258,62 @@ export class UserService {
     return populatedUser;
   }
 
-  getCommunity(entity: ICommunityable): ICommunity {
-    const community = entity.community;
-    if (!community)
+  async getAgent(user: IUser): Promise<IAgent> {
+    const userWithAgent = await this.getUserByIdOrFail(user.id, {
+      relations: ['agent'],
+    });
+    const agent = userWithAgent.agent;
+    if (!agent)
       throw new EntityNotInitializedException(
-        `Community not initialised on entity: ${entity.id}`,
-        LogContext.COMMUNITY
+        `User Agent not initialized: ${user.id}`,
+        LogContext.AUTH
       );
-    return community;
+
+    return agent;
+  }
+
+  async usersWithCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<IUser[]> {
+    const matchingAgents = await this.agentService.findAgentsWithMatchingCredentials(
+      credentialCriteria
+    );
+
+    const users: IUser[] = [];
+    for (const matchedAgent of matchingAgents) {
+      const agent = await this.agentService.getAgentOrFail(matchedAgent.id, {
+        relations: ['user'],
+      });
+      const userID = (agent as Agent).user?.id;
+      if (userID) {
+        const user = await this.getUserByIdOrFail(userID, {
+          relations: ['agent'],
+        });
+        users.push(user);
+      }
+    }
+    return users;
+  }
+
+  getAgentOrFail(user: IUser): IAgent {
+    const agent = user.agent;
+    if (!agent)
+      throw new EntityNotInitializedException(
+        `Unable to find agent for user: ${user.id}`,
+        LogContext.AUTH
+      );
+    return agent;
+  }
+
+  async hasMatchingCredential(
+    user: IUser,
+    credentialCriteria: CredentialsSearchInput
+  ) {
+    const agent = this.getAgentOrFail(user);
+    return await this.agentService.hasValidCredential(
+      agent.id,
+      credentialCriteria
+    );
   }
 
   // Membership related functionality
@@ -224,41 +331,5 @@ export class UserService {
     } else {
       existingEntity.groups?.push(group);
     }
-  }
-
-  async getMemberOf(user: User): Promise<MemberOf> {
-    const membership = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.userGroups', 'userGroup')
-      .leftJoinAndSelect('userGroup.community', 'community')
-      .leftJoinAndSelect('userGroup.organisation', 'organisation')
-      .where('user.id = :userId')
-      .setParameters({ userId: `${user.id}` })
-      .getOne();
-
-    const memberOf = new MemberOf();
-    memberOf.communities = [];
-    memberOf.organisations = [];
-
-    if (!membership) return memberOf;
-    if (!membership.userGroups) return memberOf;
-
-    // Iterate over the groups
-    for (const group of membership?.userGroups) {
-      // Set flag on the group to block population of the members field
-      group.membersPopulationEnabled = false;
-      const community = group.community;
-      const organisation = group.organisation;
-
-      if (community) {
-        this.addGroupToEntity(memberOf.communities, community, group);
-        group.community = undefined;
-      } else if (organisation) {
-        this.addGroupToEntity(memberOf.organisations, organisation, group);
-        group.organisation = undefined;
-      }
-    }
-
-    return memberOf;
   }
 }

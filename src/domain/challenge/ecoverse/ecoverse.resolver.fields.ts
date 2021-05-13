@@ -1,9 +1,6 @@
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import { Community } from '@domain/community/community';
@@ -24,7 +21,8 @@ import {
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -36,8 +34,6 @@ export class EcoverseResolverFields {
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
   @ResolveField('community', () => Community, {
     nullable: true,
     description: 'The community for the ecoverse.',
@@ -91,8 +87,6 @@ export class EcoverseResolverFields {
     );
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
   @ResolveField('projects', () => [Project], {
     nullable: false,
     description: 'All projects within this ecoverse',
@@ -102,8 +96,6 @@ export class EcoverseResolverFields {
     return await this.projectService.getProjects();
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
   @ResolveField('project', () => Project, {
     nullable: false,
     description: 'A particular Project, identified by the ID',
@@ -113,8 +105,8 @@ export class EcoverseResolverFields {
     return await this.projectService.getProjectOrFail(id);
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: false,
     description: 'The User Groups on this Ecoverse',
@@ -124,8 +116,8 @@ export class EcoverseResolverFields {
     return await this.groupService.getGroups();
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @UseGuards(GraphqlGuard)
   @ResolveField('groupsWithTag', () => [UserGroup], {
     nullable: false,
     description: 'All groups on this Ecoverse that have the provided tag',
@@ -135,8 +127,8 @@ export class EcoverseResolverFields {
     return await this.groupService.getGroupsWithTag(tag);
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @UseGuards(GraphqlGuard)
   @ResolveField('group', () => UserGroup, {
     nullable: false,
     description:
@@ -144,14 +136,14 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async group(@Args('ID') id: string): Promise<IUserGroup> {
-    const group = await this.groupService.getUserGroupOrFail(id, {
-      relations: ['members', 'focalPoint'],
-    });
-    return group;
+    return await this.groupService.getUserGroupOrFail(id);
   }
 
-  @Roles(AuthorizationRoles.Members, AuthorizationRoles.CommunityAdmins)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(
+    AuthorizationRolesGlobal.Registered,
+    AuthorizationRolesGlobal.CommunityAdmin
+  )
+  @UseGuards(GraphqlGuard)
   @ResolveField('application', () => Application, {
     nullable: false,
     description: 'All applications to join',

@@ -86,18 +86,9 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @ManyToOne(() => Community, { eager: false, cascade: false })
   parentCommunity?: Community;
 
-  // The restricted group names at the Community level
-  @Column('simple-array')
-  restrictedGroupNames: string[];
-
-  constructor(
-    name: string,
-    communityType: string,
-    restrictedGroupNames: string[]
-  ) {
+  constructor(name: string, communityType: string) {
     super();
     this.name = name;
-    this.restrictedGroupNames = restrictedGroupNames;
     this.type = communityType;
   }
 }
