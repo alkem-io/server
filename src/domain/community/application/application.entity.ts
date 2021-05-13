@@ -3,6 +3,7 @@ import { User } from '@domain/community/user/user.entity';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
   BaseEntity,
+  Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
@@ -34,6 +35,9 @@ export class Application extends BaseEntity implements IApplication {
 
   @VersionColumn()
   version?: number;
+
+  @Column()
+  ecoverseID?: string;
 
   @Field(() => Lifecycle, { nullable: false })
   @OneToOne(() => Lifecycle, { eager: true, cascade: true })

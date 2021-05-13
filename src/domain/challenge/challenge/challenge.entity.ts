@@ -49,6 +49,9 @@ export class Challenge extends BaseEntity
   @Column()
   name: string;
 
+  @Column()
+  ecoverseID?: string;
+
   @Field(() => String, {
     nullable: false,
     description: 'A short text identifier for this challenge',

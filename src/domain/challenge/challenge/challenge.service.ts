@@ -32,12 +32,14 @@ import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { ChallengeLifecycleTemplates } from '@common/enums/challenge.lifecycle.templates';
 import { IContext } from '@domain/context/context';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Injectable()
 export class ChallengeService {
   constructor(
     private contextService: ContextService,
     private communityService: CommunityService,
+    private collaborationService: CollaborationService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
@@ -47,9 +49,11 @@ export class ChallengeService {
   ) {}
 
   async createChallenge(
-    challengeData: CreateChallengeInput
+    challengeData: CreateChallengeInput,
+    ecoverseID?: string
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
+    (challenge as Challenge).ecoverseID = ecoverseID;
     challenge.childChallenges = [];
 
     // Community
@@ -59,12 +63,15 @@ export class ChallengeService {
 
     // Context
     if (!challengeData.context) {
-      challengeData.context = {};
+      challengeData.context = await this.contextService.createContext({});
     } else {
       challenge.context = await this.contextService.createContext(
         challengeData.context
       );
     }
+
+    // Collaboration
+    challenge.collaboration = await this.collaborationService.createCollaboration();
 
     // Remaining initialisation
     challenge.tagset = this.tagsetService.createDefaultTagset();
@@ -281,7 +288,10 @@ export class ChallengeService {
 
     await this.validateChildChallenge(challenge, challengeData);
 
-    const childChallenge = await this.createChallenge(challengeData);
+    const childChallenge = await this.createChallenge(
+      challengeData,
+      (challenge as Challenge).ecoverseID
+    );
 
     challenge.childChallenges?.push(childChallenge);
 

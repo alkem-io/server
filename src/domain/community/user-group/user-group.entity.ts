@@ -36,6 +36,9 @@ export class UserGroup extends BaseEntity implements IUserGroup {
   @Column()
   name: string;
 
+  @Column()
+  ecoverseID?: string;
+
   @Field(() => Profile, {
     nullable: true,
     description: 'The profile for the user group',

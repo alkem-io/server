@@ -62,8 +62,13 @@ export class EcoverseResolverFields {
     description: 'A particular Challenge, either by its ID or textID',
   })
   @Profiling.api
-  async challenge(@Args('ID') id: string): Promise<IChallenge> {
-    return await this.challengeService.getChallengeOrFail(id);
+  async challenge(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID') id: string
+  ): Promise<IChallenge> {
+    return await this.challengeService.getChallengeOrFail(id, {
+      where: { ecoverseID: ecoverse.id.toString() },
+    });
   }
 
   @ResolveField('opportunities', () => [Challenge], {
@@ -80,8 +85,8 @@ export class EcoverseResolverFields {
     description: 'All projects within this ecoverse',
   })
   @Profiling.api
-  async projects(): Promise<IProject[]> {
-    return await this.projectService.getProjects();
+  async projects(@Parent() ecoverse: Ecoverse): Promise<IProject[]> {
+    return await this.projectService.getProjects(ecoverse.id.toString());
   }
 
   @ResolveField('project', () => Project, {
@@ -89,8 +94,13 @@ export class EcoverseResolverFields {
     description: 'A particular Project, identified by the ID',
   })
   @Profiling.api
-  async project(@Args('ID') id: string): Promise<IProject> {
-    return await this.projectService.getProjectOrFail(id);
+  async project(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID') projectID: string
+  ): Promise<IProject> {
+    return await this.projectService.getProjectOrFail(projectID, {
+      where: { ecoverseID: ecoverse.id.toString() },
+    });
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
@@ -100,8 +110,10 @@ export class EcoverseResolverFields {
     description: 'The User Groups on this Ecoverse',
   })
   @Profiling.api
-  async groups(): Promise<IUserGroup[]> {
-    return await this.groupService.getGroups();
+  async groups(@Parent() ecoverse: Ecoverse): Promise<IUserGroup[]> {
+    return await this.groupService.getGroups({
+      ecoverseID: ecoverse.id.toString(),
+    });
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
@@ -111,8 +123,13 @@ export class EcoverseResolverFields {
     description: 'All groups on this Ecoverse that have the provided tag',
   })
   @Profiling.api
-  async groupsWithTag(@Args('tag') tag: string): Promise<IUserGroup[]> {
-    return await this.groupService.getGroupsWithTag(tag);
+  async groupsWithTag(
+    @Parent() ecoverse: Ecoverse,
+    @Args('tag') tag: string
+  ): Promise<IUserGroup[]> {
+    return await this.groupService.getGroupsWithTag(tag, {
+      ecoverseID: ecoverse.id.toString(),
+    });
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
@@ -123,8 +140,13 @@ export class EcoverseResolverFields {
       'The user group with the specified id anywhere in the ecoverse',
   })
   @Profiling.api
-  async group(@Args('ID') id: string): Promise<IUserGroup> {
-    return await this.groupService.getUserGroupOrFail(id);
+  async group(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID') groupID: string
+  ): Promise<IUserGroup> {
+    return await this.groupService.getUserGroupOrFail(groupID, {
+      where: { ecoverseID: ecoverse.id.toString() },
+    });
   }
 
   @AuthorizationGlobalRoles(
@@ -136,7 +158,12 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'All applications to join',
   })
-  async application(@Args('ID') id: number): Promise<IApplication> {
-    return await this.applicationService.getApplicationOrFail(id);
+  async application(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID') applicationID: number
+  ): Promise<IApplication> {
+    return await this.applicationService.getApplicationOrFail(applicationID, {
+      where: { ecoverseID: ecoverse.id.toString() },
+    });
   }
 }

@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  OneToMany,
+  ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -45,11 +45,7 @@ export class Ecoverse extends BaseEntity implements IEcoverse {
   @VersionColumn()
   version?: number;
 
-  @OneToMany(
-    () => Organisation,
-    host => host.hostedEcoverses,
-    { eager: false, cascade: true }
-  )
+  @ManyToOne(() => Organisation, { eager: false, cascade: false })
   @Field(() => Organisation, {
     nullable: true,
     description: 'The organisation that hosts this Ecoverse instance',

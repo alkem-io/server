@@ -47,9 +47,9 @@ export class ChallengeResolverFields {
     return await this.challengeService.getLifecycle(challenge.id);
   }
 
-  @ResolveField('opportunities', () => [Challenge], {
+  @ResolveField('childChallenges', () => [Challenge], {
     nullable: true,
-    description: 'The set of opportunities within this challenge.',
+    description: 'The set of child Challenges within this challenge.',
   })
   @Profiling.api
   async challenges(@Parent() challenge: Challenge) {

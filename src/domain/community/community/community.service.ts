@@ -72,13 +72,14 @@ export class CommunityService {
   }
 
   // Loads the group into the Community entity if not already present
-  async loadGroups(community: ICommunity): Promise<IUserGroup[]> {
-    if (community.groups && community.groups.length > 0) {
-      // Community already has groups loaded
-      return community.groups;
+  async getUserGroups(community: ICommunity): Promise<IUserGroup[]> {
+    if (!community.groups) {
+      throw new EntityNotInitializedException(
+        `Community not initialized: ${community.name}`,
+        LogContext.COMMUNITY
+      );
     }
-
-    return await this.userGroupService.getGroupsOnGroupable(community);
+    return community.groups;
   }
 
   async getCommunityOrFail(
@@ -217,7 +218,7 @@ export class CommunityService {
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
-      relations: ['applications', 'parentCommunity'],
+      relations: ['applications', 'parentCommunity', 'challenge'],
     })) as Community;
 
     const existingApplication = community.applications?.find(
@@ -244,8 +245,15 @@ export class CommunityService {
         );
     }
 
+    const ecoverseID = community.challenge?.ecoverseID;
+    if (!ecoverseID)
+      throw new EntityNotInitializedException(
+        `Unable to locate containing ecoverse: ${community.id}`,
+        LogContext.COMMUNITY
+      );
     const application = await this.applicationService.createApplication(
-      applicationData
+      applicationData,
+      ecoverseID
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);

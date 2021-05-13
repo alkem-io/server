@@ -28,18 +28,19 @@ export class ApplicationService {
   ) {}
 
   async createApplication(
-    applicationData: CreateApplicationInput
+    applicationData: CreateApplicationInput,
+    ecoverseID?: string
   ): Promise<IApplication> {
-    const application: IApplication = Application.create(applicationData);
-    const user = await this.userService.getUserOrFail(
+    const application = Application.create(applicationData);
+    application.ecoverseID = ecoverseID;
+    (application as IApplication).user = await this.userService.getUserOrFail(
       applicationData.userId.toString()
     );
-    application.user = user;
 
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
-    application.lifecycle = await this.lifecycleService.createLifecycle(
+    (application as IApplication).lifecycle = await this.lifecycleService.createLifecycle(
       application.id.toString(),
       applicationLifecycleConfig
     );

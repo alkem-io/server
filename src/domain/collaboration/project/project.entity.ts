@@ -42,6 +42,9 @@ export class Project extends BaseEntity implements IProject {
   @Column()
   textID: string;
 
+  @Column()
+  ecoverseID?: string;
+
   @Field(() => String, { nullable: false, description: '' })
   @Column()
   name: string;

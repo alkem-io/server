@@ -33,8 +33,12 @@ export class ProjectService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createProject(projectData: CreateProjectInput): Promise<IProject> {
+  async createProject(
+    projectData: CreateProjectInput,
+    ecoverseID?: string
+  ): Promise<IProject> {
     const project: IProject = Project.create(projectData);
+    (project as Project).ecoverseID = ecoverseID;
 
     await this.projectRepository.save(project);
 
@@ -95,17 +99,16 @@ export class ProjectService {
     );
   }
 
-  async getProjects(): Promise<Project[]> {
-    const projects = await this.projectRepository.find();
+  async getProjects(ecoverseID: string): Promise<Project[]> {
+    const projects = await this.projectRepository.find({
+      ecoverseID: ecoverseID,
+    });
     return projects || [];
   }
 
   async updateProject(projectData: UpdateProjectInput): Promise<IProject> {
     const project = await this.getProjectOrFail(projectData.ID);
 
-    // Note: do not update the textID
-
-    // Copy over the received data
     if (projectData.name) {
       project.name = projectData.name;
     }

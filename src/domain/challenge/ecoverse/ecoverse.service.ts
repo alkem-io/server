@@ -1,9 +1,6 @@
 import { IChallenge, CreateChallengeInput } from '@domain/challenge/challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { ContextService } from '@domain/context/context/context.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
-
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -21,7 +18,6 @@ import {
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { ICommunity } from '@domain/community/community';
-import { CommunityService } from '@domain/community/community/community.service';
 import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
 
@@ -30,9 +26,6 @@ export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
     private challengeService: ChallengeService,
-    private contextService: ContextService,
-    private communityService: CommunityService,
-    private tagsetService: TagsetService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -41,13 +34,16 @@ export class EcoverseService {
   async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
     const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
     await this.ecoverseRepository.save(ecoverse);
-    ecoverse.challenge = await this.challengeService.createChallenge({
-      parentID: ecoverse.id,
-      name: `ecoverse-${ecoverseData.name}`,
-      context: ecoverseData.context,
-      textID: `ecoverse-${ecoverseData.textID}`,
-      tags: ecoverseData.tags,
-    });
+    ecoverse.challenge = await this.challengeService.createChallenge(
+      {
+        parentID: ecoverse.id,
+        name: `ecoverse-${ecoverseData.name}`,
+        context: ecoverseData.context,
+        textID: `ecoverse-${ecoverseData.textID}`,
+        tags: ecoverseData.tags,
+      },
+      ecoverse.id.toString()
+    );
 
     if (ecoverseData.hostID) {
       ecoverse.host = await this.organisationService.getOrganisationOrFail(
@@ -55,7 +51,7 @@ export class EcoverseService {
       );
     } else {
       ecoverse.host = await this.organisationService.createOrganisation({
-        name: 'Default host organisation',
+        name: `host-org-${ecoverseData.textID}`,
         textID: `host-${ecoverseData.textID}`,
       });
     }
@@ -187,11 +183,7 @@ export class EcoverseService {
   }
 
   async getDefaultEcoverseId(): Promise<number> {
-    const ecoverse = await this.ecoverseRepository
-      .createQueryBuilder('ecoverse')
-      .select('ecoverse.id')
-      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
-
+    const ecoverse = await this.ecoverseRepository.findOne();
     if (!ecoverse) {
       throw new ValidationException(
         'Ecoverse is missing!',

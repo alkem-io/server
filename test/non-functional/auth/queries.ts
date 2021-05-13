@@ -75,7 +75,8 @@ export const challengesName = () => '{ ecoverse{ challenges { name }}}';
 
 export const challengesTextId = () => '{ ecoverse{ challenges { textID }}}';
 
-export const challengesState = () => '{ ecoverse{ challenges { lifecycle{state} }}}';
+export const challengesState = () =>
+  '{ ecoverse{ challenges { lifecycle{state} }}}';
 
 export const challengesContext = () =>
   '{ ecoverse{ challenges { context { who }}}}';
@@ -104,7 +105,7 @@ export const challengeName = (id: number) =>
 export const challengeTextId = (id: number) =>
   `{ecoverse{  challenge(ID: "${id}") { textID }}}`;
 
-  export const challengeState = (id: number) =>
+export const challengeState = (id: number) =>
   `{ecoverse{  challenge(ID: "${id}") { lifecycle{state} }}}`;
 export const challengeContext = (id: number) =>
   `{ecoverse{  challenge(ID: "${id}") { context { who }}}}`;
@@ -132,7 +133,8 @@ export const opportunitiesName = () => '{ecoverse{  opportunities { name }}}';
 export const opportunitiesTextId = () =>
   '{ecoverse{  opportunities { textID }}}';
 
-  export const opportunitiesState = () => '{ecoverse{  opportunities { lifecycle{state} }}}';
+export const opportunitiesState = () =>
+  '{ecoverse{  opportunities { lifecycle{state} }}}';
 export const opportunitiesContext = () =>
   '{ecoverse{  opportunities { context { who }}}}';
 
@@ -167,9 +169,10 @@ export const projectsTextId = () => '{ecoverse{  projects { textID }}}';
 export const projectsDescription = () =>
   '{ecoverse{  projects { description }}}';
 
-  export const projectsState = () => '{ecoverse{  projects { lifecycle{state} }}}';
+export const projectsState = () =>
+  '{ecoverse{  projects { lifecycle{state} }}}';
 
-  export const projectsTagset = () => '{ecoverse{  projects { tagset { name }}}}';
+export const projectsTagset = () => '{ecoverse{  projects { tagset { name }}}}';
 
 export const projectsAspects = () =>
   '{ecoverse{ projects { aspects { title }}}}';

@@ -13,7 +13,6 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
@@ -46,12 +45,6 @@ export class Organisation extends BaseEntity
   })
   @Column()
   textID: string;
-
-  @OneToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.host
-  )
-  hostedEcoverses?: Ecoverse[];
 
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()

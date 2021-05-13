@@ -135,37 +135,20 @@ export class BootstrapService {
 
   async ensureEcoverseSingleton() {
     this.logger.verbose?.(
-      '=== Ensuring single ecoverse is present ===',
+      '=== Ensuring at least one ecoverse is present ===',
       LogContext.BOOTSTRAP
     );
     const ecoverseCount = await this.ecoverseRepository.count();
     if (ecoverseCount == 0) {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
-      // Create a new ecoverse
-      const ecoverse = await this.ecoverseService.createEcoverse({
+      return await this.ecoverseService.createEcoverse({
         textID: 'Eco1',
         name: 'Empty ecoverse',
         context: {
           tagline: 'An empty ecoverse to be populated',
         },
       });
-
-      this.logger.verbose?.('........populating...', LogContext.BOOTSTRAP);
-      await this.ecoverseRepository.save(ecoverse);
-      return ecoverse;
-    }
-    if (ecoverseCount == 1) {
-      this.logger.verbose?.(
-        '...single ecoverse - verified',
-        LogContext.BOOTSTRAP
-      );
-    }
-    if (ecoverseCount > 1) {
-      this.logger.warn?.(
-        `...multiple ecoverses detected: ${ecoverseCount}`,
-        LogContext.BOOTSTRAP
-      );
     }
   }
 }

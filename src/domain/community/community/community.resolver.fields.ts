@@ -28,7 +28,7 @@ export class CommunityResolverFields {
   })
   @Profiling.api
   async groups(@Parent() community: Community) {
-    return await this.communityService.loadGroups(community);
+    return await this.communityService.getUserGroups(community);
   }
 
   @AuthorizationGlobalRoles(
