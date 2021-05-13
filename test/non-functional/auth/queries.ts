@@ -94,7 +94,7 @@ export const challengesGroups = () =>
   '{ ecoverse{ challenges {community {groups {members {name}}}}}}';
 
 export const challengesContributors = () =>
-  '{ecoverse{ challenges {community {groups {members {name}}}}}}';
+  '{ecoverse{ challenges {community{id members{id}}}}}';
 
 export const challengesOpportunities = () =>
   '{ ecoverse{ challenges { opportunities { name }}}}';
@@ -123,7 +123,7 @@ export const challengeGroups = (id: number) =>
   `{ecoverse{  challenge(ID: "${id}") {community {groups {name}}}}}`;
 
 export const challengeContributors = (id: number) =>
-  `{ecoverse{  challenge(ID: "${id}") {community {groups {members {name}}}}}}`;
+  `{ecoverse{  challenge(ID: "${id}") {community{id members{id}}}}}`;
 
 export const challengeOpportunities = (id: number) =>
   `{ecoverse{  challenge(ID: "${id}") { opportunities { name }}}}`;
@@ -142,7 +142,7 @@ export const opportunitiesGroups = () =>
   '{ecoverse{  opportunities { community{groups { name }}}}}';
 
 export const opportunitiesContributors = () =>
-  '{ecoverse{  opportunities {community {groups {members {name}}}}}}';
+  '{ecoverse{  opportunities {community{id members{id}}}}}';
 
 export const opportunitiesProjectsName = () =>
   '{ecoverse{  opportunities { projects { name }}}}';
