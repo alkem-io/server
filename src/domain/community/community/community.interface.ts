@@ -7,5 +7,4 @@ export interface ICommunity {
   groups?: IUserGroup[];
   applications?: IApplication[];
   parentCommunity?: ICommunity;
-  type: string;
 }

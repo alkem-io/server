@@ -39,8 +39,8 @@ export class CommunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createCommunity(name: string, type: string): Promise<ICommunity> {
-    const community = new Community(name, type);
+  async createCommunity(name: string): Promise<ICommunity> {
+    const community = new Community(name);
 
     community.groups = [];
     await this.communityRepository.save(community);

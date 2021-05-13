@@ -40,13 +40,6 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @Column()
   name: string;
 
-  @Field(() => String, {
-    nullable: false,
-    description: 'The type of the Community',
-  })
-  @Column()
-  type: string;
-
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.community,
@@ -72,9 +65,8 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @ManyToOne(() => Community, { eager: false, cascade: false })
   parentCommunity?: Community;
 
-  constructor(name: string, communityType: string) {
+  constructor(name: string) {
     super();
     this.name = name;
-    this.type = communityType;
   }
 }
