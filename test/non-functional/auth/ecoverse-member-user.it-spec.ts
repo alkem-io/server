@@ -36,7 +36,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT ecoverse member user - queries - authorized', () => {
+describe.skip('DDT ecoverse member user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expected             | expectedForb

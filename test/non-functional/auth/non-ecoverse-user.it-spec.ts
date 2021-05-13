@@ -39,7 +39,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT non-ecoverse user - queries - Not authorized', () => {
+describe.skip('DDT non-ecoverse user - queries - Not authorized', () => {
   // Arrange
   test.each`
     query                                | idName           | expectedAuth         | expectedForb
@@ -105,7 +105,7 @@ describe('DDT non-ecoverse user - queries - Not authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT non-ecoverse user - queries - authorized', () => {
+describe.skip('DDT non-ecoverse user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expectedAuth         | expectedForb
@@ -164,7 +164,7 @@ describe('DDT non-ecoverse user - queries - authorized', () => {
   );
 });
 
-describe('DDT non-ecoverse user - Create mutations - Not authorized', () => {
+describe.skip('DDT non-ecoverse user - Create mutations - Not authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -206,7 +206,7 @@ describe('DDT non-ecoverse user - Create mutations - Not authorized', () => {
   );
 });
 
-describe('DDT non-ecoverse user - Create mutations - authorized', () => {
+describe.skip('DDT non-ecoverse user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName             | expected
@@ -238,7 +238,7 @@ describe('DDT non-ecoverse user - Create mutations - authorized', () => {
   );
 });
 
-describe('DDT non-ecoverse user - Update mutations - NOT authorized', () => {
+describe.skip('DDT non-ecoverse user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName               | expected
@@ -309,7 +309,7 @@ describe.skip('DDT non-ecoverse user - Update mutations - authorized', () => {
   );
 });
 
-describe('DDT non-ecoverse user - Remove mutations - NOT authorized', () => {
+describe.skip('DDT non-ecoverse user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected
