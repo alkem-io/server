@@ -15,8 +15,10 @@ export class WinstonConfigService {
           winston.format.timestamp(),
           nestWinstonModuleUtilities.format.nestLike()
         ),
-        level: this.configService.get('monitoring')?.logging?.level,
-        silent: !this.configService.get('monitoring')?.logging
+        level: this.configService
+          .get('monitoring')
+          ?.logging?.level.toLowerCase(),
+        silent: this.configService.get('monitoring')?.logging
           ?.consoleLoggingEnabled,
       }),
     ];
@@ -30,18 +32,20 @@ export class WinstonConfigService {
               '@timestamp': new Date().getTime(),
               severity: logData.level,
               message: `[${logData.level}] LOG Message: ${logData.message}`,
-              environment: this.configService.get('monitoring')?.elastic
+              environment: this.configService.get('hosting')
                 ?.environment as string,
               fields: { ...logData.meta },
             };
           },
           clientOpts: {
             cloud: {
-              id: process.env.ELASTIC_CLOUD_ID || '',
+              id: this.configService.get('monitoring')?.elastic?.cloud?.id,
             },
             auth: {
-              username: process.env.ELASTIC_CLOUD_USERNAME || '',
-              password: process.env.ELASTIC_CLOUD_PASSWORD || '',
+              username: this.configService.get('monitoring')?.elastic?.cloud
+                ?.username,
+              password: this.configService.get('monitoring')?.elastic?.cloud
+                ?.password,
             },
           },
         })
