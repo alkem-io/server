@@ -166,7 +166,6 @@ export class SearchService {
         .leftJoinAndSelect('group.profile', 'profile')
         .where('group.name like :term')
         .orWhere('profile.description like :term')
-        .andWhere('group.includeInSearch = true')
         .setParameters({ term: `%${term}%` })
         .getMany();
       // Create results for each match
