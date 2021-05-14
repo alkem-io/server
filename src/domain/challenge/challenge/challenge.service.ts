@@ -55,7 +55,7 @@ export class ChallengeService {
     ecoverseID: string
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
-
+    challenge.ecoverseID = ecoverseID;
     challenge.childChallenges = [];
 
     // Community
