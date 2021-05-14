@@ -6,6 +6,7 @@ import { BearerStrategy } from 'passport-azure-ad';
 import { AuthenticationException } from '@common/exceptions';
 import { ITokenPayload } from 'passport-azure-ad';
 import { AuthenticationService } from './authentication.service';
+import { ConfigurationTypes } from '@common/enums';
 
 @Injectable()
 export class AadBearerStrategy extends PassportStrategy(
@@ -18,7 +19,8 @@ export class AadBearerStrategy extends PassportStrategy(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super({
-      ...configService.get('identity')?.authentication?.providers?.aad,
+      ...configService.get(ConfigurationTypes.Identity)?.authentication
+        ?.providers?.aad,
     });
   }
 

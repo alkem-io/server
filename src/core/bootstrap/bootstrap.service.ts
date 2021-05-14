@@ -9,7 +9,7 @@ import fs from 'fs';
 import * as defaultRoles from '@templates/authorisation-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 @Injectable()
@@ -31,8 +31,9 @@ export class BootstrapService {
       this.logConfiguration();
 
       Profiling.logger = this.logger;
-      const profilingEnabled = this.configService.get('monitoring')?.logging
-        ?.profilingEnabled;
+      const profilingEnabled = this.configService.get(
+        ConfigurationTypes.Monitoring
+      )?.logging?.profilingEnabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
 
       await this.ensureEcoverseSingleton();
@@ -47,23 +48,17 @@ export class BootstrapService {
       '==== Configuration - Start ===',
       LogContext.BOOTSTRAP
     );
-    this.logConfigLevel('hosting', this.configService.get('monitoring'));
-    this.logConfigLevel('bootstrap', this.configService.get('bootstrap'));
-    this.logConfigLevel('security', this.configService.get('security'));
-    this.logConfigLevel('monitoring', this.configService.get('monitoring'));
-    this.logConfigLevel('identity', this.configService.get('identity'));
-    this.logConfigLevel(
-      'communications',
-      this.configService.get('communications')
-    );
-    this.logConfigLevel('storage', this.configService.get('storage'));
+
+    const values = Object.values(ConfigurationTypes);
+    for (const value of values) {
+      this.logConfigLevel(value, this.configService.get(value));
+    }
     this.logger.verbose?.('==== Configuration - End ===', LogContext.BOOTSTRAP);
   }
 
   logConfigLevel(key: any, value: any, indent = '', incrementalIndent = '  ') {
     if (typeof value === 'object') {
       const msg = `${indent}${key}:`;
-      //console.log(msg);
       this.logger.verbose?.(`${msg}`, LogContext.BOOTSTRAP);
       Object.keys(value).forEach(childKey => {
         const childValue = value[childKey];
@@ -73,13 +68,13 @@ export class BootstrapService {
     } else {
       const msg = `${indent}==> ${key}: ${value}`;
       this.logger.verbose?.(`${msg}`, LogContext.BOOTSTRAP);
-      //console.log(msg);
     }
   }
 
   async bootstrapProfiles() {
-    const bootstrapFilePath = this.configService.get('bootstrap')
-      ?.authorisationBootstrapPath as string;
+    const bootstrapFilePath = this.configService.get(
+      ConfigurationTypes.Bootstrap
+    )?.authorisationBootstrapPath as string;
 
     let bootstrapJson = {
       ...defaultRoles,
