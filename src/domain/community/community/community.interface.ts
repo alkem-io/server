@@ -7,4 +7,5 @@ export interface ICommunity {
   groups?: IUserGroup[];
   applications?: IApplication[];
   parentCommunity?: ICommunity;
+  ecoverseID: string;
 }

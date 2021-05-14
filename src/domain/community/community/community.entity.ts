@@ -40,6 +40,9 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   @Column()
   name: string;
 
+  @Column()
+  ecoverseID: string;
+
   @OneToMany(
     () => UserGroup,
     userGroup => userGroup.community,
@@ -68,5 +71,6 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   constructor(name: string) {
     super();
     this.name = name;
+    this.ecoverseID = '';
   }
 }

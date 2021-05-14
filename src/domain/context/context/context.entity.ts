@@ -76,10 +76,6 @@ export class Context extends BaseEntity implements IContext {
   )
   references?: Reference[];
 
-  @Field(() => EcosystemModel, {
-    nullable: true,
-    description: 'The model of the Ecosystem',
-  })
   @OneToOne(() => EcosystemModel, { eager: false, cascade: true })
   @JoinColumn()
   ecosystemModel?: EcosystemModel;

@@ -9,7 +9,7 @@ import {
 import { ContextService } from './context.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
-import { Aspect, CreateAspectInput, IContext } from '@domain/context';
+import { Aspect, CreateAspectInput, IAspect } from '@domain/context';
 
 @Resolver()
 export class ContextResolverMutations {
@@ -39,7 +39,7 @@ export class ContextResolverMutations {
   @Profiling.api
   async createAspect(
     @Args('aspectData') aspectData: CreateAspectInput
-  ): Promise<IContext> {
+  ): Promise<IAspect> {
     return await this.contextService.createAspect(aspectData);
   }
 }

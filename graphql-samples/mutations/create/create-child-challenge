@@ -9,7 +9,7 @@ query variables:
 {
   "childChallengeData":
   {
-    "parentID": 1,
+    "parentID": "1",
     "name": "Balance the grid",
     "textID": "balance-grid",
     "lifecycleTemplate": "EXTENDED",

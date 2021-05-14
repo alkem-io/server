@@ -50,7 +50,7 @@ export class Challenge extends BaseEntity
   name: string;
 
   @Column()
-  ecoverseID?: string;
+  ecoverseID: string;
 
   @Field(() => String, {
     nullable: false,
@@ -127,5 +127,6 @@ export class Challenge extends BaseEntity
     super();
     this.name = name;
     this.textID = textID;
+    this.ecoverseID = '';
   }
 }

@@ -64,7 +64,8 @@ export class CommunityService {
 
     const group = await this.userGroupService.addGroupWithName(
       community,
-      groupName
+      groupName,
+      community.ecoverseID
     );
     await this.communityRepository.save(community);
 

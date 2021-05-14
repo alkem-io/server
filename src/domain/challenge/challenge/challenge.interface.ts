@@ -15,4 +15,5 @@ export interface IChallenge {
   tagset?: ITagset;
   childChallenges?: IChallenge[];
   leadOrganisations?: IOrganisation[];
+  ecoverseID: string;
 }

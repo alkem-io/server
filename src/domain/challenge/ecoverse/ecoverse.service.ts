@@ -50,6 +50,7 @@ export class EcoverseService {
       },
       ecoverse.id.toString()
     );
+    ecoverse.challenge.ecoverseID = ecoverse.id.toString();
 
     if (ecoverseData.hostID) {
       ecoverse.host = await this.organisationService.getOrganisationOrFail(
@@ -124,9 +125,15 @@ export class EcoverseService {
       const childChallenges = await this.challengeService.getChildChallenges(
         challenge
       );
-      childChallenges.forEach(challenge =>
-        opportunitiyChallenges.push(challenge)
-      );
+      for (const childChallenge of childChallenges) {
+        const opportunity = await this.challengeService.getChallengeByIdOrFail(
+          childChallenge.id,
+          {
+            relations: ['context', 'collaboration'],
+          }
+        );
+        opportunitiyChallenges.push(opportunity);
+      }
     }
     return opportunitiyChallenges;
   }

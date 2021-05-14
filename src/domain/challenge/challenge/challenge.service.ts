@@ -52,16 +52,17 @@ export class ChallengeService {
 
   async createChallenge(
     challengeData: CreateChallengeInput,
-    ecoverseID?: string
+    ecoverseID: string
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
-    (challenge as Challenge).ecoverseID = ecoverseID;
+
     challenge.childChallenges = [];
 
     // Community
     challenge.community = await this.communityService.createCommunity(
       challenge.name
     );
+    challenge.community.ecoverseID = ecoverseID;
 
     // Context
     if (!challengeData.context) {
@@ -100,7 +101,9 @@ export class ChallengeService {
   async updateChallenge(
     challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
-    const challenge = await this.getChallengeOrFail(challengeData.ID);
+    const challenge = await this.getChallengeOrFail(challengeData.ID, {
+      relations: ['context'],
+    });
 
     const newName = challengeData.name;
     if (newName) {
@@ -289,7 +292,7 @@ export class ChallengeService {
 
     const childChallenge = await this.createChallenge(
       challengeData,
-      (challenge as Challenge).ecoverseID
+      challenge.ecoverseID
     );
 
     challenge.childChallenges?.push(childChallenge);

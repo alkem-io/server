@@ -6,6 +6,7 @@ import { ContextService } from './context.service';
 import { Context } from '@domain/context';
 import { EcosystemModelModule } from '../ecosystem-model/ecosystem-model.module';
 import { AspectModule } from '../aspect/aspect.module';
+import { ContextResolverFields } from './context.resolver.fields';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { AspectModule } from '../aspect/aspect.module';
     EcosystemModelModule,
     TypeOrmModule.forFeature([Context]),
   ],
-  providers: [ContextResolverMutations, ContextService],
+  providers: [ContextResolverMutations, ContextResolverFields, ContextService],
   exports: [ContextService],
 })
 export class ContextModule {}

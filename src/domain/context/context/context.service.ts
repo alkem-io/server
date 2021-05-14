@@ -17,6 +17,7 @@ import {
 } from '@domain/context/context';
 import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AspectService } from '../aspect/aspect.service';
+import { EcosystemModel, IEcosystemModel } from '../ecosystem-model';
 
 @Injectable()
 export class ContextService {
@@ -29,6 +30,7 @@ export class ContextService {
 
   async createContext(contextData: CreateContextInput): Promise<IContext> {
     const context: IContext = Context.create(contextData);
+    context.ecosystemModel = new EcosystemModel();
     context.references = [];
     return context;
   }
@@ -136,7 +138,7 @@ export class ContextService {
     return newReference;
   }
 
-  async createAspect(aspectData: CreateAspectInput): Promise<IContext> {
+  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
     const contextID = aspectData.parentID;
     const context = await this.getContextOrFail(contextID, {
       relations: ['aspects'],
@@ -160,12 +162,11 @@ export class ContextService {
 
     const aspect = await this.aspectService.createAspect(aspectData);
     context.aspects.push(aspect);
-    return await this.contextRepository.save(context);
+    await this.contextRepository.save(context);
+    return aspect;
   }
 
-  // Loads the aspects into the Opportunity entity if not already present
   async getAspects(context: Context): Promise<IAspect[]> {
-    // Opportunity is not populated so load it with actorGroups
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['aspects'],
     });
@@ -176,5 +177,18 @@ export class ContextService {
       );
 
     return contextLoaded.aspects;
+  }
+
+  async getEcosystemModel(context: Context): Promise<IEcosystemModel> {
+    const contextLoaded = await this.getContextOrFail(context.id, {
+      relations: ['ecosystemModel'],
+    });
+    if (!contextLoaded.ecosystemModel)
+      throw new EntityNotFoundException(
+        `Context not initialised: ${context.id}`,
+        LogContext.CONTEXT
+      );
+
+    return contextLoaded.ecosystemModel;
   }
 }
