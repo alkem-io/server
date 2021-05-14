@@ -1,13 +1,62 @@
+# Configuration file for Cherrytwist.
+#
+# This is a YAML file: see [1] for a quick introduction. Note in particular
+# that *indentation is important*: all the elements of a list or dictionary
+# should have the same indentation.
+#
+# [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+
+## hosting ##
+
+# The hosting configuration for the Cherrytwist Server
+#
 hosting:
+  # The port will be used in the ingress configuration (e.g. traefik)
+  # for routing the requests from the public-facing endpoint (e.g. https://dev.cherrytwist.org/graphql)
+  # to the ct-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
+  # The graphql port is also used for internal communication between the services inside the e.g. kubernetes cluster.
+  #
   port: ${GRAPHQL_ENDPOINT}:4000
+
+  # The environment is used in multiple places - to determine whether dev tooling is enabled (in e.g. Dev env)
+  # and can also be used for logging to the correct environment in an ELK cluster / ElasticCloud instance.
+  #
   environment: ${ENVIRONMENT}:Dev
+
+## bootstrap ##
+
+# The bootstrap configuration for the Cherrytwist Server.
+# Used to define the configuration needed to initialize a functional Cherrytwist instance.
+# The bootstrap configuration files have the minimum set of users and credentials to start using Cherrytwist.
+#
+
 bootstrap:
+  # The authorisationBootstrapPath is used as a path to a config file used for bootstrapping the default CT users and credentials.
   authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
+
+## security ##
+
+# Security configuration section for Cherrytwist Server. It is used to define security
+# settings minimizing the risk of unauthorized access.
 security:
+  # cors settings for the application
   cors:
+    # Origin of the graphql requests to the Cherrytwist Server.
+    # Defaults to * (insecure, not recommended for production usage).
+    # Change to a value that whitelists your request origin.
     origin: ${CORS_ORIGIN}:*
+
+    # Cors methods allowed in the Cherrytwist Server.
+    # Defaults to GET,HEAD,PUT,PATCH,POST,DELETE.
+    # Graphql uses mostly POST - the rest of the methods are left for utility REST endpoints.
+    # If no REST endpoints are used (they are kept for ease of development) the list of allowed methods can be reduced.
     methods: ${CORS_METHODS}:GET,HEAD,PUT,PATCH,POST,DELETE
+
+    # Cors allowed headers.
+    # Defaults to Origin,X-Requested-With,Content-Type,Accept,Authorization.
     allowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
+
+## identity ##
 identity:
   authentication:
     enabled: ${AUTH_ENABLED}:true
