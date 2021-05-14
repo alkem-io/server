@@ -9,6 +9,8 @@ export class WinstonConfigService {
   constructor(private configService: ConfigService) {}
 
   async createWinstonModuleOptions() {
+    const consoleEnabled: boolean = this.configService.get('monitoring')
+      ?.logging?.consoleLoggingEnabled;
     const transports: any[] = [
       new winston.transports.Console({
         format: winston.format.combine(
@@ -18,8 +20,7 @@ export class WinstonConfigService {
         level: this.configService
           .get('monitoring')
           ?.logging?.level.toLowerCase(),
-        silent: this.configService.get('monitoring')?.logging
-          ?.consoleLoggingEnabled,
+        silent: !consoleEnabled,
       }),
     ];
 

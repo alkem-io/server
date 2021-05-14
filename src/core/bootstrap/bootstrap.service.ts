@@ -28,14 +28,13 @@ export class BootstrapService {
   async bootstrapEcoverse() {
     try {
       this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
+      this.logConfiguration();
 
       Profiling.logger = this.logger;
       const profilingEnabled = this.configService.get('monitoring')?.logging
         ?.profilingEnabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
-      this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
 
-      // Now setup the rest...
       await this.ensureEcoverseSingleton();
       await this.bootstrapProfiles();
     } catch (error) {
@@ -43,19 +42,38 @@ export class BootstrapService {
     }
   }
 
-  logConfigLevel(key: any, value: any, indent: string) {
+  logConfiguration() {
+    this.logger.verbose?.(
+      '==== Configuration - Start ===',
+      LogContext.BOOTSTRAP
+    );
+    this.logConfigLevel('hosting', this.configService.get('monitoring'));
+    this.logConfigLevel('bootstrap', this.configService.get('bootstrap'));
+    this.logConfigLevel('security', this.configService.get('security'));
+    this.logConfigLevel('monitoring', this.configService.get('monitoring'));
+    this.logConfigLevel('identity', this.configService.get('identity'));
+    this.logConfigLevel(
+      'communications',
+      this.configService.get('communications')
+    );
+    this.logConfigLevel('storage', this.configService.get('storage'));
+    this.logger.verbose?.('==== Configuration - End ===', LogContext.BOOTSTRAP);
+  }
+
+  logConfigLevel(key: any, value: any, indent = '', incrementalIndent = '  ') {
     if (typeof value === 'object') {
-      this.logger.verbose?.(`Variable: ${key}:`);
+      const msg = `${indent}${key}:`;
+      //console.log(msg);
+      this.logger.verbose?.(`${msg}`, LogContext.BOOTSTRAP);
       Object.keys(value).forEach(childKey => {
         const childValue = value[childKey];
-        const newIndent = `${indent}....`;
-        this.logConfigLevel(childKey, childValue, newIndent);
+        const newIndent = `${indent}${incrementalIndent}`;
+        this.logConfigLevel(childKey, childValue, newIndent, incrementalIndent);
       });
     } else {
-      this.logger.verbose?.(
-        `${indent}Variable: ${key}: ${value}`,
-        LogContext.BOOTSTRAP
-      );
+      const msg = `${indent}==> ${key}: ${value}`;
+      this.logger.verbose?.(`${msg}`, LogContext.BOOTSTRAP);
+      //console.log(msg);
     }
   }
 
