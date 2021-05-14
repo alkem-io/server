@@ -57,20 +57,72 @@ security:
     allowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
 
 ## identity ##
+
+# Identity configuration section for Cherrytwist Server. Here is defined all authentication and authorization
+# configuration. Configuration is unique per provider.
+# In Cherrytwist Authentication Providers and Identity Providers (Servers, Services) might be used interchangably
+# as in the context of the platform, the only functionality used from an Identity Provider from a specific
+# vendor is acquiring an access token and extracting its email (in other words, authentication). The email is used for matching the user account
+# (provided from the Identity Server, e.g. AAD) against the user profile in the Cherrytwist domain model.
+# Traditional Identity Provider functionality like federation, account management etc. are out-of-scope in Cherrytwist.
+# Authorization is Credential-based, validating whether the user has valid credentials for the
+# requested resource.
 identity:
-  authentication:
+
+## authentication ##
+# Authentication configuration section for Cherrytwist Server. Here is defined both the configuration
+# required for the server to process authentication requests (via passportJS strategies) and the
+# client-side configuration required to authenticate to the Identity Servers (e.g. AAD) and generate
+# valid Authorization Header (Bearer access token).
+    authentication:
+
+# A flag setting whether requeststed resource access needs to be checked with a nestJS guard implementing
+# the specific passportJS strategy of the enabled identity providers.
     enabled: ${AUTH_ENABLED}:true
+
+# A list of Identity Providers used for authenticating the user account that is later
+# mapped to the Cherrytwist user profile. The claims in the access token that are used in
+# Cherrytwist are the user email and the token expiration time.
     providers:
+
+# Azure Active Directory Authentication Provider. Provides configuration for both Cherrytwist Server
+# and Cherrytwist Client. Supports different flows to cover the needs of the platform, including automated testing.
+# All default values are from the Cherrytwist Playground AAD instance.
       aad:
+
+# OpenID Connect metadata document endpoint.
         identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
+
+# Cherrytwist Server clientID. The AAD application is called cherrytwist-api in the playground AAD instance.
         clientID: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
+
+# Flag checking whether the issuer of the access token needs to be validated.
         validateIssuer: true
+
+# Flag checking whether the request should be passed in the passportJS callback.
+# By default it's passed in the platform - but it's not actively used. This setting is useful
+# for debugging issues with Authentication Providers - e.g. in src/core/authentication/aad.bearer.strategy.ts
+# the _req field in validate function can be used for tracing issues.
         passReqToCallback: true
+
+# Issuer of the access token used in Cherrytwist Server
         issuer: ${AUTH_AAD_ISSUER}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0
+
+# Audience that the ID token issues by AAD is intended for.
+# The relationship between audiences, scopes, APIs and access tokens is well defined in this article:
+# https://www.pingidentity.com/en/company/blog/posts/2019/oauth2-access-token-multiple-resources-usage-strategies.html
         audience: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
+
+# toDo - move out of config
         allowMultiAudiencesInToken: false
+
         loggingLevel: ${AUTH_AAD_LOGGING_LEVEL}:Error
+
+# toDo - move out of config
         scope: ['Cherrytwist-GraphQL']
+
+# Flag setting whether Personal Identifiable Information (PII) can be logged.
+# Defaults to false. Note: there is a
         loggingNoPII: false
         upnDomain: ${AUTH_AAD_UPN_DOMAIN}:playgroundcherrytwist.onmicrosoft.com
         tenant: ${AUTH_AAD_TENANT}
