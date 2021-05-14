@@ -20,7 +20,6 @@ import {
 import { ICommunity } from '@domain/community/community';
 import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
-import { Activity } from '@domain/common/activity';
 import { NVP } from '@domain/common';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
@@ -215,10 +214,10 @@ export class EcoverseService {
     return await this.projectService.getProjects(ecoverse.id.toString());
   }
 
-  async getActivity(ecoverse: IEcoverse): Promise<Activity> {
+  async getActivity(ecoverse: IEcoverse): Promise<NVP[]> {
     const challenge = this.getChallenge(ecoverse);
     // this will have members + challenges populated
-    const activity = new Activity();
+    const activity: NVP[] = [];
 
     // Challenges
     const childChallengesCount = await this.challengeService.getChildChallengesCount(
@@ -228,7 +227,7 @@ export class EcoverseService {
       'challenges',
       childChallengesCount.toString()
     );
-    activity.topics.push(challengesTopic);
+    activity.push(challengesTopic);
 
     const allChallengesCount = await this.challengeService.getAllChallengesCount(
       ecoverse.id
@@ -237,19 +236,19 @@ export class EcoverseService {
       'opportunities',
       (allChallengesCount - childChallengesCount - 1).toString()
     );
-    activity.topics.push(opportunitiesTopic);
+    activity.push(opportunitiesTopic);
 
     // Projects
     const projectsCount = await this.projectService.getProjectsCount(
       ecoverse.id
     );
     const projectsTopic = new NVP('projects', projectsCount.toString());
-    activity.topics.push(projectsTopic);
+    activity.push(projectsTopic);
 
     // Members
     const membersCount = await this.challengeService.getMembersCount(challenge);
     const membersTopic = new NVP('members', membersCount.toString());
-    activity.topics.push(membersTopic);
+    activity.push(membersTopic);
 
     return activity;
   }

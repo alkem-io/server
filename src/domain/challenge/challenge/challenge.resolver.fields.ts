@@ -6,7 +6,7 @@ import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Context } from '@domain/context/context';
 import { Collaboration } from '@domain/collaboration/collaboration';
-import { Activity } from '@domain/common/activity';
+import { NVP } from '@domain/common';
 
 @Resolver(() => Challenge)
 export class ChallengeResolverFields {
@@ -57,7 +57,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getChildChallenges(challenge);
   }
 
-  @ResolveField('activity', () => Activity, {
+  @ResolveField('activity', () => [NVP], {
     nullable: true,
     description: 'The activity within this Challenge.',
   })

@@ -20,8 +20,8 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { Tagset } from '@domain/common/tagset';
-import { Activity } from '@domain/common/activity';
 import { Context } from '@domain/context';
+import { NVP } from '@domain/common';
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -178,7 +178,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @ResolveField('activity', () => Activity, {
+  @ResolveField('activity', () => [NVP], {
     nullable: true,
     description: 'The activity within this Ecoverse.',
   })
