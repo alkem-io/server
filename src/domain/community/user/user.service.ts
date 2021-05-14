@@ -10,8 +10,6 @@ import {
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import validator from 'validator';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import {
   UpdateUserInput,
   CreateUserInput,
@@ -314,22 +312,5 @@ export class UserService {
       agent.id,
       credentialCriteria
     );
-  }
-
-  // Membership related functionality
-
-  addGroupToEntity(
-    entities: IGroupable[],
-    entity: IGroupable,
-    group: IUserGroup
-  ) {
-    const existingEntity = entities.find(e => e.id === entity.id);
-    if (!existingEntity) {
-      //first time through
-      entities.push(entity);
-      entity.groups = [group];
-    } else {
-      existingEntity.groups?.push(group);
-    }
   }
 }
