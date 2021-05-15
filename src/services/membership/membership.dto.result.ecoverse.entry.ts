@@ -1,5 +1,5 @@
-import { NVP } from '@domain/common/nvp';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { MembershipResultEntry } from './membership.dto.result.entry';
 
 @ObjectType()
 export class MembershipEcoverseResultEntry {
@@ -15,13 +15,13 @@ export class MembershipEcoverseResultEntry {
   })
   id = '';
 
-  @Field(() => [NVP], {
+  @Field(() => [MembershipResultEntry], {
     description: 'Names and IDs of the Challenges the user is a member of',
   })
-  challenges: NVP[] = [];
+  challenges: MembershipResultEntry[] = [];
 
-  @Field(() => [NVP], {
+  @Field(() => [MembershipResultEntry], {
     description: 'Names and IDs of  the UserGroups the user is a member of',
   })
-  userGroups: NVP[] = [];
+  userGroups: MembershipResultEntry[] = [];
 }

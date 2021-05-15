@@ -10,9 +10,9 @@ import { AuthorizationCredential } from '@core/authorization';
 import { CommunityService } from '@domain/community/community/community.service';
 import { Community } from '@domain/community/community';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { NVP } from '@domain/common';
 import { IChallenge } from '@domain/challenge/challenge';
 import { IUserGroup } from '@domain/community/user-group';
+import { MembershipResultEntry } from './membership.dto.result.entry';
 
 export class MembershipService {
   constructor(
@@ -38,8 +38,11 @@ export class MembershipService {
         const organisation = await this.organisationService.getOrganisationByIdOrFail(
           credential.resourceID
         );
-        const orgNVP = new NVP(organisation.name, organisation.id.toString());
-        membership.organisations.push(orgNVP);
+        const orgResult = new MembershipResultEntry(
+          organisation.name,
+          organisation.id.toString()
+        );
+        membership.organisations.push(orgResult);
       } else if (credential.type === AuthorizationCredential.CommunityMember) {
         const community = await this.communityService.getCommunityOrFail(
           credential.resourceID,
@@ -70,12 +73,18 @@ export class MembershipService {
     if (membership.ecoverses.length > 0) {
       const ecoverseResult = membership.ecoverses[0];
       for (const challenge of storedChallenges) {
-        const challengeNVP = new NVP(challenge.name, challenge.id.toString());
-        ecoverseResult.challenges.push(challengeNVP);
+        const challengeResult = new MembershipResultEntry(
+          challenge.name,
+          challenge.id.toString()
+        );
+        ecoverseResult.challenges.push(challengeResult);
       }
       for (const group of storedUserGroups) {
-        const groupNVP = new NVP(group.name, group.id.toString());
-        ecoverseResult.userGroups.push(groupNVP);
+        const groupResult = new MembershipResultEntry(
+          group.name,
+          group.id.toString()
+        );
+        ecoverseResult.userGroups.push(groupResult);
       }
     }
 
