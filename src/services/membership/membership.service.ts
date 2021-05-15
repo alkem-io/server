@@ -5,10 +5,14 @@ import { OrganisationService } from '@domain/community/organisation/organisation
 import { Membership } from './membership.dto.result';
 import { UserService } from '@domain/community/user/user.service';
 import { MembershipInput } from './membership.dto.input';
+import { MembershipEcoverseResultEntry } from './membership.dto.result.ecoverse.entry';
 import { AuthorizationCredential } from '@core/authorization';
 import { CommunityService } from '@domain/community/community/community.service';
 import { Community } from '@domain/community/community';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { NVP } from '@domain/common';
+import { IChallenge } from '@domain/challenge/challenge';
+import { IUserGroup } from '@domain/community/user-group';
 
 export class MembershipService {
   constructor(
@@ -27,12 +31,15 @@ export class MembershipService {
     if (!credentials) {
       return membership;
     }
+    const storedChallenges: IChallenge[] = [];
+    const storedUserGroups: IUserGroup[] = [];
     for (const credential of credentials) {
       if (credential.type === AuthorizationCredential.OrganisationMember) {
         const organisation = await this.organisationService.getOrganisationByIdOrFail(
           credential.resourceID
         );
-        membership.organisations.push(organisation);
+        const orgNVP = new NVP(organisation.name, organisation.id.toString());
+        membership.organisations.push(orgNVP);
       } else if (credential.type === AuthorizationCredential.CommunityMember) {
         const community = await this.communityService.getCommunityOrFail(
           credential.resourceID,
@@ -40,31 +47,53 @@ export class MembershipService {
             relations: ['ecoverse', 'challenge'],
           }
         );
-        const ecoverseID = (community as Community).ecoverse?.id;
-        if (ecoverseID) {
-          const ecoverse = await this.ecoverseService.getEcoverseByIdOrFail(
-            ecoverseID,
-            {
-              relations: ['challenges'],
-            }
+        const ecoverse = (community as Community).ecoverse;
+        const challenge = (community as Community).challenge;
+        if (ecoverse) {
+          const ecoverseResult = await this.createEcoverseMembershipResult(
+            ecoverse.id
           );
-          membership.ecoverses.push(ecoverse);
-        }
-
-        const challengeID = (community as Community).challenge?.id;
-        if (challengeID) {
-          const challenge = await this.ecoverseService.getEcoverseByIdOrFail(
-            challengeID
-          );
-          membership.challenges.push(challenge);
+          membership.ecoverses.push(ecoverseResult);
+        } else if (challenge) {
+          storedChallenges.push(challenge);
         }
       } else if (credential.type === AuthorizationCredential.UserGroupMember) {
         const group = await this.userGroupService.getUserGroupByIdOrFail(
           credential.resourceID
         );
-        membership.userGroups.push(group);
+        storedUserGroups.push(group);
       }
     }
+
+    // Assume single ecoverse for now.
+    // Todo: when domain-model restructuring goes in use the ecoverseID to determine ecoverse scope.
+    if (membership.ecoverses.length > 0) {
+      const ecoverseResult = membership.ecoverses[0];
+      for (const challenge of storedChallenges) {
+        const challengeNVP = new NVP(challenge.name, challenge.id.toString());
+        ecoverseResult.challenges.push(challengeNVP);
+      }
+      for (const group of storedUserGroups) {
+        const groupNVP = new NVP(group.name, group.id.toString());
+        ecoverseResult.userGroups.push(groupNVP);
+      }
+    }
+
     return membership;
+  }
+
+  async createEcoverseMembershipResult(
+    ecoverseID: number
+  ): Promise<MembershipEcoverseResultEntry> {
+    const ecoverse = await this.ecoverseService.getEcoverseByIdOrFail(
+      ecoverseID,
+      {
+        relations: ['challenges'],
+      }
+    );
+    const ecoverseResult = new MembershipEcoverseResultEntry();
+    ecoverseResult.name = ecoverse.name;
+    ecoverseResult.id = ecoverse.id.toString();
+    return ecoverseResult;
   }
 }
