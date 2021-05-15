@@ -22,6 +22,7 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { MembershipModule } from './services/membership/membership.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
     DataManagementModule,
     BootstrapModule,
     SearchModule,
+    MembershipModule,
     KonfigModule,
     IpfsModule,
   ],
