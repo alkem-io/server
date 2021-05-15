@@ -86,6 +86,9 @@ identity:
       # and Cherrytwist Client. Supports different flows to cover the needs of the platform, including automated testing.
       # All default values are from the Cherrytwist Playground AAD instance.
       aad:
+        # Azure Active Directory Tenant.
+        tenant: ${AUTH_AAD_TENANT}
+
         # OpenID Connect metadata document endpoint.
         identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
 
