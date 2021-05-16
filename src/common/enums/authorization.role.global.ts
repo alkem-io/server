@@ -1,4 +1,4 @@
-export enum AuthorizationRolesGlobal {
+export enum AuthorizationRoleGlobal {
   Registered = 'global-registered',
   CommunityAdmin = 'global-admin-community',
   ChallengesAdmin = 'global-admin-challenges',

@@ -38,7 +38,7 @@ import { TagsetService } from '@domain/common/tagset';
 import validator from 'validator';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { OpportunityLifecycleTemplates } from '@common/enums/opportunity.lifecycle.templates';
+import { OpportunityLifecycleTemplate } from '@common/enums/opportunity.lifecycle.template';
 
 @Injectable()
 export class OpportunityService {
@@ -78,7 +78,7 @@ export class OpportunityService {
     if (
       opportunityData.lifecycleTemplate &&
       opportunityData.lifecycleTemplate ===
-        OpportunityLifecycleTemplates.EXTENDED
+        OpportunityLifecycleTemplate.EXTENDED
     ) {
       machineConfig = opportunityLifecycleConfigExtended;
     }
@@ -311,13 +311,13 @@ export class OpportunityService {
   async createRestrictedActorGroups(
     opportunity: IOpportunity
   ): Promise<boolean> {
-    if (!opportunity.restrictedActorGroupNames) {
+    if (!opportunity.RestrictedActorGroupName) {
       throw new EntityNotInitializedException(
         'Non-initialised Opportunity submitted',
         LogContext.CHALLENGES
       );
     }
-    for (const name of opportunity.restrictedActorGroupNames) {
+    for (const name of opportunity.RestrictedActorGroupName) {
       const actorGroupData = new CreateActorGroupInput();
       actorGroupData.name = name;
       actorGroupData.description = 'Default actor group';

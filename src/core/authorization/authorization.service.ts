@@ -9,9 +9,9 @@ import { IUser } from '@domain/community/user';
 
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { AuthorizationCredentialGlobal } from './authorization.credential.global';
+import { AuthorizationCredentialGlobal } from '../../common/enums/authorization.credential.global';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
-import { AuthorizationCredential } from './authorization.credential';
+import { AuthorizationCredential } from '../../common/enums/authorization.credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserInfo } from '@core/authentication';
 

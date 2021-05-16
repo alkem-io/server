@@ -29,7 +29,8 @@ import {
 } from '@domain/challenge/opportunity';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
@@ -37,7 +38,7 @@ export class OpportunityResolverMutations {
     private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Updates the Opportunity.',
@@ -52,7 +53,7 @@ export class OpportunityResolverMutations {
     return Opportunity;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Deletes the Opportunity.',
@@ -63,7 +64,7 @@ export class OpportunityResolverMutations {
     return await this.opportunityService.deleteOpportunity(deleteData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Create a new Project on the Opportunity',
@@ -76,7 +77,7 @@ export class OpportunityResolverMutations {
     return project;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Aspect, {
     description: 'Create a new Aspect on the Opportunity.',
@@ -88,7 +89,7 @@ export class OpportunityResolverMutations {
     return await this.opportunityService.createAspect(aspectData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => ActorGroup, {
     description: 'Create a new Actor Group on the Opportunity.',
@@ -103,7 +104,7 @@ export class OpportunityResolverMutations {
     return actorGroup;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Relation, {
     description: 'Create a new Relation on the Opportunity.',
@@ -115,7 +116,7 @@ export class OpportunityResolverMutations {
     return await this.opportunityService.createRelation(relationData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Opportunity, {
     description: 'Trigger an event on an Opportunity.',

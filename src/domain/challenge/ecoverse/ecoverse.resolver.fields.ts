@@ -10,7 +10,7 @@ import { IChallenge } from '../challenge';
 import { IOpportunity, Opportunity } from '../opportunity';
 import { OpportunityService } from '../opportunity/opportunity.service';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationRoleGlobal, LogContext } from '@common/enums';
 import { Project, IProject } from '@domain/collaboration/project';
 import {
   UserGroup,
@@ -22,7 +22,7 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 @Resolver(() => Ecoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -105,7 +105,7 @@ export class EcoverseResolverFields {
     return await this.projectService.getProjectOrFail(id);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [UserGroup], {
     nullable: false,
@@ -116,7 +116,7 @@ export class EcoverseResolverFields {
     return await this.groupService.getGroups();
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @ResolveField('groupsWithTag', () => [UserGroup], {
     nullable: false,
@@ -127,7 +127,7 @@ export class EcoverseResolverFields {
     return await this.groupService.getGroupsWithTag(tag);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => UserGroup, {
     nullable: false,
@@ -140,8 +140,8 @@ export class EcoverseResolverFields {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Registered,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Registered,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @UseGuards(GraphqlGuard)
   @ResolveField('application', () => Application, {

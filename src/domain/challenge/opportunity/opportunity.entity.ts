@@ -123,12 +123,12 @@ export class Opportunity extends BaseEntity
   challenge?: Challenge;
 
   // The restricted actor group names at the Opportunity level
-  restrictedActorGroupNames: string[];
+  RestrictedActorGroupName: string[];
 
   constructor(name: string, textID: string) {
     super();
     this.name = name;
     this.textID = textID;
-    this.restrictedActorGroupNames = [];
+    this.RestrictedActorGroupName = [];
   }
 }

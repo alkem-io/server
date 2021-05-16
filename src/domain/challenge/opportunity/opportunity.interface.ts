@@ -17,7 +17,7 @@ export interface IOpportunity {
   tagset?: ITagset;
   projects?: IProject[];
   actorGroups?: IActorGroup[];
-  restrictedActorGroupNames: string[];
+  RestrictedActorGroupName: string[];
   aspects?: IAspect[];
   relations?: IRelation[];
 }

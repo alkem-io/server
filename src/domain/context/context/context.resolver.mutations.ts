@@ -8,15 +8,16 @@ import {
 } from '@domain/common/reference';
 import { ContextService } from './context.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver()
 export class ContextResolverMutations {
   constructor(private contextService: ContextService) {}
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => Reference, {

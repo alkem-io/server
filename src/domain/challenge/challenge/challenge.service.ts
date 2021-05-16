@@ -36,7 +36,7 @@ import {
 } from '@domain/challenge/challenge';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { ChallengeLifecycleTemplates } from '@common/enums/challenge.lifecycle.templates';
+import { ChallengeLifecycleTemplate } from '@common/enums/challenge.lifecycle.template';
 
 @Injectable()
 export class ChallengeService {
@@ -78,7 +78,7 @@ export class ChallengeService {
     let machineConfig: any = challengeLifecycleConfigDefault;
     if (
       challengeData.lifecycleTemplate &&
-      challengeData.lifecycleTemplate === ChallengeLifecycleTemplates.EXTENDED
+      challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
     ) {
       machineConfig = challengeLifecycleConfigExtended;
     }

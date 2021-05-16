@@ -3,7 +3,7 @@ import { ForbiddenException } from '@common/exceptions';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { UserInfo } from '@core/authentication/user-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
-import { AuthorizationCredential } from '../authorization.credential';
+import { AuthorizationCredential } from '../../../common/enums/authorization.credential';
 
 export class AuthorizationRuleCommunityMember implements IAuthorizationRule {
   communityID: number;
