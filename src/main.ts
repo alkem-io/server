@@ -9,6 +9,7 @@ import { HttpExceptionsFilter } from './core/error-handling/http.exceptions.filt
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
 import { graphqlUploadExpress } from 'graphql-upload';
+import { ConfigurationTypes } from '@common/enums';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -22,9 +23,10 @@ const bootstrap = async () => {
 
   await bootstrapService.bootstrapEcoverse();
   app.enableCors({
-    origin: configService.get('security')?.cors?.origin,
-    allowedHeaders: configService.get('security')?.cors?.allowedHeaders,
-    methods: configService.get('security')?.cors?.methods,
+    origin: configService.get(ConfigurationTypes.Security)?.cors?.origin,
+    allowedHeaders: configService.get(ConfigurationTypes.Security)?.cors
+      ?.allowedHeaders,
+    methods: configService.get(ConfigurationTypes.Security)?.cors?.methods,
   });
 
   app.use(faviconMiddleware);
@@ -36,11 +38,14 @@ const bootstrap = async () => {
 
   app.use(
     graphqlUploadExpress({
-      maxFileSize: configService.get('storage')?.ipfs?.maxFileSize,
+      maxFileSize: configService.get(ConfigurationTypes.Storage)?.ipfs
+        ?.maxFileSize,
     })
   );
 
-  await app.listen(configService.get('hosting')?.port as number);
+  await app.listen(
+    configService.get(ConfigurationTypes.Hosting)?.port as number
+  );
 };
 
 bootstrap();
