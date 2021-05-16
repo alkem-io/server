@@ -19,6 +19,8 @@ export class AadBearerStrategy extends PassportStrategy(
   ) {
     super({
       ...configService.get('identity')?.authentication?.providers?.aad,
+      scope: ['Cherrytwist-GraphQL'],
+      allowMultiAudiencesInToken: false,
     });
   }
 

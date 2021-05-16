@@ -18,7 +18,7 @@ export class WinstonConfigService {
         level: this.configService
           .get('monitoring')
           ?.logging?.level.toLowerCase(),
-        silent: this.configService.get('monitoring')?.logging
+        silent: !this.configService.get('monitoring')?.logging
           ?.consoleLoggingEnabled,
       }),
     ];
