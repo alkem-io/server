@@ -1,17 +1,18 @@
-import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   GrantAuthorizationCredentialInput,
   RemoveAuthorizationCredentialInput,
   UsersWithAuthorizationCredentialInput,
 } from '@core/authorization';
 import { IUser } from '@domain/community/user';
-
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { AuthorizationCredentialGlobal } from '../../common/enums/authorization.credential.global';
+import { UserService } from '@domain/community/user/user.service';
+import {
+  LogContext,
+  AuthorizationCredentialGlobal,
+  AuthorizationCredential,
+} from '@common/enums';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
-import { AuthorizationCredential } from '../../common/enums/authorization.credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserInfo } from '@core/authentication';
 
