@@ -10,6 +10,7 @@ Variables:
 {
   "tagsetData":{
     "parentID": 1,
-    "name": "testTagset"
+    "name": "testTagset3",
+    "tags": ["Tag 1", "Tag 2"]
   }
 }

@@ -1,4 +1,5 @@
 import { AadAuthenticationClient, Token, TokenError } from '@cmdbg/tokenator';
+import { ConfigurationTypes } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { ConfigService } from '@nestjs/config';
 
@@ -7,8 +8,8 @@ export class TokenHelper {
   private aadAuthenticationClient: AadAuthenticationClient;
 
   constructor(configService: ConfigService) {
-    const aadConfig = configService.get('identity')?.authentication?.providers
-      ?.aad;
+    const aadConfig = configService.get(ConfigurationTypes.Identity)
+      ?.authentication?.providers?.aad;
 
     this.aadAuthenticationClient = new AadAuthenticationClient(() => ({
       clientID: aadConfig.client.clientId,
