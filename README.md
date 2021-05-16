@@ -26,7 +26,6 @@ The key takeaway is that the Cherrytwist server is designed to be integrated, so
 - [Design - An overview of architectural layers and technologies used](docs/Design.md)
 - [Running - How to run the Server using containers (docker-compose and docker)](docs/Running.md)
 - [Developing - How to setup the Server for developing](docs/Developing.md)
-- [Configuration - The Server is responsible for managing the majority of the configuration for the Cherrytwist Platform.](docs/Configuration.md)
 - [Data Management - How data representing the domain model used by Cherrytwist Platform is managed, including database migrations](docs/DataManagement.md)
 - [Quality Assurance - Details of the test harness around the server and how to execute the test suites](docs/QA.md).
 - [Pushing - How new docker images are published to Dockerhub](docs/Publishing.md)

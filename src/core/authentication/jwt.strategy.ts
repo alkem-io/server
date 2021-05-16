@@ -1,4 +1,4 @@
-import { CherrytwistErrorStatus } from '@common/enums';
+import { CherrytwistErrorStatus, ConfigurationTypes } from '@common/enums';
 import { TokenException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
@@ -13,8 +13,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'demo-auth-jwt') {
     private readonly authService: AuthenticationService
   ) {
     super({
-      secretOrKey: configService.get('identity')?.authentication?.providers
-        ?.demo_auth_provider?.clientSecret,
+      secretOrKey: configService.get(ConfigurationTypes.Identity)
+        ?.authentication?.providers?.demo_auth_provider?.clientSecret,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: true,
     });

@@ -10,7 +10,7 @@ import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-hos
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions/authentication.exception';
 import { TokenException } from '@common/exceptions/token.exception';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
@@ -109,8 +109,8 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     _status?: any
   ) {
     // Always handle the request if authentication is disabled
-    const authEnabled = this.configService.get('identity')?.authentication
-      ?.enabled;
+    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
+      ?.authentication?.enabled;
     if (!authEnabled) {
       return userInfo;
     }
