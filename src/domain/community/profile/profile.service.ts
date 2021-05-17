@@ -128,7 +128,7 @@ export class ProfileService {
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
-      tagsetData.name
+      tagsetData
     );
     await this.profileRepository.save(profile);
 

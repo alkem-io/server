@@ -11,6 +11,7 @@ import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
@@ -187,25 +188,24 @@ export class TagsetService {
 
   async addTagsetWithName(
     tagsetable: ITagsetable,
-    name: string
+    tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning
-    if (this.hasTagsetWithName(tagsetable, name)) {
-      // TODO: log a warning
-      return this.getTagsetByName(tagsetable, name);
-    }
-
-    if (tagsetable.restrictedTagsetNames?.includes(name)) {
-      this.logger.verbose?.(
-        `Attempted to create a tagset using a restricted name: ${name}`,
-        LogContext.CHALLENGES
-      );
-      throw new Error(
-        'Unable to create tagset with restricted name: ' + { name }
+    if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
+      throw new ValidationException(
+        `Already exists a Tagset with the given name: ${tagsetData.name}`,
+        LogContext.COMMUNITY
       );
     }
 
-    const newTagset = await this.createTagset({ name: name });
+    if (tagsetable.restrictedTagsetNames?.includes(tagsetData.name)) {
+      throw new ValidationException(
+        `Restricted Tagset name: ${tagsetData.name}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    const newTagset = await this.createTagset(tagsetData);
     tagsetable.tagsets?.push(newTagset);
     return newTagset;
   }
