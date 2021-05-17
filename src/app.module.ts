@@ -23,6 +23,7 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ConfigurationTypes } from '@common/enums';
+import { MembershipModule } from './services/membership/membership.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { ConfigurationTypes } from '@common/enums';
     DataManagementModule,
     BootstrapModule,
     SearchModule,
+    MembershipModule,
     KonfigModule,
     IpfsModule,
   ],
