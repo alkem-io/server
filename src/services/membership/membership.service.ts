@@ -6,13 +6,14 @@ import { Membership } from './membership.dto.result';
 import { UserService } from '@domain/community/user/user.service';
 import { MembershipInput } from './membership.dto.input';
 import { MembershipEcoverseResultEntry } from './membership.dto.result.ecoverse.entry';
-import { AuthorizationCredential } from '@core/authorization';
+
 import { CommunityService } from '@domain/community/community/community.service';
 import { Community } from '@domain/community/community';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IChallenge } from '@domain/challenge/challenge';
 import { IUserGroup } from '@domain/community/user-group';
 import { MembershipResultEntry } from './membership.dto.result.entry';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 
 export class MembershipService {
   constructor(
