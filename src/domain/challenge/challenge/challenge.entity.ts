@@ -23,7 +23,7 @@ import { ICommunityable } from '@interfaces/communityable.interface';
 import { Organisation } from '@domain/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Context } from '@domain/context/context';
-import { Collaboration } from '@domain/collaboration/collaboration';
+import { Opportunity } from '@domain/collaboration/opportunity';
 
 @Entity()
 @ObjectType()
@@ -71,13 +71,13 @@ export class Challenge extends BaseEntity
   @JoinColumn()
   community?: Community;
 
-  @OneToOne(() => Collaboration, {
+  @OneToOne(() => Opportunity, {
     eager: false,
     cascade: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn()
-  collaboration?: Collaboration;
+  opportunity?: Opportunity;
 
   @Field(() => [Organisation], {
     description: 'The Organisations that are leading this Challenge.',

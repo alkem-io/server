@@ -10,7 +10,7 @@ import {
   VersionColumn,
 } from 'typeorm';
 import { IRelation } from '@domain/collaboration/relation';
-import { Collaboration } from '@domain/collaboration/collaboration';
+import { Opportunity } from '@domain/collaboration/opportunity';
 
 @Entity()
 @ObjectType()
@@ -49,8 +49,8 @@ export class Relation extends BaseEntity implements IRelation {
   description? = '';
 
   @ManyToOne(
-    () => Collaboration,
-    collaboration => collaboration.relations
+    () => Opportunity,
+    opportunity => opportunity.relations
   )
-  collaboration?: Collaboration;
+  opportunity?: Opportunity;
 }

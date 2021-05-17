@@ -5,7 +5,7 @@ import { ChallengeService } from './challenge.service';
 import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Context } from '@domain/context/context';
-import { Collaboration } from '@domain/collaboration/collaboration';
+import { Opportunity } from '@domain/collaboration/opportunity';
 import { NVP } from '@domain/common';
 
 @Resolver(() => Challenge)
@@ -30,13 +30,13 @@ export class ChallengeResolverFields {
     return await this.challengeService.getContext(challenge.id);
   }
 
-  @ResolveField('collaboration', () => Collaboration, {
+  @ResolveField('opportunity', () => Opportunity, {
     nullable: true,
-    description: 'The Collaboration for the challenge.',
+    description: 'The Opportunity for the challenge.',
   })
   @Profiling.api
-  async collaboration(@Parent() challenge: Challenge) {
-    return await this.challengeService.getCollaboration(challenge.id);
+  async opportunity(@Parent() challenge: Challenge) {
+    return await this.challengeService.getOpportunity(challenge.id);
   }
 
   @ResolveField('lifecycle', () => Lifecycle, {

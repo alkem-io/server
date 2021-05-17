@@ -10,11 +10,11 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { ICollaboration } from './collaboration.interface';
+import { IOpportunity } from '@domain/collaboration';
 
 @Entity()
 @ObjectType()
-export class Collaboration extends BaseEntity implements ICollaboration {
+export class Opportunity extends BaseEntity implements IOpportunity {
   @Field(() => ID)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -30,18 +30,18 @@ export class Collaboration extends BaseEntity implements ICollaboration {
 
   @Field(() => [Project], {
     nullable: true,
-    description: 'The set of projects within the context of this Collaboration',
+    description: 'The set of projects within the context of this Opportunity',
   })
   @OneToMany(
     () => Project,
-    project => project.collaboration,
+    project => project.opportunity,
     { eager: true, cascade: true }
   )
   projects?: Project[];
 
   @OneToMany(
     () => Relation,
-    relation => relation.collaboration,
+    relation => relation.opportunity,
     { eager: false, cascade: true }
   )
   relations?: Relation[];

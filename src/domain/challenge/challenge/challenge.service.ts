@@ -31,16 +31,16 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { ChallengeLifecycleTemplates } from '@common/enums/challenge.lifecycle.templates';
 import { IContext } from '@domain/context/context';
-import { ICollaboration } from '@domain/collaboration/collaboration';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { NVP } from '@domain/common';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { IOpportunity } from '@domain/collaboration';
 
 @Injectable()
 export class ChallengeService {
   constructor(
     private contextService: ContextService,
     private communityService: CommunityService,
-    private collaborationService: CollaborationService,
+    private opportunityService: OpportunityService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
@@ -73,7 +73,7 @@ export class ChallengeService {
     }
 
     // Collaboration
-    challenge.collaboration = await this.collaborationService.createCollaboration();
+    challenge.opportunity = await this.opportunityService.createOpportunity();
 
     // Remaining initialisation
     challenge.tagset = this.tagsetService.createDefaultTagset();
@@ -219,17 +219,17 @@ export class ChallengeService {
     return context;
   }
 
-  async getCollaboration(challengeId: number): Promise<ICollaboration> {
+  async getOpportunity(challengeId: number): Promise<IOpportunity> {
     const challenge = await this.getChallengeByIdOrFail(challengeId, {
-      relations: ['collaboration'],
+      relations: ['opportunity'],
     });
-    const collaboration = challenge.collaboration;
-    if (!collaboration)
+    const opportunity = challenge.opportunity;
+    if (!opportunity)
       throw new RelationshipNotFoundException(
-        `Unable to load Collaboration for challenge ${challengeId} `,
+        `Unable to load Opportunities for challenge ${challengeId} `,
         LogContext.COLLABORATION
       );
-    return collaboration;
+    return opportunity;
   }
 
   // Lazy load the lifecycle

@@ -12,12 +12,12 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { Agreement } from '@domain/collaboration/agreement/agreement.entity';
+import { Agreement } from '@domain/collaboration/agreement';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
 import { Lifecycle } from '@domain/common/lifecycle';
-import { Collaboration } from '@domain/collaboration/collaboration';
+import { Opportunity } from '@domain/collaboration';
 
 @Entity()
 @ObjectType()
@@ -85,10 +85,10 @@ export class Project extends BaseEntity implements IProject {
   agreements?: Agreement[];
 
   @ManyToOne(
-    () => Collaboration,
-    collaboration => collaboration.projects
+    () => Opportunity,
+    opportunity => opportunity.projects
   )
-  collaboration?: Collaboration;
+  opportunity?: Opportunity;
 
   constructor(name: string, textID: string) {
     super();
