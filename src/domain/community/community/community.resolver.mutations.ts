@@ -23,9 +23,10 @@ import {
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user';
 import { UserInfo } from '@core/authentication';
+import { AuthorizationRoleGlobal } from '@common/enums';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -35,7 +36,7 @@ export class CommunityResolverMutations {
     private applicationService: ApplicationService
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
     description: 'Creates a new User Group in the specified Community.',
@@ -48,8 +49,8 @@ export class CommunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
@@ -63,8 +64,8 @@ export class CommunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => UserGroup, {
@@ -77,7 +78,7 @@ export class CommunityResolverMutations {
     return await this.communityService.removeMember(membershipData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Application, {
     description: 'Creates Application for a User to join this Community.',
@@ -90,8 +91,8 @@ export class CommunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => Application, {
@@ -104,8 +105,8 @@ export class CommunityResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => Application, {

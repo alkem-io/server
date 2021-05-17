@@ -15,10 +15,6 @@ import { Actor } from '@domain/context/actor/actor.entity';
 import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
 import { IActorGroup } from './actor-group.interface';
 
-export enum RestrictedActorGroupNames {
-  Collaborators = 'collaborators',
-}
-
 @Entity()
 @ObjectType()
 export class ActorGroup extends BaseEntity implements IActorGroup {

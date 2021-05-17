@@ -1,8 +1,8 @@
+import { AuthorizationRoleGlobal } from '@common/enums';
 import {
   AuthorizationCommunityMember,
   GraphqlGuard,
 } from '@core/authorization';
-import { AuthorizationRolesGlobal } from '@core/authorization/authorization.roles.global';
 import { Application } from '@domain/community/application/application.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
@@ -17,8 +17,8 @@ export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Admin,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
@@ -32,8 +32,8 @@ export class CommunityResolverFields {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Admin,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
@@ -47,8 +47,8 @@ export class CommunityResolverFields {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Admin,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)

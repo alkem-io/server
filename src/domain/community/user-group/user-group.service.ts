@@ -7,7 +7,7 @@ import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   NotSupportedException,
@@ -27,7 +27,6 @@ import {
 
 import validator from 'validator';
 import { TagsetService } from '@domain/common/tagset';
-import { AuthorizationCredential } from '@core/authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()

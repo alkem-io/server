@@ -3,14 +3,13 @@ import {
   ApplicationEventInput,
 } from '@domain/community/application';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
-import { AuthorizationCredential } from '@core/authorization';
 import { ICredential } from '@domain/agent';
 import { IUser } from '@domain/community/user';
 

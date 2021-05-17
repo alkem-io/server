@@ -6,12 +6,13 @@ import { Profiling } from '@src/common/decorators';
 import { SearchInput } from './search-input.dto';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
 @Resolver()
 export class SearchResolver {
   constructor(private searchService: SearchService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Query(() => [SearchResultEntry], {
     nullable: false,

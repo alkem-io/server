@@ -1,9 +1,10 @@
-import { LogContext } from '@common/enums';
-import { ForbiddenException } from '@common/exceptions';
-import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
+import {
+  ForbiddenException,
+  UserNotRegisteredException,
+} from '@common/exceptions';
 import { UserInfo } from '@core/authentication/user-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
-import { AuthorizationCredential } from '../authorization.credential';
+import { LogContext, AuthorizationCredential } from '@common/enums';
 
 export class AuthorizationRuleOrganisationMember implements IAuthorizationRule {
   organisationID: number;
