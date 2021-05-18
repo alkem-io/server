@@ -13,11 +13,9 @@ import { IChallenge } from './challenge.interface';
 import { Organisation } from '@domain/community';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { ChallengeBase } from '@domain/challenge';
-import { IChallengeBase } from '../challenge-base';
 
 @Entity()
-export class Challenge extends ChallengeBase
-  implements IChallenge, IChallengeBase {
+export class Challenge extends ChallengeBase implements IChallenge {
   @OneToMany(
     () => Opportunity,
     opportunity => opportunity.challenge,

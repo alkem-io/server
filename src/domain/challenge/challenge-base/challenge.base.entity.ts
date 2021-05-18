@@ -5,7 +5,7 @@ import { IChallengeBase } from '@domain/challenge';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Community } from '@domain/community/community';
 import { Context } from '@domain/context/context';
-import { CherrytwistBaseEntity } from './cherrytwist.base.entity';
+import { CherrytwistBaseEntity } from '@domain/common/base-entity/cherrytwist.base.entity';
 
 export abstract class ChallengeBase extends CherrytwistBaseEntity
   implements IChallengeBase {

@@ -34,6 +34,7 @@ import { IContext } from '@domain/context/context';
 import { NVP } from '@domain/common';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { IOpportunity } from '@domain/collaboration';
+import { ChallengeBaseService } from '../challenge-base/challenge.base.service';
 
 @Injectable()
 export class ChallengeService {
@@ -41,6 +42,7 @@ export class ChallengeService {
     private contextService: ContextService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
+    private challengeBaseService: ChallengeBaseService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
@@ -188,19 +190,23 @@ export class ChallengeService {
   }
 
   async getCommunity(challengeId: number): Promise<ICommunity> {
-    const challengeWithCommunity = await this.getChallengeByIdOrFail(
+    return await this.challengeBaseService.getCommunity(
       challengeId,
-      {
-        relations: ['community'],
-      }
+      this.challengeRepository
     );
-    const community = challengeWithCommunity.community;
-    if (!community)
-      throw new RelationshipNotFoundException(
-        `Unable to load community for challenge ${challengeId} `,
-        LogContext.COMMUNITY
-      );
-    return community;
+    // const challengeWithCommunity = await this.getChallengeByIdOrFail(
+    //   challengeId,
+    //   {
+    //     relations: ['community'],
+    //   }
+    // );
+    // const community = challengeWithCommunity.community;
+    // if (!community)
+    //   throw new RelationshipNotFoundException(
+    //     `Unable to load community for challenge ${challengeId} `,
+    //     LogContext.COMMUNITY
+    //   );
+    // return community;
   }
 
   async getContext(challengeId: number): Promise<IContext> {
