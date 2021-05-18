@@ -11,10 +11,12 @@ import { OrganisationModule } from '@domain/community/organisation/organisation.
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { ChallengeBaseModule } from '../challenge-base/challenge.base.module';
 
 @Module({
   imports: [
     ContextModule,
+    ChallengeBaseModule,
     CommunityModule,
     OpportunityModule,
     TagsetModule,

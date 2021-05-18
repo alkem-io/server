@@ -7,7 +7,6 @@ import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import {
   UpdateChallengeInput,
   IChallenge,
-  Challenge,
   DeleteChallengeInput,
   ChallengeEventInput,
   AssignChallengeLeadInput,
@@ -27,7 +26,7 @@ export class ChallengeResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Creates a new child challenge within the parent Challenge.',
   })
   @Profiling.api
@@ -39,7 +38,7 @@ export class ChallengeResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Updates the specified Challenge.',
   })
   @Profiling.api
@@ -54,7 +53,7 @@ export class ChallengeResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Deletes the specified Challenge.',
   })
   async deleteChallenge(
@@ -68,7 +67,7 @@ export class ChallengeResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Assigns an organisation as a lead for the Challenge.',
   })
   @Profiling.api
@@ -83,7 +82,7 @@ export class ChallengeResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Remove an organisation as a lead for the Challenge.',
   })
   @Profiling.api
@@ -95,7 +94,7 @@ export class ChallengeResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Trigger an event on the Challenge.',
   })
   async eventOnChallenge(

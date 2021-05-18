@@ -4,7 +4,6 @@ import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import { Community } from '@domain/community/community';
-import { Challenge } from '../challenge/challenge.entity';
 import { ChallengeService } from '../challenge/challenge.service';
 import { IChallenge } from '../challenge';
 import { Project, IProject } from '@domain/collaboration/project';
@@ -50,7 +49,7 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getContext(ecoverse);
   }
 
-  @ResolveField('challenges', () => [Challenge], {
+  @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
     description: 'The challenges for the ecoverse.',
   })
@@ -68,7 +67,7 @@ export class EcoverseResolverFields {
     return this.ecoverseService.getChallenge(ecoverse).tagset;
   }
 
-  @ResolveField('challenge', () => Challenge, {
+  @ResolveField('challenge', () => IChallenge, {
     nullable: false,
     description: 'A particular Challenge, either by its ID or textID',
   })
@@ -82,7 +81,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @ResolveField('opportunities', () => [Challenge], {
+  @ResolveField('opportunities', () => [IChallenge], {
     nullable: false,
     description: 'All opportunities within the ecoverse',
   })

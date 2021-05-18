@@ -73,7 +73,7 @@ export class ChallengeService {
     }
 
     // Collaboration
-    challenge.opportunity = await this.opportunityService.createOpportunity();
+    challenge.opportunities = [];
 
     // Remaining initialisation
     challenge.tagset = this.tagsetService.createDefaultTagset();
@@ -219,20 +219,19 @@ export class ChallengeService {
     return context;
   }
 
-  async getOpportunity(challengeId: number): Promise<IOpportunity> {
+  async getOpportunities(challengeId: number): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeByIdOrFail(challengeId, {
-      relations: ['opportunity'],
+      relations: ['opportunities'],
     });
-    const opportunity = challenge.opportunity;
-    if (!opportunity)
+    const opportunities = challenge.opportunities;
+    if (!opportunities)
       throw new RelationshipNotFoundException(
         `Unable to load Opportunities for challenge ${challengeId} `,
         LogContext.COLLABORATION
       );
-    return opportunity;
+    return opportunities;
   }
 
-  // Lazy load the lifecycle
   async getLifecycle(challengeId: number): Promise<ILifecycle> {
     const challenge = await this.getChallengeByIdOrFail(challengeId, {
       relations: ['lifecycle'],

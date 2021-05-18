@@ -5,12 +5,14 @@ import {
   BaseEntity,
   CreateDateColumn,
   Entity,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
 import { IOpportunity } from '@domain/collaboration';
+import { Challenge } from '@domain/challenge';
 
 @Entity()
 @ObjectType()
@@ -27,6 +29,13 @@ export class Opportunity extends BaseEntity implements IOpportunity {
 
   @VersionColumn()
   version?: number;
+
+  @ManyToOne(
+    () => Challenge,
+    challenge => challenge.opportunities,
+    { eager: false, cascade: false }
+  )
+  challenge?: Challenge;
 
   @Field(() => [Project], {
     nullable: true,

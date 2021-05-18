@@ -1,5 +1,4 @@
 import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
@@ -46,7 +45,7 @@ export class EcoverseResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Creates a new Challenge within the specified Ecoverse.',
   })
   @Profiling.api
