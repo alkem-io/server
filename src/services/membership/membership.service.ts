@@ -41,7 +41,7 @@ export class MembershipService {
         );
         const orgResult = new MembershipResultEntry(
           organisation.name,
-          organisation.id.toString()
+          `organisation:${organisation.id.toString()}`
         );
         membership.organisations.push(orgResult);
       } else if (credential.type === AuthorizationCredential.CommunityMember) {
@@ -76,14 +76,14 @@ export class MembershipService {
       for (const challenge of storedChallenges) {
         const challengeResult = new MembershipResultEntry(
           challenge.name,
-          challenge.id.toString()
+          `challenge:${challenge.id.toString()}`
         );
         ecoverseResult.challenges.push(challengeResult);
       }
       for (const group of storedUserGroups) {
         const groupResult = new MembershipResultEntry(
           group.name,
-          group.id.toString()
+          `group:${group.id.toString()}`
         );
         ecoverseResult.userGroups.push(groupResult);
       }
@@ -103,7 +103,7 @@ export class MembershipService {
     );
     const ecoverseResult = new MembershipEcoverseResultEntry();
     ecoverseResult.name = ecoverse.name;
-    ecoverseResult.id = ecoverse.id.toString();
+    ecoverseResult.id = `ecoverse:${ecoverse.id.toString()}`;
     return ecoverseResult;
   }
 }
