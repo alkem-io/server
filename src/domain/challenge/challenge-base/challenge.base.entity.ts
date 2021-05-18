@@ -1,37 +1,14 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  JoinColumn,
-  OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Column, JoinColumn, OneToOne } from 'typeorm';
 import { Tagset } from '@domain/common/tagset';
 import { IChallengeBase } from '@domain/challenge';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Community } from '@domain/community/community';
 import { Context } from '@domain/context/context';
+import { CherrytwistBaseEntity } from './cherrytwist.base.entity';
 
-export abstract class ChallengeBase extends BaseEntity
+export abstract class ChallengeBase extends CherrytwistBaseEntity
   implements IChallengeBase {
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Column()
-  ecverseID!: string;
-
   @Column()
   name: string;
 
