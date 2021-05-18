@@ -128,7 +128,7 @@ export class EcoverseService {
         const opportunity = await this.challengeService.getChallengeByIdOrFail(
           childChallenge.id,
           {
-            relations: ['context', 'collaboration'],
+            relations: ['context', 'opportunities'],
           }
         );
         opportunitiyChallenges.push(opportunity);

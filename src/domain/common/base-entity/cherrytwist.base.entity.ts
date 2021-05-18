@@ -6,7 +6,7 @@ import {
   VersionColumn,
 } from 'typeorm';
 
-export abstract class CherrytwistBaseEntity extends BaseEntity {
+export abstract class BaseCherrytwistEntity extends BaseEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 

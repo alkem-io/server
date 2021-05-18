@@ -6,11 +6,13 @@ import { ProjectModule } from '../project/project.module';
 import { RelationModule } from '../relation/relation.module';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
 import { OpportunityResolverMutations } from './opportunity.resolver.mutations';
+import { ChallengeBaseModule } from '@domain/challenge/challenge-base/challenge.base.module';
 
 @Module({
   imports: [
     ProjectModule,
     RelationModule,
+    ChallengeBaseModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

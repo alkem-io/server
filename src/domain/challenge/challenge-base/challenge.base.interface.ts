@@ -26,6 +26,8 @@ export abstract class IChallengeBase extends ICherrytwistBase {
   })
   tagset?: ITagset;
 
+  ecoverseID!: string;
+
   context?: IContext;
   community?: ICommunity;
   lifecycle?: ILifecycle;

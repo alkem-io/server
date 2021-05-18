@@ -10,10 +10,10 @@ import { CherrytwistBaseEntity } from '@domain/common/base-entity/cherrytwist.ba
 export abstract class ChallengeBase extends CherrytwistBaseEntity
   implements IChallengeBase {
   @Column()
-  name: string;
+  name = '';
 
   @Column()
-  textID: string;
+  textID = '';
 
   @OneToOne(() => Context, { eager: false, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
@@ -35,9 +35,10 @@ export abstract class ChallengeBase extends CherrytwistBaseEntity
   @JoinColumn()
   tagset?: Tagset;
 
-  constructor(name: string, textID: string) {
+  @Column()
+  ecoverseID = '';
+
+  constructor() {
     super();
-    this.name = name;
-    this.textID = textID;
   }
 }

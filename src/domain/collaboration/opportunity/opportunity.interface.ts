@@ -1,8 +1,15 @@
 import { IRelation } from '@domain/collaboration/relation';
-import { IProject } from '@domain/collaboration/project';
+import { IProject, Project } from '@domain/collaboration/project';
+import { IChallengeBase } from '@domain/challenge';
+import { Field, ObjectType } from '@nestjs/graphql';
 
-export interface IOpportunity {
-  id: number;
+@ObjectType('Opportunity')
+export abstract class IOpportunity extends IChallengeBase {
+  @Field(() => [Project], {
+    nullable: true,
+    description: 'The set of projects within the context of this Opportunity',
+  })
   projects?: IProject[];
+
   relations?: IRelation[];
 }

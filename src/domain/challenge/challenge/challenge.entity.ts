@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import {
-  Column,
   Entity,
   JoinTable,
   ManyToMany,
@@ -52,11 +51,8 @@ export class Challenge extends ChallengeBase implements IChallenge {
   )
   ecoverse?: Ecoverse;
 
-  @Column()
-  ecoverseID: string;
-
-  constructor(name: string, textID: string) {
-    super(name, textID);
+  constructor() {
+    super();
     this.ecoverseID = '';
   }
 }

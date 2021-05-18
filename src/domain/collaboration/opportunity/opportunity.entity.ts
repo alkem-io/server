@@ -1,35 +1,11 @@
 import { Relation } from '@domain/collaboration/relation';
 import { Project } from '@domain/collaboration/project';
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Entity, ManyToOne, OneToMany } from 'typeorm';
 import { IOpportunity } from '@domain/collaboration';
-import { Challenge } from '@domain/challenge';
+import { Challenge, ChallengeBase } from '@domain/challenge';
 
 @Entity()
-@ObjectType()
-export class Opportunity extends BaseEntity implements IOpportunity {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
+export class Opportunity extends ChallengeBase implements IOpportunity {
   @ManyToOne(
     () => Challenge,
     challenge => challenge.opportunities,
@@ -37,10 +13,6 @@ export class Opportunity extends BaseEntity implements IOpportunity {
   )
   challenge?: Challenge;
 
-  @Field(() => [Project], {
-    nullable: true,
-    description: 'The set of projects within the context of this Opportunity',
-  })
   @OneToMany(
     () => Project,
     project => project.opportunity,
@@ -55,7 +27,6 @@ export class Opportunity extends BaseEntity implements IOpportunity {
   )
   relations?: Relation[];
 
-  // Constructor
   constructor() {
     super();
   }
