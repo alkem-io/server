@@ -169,6 +169,10 @@ identity:
         # If the secret doesn't match JWT validation will fail.
         clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
 
+      ory_kratos:
+        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://127.0.0.1:4455/
+        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://127.0.0.1:4456/.well-known/jwks.json
+
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:
@@ -261,5 +265,3 @@ storage:
 
     # Max file size of files that will be uploaded to IPFS (in bytes).
     maxFileSize: 1048576
-
-
