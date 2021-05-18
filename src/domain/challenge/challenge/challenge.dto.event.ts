@@ -1,13 +1,5 @@
-import { InputType, Field } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
-import { SMALL_TEXT_LENGTH } from '@src/common/constants';
+import { InputType } from '@nestjs/graphql';
+import { BaseChallengeEventInput } from '../base-challenge/base.challenge.dto.event';
 
 @InputType()
-export class ChallengeEventInput {
-  @Field({ nullable: false })
-  ID!: number;
-
-  @Field({ nullable: false })
-  @MaxLength(SMALL_TEXT_LENGTH)
-  eventName!: string;
-}
+export class ChallengeEventInput extends BaseChallengeEventInput {}

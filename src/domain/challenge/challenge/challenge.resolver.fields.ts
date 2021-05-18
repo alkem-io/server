@@ -5,7 +5,7 @@ import { ChallengeService } from './challenge.service';
 import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Context } from '@domain/context/context';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity } from '@domain/collaboration/opportunity';
 import { NVP } from '@domain/common';
 import { IChallenge } from '@domain/challenge';
 
@@ -31,7 +31,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getContext(challenge.id);
   }
 
-  @ResolveField('opportunites', () => [Opportunity], {
+  @ResolveField('opportunites', () => [IOpportunity], {
     nullable: true,
     description: 'The Opportunities for the challenge.',
   })

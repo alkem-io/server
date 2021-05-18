@@ -6,7 +6,7 @@ import { EcoverseService } from './ecoverse.service';
 import { Community } from '@domain/community/community';
 import { ChallengeService } from '../challenge/challenge.service';
 import { IChallenge } from '../challenge';
-import { Project, IProject } from '@domain/collaboration/project';
+import { IProject } from '@domain/collaboration/project';
 import {
   UserGroup,
   IUserGroup,
@@ -21,7 +21,8 @@ import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { Tagset } from '@domain/common/tagset';
 import { Context } from '@domain/context';
 import { NVP } from '@domain/common';
-@Resolver(() => Ecoverse)
+import { IEcoverse } from '@domain/challenge/ecoverse';
+@Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
   constructor(
     private challengeService: ChallengeService,
@@ -90,7 +91,7 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getOpportunities(ecoverse);
   }
 
-  @ResolveField('projects', () => [Project], {
+  @ResolveField('projects', () => [IProject], {
     nullable: false,
     description: 'All projects within this ecoverse',
   })
@@ -99,7 +100,7 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getProjects(ecoverse);
   }
 
-  @ResolveField('project', () => Project, {
+  @ResolveField('project', () => IProject, {
     nullable: false,
     description: 'A particular Project, identified by the ID',
   })

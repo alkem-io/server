@@ -1,7 +1,5 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { DeleteBaseCherrytwistInput } from '@domain/common/base-entity/base.cherrytwist.dto.delete';
+import { InputType } from '@nestjs/graphql';
 
 @InputType()
-export class DeleteOpportunityInput {
-  @Field({ nullable: false })
-  ID!: number;
-}
+export class DeleteOpportunityInput extends DeleteBaseCherrytwistInput {}

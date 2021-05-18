@@ -4,10 +4,10 @@ import { Tagset } from '@domain/common/tagset';
 import { IContext } from '@domain/context';
 import { ICommunity } from '@domain/community/community';
 import { ILifecycle } from '@domain/common';
-import { ICherrytwistBase } from '@domain/common/base-entity/cherrytwist.base.interface';
+import { IBaseCherrytwist } from '@domain/common/base-entity/base.cherrytwist.interface';
 
-@ObjectType('IChallengeBase')
-export abstract class IChallengeBase extends ICherrytwistBase {
+@ObjectType('IBaseChallenge')
+export abstract class IBaseChallenge extends IBaseCherrytwist {
   @Field(() => String, {
     nullable: false,
     description: 'The name of the challenge',

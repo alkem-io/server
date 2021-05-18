@@ -5,7 +5,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { IChallengeBase, UpdateChallengeBaseInput } from '@domain/challenge';
+import { IBaseChallenge, UpdateBaseChallengeInput } from '@domain/challenge';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { TagsetService } from '@domain/common/tagset';
@@ -16,18 +16,15 @@ import { ContextService } from '@domain/context/context/context.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import {
-  Challenge,
-  challengeLifecycleConfigDefault,
-  challengeLifecycleConfigExtended,
-} from '../challenge';
-import { ChallengeBase } from './challenge.base.entity';
+import { BaseChallenge } from './base.challenge.entity';
 import validator from 'validator';
-import { CreateChallengeBaseInput } from './challenge.base.dto.create';
+import { CreateBaseChallengeInput } from './base.challenge.dto.create';
 import { ChallengeLifecycleTemplates } from '@common/enums/challenge.lifecycle.templates';
+import { challengeLifecycleConfigDefault } from './base.challenge.lifecycle.config.default';
+import { challengeLifecycleConfigExtended } from './base.challenge.lifecycle.config.extended';
 
 @Injectable()
-export class ChallengeBaseService {
+export class BaseChallengeService {
   constructor(
     private contextService: ContextService,
     private communityService: CommunityService,
@@ -37,9 +34,9 @@ export class ChallengeBaseService {
   ) {}
 
   async initialise(
-    challengeBase: IChallengeBase,
-    challengeData: CreateChallengeBaseInput,
-    repository: Repository<ChallengeBase>
+    challengeBase: IBaseChallenge,
+    challengeData: CreateBaseChallengeInput,
+    repository: Repository<BaseChallenge>
   ) {
     challengeBase.community = await this.communityService.createCommunity(
       challengeBase.name
@@ -74,9 +71,9 @@ export class ChallengeBaseService {
   }
 
   async update(
-    challengeBaseData: UpdateChallengeBaseInput,
-    repository: Repository<ChallengeBase>
-  ): Promise<IChallengeBase> {
+    challengeBaseData: UpdateBaseChallengeInput,
+    repository: Repository<BaseChallenge>
+  ): Promise<IBaseChallenge> {
     const challenge = await this.getChallengeBaseOrFail(
       challengeBaseData.ID,
       repository,
@@ -116,14 +113,14 @@ export class ChallengeBaseService {
     }
     if (challengeBaseData.tags)
       this.tagsetService.replaceTagsOnEntity(
-        challenge as Challenge,
+        challenge as BaseChallenge,
         challengeBaseData.tags
       );
 
     return await repository.save(challenge);
   }
 
-  async deleteEntities(challengeBase: IChallengeBase) {
+  async deleteEntities(challengeBase: IBaseChallenge) {
     if (challengeBase.context) {
       await this.contextService.removeContext(challengeBase.context.id);
     }
@@ -143,9 +140,9 @@ export class ChallengeBaseService {
 
   async getChallengeBaseOrFail(
     challengeID: string,
-    repository: Repository<ChallengeBase>,
-    options?: FindOneOptions<ChallengeBase>
-  ): Promise<IChallengeBase> {
+    repository: Repository<BaseChallenge>,
+    options?: FindOneOptions<BaseChallenge>
+  ): Promise<IBaseChallenge> {
     if (validator.isNumeric(challengeID)) {
       const idInt: number = parseInt(challengeID);
       return await this.getChallengeBaseByIdOrFail(idInt, repository, options);
@@ -160,9 +157,9 @@ export class ChallengeBaseService {
 
   async getChallengeBaseByIdOrFail(
     challengeBaseID: number,
-    repository: Repository<ChallengeBase>,
-    options?: FindOneOptions<ChallengeBase>
-  ): Promise<IChallengeBase> {
+    repository: Repository<BaseChallenge>,
+    options?: FindOneOptions<BaseChallenge>
+  ): Promise<IBaseChallenge> {
     const challenge = await repository.findOne(
       { id: challengeBaseID },
       options
@@ -177,9 +174,9 @@ export class ChallengeBaseService {
 
   async getChallengeByTextIdOrFail(
     challengeID: string,
-    repository: Repository<ChallengeBase>,
-    options?: FindOneOptions<ChallengeBase>
-  ): Promise<IChallengeBase> {
+    repository: Repository<BaseChallenge>,
+    options?: FindOneOptions<BaseChallenge>
+  ): Promise<IBaseChallenge> {
     const challenge = await repository.findOne(
       { textID: challengeID },
       options
@@ -194,7 +191,7 @@ export class ChallengeBaseService {
 
   async getCommunity(
     challengeBaseId: number,
-    repository: Repository<ChallengeBase>
+    repository: Repository<BaseChallenge>
   ): Promise<ICommunity> {
     const challengeWithCommunity = await this.getChallengeBaseByIdOrFail(
       challengeBaseId,
@@ -214,7 +211,7 @@ export class ChallengeBaseService {
 
   async getContext(
     challengeId: number,
-    repository: Repository<ChallengeBase>
+    repository: Repository<BaseChallenge>
   ): Promise<IContext> {
     const challengeWithContext = await this.getChallengeBaseByIdOrFail(
       challengeId,
@@ -234,7 +231,7 @@ export class ChallengeBaseService {
 
   async getLifecycle(
     challengeId: number,
-    repository: Repository<ChallengeBase>
+    repository: Repository<BaseChallenge>
   ): Promise<ILifecycle> {
     const challenge = await this.getChallengeBaseByIdOrFail(
       challengeId,

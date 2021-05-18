@@ -9,10 +9,7 @@ import { CreateContextInput } from '@domain/context/context';
 import { TextID } from '@domain/common/scalars';
 
 @InputType()
-export class CreateChallengeBaseInput {
-  @Field({ nullable: false })
-  parentID!: string;
-
+export class CreateBaseChallengeInput {
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;

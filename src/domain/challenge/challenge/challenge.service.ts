@@ -26,12 +26,12 @@ import {
   RemoveChallengeLeadInput,
 } from '@domain/challenge/challenge';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
 import { NVP } from '@domain/common';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { IOpportunity } from '@domain/collaboration';
-import { ChallengeBaseService } from '../challenge-base/challenge.base.service';
+import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 
 @Injectable()
 export class ChallengeService {
@@ -39,7 +39,7 @@ export class ChallengeService {
     private contextService: ContextService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
-    private challengeBaseService: ChallengeBaseService,
+    private challengeBaseService: BaseChallengeService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
@@ -77,7 +77,7 @@ export class ChallengeService {
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.getChallengeByIdOrFail(challengeID, {
+    const challenge = await this.getChallengeByIdOrFail(parseInt(challengeID), {
       relations: [
         'childChallenges',
         'community',

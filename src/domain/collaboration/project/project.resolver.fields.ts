@@ -1,10 +1,10 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { Project } from './project.entity';
 import { ProjectService } from './project.service';
 import { Lifecycle } from '@domain/common/lifecycle';
+import { IProject, Project } from '@domain/collaboration/project';
 
-@Resolver(() => Project)
+@Resolver(() => IProject)
 export class ProjectResolverFields {
   constructor(private projectService: ProjectService) {}
 
@@ -14,7 +14,7 @@ export class ProjectResolverFields {
       'The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc',
   })
   @Profiling.api
-  async lifecycle(@Parent() Project: Project) {
-    return await this.projectService.getLifecycle(Project.id);
+  async lifecycle(@Parent() project: Project) {
+    return await this.projectService.getLifecycle(project.id);
   }
 }

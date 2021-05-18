@@ -5,7 +5,6 @@ import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
 import { ProjectService } from './project.service';
 import {
   UpdateProjectInput,
-  Project,
   IProject,
   DeleteProjectInput,
   ProjectEventInput,
@@ -22,7 +21,7 @@ export class ProjectResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Project, {
+  @Mutation(() => IProject, {
     description: 'Deletes the specified Project.',
   })
   async deleteProject(
@@ -36,7 +35,7 @@ export class ProjectResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Project, {
+  @Mutation(() => IProject, {
     description: 'Updates the specified Project.',
   })
   async updateProject(
@@ -60,7 +59,7 @@ export class ProjectResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Project, {
+  @Mutation(() => IProject, {
     description: 'Trigger an event on the Project.',
   })
   async eventOnProject(

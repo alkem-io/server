@@ -1,19 +1,19 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import { Column, JoinColumn, OneToOne } from 'typeorm';
 import { Tagset } from '@domain/common/tagset';
-import { IChallengeBase } from '@domain/challenge';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Community } from '@domain/community/community';
 import { Context } from '@domain/context/context';
-import { CherrytwistBaseEntity } from '@domain/common/base-entity/cherrytwist.base.entity';
+import { IBaseChallenge } from '@domain/challenge';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity/base.cherrytwist.entity';
 
-export abstract class ChallengeBase extends CherrytwistBaseEntity
-  implements IChallengeBase {
+export abstract class BaseChallenge extends BaseCherrytwistEntity
+  implements IBaseChallenge {
   @Column()
-  name = '';
+  name!: string;
 
   @Column()
-  textID = '';
+  textID!: string;
 
   @OneToOne(() => Context, { eager: false, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
@@ -36,9 +36,12 @@ export abstract class ChallengeBase extends CherrytwistBaseEntity
   tagset?: Tagset;
 
   @Column()
-  ecoverseID = '';
+  ecoverseID!: string;
 
   constructor() {
     super();
+    this.name = '';
+    this.textID = '';
+    this.ecoverseID = '';
   }
 }

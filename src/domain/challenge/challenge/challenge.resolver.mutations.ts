@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { ChallengeService } from './challenge.service';
@@ -11,17 +11,21 @@ import {
   ChallengeEventInput,
   AssignChallengeLeadInput,
   RemoveChallengeLeadInput,
+  Challenge,
 } from '@domain/challenge/challenge';
-import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 import { GraphqlGuard, AuthorizationRolesGlobal } from '@core/authorization';
 import { CreateChallengeInput } from './challenge.dto.create';
+import { BaseChallengeLifecycleOptionsProvider } from '../base-challenge/base.challenge.lifecycle.options.provider';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Resolver()
 export class ChallengeResolverMutations {
   constructor(
-    @Inject(ChallengeService) private challengeService: ChallengeService,
-    @Inject(ChallengeLifecycleOptionsProvider)
-    private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider
+    private challengeService: ChallengeService,
+    private challengeLifecycleOptionsProvider: BaseChallengeLifecycleOptionsProvider,
+    @InjectRepository(Challenge)
+    private challengeRepository: Repository<Challenge>
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
@@ -101,8 +105,10 @@ export class ChallengeResolverMutations {
     @Args('challengeEventData')
     challengeEventData: ChallengeEventInput
   ): Promise<IChallenge> {
-    return await this.challengeLifecycleOptionsProvider.eventOnChallenge(
-      challengeEventData
-    );
+    return await this.challengeLifecycleOptionsProvider.eventOnBaseChallenge({
+      eventName: challengeEventData.eventName,
+      ID: challengeEventData.ID,
+      repository: this.challengeRepository,
+    });
   }
 }

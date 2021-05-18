@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('ICherrytwistBase')
-export abstract class ICherrytwistBase {
+@ObjectType('IBaseCherrytwist')
+export abstract class IBaseCherrytwist {
   @Field(() => ID, {
     nullable: false,
     description: 'The ID of the entity',

@@ -2,7 +2,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
@@ -16,6 +15,7 @@ import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
 import validator from 'validator';
 import { DeleteTagsetInput } from './tagset.dto.delete';
+import { BaseChallenge } from '@domain/challenge';
 
 @Injectable()
 export class TagsetService {
@@ -109,7 +109,7 @@ export class TagsetService {
     return tagsets;
   }
 
-  replaceTagsOnEntity(entity: Challenge | Project, tags: string[]) {
+  replaceTagsOnEntity(entity: BaseChallenge | Project, tags: string[]) {
     if (!entity.tagset)
       throw new EntityNotInitializedException(
         `Entity with id(${entity.id}) not initialised with a tagset!`,

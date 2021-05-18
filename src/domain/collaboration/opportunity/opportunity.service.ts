@@ -13,12 +13,12 @@ import { RelationService } from '../relation/relation.service';
 import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ChallengeBaseService } from '@domain/challenge/challenge-base/challenge.base.service';
+import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 
 @Injectable()
 export class OpportunityService {
   constructor(
-    private challengeBaseService: ChallengeBaseService,
+    private challengeBaseService: BaseChallengeService,
     private projectService: ProjectService,
     private relationService: RelationService,
     @InjectRepository(Opportunity)

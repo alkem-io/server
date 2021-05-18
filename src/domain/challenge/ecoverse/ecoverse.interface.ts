@@ -1,10 +1,16 @@
+import { IBaseChallenge } from '@domain/challenge/base-challenge';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { Organisation } from '@domain/community';
 import { IOrganisation } from '@domain/community/organisation/organisation.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 
-export interface IEcoverse {
-  id: number;
-  textID: string;
-  name: string;
+@ObjectType('Ecoverse')
+export abstract class IEcoverse extends IBaseChallenge {
+  @Field(() => Organisation, {
+    nullable: true,
+    description: 'The organisation that hosts this Ecoverse instance',
+  })
   host?: IOrganisation;
+
   challenge?: IChallenge;
 }

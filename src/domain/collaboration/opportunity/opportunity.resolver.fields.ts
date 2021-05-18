@@ -1,10 +1,10 @@
 import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity, Opportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from './opportunity.service';
 
-@Resolver(() => Opportunity)
+@Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
   constructor(private opportunityService: OpportunityService) {}
 

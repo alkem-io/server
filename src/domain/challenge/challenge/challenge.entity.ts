@@ -7,14 +7,14 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Ecoverse } from '@domain/challenge/ecoverse';
 import { IChallenge } from './challenge.interface';
 import { Organisation } from '@domain/community';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { ChallengeBase } from '@domain/challenge';
+import { BaseChallenge } from '@domain/challenge/base-challenge';
 
 @Entity()
-export class Challenge extends ChallengeBase implements IChallenge {
+export class Challenge extends BaseChallenge implements IChallenge {
   @OneToMany(
     () => Opportunity,
     opportunity => opportunity.challenge,
@@ -53,6 +53,5 @@ export class Challenge extends ChallengeBase implements IChallenge {
 
   constructor() {
     super();
-    this.ecoverseID = '';
   }
 }

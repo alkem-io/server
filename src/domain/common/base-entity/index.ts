@@ -1,4 +1,3 @@
-export * from './agreement';
-export * from './project';
-export * from './relation';
-export * from './opportunity';
+export * from './base.cherrytwist.dto.update';
+export * from './base.cherrytwist.entity';
+export * from './base.cherrytwist.interface';

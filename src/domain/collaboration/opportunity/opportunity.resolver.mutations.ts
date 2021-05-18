@@ -7,11 +7,7 @@ import {
   IRelation,
   Relation,
 } from '@domain/collaboration/relation';
-import {
-  CreateProjectInput,
-  Project,
-  IProject,
-} from '@domain/collaboration/project';
+import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
@@ -22,7 +18,7 @@ export class OpportunityResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Project, {
+  @Mutation(() => IProject, {
     description: 'Create a new Project on the Opportunity',
   })
   @Profiling.api

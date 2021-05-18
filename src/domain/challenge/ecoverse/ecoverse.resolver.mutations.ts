@@ -6,7 +6,6 @@ import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import {
   CreateEcoverseInput,
-  Ecoverse,
   IEcoverse,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
@@ -20,7 +19,7 @@ export class EcoverseResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Ecoverse, {
+  @Mutation(() => IEcoverse, {
     description: 'Creates a new Ecoverse.',
   })
   @Profiling.api
@@ -32,7 +31,7 @@ export class EcoverseResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Ecoverse, {
+  @Mutation(() => IEcoverse, {
     description: 'Updates the Ecoverse.',
   })
   @Profiling.api
