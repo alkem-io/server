@@ -20,7 +20,7 @@ import {
 import { ICommunity } from '@domain/community/community';
 import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
-import { NVP } from '@domain/common';
+import { INVP, NVP } from '@domain/common';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
 import { IContext } from '@domain/context';
@@ -214,10 +214,10 @@ export class EcoverseService {
     return await this.projectService.getProjects(ecoverse.id.toString());
   }
 
-  async getActivity(ecoverse: IEcoverse): Promise<NVP[]> {
+  async getActivity(ecoverse: IEcoverse): Promise<INVP[]> {
     const challenge = this.getChallenge(ecoverse);
     // this will have members + challenges populated
-    const activity: NVP[] = [];
+    const activity: INVP[] = [];
 
     // Challenges
     const childChallengesCount = await this.challengeService.getChildChallengesCount(

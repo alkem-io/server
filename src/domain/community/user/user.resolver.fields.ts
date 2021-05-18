@@ -2,14 +2,14 @@ import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { User } from '@domain/community/user/user.entity';
 import { UserService } from './user.service';
-import { Agent, IAgent } from '@domain/agent/agent';
+import { IAgent } from '@domain/agent/agent';
 import { Profiling } from '@common/decorators';
 
 @Resolver(() => User)
 export class UserResolverFields {
   constructor(private userService: UserService) {}
 
-  @ResolveField('agent', () => Agent, {
+  @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this User.',
   })

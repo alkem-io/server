@@ -15,6 +15,7 @@ import {
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
 import { IProfile } from './profile.interface';
+import { IReference } from '@domain/common/reference';
 
 @Entity()
 @ObjectType()
@@ -32,7 +33,7 @@ export class Profile extends BaseEntity implements IProfile {
   @VersionColumn()
   version?: number;
 
-  @Field(() => [Reference], {
+  @Field(() => [IReference], {
     nullable: true,
     description: 'A list of URLs to relevant information.',
   })

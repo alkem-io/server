@@ -15,10 +15,11 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-import { Question } from '@domain/community/application';
+import { IQuestion } from '@domain/community/application';
 import { Community } from '../community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IApplication } from './application.interface';
+import { ILifecycle } from '@domain/common/lifecycle';
 
 @Entity()
 @ObjectType()
@@ -39,7 +40,7 @@ export class Application extends BaseEntity implements IApplication {
   @Column()
   ecoverseID?: string;
 
-  @Field(() => Lifecycle, { nullable: false })
+  @Field(() => ILifecycle, { nullable: false })
   @OneToOne(() => Lifecycle, { eager: true, cascade: true })
   @JoinColumn()
   lifecycle!: Lifecycle;
@@ -52,14 +53,14 @@ export class Application extends BaseEntity implements IApplication {
   )
   user!: User;
 
-  @Field(() => [Question])
+  @Field(() => [IQuestion])
   @ManyToMany(
     () => NVP,
     nvp => nvp.id,
     { eager: true, cascade: true }
   )
   @JoinTable({ name: 'application_questions' })
-  questions?: Question[];
+  questions?: IQuestion[];
 
   @ManyToOne(
     () => Community,

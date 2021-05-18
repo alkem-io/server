@@ -3,10 +3,9 @@ import { Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 import { Community } from '@domain/community/community';
-import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Context } from '@domain/context/context';
 import { IOpportunity } from '@domain/collaboration/opportunity';
-import { NVP } from '@domain/common';
+import { ILifecycle, INVP } from '@domain/common';
 import { IChallenge } from '@domain/challenge';
 
 @Resolver(() => IChallenge)
@@ -40,7 +39,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getOpportunities(challenge.id);
   }
 
-  @ResolveField('lifecycle', () => Lifecycle, {
+  @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
     description: 'The lifeycle for the Challenge.',
   })
@@ -58,7 +57,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getChildChallenges(challenge);
   }
 
-  @ResolveField('activity', () => [NVP], {
+  @ResolveField('activity', () => [INVP], {
     nullable: true,
     description: 'The activity within this Challenge.',
   })

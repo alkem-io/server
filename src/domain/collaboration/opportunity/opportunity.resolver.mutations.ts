@@ -2,11 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
 import { Profiling } from '@src/common/decorators';
-import {
-  CreateRelationInput,
-  IRelation,
-  Relation,
-} from '@domain/collaboration/relation';
+import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
@@ -31,7 +27,7 @@ export class OpportunityResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Relation, {
+  @Mutation(() => IRelation, {
     description: 'Create a new Relation on the Opportunity.',
   })
   @Profiling.api

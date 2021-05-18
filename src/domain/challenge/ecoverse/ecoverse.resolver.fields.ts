@@ -20,7 +20,7 @@ import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { Tagset } from '@domain/common/tagset';
 import { Context } from '@domain/context';
-import { NVP } from '@domain/common';
+import { INVP } from '@domain/common';
 import { IEcoverse } from '@domain/challenge/ecoverse';
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
@@ -178,7 +178,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @ResolveField('activity', () => [NVP], {
+  @ResolveField('activity', () => [INVP], {
     nullable: true,
     description: 'The activity within this Ecoverse.',
   })

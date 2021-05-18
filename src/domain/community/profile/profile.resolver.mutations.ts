@@ -1,4 +1,3 @@
-import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
@@ -48,7 +47,7 @@ export class ProfileResolverMutations {
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Reference, {
+  @Mutation(() => IReference, {
     description: 'Creates a new Reference on the specified Profile.',
   })
   @Profiling.api

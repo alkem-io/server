@@ -15,7 +15,7 @@ import {
 } from 'typeorm';
 import { IUser } from './user.interface';
 import { Application } from '@domain/community/application/application.entity';
-import { Agent } from '@domain/agent/agent';
+import { Agent, IAgent } from '@domain/agent/agent';
 
 @Entity()
 @ObjectType()
@@ -80,7 +80,7 @@ export class User extends BaseEntity implements IUser {
   @JoinColumn()
   profile?: Profile;
 
-  @Field(() => Agent, {
+  @Field(() => IAgent, {
     nullable: true,
     description: 'The agent for this User',
   })

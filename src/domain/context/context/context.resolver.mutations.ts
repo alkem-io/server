@@ -1,11 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import {
-  CreateReferenceInput,
-  Reference,
-  IReference,
-} from '@domain/common/reference';
+import { CreateReferenceInput, IReference } from '@domain/common/reference';
 import { ContextService } from './context.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
@@ -20,7 +16,7 @@ export class ContextResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Reference, {
+  @Mutation(() => IReference, {
     description: 'Creates a new Reference on the specified Context.',
   })
   @Profiling.api

@@ -14,6 +14,7 @@ import {
 } from 'typeorm';
 import { Aspect, IContext } from '@domain/context';
 import { EcosystemModel } from '../ecosystem-model';
+import { IReference } from '@domain/common/reference';
 @Entity()
 @ObjectType()
 export class Context extends BaseEntity implements IContext {
@@ -65,7 +66,7 @@ export class Context extends BaseEntity implements IContext {
   @Column('text', { nullable: true })
   who?: string = '';
 
-  @Field(() => [Reference], {
+  @Field(() => [IReference], {
     nullable: true,
     description: 'A list of URLs to relevant information.',
   })
