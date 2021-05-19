@@ -2,17 +2,18 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
-import { Community } from '@domain/community/community';
-import { Context } from '@domain/context/context';
+import { ICommunity } from '@domain/community/community';
+import { IContext } from '@domain/context/context';
 import { IOpportunity } from '@domain/collaboration/opportunity';
-import { ILifecycle, INVP } from '@domain/common';
-import { IChallenge } from '@domain/challenge';
+import { ILifecycle } from '@domain/common/lifecycle';
+import { IChallenge } from '@domain/challenge/challenge';
+import { INVP } from '@domain/common/nvp';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
   constructor(private challengeService: ChallengeService) {}
 
-  @ResolveField('community', () => Community, {
+  @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the challenge.',
   })
@@ -21,7 +22,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getCommunity(challenge.id);
   }
 
-  @ResolveField('context', () => Context, {
+  @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the challenge.',
   })

@@ -1,42 +1,14 @@
-import { ID, Field, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  OneToMany,
-  OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community';
 import { Challenge } from '@domain/challenge';
 import { Application, IApplication } from '@domain/community/application';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
-@ObjectType()
-export class Community extends BaseEntity implements ICommunity, IGroupable {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'The name of the Community',
-  })
+export class Community extends BaseCherrytwistEntity
+  implements ICommunity, IGroupable {
   @Column()
   name: string;
 

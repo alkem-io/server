@@ -4,11 +4,7 @@ import { Profiling } from '@src/common/decorators';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { EcosystemModelService } from './ecosystem-model.service';
-import {
-  ActorGroup,
-  CreateActorGroupInput,
-  IActorGroup,
-} from '@domain/context';
+import { CreateActorGroupInput, IActorGroup } from '@domain/context';
 
 @Resolver()
 export class EcosystemModelResolverMutations {
@@ -16,7 +12,7 @@ export class EcosystemModelResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ActorGroup, {
+  @Mutation(() => IActorGroup, {
     description: 'Create a new Actor Group on the EcosystemModel.',
   })
   @Profiling.api

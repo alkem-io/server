@@ -1,45 +1,15 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { EcosystemModel, IActorGroup, Actor } from '@domain/context';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 export enum RestrictedActorGroupNames {
   Collaborators = 'collaborators',
 }
-
 @Entity()
-@ObjectType()
-export class ActorGroup extends BaseEntity implements IActorGroup {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String)
+export class ActorGroup extends BaseCherrytwistEntity implements IActorGroup {
   @Column()
   name: string;
 
-  @Field(() => String, {
-    nullable: true,
-    description: 'A description of this group of actors',
-  })
   @Column('text', { nullable: true })
   description?: string;
 
@@ -49,10 +19,6 @@ export class ActorGroup extends BaseEntity implements IActorGroup {
   )
   ecosystemModel?: EcosystemModel;
 
-  @Field(() => [Actor], {
-    nullable: true,
-    description: 'The set of actors in this actor group',
-  })
   @OneToMany(
     () => Actor,
     actor => actor.actorGroup,

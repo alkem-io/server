@@ -1,10 +1,9 @@
-import { IAgreement } from '@domain/collaboration/agreement/agreement.interface';
-import { IAspect } from '@domain/context/aspect/aspect.interface';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IAgreement } from '@domain/collaboration/agreement';
+import { IAspect } from '@domain/context/aspect';
+import { ITagset } from '@domain/common/tagset';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { IBaseCherrytwist, Tagset } from '@domain/common';
+import { IBaseCherrytwist } from '@domain/common';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Aspect } from '@domain/context/aspect';
 
 @ObjectType('Project')
 export abstract class IProject extends IBaseCherrytwist {
@@ -22,7 +21,7 @@ export abstract class IProject extends IBaseCherrytwist {
 
   lifecycle?: ILifecycle;
 
-  @Field(() => Tagset, {
+  @Field(() => ITagset, {
     nullable: true,
     description: 'The set of tags for the project',
   })
@@ -30,7 +29,7 @@ export abstract class IProject extends IBaseCherrytwist {
 
   agreements?: IAgreement[];
 
-  @Field(() => [Aspect], {
+  @Field(() => [IAspect], {
     nullable: true,
     description: 'The set of aspects for this Project. Note: likley to change.',
   })

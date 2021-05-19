@@ -11,9 +11,11 @@ import {
   RemoveAuthorizationCredentialInput,
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
-import { IUser, User } from '@domain/community/user';
-import { AuthorizationRolesGlobal } from './authorization.roles.global';
-import { GraphqlGuard } from './graphql.guard';
+import { IUser } from '@domain/community/user';
+import {
+  GraphqlGuard,
+  AuthorizationRolesGlobal,
+} from '@src/core/authorization';
 import { UserInfo } from '@core/authentication';
 
 @Resolver()
@@ -25,7 +27,7 @@ export class AuthorizationResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => User, {
+  @Mutation(() => IUser, {
     description: 'Grants an authorization credential to a User.',
   })
   @Profiling.api
@@ -45,7 +47,7 @@ export class AuthorizationResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => User, {
+  @Mutation(() => IUser, {
     description: 'Removes an authorization credential from a User.',
   })
   @Profiling.api

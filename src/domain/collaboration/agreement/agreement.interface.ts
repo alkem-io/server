@@ -1,6 +1,5 @@
 import { IBaseCherrytwist } from '@domain/common/base-entity';
-import { Tagset } from '@domain/common/tagset';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { ITagset } from '@domain/common/tagset';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Agreement')
@@ -11,7 +10,7 @@ export abstract class IAgreement extends IBaseCherrytwist {
   @Field(() => String)
   description?: string;
 
-  @Field(() => Tagset, {
+  @Field(() => ITagset, {
     nullable: true,
     description: 'The set of tags for the agreement',
   })

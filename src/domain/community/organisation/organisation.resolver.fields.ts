@@ -1,12 +1,9 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { Organisation } from './organisation.entity';
-import { User } from '@domain/community/user/user.entity';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
-import { Profile } from '@domain/community/profile/profile.entity';
 import { OrganisationService } from './organisation.service';
 import {
   ValidationException,
@@ -18,7 +15,11 @@ import {
   GraphqlGuard,
   AuthorizationOrganisationMember,
 } from '@core/authorization';
-@Resolver(() => Organisation)
+import { IOrganisation } from '@domain/community/organisation';
+import { IUserGroup } from '@domain/community/user-group';
+import { IUser } from '@domain/community/user';
+import { IProfile } from '@domain/community/profile';
+@Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
   constructor(
     private organisationService: OrganisationService,
@@ -31,7 +32,7 @@ export class OrganisationResolverFields {
   )
   @AuthorizationOrganisationMember()
   @UseGuards(GraphqlGuard)
-  @ResolveField('groups', () => [UserGroup], {
+  @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
     description: 'Groups defined on this organisation.',
   })
@@ -59,7 +60,7 @@ export class OrganisationResolverFields {
   )
   @AuthorizationOrganisationMember()
   @UseGuards(GraphqlGuard)
-  @ResolveField('members', () => [User], {
+  @ResolveField('members', () => [IUser], {
     nullable: true,
     description: 'All users that are members of this Organisation.',
   })
@@ -68,7 +69,7 @@ export class OrganisationResolverFields {
     return await this.organisationService.getMembers(organisation);
   }
 
-  @ResolveField('profile', () => Profile, {
+  @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this organisation.',
   })

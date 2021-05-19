@@ -1,4 +1,4 @@
-import { ILifecycle } from '@domain/common';
+import { ILifecycle } from '@domain/common/lifecycle';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { LifecycleService } from './lifecycle.service';

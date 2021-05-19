@@ -1,27 +1,21 @@
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
-import { Community } from '@domain/community/community';
+import { ICommunity } from '@domain/community/community';
 import { ChallengeService } from '../challenge/challenge.service';
-import { IChallenge } from '../challenge';
+import { IChallenge } from '@domain/challenge/challenge';
 import { IProject } from '@domain/collaboration/project';
-import {
-  UserGroup,
-  IUserGroup,
-  Application,
-  IApplication,
-} from '@domain/community';
+import { IUserGroup, IApplication } from '@domain/community';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
-import { Tagset } from '@domain/common/tagset';
-import { Context } from '@domain/context';
-import { INVP } from '@domain/common';
-import { IEcoverse } from '@domain/challenge/ecoverse';
+import { ITagset } from '@domain/common/tagset';
+import { IContext } from '@domain/context/context';
+import { INVP } from '@domain/common/nvp';
+import { IEcoverse, Ecoverse } from '@domain/challenge/ecoverse';
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -32,7 +26,7 @@ export class EcoverseResolverFields {
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
 
-  @ResolveField('community', () => Community, {
+  @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the ecoverse.',
   })
@@ -41,7 +35,7 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getCommunity(ecoverse);
   }
 
-  @ResolveField('context', () => Context, {
+  @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the ecoverse.',
   })
@@ -59,7 +53,7 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getChallenges(ecoverse);
   }
 
-  @ResolveField('tagset', () => Tagset, {
+  @ResolveField('tagset', () => ITagset, {
     nullable: true,
     description: 'The set of tags for the  ecoverse.',
   })
@@ -116,7 +110,7 @@ export class EcoverseResolverFields {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
   @UseGuards(GraphqlGuard)
-  @ResolveField('groups', () => [UserGroup], {
+  @ResolveField('groups', () => [IUserGroup], {
     nullable: false,
     description: 'The User Groups on this Ecoverse',
   })
@@ -129,7 +123,7 @@ export class EcoverseResolverFields {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
   @UseGuards(GraphqlGuard)
-  @ResolveField('groupsWithTag', () => [UserGroup], {
+  @ResolveField('groupsWithTag', () => [IUserGroup], {
     nullable: false,
     description: 'All groups on this Ecoverse that have the provided tag',
   })
@@ -145,7 +139,7 @@ export class EcoverseResolverFields {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
   @UseGuards(GraphqlGuard)
-  @ResolveField('group', () => UserGroup, {
+  @ResolveField('group', () => IUserGroup, {
     nullable: false,
     description:
       'The user group with the specified id anywhere in the ecoverse',
@@ -165,7 +159,7 @@ export class EcoverseResolverFields {
     AuthorizationRolesGlobal.CommunityAdmin
   )
   @UseGuards(GraphqlGuard)
-  @ResolveField('application', () => Application, {
+  @ResolveField('application', () => IApplication, {
     nullable: false,
     description: 'All applications to join',
   })

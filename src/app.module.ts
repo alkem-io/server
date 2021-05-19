@@ -12,7 +12,6 @@ import { DataManagementModule } from '@src/services/data-management/data-managem
 import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
 import { WinstonModule } from 'nest-winston';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { SearchModule } from '@src/services/search/search.module';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { MetadataModule } from '@src/services/metadata/metadata.module';
@@ -66,7 +65,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
     MetadataModule,
     DataManagementModule,
     BootstrapModule,
-    SearchModule,
+    //SearchModule,
     KonfigModule,
     IpfsModule,
   ],

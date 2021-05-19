@@ -28,7 +28,7 @@ import {
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
-import { NVP } from '@domain/common';
+import { INVP, NVP } from '@domain/common';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
@@ -353,8 +353,8 @@ export class ChallengeService {
     return await this.communityService.getMembersCount(community);
   }
 
-  async getActivity(challenge: IChallenge): Promise<NVP[]> {
-    const activity: NVP[] = [];
+  async getActivity(challenge: IChallenge): Promise<INVP[]> {
+    const activity: INVP[] = [];
     const community = await this.getCommunity(challenge.id);
 
     const membersCount = await this.communityService.getMembersCount(community);

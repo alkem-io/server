@@ -5,18 +5,13 @@ import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import {
   CreateOrganisationInput,
   UpdateOrganisationInput,
-  Organisation,
   IOrganisation,
   DeleteOrganisationInput,
 } from '@domain/community/organisation';
-import {
-  CreateUserGroupInput,
-  IUserGroup,
-  UserGroup,
-} from '@domain/community/user-group';
+import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 
-@Resolver(() => Organisation)
+@Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
   constructor(
     @Inject(OrganisationService)
@@ -25,7 +20,7 @@ export class OrganisationResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Organisation, {
+  @Mutation(() => IOrganisation, {
     description: 'Creates a new Organisation on the platform.',
   })
   @Profiling.api
@@ -44,7 +39,7 @@ export class OrganisationResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => UserGroup, {
+  @Mutation(() => IUserGroup, {
     description: 'Creates a new User Group for the specified Organisation.',
   })
   @Profiling.api
@@ -60,7 +55,7 @@ export class OrganisationResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Organisation, {
+  @Mutation(() => IOrganisation, {
     description: 'Updates the specified Organisation.',
   })
   @Profiling.api
@@ -75,7 +70,7 @@ export class OrganisationResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Organisation, {
+  @Mutation(() => IOrganisation, {
     description: 'Deletes the specified Organisation.',
   })
   async deleteOrganisation(

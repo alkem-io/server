@@ -1,4 +1,4 @@
-import { IOrganisation, Organisation } from '@domain/community';
+import { IOrganisation } from '@domain/community';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '@domain/challenge/base-challenge';
@@ -8,7 +8,7 @@ export abstract class IChallenge extends IBaseChallenge {
   childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
 
-  @Field(() => [Organisation], {
+  @Field(() => [IOrganisation], {
     description: 'The Organisations that are leading this Challenge.',
   })
   leadOrganisations?: IOrganisation[];

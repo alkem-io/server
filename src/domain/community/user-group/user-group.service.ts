@@ -20,11 +20,9 @@ import {
   RemoveUserGroupMemberInput,
   DeleteUserGroupInput,
   CreateUserGroupInput,
-  UserGroupParent,
 } from '@domain/community/user-group';
-
 import validator from 'validator';
-import { TagsetService } from '@domain/common/tagset';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AuthorizationCredential } from '@core/authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
@@ -96,7 +94,7 @@ export class UserGroupService {
     return populatedUserGroup;
   }
 
-  async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
+  async getParent(group: UserGroup): Promise<IGroupable> {
     const groupWithParent = (await this.getUserGroupByIdOrFail(group.id, {
       relations: ['community', 'organisation'],
     })) as UserGroup;

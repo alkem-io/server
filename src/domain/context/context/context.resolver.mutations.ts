@@ -5,7 +5,7 @@ import { CreateReferenceInput, IReference } from '@domain/common/reference';
 import { ContextService } from './context.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
-import { Aspect, CreateAspectInput, IAspect } from '@domain/context';
+import { CreateAspectInput, IAspect } from '@domain/context';
 
 @Resolver()
 export class ContextResolverMutations {
@@ -29,7 +29,7 @@ export class ContextResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Aspect, {
+  @Mutation(() => IAspect, {
     description: 'Create a new Aspect on the Opportunity.',
   })
   @Profiling.api

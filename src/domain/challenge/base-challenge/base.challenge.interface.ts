@@ -1,6 +1,5 @@
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Tagset } from '@domain/common/tagset';
 import { IContext } from '@domain/context';
 import { ICommunity } from '@domain/community/community';
 import { ILifecycle } from '@domain/common';
@@ -20,7 +19,7 @@ export abstract class IBaseChallenge extends IBaseCherrytwist {
   })
   textID!: string;
 
-  @Field(() => Tagset, {
+  @Field(() => ITagset, {
     nullable: true,
     description: 'The set of tags for the challenge',
   })
@@ -30,5 +29,5 @@ export abstract class IBaseChallenge extends IBaseCherrytwist {
 
   context?: IContext;
   community?: ICommunity;
-  lifecycle?: ILifecycle;
+  life5cycle?: ILifecycle;
 }

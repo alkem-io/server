@@ -30,7 +30,7 @@ export class Project extends BaseCherrytwistEntity implements IProject {
 
   @OneToOne(() => Lifecycle, { eager: false, cascade: true })
   @JoinColumn()
-  lifecycle!: Lifecycle;
+  life3cycle!: Lifecycle;
 
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()

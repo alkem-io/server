@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
+import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { ProjectService } from './project.service';
 import {
   UpdateProjectInput,
@@ -46,7 +46,7 @@ export class ProjectResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Aspect, {
+  @Mutation(() => IAspect, {
     description: 'Create a new Aspect on the Project.',
   })
   @Profiling.api

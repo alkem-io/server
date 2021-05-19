@@ -1,48 +1,24 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToMany,
   OneToMany,
   OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
-@ObjectType()
-export class Organisation extends BaseEntity
+export class Organisation extends BaseCherrytwistEntity
   implements IOrganisation, IGroupable {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String, { nullable: false, description: '' })
   @Column()
   name: string;
 
-  @Field(() => String, {
-    nullable: false,
-    description: 'A short text identifier for this Organisation',
-  })
   @Column()
   textID: string;
 

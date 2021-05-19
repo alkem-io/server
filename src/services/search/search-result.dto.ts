@@ -1,7 +1,7 @@
 import { createUnionType } from '@nestjs/graphql';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { User } from '@domain/community/user/user.entity';
-import { Organisation } from '@domain/community/organisation/organisation.entity';
+import { User } from '@domain/community/user';
+import { Organisation } from '@domain/community/organisation';
+import { UserGroup } from '@domain/community/user-group';
 
 export const SearchResult = createUnionType({
   name: 'SearchResult',

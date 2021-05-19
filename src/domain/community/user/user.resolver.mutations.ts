@@ -10,13 +10,12 @@ import {
 import {
   CreateUserInput,
   UpdateUserInput,
-  User,
   IUser,
   DeleteUserInput,
 } from '@domain/community/user';
 import { UserService } from './user.service';
 
-@Resolver(() => User)
+@Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(private readonly userService: UserService) {}
 
@@ -26,7 +25,7 @@ export class UserResolverMutations {
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
-  @Mutation(() => User, {
+  @Mutation(() => IUser, {
     description: 'Creates a new User on the platform.',
   })
   @Profiling.api
@@ -42,8 +41,8 @@ export class UserResolverMutations {
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
-  @Mutation(() => User, {
-    description: 'Updates the User. Note: email address cannot be updated.',
+  @Mutation(() => IUser, {
+    description: 'Updates the User.',
   })
   @Profiling.api
   async updateUser(
@@ -58,7 +57,7 @@ export class UserResolverMutations {
     AuthorizationRolesGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => User, {
+  @Mutation(() => IUser, {
     description: 'Deletes the specified User.',
   })
   @Profiling.api

@@ -1,7 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import {
-  Actor,
   DeleteActorInput,
   IActor,
   UpdateActorInput,
@@ -16,7 +15,7 @@ export class ActorResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Actor, {
+  @Mutation(() => IActor, {
     description: 'Deletes the specified Actor.',
   })
   async deleteActor(
@@ -27,7 +26,7 @@ export class ActorResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Actor, {
+  @Mutation(() => IActor, {
     description: 'Updates the specified Actor.',
   })
   async updateActor(

@@ -40,7 +40,7 @@ export class ApplicationService {
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
-    (application as IApplication).lifecycle = await this.lifecycleService.createLifecycle(
+    (application as IApplication).life44cycle = await this.lifecycleService.createLifecycle(
       application.id.toString(),
       applicationLifecycleConfig
     );

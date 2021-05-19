@@ -1,14 +1,15 @@
-import { Aspect, Context } from '@domain/context';
+import { Context, IContext } from '@domain/context/context';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ContextService } from './context.service';
 import { Profiling } from '@common/decorators';
-import { EcosystemModel } from '../ecosystem-model';
+import { IEcosystemModel } from '@domain/context/ecosystem-model';
+import { IAspect } from '@domain/context/aspect';
 
-@Resolver(() => Context)
+@Resolver(() => IContext)
 export class ContextResolverFields {
   constructor(private contextService: ContextService) {}
 
-  @ResolveField('ecosystemModel', () => EcosystemModel, {
+  @ResolveField('ecosystemModel', () => IEcosystemModel, {
     nullable: true,
     description: 'The EcosystemModel for this Context.',
   })
@@ -17,7 +18,7 @@ export class ContextResolverFields {
     return await this.contextService.getEcosystemModel(context);
   }
 
-  @ResolveField('aspects', () => [Aspect], {
+  @ResolveField('aspects', () => [IAspect], {
     nullable: true,
     description: 'The Aspects for this Context.',
   })

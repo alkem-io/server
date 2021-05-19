@@ -95,7 +95,7 @@ export class ProjectService {
     }
     throw new EntityNotFoundException(
       `Unable to find Project with ID: ${projectID}`,
-      LogContext.CHALLENGES
+      LogContext.COLLABORATION
     );
   }
 
@@ -127,13 +127,11 @@ export class ProjectService {
       relations: ['lifecycle'],
     });
 
-    // if no lifecycle then create + save...
     if (!project.lifecycle) {
-      project.lifecycle = await this.lifecycleService.createLifecycle(
-        projectId.toString(),
-        projectLifecycleConfigDefault
+      throw new EntityNotFoundException(
+        `Unable to find Lifecycle on Project with ID: ${projectId}`,
+        LogContext.COLLABORATION
       );
-      await this.projectRepository.save(project);
     }
 
     return project.lifecycle;

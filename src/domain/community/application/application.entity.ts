@@ -1,51 +1,28 @@
-import { NVP } from '@domain/common/nvp/nvp.entity';
-import { User } from '@domain/community/user/user.entity';
-import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
   OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
 } from 'typeorm';
 import { IQuestion } from '@domain/community/application';
-import { Community } from '../community';
+import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IApplication } from './application.interface';
-import { ILifecycle } from '@domain/common/lifecycle';
-
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { NVP } from '@domain/common/nvp';
+import { User } from '@domain/community/user';
 @Entity()
-@ObjectType()
-export class Application extends BaseEntity implements IApplication {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
+export class Application extends BaseCherrytwistEntity implements IApplication {
   @Column()
   ecoverseID?: string;
 
-  @Field(() => ILifecycle, { nullable: false })
   @OneToOne(() => Lifecycle, { eager: true, cascade: true })
   @JoinColumn()
-  lifecycle!: Lifecycle;
+  life44cycle!: Lifecycle;
 
-  @Field(() => User)
   @ManyToOne(
     () => User,
     user => user.applications,
@@ -53,7 +30,6 @@ export class Application extends BaseEntity implements IApplication {
   )
   user!: User;
 
-  @Field(() => [IQuestion])
   @ManyToMany(
     () => NVP,
     nvp => nvp.id,
