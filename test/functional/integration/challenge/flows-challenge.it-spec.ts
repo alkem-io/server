@@ -1,13 +1,13 @@
 import {
   createChallangeMutation,
-  getChallengeUsers,
+  getChallengeData,
   updateChallangeMutation,
 } from './challenge.request.params';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import { getGroup } from '@test/functional/integration/group/group.request.params';
 import { assignGroupFocalPointMutation } from '@test/functional/e2e/user-management/user.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
+import { createChildChallengeMutation } from '../opportunity/opportunity.request.params';
 
 const userNameOne = 'Evgeni Dimitrov';
 const userIdOne = '6';
@@ -59,7 +59,7 @@ describe('Flows challenge', () => {
     );
 
     // Query focal point through challenge group
-    const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
+    const responseChallengeGroupQuery = await getChallengeData(challengeId);
     const groupFocalPointFromChallenge =
       responseChallengeGroupQuery.body.data.ecoverse.challenge.community
         .groups[0].focalPoint.name;
@@ -84,7 +84,7 @@ describe('Flows challenge', () => {
   test('should not result unassigned users to a challenge', async () => {
     // Act
     // Get users assossiated with challenge or groups within challenge
-    const responseGroupQuery = await getChallengeUsers(challengeId);
+    const responseGroupQuery = await getChallengeData(challengeId);
 
     // Assert
     //expect(responseCreateUserOne.status).toBe(200);
@@ -150,22 +150,22 @@ describe('Flows challenge', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(response.text).toContain(
-      'property textID has failed the following constraints: isUniqueTextId'
+      `Trying to create an child challenge but one with the given textID already exists: ${uniqueTextId}`
     );
   });
 
   test('should add "opportunity" to "challenge"', async () => {
     // Act
     // Add opportunity to a challenge
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+    const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
       challengeId,
       opportunityName,
       opportunityTextId
     );
     const oportunityNameResponse =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity.name;
+      responseCreateOpportunityOnChallenge.body.data.createChildChallenge.name;
     const oportunityIdResponse =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
