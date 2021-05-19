@@ -2,8 +2,11 @@ import { IProfile } from '@domain/community/profile';
 import { IAgent } from '@domain/agent';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseCherrytwist } from '@domain/common/base-entity';
+import { ISearchable } from '@domain/common/interfaces';
 
-@ObjectType('User')
+@ObjectType('User', {
+  implements: () => [ISearchable],
+})
 export abstract class IUser extends IBaseCherrytwist {
   @Field(() => String)
   name!: string;

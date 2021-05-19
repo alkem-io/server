@@ -4,7 +4,7 @@ import { UserGroupService } from './user-group.service';
 import { Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
 import { UserGroup, IUserGroup } from '@domain/community/user-group';
-import { IGroupable } from './groupable.interface';
+import { IGroupable } from '../../common/interfaces/groupable.interface';
 
 @Resolver(() => IUserGroup)
 export class UserGroupResolverFields {

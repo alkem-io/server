@@ -1,4 +1,4 @@
-import { IOrganisation } from '@domain/community';
+import { IOrganisation } from '@domain/community/organisation';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '@domain/challenge/base-challenge';

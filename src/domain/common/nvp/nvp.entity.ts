@@ -1,5 +1,6 @@
 import { Column, Entity } from 'typeorm';
-import { BaseCherrytwistEntity, INVP } from '@domain/common';
+import { INVP } from '@domain/common/nvp';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
 export class NVP extends BaseCherrytwistEntity implements INVP {

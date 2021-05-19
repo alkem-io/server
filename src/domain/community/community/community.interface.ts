@@ -2,7 +2,7 @@ import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { IApplication } from '@domain/community/application';
 import { IUserGroup } from '@domain/community/user-group';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IGroupable } from '../user-group/groupable.interface';
+import { IGroupable } from '@domain/common/interfaces';
 
 @ObjectType('Community', {
   implements: () => [IGroupable],

@@ -7,4 +7,8 @@ export abstract class IBaseCherrytwist {
     description: 'The ID of the entity',
   })
   id!: number;
+
+  constructor() {
+    this.id = -1;
+  }
 }

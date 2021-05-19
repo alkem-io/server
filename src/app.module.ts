@@ -21,6 +21,7 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { SearchModule } from './services/search/search.module';
 
 @Module({
   imports: [
@@ -65,7 +66,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
     MetadataModule,
     DataManagementModule,
     BootstrapModule,
-    //SearchModule,
+    SearchModule,
     KonfigModule,
     IpfsModule,
   ],

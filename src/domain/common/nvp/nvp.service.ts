@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { NVP } from './nvp.entity';
+import { NVP } from '@domain/common/nvp';
 
 @Injectable()
 export class NVPService {

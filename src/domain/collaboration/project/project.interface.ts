@@ -2,7 +2,7 @@ import { IAgreement } from '@domain/collaboration/agreement';
 import { IAspect } from '@domain/context/aspect';
 import { ITagset } from '@domain/common/tagset';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { IBaseCherrytwist } from '@domain/common';
+import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Project')

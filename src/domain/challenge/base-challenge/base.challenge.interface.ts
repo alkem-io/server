@@ -2,7 +2,7 @@ import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IContext } from '@domain/context';
 import { ICommunity } from '@domain/community/community';
-import { ILifecycle } from '@domain/common';
+import { ILifecycle } from '@domain/common/lifecycle';
 import { IBaseCherrytwist } from '@domain/common/base-entity/base.cherrytwist.interface';
 
 @ObjectType('IBaseChallenge')

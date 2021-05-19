@@ -3,9 +3,9 @@ import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { IProfile } from '@domain/community/profile/profile.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IGroupable } from '../user-group/groupable.interface';
+import { IGroupable, ISearchable } from '@domain/common/interfaces';
 @ObjectType('Organisation', {
-  implements: () => [IGroupable],
+  implements: () => [IGroupable, ISearchable],
 })
 export abstract class IOrganisation extends IBaseCherrytwist {
   @Field(() => String, { nullable: false, description: '' })

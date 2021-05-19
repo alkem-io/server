@@ -20,7 +20,7 @@ import {
 import { ICommunity } from '@domain/community/community';
 import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
-import { INVP, NVP } from '@domain/common';
+import { INVP, NVP } from '@domain/common/nvp';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
 import { IContext } from '@domain/context';
