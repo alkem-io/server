@@ -108,15 +108,17 @@ export class CommunityService {
     // Remove all groups
     if (community.groups) {
       for (const group of community.groups) {
-        await this.userGroupService.removeUserGroup({ ID: group.id });
+        await this.userGroupService.removeUserGroup({
+          ID: group.id.toString(),
+        });
       }
     }
 
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationService.delete({
-          ID: application.id,
+        await this.applicationService.deleteApplication({
+          ID: application.id.toString(),
         });
       }
     }

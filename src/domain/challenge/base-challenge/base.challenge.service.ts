@@ -64,7 +64,7 @@ export class BaseChallengeService {
 
     await repository.save(challengeBase);
 
-    challengeBase.life5cycle = await this.lifecycleService.createLifecycle(
+    challengeBase.lifecycle = await this.lifecycleService.createLifecycle(
       challengeBase.id.toString(),
       machineConfig
     );
@@ -129,12 +129,14 @@ export class BaseChallengeService {
       await this.communityService.removeCommunity(challengeBase.community.id);
     }
 
-    if (challengeBase.life5cycle) {
-      await this.lifecycleService.deleteLifecycle(challengeBase.life5cycle.id);
+    if (challengeBase.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(challengeBase.lifecycle.id);
     }
 
     if (challengeBase.tagset) {
-      await this.tagsetService.removeTagset({ ID: challengeBase.tagset.id });
+      await this.tagsetService.removeTagset({
+        ID: challengeBase.tagset.id.toString(),
+      });
     }
   }
 
@@ -241,13 +243,13 @@ export class BaseChallengeService {
       }
     );
 
-    if (!challenge.life5cycle) {
+    if (!challenge.lifecycle) {
       throw new RelationshipNotFoundException(
         `Unable to load Lifeycle for challenge ${challengeId} `,
         LogContext.CHALLENGES
       );
     }
 
-    return challenge.life5cycle;
+    return challenge.lifecycle;
   }
 }

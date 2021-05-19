@@ -1,5 +1,5 @@
 import { InputType } from '@nestjs/graphql';
-import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity/base.cherrytwist.dto.update';
+import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge';
 
 @InputType()
-export class UpdateOpportunityInput extends UpdateBaseCherrytwistInput {}
+export class UpdateOpportunityInput extends UpdateBaseChallengeInput {}

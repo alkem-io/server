@@ -1,3 +1,4 @@
+import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity';
 import { InputType, Field } from '@nestjs/graphql';
 import {
   LONG_TEXT_LENGTH,
@@ -11,11 +12,7 @@ import {
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class UpdateProjectInput {
-  @Field({ nullable: false })
-  @MaxLength(SMALL_TEXT_LENGTH)
-  ID!: string;
-
+export class UpdateProjectInput extends UpdateBaseCherrytwistInput {
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;

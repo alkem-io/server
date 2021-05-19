@@ -21,7 +21,7 @@ export class Application extends BaseCherrytwistEntity implements IApplication {
 
   @OneToOne(() => Lifecycle, { eager: true, cascade: true })
   @JoinColumn()
-  life44cycle!: Lifecycle;
+  lifecycle!: Lifecycle;
 
   @ManyToOne(
     () => User,

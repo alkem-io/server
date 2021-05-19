@@ -40,7 +40,7 @@ export class ApplicationService {
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
-    (application as IApplication).life44cycle = await this.lifecycleService.createLifecycle(
+    (application as IApplication).lifecycle = await this.lifecycleService.createLifecycle(
       application.id.toString(),
       applicationLifecycleConfig
     );
@@ -51,10 +51,8 @@ export class ApplicationService {
   async deleteApplication(
     deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
-    const applicationID = deleteData.ID;
-
+    const applicationID = parseInt(deleteData.ID);
     const application = await this.getApplicationOrFail(applicationID);
-
     if (application.questions) {
       for (const question of application.questions) {
         await this.nvpService.removeNVP(question.id);
@@ -63,7 +61,7 @@ export class ApplicationService {
     const result = await this.applicationRepository.remove(
       application as Application
     );
-    result.id = deleteData.ID;
+    result.id = applicationID;
     return result;
   }
 
@@ -89,14 +87,5 @@ export class ApplicationService {
 
   async save(application: Application): Promise<Application> {
     return await this.applicationRepository.save(application);
-  }
-
-  async delete(deleteData: DeleteApplicationInput): Promise<IApplication> {
-    const application = await this.getApplicationOrFail(deleteData.ID);
-    const result = await this.applicationRepository.remove(
-      application as Application
-    );
-    result.id = deleteData.ID;
-    return result;
   }
 }

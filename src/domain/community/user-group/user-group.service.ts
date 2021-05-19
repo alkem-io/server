@@ -58,7 +58,7 @@ export class UserGroupService {
   async removeUserGroup(deleteData: DeleteUserGroupInput): Promise<IUserGroup> {
     const groupID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
-    const group = (await this.getUserGroupByIdOrFail(groupID)) as UserGroup;
+    const group = (await this.getUserGroupOrFail(groupID)) as UserGroup;
 
     if (group.profile) {
       await this.profileService.deleteProfile(group.profile.id);

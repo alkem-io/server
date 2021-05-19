@@ -29,5 +29,5 @@ export abstract class IBaseChallenge extends IBaseCherrytwist {
 
   context?: IContext;
   community?: ICommunity;
-  life5cycle?: ILifecycle;
+  lifecycle?: ILifecycle;
 }

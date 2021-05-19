@@ -68,7 +68,9 @@ export class EcosystemModelService {
 
     if (ecosystemModel.actorGroups) {
       for (const actorGroup of ecosystemModel.actorGroups) {
-        await this.actorGroupService.deleteActorGroup({ ID: actorGroup.id });
+        await this.actorGroupService.deleteActorGroup({
+          ID: actorGroup.id.toString(),
+        });
       }
     }
 

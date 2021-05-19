@@ -32,7 +32,7 @@ export class CommunityLifecycleOptionsProvider {
       applicationID
     );
 
-    if (!application.life44cycle)
+    if (!application.lifecycle)
       throw new EntityNotInitializedException(
         `Lifecycle not initialized on Application: ${applicationID}`,
         LogContext.COMMUNITY
@@ -42,12 +42,12 @@ export class CommunityLifecycleOptionsProvider {
 
     // Send the event, translated if needed
     this.logger.verbose?.(
-      `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${application.life44cycle.id}`,
+      `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${application.lifecycle.id}`,
       LogContext.COMMUNITY
     );
     await this.lifecycleService.event(
       {
-        ID: application.life44cycle.id,
+        ID: application.lifecycle.id,
         eventName: applicationEventData.eventName,
       },
       this.applicationLifecycleMachineOptions,

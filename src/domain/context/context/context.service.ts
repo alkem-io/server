@@ -91,14 +91,16 @@ export class ContextService {
     // Remove all references
     if (context.references) {
       for (const reference of context.references) {
-        await this.referenceService.deleteReference({ ID: reference.id });
+        await this.referenceService.deleteReference({
+          ID: reference.id.toString(),
+        });
       }
     }
 
     // First remove all groups
     if (context.aspects) {
       for (const aspect of context.aspects) {
-        await this.aspectService.removeAspect({ ID: aspect.id });
+        await this.aspectService.removeAspect({ ID: aspect.id.toString() });
       }
     }
 

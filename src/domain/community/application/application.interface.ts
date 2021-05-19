@@ -13,7 +13,7 @@ export abstract class IApplication extends IBaseCherrytwist {
   community?: ICommunity;
 
   @Field(() => ILifecycle, { nullable: false })
-  life44cycle?: ILifecycle;
+  lifecycle?: ILifecycle;
 
   @Field(() => [IQuestion])
   questions?: Question[];

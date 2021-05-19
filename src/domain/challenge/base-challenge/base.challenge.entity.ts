@@ -29,7 +29,7 @@ export abstract class BaseChallenge extends BaseCherrytwistEntity
 
   @OneToOne(() => Lifecycle, { eager: false, cascade: true })
   @JoinColumn()
-  life5cycle!: Lifecycle;
+  lifecycle!: Lifecycle;
 
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()

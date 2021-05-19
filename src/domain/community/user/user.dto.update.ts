@@ -2,12 +2,10 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateProfileInput } from '@domain/community/profile';
+import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity';
 
 @InputType()
-export class UpdateUserInput {
-  @Field({ nullable: false })
-  ID!: string;
-
+export class UpdateUserInput extends UpdateBaseCherrytwistInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)

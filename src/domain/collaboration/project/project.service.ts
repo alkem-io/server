@@ -52,7 +52,7 @@ export class ProjectService {
 
   async deleteProject(deleteData: DeleteProjectInput): Promise<IProject> {
     const projectID = deleteData.ID;
-    const project = await this.getProjectByIdOrFail(projectID, {
+    const project = await this.getProjectOrFail(projectID, {
       relations: ['lifecycle'],
     });
     if (!project)
@@ -65,7 +65,7 @@ export class ProjectService {
       await this.lifecycleService.deleteLifecycle(project.lifecycle.id);
     }
     const result = await this.projectRepository.remove(project as Project);
-    result.id = projectID;
+    result.id = parseInt(projectID);
     return result;
   }
 

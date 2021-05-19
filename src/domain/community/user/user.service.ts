@@ -69,7 +69,7 @@ export class UserService {
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
-    const user = await this.getUserByIdOrFail(userID);
+    const user = await this.getUserOrFail(userID);
     const { id } = user;
 
     if (user.profile) {
