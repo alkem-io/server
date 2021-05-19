@@ -93,7 +93,7 @@ describe('Context', () => {
     expect(queryAfterUpdate.references).toHaveLength(2);
   });
 
-  test.only('should update the same reference and query challenge context and references', async () => {
+  test('should update the same reference and query challenge context and references', async () => {
     // Arrange
     // Query Challenge Context Data data
     const contextChallengeQuery = await getContextQuery(challengeId);
@@ -154,7 +154,7 @@ describe('Context', () => {
     expect(queryAfterUpdate.references).toHaveLength(1);
   });
 
-  test('should create reference using different name on context', async () => {
+  test.skip('should create reference using different name on context', async () => {
     // Act
     // Update challenge context and references
     await createReferenceOnContextMutation(contextIdChallenge, refName, refUri);
