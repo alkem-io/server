@@ -19,7 +19,6 @@ import { INVP, NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { IBaseChallenge } from '@domain/challenge/base-challenge';
 import { LogContext } from '@common/enums';
 import { Inject, Injectable } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -209,8 +208,14 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    this.checkForExistingEntityName(childChallenges, challengeData.name);
-    this.checkForExistingEntityTextID(childChallenges, challengeData.textID);
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      childChallenges,
+      challengeData.name
+    );
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      childChallenges,
+      challengeData.textID
+    );
   }
 
   async createOpportunity(
@@ -256,31 +261,14 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    this.checkForExistingEntityName(opportunities, opportunityData.name);
-    this.checkForExistingEntityTextID(opportunities, opportunityData.textID);
-  }
-
-  checkForExistingEntityName(existingChildren: IBaseChallenge[], name: string) {
-    const existingChild = existingChildren.find(child => child.name === name);
-    if (existingChild)
-      throw new ValidationException(
-        `Trying to create a child but one with the given name already exists: ${name}`,
-        LogContext.CHALLENGES
-      );
-  }
-
-  checkForExistingEntityTextID(
-    existingChildren: IBaseChallenge[],
-    textID: string
-  ) {
-    const existingChild = existingChildren.find(
-      child => child.textID === textID
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      opportunities,
+      opportunityData.name
     );
-    if (existingChild)
-      throw new ValidationException(
-        `Trying to create a child but one with the given TextID already exists: ${textID}`,
-        LogContext.CHALLENGES
-      );
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      opportunities,
+      opportunityData.textID
+    );
   }
 
   async getChallengeOrFail(

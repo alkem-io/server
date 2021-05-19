@@ -26,6 +26,7 @@ import { IProject } from '@domain/collaboration/project';
 import { IContext } from '@domain/context';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 
 @Injectable()
 export class EcoverseService {
@@ -33,6 +34,7 @@ export class EcoverseService {
     private organisationService: OrganisationService,
     private projectService: ProjectService,
     private opportunityService: OpportunityService,
+    private challengeBaseService: BaseChallengeService,
     private challengeService: ChallengeService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -155,18 +157,17 @@ export class EcoverseService {
     const ecoverse = await this.getEcoverseOrFail(challengeData.parentID);
     const challenges = await this.getChallenges(ecoverse);
 
-    // First check if the challenge already exists on not...
-    let newChallenge = challenges.find(c => c.name === challengeData.name);
-    if (newChallenge) {
-      // already have a challenge with the given name, not allowed
-      throw new ValidationException(
-        `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`,
-        LogContext.CHALLENGES
-      );
-    }
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      challenges,
+      challengeData.name
+    );
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      challenges,
+      challengeData.textID
+    );
 
     // No existing challenge found, create and initialise a new one!
-    newChallenge = await this.challengeService.createChildChallenge(
+    const newChallenge = await this.challengeService.createChildChallenge(
       challengeData
     );
     await this.ecoverseRepository.save(ecoverse);

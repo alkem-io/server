@@ -1,27 +1,14 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToMany,
-  OneToMany,
-  OneToOne,
-} from 'typeorm';
+import { Entity, JoinColumn, ManyToMany, OneToMany, OneToOne } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { IdentifiableEntity } from '@domain/common/identifiable-entity';
 
 @Entity()
-export class Organisation extends BaseCherrytwistEntity
+export class Organisation extends IdentifiableEntity
   implements IOrganisation, IGroupable {
-  @Column()
-  name: string;
-
-  @Column()
-  textID: string;
-
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
@@ -40,9 +27,7 @@ export class Organisation extends BaseCherrytwistEntity
   )
   challenges!: Challenge[];
 
-  constructor(textID: string) {
+  constructor() {
     super();
-    this.name = '';
-    this.textID = textID;
   }
 }

@@ -12,18 +12,12 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { IdentifiableEntity } from '@domain/common/identifiable-entity';
 
 @Entity()
-export class Project extends BaseCherrytwistEntity implements IProject {
-  @Column()
-  textID: string;
-
+export class Project extends IdentifiableEntity implements IProject {
   @Column()
   ecoverseID?: string;
-
-  @Column()
-  name: string;
 
   @Column('text', { nullable: true })
   description?: string;

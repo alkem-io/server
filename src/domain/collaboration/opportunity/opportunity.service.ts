@@ -20,6 +20,9 @@ import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import validator from 'validator';
+import { ICommunity } from '@domain/community/community';
+import { ILifecycle } from '@domain/common/lifecycle';
+import { IContext } from '@domain/context/context';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -121,6 +124,27 @@ export class OpportunityService {
 
   async saveOpportunity(opportunity: IOpportunity): Promise<IOpportunity> {
     return await this.opportunityRepository.save(opportunity);
+  }
+
+  async getCommunity(opportunityId: number): Promise<ICommunity> {
+    return await this.challengeBaseService.getCommunity(
+      opportunityId,
+      this.opportunityRepository
+    );
+  }
+
+  async getLifecycle(opportunityId: number): Promise<ILifecycle> {
+    return await this.challengeBaseService.getLifecycle(
+      opportunityId,
+      this.opportunityRepository
+    );
+  }
+
+  async getContext(opportunityId: number): Promise<IContext> {
+    return await this.challengeBaseService.getContext(
+      opportunityId,
+      this.opportunityRepository
+    );
   }
 
   // Loads the aspects into the Opportunity entity if not already present
