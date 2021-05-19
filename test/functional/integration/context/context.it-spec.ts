@@ -6,6 +6,7 @@ import {
 } from '@test/functional/integration/challenge/challenge.request.params';
 import { getContextQuery } from './context.request.params';
 import { createReferenceOnContextMutation } from '../references/references.request.params';
+import { response } from 'express';
 
 let challengeName = '';
 let challengeId = '';
@@ -44,7 +45,6 @@ beforeEach(async () => {
     challengeName,
     uniqueTextId
   );
-
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
   challengeContextData =
     responseCreateChallenge.body.data.createChallenge.context;
@@ -93,7 +93,7 @@ describe('Context', () => {
     expect(queryAfterUpdate.references).toHaveLength(2);
   });
 
-  test('should update the same reference and query challenge context and references', async () => {
+  test.only('should update the same reference and query challenge context and references', async () => {
     // Arrange
     // Query Challenge Context Data data
     const contextChallengeQuery = await getContextQuery(challengeId);
