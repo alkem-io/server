@@ -18,6 +18,10 @@ import { CreateChallengeInput } from './challenge.dto.create';
 import { BaseChallengeLifecycleOptionsProvider } from '../base-challenge/base.challenge.lifecycle.options.provider';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  CreateOpportunityInput,
+  IOpportunity,
+} from '@domain/collaboration/opportunity';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -38,6 +42,18 @@ export class ChallengeResolverMutations {
     @Args('challengeData') challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
     return await this.challengeService.createChildChallenge(challengeData);
+  }
+
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOpportunity, {
+    description: 'Creates a new Opportunity within the parent Challenge.',
+  })
+  @Profiling.api
+  async createOpportunity(
+    @Args('opportunityData') opportunityData: CreateOpportunityInput
+  ): Promise<IChallenge> {
+    return await this.challengeService.createOpportunity(opportunityData);
   }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)

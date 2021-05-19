@@ -1,7 +1,5 @@
-import { ContextService } from '@domain/context/context/context.service';
 import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -25,23 +23,20 @@ import {
   AssignChallengeLeadInput,
   RemoveChallengeLeadInput,
 } from '@domain/challenge/challenge';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
 import { INVP, NVP } from '@domain/common';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { IOpportunity } from '@domain/collaboration';
+import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
+import { IBaseChallenge } from '@domain/challenge/base-challenge';
 
 @Injectable()
 export class ChallengeService {
   constructor(
-    private contextService: ContextService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private challengeBaseService: BaseChallengeService,
-    private tagsetService: TagsetService,
-    private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -213,23 +208,76 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    let childChallenge = childChallenges.find(
-      childChallenge => childChallenge.name === challengeData.name
+    this.checkForExistingEntityName(childChallenges, challengeData.name);
+    this.checkForExistingEntityTextID(childChallenges, challengeData.textID);
+  }
+
+  async createOpportunity(
+    opportunityData: CreateOpportunityInput
+  ): Promise<IOpportunity> {
+    this.logger.verbose?.(
+      `Adding Opportunity to Challenge (${opportunityData.parentID})`,
+      LogContext.CHALLENGES
     );
 
-    if (childChallenge)
-      throw new ValidationException(
-        `Child Challenge with name: ${challengeData.name} already exists!`,
+    const challenge = await this.getChallengeOrFail(opportunityData.parentID, {
+      relations: ['opportunities', 'community'],
+    });
+
+    await this.validateOpportunity(challenge, opportunityData);
+
+    const opportunity = await this.opportunityService.createOpportunity(
+      opportunityData,
+      challenge.ecoverseID
+    );
+
+    challenge.opportunities?.push(opportunity);
+
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      opportunity.community,
+      challenge.community
+    );
+
+    await this.challengeRepository.save(challenge);
+
+    return opportunity;
+  }
+
+  async validateOpportunity(
+    challenge: IChallenge,
+    opportunityData: CreateOpportunityInput
+  ) {
+    const opportunities = challenge.opportunities;
+    if (!opportunities)
+      throw new EntityNotInitializedException(
+        `Challenge without initialised opportunities encountered ${challenge.id}`,
         LogContext.CHALLENGES
       );
 
-    childChallenge = childChallenges.find(
-      childChallenge => childChallenge.textID === challengeData.textID
-    );
-    // check if the opportunity already exists with the textID
-    if (childChallenge)
+    this.checkForExistingEntityName(opportunities, opportunityData.name);
+    this.checkForExistingEntityTextID(opportunities, opportunityData.textID);
+  }
+
+  checkForExistingEntityName(existingChildren: IBaseChallenge[], name: string) {
+    const existingChild = existingChildren.find(child => child.name === name);
+    if (existingChild)
       throw new ValidationException(
-        `Trying to create an child challenge but one with the given textID already exists: ${challengeData.textID}`,
+        `Trying to create a child but one with the given name already exists: ${name}`,
+        LogContext.CHALLENGES
+      );
+  }
+
+  checkForExistingEntityTextID(
+    existingChildren: IBaseChallenge[],
+    textID: string
+  ) {
+    const existingChild = existingChildren.find(
+      child => child.textID === textID
+    );
+    if (existingChild)
+      throw new ValidationException(
+        `Trying to create a child but one with the given TextID already exists: ${textID}`,
         LogContext.CHALLENGES
       );
   }

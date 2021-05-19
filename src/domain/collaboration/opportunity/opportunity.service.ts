@@ -6,7 +6,11 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { Opportunity, IOpportunity } from '@domain/collaboration/opportunity';
+import {
+  Opportunity,
+  IOpportunity,
+  CreateOpportunityInput,
+} from '@domain/collaboration/opportunity';
 import { LogContext } from '@common/enums';
 import { ProjectService } from '../project/project.service';
 import { RelationService } from '../relation/relation.service';
@@ -26,10 +30,20 @@ export class OpportunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createOpportunity(): Promise<IOpportunity> {
-    const opportunity: IOpportunity = new Opportunity();
+  async createOpportunity(
+    opportunityData: CreateOpportunityInput,
+    ecoverseID: string
+  ): Promise<IOpportunity> {
+    const opportunity: IOpportunity = Opportunity.create(opportunityData);
+    opportunity.ecoverseID = ecoverseID;
     opportunity.projects = [];
     opportunity.relations = [];
+
+    await this.challengeBaseService.initialise(
+      opportunity,
+      opportunityData,
+      this.opportunityRepository
+    );
 
     return await this.saveOpportunity(opportunity);
   }
