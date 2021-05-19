@@ -13,7 +13,7 @@ services:
     image: mysql:8.0.11
     networks:
       - ct_server_dev
-    command: --default-authentication-plugin=mysql_native_password
+    command: --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
     restart: always
     ports:
       - 3306:3306
@@ -22,6 +22,7 @@ services:
       - MYSQL_DATABASE
     volumes:
       - ct_server_dev_db:/var/lib/mysql
+      - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
 
   ct_ipfs_server:
     container_name: ct_ipfs_server
