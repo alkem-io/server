@@ -31,7 +31,7 @@ export class ContextService {
   async createContext(contextData: CreateContextInput): Promise<IContext> {
     const context: IContext = Context.create(contextData);
     context.ecosystemModel = new EcosystemModel();
-    context.references = [];
+    if (!context.references) context.references = [];
     return context;
   }
 

@@ -44,7 +44,7 @@ export class BaseChallengeService {
     challengeBase.community.ecoverseID = challengeBase.ecoverseID;
 
     if (!challengeData.context) {
-      challengeData.context = await this.contextService.createContext({});
+      challengeBase.context = await this.contextService.createContext({});
     } else {
       challengeBase.context = await this.contextService.createContext(
         challengeData.context
