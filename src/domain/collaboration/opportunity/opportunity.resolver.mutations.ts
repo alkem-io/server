@@ -7,10 +7,43 @@ import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
+import {
+  DeleteOpportunityInput,
+  IOpportunity,
+  UpdateOpportunityInput,
+} from '@domain/collaboration/opportunity';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(private opportunityService: OpportunityService) {}
+
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOpportunity, {
+    description: 'Updates the specified Opportunity.',
+  })
+  @Profiling.api
+  async updateOpportunity(
+    @Args('opportunityData') opportunityData: UpdateOpportunityInput
+  ): Promise<IOpportunity> {
+    const challenge = await this.opportunityService.updateOpportunity(
+      opportunityData
+    );
+    return challenge;
+  }
+
+  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOpportunity, {
+    description: 'Deletes the specified Opportunity.',
+  })
+  async deleteOpportunity(
+    @Args('deleteData') deleteData: DeleteOpportunityInput
+  ): Promise<IOpportunity> {
+    return await this.opportunityService.deleteOpportunity(
+      parseInt(deleteData.ID)
+    );
+  }
 
   @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
   @UseGuards(GraphqlGuard)

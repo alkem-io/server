@@ -16,10 +16,13 @@ import { ITagset } from '@domain/common/tagset';
 import { IContext } from '@domain/context/context';
 import { INVP } from '@domain/common/nvp';
 import { IEcoverse, Ecoverse } from '@domain/challenge/ecoverse';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
   constructor(
     private challengeService: ChallengeService,
+    private opportunityService: OpportunityService,
     private projectService: ProjectService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
@@ -76,13 +79,27 @@ export class EcoverseResolverFields {
     });
   }
 
-  @ResolveField('opportunities', () => [IChallenge], {
+  @ResolveField('opportunities', () => [IOpportunity], {
     nullable: false,
     description: 'All opportunities within the ecoverse',
   })
   @Profiling.api
-  async opportunities(@Parent() ecoverse: Ecoverse): Promise<IChallenge[]> {
+  async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
     return await this.ecoverseService.getOpportunities(ecoverse);
+  }
+
+  @ResolveField('opportunity', () => IOpportunity, {
+    nullable: false,
+    description: 'A particular Opportunity, either by its ID or textID',
+  })
+  @Profiling.api
+  async opportunity(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID') id: string
+  ): Promise<IChallenge> {
+    return await this.opportunityService.getOpportunityOrFail(id, {
+      where: { ecoverseID: ecoverse.id.toString() },
+    });
   }
 
   @ResolveField('projects', () => [IProject], {

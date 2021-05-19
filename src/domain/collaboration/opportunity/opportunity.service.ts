@@ -10,6 +10,7 @@ import {
   Opportunity,
   IOpportunity,
   CreateOpportunityInput,
+  UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { LogContext } from '@common/enums';
 import { ProjectService } from '../project/project.service';
@@ -18,7 +19,7 @@ import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-
+import validator from 'validator';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -49,6 +50,18 @@ export class OpportunityService {
   }
 
   async getOpportunityOrFail(
+    opportunityID: string,
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity> {
+    if (validator.isNumeric(opportunityID)) {
+      const idInt: number = parseInt(opportunityID);
+      return await this.getOpportunityByIdOrFail(idInt, options);
+    }
+
+    return await this.getOpportunityByTextIdOrFail(opportunityID, options);
+  }
+
+  async getOpportunityByIdOrFail(
     opportunityID: number,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity> {
@@ -64,11 +77,29 @@ export class OpportunityService {
     return Opportunity;
   }
 
+  async getOpportunityByTextIdOrFail(
+    opportunityID: string,
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityRepository.findOne(
+      { textID: opportunityID },
+      options
+    );
+    if (!opportunity)
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: ${opportunityID}`,
+        LogContext.COLLABORATION
+      );
+    return opportunity;
+  }
+
   async deleteOpportunity(opportunityID: number): Promise<IOpportunity> {
     // Note need to load it in with all contained entities so can remove fully
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['relations', 'projects'],
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
+      relations: ['community', 'context', 'lifecycle', 'relations', 'projects'],
     });
+
+    await this.challengeBaseService.deleteEntities(opportunity);
 
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
@@ -77,6 +108,15 @@ export class OpportunityService {
     }
 
     return await this.opportunityRepository.remove(opportunity as Opportunity);
+  }
+
+  async updateOpportunity(
+    opportunityData: UpdateOpportunityInput
+  ): Promise<IOpportunity> {
+    return await this.challengeBaseService.update(
+      opportunityData,
+      this.opportunityRepository
+    );
   }
 
   async saveOpportunity(opportunity: IOpportunity): Promise<IOpportunity> {
@@ -90,9 +130,12 @@ export class OpportunityService {
       return opportunity.relations;
     }
 
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['relations'],
-    });
+    const opportunityLoaded = await this.getOpportunityByIdOrFail(
+      opportunity.id,
+      {
+        relations: ['relations'],
+      }
+    );
 
     if (!opportunityLoaded.relations)
       throw new EntityNotInitializedException(
@@ -111,7 +154,7 @@ export class OpportunityService {
       LogContext.COLLABORATION
     );
 
-    const opportunity = await this.getOpportunityOrFail(opportunityId);
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId);
 
     // Check that do not already have an Project with the same name
     const name = projectData.name;
@@ -137,7 +180,7 @@ export class OpportunityService {
 
   async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
     const opportunityId = relationData.parentID;
-    const opportunity = await this.getOpportunityOrFail(opportunityId, {
+    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
       relations: ['relations'],
     });
 

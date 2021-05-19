@@ -24,12 +24,15 @@ import { INVP, NVP } from '@domain/common/nvp';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
 import { IContext } from '@domain/context';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
     private projectService: ProjectService,
+    private opportunityService: OpportunityService,
     private challengeService: ChallengeService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -116,25 +119,24 @@ export class EcoverseService {
     return community.groups || [];
   }
 
-  // todo: replace with a single getChallenges with a flag for recursive
-  async getOpportunities(ecoverse: IEcoverse): Promise<IChallenge[]> {
+  async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
     const challenges = await this.getChallenges(ecoverse);
-    const opportunitiyChallenges: IChallenge[] = [];
+    const opportunities: IOpportunity[] = [];
     for (const challenge of challenges) {
-      const childChallenges = await this.challengeService.getChildChallenges(
-        challenge
+      const childOpportunities = await this.challengeService.getOpportunities(
+        challenge.id
       );
-      for (const childChallenge of childChallenges) {
-        const opportunity = await this.challengeService.getChallengeByIdOrFail(
-          childChallenge.id,
+      for (const childOpportunity of childOpportunities) {
+        const opportunity = await this.opportunityService.getOpportunityByIdOrFail(
+          childOpportunity.id,
           {
-            relations: ['context', 'opportunities'],
+            relations: ['context'],
           }
         );
-        opportunitiyChallenges.push(opportunity);
+        opportunities.push(opportunity);
       }
     }
-    return opportunitiyChallenges;
+    return opportunities;
   }
 
   async getCommunity(ecoverse: IEcoverse): Promise<ICommunity> {
