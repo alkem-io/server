@@ -29,7 +29,7 @@ export class ApplicationService {
 
   async createApplication(
     applicationData: CreateApplicationInput,
-    ecoverseID?: string
+    ecoverseID = '-1'
   ): Promise<IApplication> {
     const application = Application.create(applicationData);
     application.ecoverseID = ecoverseID;

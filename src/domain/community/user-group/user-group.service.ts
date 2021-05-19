@@ -41,10 +41,11 @@ export class UserGroupService {
 
   async createUserGroup(
     userGroupData: CreateUserGroupInput,
-    ecoverseID?: string
+    ecoverseID = '-1'
   ): Promise<IUserGroup> {
     const group = UserGroup.create(userGroupData);
     group.ecoverseID = ecoverseID;
+
     (group as IUserGroup).profile = await this.profileService.createProfile(
       userGroupData.profileData
     );

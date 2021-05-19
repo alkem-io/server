@@ -35,7 +35,7 @@ export class ProjectService {
 
   async createProject(
     projectData: CreateProjectInput,
-    ecoverseID?: string
+    ecoverseID = '-1'
   ): Promise<IProject> {
     const project: IProject = Project.create(projectData);
     (project as Project).ecoverseID = ecoverseID;
