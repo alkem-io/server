@@ -11,7 +11,7 @@ import {
   getProjectData,
 } from '../project/project.request.params';
 import {
-  createOpportunityOnChallengeMutation,
+  createChildChallengeMutation,
   queryOpportunity,
 } from '../opportunity/opportunity.request.params';
 import {
@@ -89,7 +89,6 @@ describe('Lifecycle', () => {
           challengeId,
           setInvalidEvent
         );
-
         // Assert
         expect(updateState.text).toContain(
           `Unable to update state: provided event (${setInvalidEvent}) not in valid set of next events: ${nextEvents}`
@@ -163,21 +162,25 @@ describe('Lifecycle', () => {
       challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
       // Create Opportunity
-      const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+      const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
         challengeId,
         opportunityName,
         opportunityTextId,
         contextTagline
       );
       opportunityId =
-        responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+        responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
+      let collaborationId =
+        responseCreateOpportunityOnChallenge.body.data.createChildChallenge
+          .collaboration.id;
 
       // Create Project
       const responseCreateProject = await createProjectMutation(
-        opportunityId,
+        collaborationId,
         projectName,
         projectTextId
       );
+
       projectId = responseCreateProject.body.data.createProject.id;
     });
 
@@ -202,33 +205,6 @@ describe('Lifecycle', () => {
         expect(data.state).toEqual(state);
         expect(data.nextEvents).toEqual(nextEvents);
         expect(data).toEqual(challengeDataResponse);
-      }
-    );
-
-    // Arrange
-    test.each`
-      setEvent       | state             | nextEvents
-      ${'REFINE'}    | ${'beingRefined'} | ${['ACTIVE', 'ABANDONED']}
-      ${'ACTIVE'}    | ${'inProgress'}   | ${['COMPLETED', 'ABANDONED']}
-      ${'COMPLETED'} | ${'complete'}     | ${['ARCHIVE', 'ABANDONED']}
-      ${'ARCHIVE'}   | ${'archived'}     | ${[]}
-    `(
-      'should update opportunity, when set event: "$setEvent" to state: "$state", nextEvents: "$nextEvents"',
-      async ({ setEvent, state, nextEvents }) => {
-        // Act
-        let updateState = await eventOnOpportunityMutation(
-          opportunityId,
-          setEvent
-        );
-        let data = updateState.body.data.eventOnOpportunity.lifecycle;
-        let opportunityData = await queryOpportunity(opportunityId);
-        let opportunityDataResponse =
-          opportunityData.body.data.ecoverse.opportunity.lifecycle;
-
-        // Assert
-        expect(data.state).toEqual(state);
-        expect(data.nextEvents).toEqual(nextEvents);
-        expect(data).toEqual(opportunityDataResponse);
       }
     );
 

@@ -1,14 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
-
-export const lifecycleData = `
-lifecycle {
-  id
-  state
-  nextEvents
-  machineDef
-  templateId
-}`;
+import { lifecycleData } from '@test/utils/common-params';
 
 export const eventOnChallengeMutation = async (
   challengeId: string,
@@ -19,7 +11,9 @@ export const eventOnChallengeMutation = async (
     query: `mutation eventOnChallenge($challengeEventData: ChallengeEventInput!) {
       eventOnChallenge(challengeEventData: $challengeEventData) {
         id
-        ${lifecycleData}
+        lifecycle {
+          ${lifecycleData}
+        }
       }
     }`,
     variables: {
@@ -42,7 +36,9 @@ export const eventOnOpportunityMutation = async (
     query: `mutation eventOnOpportunity($opportunityEventData: OpportunityEventInput!) {
       eventOnOpportunity(opportunityEventData: $opportunityEventData) {
         id
-        ${lifecycleData}
+        lifecycle {
+          ${lifecycleData}
+        }
       }
     }`,
     variables: {
@@ -65,7 +61,9 @@ export const eventOnProjectMutation = async (
     query: `mutation eventOnProject($projectEventData: ProjectEventInput!) {
       eventOnProject(projectEventData: $projectEventData) {
         id
-        ${lifecycleData}
+        lifecycle {
+          ${lifecycleData}
+        }
       }
     }`,
     variables: {
@@ -88,7 +86,9 @@ export const eventOnApplicationMutation = async (
     query: `mutation eventOnApplication($applicationEventData: ApplicationEventInput!) {
       eventOnApplication(applicationEventData: $applicationEventData) {
         id
-        ${lifecycleData}
+        lifecycle {
+          ${lifecycleData}
+        }
       }
     }`,
     variables: {
