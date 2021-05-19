@@ -7,12 +7,13 @@ import {
   IAspect,
 } from '@domain/context/aspect';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
 @Resolver()
 export class AspectResolverMutations {
   constructor(private aspectService: AspectService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
     description: 'Deletes the specified Aspect.',
@@ -23,7 +24,7 @@ export class AspectResolverMutations {
     return await this.aspectService.removeAspect(deleteData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
     description: 'Updates the specified Aspect.',

@@ -7,7 +7,7 @@ export abstract class ICredential extends IBaseCherrytwist {
   agent?: IAgent;
 
   @Field(() => Number)
-  resourceID?: number;
+  resourceID!: number;
 
   @Field(() => String)
   type!: string;

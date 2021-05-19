@@ -11,7 +11,8 @@ import {
 } from '@domain/collaboration/project';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(
@@ -19,7 +20,7 @@ export class ProjectResolverMutations {
     private projectLifecycleOptionsProvider: ProjectLifecycleOptionsProvider
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IProject, {
     description: 'Deletes the specified Project.',
@@ -31,8 +32,8 @@ export class ProjectResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IProject, {
@@ -44,7 +45,7 @@ export class ProjectResolverMutations {
     return await this.projectService.updateProject(projectData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
     description: 'Create a new Aspect on the Project.',
@@ -57,7 +58,7 @@ export class ProjectResolverMutations {
     return aspect;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IProject, {
     description: 'Trigger an event on the Project.',

@@ -6,7 +6,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import validator from 'validator';
@@ -20,7 +20,6 @@ import {
 import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '../user/user.service';
-import { AuthorizationCredential } from '@core/authorization';
 
 @Injectable()
 export class OrganisationService {

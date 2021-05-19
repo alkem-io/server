@@ -5,7 +5,6 @@ import {
   AuthorizationSelfManagement,
   AuthorizationGlobalRoles,
   GraphqlGuard,
-  AuthorizationRolesGlobal,
 } from '@core/authorization';
 import {
   CreateUserInput,
@@ -14,14 +13,15 @@ import {
   DeleteUserInput,
 } from '@domain/community/user';
 import { UserService } from './user.service';
+import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(private readonly userService: UserService) {}
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
@@ -36,8 +36,8 @@ export class UserResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
@@ -53,8 +53,8 @@ export class UserResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {

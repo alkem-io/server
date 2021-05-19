@@ -5,19 +5,20 @@ import { Profiling } from '@src/common/decorators';
 import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
 import {
   DeleteOpportunityInput,
   IOpportunity,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
+import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(private opportunityService: OpportunityService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOpportunity, {
     description: 'Updates the specified Opportunity.',
@@ -32,7 +33,7 @@ export class OpportunityResolverMutations {
     return challenge;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOpportunity, {
     description: 'Deletes the specified Opportunity.',
@@ -45,7 +46,7 @@ export class OpportunityResolverMutations {
     );
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IProject, {
     description: 'Create a new Project on the Opportunity',
@@ -58,7 +59,7 @@ export class OpportunityResolverMutations {
     return project;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IRelation, {
     description: 'Create a new Relation on the Opportunity.',

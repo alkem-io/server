@@ -12,18 +12,18 @@ import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
 import {
   GraphqlGuard,
-  AuthorizationRolesGlobal,
   AuthorizationGlobalRoles,
   AuthorizationSelfManagement,
 } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver()
 export class ProfileResolverMutations {
   constructor(private profileService: ProfileService) {}
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
@@ -38,8 +38,8 @@ export class ProfileResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
@@ -54,8 +54,8 @@ export class ProfileResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Admin,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
@@ -70,8 +70,8 @@ export class ProfileResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Admin,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @AuthorizationSelfManagement()
   @Mutation(() => IProfile, {

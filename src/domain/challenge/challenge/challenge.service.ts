@@ -1,27 +1,17 @@
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
-import { ICommunity } from '@domain/community/community';
-import { CommunityService } from '@domain/community/community/community.service';
-import validator from 'validator';
 import {
-  UpdateChallengeInput,
+  AssignChallengeLeadInput,
   Challenge,
-  IChallenge,
   CreateChallengeInput,
   DeleteChallengeInput,
-  AssignChallengeLeadInput,
+  IChallenge,
   RemoveChallengeLeadInput,
+  UpdateChallengeInput,
 } from '@domain/challenge/challenge';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
@@ -30,7 +20,17 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { IBaseChallenge } from '@domain/challenge/base-challenge';
-
+import { LogContext } from '@common/enums';
+import { Inject, Injectable } from '@nestjs/common';
+import { CommunityService } from '@domain/community/community/community.service';
+import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LoggerService } from '@nestjs/common';
+import { IOrganisation } from '@domain/community/organisation';
+import validator from 'validator';
+import { ICommunity } from '@domain/community/community';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -50,6 +50,7 @@ export class ChallengeService {
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.ecoverseID = ecoverseID;
     challenge.childChallenges = [];
+
     challenge.opportunities = [];
     await this.challengeBaseService.initialise(
       challenge,

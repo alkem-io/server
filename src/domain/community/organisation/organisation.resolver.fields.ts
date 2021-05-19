@@ -9,9 +9,8 @@ import {
   ValidationException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationRoleGlobal, LogContext } from '@common/enums';
 import {
-  AuthorizationRolesGlobal,
   GraphqlGuard,
   AuthorizationOrganisationMember,
 } from '@core/authorization';
@@ -27,8 +26,8 @@ export class OrganisationResolverFields {
   ) {}
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Admin,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @AuthorizationOrganisationMember()
   @UseGuards(GraphqlGuard)
@@ -55,8 +54,8 @@ export class OrganisationResolverFields {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Admin,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @AuthorizationOrganisationMember()
   @UseGuards(GraphqlGuard)

@@ -19,9 +19,9 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
 import validator from 'validator';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
-import { ChallengeLifecycleTemplates } from '@common/enums/challenge.lifecycle.templates';
 import { challengeLifecycleConfigDefault } from './base.challenge.lifecycle.config.default';
 import { challengeLifecycleConfigExtended } from './base.challenge.lifecycle.config.extended';
+import { ChallengeLifecycleTemplate } from '@common/enums/challenge.lifecycle.template';
 
 @Injectable()
 export class BaseChallengeService {
@@ -57,7 +57,7 @@ export class BaseChallengeService {
     let machineConfig: any = challengeLifecycleConfigDefault;
     if (
       challengeData.lifecycleTemplate &&
-      challengeData.lifecycleTemplate === ChallengeLifecycleTemplates.EXTENDED
+      challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
     ) {
       machineConfig = challengeLifecycleConfigExtended;
     }

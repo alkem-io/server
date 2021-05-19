@@ -7,13 +7,14 @@ import { AuthenticationException } from '@common/exceptions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserInfo } from '@src/core/authentication/user-info';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
   constructor(private userService: UserService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Query(() => [IUser], {
     nullable: false,
@@ -24,7 +25,7 @@ export class UserResolverQueries {
     return await this.userService.getUsers();
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Query(() => IUser, {
     nullable: false,
@@ -35,7 +36,7 @@ export class UserResolverQueries {
     return await this.userService.getUserOrFail(id);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Query(() => [IUser], {
     nullable: false,
@@ -51,7 +52,7 @@ export class UserResolverQueries {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Query(() => IUser, {
     nullable: false,

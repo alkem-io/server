@@ -1,23 +1,26 @@
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import { AuthorizationRoleGlobal } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
+import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { IProject } from '@domain/collaboration/project';
+import { ProjectService } from '@domain/collaboration/project/project.service';
+import { IUserGroup } from '@domain/community/user-group';
+import { ApplicationService } from '@domain/community/application/application.service';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { EcoverseService } from './ecoverse.service';
-import { ICommunity } from '@domain/community/community';
+import { IChallenge } from '../challenge';
 import { ChallengeService } from '../challenge/challenge.service';
-import { IChallenge } from '@domain/challenge/challenge';
-import { IProject } from '@domain/collaboration/project';
-import { IUserGroup, IApplication } from '@domain/community';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { ApplicationService } from '@domain/community/application/application.service';
-import { ProjectService } from '@domain/collaboration/project/project.service';
-import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
-import { ITagset } from '@domain/common/tagset';
-import { IContext } from '@domain/context/context';
-import { INVP } from '@domain/common/nvp';
-import { IEcoverse, Ecoverse } from '@domain/challenge/ecoverse';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { EcoverseService } from './ecoverse.service';
+import { IEcoverse } from '@domain/challenge/ecoverse';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { ICommunity } from '@domain/community/community';
+import { IContext } from '@domain/context/context';
+import { ITagset } from '@domain/common/tagset';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IApplication } from '@domain/community/application';
+import { INVP } from '@domain/common/nvp';
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
   constructor(
@@ -125,7 +128,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: false,
@@ -138,7 +141,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @ResolveField('groupsWithTag', () => [IUserGroup], {
     nullable: false,
@@ -154,7 +157,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: false,
@@ -172,8 +175,8 @@ export class EcoverseResolverFields {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Registered,
-    AuthorizationRolesGlobal.CommunityAdmin
+    AuthorizationRoleGlobal.Registered,
+    AuthorizationRoleGlobal.CommunityAdmin
   )
   @UseGuards(GraphqlGuard)
   @ResolveField('application', () => IApplication, {

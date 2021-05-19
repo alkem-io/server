@@ -5,6 +5,7 @@ import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 export enum RestrictedActorGroupNames {
   Collaborators = 'collaborators',
 }
+
 @Entity()
 export class ActorGroup extends BaseCherrytwistEntity implements IActorGroup {
   @Column()

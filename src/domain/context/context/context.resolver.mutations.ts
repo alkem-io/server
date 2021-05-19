@@ -1,19 +1,19 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { CreateReferenceInput, IReference } from '@domain/common/reference';
 import { ContextService } from './context.service';
-import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
 import { CreateAspectInput, IAspect } from '@domain/context';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import { AuthorizationRoleGlobal } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
+import { UseGuards } from '@nestjs/common/decorators';
 @Resolver()
 export class ContextResolverMutations {
   constructor(private contextService: ContextService) {}
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
@@ -27,7 +27,7 @@ export class ContextResolverMutations {
     return reference;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
     description: 'Create a new Aspect on the Opportunity.',

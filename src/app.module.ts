@@ -22,6 +22,8 @@ import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SearchModule } from './services/search/search.module';
+import { ConfigurationTypes } from '@common/enums';
+import { MembershipModule } from './services/membership/membership.module';
 
 @Module({
   imports: [
@@ -40,12 +42,16 @@ import { SearchModule } from './services/search/search.module';
         synchronize: true,
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        host: configService.get('storage')?.database?.host,
-        port: configService.get('storage')?.database?.port,
-        username: configService.get('storage')?.database?.username,
-        password: configService.get('storage')?.database?.password,
-        database: configService.get('storage')?.database?.schema,
-        logging: configService.get('storage')?.database?.logging,
+        host: configService.get(ConfigurationTypes.Storage)?.database?.host,
+        port: configService.get(ConfigurationTypes.Storage)?.database?.port,
+        username: configService.get(ConfigurationTypes.Storage)?.database
+          ?.username,
+        password: configService.get(ConfigurationTypes.Storage)?.database
+          ?.password,
+        database: configService.get(ConfigurationTypes.Storage)?.database
+          ?.schema,
+        logging: configService.get(ConfigurationTypes.Storage)?.database
+          ?.logging,
       }),
     }),
     WinstonModule.forRootAsync({
@@ -67,6 +73,7 @@ import { SearchModule } from './services/search/search.module';
     DataManagementModule,
     BootstrapModule,
     SearchModule,
+    MembershipModule,
     KonfigModule,
     IpfsModule,
   ],

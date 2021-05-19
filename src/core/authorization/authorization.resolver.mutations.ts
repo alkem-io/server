@@ -12,19 +12,17 @@ import {
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
 import { IUser } from '@domain/community/user';
-import {
-  GraphqlGuard,
-  AuthorizationRolesGlobal,
-} from '@src/core/authorization';
+import { GraphqlGuard } from './graphql.guard';
 import { UserInfo } from '@core/authentication';
+import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver()
 export class AuthorizationResolverMutations {
   constructor(private authorizationService: AuthorizationService) {}
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
@@ -43,8 +41,8 @@ export class AuthorizationResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
