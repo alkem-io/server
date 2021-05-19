@@ -12,10 +12,6 @@ import {
 } from 'typeorm';
 import { EcosystemModel, IActorGroup, Actor } from '@domain/context';
 
-export enum RestrictedActorGroupNames {
-  Collaborators = 'collaborators',
-}
-
 @Entity()
 @ObjectType()
 export class ActorGroup extends BaseEntity implements IActorGroup {

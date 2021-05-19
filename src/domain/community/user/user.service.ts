@@ -7,7 +7,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import validator from 'validator';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
@@ -20,7 +20,6 @@ import {
 } from '@domain/community/user';
 import { DeleteUserInput } from './user.dto.delete';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { AuthorizationCredential } from '@core/authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Agent, IAgent } from '@domain/agent/agent';
 

@@ -1,21 +1,20 @@
-import { Inject, UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql';
-import { ChallengeService } from './challenge.service';
-import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
-
+import { AuthorizationRoleGlobal } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
 import {
-  UpdateChallengeInput,
-  IChallenge,
-  Challenge,
-  DeleteChallengeInput,
-  ChallengeEventInput,
   AssignChallengeLeadInput,
+  Challenge,
+  ChallengeEventInput,
+  DeleteChallengeInput,
+  IChallenge,
   RemoveChallengeLeadInput,
+  UpdateChallengeInput,
 } from '@domain/challenge/challenge';
-import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
-import { GraphqlGuard, AuthorizationRolesGlobal } from '@core/authorization';
+import { Inject, UseGuards } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import { CreateChallengeInput } from './challenge.dto.create';
+import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
+import { ChallengeService } from './challenge.service';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -25,7 +24,7 @@ export class ChallengeResolverMutations {
     private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Creates a new child challenge within the parent Challenge.',
@@ -37,7 +36,7 @@ export class ChallengeResolverMutations {
     return await this.challengeService.createChildChallenge(challengeData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Updates the specified Challenge.',
@@ -52,7 +51,7 @@ export class ChallengeResolverMutations {
     return challenge;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Deletes the specified Challenge.',
@@ -64,8 +63,8 @@ export class ChallengeResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
@@ -79,8 +78,8 @@ export class ChallengeResolverMutations {
   }
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
@@ -93,7 +92,7 @@ export class ChallengeResolverMutations {
     return await this.challengeService.removeChallengeLead(removeData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Challenge, {
     description: 'Trigger an event on the Challenge.',

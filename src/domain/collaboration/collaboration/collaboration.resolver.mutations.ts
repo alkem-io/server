@@ -13,14 +13,15 @@ import {
   IProject,
 } from '@domain/collaboration/project';
 import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRolesGlobal, GraphqlGuard } from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 import { CollaborationService } from './collaboration.service';
+import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver()
 export class CollaborationResolverMutations {
   constructor(private collaborationService: CollaborationService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Project, {
     description: 'Create a new Project on the Opportunity',
@@ -33,7 +34,7 @@ export class CollaborationResolverMutations {
     return project;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Admin)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => Relation, {
     description: 'Create a new Relation on the Collaboration.',

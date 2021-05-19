@@ -1,39 +1,39 @@
-import { ContextService } from '@domain/context/context/context.service';
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { LogContext } from '@common/enums';
+import { ChallengeLifecycleTemplate } from '@common/enums/challenge.lifecycle.template';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
-import { ICommunity } from '@domain/community/community';
-import { CommunityService } from '@domain/community/community/community.service';
-import validator from 'validator';
 import {
-  UpdateChallengeInput,
-  Challenge,
-  IChallenge,
-  CreateChallengeInput,
-  DeleteChallengeInput,
   AssignChallengeLeadInput,
-  RemoveChallengeLeadInput,
+  Challenge,
   challengeLifecycleConfigDefault,
   challengeLifecycleConfigExtended,
+  CreateChallengeInput,
+  DeleteChallengeInput,
+  IChallenge,
+  RemoveChallengeLeadInput,
+  UpdateChallengeInput,
 } from '@domain/challenge/challenge';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { ChallengeLifecycleTemplates } from '@common/enums/challenge.lifecycle.templates';
-import { IContext } from '@domain/context/context';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { NVP } from '@domain/common';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ICommunity } from '@domain/community/community';
+import { CommunityService } from '@domain/community/community/community.service';
+import { IOrganisation } from '@domain/community/organisation/organisation.interface';
+import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { IContext } from '@domain/context/context';
+import { ContextService } from '@domain/context/context/context.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import validator from 'validator';
 
 @Injectable()
 export class ChallengeService {
@@ -82,7 +82,7 @@ export class ChallengeService {
     let machineConfig: any = challengeLifecycleConfigDefault;
     if (
       challengeData.lifecycleTemplate &&
-      challengeData.lifecycleTemplate === ChallengeLifecycleTemplates.EXTENDED
+      challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
     ) {
       machineConfig = challengeLifecycleConfigExtended;
     }

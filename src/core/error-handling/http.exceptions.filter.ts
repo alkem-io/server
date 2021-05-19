@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { BaseException } from '../../common/exceptions/base.exception';
+import { BaseException } from '@common/exceptions';
 
 @Injectable()
 @Catch()

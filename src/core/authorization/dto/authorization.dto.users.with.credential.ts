@@ -1,5 +1,5 @@
+import { AuthorizationCredential } from '@common/enums';
 import { InputType, Field } from '@nestjs/graphql';
-import { AuthorizationCredential } from '@core/authorization';
 
 @InputType()
 export class UsersWithAuthorizationCredentialInput {

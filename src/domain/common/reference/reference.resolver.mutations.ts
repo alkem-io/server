@@ -1,6 +1,6 @@
+import { AuthorizationRoleGlobal } from '@common/enums';
 import {
   AuthorizationGlobalRoles,
-  AuthorizationRolesGlobal,
   AuthorizationSelfManagement,
   GraphqlGuard,
 } from '@core/authorization';
@@ -18,8 +18,8 @@ export class ReferenceResolverMutations {
   constructor(private referenceService: ReferenceService) {}
 
   @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)

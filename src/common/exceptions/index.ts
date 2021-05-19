@@ -10,3 +10,4 @@ export * from './not.supported.exception';
 export * from './relationship.not.found.exception';
 export * from './token.exception';
 export * from './validation.exception';
+export * from './registration.exception';

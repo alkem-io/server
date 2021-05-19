@@ -24,7 +24,7 @@ import {
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
 import { ApplicationService } from '../application/application.service';
-import { AuthorizationCredential } from '@core/authorization/authorization.credential';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
