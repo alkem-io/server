@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { actorData, contextData } from '@test/utils/common-params';
 
 export const createActorMutation = async (
   actorGroupId: string,
@@ -12,13 +13,9 @@ export const createActorMutation = async (
     operationName: null,
     query: `mutation createActor($actorData: CreateActorInput!) {
       createActor(actorData: $actorData) {
-          id,
-          name,
-          description,
-          value,
-          impact
+          ${actorData}
           }
-      }`,
+        }`,
     variables: {
       actorData: {
         parentID: parseFloat(actorGroupId),
@@ -44,11 +41,7 @@ export const updateActorMutation = async (
     operationName: null,
     query: `mutation updateActor($actorData: UpdateActorInput!) {
       updateActor(actorData: $actorData) {
-          id
-          name
-          description
-          value
-          impact
+        ${actorData}
         }
       }`,
     variables: {
@@ -82,17 +75,16 @@ export const removeActorMutation = async (actorId: string) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getActorData = async (opportunityId: string) => {
+export const getActorData = async (subChallengeId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
-      actorGroups{
-        actors{
-          id name description value impact
+    query: `query {ecoverse {challenge(ID: "${subChallengeId}") {
+      context{
+        ${contextData}
         }
       }
     }
-  }}`,
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
