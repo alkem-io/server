@@ -65,7 +65,7 @@ export class ChallengeService {
 
     // Context
     if (!challengeData.context) {
-      challengeData.context = await this.contextService.createContext({});
+      challenge.context = await this.contextService.createContext({});
     } else {
       challenge.context = await this.contextService.createContext(
         challengeData.context
