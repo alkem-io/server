@@ -33,7 +33,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT anonymous user - queries - Not authorized', () => {
+describe.skip('DDT anonymous user - queries - Not authorized', () => {
   // Arrange
   test.each`
     query                                | idName           | expectedAuth         | expectedForb
@@ -96,7 +96,7 @@ describe('DDT anonymous user - queries - Not authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT anonymous user - queries - authorized', () => {
+describe.skip('DDT anonymous user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expectedAuth         | expectedForb
@@ -151,7 +151,7 @@ describe('DDT anonymous user - queries - authorized', () => {
   );
 });
 
-describe('DDT anonymous user - Create mutations - Not authorized', () => {
+describe.skip('DDT anonymous user - Create mutations - Not authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -190,7 +190,7 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
   );
 });
 
-describe('DDT anonymous user - Update mutations - NOT authorized', () => {
+describe.skip('DDT anonymous user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName               | expected
@@ -228,7 +228,7 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
 // disabled until the bug is fixed: ${'updateUserMutation'}                     | ${'updateUserVariables'}                     | ${'userId'}                   | ${notAuthorizedCode}
 // https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/809
 
-describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
+describe.skip('DDT anonymous user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected

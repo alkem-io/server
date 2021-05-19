@@ -178,7 +178,7 @@ describe.skip('DDT ecoverse admin user - Create mutations - authorized', () => {
 
 //  Scenario excluded not to load with fake data the AAD   ${createUserMutation}   | ${createUserVariables}  | ${notAuthorizedCode}
 
-describe('DDT ecoverse admin user - Update mutations - authorized', () => {
+describe.skip('DDT ecoverse admin user - Update mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName               | expected

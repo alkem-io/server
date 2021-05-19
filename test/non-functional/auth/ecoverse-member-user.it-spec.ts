@@ -163,7 +163,7 @@ describe.skip('DDT ecoverse member user - Create mutations - authorized', () => 
   );
 });
 
-describe('DDT ecoverse member user - Create mutations - NOT authorized', () => {
+describe.skip('DDT ecoverse member user - Create mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -207,7 +207,7 @@ describe('DDT ecoverse member user - Create mutations - NOT authorized', () => {
 //  Scenario excluded not to load with fake data the AAD   ${createUserMutation}   | ${createUserVariables}  | ${notAuthorizedCode}
 
 // ${'updateUserMutation'}                     | ${'updateUserVariables'}                     | ${'userId'}                   | ${forbiddenCode}
-describe('DDT ecoverse member user - Update mutations - NOT authorized', () => {
+describe.skip('DDT ecoverse member user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName               | expected
@@ -245,7 +245,7 @@ describe('DDT ecoverse member user - Update mutations - NOT authorized', () => {
   );
 });
 
-describe('DDT ecoverse member user - Remove mutations - NOT authorized', () => {
+describe.skip('DDT ecoverse member user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected
