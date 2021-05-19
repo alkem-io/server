@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { aspectData, collaborationData, contextData, projectData } from '@test/utils/common-params';
 
 export const createAspectOnProjectMutation = async (
   projectId: string,
@@ -11,10 +12,7 @@ export const createAspectOnProjectMutation = async (
     operationName: null,
     query: `mutation CreateAspectOnProject($aspectData: CreateAspectInput!) {
       createAspectOnProject(aspectData: $aspectData) {
-        id,
-        title,
-        framing,
-        explanation
+        ${aspectData}
       }
     }`,
     variables: {
@@ -40,10 +38,7 @@ export const createAspectOnOpportunityMutation = async (
     operationName: null,
     query: `mutation CreateAspect($aspectData: CreateAspectInput!) {
       createAspect(aspectData: $aspectData)  {
-        id,
-        title,
-        framing,
-        explanation
+        ${aspectData}
       }
     }`,
     variables: {
@@ -69,7 +64,7 @@ export const updateAspectMutation = async (
     operationName: null,
     query: `mutation updateAspect($aspectData: UpdateAspectInput!) {
       updateAspect(aspectData: $aspectData) {
-        id, title, framing, explanation
+        ${aspectData}
       }
     }`,
     variables: {
@@ -102,27 +97,29 @@ export const removeAspectMutation = async (aspectId: string) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getAspectPerOpportunity = async (opportunityId: string) => {
+export const getAspectPerOpportunity = async (childChallengeId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse{ opportunity(ID: "${opportunityId}") {
-        aspects { id title framing explanation }}}}`,
+    query: `query {ecoverse{ challenge(ID: "${childChallengeId}") {
+          context {
+            ${contextData}
+          }
+        }
+      }
+    }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getAspectPerProject = async (opportunityId: string) => {
+export const getAspectPerProjectunderChildChallenge = async (childChallenge: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse{ opportunity(ID: "${opportunityId}") {
-      projects{
-        aspects{
-          id title framing explanation
-        }
+    query: `query {ecoverse{ challenge(ID: "${childChallenge}") {
+      ${collaborationData}
       }
     }
-  }}`,
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

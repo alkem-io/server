@@ -3,11 +3,12 @@ import { appSingleton } from '@test/utils/app.singleton';
 import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 import {
   createAspectOnProjectMutation,
+  getAspectPerProjectunderChildChallenge,
   removeAspectMutation,
   updateAspectMutation,
-  getAspectPerProject,
+
 } from './aspect.request.params';
-import { createOpportunityOnChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
+import { createChildChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 import { createProjectMutation } from '@test/functional/integration/project/project.request.params';
 
 let opportunityName = '';
@@ -24,17 +25,18 @@ let aspectFrame = '';
 let aspectExplanation = '';
 let uniqueTextId = '';
 let aspectDataCreate = '';
+let collaborationId = '';
 let aspectCountPerProject = async (): Promise<number> => {
-  const responseQuery = await getAspectPerProject(opportunityId);
+  const responseQuery = await getAspectPerProjectunderChildChallenge(opportunityId);
   let response =
-    responseQuery.body.data.ecoverse.opportunity.projects[0].aspects;
+    responseQuery.body.data.ecoverse.challenge.collaboration.projects[0].aspects;
   return response;
 };
 
 let aspectDataPerPerproject = async (): Promise<String> => {
-  const responseQuery = await getAspectPerProject(opportunityId);
+  const responseQuery = await getAspectPerProjectunderChildChallenge(opportunityId);
   let response =
-    responseQuery.body.data.ecoverse.opportunity.projects[0].aspects[0];
+    responseQuery.body.data.ecoverse.challenge.collaboration.projects[0].aspects[0];
   return response;
 };
 beforeEach(async () => {
@@ -68,17 +70,19 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
   // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+  const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
     challengeId,
     opportunityName,
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+    responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
+  collaborationId =
+    responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
 
   // Create Project
   const responseCreateProject = await createProjectMutation(
-    opportunityId,
+    collaborationId,
     projectName,
     projectTextId
   );
