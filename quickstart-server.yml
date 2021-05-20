@@ -1,0 +1,45 @@
+version: '3.7'
+
+services:
+  ct_server:
+    container_name: ct_server_dev
+    image: ct_server
+    build: .
+    networks:
+      - ct_server_dev
+    environment:
+      - DATABASE_HOST
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+      - WAIT_HOSTS
+      - WAIT_HOSTS_TIMEOUT
+      - WAIT_SLEEP_INTERVAL
+      - WAIT_HOST_CONNECT_TIMEOUT
+      - GRAPHQL_ENDPOINT_PORT
+      - AUTH_AAD_CHERRYTWIST_API_APP_ID
+      - AUTH_AAD_LOGGING_PII
+      - AUTH_AAD_LOGGING_LEVEL
+      - AUTH_AAD_MSGRAPH_API_SECRET
+      - AUTH_AAD_MSGRAPH_API_SCOPE
+      - AUTH_AAD_UPN_DOMAIN
+      - AUTH_AAD_TENANT
+      - AUTH_ENABLED
+      - AUTH_AAD_CLIENT_APP_ID
+      - AUTH_AAD_CHERRYTWIST_API_SCOPE
+      - AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI
+      - NODE_ENV
+      - AUTH_DEMO_AUTH_ISSUER
+      - AUTH_DEMO_AUTH_TOKEN_ENDPOINT
+      - AUTH_DEMO_AUTH_CLIENT_SECRET
+      - IPFS_ENDPOINT
+      - IPFS_CLIENT_ENDPOINT
+      - IPFS_MAX_FILE_SIZE
+    depends_on:
+      - db
+      - ct_demo_auth_provider
+    restart: always
+    ports:
+      - 4003:4000
+    command: sh -c "/wait && npm run migration:run && npm run start"
+    volumes:
+      - ct_server_dev:/usr/src/app/config

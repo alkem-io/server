@@ -7,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AadBearerStrategy } from './aad.bearer.strategy';
 import { ConfigurationTypes } from '@common/enums';
+import { OryStrategy } from './ory.strategy';
 @Module({
   imports: [
     PassportModule.register({ session: false, defaultStrategy: 'azure-ad' }),
@@ -21,7 +22,12 @@ import { ConfigurationTypes } from '@common/enums';
       }),
     }),
   ],
-  providers: [AadBearerStrategy, AuthenticationService, JwtStrategy],
+  providers: [
+    AadBearerStrategy,
+    AuthenticationService,
+    JwtStrategy,
+    OryStrategy,
+  ],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}

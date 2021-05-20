@@ -65,6 +65,7 @@
     "image-size": "^0.9.7",
     "ipfs-http-client": "^49.0.4",
     "js-yaml": "^4.1.0",
+    "jwks-rsa": "^2.0.3",
     "module-alias": "^2.2.2",
     "mysql": "^2.18.1",
     "nest-winston": "^1.4.0",
