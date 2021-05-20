@@ -9,12 +9,14 @@ import { OpportunityResolverMutations } from './opportunity.resolver.mutations';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
+import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
     ProjectModule,
     RelationModule,
     BaseChallengeModule,
+    CommunityModule,
     LifecycleModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
