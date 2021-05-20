@@ -11,6 +11,7 @@ import { OrganisationModule } from '@domain/community/organisation/organisation.
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
+import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
     ChallengeService,
     ChallengeResolverMutations,
     ChallengeResolverFields,
+    ChallengeLifecycleOptionsProvider,
   ],
   exports: [ChallengeService],
 })

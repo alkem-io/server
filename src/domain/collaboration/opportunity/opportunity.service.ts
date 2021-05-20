@@ -23,11 +23,16 @@ import validator from 'validator';
 import { ICommunity } from '@domain/community/community';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { opportunityLifecycleConfigDefault } from './opportunity.lifecycle.config.default';
+import { ChallengeLifecycleTemplate } from '@common/enums';
+import { opportunityLifecycleConfigExtended } from './opportunity.lifecycle.config.extended';
 @Injectable()
 export class OpportunityService {
   constructor(
     private challengeBaseService: BaseChallengeService,
     private projectService: ProjectService,
+    private lifecycleService: LifecycleService,
     private relationService: RelationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -43,10 +48,22 @@ export class OpportunityService {
     opportunity.projects = [];
     opportunity.relations = [];
 
-    await this.challengeBaseService.initialise(
-      opportunity,
-      opportunityData,
-      this.opportunityRepository
+    await this.challengeBaseService.initialise(opportunity, opportunityData);
+
+    // Lifecycle, that has both a default and extended version
+    let machineConfig: any = opportunityLifecycleConfigDefault;
+    if (
+      opportunityData.lifecycleTemplate &&
+      opportunityData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
+    ) {
+      machineConfig = opportunityLifecycleConfigExtended;
+    }
+
+    await this.opportunityRepository.save(opportunity);
+
+    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+      opportunity.id.toString(),
+      machineConfig
     );
 
     return await this.saveOpportunity(opportunity);

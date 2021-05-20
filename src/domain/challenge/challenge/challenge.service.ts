@@ -51,11 +51,7 @@ export class ChallengeService {
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
-    await this.challengeBaseService.initialise(
-      challenge,
-      challengeData,
-      this.challengeRepository
-    );
+    await this.challengeBaseService.initialise(challenge, challengeData);
 
     return await this.challengeRepository.save(challenge);
   }

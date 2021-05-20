@@ -14,7 +14,6 @@ import {
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
 import { GraphqlGuard } from '@core/authorization';
-import { BaseChallengeLifecycleOptionsProvider } from '../base-challenge/base.challenge.lifecycle.options.provider';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -22,12 +21,13 @@ import {
   IOpportunity,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 
 @Resolver()
 export class ChallengeResolverMutations {
   constructor(
     private challengeService: ChallengeService,
-    private challengeLifecycleOptionsProvider: BaseChallengeLifecycleOptionsProvider,
+    private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
   ) {}
@@ -121,7 +121,7 @@ export class ChallengeResolverMutations {
     @Args('challengeEventData')
     challengeEventData: ChallengeEventInput
   ): Promise<IChallenge> {
-    return await this.challengeLifecycleOptionsProvider.eventOnBaseChallenge({
+    return await this.challengeLifecycleOptionsProvider.eventOnChallenge({
       eventName: challengeEventData.eventName,
       ID: challengeEventData.ID,
       repository: this.challengeRepository,

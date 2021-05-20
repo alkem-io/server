@@ -10,13 +10,18 @@ import { OpportunityService } from './opportunity.service';
 import {
   DeleteOpportunityInput,
   IOpportunity,
+  OpportunityEventInput,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 
 @Resolver()
 export class OpportunityResolverMutations {
-  constructor(private opportunityService: OpportunityService) {}
+  constructor(
+    private opportunityService: OpportunityService,
+    private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
+  ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
@@ -69,5 +74,20 @@ export class OpportunityResolverMutations {
     @Args('relationData') relationData: CreateRelationInput
   ): Promise<IRelation> {
     return await this.opportunityService.createRelation(relationData);
+  }
+
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOpportunity, {
+    description: 'Trigger an event on the Opportunity.',
+  })
+  async eventOnOpportunity(
+    @Args('opportunityEventData')
+    challengeEventData: OpportunityEventInput
+  ): Promise<IOpportunity> {
+    return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity({
+      eventName: challengeEventData.eventName,
+      ID: challengeEventData.ID,
+    });
   }
 }
