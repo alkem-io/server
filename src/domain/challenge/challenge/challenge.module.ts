@@ -9,14 +9,16 @@ import { ChallengeService } from './challenge.service';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
-import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
     ContextModule,
+    BaseChallengeModule,
     CommunityModule,
-    CollaborationModule,
+    OpportunityModule,
     TagsetModule,
     OrganisationModule,
     LifecycleModule,

@@ -94,7 +94,7 @@ export class OrganisationService {
   async deleteOrganisation(
     deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
-    const orgID = deleteData.ID;
+    const orgID = parseInt(deleteData.ID);
     const organisation = await this.getOrganisationByIdOrFail(orgID);
 
     if (organisation.profile) {
@@ -103,14 +103,16 @@ export class OrganisationService {
 
     if (organisation.groups) {
       for (const group of organisation.groups) {
-        await this.userGroupService.removeUserGroup({ ID: group.id });
+        await this.userGroupService.removeUserGroup({
+          ID: group.id.toString(),
+        });
       }
     }
 
     const result = await this.organisationRepository.remove(
       organisation as Organisation
     );
-    result.id = deleteData.ID;
+    result.id = orgID;
     return result;
   }
 

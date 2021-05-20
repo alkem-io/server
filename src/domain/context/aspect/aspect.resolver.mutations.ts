@@ -1,9 +1,11 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Aspect } from './aspect.entity';
-import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
-import { DeleteAspectInput, UpdateAspectInput } from '@domain/context/aspect';
+import {
+  DeleteAspectInput,
+  UpdateAspectInput,
+  IAspect,
+} from '@domain/context/aspect';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
@@ -13,7 +15,7 @@ export class AspectResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Aspect, {
+  @Mutation(() => IAspect, {
     description: 'Deletes the specified Aspect.',
   })
   async deleteAspect(
@@ -24,7 +26,7 @@ export class AspectResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Aspect, {
+  @Mutation(() => IAspect, {
     description: 'Updates the specified Aspect.',
   })
   async updateAspect(

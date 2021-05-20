@@ -2,17 +2,18 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
-import { Community } from '@domain/community/community';
-import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
-import { Context } from '@domain/context/context';
-import { Collaboration } from '@domain/collaboration/collaboration';
-import { NVP } from '@domain/common';
+import { ICommunity } from '@domain/community/community';
+import { IContext } from '@domain/context/context';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { ILifecycle } from '@domain/common/lifecycle';
+import { IChallenge } from '@domain/challenge/challenge';
+import { INVP } from '@domain/common/nvp';
 
-@Resolver(() => Challenge)
+@Resolver(() => IChallenge)
 export class ChallengeResolverFields {
   constructor(private challengeService: ChallengeService) {}
 
-  @ResolveField('community', () => Community, {
+  @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the challenge.',
   })
@@ -21,7 +22,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getCommunity(challenge.id);
   }
 
-  @ResolveField('context', () => Context, {
+  @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the challenge.',
   })
@@ -30,16 +31,16 @@ export class ChallengeResolverFields {
     return await this.challengeService.getContext(challenge.id);
   }
 
-  @ResolveField('collaboration', () => Collaboration, {
+  @ResolveField('opportunites', () => [IOpportunity], {
     nullable: true,
-    description: 'The Collaboration for the challenge.',
+    description: 'The Opportunities for the challenge.',
   })
   @Profiling.api
-  async collaboration(@Parent() challenge: Challenge) {
-    return await this.challengeService.getCollaboration(challenge.id);
+  async opportunities(@Parent() challenge: Challenge) {
+    return await this.challengeService.getOpportunities(challenge.id);
   }
 
-  @ResolveField('lifecycle', () => Lifecycle, {
+  @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
     description: 'The lifeycle for the Challenge.',
   })
@@ -48,7 +49,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getLifecycle(challenge.id);
   }
 
-  @ResolveField('challenges', () => [Challenge], {
+  @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
     description: 'The set of child Challenges within this challenge.',
   })
@@ -57,7 +58,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getChildChallenges(challenge);
   }
 
-  @ResolveField('activity', () => [NVP], {
+  @ResolveField('activity', () => [INVP], {
     nullable: true,
     description: 'The activity within this Challenge.',
   })

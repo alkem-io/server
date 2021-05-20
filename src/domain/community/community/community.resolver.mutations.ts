@@ -1,8 +1,7 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
+import { IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import {
   AuthorizationGlobalRoles,
@@ -12,7 +11,6 @@ import {
 import {
   CreateApplicationInput,
   DeleteApplicationInput,
-  Application,
   IApplication,
   ApplicationEventInput,
 } from '@domain/community/application';
@@ -38,7 +36,7 @@ export class CommunityResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => UserGroup, {
+  @Mutation(() => IUserGroup, {
     description: 'Creates a new User Group in the specified Community.',
   })
   @Profiling.api
@@ -53,7 +51,7 @@ export class CommunityResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => UserGroup, {
+  @Mutation(() => IUserGroup, {
     description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api
@@ -68,7 +66,7 @@ export class CommunityResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => UserGroup, {
+  @Mutation(() => IUserGroup, {
     description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
@@ -80,7 +78,7 @@ export class CommunityResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Application, {
+  @Mutation(() => IApplication, {
     description: 'Creates Application for a User to join this Community.',
   })
   @Profiling.api
@@ -95,7 +93,7 @@ export class CommunityResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Application, {
+  @Mutation(() => IApplication, {
     description: 'Removes the specified User Application.',
   })
   async deleteUserApplication(
@@ -109,7 +107,7 @@ export class CommunityResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Application, {
+  @Mutation(() => IApplication, {
     description: 'Trigger an event on the Application.',
   })
   async eventOnApplication(

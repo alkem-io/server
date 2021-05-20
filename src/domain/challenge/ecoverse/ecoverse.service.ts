@@ -20,16 +20,21 @@ import {
 import { ICommunity } from '@domain/community/community';
 import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
-import { NVP } from '@domain/common';
+import { INVP, NVP } from '@domain/common/nvp';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
 import { IContext } from '@domain/context';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
     private projectService: ProjectService,
+    private opportunityService: OpportunityService,
+    private challengeBaseService: BaseChallengeService,
     private challengeService: ChallengeService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -116,25 +121,24 @@ export class EcoverseService {
     return community.groups || [];
   }
 
-  // todo: replace with a single getChallenges with a flag for recursive
-  async getOpportunities(ecoverse: IEcoverse): Promise<IChallenge[]> {
+  async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
     const challenges = await this.getChallenges(ecoverse);
-    const opportunitiyChallenges: IChallenge[] = [];
+    const opportunities: IOpportunity[] = [];
     for (const challenge of challenges) {
-      const childChallenges = await this.challengeService.getChildChallenges(
-        challenge
+      const childOpportunities = await this.challengeService.getOpportunities(
+        challenge.id
       );
-      for (const childChallenge of childChallenges) {
-        const opportunity = await this.challengeService.getChallengeByIdOrFail(
-          childChallenge.id,
+      for (const childOpportunity of childOpportunities) {
+        const opportunity = await this.opportunityService.getOpportunityByIdOrFail(
+          childOpportunity.id,
           {
-            relations: ['context', 'collaboration'],
+            relations: ['context'],
           }
         );
-        opportunitiyChallenges.push(opportunity);
+        opportunities.push(opportunity);
       }
     }
-    return opportunitiyChallenges;
+    return opportunities;
   }
 
   async getCommunity(ecoverse: IEcoverse): Promise<ICommunity> {
@@ -153,18 +157,17 @@ export class EcoverseService {
     const ecoverse = await this.getEcoverseOrFail(challengeData.parentID);
     const challenges = await this.getChallenges(ecoverse);
 
-    // First check if the challenge already exists on not...
-    let newChallenge = challenges.find(c => c.name === challengeData.name);
-    if (newChallenge) {
-      // already have a challenge with the given name, not allowed
-      throw new ValidationException(
-        `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`,
-        LogContext.CHALLENGES
-      );
-    }
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      challenges,
+      challengeData.name
+    );
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      challenges,
+      challengeData.textID
+    );
 
     // No existing challenge found, create and initialise a new one!
-    newChallenge = await this.challengeService.createChildChallenge(
+    const newChallenge = await this.challengeService.createChildChallenge(
       challengeData
     );
     await this.ecoverseRepository.save(ecoverse);
@@ -214,10 +217,10 @@ export class EcoverseService {
     return await this.projectService.getProjects(ecoverse.id.toString());
   }
 
-  async getActivity(ecoverse: IEcoverse): Promise<NVP[]> {
+  async getActivity(ecoverse: IEcoverse): Promise<INVP[]> {
     const challenge = this.getChallenge(ecoverse);
     // this will have members + challenges populated
-    const activity: NVP[] = [];
+    const activity: INVP[] = [];
 
     // Challenges
     const childChallengesCount = await this.challengeService.getChildChallengesCount(

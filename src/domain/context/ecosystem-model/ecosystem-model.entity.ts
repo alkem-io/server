@@ -1,44 +1,13 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
-import { ActorGroup } from '@domain/context';
-
+import { ActorGroup } from '@domain/context/actor-group';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 @Entity()
-@ObjectType()
-export class EcosystemModel extends BaseEntity implements IEcosystemModel {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'Overview of this ecosystem model.',
-  })
+export class EcosystemModel extends BaseCherrytwistEntity
+  implements IEcosystemModel {
   @Column('varchar', { length: 255, nullable: true })
   description?: string = '';
 
-  @Field(() => [ActorGroup], {
-    nullable: true,
-    description: 'A list of ActorGroups',
-  })
   @OneToMany(
     () => ActorGroup,
     actorGroup => actorGroup.ecosystemModel,
@@ -49,7 +18,6 @@ export class EcosystemModel extends BaseEntity implements IEcosystemModel {
   // The restricted actor group names at the Opportunity level
   restrictedActorGroupNames: string[];
 
-  // Constructor
   constructor() {
     super();
     this.restrictedActorGroupNames = [];

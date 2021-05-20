@@ -32,10 +32,10 @@ export class AspectService {
   }
 
   async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
-    const aspectID = deleteData.ID;
+    const aspectID = parseInt(deleteData.ID);
     const aspect = await this.getAspectByIdOrFail(aspectID);
     const result = await this.aspectRepository.remove(aspect as Aspect);
-    result.id = deleteData.ID;
+    result.id = aspectID;
     return result;
   }
 

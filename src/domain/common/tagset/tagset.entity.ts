@@ -1,17 +1,7 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
-import { ITagset } from './tagset.interface';
-import { Profile } from '@domain/community/profile/profile.entity';
+import { Column, Entity, ManyToOne } from 'typeorm';
+import { ITagset } from '@domain/common/tagset';
+import { Profile } from '@domain/community/profile';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 export enum RestrictedTagsetNames {
   Default = 'default',
@@ -19,26 +9,10 @@ export enum RestrictedTagsetNames {
 }
 
 @Entity()
-@ObjectType()
-export class Tagset extends BaseEntity implements ITagset {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String)
+export class Tagset extends BaseCherrytwistEntity implements ITagset {
   @Column({ default: RestrictedTagsetNames.Default })
   name: string;
 
-  @Field(() => [String])
   @Column('simple-array')
   tags: string[];
 

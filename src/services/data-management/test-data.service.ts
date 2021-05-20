@@ -295,7 +295,9 @@ export class TestDataService {
     const challengeToRemove = (await this.challengeService.getChallengeByIdOrFail(
       challengeId
     )) as IChallenge;
-    await this.challengeService.deleteChallenge({ ID: challengeToRemove?.id });
+    await this.challengeService.deleteChallenge({
+      ID: challengeToRemove?.id.toString(),
+    });
   }
 
   // async removeUserFromGroups() {

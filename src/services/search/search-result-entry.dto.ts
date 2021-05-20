@@ -1,6 +1,6 @@
+import { ISearchable } from '@domain/common/interfaces';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultEntry } from './search-result-entry.interface';
-import { SearchResult } from './search-result.dto';
 
 @ObjectType()
 export class SearchResultEntry implements ISearchResultEntry {
@@ -17,12 +17,12 @@ export class SearchResultEntry implements ISearchResultEntry {
   })
   terms: string[];
 
-  @Field(() => SearchResult, {
+  @Field(() => ISearchable, {
     nullable: true,
     description:
       'Each search result contains either a User, UserGroup or Organisation',
   })
-  result?: typeof SearchResult;
+  result?: ISearchable;
 
   constructor() {
     this.score = 0;

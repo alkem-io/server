@@ -1,43 +1,17 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { Context } from '@domain/context';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
-@ObjectType()
-export class Aspect extends BaseEntity implements IAspect {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String)
+export class Aspect extends BaseCherrytwistEntity implements IAspect {
   @Column()
   title: string;
 
-  @Field(() => String)
   @Column('text')
   framing: string;
 
-  @Field(() => String)
   @Column('text')
   explanation: string;
 

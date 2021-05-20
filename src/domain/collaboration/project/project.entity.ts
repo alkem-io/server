@@ -1,55 +1,24 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
   OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
 } from 'typeorm';
-import { Agreement } from '@domain/collaboration/agreement/agreement.entity';
+import { Agreement } from '@domain/collaboration/agreement';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
 import { Lifecycle } from '@domain/common/lifecycle';
-import { Collaboration } from '@domain/collaboration/collaboration';
+import { Opportunity } from '@domain/collaboration/opportunity';
+import { IdentifiableEntity } from '@domain/common/identifiable-entity';
 
 @Entity()
-@ObjectType()
-export class Project extends BaseEntity implements IProject {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'A short text identifier for this Opportunity',
-  })
-  @Column()
-  textID: string;
-
+export class Project extends IdentifiableEntity implements IProject {
   @Column()
   ecoverseID?: string;
 
-  @Field(() => String, { nullable: false, description: '' })
-  @Column()
-  name: string;
-
-  @Field(() => String, { nullable: true, description: '' })
   @Column('text', { nullable: true })
   description?: string;
 
@@ -57,18 +26,10 @@ export class Project extends BaseEntity implements IProject {
   @JoinColumn()
   lifecycle!: Lifecycle;
 
-  @Field(() => Tagset, {
-    nullable: true,
-    description: 'The set of tags for the project',
-  })
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset?: Tagset;
 
-  @Field(() => [Aspect], {
-    nullable: true,
-    description: 'The set of aspects for this Project. Note: likley to change.',
-  })
   @OneToMany(
     () => Aspect,
     aspect => aspect.project,
@@ -76,7 +37,6 @@ export class Project extends BaseEntity implements IProject {
   )
   aspects?: Aspect[];
 
-  //@Field(() => [Agreement])
   @OneToMany(
     () => Agreement,
     agreement => agreement.project,
@@ -85,10 +45,10 @@ export class Project extends BaseEntity implements IProject {
   agreements?: Agreement[];
 
   @ManyToOne(
-    () => Collaboration,
-    collaboration => collaboration.projects
+    () => Opportunity,
+    opportunity => opportunity.projects
   )
-  collaboration?: Collaboration;
+  opportunity?: Opportunity;
 
   constructor(name: string, textID: string) {
     super();

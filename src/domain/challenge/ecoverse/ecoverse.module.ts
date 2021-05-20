@@ -13,12 +13,16 @@ import { EcoverseResolverFields } from './ecoverse.resolver.fields';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
 
 @Module({
   imports: [
     ContextModule,
     CommunityModule,
     ChallengeModule,
+    BaseChallengeModule,
+    OpportunityModule,
     ProjectModule,
     OrganisationModule,
     TagsetModule,

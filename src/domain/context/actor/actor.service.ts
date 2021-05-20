@@ -64,9 +64,9 @@ export class ActorService {
 
   async deleteActor(deleteData: DeleteActorInput): Promise<IActor> {
     const actorID = deleteData.ID;
-    const actor = await this.getActorByIdOrFail(actorID);
+    const actor = await this.getActorOrFail(actorID);
     const result = await this.actorRepository.remove(actor as Actor);
-    result.id = deleteData.ID;
+    result.id = parseInt(deleteData.ID);
     return result;
   }
 

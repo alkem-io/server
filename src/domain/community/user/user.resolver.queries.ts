@@ -1,8 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
-import { User } from './user.entity';
-import { IUser } from './user.interface';
+import { IUser } from '@domain/community/user';
 import { UserService } from './user.service';
 import { AuthenticationException } from '@common/exceptions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -11,13 +10,13 @@ import { UserNotRegisteredException } from '@common/exceptions/registration.exce
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
 
-@Resolver(() => User)
+@Resolver(() => IUser)
 export class UserResolverQueries {
   constructor(private userService: UserService) {}
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
-  @Query(() => [User], {
+  @Query(() => [IUser], {
     nullable: false,
     description: 'The users who have profiles on this platform',
   })
@@ -28,8 +27,7 @@ export class UserResolverQueries {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
-  //should be in user queries
-  @Query(() => User, {
+  @Query(() => IUser, {
     nullable: false,
     description: 'A particular user, identified by the ID or by email',
   })
@@ -40,8 +38,7 @@ export class UserResolverQueries {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
-  //should be in user queries
-  @Query(() => [User], {
+  @Query(() => [IUser], {
     nullable: false,
     description: 'The users filtered by list of IDs.',
   })
@@ -57,7 +54,7 @@ export class UserResolverQueries {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
-  @Query(() => User, {
+  @Query(() => IUser, {
     nullable: false,
     description: 'The currently logged in user',
   })

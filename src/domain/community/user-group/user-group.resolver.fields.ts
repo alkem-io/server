@@ -1,17 +1,16 @@
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { UserGroup } from './user-group.entity';
 import { UserGroupService } from './user-group.service';
-import { UserGroupParent } from './user-group-parent.dto';
 import { Profiling } from '@src/common/decorators';
-import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user';
+import { UserGroup, IUserGroup } from '@domain/community/user-group';
+import { IGroupable } from '../../common/interfaces/groupable.interface';
 
-@Resolver(() => UserGroup)
+@Resolver(() => IUserGroup)
 export class UserGroupResolverFields {
   constructor(private userGroupService: UserGroupService) {}
 
-  @ResolveField('parent', () => UserGroupParent, {
+  @ResolveField('parent', () => IGroupable, {
     nullable: true,
     description: 'Containing entity for this UserGroup.',
   })
@@ -20,7 +19,7 @@ export class UserGroupResolverFields {
     return await this.userGroupService.getParent(userGroup);
   }
 
-  @ResolveField('members', () => [User], {
+  @ResolveField('members', () => [IUser], {
     nullable: true,
     description: 'The Users that are members of this User Group.',
   })

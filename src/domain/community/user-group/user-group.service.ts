@@ -20,11 +20,9 @@ import {
   RemoveUserGroupMemberInput,
   DeleteUserGroupInput,
   CreateUserGroupInput,
-  UserGroupParent,
 } from '@domain/community/user-group';
-
 import validator from 'validator';
-import { TagsetService } from '@domain/common/tagset';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
@@ -60,7 +58,7 @@ export class UserGroupService {
   async removeUserGroup(deleteData: DeleteUserGroupInput): Promise<IUserGroup> {
     const groupID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
-    const group = (await this.getUserGroupByIdOrFail(groupID)) as UserGroup;
+    const group = (await this.getUserGroupOrFail(groupID)) as UserGroup;
 
     if (group.profile) {
       await this.profileService.deleteProfile(group.profile.id);
@@ -96,7 +94,7 @@ export class UserGroupService {
     return populatedUserGroup;
   }
 
-  async getParent(group: UserGroup): Promise<typeof UserGroupParent> {
+  async getParent(group: UserGroup): Promise<IGroupable> {
     const groupWithParent = (await this.getUserGroupByIdOrFail(group.id, {
       relations: ['community', 'organisation'],
     })) as UserGroup;

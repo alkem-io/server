@@ -36,17 +36,17 @@ export class ActorGroupService {
   async deleteActorGroup(
     deleteData: DeleteActorGroupInput
   ): Promise<IActorGroup> {
-    const actorGroupID = deleteData.ID;
+    const actorGroupID = parseInt(deleteData.ID);
     const actorGroup = await this.getActorGroupOrFail(actorGroupID);
     if (actorGroup.actors) {
       for (const actor of actorGroup.actors) {
-        await this.actorService.deleteActor({ ID: actor.id });
+        await this.actorService.deleteActor({ ID: actor.id.toString() });
       }
     }
     const result = await this.actorGroupRepository.remove(
       actorGroup as ActorGroup
     );
-    result.id = deleteData.ID;
+    result.id = actorGroupID;
     return result;
   }
 

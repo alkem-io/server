@@ -1,15 +1,10 @@
-import { Reference } from '@domain/common/reference/reference.entity';
-import { IReference } from '@domain/common/reference/reference.interface';
-import { Tagset } from '@domain/common/tagset/tagset.entity';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { CreateReferenceInput } from '@domain/common/reference';
+import { IReference, CreateReferenceInput } from '@domain/common/reference';
+import { ITagset, CreateTagsetInput } from '@domain/common/tagset';
 import {
   IProfile,
-  Profile,
   UpdateProfileInput,
   UploadProfileAvatarInput,
 } from '@domain/community/profile';
-import { CreateTagsetInput } from '@domain/common/tagset';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
@@ -32,7 +27,7 @@ export class ProfileResolverMutations {
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Tagset, {
+  @Mutation(() => ITagset, {
     description: 'Creates a new Tagset on the specified Profile',
   })
   @Profiling.api
@@ -48,7 +43,7 @@ export class ProfileResolverMutations {
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Reference, {
+  @Mutation(() => IReference, {
     description: 'Creates a new Reference on the specified Profile.',
   })
   @Profiling.api
@@ -64,7 +59,7 @@ export class ProfileResolverMutations {
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Profile, {
+  @Mutation(() => IProfile, {
     description: 'Updates the specified Profile.',
   })
   @Profiling.api
@@ -79,7 +74,7 @@ export class ProfileResolverMutations {
     AuthorizationRoleGlobal.CommunityAdmin
   )
   @AuthorizationSelfManagement()
-  @Mutation(() => Profile, {
+  @Mutation(() => IProfile, {
     description: 'Uploads and sets an avatar image for the specified Profile.',
   })
   async uploadAvatar(
