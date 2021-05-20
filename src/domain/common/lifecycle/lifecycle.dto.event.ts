@@ -1,8 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { BaseChallenge } from '@domain/challenge';
 
 @InputType()
 export class LifecycleEventInput {

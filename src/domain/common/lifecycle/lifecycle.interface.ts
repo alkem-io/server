@@ -2,7 +2,7 @@ import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import JSON from 'graphql-type-json';
 
-@ObjectType('Lifecycle2')
+@ObjectType('Lifecycle')
 export abstract class ILifecycle extends IBaseCherrytwist {
   machineState?: string;
 

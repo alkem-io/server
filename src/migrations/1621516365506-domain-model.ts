@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class domainModel1620915132555 implements MigrationInterface {
-  name = 'domainModel1620915132555';
+export class domainModel1621516365506 implements MigrationInterface {
+  name = 'domainModel1621516365506';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -23,7 +23,7 @@ export class domainModel1620915132555 implements MigrationInterface {
       'CREATE TABLE `lifecycle` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `machineState` text NULL, `machineDef` text NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `relation` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `type` varchar(255) NOT NULL, `actorName` varchar(255) NOT NULL, `actorType` varchar(255) NOT NULL, `actorRole` varchar(255) NOT NULL, `description` text NULL, `collaborationId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `relation` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `type` varchar(255) NOT NULL, `actorName` varchar(255) NOT NULL, `actorType` varchar(255) NOT NULL, `actorRole` varchar(255) NOT NULL, `description` text NULL, `opportunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `nvp` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `value` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
@@ -32,7 +32,7 @@ export class domainModel1620915132555 implements MigrationInterface {
       'CREATE TABLE `application` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `ecoverseID` varchar(255) NOT NULL, `lifecycleId` int NULL, `userId` int NULL, `communityId` int NULL, UNIQUE INDEX `REL_7ec2857c7d8d16432ffca1cb3d` (`lifecycleId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `community` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `parentCommunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `community` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `parentCommunityId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `user_group` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `profileId` int NULL, `organisationId` int NULL, `communityId` int NULL, UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
@@ -41,16 +41,16 @@ export class domainModel1620915132555 implements MigrationInterface {
       'CREATE TABLE `organisation` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `profileId` int NULL, UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `ecoverse` (`id` int NOT NULL AUTO_INCREMENT, `textID` varchar(255) NOT NULL, `name` varchar(255) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `hostId` int NULL, `challengeId` int NULL, UNIQUE INDEX `REL_70577156f8512a2573dcdb72fa` (`challengeId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `ecoverse` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `lifecycleId` int NULL, `tagsetId` int NULL, `hostId` int NULL, `challengeId` int NULL, UNIQUE INDEX `REL_6db8627abbf00b1b986e359054` (`contextId`), UNIQUE INDEX `REL_f5ad15bcb06a95c2a109fbcce2` (`communityId`), UNIQUE INDEX `REL_ec1a68698d32f610a5fc1880c7` (`lifecycleId`), UNIQUE INDEX `REL_3a69b0a6c67ead761763400990` (`tagsetId`), UNIQUE INDEX `REL_70577156f8512a2573dcdb72fa` (`challengeId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `challenge` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `collaborationId` int NULL, `lifecycleId` int NULL, `tagsetId` int NULL, `parentChallengeId` int NULL, UNIQUE INDEX `REL_1deebaabfc620e881858333b0d` (`contextId`), UNIQUE INDEX `REL_aa9668dd2340c2d794b414577b` (`communityId`), UNIQUE INDEX `REL_d4551f18fed106ae2e20c70f7c` (`collaborationId`), UNIQUE INDEX `REL_3c535130cde781b69259eec7d8` (`lifecycleId`), UNIQUE INDEX `REL_6b1bcaf365212806d8cc1f87b5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `challenge` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `lifecycleId` int NULL, `tagsetId` int NULL, `parentChallengeId` int NULL, UNIQUE INDEX `REL_1deebaabfc620e881858333b0d` (`contextId`), UNIQUE INDEX `REL_aa9668dd2340c2d794b414577b` (`communityId`), UNIQUE INDEX `REL_3c535130cde781b69259eec7d8` (`lifecycleId`), UNIQUE INDEX `REL_6b1bcaf365212806d8cc1f87b5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `collaboration` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `opportunity` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `contextId` int NULL, `communityId` int NULL, `lifecycleId` int NULL, `tagsetId` int NULL, `challengeId` int NULL, UNIQUE INDEX `REL_9c169eb500e2d3823154c7b603` (`contextId`), UNIQUE INDEX `REL_1c7744df92f39ab567084fd8c0` (`communityId`), UNIQUE INDEX `REL_6860f1e3ae5509245bdb5c401f` (`lifecycleId`), UNIQUE INDEX `REL_7d23d17ce61f11c92ff1ea0ed1` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `project` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `textID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `lifecycleId` int NULL, `tagsetId` int NULL, `collaborationId` int NULL, UNIQUE INDEX `REL_f425931bb61a95ef6f6d89c9a8` (`lifecycleId`), UNIQUE INDEX `REL_d07535c59062f86e887de8f0a5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `project` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `textID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `description` text NULL, `lifecycleId` int NULL, `tagsetId` int NULL, `opportunityId` int NULL, UNIQUE INDEX `REL_f425931bb61a95ef6f6d89c9a8` (`lifecycleId`), UNIQUE INDEX `REL_d07535c59062f86e887de8f0a5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `aspect` (`id` int NOT NULL AUTO_INCREMENT, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `title` varchar(255) NOT NULL, `framing` text NOT NULL, `explanation` text NOT NULL, `contextId` int NULL, `projectId` int NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
@@ -98,7 +98,7 @@ export class domainModel1620915132555 implements MigrationInterface {
       'ALTER TABLE `agreement` ADD CONSTRAINT `FK_22348b89c2f802a3d75d52fbd57` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `relation` ADD CONSTRAINT `FK_701a6f8e3e1da76354571767c3f` FOREIGN KEY (`collaborationId`) REFERENCES `collaboration`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+      'ALTER TABLE `relation` ADD CONSTRAINT `FK_d6d967126caae9df4c763985f9b` FOREIGN KEY (`opportunityId`) REFERENCES `opportunity`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `application` ADD CONSTRAINT `FK_7ec2857c7d8d16432ffca1cb3d9` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
@@ -125,6 +125,18 @@ export class domainModel1620915132555 implements MigrationInterface {
       'ALTER TABLE `organisation` ADD CONSTRAINT `FK_037ba4b170844c039e74aa22ecd` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
+      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_6db8627abbf00b1b986e359054f` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_ec1a68698d32f610a5fc1880c7f` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_3a69b0a6c67ead7617634009903` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
       'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_84d2ecca9924fb1b0d2fe2d2ad6` FOREIGN KEY (`hostId`) REFERENCES `organisation`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
@@ -137,9 +149,6 @@ export class domainModel1620915132555 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_aa9668dd2340c2d794b414577b6` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_d4551f18fed106ae2e20c70f7cb` FOREIGN KEY (`collaborationId`) REFERENCES `collaboration`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
-    );
-    await queryRunner.query(
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_3c535130cde781b69259eec7d85` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
@@ -149,13 +158,28 @@ export class domainModel1620915132555 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_7d2b222d54b900071b0959f03ef` FOREIGN KEY (`parentChallengeId`) REFERENCES `challenge`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
+      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_9c169eb500e2d3823154c7b603d` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_1c7744df92f39ab567084fd8c09` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_6860f1e3ae5509245bdb5c401f3` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_7d23d17ce61f11c92ff1ea0ed1a` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_0e2c355dbb2950851dbc17a4490` FOREIGN KEY (`challengeId`) REFERENCES `challenge`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
       'ALTER TABLE `project` ADD CONSTRAINT `FK_f425931bb61a95ef6f6d89c9a85` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `project` ADD CONSTRAINT `FK_d07535c59062f86e887de8f0a57` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `project` ADD CONSTRAINT `FK_534fac334526e373b95d3ae18e3` FOREIGN KEY (`collaborationId`) REFERENCES `collaboration`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
+      'ALTER TABLE `project` ADD CONSTRAINT `FK_35e34564793a27bb3c209a15245` FOREIGN KEY (`opportunityId`) REFERENCES `opportunity`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `aspect` ADD CONSTRAINT `FK_6c57bb50b3b6fb4943c807c83ce` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION'
@@ -231,13 +255,28 @@ export class domainModel1620915132555 implements MigrationInterface {
       'ALTER TABLE `aspect` DROP FOREIGN KEY `FK_6c57bb50b3b6fb4943c807c83ce`'
     );
     await queryRunner.query(
-      'ALTER TABLE `project` DROP FOREIGN KEY `FK_534fac334526e373b95d3ae18e3`'
+      'ALTER TABLE `project` DROP FOREIGN KEY `FK_35e34564793a27bb3c209a15245`'
     );
     await queryRunner.query(
       'ALTER TABLE `project` DROP FOREIGN KEY `FK_d07535c59062f86e887de8f0a57`'
     );
     await queryRunner.query(
       'ALTER TABLE `project` DROP FOREIGN KEY `FK_f425931bb61a95ef6f6d89c9a85`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_0e2c355dbb2950851dbc17a4490`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_7d23d17ce61f11c92ff1ea0ed1a`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_6860f1e3ae5509245bdb5c401f3`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_1c7744df92f39ab567084fd8c09`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_9c169eb500e2d3823154c7b603d`'
     );
     await queryRunner.query(
       'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_7d2b222d54b900071b0959f03ef`'
@@ -247,9 +286,6 @@ export class domainModel1620915132555 implements MigrationInterface {
     );
     await queryRunner.query(
       'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_3c535130cde781b69259eec7d85`'
-    );
-    await queryRunner.query(
-      'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_d4551f18fed106ae2e20c70f7cb`'
     );
     await queryRunner.query(
       'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_aa9668dd2340c2d794b414577b6`'
@@ -262,6 +298,18 @@ export class domainModel1620915132555 implements MigrationInterface {
     );
     await queryRunner.query(
       'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_84d2ecca9924fb1b0d2fe2d2ad6`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_3a69b0a6c67ead7617634009903`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_ec1a68698d32f610a5fc1880c7f`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_f5ad15bcb06a95c2a109fbcce2a`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_6db8627abbf00b1b986e359054f`'
     );
     await queryRunner.query(
       'ALTER TABLE `organisation` DROP FOREIGN KEY `FK_037ba4b170844c039e74aa22ecd`'
@@ -288,7 +336,7 @@ export class domainModel1620915132555 implements MigrationInterface {
       'ALTER TABLE `application` DROP FOREIGN KEY `FK_7ec2857c7d8d16432ffca1cb3d9`'
     );
     await queryRunner.query(
-      'ALTER TABLE `relation` DROP FOREIGN KEY `FK_701a6f8e3e1da76354571767c3f`'
+      'ALTER TABLE `relation` DROP FOREIGN KEY `FK_d6d967126caae9df4c763985f9b`'
     );
     await queryRunner.query(
       'ALTER TABLE `agreement` DROP FOREIGN KEY `FK_22348b89c2f802a3d75d52fbd57`'
@@ -345,15 +393,24 @@ export class domainModel1620915132555 implements MigrationInterface {
       'DROP INDEX `REL_f425931bb61a95ef6f6d89c9a8` ON `project`'
     );
     await queryRunner.query('DROP TABLE `project`');
-    await queryRunner.query('DROP TABLE `collaboration`');
+    await queryRunner.query(
+      'DROP INDEX `REL_7d23d17ce61f11c92ff1ea0ed1` ON `opportunity`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_6860f1e3ae5509245bdb5c401f` ON `opportunity`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_1c7744df92f39ab567084fd8c0` ON `opportunity`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_9c169eb500e2d3823154c7b603` ON `opportunity`'
+    );
+    await queryRunner.query('DROP TABLE `opportunity`');
     await queryRunner.query(
       'DROP INDEX `REL_6b1bcaf365212806d8cc1f87b5` ON `challenge`'
     );
     await queryRunner.query(
       'DROP INDEX `REL_3c535130cde781b69259eec7d8` ON `challenge`'
-    );
-    await queryRunner.query(
-      'DROP INDEX `REL_d4551f18fed106ae2e20c70f7c` ON `challenge`'
     );
     await queryRunner.query(
       'DROP INDEX `REL_aa9668dd2340c2d794b414577b` ON `challenge`'
@@ -364,6 +421,18 @@ export class domainModel1620915132555 implements MigrationInterface {
     await queryRunner.query('DROP TABLE `challenge`');
     await queryRunner.query(
       'DROP INDEX `REL_70577156f8512a2573dcdb72fa` ON `ecoverse`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_3a69b0a6c67ead761763400990` ON `ecoverse`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_ec1a68698d32f610a5fc1880c7` ON `ecoverse`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_f5ad15bcb06a95c2a109fbcce2` ON `ecoverse`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_6db8627abbf00b1b986e359054` ON `ecoverse`'
     );
     await queryRunner.query('DROP TABLE `ecoverse`');
     await queryRunner.query(

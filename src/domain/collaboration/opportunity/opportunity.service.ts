@@ -27,12 +27,16 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { opportunityLifecycleConfigDefault } from './opportunity.lifecycle.config.default';
 import { ChallengeLifecycleTemplate } from '@common/enums';
 import { opportunityLifecycleConfigExtended } from './opportunity.lifecycle.config.extended';
+import { INVP } from '@domain/common/nvp/nvp.interface';
+import { CommunityService } from '@domain/community/community/community.service';
+import { NVP } from '@domain/common/nvp';
 @Injectable()
 export class OpportunityService {
   constructor(
     private challengeBaseService: BaseChallengeService,
     private projectService: ProjectService,
     private lifecycleService: LifecycleService,
+    private communityService: CommunityService,
     private relationService: RelationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -188,7 +192,7 @@ export class OpportunityService {
   }
 
   async createProject(projectData: CreateProjectInput): Promise<IProject> {
-    const opportunityId = projectData.parentID;
+    const opportunityId = projectData.opportunityID;
 
     this.logger.verbose?.(
       `Adding project to opportunity (${opportunityId})`,
@@ -235,5 +239,26 @@ export class OpportunityService {
     opportunity.relations.push(relation);
     await this.opportunityRepository.save(opportunity);
     return relation;
+  }
+
+  async getProjectsCount(opportunityID: number): Promise<number> {
+    return await this.opportunityRepository.count({
+      where: { opportunity: opportunityID },
+    });
+  }
+
+  async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
+    const activity: INVP[] = [];
+    const community = await this.getCommunity(opportunity.id);
+
+    const membersCount = await this.communityService.getMembersCount(community);
+    const membersTopic = new NVP('members', membersCount.toString());
+    activity.push(membersTopic);
+
+    const challengesCount = await this.getProjectsCount(opportunity.id);
+    const challengesTopic = new NVP('challenges', challengesCount.toString());
+    activity.push(challengesTopic);
+
+    return activity;
   }
 }
