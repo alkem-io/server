@@ -202,7 +202,7 @@ export class CommunityService {
   }
 
   async isMember(userID: string, communityID: string): Promise<boolean> {
-    const agent = await this.userService.getUserByIdWithAgent(userID);
+    const agent = await this.userService.getUserWithAgent(userID);
 
     return await this.agentService.hasValidCredential(agent.id, {
       type: AuthorizationCredential.CommunityMember,

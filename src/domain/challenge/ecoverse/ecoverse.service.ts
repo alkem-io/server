@@ -10,7 +10,7 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import {
   Ecoverse,
   IEcoverse,
@@ -18,7 +18,6 @@ import {
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { ICommunity } from '@domain/community/community';
-import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
 import { INVP, NVP } from '@domain/common/nvp';
 import { ProjectService } from '@domain/collaboration/project/project.service';
@@ -73,25 +72,18 @@ export class EcoverseService {
     ecoverseID: string,
     options?: FindOneOptions<Ecoverse>
   ): Promise<IEcoverse> {
-    if (validator.isNumeric(ecoverseID)) {
-      const idInt: number = parseInt(ecoverseID);
-      return await this.getEcoverseByIdOrFail(idInt.toString(), options);
-    }
-
-    throw new EntityNotFoundException(
-      `Unable to find Ecoverse with ID: ${ecoverseID}`,
-      LogContext.CHALLENGES
-    );
+    return await this.getEcoverseByIdOrFail(ecoverseID, options);
   }
 
   async getEcoverseByIdOrFail(
     ecoverseID: string,
     options?: FindOneOptions<Ecoverse>
   ): Promise<IEcoverse> {
-    const ecoverse = await this.ecoverseRepository.findOne(
-      { id: ecoverseID },
-      options
-    );
+    const conditions: FindConditions<Ecoverse> = {
+      id: ecoverseID,
+      //textID: ecoverseID,
+    };
+    const ecoverse = await this.ecoverseRepository.findOne(conditions, options);
     if (!ecoverse)
       throw new EntityNotFoundException(
         `Unable to find Ecoverse with ID: ${ecoverseID}`,

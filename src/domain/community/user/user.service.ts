@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -9,7 +9,6 @@ import {
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import validator from 'validator';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import {
@@ -94,7 +93,7 @@ export class UserService {
         `User profile creation (${userData.firstName}) missing required email`,
         LogContext.COMMUNITY
       );
-    const userCheck = await this.getUserByEmail(userData.email);
+    const userCheck = await this.isRegisteredUser(userData.email);
     if (userCheck)
       throw new ValidationException(
         `User profile with the specified email (${userData.email}) already exists`,
@@ -114,19 +113,18 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    if (validator.isNumeric(userID)) {
-      const idInt: number = parseInt(userID);
-      return await this.getUserByIdOrFail(idInt.toString(), options);
-    }
-
-    return await this.getUserByEmailOrFail(userID, options);
+    return this.getUserByIdOrFail(userID, options);
   }
 
   async getUserByIdOrFail(
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    const user = await this.userRepository.findOne({ id: userID }, options);
+    const conditions: FindConditions<User> = {
+      id: userID,
+      //email: userID
+    };
+    const user = await this.userRepository.findOne(conditions, options);
     if (!user)
       throw new EntityNotFoundException(
         `Unable to find user with given ID: ${userID}`,
@@ -135,18 +133,17 @@ export class UserService {
     return user;
   }
 
-  async getUserByEmail(
-    email: string,
-    options?: FindOneOptions<User>
-  ): Promise<IUser | undefined> {
-    return await this.userRepository.findOne({ email: email }, options);
+  async isRegisteredUser(email: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({ email: email });
+    if (user) return true;
+    return false;
   }
 
   async getUserByEmailOrFail(
     email: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    const user = await this.getUserByEmail(email, options);
+    const user = await this.userRepository.findOne({ email: email }, options);
     if (!user)
       throw new EntityNotFoundException(
         `Unable to find user with given email: ${email}`,
@@ -189,20 +186,6 @@ export class UserService {
 
   async getUserWithAgent(userID: string): Promise<IUser> {
     const user = await this.getUserOrFail(userID, {
-      relations: ['agent'],
-    });
-
-    if (!user.agent || !user.agent.credentials) {
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${userID}`,
-        LogContext.AUTH
-      );
-    }
-    return user;
-  }
-
-  async getUserByIdWithAgent(userID: string): Promise<IUser> {
-    const user = await this.getUserByIdOrFail(userID, {
       relations: ['agent'],
     });
 

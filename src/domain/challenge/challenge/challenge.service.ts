@@ -24,11 +24,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LoggerService } from '@nestjs/common';
 import { IOrganisation } from '@domain/community/organisation';
-import validator from 'validator';
 import { ICommunity } from '@domain/community/community';
 import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
 import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
@@ -295,20 +294,13 @@ export class ChallengeService {
     challengeID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge> {
-    if (validator.isNumeric(challengeID)) {
-      const idInt: number = parseInt(challengeID);
-      return await this.getChallengeByIdOrFail(idInt.toString(), options);
-    }
+    const conditions: FindConditions<Challenge> = {
+      id: challengeID,
+      //textID: challengeID,
+    };
 
-    return await this.getChallengeByTextIdOrFail(challengeID, options);
-  }
-
-  async getChallengeByIdOrFail(
-    challengeID: string,
-    options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
     const challenge = await this.challengeRepository.findOne(
-      { id: challengeID },
+      conditions,
       options
     );
     if (!challenge)
@@ -316,7 +308,15 @@ export class ChallengeService {
         `Unable to find challenge with ID: ${challengeID}`,
         LogContext.CHALLENGES
       );
+
     return challenge;
+  }
+
+  async getChallengeByIdOrFail(
+    challengeID: string,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge> {
+    return await this.getChallengeOrFail(challengeID, options);
   }
 
   async getChallengeByTextIdOrFail(

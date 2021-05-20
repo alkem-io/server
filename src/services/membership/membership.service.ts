@@ -62,7 +62,7 @@ export class MembershipService {
           storedChallenges.push(challenge);
         }
       } else if (credential.type === AuthorizationCredential.UserGroupMember) {
-        const group = await this.userGroupService.getUserGroupByIdOrFail(
+        const group = await this.userGroupService.getUserGroupOrFail(
           credential.resourceID
         );
         storedUserGroups.push(group);

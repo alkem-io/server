@@ -15,9 +15,8 @@ import { IContext } from '@domain/context/context';
 import { ContextService } from '@domain/context/context/context.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
-import validator from 'validator';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
 import { IIdentifiable } from '@domain/common/identifiable-entity';
 import { IBaseChallenge } from './base.challenge.interface';
@@ -109,16 +108,7 @@ export class BaseChallengeService {
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
   ): Promise<IBaseChallenge> {
-    if (validator.isNumeric(challengeID)) {
-      const idInt: number = parseInt(challengeID);
-      return await this.getChallengeBaseByIdOrFail(
-        idInt.toString(),
-        repository,
-        options
-      );
-    }
-
-    return await this.getChallengeByTextIdOrFail(
+    return await this.getChallengeBaseByIdOrFail(
       challengeID,
       repository,
       options
@@ -130,10 +120,12 @@ export class BaseChallengeService {
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
   ): Promise<IBaseChallenge> {
-    const challenge = await repository.findOne(
-      { id: challengeBaseID },
-      options
-    );
+    const conditions: FindConditions<BaseChallenge> = {
+      id: challengeBaseID,
+      //textID: challengeBaseID,
+    };
+
+    const challenge = await repository.findOne(conditions, options);
     if (!challenge)
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: ${challengeBaseID}`,

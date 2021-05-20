@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ValidationException,
@@ -119,10 +119,9 @@ export class OrganisationService {
     organisationID: string,
     options?: FindOneOptions<Organisation>
   ): Promise<IOrganisation> {
-    const organisation = await Organisation.findOne(
-      { id: organisationID },
-      options
-    );
+    const conditions: FindConditions<Organisation> = { id: organisationID };
+    const organisation = await Organisation.findOne(conditions, options);
+
     if (!organisation)
       throw new EntityNotFoundException(
         `Unable to find organisation with ID: ${organisationID}`,

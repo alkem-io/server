@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -19,7 +19,6 @@ import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import validator from 'validator';
 import { ICommunity } from '@domain/community/community';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
@@ -77,28 +76,27 @@ export class OpportunityService {
     opportunityID: string,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity> {
-    if (validator.isNumeric(opportunityID)) {
-      const idInt: number = parseInt(opportunityID);
-      return await this.getOpportunityByIdOrFail(idInt.toString(), options);
-    }
-
-    return await this.getOpportunityByTextIdOrFail(opportunityID, options);
+    return await this.getOpportunityByIdOrFail(opportunityID, options);
   }
 
   async getOpportunityByIdOrFail(
     opportunityID: string,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity> {
-    const Opportunity = await this.opportunityRepository.findOne(
-      { id: opportunityID },
+    const conditions: FindConditions<Opportunity> = {
+      id: opportunityID,
+      //textID: opportunityID,
+    };
+    const opportunity = await this.opportunityRepository.findOne(
+      conditions,
       options
     );
-    if (!Opportunity)
+    if (!opportunity)
       throw new EntityNotFoundException(
         `No Opportunity found with the given id: ${opportunityID}`,
         LogContext.COLLABORATION
       );
-    return Opportunity;
+    return opportunity;
   }
 
   async getOpportunityByTextIdOrFail(

@@ -119,10 +119,11 @@ export class BootstrapService {
   async createUserProfiles(usersData: any[]) {
     try {
       for (const userData of usersData) {
-        // If the user does not exist create + add credentials
-        let user = await this.userService.getUserByEmail(userData.email);
-        if (!user) {
-          user = await this.userService.createUser({
+        const userExists = await this.userService.isRegisteredUser(
+          userData.email
+        );
+        if (!userExists) {
+          const user = await this.userService.createUser({
             email: userData.email,
             accountUpn: userData.email,
             name: `${userData.firstName} ${userData.lastName}`,
