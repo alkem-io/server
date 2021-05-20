@@ -89,7 +89,7 @@ export class ChallengeService {
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.getChallengeByIdOrFail(parseInt(challengeID), {
+    const challenge = await this.getChallengeByIdOrFail(challengeID, {
       relations: [
         'childChallenges',
         'community',
@@ -123,28 +123,28 @@ export class ChallengeService {
     };
   }
 
-  async getCommunity(challengeId: number): Promise<ICommunity> {
+  async getCommunity(challengeId: string): Promise<ICommunity> {
     return await this.challengeBaseService.getCommunity(
       challengeId,
       this.challengeRepository
     );
   }
 
-  async getLifecycle(challengeId: number): Promise<ILifecycle> {
+  async getLifecycle(challengeId: string): Promise<ILifecycle> {
     return await this.challengeBaseService.getLifecycle(
       challengeId,
       this.challengeRepository
     );
   }
 
-  async getContext(challengeId: number): Promise<IContext> {
+  async getContext(challengeId: string): Promise<IContext> {
     return await this.challengeBaseService.getContext(
       challengeId,
       this.challengeRepository
     );
   }
 
-  async getOpportunities(challengeId: number): Promise<IOpportunity[]> {
+  async getOpportunities(challengeId: string): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeByIdOrFail(challengeId, {
       relations: ['opportunities'],
     });
@@ -297,14 +297,14 @@ export class ChallengeService {
   ): Promise<IChallenge> {
     if (validator.isNumeric(challengeID)) {
       const idInt: number = parseInt(challengeID);
-      return await this.getChallengeByIdOrFail(idInt, options);
+      return await this.getChallengeByIdOrFail(idInt.toString(), options);
     }
 
     return await this.getChallengeByTextIdOrFail(challengeID, options);
   }
 
   async getChallengeByIdOrFail(
-    challengeID: number,
+    challengeID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge> {
     const challenge = await this.challengeRepository.findOne(
@@ -392,14 +392,14 @@ export class ChallengeService {
     return await this.challengeRepository.save(challenge);
   }
 
-  async getAllChallengesCount(ecoverseID: number): Promise<number> {
+  async getAllChallengesCount(ecoverseID: string): Promise<number> {
     const count = await this.challengeRepository.count({
       where: { ecoverseID: ecoverseID },
     });
     return count;
   }
 
-  async getChildChallengesCount(challengeID: number): Promise<number> {
+  async getChildChallengesCount(challengeID: string): Promise<number> {
     return await this.challengeRepository.count({
       where: { parentChallenge: challengeID },
     });

@@ -19,8 +19,6 @@ import {
   Profile,
   IProfile,
 } from '@domain/community/profile';
-
-import validator from 'validator';
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { CreateProfileInput } from './profile.dto.create';
 
@@ -98,9 +96,9 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  async deleteProfile(profileID: number): Promise<IProfile> {
+  async deleteProfile(profileID: string): Promise<IProfile> {
     // Note need to load it in with all contained entities so can remove fully
-    const profile = await this.getProfileByIdOrFail(profileID);
+    const profile = await this.getProfileOrFail(profileID);
 
     if (profile.tagsets) {
       for (const tagset of profile.tagsets) {
@@ -126,7 +124,7 @@ export class ProfileService {
         'No parendId specified for tagset creation',
         LogContext.COMMUNITY
       );
-    const profile = await this.getProfileByIdOrFail(profileID);
+    const profile = await this.getProfileOrFail(profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
@@ -146,7 +144,7 @@ export class ProfileService {
         'No parendId specified for reference creation',
         LogContext.COMMUNITY
       );
-    const profile = await this.getProfileByIdOrFail(profileID);
+    const profile = await this.getProfileOrFail(profileID);
 
     if (!profile.references)
       throw new EntityNotInitializedException(
@@ -171,17 +169,6 @@ export class ProfileService {
   }
 
   async getProfileOrFail(profileID: string): Promise<IProfile> {
-    if (validator.isNumeric(profileID)) {
-      const idInt: number = parseInt(profileID);
-      return await this.getProfileByIdOrFail(idInt);
-    }
-    throw new EntityNotFoundException(
-      `Profile with id(${profileID}) not found!`,
-      LogContext.COMMUNITY
-    );
-  }
-
-  async getProfileByIdOrFail(profileID: number): Promise<IProfile> {
     const profile = await Profile.findOne({ id: profileID });
     if (!profile)
       throw new EntityNotFoundException(

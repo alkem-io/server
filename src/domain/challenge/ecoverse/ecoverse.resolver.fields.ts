@@ -185,7 +185,7 @@ export class EcoverseResolverFields {
   })
   async application(
     @Parent() ecoverse: Ecoverse,
-    @Args('ID') applicationID: number
+    @Args('ID') applicationID: string
   ): Promise<IApplication> {
     return await this.applicationService.getApplicationOrFail(applicationID, {
       where: { ecoverseID: ecoverse.id.toString() },

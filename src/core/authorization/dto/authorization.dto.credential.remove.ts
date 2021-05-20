@@ -7,7 +7,7 @@ export class RemoveAuthorizationCredentialInput {
     nullable: false,
     description: 'The user from whom the credential is being removed.',
   })
-  userID!: number;
+  userID!: string;
 
   @Field(() => AuthorizationCredential, {
     nullable: false,
@@ -18,5 +18,5 @@ export class RemoveAuthorizationCredentialInput {
     nullable: true,
     description: 'The resource to which access is being removed.',
   })
-  resourceID!: number;
+  resourceID!: string;
 }

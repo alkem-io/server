@@ -33,8 +33,8 @@ export class LifecycleService {
     return await this.lifecycleRepository.save(lifecycle);
   }
 
-  async deleteLifecycle(lifecycleID: number): Promise<ILifecycle> {
-    const lifecycle = await this.getLifecycleByIdOrFail(lifecycleID);
+  async deleteLifecycle(lifecycleID: string): Promise<ILifecycle> {
+    const lifecycle = await this.getLifecycleOrFail(lifecycleID);
     return await this.lifecycleRepository.remove(lifecycle as Lifecycle);
   }
 
@@ -43,7 +43,7 @@ export class LifecycleService {
     options: Partial<MachineOptions<any, any>>,
     credentials?: ICredential[]
   ): Promise<ILifecycle> {
-    const lifecycle = await this.getLifecycleByIdOrFail(lifecycleEventData.ID);
+    const lifecycle = await this.getLifecycleOrFail(lifecycleEventData.ID);
     const eventName = lifecycleEventData.eventName;
     const machineDef = JSON.parse(lifecycle.machineDef);
 
@@ -90,8 +90,8 @@ export class LifecycleService {
     return await this.lifecycleRepository.save(lifecycle);
   }
 
-  async getLifecycleByIdOrFail(
-    lifecycleID: number,
+  async getLifecycleOrFail(
+    lifecycleID: string,
     options?: FindOneOptions<Lifecycle>
   ): Promise<ILifecycle> {
     const lifecycle = await this.lifecycleRepository.findOne(

@@ -79,14 +79,14 @@ export class OpportunityService {
   ): Promise<IOpportunity> {
     if (validator.isNumeric(opportunityID)) {
       const idInt: number = parseInt(opportunityID);
-      return await this.getOpportunityByIdOrFail(idInt, options);
+      return await this.getOpportunityByIdOrFail(idInt.toString(), options);
     }
 
     return await this.getOpportunityByTextIdOrFail(opportunityID, options);
   }
 
   async getOpportunityByIdOrFail(
-    opportunityID: number,
+    opportunityID: string,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity> {
     const Opportunity = await this.opportunityRepository.findOne(
@@ -117,7 +117,7 @@ export class OpportunityService {
     return opportunity;
   }
 
-  async deleteOpportunity(opportunityID: number): Promise<IOpportunity> {
+  async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
     // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
       relations: ['community', 'context', 'lifecycle', 'relations', 'projects'],
@@ -147,21 +147,21 @@ export class OpportunityService {
     return await this.opportunityRepository.save(opportunity);
   }
 
-  async getCommunity(opportunityId: number): Promise<ICommunity> {
+  async getCommunity(opportunityId: string): Promise<ICommunity> {
     return await this.challengeBaseService.getCommunity(
       opportunityId,
       this.opportunityRepository
     );
   }
 
-  async getLifecycle(opportunityId: number): Promise<ILifecycle> {
+  async getLifecycle(opportunityId: string): Promise<ILifecycle> {
     return await this.challengeBaseService.getLifecycle(
       opportunityId,
       this.opportunityRepository
     );
   }
 
-  async getContext(opportunityId: number): Promise<IContext> {
+  async getContext(opportunityId: string): Promise<IContext> {
     return await this.challengeBaseService.getContext(
       opportunityId,
       this.opportunityRepository
@@ -241,7 +241,7 @@ export class OpportunityService {
     return relation;
   }
 
-  async getProjectsCount(opportunityID: number): Promise<number> {
+  async getProjectsCount(opportunityID: string): Promise<number> {
     return await this.opportunityRepository.count({
       where: { opportunity: opportunityID },
     });

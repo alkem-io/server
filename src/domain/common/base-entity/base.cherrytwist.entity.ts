@@ -7,8 +7,8 @@ import {
 } from 'typeorm';
 
 export abstract class BaseCherrytwistEntity extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
   @CreateDateColumn()
   createdDate?: Date;

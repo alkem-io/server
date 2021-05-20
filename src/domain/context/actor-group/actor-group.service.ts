@@ -36,7 +36,7 @@ export class ActorGroupService {
   async deleteActorGroup(
     deleteData: DeleteActorGroupInput
   ): Promise<IActorGroup> {
-    const actorGroupID = parseInt(deleteData.ID);
+    const actorGroupID = deleteData.ID;
     const actorGroup = await this.getActorGroupOrFail(actorGroupID);
     if (actorGroup.actors) {
       for (const actor of actorGroup.actors) {
@@ -50,7 +50,7 @@ export class ActorGroupService {
     return result;
   }
 
-  async getActorGroupOrFail(actorGroupID: number): Promise<IActorGroup> {
+  async getActorGroupOrFail(actorGroupID: string): Promise<IActorGroup> {
     const actorGroup = await this.actorGroupRepository.findOne({
       id: actorGroupID,
     });

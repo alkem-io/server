@@ -46,9 +46,7 @@ export class OpportunityResolverMutations {
   async deleteOpportunity(
     @Args('deleteData') deleteData: DeleteOpportunityInput
   ): Promise<IOpportunity> {
-    return await this.opportunityService.deleteOpportunity(
-      parseInt(deleteData.ID)
-    );
+    return await this.opportunityService.deleteOpportunity(deleteData.ID);
   }
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)

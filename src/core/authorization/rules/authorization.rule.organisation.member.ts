@@ -7,12 +7,12 @@ import { IAuthorizationRule } from '@core/authorization/rules';
 import { LogContext, AuthorizationCredential } from '@common/enums';
 
 export class AuthorizationRuleOrganisationMember implements IAuthorizationRule {
-  organisationID: number;
+  organisationID: string;
   priority: number;
 
   constructor(parentArg: any, priority?: number) {
     this.organisationID = parentArg.id;
-    if (this.organisationID == -1) {
+    if (!this.organisationID || this.organisationID.length == 0) {
       throw new ForbiddenException(
         'Organisation Member guard not set up properly.',
         LogContext.AUTH
@@ -33,7 +33,7 @@ export class AuthorizationRuleOrganisationMember implements IAuthorizationRule {
     if (!userCredentials) return false;
     for (const userCredential of userCredentials) {
       if (userCredential.type === AuthorizationCredential.OrganisationMember) {
-        if (userCredential.resourceID == this.organisationID) return true;
+        if (userCredential.resourceID === this.organisationID) return true;
       }
     }
     return false;

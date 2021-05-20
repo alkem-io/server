@@ -3,8 +3,8 @@ import { Field, InputType } from '@nestjs/graphql';
 @InputType()
 export class RemoveCommunityMemberInput {
   @Field({ nullable: false })
-  communityID!: number;
+  communityID!: string;
 
   @Field({ nullable: false })
-  userID!: number;
+  userID!: string;
 }

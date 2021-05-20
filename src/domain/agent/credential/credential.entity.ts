@@ -6,7 +6,7 @@ import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 @Entity()
 export class Credential extends BaseCherrytwistEntity implements ICredential {
   @Column()
-  resourceID: number;
+  resourceID: string;
 
   @Column()
   type: string;
@@ -18,10 +18,10 @@ export class Credential extends BaseCherrytwistEntity implements ICredential {
   )
   agent?: IAgent;
 
-  constructor(type: string, resourceID: number) {
+  constructor(type: string, resourceID: string) {
     super();
     this.type = type;
     this.resourceID = resourceID;
-    if (!this.resourceID) this.resourceID = -1;
+    if (!this.resourceID) this.resourceID = '';
   }
 }

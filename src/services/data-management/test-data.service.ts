@@ -15,18 +15,18 @@ import { ContextService } from '@domain/context/context/context.service';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
 
 export type TestDataServiceInitResult = {
-  userId: number;
+  userId: string;
   // ecoverseAdminId: number;
   // globalAdminId: number;
   // communityAdminId: number;
   // ecoverseMemberId: number;
   // nonEcoverseId: number;
-  userProfileId: number;
-  organisationId: number;
-  challengeId: number;
-  removeChallangeId: number;
-  opportunityId: number;
-  removeOpportunityId: number;
+  userProfileId: string;
+  organisationId: string;
+  challengeId: string;
+  removeChallangeId: string;
+  opportunityId: string;
+  removeOpportunityId: string;
   // projectId: number;
   // //aspectId: number;
   // aspectOnProjectId: number;
@@ -37,8 +37,8 @@ export type TestDataServiceInitResult = {
   //assignGroupFocalPointId: number;
   // actorGroupId: number;
   // actorId: number;
-  tagsetId: number;
-  contextId: number;
+  tagsetId: string;
+  contextId: string;
 };
 
 @Injectable()
@@ -80,7 +80,7 @@ export class TestDataService {
   communityAdminEmail = 'community.admin@cherrytwist.org';
   nonEcoverseEmail = 'non-ecoverse@cherrytwist.com';
 
-  async initOrganisation(): Promise<number> {
+  async initOrganisation(): Promise<string> {
     const organisation = new CreateOrganisationInput();
     organisation.name = `${this.organisationName}`;
     organisation.textID = `${this.uniqueTextId}`;
@@ -90,7 +90,7 @@ export class TestDataService {
     return response.id;
   }
 
-  async initChallenge(): Promise<number> {
+  async initChallenge(): Promise<string> {
     const challenge = new CreateChallengeInput();
     challenge.parentID = '1';
     challenge.name = `${this.challengeName}`;
@@ -114,7 +114,7 @@ export class TestDataService {
     return response.id;
   }
 
-  async initRemoveChallenge(): Promise<number> {
+  async initRemoveChallenge(): Promise<string> {
     const response = await this.ecoverseService.createChallenge({
       parentID: '1',
       name: 'Remove-challenge',
@@ -124,7 +124,7 @@ export class TestDataService {
     return response.id;
   }
 
-  async initChildChallenge(challengeId: number): Promise<number> {
+  async initChildChallenge(challengeId: string): Promise<string> {
     const opportunity = new CreateChallengeInput();
     opportunity.parentID = challengeId.toString();
     opportunity.name = 'init opportunity name';
@@ -149,7 +149,7 @@ export class TestDataService {
     return response.id;
   }
 
-  async initRemoveChildChallenge(challengeId: number): Promise<number> {
+  async initRemoveChildChallenge(challengeId: string): Promise<string> {
     const opportunity = new CreateChallengeInput();
     opportunity.parentID = challengeId.toString();
     opportunity.name = 'init remove opportunity name';
@@ -259,7 +259,7 @@ export class TestDataService {
   //   return response.id;
   // }
 
-  async initGetUserId(userEmail: string): Promise<number> {
+  async initGetUserId(userEmail: string): Promise<string> {
     const response = await this.userService.getUserByEmailOrFail(userEmail);
     return response.id;
   }
@@ -269,21 +269,21 @@ export class TestDataService {
     return response.profile?.id;
   }
 
-  async initGetTagsetId(challengeId: number): Promise<any> {
+  async initGetTagsetId(challengeId: string): Promise<any> {
     const response = await this.challengeService.getChallengeByIdOrFail(
       challengeId
     );
     return response.tagset?.id;
   }
 
-  async initGetContextId(challengeId: number): Promise<any> {
+  async initGetContextId(challengeId: string): Promise<any> {
     const response = await this.challengeService.getChallengeByIdOrFail(
       challengeId
     );
     return response.context?.id;
   }
 
-  async initGetContextIdChildChallenge(opportunityId: number): Promise<any> {
+  async initGetContextIdChildChallenge(opportunityId: string): Promise<any> {
     const response = await this.challengeService.getChallengeByIdOrFail(
       opportunityId
     );
@@ -291,7 +291,7 @@ export class TestDataService {
     return response.context?.id;
   }
 
-  async teardownChallenges(challengeId: number) {
+  async teardownChallenges(challengeId: string) {
     const challengeToRemove = (await this.challengeService.getChallengeByIdOrFail(
       challengeId
     )) as IChallenge;
@@ -310,7 +310,7 @@ export class TestDataService {
   //   });
   // }
 
-  async initUserId(usersEmail: string): Promise<number> {
+  async initUserId(usersEmail: string): Promise<string> {
     const response = await this.userService.getUserByEmailOrFail(usersEmail);
     return response.id;
   }

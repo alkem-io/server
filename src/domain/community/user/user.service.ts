@@ -116,14 +116,14 @@ export class UserService {
   ): Promise<IUser> {
     if (validator.isNumeric(userID)) {
       const idInt: number = parseInt(userID);
-      return await this.getUserByIdOrFail(idInt, options);
+      return await this.getUserByIdOrFail(idInt.toString(), options);
     }
 
     return await this.getUserByEmailOrFail(userID, options);
   }
 
   async getUserByIdOrFail(
-    userID: number,
+    userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
     const user = await this.userRepository.findOne({ id: userID }, options);
@@ -156,7 +156,7 @@ export class UserService {
   }
 
   async getUserAndCredentials(
-    userID: number
+    userID: string
   ): Promise<{ user: IUser; credentials: ICredential[] }> {
     const user = await this.getUserByIdOrFail(userID, {
       relations: ['agent'],
@@ -172,7 +172,7 @@ export class UserService {
   }
 
   async getUserAndAgent(
-    userID: number
+    userID: string
   ): Promise<{ user: IUser; agent: IAgent }> {
     const user = await this.getUserByIdOrFail(userID, {
       relations: ['agent'],
@@ -201,7 +201,7 @@ export class UserService {
     return user;
   }
 
-  async getUserByIdWithAgent(userID: number): Promise<IUser> {
+  async getUserByIdWithAgent(userID: string): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userID, {
       relations: ['agent'],
     });

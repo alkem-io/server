@@ -36,7 +36,7 @@ export class MembershipService {
     const storedUserGroups: IUserGroup[] = [];
     for (const credential of credentials) {
       if (credential.type === AuthorizationCredential.OrganisationMember) {
-        const organisation = await this.organisationService.getOrganisationByIdOrFail(
+        const organisation = await this.organisationService.getOrganisationOrFail(
           credential.resourceID
         );
         const orgResult = new MembershipResultEntry(
@@ -55,7 +55,7 @@ export class MembershipService {
         const challenge = (community as Community).challenge;
         if (ecoverse) {
           const ecoverseResult = await this.createEcoverseMembershipResult(
-            Number(ecoverse)
+            ecoverse
           );
           membership.ecoverses.push(ecoverseResult);
         } else if (challenge) {
@@ -93,7 +93,7 @@ export class MembershipService {
   }
 
   async createEcoverseMembershipResult(
-    ecoverseID: number
+    ecoverseID: string
   ): Promise<MembershipEcoverseResultEntry> {
     const ecoverse = await this.ecoverseService.getEcoverseByIdOrFail(
       ecoverseID,

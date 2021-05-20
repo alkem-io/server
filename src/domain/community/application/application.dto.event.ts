@@ -5,7 +5,7 @@ import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 @InputType()
 export class ApplicationEventInput {
   @Field({ nullable: false })
-  ID!: number;
+  ID!: string;
 
   @Field({ nullable: false })
   @IsOptional()

@@ -5,10 +5,10 @@ import { Entity } from 'typeorm';
 @InputType()
 export class CreateApplicationInput {
   @Field({ nullable: false })
-  userId!: number;
+  userID!: string;
 
   @Field({ nullable: false })
-  parentID!: number;
+  parentID!: string;
 
   @Field(() => [CreateNVPInput], { nullable: false })
   questions!: CreateNVPInput[];

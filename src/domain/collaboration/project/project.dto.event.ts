@@ -5,7 +5,7 @@ import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 @InputType()
 export class ProjectEventInput {
   @Field({ nullable: false })
-  ID!: number;
+  ID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

@@ -33,7 +33,7 @@ export class AgentService {
   }
 
   async getAgentOrFail(
-    agentID: number,
+    agentID: string,
     options?: FindOneOptions<Agent>
   ): Promise<IAgent> {
     const agent = await this.agentRepository.findOne({ id: agentID }, options);
@@ -45,7 +45,7 @@ export class AgentService {
     return agent;
   }
 
-  async deleteAgent(agentID: number): Promise<IAgent> {
+  async deleteAgent(agentID: string): Promise<IAgent> {
     // Note need to load it in with all contained entities so can remove fully
     const agent = await this.getAgentOrFail(agentID);
 
@@ -81,7 +81,7 @@ export class AgentService {
   }
 
   async getAgentCredentials(
-    agentID: number
+    agentID: string
   ): Promise<{ agent: IAgent; credentials: ICredential[] }> {
     const agent = await this.getAgentOrFail(agentID, {
       relations: ['credentials'],
@@ -103,7 +103,7 @@ export class AgentService {
       grantCredentialData.agentID
     );
 
-    if (!grantCredentialData.resourceID) grantCredentialData.resourceID = -1;
+    if (!grantCredentialData.resourceID) grantCredentialData.resourceID = '';
 
     // Check if the agent already has this credential type + Value
     for (const credential of credentials) {
@@ -135,7 +135,7 @@ export class AgentService {
       revokeCredentialData.agentID
     );
 
-    if (!revokeCredentialData.resourceID) revokeCredentialData.resourceID = -1;
+    if (!revokeCredentialData.resourceID) revokeCredentialData.resourceID = '';
 
     for (const credential of credentials) {
       if (
@@ -150,7 +150,7 @@ export class AgentService {
   }
 
   async hasValidCredential(
-    agentID: number,
+    agentID: string,
     credentialCriteria: CredentialsSearchInput
   ): Promise<boolean> {
     const { credentials } = await this.getAgentCredentials(agentID);

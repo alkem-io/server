@@ -13,7 +13,6 @@ import {
   EntityNotFoundException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import validator from 'validator';
 import { DeleteActorInput } from './actor.dto.delete';
 
 @Injectable()
@@ -42,17 +41,6 @@ export class ActorService {
   }
 
   async getActorOrFail(actorID: string): Promise<IActor> {
-    if (validator.isNumeric(actorID)) {
-      const idInt: number = parseInt(actorID);
-      return await this.getActorByIdOrFail(idInt);
-    }
-    throw new EntityNotFoundException(
-      `Not able to locate actor with the specified ID: ${actorID}`,
-      LogContext.CHALLENGES
-    );
-  }
-
-  async getActorByIdOrFail(actorID: number): Promise<IActor> {
     const actor = await this.actorRepository.findOne({ id: actorID });
     if (!actor)
       throw new EntityNotFoundException(
@@ -66,7 +54,7 @@ export class ActorService {
     const actorID = deleteData.ID;
     const actor = await this.getActorOrFail(actorID);
     const result = await this.actorRepository.remove(actor as Actor);
-    result.id = parseInt(deleteData.ID);
+    result.id = deleteData.ID;
     return result;
   }
 

@@ -111,7 +111,11 @@ export class BaseChallengeService {
   ): Promise<IBaseChallenge> {
     if (validator.isNumeric(challengeID)) {
       const idInt: number = parseInt(challengeID);
-      return await this.getChallengeBaseByIdOrFail(idInt, repository, options);
+      return await this.getChallengeBaseByIdOrFail(
+        idInt.toString(),
+        repository,
+        options
+      );
     }
 
     return await this.getChallengeByTextIdOrFail(
@@ -122,7 +126,7 @@ export class BaseChallengeService {
   }
 
   async getChallengeBaseByIdOrFail(
-    challengeBaseID: number,
+    challengeBaseID: string,
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
   ): Promise<IBaseChallenge> {
@@ -184,7 +188,7 @@ export class BaseChallengeService {
   }
 
   async getCommunity(
-    challengeBaseId: number,
+    challengeBaseId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ICommunity> {
     const challengeWithCommunity = await this.getChallengeBaseByIdOrFail(
@@ -204,7 +208,7 @@ export class BaseChallengeService {
   }
 
   async getContext(
-    challengeId: number,
+    challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<IContext> {
     const challengeWithContext = await this.getChallengeBaseByIdOrFail(
@@ -224,7 +228,7 @@ export class BaseChallengeService {
   }
 
   async getLifecycle(
-    challengeId: number,
+    challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ILifecycle> {
     const challenge = await this.getChallengeBaseByIdOrFail(

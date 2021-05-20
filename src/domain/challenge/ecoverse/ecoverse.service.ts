@@ -75,7 +75,7 @@ export class EcoverseService {
   ): Promise<IEcoverse> {
     if (validator.isNumeric(ecoverseID)) {
       const idInt: number = parseInt(ecoverseID);
-      return await this.getEcoverseByIdOrFail(idInt, options);
+      return await this.getEcoverseByIdOrFail(idInt.toString(), options);
     }
 
     throw new EntityNotFoundException(
@@ -85,7 +85,7 @@ export class EcoverseService {
   }
 
   async getEcoverseByIdOrFail(
-    ecoverseID: number,
+    ecoverseID: string,
     options?: FindOneOptions<Ecoverse>
   ): Promise<IEcoverse> {
     const ecoverse = await this.ecoverseRepository.findOne(
@@ -202,7 +202,7 @@ export class EcoverseService {
     return await this.getEcoverseByIdOrFail(ecoverseId, options);
   }
 
-  async getDefaultEcoverseId(): Promise<number> {
+  async getDefaultEcoverseId(): Promise<string> {
     const ecoverse = await this.ecoverseRepository.findOne();
     if (!ecoverse) {
       throw new ValidationException(
@@ -214,7 +214,7 @@ export class EcoverseService {
   }
 
   async getProjects(ecoverse: IEcoverse): Promise<IProject[]> {
-    return await this.projectService.getProjects(ecoverse.id.toString());
+    return await this.projectService.getProjects(ecoverse.id);
   }
 
   async getActivity(ecoverse: IEcoverse): Promise<INVP[]> {

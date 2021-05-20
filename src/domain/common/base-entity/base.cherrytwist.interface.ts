@@ -6,9 +6,9 @@ export abstract class IBaseCherrytwist {
     nullable: false,
     description: 'The ID of the entity',
   })
-  id!: number;
+  id!: string;
 
   constructor() {
-    this.id = -1;
+    this.id = '';
   }
 }

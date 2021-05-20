@@ -65,12 +65,12 @@ export class ProjectService {
       await this.lifecycleService.deleteLifecycle(project.lifecycle.id);
     }
     const result = await this.projectRepository.remove(project as Project);
-    result.id = parseInt(projectID);
+    result.id = projectID;
     return result;
   }
 
   async getProjectByIdOrFail(
-    projectID: number,
+    projectID: string,
     options?: FindOneOptions<Project>
   ): Promise<IProject> {
     const project = await this.projectRepository.findOne(
@@ -91,7 +91,7 @@ export class ProjectService {
   ): Promise<IProject> {
     if (validator.isNumeric(projectID)) {
       const idInt: number = parseInt(projectID);
-      return await this.getProjectByIdOrFail(idInt, options);
+      return await this.getProjectByIdOrFail(idInt.toString(), options);
     }
     throw new EntityNotFoundException(
       `Unable to find Project with ID: ${projectID}`,
@@ -122,7 +122,7 @@ export class ProjectService {
   }
 
   // Lazy load the lifecycle
-  async getLifecycle(projectId: number): Promise<ILifecycle> {
+  async getLifecycle(projectId: string): Promise<ILifecycle> {
     const project = await this.getProjectByIdOrFail(projectId, {
       relations: ['lifecycle'],
     });
@@ -163,7 +163,7 @@ export class ProjectService {
     return aspect;
   }
 
-  async getProjectsCount(ecoverseID: number): Promise<number> {
+  async getProjectsCount(ecoverseID: string): Promise<number> {
     const count = await this.projectRepository.count({
       where: { ecoverseID: ecoverseID },
     });

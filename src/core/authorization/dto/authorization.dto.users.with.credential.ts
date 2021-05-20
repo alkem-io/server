@@ -13,5 +13,5 @@ export class UsersWithAuthorizationCredentialInput {
     nullable: true,
     description: 'The resource to which a credential needs to be bound.',
   })
-  resourceID?: number;
+  resourceID?: string;
 }

@@ -67,8 +67,13 @@ export class CommunityLifecycleOptionsProvider {
             relations: ['community'],
           }
         );
-        const userID = application.user?.id as number;
-        const communityID = application.community?.id as number;
+        const userID = application.user?.id;
+        const communityID = application.community?.id;
+        if (!userID || !communityID)
+          throw new EntityNotInitializedException(
+            `Lifecycle not initialized on Application: ${application.id}`,
+            LogContext.COMMUNITY
+          );
 
         await this.communityService.assignMember({
           userID: userID,

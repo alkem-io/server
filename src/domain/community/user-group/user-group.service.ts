@@ -112,7 +112,7 @@ export class UserGroupService {
   ): Promise<IUserGroup> {
     if (validator.isNumeric(groupID)) {
       const idInt: number = parseInt(groupID);
-      return await this.getUserGroupByIdOrFail(idInt, options);
+      return await this.getUserGroupByIdOrFail(idInt.toString(), options);
     }
 
     throw new EntityNotFoundException(
@@ -122,7 +122,7 @@ export class UserGroupService {
   }
 
   async getUserGroupByIdOrFail(
-    groupID: number,
+    groupID: string,
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
     //const t1 = performance.now()
@@ -156,7 +156,7 @@ export class UserGroupService {
     });
   }
 
-  async isMember(userID: number, groupID: number): Promise<boolean> {
+  async isMember(userID: string, groupID: string): Promise<boolean> {
     const agent = await this.userService.getUserByIdWithAgent(userID);
 
     return await this.agentService.hasValidCredential(agent.id, {
@@ -228,7 +228,7 @@ export class UserGroupService {
     return newGroup;
   }
 
-  async getMembers(groupID: number): Promise<IUser[]> {
+  async getMembers(groupID: string): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
       type: AuthorizationCredential.UserGroupMember,
       resourceID: groupID,

@@ -17,7 +17,7 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async ecoverse(
-    @Args('ID', { nullable: true }) ID?: number
+    @Args('ID', { nullable: true }) ID?: string
   ): Promise<IEcoverse> {
     if (ID) return await this.ecoverseService.getEcoverseByIdOrFail(ID);
     return await this.ecoverseService.getDefaultEcoverseOrFail();

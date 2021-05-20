@@ -24,7 +24,7 @@ export class CredentialService {
     return credential;
   }
 
-  async getCredentialOrFail(credentialID: number): Promise<ICredential> {
+  async getCredentialOrFail(credentialID: string): Promise<ICredential> {
     const credential = await this.credentialRepository.findOne({
       id: credentialID,
     });
@@ -36,7 +36,7 @@ export class CredentialService {
     return credential;
   }
 
-  async deleteCredential(credentialID: number): Promise<ICredential> {
+  async deleteCredential(credentialID: string): Promise<ICredential> {
     const credential = await this.getCredentialOrFail(credentialID);
     const result = await this.credentialRepository.remove(
       credential as Credential

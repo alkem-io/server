@@ -1,7 +1,7 @@
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 
 export interface IGroupable {
-  id: number;
+  id: string;
   name: string;
   groups?: IUserGroup[];
 }

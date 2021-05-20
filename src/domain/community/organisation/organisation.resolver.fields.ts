@@ -38,7 +38,7 @@ export class OrganisationResolverFields {
   @Profiling.api
   async groups(@Parent() organisation: Organisation) {
     // get the organisation with the groups loaded
-    const organisationGroups = await this.organisationService.getOrganisationByIdOrFail(
+    const organisationGroups = await this.organisationService.getOrganisationOrFail(
       organisation.id,
       {
         relations: ['groups'],

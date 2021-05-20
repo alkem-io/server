@@ -39,7 +39,7 @@ export class EcosystemModelService {
   }
 
   async getEcosystemModelOrFail(
-    ecosystemModelID: number
+    ecosystemModelID: string
   ): Promise<IEcosystemModel> {
     const ecosystemModel = await this.ecosystemModelRepository.findOne({
       id: ecosystemModelID,
@@ -61,7 +61,7 @@ export class EcosystemModelService {
   }
 
   async deleteEcosystemModel(
-    ecosystemModelID: number
+    ecosystemModelID: string
   ): Promise<IEcosystemModel> {
     // Note need to load it in with all contained entities so can remove fully
     const ecosystemModel = await this.getEcosystemModelOrFail(ecosystemModelID);

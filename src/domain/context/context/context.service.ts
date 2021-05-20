@@ -36,7 +36,7 @@ export class ContextService {
   }
 
   async getContextOrFail(
-    contextID: number,
+    contextID: string,
     options?: FindOneOptions<Context>
   ): Promise<IContext> {
     const context = await this.contextRepository.findOne(
@@ -82,7 +82,7 @@ export class ContextService {
     return await this.contextRepository.save(context);
   }
 
-  async removeContext(contextID: number): Promise<IContext> {
+  async removeContext(contextID: string): Promise<IContext> {
     // Note need to load it in with all contained entities so can remove fully
     const context = await this.getContextOrFail(contextID, {
       relations: ['aspects'],
@@ -92,7 +92,7 @@ export class ContextService {
     if (context.references) {
       for (const reference of context.references) {
         await this.referenceService.deleteReference({
-          ID: reference.id.toString(),
+          ID: reference.id,
         });
       }
     }
@@ -100,7 +100,7 @@ export class ContextService {
     // First remove all groups
     if (context.aspects) {
       for (const aspect of context.aspects) {
-        await this.aspectService.removeAspect({ ID: aspect.id.toString() });
+        await this.aspectService.removeAspect({ ID: aspect.id });
       }
     }
 

@@ -5,7 +5,7 @@ import { MaxLength } from 'class-validator';
 @InputType()
 export class CreateRelationInput {
   @Field({ nullable: false })
-  parentID!: number;
+  parentID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

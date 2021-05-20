@@ -84,7 +84,7 @@ export class CommunityService {
   }
 
   async getCommunityOrFail(
-    communityID: number,
+    communityID: string,
     options?: FindOneOptions<Community>
   ): Promise<ICommunity> {
     const Community = await this.communityRepository.findOne(
@@ -99,7 +99,7 @@ export class CommunityService {
     return Community;
   }
 
-  async removeCommunity(communityID: number): Promise<boolean> {
+  async removeCommunity(communityID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
       relations: ['applications', 'groups'],
@@ -201,7 +201,7 @@ export class CommunityService {
     return user;
   }
 
-  async isMember(userID: number, communityID: number): Promise<boolean> {
+  async isMember(userID: string, communityID: string): Promise<boolean> {
     const agent = await this.userService.getUserByIdWithAgent(userID);
 
     return await this.agentService.hasValidCredential(agent.id, {
@@ -210,7 +210,7 @@ export class CommunityService {
     });
   }
 
-  async getCommunities(ecoverseId: number): Promise<Community[]> {
+  async getCommunities(ecoverseId: string): Promise<Community[]> {
     const communites = await this.communityRepository.find({
       where: { ecoverse: { id: ecoverseId } },
     });
@@ -225,7 +225,7 @@ export class CommunityService {
     })) as Community;
 
     const existingApplication = community.applications?.find(
-      x => x.user?.id === applicationData.userId
+      x => x.user?.id === applicationData.userID
     );
 
     if (existingApplication) {
@@ -238,12 +238,12 @@ export class CommunityService {
     const parentCommunity = community.parentCommunity;
     if (parentCommunity) {
       const isMember = await this.isMember(
-        applicationData.userId,
+        applicationData.userID,
         parentCommunity.id
       );
       if (!isMember)
         throw new InvalidStateTransitionException(
-          `User ${applicationData.userId} is not a member of the parent Community: ${parentCommunity.name}.`,
+          `User ${applicationData.userID} is not a member of the parent Community: ${parentCommunity.name}.`,
           LogContext.COMMUNITY
         );
     }

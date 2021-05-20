@@ -19,5 +19,5 @@ export abstract class ISearchable {
     nullable: false,
     description: 'The ID of the entity that was found.',
   })
-  id!: number;
+  id!: string;
 }

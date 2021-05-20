@@ -11,7 +11,6 @@ import {
   IAspect,
   DeleteAspectInput,
 } from '@domain/context/aspect';
-import validator from 'validator';
 
 @Injectable()
 export class AspectService {
@@ -32,25 +31,14 @@ export class AspectService {
   }
 
   async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
-    const aspectID = parseInt(deleteData.ID);
-    const aspect = await this.getAspectByIdOrFail(aspectID);
+    const aspectID = deleteData.ID;
+    const aspect = await this.getAspectOrFail(aspectID);
     const result = await this.aspectRepository.remove(aspect as Aspect);
     result.id = aspectID;
     return result;
   }
 
   async getAspectOrFail(aspectID: string): Promise<IAspect> {
-    if (validator.isNumeric(aspectID)) {
-      const idInt: number = parseInt(aspectID);
-      return await this.getAspectByIdOrFail(idInt);
-    }
-    throw new EntityNotFoundException(
-      `Not able to locate aspect with the specified ID: ${aspectID}`,
-      LogContext.CHALLENGES
-    );
-  }
-
-  async getAspectByIdOrFail(aspectID: number): Promise<IAspect> {
     const aspect = await this.aspectRepository.findOne({ id: aspectID });
     if (!aspect)
       throw new EntityNotFoundException(

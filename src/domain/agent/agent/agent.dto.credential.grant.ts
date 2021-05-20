@@ -6,7 +6,7 @@ export class GrantCredentialInput {
     nullable: false,
     description: 'The Agent to whom the credential is being granted.',
   })
-  agentID!: number;
+  agentID!: string;
 
   @Field(() => String, { nullable: false })
   type!: string;
@@ -15,5 +15,5 @@ export class GrantCredentialInput {
     nullable: true,
     description: 'The resource to which this credential is tied.',
   })
-  resourceID?: number;
+  resourceID?: string;
 }

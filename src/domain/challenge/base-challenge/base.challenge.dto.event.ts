@@ -5,7 +5,7 @@ import { MaxLength } from 'class-validator';
 @InputType()
 export class BaseChallengeEventInput {
   @Field({ nullable: false })
-  ID!: number;
+  ID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

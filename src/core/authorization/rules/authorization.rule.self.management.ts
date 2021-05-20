@@ -5,10 +5,10 @@ import { UserInfo } from '@core/authentication/user-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
 
 export class AuthorizationRuleSelfManagement implements IAuthorizationRule {
-  userID?: number;
+  userID?: string;
   userEmail?: string;
-  profileID?: number;
-  referenceID?: number;
+  profileID?: string;
+  referenceID?: string;
   operation!: string;
   priority: number;
 
@@ -64,7 +64,7 @@ export class AuthorizationRuleSelfManagement implements IAuthorizationRule {
     if (this.referenceID) {
       if (!userInfo.user.profile.references) return false;
       for (const reference of userInfo.user.profile.references) {
-        if (reference.id == this.referenceID) return true;
+        if (reference.id === this.referenceID) return true;
       }
     }
     return false;

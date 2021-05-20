@@ -5,7 +5,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 @InputType()
 export class CreateActorInput {
   @Field({ nullable: false })
-  parentID!: number;
+  parentID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

@@ -7,7 +7,7 @@ export class GrantAuthorizationCredentialInput {
     nullable: false,
     description: 'The user to whom the credential is being granted.',
   })
-  userID!: number;
+  userID!: string;
 
   @Field(() => AuthorizationCredential, {
     nullable: false,
@@ -18,5 +18,5 @@ export class GrantAuthorizationCredentialInput {
     nullable: true,
     description: 'The resource to which this credential is tied.',
   })
-  resourceID?: number;
+  resourceID?: string;
 }

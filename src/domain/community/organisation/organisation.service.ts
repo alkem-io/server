@@ -9,7 +9,6 @@ import {
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import validator from 'validator';
 import {
   IOrganisation,
   Organisation,
@@ -88,14 +87,14 @@ export class OrganisationService {
     }
 
     // Reload the organisation for returning
-    return await this.getOrganisationByIdOrFail(existingOrganisation.id);
+    return await this.getOrganisationOrFail(existingOrganisation.id);
   }
 
   async deleteOrganisation(
     deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
-    const orgID = parseInt(deleteData.ID);
-    const organisation = await this.getOrganisationByIdOrFail(orgID);
+    const orgID = deleteData.ID;
+    const organisation = await this.getOrganisationOrFail(orgID);
 
     if (organisation.profile) {
       await this.profileService.deleteProfile(organisation.profile.id);
@@ -120,18 +119,6 @@ export class OrganisationService {
     organisationID: string,
     options?: FindOneOptions<Organisation>
   ): Promise<IOrganisation> {
-    if (validator.isNumeric(organisationID)) {
-      const idInt: number = parseInt(organisationID);
-      return await this.getOrganisationByIdOrFail(idInt, options);
-    }
-
-    return await this.getOrganisationByTextIdOrFail(organisationID);
-  }
-
-  async getOrganisationByIdOrFail(
-    organisationID: number,
-    options?: FindOneOptions<Organisation>
-  ): Promise<IOrganisation> {
     const organisation = await Organisation.findOne(
       { id: organisationID },
       options
@@ -141,7 +128,7 @@ export class OrganisationService {
         `Unable to find organisation with ID: ${organisationID}`,
         LogContext.CHALLENGES
       );
-    return organisation as IOrganisation;
+    return organisation;
   }
 
   async getOrganisationByTextIdOrFail(
@@ -180,7 +167,7 @@ export class OrganisationService {
       `Adding userGroup (${groupName}) to organisation (${orgID})`
     );
     // Try to find the organisation
-    const organisation = await this.getOrganisationByIdOrFail(orgID, {
+    const organisation = await this.getOrganisationOrFail(orgID, {
       relations: ['groups'],
     });
 
