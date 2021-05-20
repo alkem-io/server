@@ -124,7 +124,6 @@ export class ChallengeResolverMutations {
     return await this.challengeLifecycleOptionsProvider.eventOnChallenge({
       eventName: challengeEventData.eventName,
       ID: challengeEventData.ID,
-      repository: this.challengeRepository,
     });
   }
 }
