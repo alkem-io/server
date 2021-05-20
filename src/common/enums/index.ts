@@ -6,3 +6,4 @@ export * from './configuration.type';
 export * from './authorization.credential';
 export * from './authorization.role.global';
 export * from './authorization.credential.global';
+export * from './challenge.lifecycle.template';

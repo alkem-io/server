@@ -19,9 +19,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
 import validator from 'validator';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
-import { challengeLifecycleConfigDefault } from './base.challenge.lifecycle.config.default';
-import { challengeLifecycleConfigExtended } from './base.challenge.lifecycle.config.extended';
-import { ChallengeLifecycleTemplate } from '@common/enums/challenge.lifecycle.template';
+import { IIdentifiable } from '@domain/common/identifiable-entity';
 
 @Injectable()
 export class BaseChallengeService {
@@ -35,8 +33,7 @@ export class BaseChallengeService {
 
   async initialise(
     challengeBase: IBaseChallenge,
-    challengeData: CreateBaseChallengeInput,
-    repository: Repository<BaseChallenge>
+    challengeData: CreateBaseChallengeInput
   ) {
     challengeBase.community = await this.communityService.createCommunity(
       challengeBase.name
@@ -52,22 +49,6 @@ export class BaseChallengeService {
     }
 
     challengeBase.tagset = this.tagsetService.createDefaultTagset();
-
-    // Lifecycle, that has both a default and extended version
-    let machineConfig: any = challengeLifecycleConfigDefault;
-    if (
-      challengeData.lifecycleTemplate &&
-      challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
-    ) {
-      machineConfig = challengeLifecycleConfigExtended;
-    }
-
-    await repository.save(challengeBase);
-
-    challengeBase.lifecycle = await this.lifecycleService.createLifecycle(
-      challengeBase.id.toString(),
-      machineConfig
-    );
   }
 
   async update(
@@ -81,24 +62,6 @@ export class BaseChallengeService {
         relations: ['context'],
       }
     );
-
-    const newName = challengeBaseData.name;
-    if (newName) {
-      if (!(newName === challenge.name)) {
-        // challenge is being renamed...
-        const otherChallenge = await repository.findOne({
-          where: { name: newName },
-        });
-        // already have a base challenge with the given name, not allowed
-        if (otherChallenge)
-          throw new ValidationException(
-            `Unable to update challenge: already have a challenge with the provided name (${challengeBaseData.name})`,
-            LogContext.CHALLENGES
-          );
-        // Ok to rename
-        challenge.name = newName;
-      }
-    }
 
     if (challengeBaseData.context) {
       if (!challenge.context)
@@ -189,6 +152,34 @@ export class BaseChallengeService {
         LogContext.CHALLENGES
       );
     return challenge;
+  }
+
+  checkForIdentifiableNameDuplication(
+    existingChildren: IIdentifiable[],
+    name: string
+  ) {
+    const existingChildName = existingChildren.find(
+      child => child.name === name
+    );
+    if (existingChildName)
+      throw new ValidationException(
+        `Unable to create entity: parent already has a child with the given name: ${name}`,
+        LogContext.CHALLENGES
+      );
+  }
+
+  checkForIdentifiableTextIdDuplication(
+    existingChildren: IIdentifiable[],
+    textID: string
+  ) {
+    const existingChildTextId = existingChildren.find(
+      child => child.textID === textID
+    );
+    if (existingChildTextId)
+      throw new ValidationException(
+        `Unable to create entity: parent already has a child with the given textID: ${textID}`,
+        LogContext.CHALLENGES
+      );
   }
 
   async getCommunity(

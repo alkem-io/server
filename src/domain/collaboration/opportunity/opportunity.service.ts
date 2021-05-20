@@ -20,11 +20,19 @@ import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import validator from 'validator';
+import { ICommunity } from '@domain/community/community';
+import { ILifecycle } from '@domain/common/lifecycle';
+import { IContext } from '@domain/context/context';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { opportunityLifecycleConfigDefault } from './opportunity.lifecycle.config.default';
+import { ChallengeLifecycleTemplate } from '@common/enums';
+import { opportunityLifecycleConfigExtended } from './opportunity.lifecycle.config.extended';
 @Injectable()
 export class OpportunityService {
   constructor(
     private challengeBaseService: BaseChallengeService,
     private projectService: ProjectService,
+    private lifecycleService: LifecycleService,
     private relationService: RelationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -40,10 +48,22 @@ export class OpportunityService {
     opportunity.projects = [];
     opportunity.relations = [];
 
-    await this.challengeBaseService.initialise(
-      opportunity,
-      opportunityData,
-      this.opportunityRepository
+    await this.challengeBaseService.initialise(opportunity, opportunityData);
+
+    // Lifecycle, that has both a default and extended version
+    let machineConfig: any = opportunityLifecycleConfigDefault;
+    if (
+      opportunityData.lifecycleTemplate &&
+      opportunityData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
+    ) {
+      machineConfig = opportunityLifecycleConfigExtended;
+    }
+
+    await this.opportunityRepository.save(opportunity);
+
+    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+      opportunity.id.toString(),
+      machineConfig
     );
 
     return await this.saveOpportunity(opportunity);
@@ -121,6 +141,27 @@ export class OpportunityService {
 
   async saveOpportunity(opportunity: IOpportunity): Promise<IOpportunity> {
     return await this.opportunityRepository.save(opportunity);
+  }
+
+  async getCommunity(opportunityId: number): Promise<ICommunity> {
+    return await this.challengeBaseService.getCommunity(
+      opportunityId,
+      this.opportunityRepository
+    );
+  }
+
+  async getLifecycle(opportunityId: number): Promise<ILifecycle> {
+    return await this.challengeBaseService.getLifecycle(
+      opportunityId,
+      this.opportunityRepository
+    );
+  }
+
+  async getContext(opportunityId: number): Promise<IContext> {
+    return await this.challengeBaseService.getContext(
+      opportunityId,
+      this.opportunityRepository
+    );
   }
 
   // Loads the aspects into the Opportunity entity if not already present

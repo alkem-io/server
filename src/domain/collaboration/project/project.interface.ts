@@ -2,20 +2,11 @@ import { IAgreement } from '@domain/collaboration/agreement';
 import { IAspect } from '@domain/context/aspect';
 import { ITagset } from '@domain/common/tagset';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IIdentifiable } from '@domain/common/identifiable-entity';
 
 @ObjectType('Project')
-export abstract class IProject extends IBaseCherrytwist {
-  @Field(() => String, {
-    nullable: false,
-    description: 'A short text identifier for this Opportunity',
-  })
-  textID!: string;
-
-  @Field(() => String, { nullable: false, description: '' })
-  name!: string;
-
+export abstract class IProject extends IIdentifiable {
   @Field(() => String, { nullable: true, description: '' })
   description?: string;
 

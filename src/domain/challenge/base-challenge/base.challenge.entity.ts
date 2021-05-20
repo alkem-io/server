@@ -4,17 +4,11 @@ import { Tagset } from '@domain/common/tagset';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Community } from '@domain/community/community';
 import { Context } from '@domain/context/context';
-import { IBaseChallenge } from '@domain/challenge';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity/base.cherrytwist.entity';
+import { IBaseChallenge } from '@domain/challenge/base-challenge';
+import { IdentifiableEntity } from '@domain/common/identifiable-entity';
 
-export abstract class BaseChallenge extends BaseCherrytwistEntity
+export abstract class BaseChallenge extends IdentifiableEntity
   implements IBaseChallenge {
-  @Column()
-  name!: string;
-
-  @Column()
-  textID!: string;
-
   @OneToOne(() => Context, { eager: false, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   context?: Context;

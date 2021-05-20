@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { Repository } from 'typeorm';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { BaseChallenge } from '@domain/challenge';
 
 @InputType()
@@ -13,7 +13,4 @@ export class LifecycleEventInput {
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   eventName!: string;
-
-  // Used for handling derived challenges from base challenge
-  repository?: Repository<BaseChallenge>;
 }

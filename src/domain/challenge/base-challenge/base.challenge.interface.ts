@@ -1,24 +1,12 @@
-import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { ITagset } from '@domain/common/tagset';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IContext } from '@domain/context';
+import { IContext } from '@domain/context/context';
 import { ICommunity } from '@domain/community/community';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { IBaseCherrytwist } from '@domain/common/base-entity/base.cherrytwist.interface';
+import { IIdentifiable } from '@domain/common/identifiable-entity';
 
 @ObjectType('IBaseChallenge')
-export abstract class IBaseChallenge extends IBaseCherrytwist {
-  @Field(() => String, {
-    nullable: false,
-    description: 'The name of the challenge',
-  })
-  name!: string;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'A short text identifier for this challenge',
-  })
-  textID!: string;
-
+export abstract class IBaseChallenge extends IIdentifiable {
   @Field(() => ITagset, {
     nullable: true,
     description: 'The set of tags for the challenge',

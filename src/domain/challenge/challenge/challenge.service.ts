@@ -19,8 +19,7 @@ import { INVP, NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { IBaseChallenge } from '@domain/challenge/base-challenge';
-import { LogContext } from '@common/enums';
+import { ChallengeLifecycleTemplate, LogContext } from '@common/enums';
 import { Inject, Injectable } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
@@ -31,12 +30,16 @@ import { LoggerService } from '@nestjs/common';
 import { IOrganisation } from '@domain/community/organisation';
 import validator from 'validator';
 import { ICommunity } from '@domain/community/community';
+import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
+import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 @Injectable()
 export class ChallengeService {
   constructor(
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private challengeBaseService: BaseChallengeService,
+    private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -52,10 +55,22 @@ export class ChallengeService {
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
-    await this.challengeBaseService.initialise(
-      challenge,
-      challengeData,
-      this.challengeRepository
+    await this.challengeBaseService.initialise(challenge, challengeData);
+
+    // Lifecycle, that has both a default and extended version
+    let machineConfig: any = challengeLifecycleConfigDefault;
+    if (
+      challengeData.lifecycleTemplate &&
+      challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
+    ) {
+      machineConfig = challengeLifecycleConfigExtended;
+    }
+
+    await this.challengeRepository.save(challenge);
+
+    challenge.lifecycle = await this.lifecycleService.createLifecycle(
+      challenge.id.toString(),
+      machineConfig
     );
 
     return await this.challengeRepository.save(challenge);
@@ -209,8 +224,14 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    this.checkForExistingEntityName(childChallenges, challengeData.name);
-    this.checkForExistingEntityTextID(childChallenges, challengeData.textID);
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      childChallenges,
+      challengeData.name
+    );
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      childChallenges,
+      challengeData.textID
+    );
   }
 
   async createOpportunity(
@@ -256,31 +277,14 @@ export class ChallengeService {
         LogContext.CHALLENGES
       );
 
-    this.checkForExistingEntityName(opportunities, opportunityData.name);
-    this.checkForExistingEntityTextID(opportunities, opportunityData.textID);
-  }
-
-  checkForExistingEntityName(existingChildren: IBaseChallenge[], name: string) {
-    const existingChild = existingChildren.find(child => child.name === name);
-    if (existingChild)
-      throw new ValidationException(
-        `Trying to create a child but one with the given name already exists: ${name}`,
-        LogContext.CHALLENGES
-      );
-  }
-
-  checkForExistingEntityTextID(
-    existingChildren: IBaseChallenge[],
-    textID: string
-  ) {
-    const existingChild = existingChildren.find(
-      child => child.textID === textID
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      opportunities,
+      opportunityData.name
     );
-    if (existingChild)
-      throw new ValidationException(
-        `Trying to create a child but one with the given TextID already exists: ${textID}`,
-        LogContext.CHALLENGES
-      );
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      opportunities,
+      opportunityData.textID
+    );
   }
 
   async getChallengeOrFail(
