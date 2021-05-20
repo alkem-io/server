@@ -12,11 +12,15 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
-import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
+import { ITagsetable } from '@src/common/interfaces';
+import {
+  CreateTagsetInput,
+  UpdateTagsetInput,
+  DeleteTagsetInput,
+} from '@domain/common/tagset';
 import validator from 'validator';
-import { DeleteTagsetInput } from './tagset.dto.delete';
-import { BaseChallenge } from '@domain/challenge';
+import {} from './tagset.dto.delete';
+import { BaseChallenge } from '@domain/challenge/base-challenge';
 
 @Injectable()
 export class TagsetService {
