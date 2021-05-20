@@ -31,7 +31,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getContext(challenge.id);
   }
 
-  @ResolveField('opportunites', () => [IOpportunity], {
+  @ResolveField('opportunities', () => [IOpportunity], {
     nullable: true,
     description: 'The Opportunities for the challenge.',
   })
