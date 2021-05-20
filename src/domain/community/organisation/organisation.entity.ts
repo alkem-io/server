@@ -3,7 +3,7 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
-import { Challenge } from '@domain/challenge';
+import { Challenge } from '@domain/challenge/challenge';
 import { IdentifiableEntity } from '@domain/common/identifiable-entity';
 
 @Entity()

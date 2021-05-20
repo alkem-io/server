@@ -2,8 +2,8 @@ import { Relation } from '@domain/collaboration/relation';
 import { Project } from '@domain/collaboration/project';
 import { Entity, ManyToOne, OneToMany } from 'typeorm';
 import { IOpportunity } from '@domain/collaboration';
-import { BaseChallenge } from '@domain/challenge/base-challenge';
 import { Challenge } from '@domain/challenge/challenge';
+import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 
 @Entity()
 export class Opportunity extends BaseChallenge implements IOpportunity {

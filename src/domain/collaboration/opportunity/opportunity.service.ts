@@ -188,7 +188,7 @@ export class OpportunityService {
   }
 
   async createProject(projectData: CreateProjectInput): Promise<IProject> {
-    const opportunityId = projectData.parentID;
+    const opportunityId = projectData.opportunityID;
 
     this.logger.verbose?.(
       `Adding project to opportunity (${opportunityId})`,

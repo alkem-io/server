@@ -141,7 +141,7 @@ export class OrganisationService {
         `Unable to find organisation with ID: ${organisationID}`,
         LogContext.CHALLENGES
       );
-    return organisation;
+    return organisation as IOrganisation;
   }
 
   async getOrganisationByTextIdOrFail(
@@ -157,7 +157,7 @@ export class OrganisationService {
         `Unable to find organisation with given identifier: ${textID}`,
         LogContext.COMMUNITY
       );
-    return organisation;
+    return organisation as IOrganisation;
   }
 
   async getOrganisations(): Promise<Organisation[]> {

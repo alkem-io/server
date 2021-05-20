@@ -20,7 +20,7 @@ import {
 } from '@domain/common/tagset';
 import validator from 'validator';
 import {} from './tagset.dto.delete';
-import { BaseChallenge } from '@domain/challenge/base-challenge';
+import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 
 @Injectable()
 export class TagsetService {

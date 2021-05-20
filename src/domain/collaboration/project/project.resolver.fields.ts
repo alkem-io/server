@@ -8,7 +8,7 @@ import { IProject, Project } from '@domain/collaboration/project';
 export class ProjectResolverFields {
   constructor(private projectService: ProjectService) {}
 
-  @ResolveField('lifecycle2', () => ILifecycle, {
+  @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
     description:
       'The maturity phase of the project i.e. new, being refined, committed, in-progress, closed etc',

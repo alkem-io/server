@@ -11,7 +11,7 @@ import { Ecoverse } from '@domain/challenge/ecoverse';
 import { IChallenge } from './challenge.interface';
 import { Organisation } from '@domain/community';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { BaseChallenge } from '@domain/challenge/base-challenge';
+import { BaseChallenge } from '../base-challenge/base.challenge.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {

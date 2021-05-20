@@ -4,5 +4,5 @@ import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge';
 @InputType()
 export class CreateOpportunityInput extends CreateBaseChallengeInput {
   @Field({ nullable: false })
-  parentID!: string;
+  challengeID!: string;
 }

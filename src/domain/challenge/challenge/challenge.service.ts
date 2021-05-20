@@ -15,7 +15,7 @@ import {
 } from '@domain/challenge/challenge';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
-import { INVP, NVP } from '@domain/common/nvp';
+import { NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
@@ -33,6 +33,7 @@ import { ICommunity } from '@domain/community/community';
 import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
 import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -238,13 +239,16 @@ export class ChallengeService {
     opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
     this.logger.verbose?.(
-      `Adding Opportunity to Challenge (${opportunityData.parentID})`,
+      `Adding Opportunity to Challenge (${opportunityData.challengeID})`,
       LogContext.CHALLENGES
     );
 
-    const challenge = await this.getChallengeOrFail(opportunityData.parentID, {
-      relations: ['opportunities', 'community'],
-    });
+    const challenge = await this.getChallengeOrFail(
+      opportunityData.challengeID,
+      {
+        relations: ['opportunities', 'community'],
+      }
+    );
 
     await this.validateOpportunity(challenge, opportunityData);
 

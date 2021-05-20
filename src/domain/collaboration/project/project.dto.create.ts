@@ -7,7 +7,7 @@ import { MaxLength } from 'class-validator';
 @InputType()
 export class CreateProjectInput extends CreateIdentifiableInput {
   @Field({ nullable: false })
-  parentID!: number;
+  opportunityID!: number;
 
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)

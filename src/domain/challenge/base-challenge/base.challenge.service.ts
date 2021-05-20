@@ -5,7 +5,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { IBaseChallenge, UpdateBaseChallengeInput } from '@domain/challenge';
+import { UpdateBaseChallengeInput } from '@domain/challenge';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -20,6 +20,7 @@ import { BaseChallenge } from './base.challenge.entity';
 import validator from 'validator';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
 import { IIdentifiable } from '@domain/common/identifiable-entity';
+import { IBaseChallenge } from './base.challenge.interface';
 
 @Injectable()
 export class BaseChallengeService {

@@ -39,7 +39,7 @@ import { MembershipModule } from './services/membership/membership.module';
       useFactory: async (configService: ConfigService) => ({
         type: 'mysql',
         insecureAuth: true,
-        synchronize: true,
+        synchronize: false,
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         host: configService.get(ConfigurationTypes.Storage)?.database?.host,

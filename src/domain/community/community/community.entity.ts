@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community';
-import { Challenge } from '@domain/challenge';
+import { Challenge } from '@domain/challenge/challenge';
 import { Application, IApplication } from '@domain/community/application';
 import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
