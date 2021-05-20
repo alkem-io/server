@@ -169,6 +169,64 @@ identity:
         # If the secret doesn't match JWT validation will fail.
         clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
 
+      # Ory Kratos Next Gen Identity Provider (https://github.com/ory/kratos).
+      ory_kratos:
+        # Issuer of the kratos cookie. The cookie can be used as is or mutated by
+        # Ory Oathkeeper into an ID token. The session can be found at (default)
+        # http://127.0.0.1:4433/sessions/whoami
+        # A session looks like:
+        #
+        # {
+        #   "id": "b237fd33-cb69-4670-a154-7c70f7d8db52",
+        #   "active": true,
+        #   "expires_at": "2021-05-20T13:29:55Z",
+        #   "authenticated_at": "2021-05-19T13:29:55Z",
+        #   "issued_at": "2021-05-19T13:29:55Z",
+        #   "identity": {
+        #     "id": "972164de-efdd-4a4c-bfcb-382a9ba9b6f4",
+        #     "schema_id": "default",
+        #     "schema_url": "http://127.0.0.1:4455/.ory/kratos/public/schemas/default",
+        #     "traits": {
+        #       "name": { "last": "Admin", "first": "Admin" },
+        #       "email": "admin@cherrytwist.org"
+        #     },
+        #     "verifiable_addresses": [
+        #       {
+        #         "id": "f271a114-ef14-4f07-9899-5c1dbfeebee1",
+        #         "value": "admin@cherrytwist.org",
+        #         "verified": false,
+        #         "via": "email",
+        #         "status": "sent",
+        #         "verified_at": null
+        #       }
+        #     ],
+        #     "recovery_addresses": [
+        #       {
+        #         "id": "796b183e-49b0-493f-acbc-c821dd4eb177",
+        #         "value": "admin@cherrytwist.org",
+        #         "via": "email"
+        #       }
+        #     ]
+        #   }
+        # }
+        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://127.0.0.1:4455/
+
+        # JSON Web Key Sets endpoint. Used for validating the JWT token signed
+        # by Ory Oathkeeper. A set of keys looks like:
+        # {
+        #   "keys": [
+        #     {
+        #       "use": "sig",
+        #       "kty": "RSA",
+        #       "kid": "a2aa9739-d753-4a0d-87ee-61f101050277",
+        #       "alg": "RS256",
+        #       "n": "zpjSl0ySsdk_YC4ZJYYV-cSznWkzndTo0lyvkYmeBkW60YHuHzXaviHqonY_DjFBdnZC0Vs_QTWmBlZvPzTp4Oni-eOetP-Ce3-B8jkGWpKFOjTLw7uwR3b3jm_mFNiz1dV_utWiweqx62Se0SyYaAXrgStU8-3P2Us7_kz5NnBVL1E7aEP40aB7nytLvPhXau-YhFmUfgykAcov0QrnNY0DH0eTcwL19UysvlKx6Uiu6mnbaFE1qx8X2m2xuLpErfiqj6wLCdCYMWdRTHiVsQMtTzSwuPuXfH7J06GTo3I1cEWN8Mb-RJxlosJA_q7hEd43yYisCO-8szX0lgCasw",
+        #       "e": "AQAB"
+        #     }
+        #   ]
+        # }
+        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://127.0.0.1:4456/.well-known/jwks.json
+
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:
@@ -261,5 +319,3 @@ storage:
 
     # Max file size of files that will be uploaded to IPFS (in bytes).
     maxFileSize: 1048576
-
-
