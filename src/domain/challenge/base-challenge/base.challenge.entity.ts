@@ -4,7 +4,7 @@ import { Tagset } from '@domain/common/tagset';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Community } from '@domain/community/community';
 import { Context } from '@domain/context/context';
-import { IBaseChallenge } from '@domain/challenge';
+import { IBaseChallenge } from '@domain/challenge/base-challenge';
 import { IdentifiableEntity } from '@domain/common/identifiable-entity';
 
 export abstract class BaseChallenge extends IdentifiableEntity

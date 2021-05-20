@@ -1,6 +1,6 @@
-import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { ITagset } from '@domain/common/tagset';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IContext } from '@domain/context';
+import { IContext } from '@domain/context/context';
 import { ICommunity } from '@domain/community/community';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IIdentifiable } from '@domain/common/identifiable-entity';

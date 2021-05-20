@@ -177,7 +177,7 @@ export class BaseChallengeService {
     );
     if (existingChildTextId)
       throw new ValidationException(
-        `Unable to create entity: parent already has a child with the given name: ${textID}`,
+        `Unable to create entity: parent already has a child with the given textID: ${textID}`,
         LogContext.CHALLENGES
       );
   }

@@ -10,12 +10,9 @@ import {
   IChallenge,
   RemoveChallengeLeadInput,
   CreateChallengeInput,
-  Challenge,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
 import { GraphqlGuard } from '@core/authorization';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
   CreateOpportunityInput,
   IOpportunity,
@@ -27,9 +24,7 @@ import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options
 export class ChallengeResolverMutations {
   constructor(
     private challengeService: ChallengeService,
-    private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider,
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>
+    private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)

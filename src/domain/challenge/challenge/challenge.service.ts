@@ -19,7 +19,7 @@ import { INVP, NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { LogContext } from '@common/enums';
+import { ChallengeLifecycleTemplate, LogContext } from '@common/enums';
 import { Inject, Injectable } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
@@ -30,12 +30,16 @@ import { LoggerService } from '@nestjs/common';
 import { IOrganisation } from '@domain/community/organisation';
 import validator from 'validator';
 import { ICommunity } from '@domain/community/community';
+import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
+import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 @Injectable()
 export class ChallengeService {
   constructor(
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private challengeBaseService: BaseChallengeService,
+    private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -52,6 +56,22 @@ export class ChallengeService {
 
     challenge.opportunities = [];
     await this.challengeBaseService.initialise(challenge, challengeData);
+
+    // Lifecycle, that has both a default and extended version
+    let machineConfig: any = challengeLifecycleConfigDefault;
+    if (
+      challengeData.lifecycleTemplate &&
+      challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
+    ) {
+      machineConfig = challengeLifecycleConfigExtended;
+    }
+
+    await this.challengeRepository.save(challenge);
+
+    challenge.lifecycle = await this.lifecycleService.createLifecycle(
+      challenge.id.toString(),
+      machineConfig
+    );
 
     return await this.challengeRepository.save(challenge);
   }
