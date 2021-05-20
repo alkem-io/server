@@ -1,50 +1,45 @@
-import { ContextService } from '@domain/context/context/context.service';
-import {
-  Opportunity,
-  IOpportunity,
-  CreateOpportunityInput,
-} from '@domain/challenge/opportunity';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
-import { ICommunity } from '@domain/community/community';
-import { CommunityService } from '@domain/community/community/community.service';
-import { CommunityType } from '@common/enums/community.types';
-import validator from 'validator';
 import {
-  UpdateChallengeInput,
+  AssignChallengeLeadInput,
   Challenge,
-  IChallenge,
   CreateChallengeInput,
   DeleteChallengeInput,
-  AssignChallengeLeadInput,
+  IChallenge,
   RemoveChallengeLeadInput,
-  challengeLifecycleConfigDefault,
-  challengeLifecycleConfigExtended,
+  UpdateChallengeInput,
 } from '@domain/challenge/challenge';
+import { ILifecycle } from '@domain/common/lifecycle';
+import { IContext } from '@domain/context/context';
+import { NVP } from '@domain/common/nvp';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
+import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
+import { ChallengeLifecycleTemplate, LogContext } from '@common/enums';
+import { Inject, Injectable } from '@nestjs/common';
+import { CommunityService } from '@domain/community/community/community.service';
+import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LoggerService } from '@nestjs/common';
+import { IOrganisation } from '@domain/community/organisation';
+import validator from 'validator';
+import { ICommunity } from '@domain/community/community';
+import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
+import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { ChallengeLifecycleTemplate } from '@common/enums/challenge.lifecycle.template';
-
+import { INVP } from '@domain/common/nvp/nvp.interface';
 @Injectable()
 export class ChallengeService {
   constructor(
-    private contextService: ContextService,
     private communityService: CommunityService,
-    private tagsetService: TagsetService,
     private opportunityService: OpportunityService,
+    private challengeBaseService: BaseChallengeService,
     private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
     @InjectRepository(Challenge)
@@ -53,26 +48,15 @@ export class ChallengeService {
   ) {}
 
   async createChallenge(
-    challengeData: CreateChallengeInput
+    challengeData: CreateChallengeInput,
+    ecoverseID: string
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
+    challenge.ecoverseID = ecoverseID;
+    challenge.childChallenges = [];
+
     challenge.opportunities = [];
-
-    // Community
-    challenge.community = await this.communityService.createCommunity(
-      challenge.name,
-      CommunityType.CHALLENGE
-    );
-
-    // Context
-    if (!challengeData.context) challengeData.context = {};
-    if (!challenge.context)
-      challenge.context = await this.contextService.createContext(
-        challengeData.context
-      );
-
-    // Remaining initialisation
-    challenge.tagset = this.tagsetService.createDefaultTagset();
+    await this.challengeBaseService.initialise(challenge, challengeData);
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = challengeLifecycleConfigDefault;
@@ -96,81 +80,39 @@ export class ChallengeService {
   async updateChallenge(
     challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
-    const challenge = await this.getChallengeOrFail(challengeData.ID);
-
-    const newName = challengeData.name;
-    if (newName) {
-      if (!(newName === challenge.name)) {
-        // challenge is being renamed...
-        const otherChallenge = await this.challengeRepository.findOne({
-          where: { name: newName },
-        });
-        // already have a challenge with the given name, not allowed
-        if (otherChallenge)
-          throw new ValidationException(
-            `Unable to update challenge: already have a challenge with the provided name (${challengeData.name})`,
-            LogContext.CHALLENGES
-          );
-        // Ok to rename
-        challenge.name = newName;
-      }
-    }
-
-    if (challengeData.context) {
-      if (!challenge.context)
-        throw new EntityNotInitializedException(
-          `Challenge not initialised: ${challengeData.ID}`,
-          LogContext.CHALLENGES
-        );
-      challenge.context = await this.contextService.updateContext(
-        challenge.context,
-        challengeData.context
-      );
-    }
-    if (challengeData.tags)
-      this.tagsetService.replaceTagsOnEntity(
-        challenge as Challenge,
-        challengeData.tags
-      );
-
-    await this.challengeRepository.save(challenge);
-
-    return challenge;
+    return await this.challengeBaseService.update(
+      challengeData,
+      this.challengeRepository
+    );
   }
 
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.getChallengeByIdOrFail(challengeID, {
-      relations: ['opportunities', 'community', 'lifecycle'],
+    const challenge = await this.getChallengeByIdOrFail(parseInt(challengeID), {
+      relations: [
+        'childChallenges',
+        'community',
+        'context',
+        'lifecycle',
+        'opportunities',
+      ],
     });
 
-    // Do not remove a challenge that has opporutnities, require these to be individually first removed
+    await this.challengeBaseService.deleteEntities(challenge);
+
+    // Do not remove a challenge that has child challenges , require these to be individually first removed
+    if (challenge.childChallenges && challenge.childChallenges.length > 0)
+      throw new ValidationException(
+        `Unable to remove challenge (${challengeID}) as it contains ${challenge.childChallenges.length} child challenges`,
+        LogContext.CHALLENGES
+      );
+
     if (challenge.opportunities && challenge.opportunities.length > 0)
       throw new ValidationException(
         `Unable to remove challenge (${challengeID}) as it contains ${challenge.opportunities.length} opportunities`,
         LogContext.CHALLENGES
       );
-
-    // Remove the community
-    if (challenge.community) {
-      await this.communityService.removeCommunity(challenge.community.id);
-    }
-
-    // Remove the context
-    if (challenge.context) {
-      await this.contextService.removeContext(challenge.context.id);
-    }
-
-    // Remove the lifecycle
-    if (challenge.lifecycle) {
-      await this.lifecycleService.deleteLifecycle(challenge.lifecycle.id);
-    }
-
-    if (challenge.tagset) {
-      await this.tagsetService.removeTagset({ ID: challenge.tagset.id });
-    }
-
     const { id } = challenge;
     const result = await this.challengeRepository.remove(
       challenge as Challenge
@@ -181,84 +123,141 @@ export class ChallengeService {
     };
   }
 
-  // Loads the challenges into the challenge entity if not already present
   async getCommunity(challengeId: number): Promise<ICommunity> {
-    const challengeWithCommunity = await this.getChallengeByIdOrFail(
+    return await this.challengeBaseService.getCommunity(
       challengeId,
-      {
-        relations: ['community'],
-      }
+      this.challengeRepository
     );
-    const community = challengeWithCommunity.community;
-    if (!community)
-      throw new RelationshipNotFoundException(
-        `Unable to load community for challenge ${challengeId} `,
-        LogContext.COMMUNITY
-      );
-    return community;
   }
 
-  // Lazy load the lifecycle
   async getLifecycle(challengeId: number): Promise<ILifecycle> {
+    return await this.challengeBaseService.getLifecycle(
+      challengeId,
+      this.challengeRepository
+    );
+  }
+
+  async getContext(challengeId: number): Promise<IContext> {
+    return await this.challengeBaseService.getContext(
+      challengeId,
+      this.challengeRepository
+    );
+  }
+
+  async getOpportunities(challengeId: number): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeByIdOrFail(challengeId, {
-      relations: ['lifecycle'],
+      relations: ['opportunities'],
     });
-
-    // if no lifecycle then create + save...
-    if (!challenge.lifecycle) {
-      challenge.lifecycle = await this.lifecycleService.createLifecycle(
-        challengeId.toString(),
-        challengeLifecycleConfigDefault
+    const opportunities = challenge.opportunities;
+    if (!opportunities)
+      throw new RelationshipNotFoundException(
+        `Unable to load Opportunities for challenge ${challengeId} `,
+        LogContext.COLLABORATION
       );
-      await this.challengeRepository.save(challenge);
-    }
-
-    return challenge.lifecycle;
+    return opportunities;
   }
 
   // Loads the challenges into the challenge entity if not already present
-  async getOpportunities(challenge: IChallenge): Promise<IOpportunity[]> {
-    if (challenge.opportunities && challenge.opportunities.length > 0) {
+  async getChildChallenges(challenge: IChallenge): Promise<IChallenge[]> {
+    if (challenge.childChallenges && challenge.childChallenges.length > 0) {
       // challenge already has groups loaded
-      return challenge.opportunities;
+      return challenge.childChallenges;
     }
 
-    const challengeWithOpportunities = await this.getChallengeByIdOrFail(
+    const challengeWithChildChallenges = await this.getChallengeByIdOrFail(
       challenge.id,
       {
-        relations: ['opportunities'],
+        relations: ['childChallenges'],
       }
     );
-    if (!challengeWithOpportunities.opportunities)
+    const childChallenges = challengeWithChildChallenges.childChallenges;
+    if (!childChallenges)
       throw new RelationshipNotFoundException(
-        `Unable to load opportunities for challenge ${challenge.id} `,
+        `Unable to load child challenges for challenge ${challenge.id} `,
         LogContext.CHALLENGES
       );
 
-    return challengeWithOpportunities.opportunities;
+    return childChallenges;
+  }
+
+  async createChildChallenge(
+    challengeData: CreateChallengeInput
+  ): Promise<IChallenge> {
+    // First find the Challenge
+
+    this.logger.verbose?.(
+      `Adding child Challenge to Challenge (${challengeData.parentID})`,
+      LogContext.CHALLENGES
+    );
+    // Try to find the challenge
+    const challenge = await this.getChallengeOrFail(challengeData.parentID, {
+      relations: ['childChallenges', 'community'],
+    });
+
+    await this.validateChildChallenge(challenge, challengeData);
+
+    const childChallenge = await this.createChallenge(
+      challengeData,
+      challenge.ecoverseID
+    );
+
+    challenge.childChallenges?.push(childChallenge);
+
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      childChallenge.community,
+      challenge.community
+    );
+
+    await this.challengeRepository.save(challenge);
+
+    return childChallenge;
+  }
+
+  async validateChildChallenge(
+    challenge: IChallenge,
+    challengeData: CreateChallengeInput
+  ) {
+    const childChallenges = challenge.childChallenges;
+    if (!childChallenges)
+      throw new EntityNotInitializedException(
+        `Challenge without initialised child challenges encountered ${challenge.id}`,
+        LogContext.CHALLENGES
+      );
+
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      childChallenges,
+      challengeData.name
+    );
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      childChallenges,
+      challengeData.textID
+    );
   }
 
   async createOpportunity(
     opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
-    // First find the Challenge
-
     this.logger.verbose?.(
-      `Adding opportunity to challenge (${opportunityData.parentID})`,
+      `Adding Opportunity to Challenge (${opportunityData.challengeID})`,
       LogContext.CHALLENGES
     );
-    // Try to find the challenge
-    const challenge = await this.getChallengeOrFail(opportunityData.parentID, {
-      relations: ['opportunities', 'community'],
-    });
+
+    const challenge = await this.getChallengeOrFail(
+      opportunityData.challengeID,
+      {
+        relations: ['opportunities', 'community'],
+      }
+    );
 
     await this.validateOpportunity(challenge, opportunityData);
 
     const opportunity = await this.opportunityService.createOpportunity(
-      opportunityData
+      opportunityData,
+      challenge.ecoverseID
     );
 
-    challenge.opportunities?.push(opportunity as Opportunity);
+    challenge.opportunities?.push(opportunity);
 
     // Finally set the community relationship
     await this.communityService.setParentCommunity(
@@ -278,29 +277,18 @@ export class ChallengeService {
     const opportunities = challenge.opportunities;
     if (!opportunities)
       throw new EntityNotInitializedException(
-        `Challenge without initialised Opportunities encountered ${challenge.id}`,
+        `Challenge without initialised opportunities encountered ${challenge.id}`,
         LogContext.CHALLENGES
       );
 
-    let opportunity = opportunities.find(
-      opportunity => opportunity.name === opportunityData.name
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      opportunities,
+      opportunityData.name
     );
-
-    if (opportunity)
-      throw new ValidationException(
-        `Opportunity with name: ${opportunityData.name} already exists!`,
-        LogContext.OPPORTUNITY
-      );
-
-    opportunity = opportunities.find(
-      opportunity => opportunity.textID === opportunityData.textID
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      opportunities,
+      opportunityData.textID
     );
-    // check if the opportunity already exists with the textID
-    if (opportunity)
-      throw new ValidationException(
-        `Trying to create an opportunity but one with the given textID already exists: ${opportunityData.textID}`,
-        LogContext.CHALLENGES
-      );
   }
 
   async getChallengeOrFail(
@@ -402,5 +390,38 @@ export class ChallengeService {
     }
     challenge.leadOrganisations = updatedLeads;
     return await this.challengeRepository.save(challenge);
+  }
+
+  async getAllChallengesCount(ecoverseID: number): Promise<number> {
+    const count = await this.challengeRepository.count({
+      where: { ecoverseID: ecoverseID },
+    });
+    return count;
+  }
+
+  async getChildChallengesCount(challengeID: number): Promise<number> {
+    return await this.challengeRepository.count({
+      where: { parentChallenge: challengeID },
+    });
+  }
+
+  async getMembersCount(challenge: IChallenge): Promise<number> {
+    const community = await this.getCommunity(challenge.id);
+    return await this.communityService.getMembersCount(community);
+  }
+
+  async getActivity(challenge: IChallenge): Promise<INVP[]> {
+    const activity: INVP[] = [];
+    const community = await this.getCommunity(challenge.id);
+
+    const membersCount = await this.communityService.getMembersCount(community);
+    const membersTopic = new NVP('members', membersCount.toString());
+    activity.push(membersTopic);
+
+    const challengesCount = await this.getChildChallengesCount(challenge.id);
+    const challengesTopic = new NVP('challenges', challengesCount.toString());
+    activity.push(challengesTopic);
+
+    return activity;
   }
 }

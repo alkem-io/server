@@ -39,8 +39,8 @@ export class CommunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createCommunity(name: string, type: string): Promise<ICommunity> {
-    const community = new Community(name, type);
+  async createCommunity(name: string): Promise<ICommunity> {
+    const community = new Community(name);
 
     community.groups = [];
     await this.communityRepository.save(community);
@@ -64,7 +64,8 @@ export class CommunityService {
 
     const group = await this.userGroupService.addGroupWithName(
       community,
-      groupName
+      groupName,
+      community.ecoverseID
     );
     await this.communityRepository.save(community);
 
@@ -72,13 +73,14 @@ export class CommunityService {
   }
 
   // Loads the group into the Community entity if not already present
-  async loadGroups(community: ICommunity): Promise<IUserGroup[]> {
-    if (community.groups && community.groups.length > 0) {
-      // Community already has groups loaded
-      return community.groups;
+  async getUserGroups(community: ICommunity): Promise<IUserGroup[]> {
+    if (!community.groups) {
+      throw new EntityNotInitializedException(
+        `Community not initialized: ${community.name}`,
+        LogContext.COMMUNITY
+      );
     }
-
-    return await this.userGroupService.getGroupsOnGroupable(community);
+    return community.groups;
   }
 
   async getCommunityOrFail(
@@ -106,15 +108,17 @@ export class CommunityService {
     // Remove all groups
     if (community.groups) {
       for (const group of community.groups) {
-        await this.userGroupService.removeUserGroup({ ID: group.id });
+        await this.userGroupService.removeUserGroup({
+          ID: group.id.toString(),
+        });
       }
     }
 
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationService.delete({
-          ID: application.id,
+        await this.applicationService.deleteApplication({
+          ID: application.id.toString(),
         });
       }
     }
@@ -137,7 +141,7 @@ export class CommunityService {
     return community;
   }
 
-  async getMembers(community: Community): Promise<IUser[]> {
+  async getMembers(community: ICommunity): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
       type: AuthorizationCredential.CommunityMember,
       resourceID: community.id,
@@ -217,7 +221,7 @@ export class CommunityService {
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
-      relations: ['applications', 'parentCommunity'],
+      relations: ['applications', 'parentCommunity', 'challenge'],
     })) as Community;
 
     const existingApplication = community.applications?.find(
@@ -244,8 +248,15 @@ export class CommunityService {
         );
     }
 
+    const ecoverseID = community.challenge?.ecoverseID;
+    if (!ecoverseID)
+      throw new EntityNotInitializedException(
+        `Unable to locate containing ecoverse: ${community.id}`,
+        LogContext.COMMUNITY
+      );
     const application = await this.applicationService.createApplication(
-      applicationData
+      applicationData,
+      ecoverseID
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -253,10 +264,17 @@ export class CommunityService {
     return application;
   }
 
-  async getApplications(community: Community): Promise<IApplication[]> {
+  async getApplications(community: ICommunity): Promise<IApplication[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
       relations: ['applications'],
     });
     return communityApps?.applications || [];
+  }
+
+  async getMembersCount(community: ICommunity): Promise<number> {
+    return await this.agentService.countAgentsWithMatchingCredentials({
+      type: AuthorizationCredential.CommunityMember,
+      resourceID: community.id,
+    });
   }
 }

@@ -33,8 +33,12 @@ export class ProjectService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createProject(projectData: CreateProjectInput): Promise<IProject> {
+  async createProject(
+    projectData: CreateProjectInput,
+    ecoverseID = '-1'
+  ): Promise<IProject> {
     const project: IProject = Project.create(projectData);
+    (project as Project).ecoverseID = ecoverseID;
 
     await this.projectRepository.save(project);
 
@@ -48,7 +52,7 @@ export class ProjectService {
 
   async deleteProject(deleteData: DeleteProjectInput): Promise<IProject> {
     const projectID = deleteData.ID;
-    const project = await this.getProjectByIdOrFail(projectID, {
+    const project = await this.getProjectOrFail(projectID, {
       relations: ['lifecycle'],
     });
     if (!project)
@@ -61,7 +65,7 @@ export class ProjectService {
       await this.lifecycleService.deleteLifecycle(project.lifecycle.id);
     }
     const result = await this.projectRepository.remove(project as Project);
-    result.id = projectID;
+    result.id = parseInt(projectID);
     return result;
   }
 
@@ -91,21 +95,20 @@ export class ProjectService {
     }
     throw new EntityNotFoundException(
       `Unable to find Project with ID: ${projectID}`,
-      LogContext.CHALLENGES
+      LogContext.COLLABORATION
     );
   }
 
-  async getProjects(): Promise<Project[]> {
-    const projects = await this.projectRepository.find();
+  async getProjects(ecoverseID: string): Promise<Project[]> {
+    const projects = await this.projectRepository.find({
+      ecoverseID: ecoverseID,
+    });
     return projects || [];
   }
 
   async updateProject(projectData: UpdateProjectInput): Promise<IProject> {
     const project = await this.getProjectOrFail(projectData.ID);
 
-    // Note: do not update the textID
-
-    // Copy over the received data
     if (projectData.name) {
       project.name = projectData.name;
     }
@@ -124,13 +127,11 @@ export class ProjectService {
       relations: ['lifecycle'],
     });
 
-    // if no lifecycle then create + save...
     if (!project.lifecycle) {
-      project.lifecycle = await this.lifecycleService.createLifecycle(
-        projectId.toString(),
-        projectLifecycleConfigDefault
+      throw new EntityNotFoundException(
+        `Unable to find Lifecycle on Project with ID: ${projectId}`,
+        LogContext.COLLABORATION
       );
-      await this.projectRepository.save(project);
     }
 
     return project.lifecycle;
@@ -160,5 +161,12 @@ export class ProjectService {
     project.aspects.push(aspect);
     await this.projectRepository.save(project);
     return aspect;
+  }
+
+  async getProjectsCount(ecoverseID: number): Promise<number> {
+    const count = await this.projectRepository.count({
+      where: { ecoverseID: ecoverseID },
+    });
+    return count;
   }
 }

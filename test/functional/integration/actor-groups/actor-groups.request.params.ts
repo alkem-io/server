@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { actorGrpupData, contextData } from '@test/utils/common-params';
 
 export const createActorGroupMutation = async (
   opportunityId: string,
@@ -9,16 +10,9 @@ export const createActorGroupMutation = async (
   const requestParams = {
     operationName: null,
     query: `mutation createActorGroup($actorGroupData: CreateActorGroupInput!) {
-      createActorGroup(actorGroupData: $actorGroupData) {
-          id
-          name
-          description
-            actors {
-                    id
-                    name
-                    description
-                  }
-          }
+      createActorGroup(actorGroupData: $actorGroupData){
+          ${actorGrpupData}
+        }
       }`,
     variables: {
       actorGroupData: {
@@ -49,27 +43,31 @@ export const removeActorGroupMutation = async (actorGroupId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getActorGroupsPerOpportunity = async (opportunityId: string) => {
+export const getActorGroupsPerOpportunity = async (subChallengeId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
-        actorGroups { id name description actors { name }}}}}`,
+    query: `query {ecoverse {challenge(ID: "${subChallengeId}") {
+          context{
+            ${contextData}
+            }
+          }
+        }
+      }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getActorData = async (opportunityId: any) => {
+export const getActorData = async (subChallengeId: any) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
-      actorGroups{
-        actors{
-          id name description value impact
+    query: `query {ecoverse {challenge(ID: "${subChallengeId}") {
+        context{
+          ${contextData}
+          }
         }
       }
-    }
-  }}`,
+    }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

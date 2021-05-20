@@ -1,12 +1,9 @@
+import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity';
 import { Field, InputType } from '@nestjs/graphql';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
-
 @InputType()
-export class UpdateTagsetInput {
-  @Field({ nullable: false })
-  ID!: number;
-
+export class UpdateTagsetInput extends UpdateBaseCherrytwistInput {
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;

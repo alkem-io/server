@@ -1,7 +1,6 @@
-import { SearchResult } from './search-result.dto';
-
+import { ISearchable } from '@domain/common/interfaces';
 export interface ISearchResultEntry {
   score: number;
   terms: string[];
-  result?: typeof SearchResult;
+  result?: ISearchable;
 }

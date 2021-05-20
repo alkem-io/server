@@ -3,16 +3,16 @@ import {
   AuthorizationCommunityMember,
   GraphqlGuard,
 } from '@core/authorization';
-import { Application } from '@domain/community/application/application.entity';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { User } from '@domain/community/user/user.entity';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
-import { Community } from './community.entity';
+import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from './community.service';
+import { IUser } from '@domain/community/user';
+import { IUserGroup } from '@domain/community/user-group';
+import { IApplication } from '@domain/community/application';
 
-@Resolver(() => Community)
+@Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
 
@@ -22,13 +22,13 @@ export class CommunityResolverFields {
   )
   @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
-  @ResolveField('groups', () => [UserGroup], {
+  @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
     description: 'Groups of users related to a Community.',
   })
   @Profiling.api
   async groups(@Parent() community: Community) {
-    return await this.communityService.loadGroups(community);
+    return await this.communityService.getUserGroups(community);
   }
 
   @AuthorizationGlobalRoles(
@@ -37,7 +37,7 @@ export class CommunityResolverFields {
   )
   @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
-  @ResolveField('members', () => [User], {
+  @ResolveField('members', () => [IUser], {
     nullable: true,
     description: 'All users that are contributing to this Community.',
   })
@@ -52,7 +52,7 @@ export class CommunityResolverFields {
   )
   @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
-  @ResolveField('applications', () => [Application], {
+  @ResolveField('applications', () => [IApplication], {
     nullable: false,
     description: 'Application available for this community.',
   })

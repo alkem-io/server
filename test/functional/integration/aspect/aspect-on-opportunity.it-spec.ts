@@ -7,7 +7,7 @@ import {
   getAspectPerOpportunity,
   updateAspectMutation,
 } from './aspect.request.params';
-import { createOpportunityOnChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
+import { createChildChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';
@@ -20,15 +20,16 @@ let aspectFrame = '';
 let aspectExplanation = '';
 let aspectDataCreate = '';
 let uniqueTextId = '';
+let contextId = '';
 let aspectCountPerOpportunity = async (): Promise<number> => {
   const responseQuery = await getAspectPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.ecoverse.opportunity.aspects;
+  let response = responseQuery.body.data.ecoverse.challenge.context.aspects;
   return response;
 };
 
 let aspectDataPerOpportunity = async (): Promise<String> => {
   const responseQuery = await getAspectPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.ecoverse.opportunity.aspects[0];
+  let response = responseQuery.body.data.ecoverse.challenge.context.aspects[0];
   return response;
 };
 beforeEach(async () => {
@@ -60,18 +61,20 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
   // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+  const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
     challengeId,
     opportunityName,
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunity
+    responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
+  contextId =
+    responseCreateOpportunityOnChallenge.body.data.createChildChallenge.context
       .id;
 
   // Create Aspect on opportunity group
   const createAspectResponse = await createAspectOnOpportunityMutation(
-    opportunityId,
+    contextId,
     aspectTitle,
     aspectFrame,
     aspectExplanation
@@ -94,7 +97,7 @@ describe('Aspect', () => {
     // Act
     // Create second aspect with different names
     await createAspectOnOpportunityMutation(
-      opportunityId,
+      contextId,
       aspectTitle + aspectTitle,
       aspectFrame,
       aspectExplanation
@@ -107,7 +110,7 @@ describe('Aspect', () => {
     // Act
     // Create second aspects with same names
     const responseSecondAspect = await createAspectOnOpportunityMutation(
-      opportunityId,
+      contextId,
       aspectTitle,
       aspectFrame,
       aspectExplanation

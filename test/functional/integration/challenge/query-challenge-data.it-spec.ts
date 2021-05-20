@@ -2,16 +2,15 @@ import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import {
   createChallangeMutation,
+  getChallengeData,
   getChallengeOpportunity,
 } from '@test/functional/integration/challenge/challenge.request.params';
 import {
-  createOpportunityOnChallengeMutation,
+  createChildChallengeMutation,
   queryOpportunity,
 } from '../opportunity/opportunity.request.params';
 import {
   addChallengeLeadToOrganisationMutation,
-  getChallenge,
-  getChallengeGroups,
   removeChallengeLeadFromOrganisationMutation,
   updateChallangeMutation,
 } from './challenge.request.params';
@@ -66,7 +65,7 @@ beforeEach(async () => {
 describe('Query Challenge data', () => {
   test.skip('should query groups through challenge', async () => {
     // Act
-    const responseQueryData = await getChallengeGroups(challengeId);
+    const responseQueryData = await getChallengeData(challengeId);
 
     // Assert
     expect(
@@ -77,16 +76,16 @@ describe('Query Challenge data', () => {
     ).toEqual('members');
   });
 
-  test('should query opportunity through challenge', async () => {
+  test.skip('should query opportunity through challenge', async () => {
     // Act
     // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+    const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
       challengeId,
       opportunityName,
       opportunityTextId
     );
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
 
     // Query Opportunity data through Challenge query
     const responseQueryData = await getChallengeOpportunity(challengeId);
@@ -109,22 +108,22 @@ describe('Query Challenge data', () => {
   test('should create opportunity and query the data', async () => {
     // Act
     // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+    const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
       challengeId,
       opportunityName,
       opportunityTextId
     );
 
     const createOpportunityData =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity;
+      responseCreateOpportunityOnChallenge.body.data.createChildChallenge;
 
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
 
     // Query Opportunity data
-    const requestQueryOpportunity = await queryOpportunity(opportunityId);
+    const requestQueryOpportunity = await getChallengeData(opportunityId);
     const requestOpportunityData =
-      requestQueryOpportunity.body.data.ecoverse.opportunity;
+      requestQueryOpportunity.body.data.ecoverse.challenge;
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
@@ -146,20 +145,20 @@ describe('Query Challenge data', () => {
     const updatedChallenge = response.body.data.updateChallenge;
 
     // Act
-    const getChallengeData = await getChallenge(challengeId);
+    const getChallengeDatas = await getChallengeData(challengeId);
 
     // Assert
     expect(response.status).toBe(200);
     expect(updatedChallenge.name).toEqual(challengeName + 'change');
     expect(updatedChallenge.context.tagline).toEqual(taglineText);
     expect(updatedChallenge.tagset.tags).toEqual(tagsArray);
-    expect(getChallengeData.body.data.ecoverse.challenge.name).toEqual(
+    expect(getChallengeDatas.body.data.ecoverse.challenge.name).toEqual(
       challengeName + 'change'
     );
     expect(
-      getChallengeData.body.data.ecoverse.challenge.context.tagline
+      getChallengeDatas.body.data.ecoverse.challenge.context.tagline
     ).toEqual(taglineText);
-    expect(getChallengeData.body.data.ecoverse.challenge.tagset.tags).toEqual(
+    expect(getChallengeDatas.body.data.ecoverse.challenge.tagset.tags).toEqual(
       tagsArray
     );
   });

@@ -4,11 +4,7 @@ import {
   AuthorizationSelfManagement,
   GraphqlGuard,
 } from '@core/authorization';
-import {
-  DeleteReferenceInput,
-  IReference,
-  Reference,
-} from '@domain/common/reference';
+import { DeleteReferenceInput, IReference } from '@domain/common/reference';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ReferenceService } from './reference.service';
@@ -23,7 +19,7 @@ export class ReferenceResolverMutations {
   )
   @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Reference, {
+  @Mutation(() => IReference, {
     description: 'Deletes the specified Reference.',
   })
   async deleteReference(

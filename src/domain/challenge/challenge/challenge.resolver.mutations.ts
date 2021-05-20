@@ -1,52 +1,59 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { ChallengeService } from './challenge.service';
 import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import {
-  IOpportunity,
-  Opportunity,
-  CreateOpportunityInput,
-} from '@domain/challenge/opportunity';
-import {
-  UpdateChallengeInput,
-  IChallenge,
-  Challenge,
-  DeleteChallengeInput,
-  ChallengeEventInput,
   AssignChallengeLeadInput,
+  ChallengeEventInput,
+  DeleteChallengeInput,
+  IChallenge,
   RemoveChallengeLeadInput,
+  CreateChallengeInput,
+  UpdateChallengeInput,
 } from '@domain/challenge/challenge';
-import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
+import {
+  CreateOpportunityInput,
+  IOpportunity,
+} from '@domain/collaboration/opportunity';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 
 @Resolver()
 export class ChallengeResolverMutations {
   constructor(
-    @Inject(ChallengeService) private challengeService: ChallengeService,
-    @Inject(ChallengeLifecycleOptionsProvider)
+    private challengeService: ChallengeService,
     private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Opportunity, {
+  @Mutation(() => IChallenge, {
+    description: 'Creates a new child challenge within the parent Challenge.',
+  })
+  @Profiling.api
+  async createChildChallenge(
+    @Args('challengeData') challengeData: CreateChallengeInput
+  ): Promise<IChallenge> {
+    return await this.challengeService.createChildChallenge(challengeData);
+  }
+
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOpportunity, {
     description: 'Creates a new Opportunity within the parent Challenge.',
   })
   @Profiling.api
   async createOpportunity(
     @Args('opportunityData') opportunityData: CreateOpportunityInput
-  ): Promise<IOpportunity> {
-    const opportunity = await this.challengeService.createOpportunity(
-      opportunityData
-    );
-    return opportunity;
+  ): Promise<IChallenge> {
+    return await this.challengeService.createOpportunity(opportunityData);
   }
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Updates the specified Challenge.',
   })
   @Profiling.api
@@ -61,7 +68,7 @@ export class ChallengeResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Deletes the specified Challenge.',
   })
   async deleteChallenge(
@@ -75,7 +82,7 @@ export class ChallengeResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Assigns an organisation as a lead for the Challenge.',
   })
   @Profiling.api
@@ -90,7 +97,7 @@ export class ChallengeResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Remove an organisation as a lead for the Challenge.',
   })
   @Profiling.api
@@ -102,15 +109,16 @@ export class ChallengeResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Trigger an event on the Challenge.',
   })
   async eventOnChallenge(
     @Args('challengeEventData')
     challengeEventData: ChallengeEventInput
   ): Promise<IChallenge> {
-    return await this.challengeLifecycleOptionsProvider.eventOnChallenge(
-      challengeEventData
-    );
+    return await this.challengeLifecycleOptionsProvider.eventOnChallenge({
+      eventName: challengeEventData.eventName,
+      ID: challengeEventData.ID,
+    });
   }
 }

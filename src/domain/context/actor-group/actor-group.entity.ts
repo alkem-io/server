@@ -1,57 +1,25 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { EcosystemModel, IActorGroup, Actor } from '@domain/context';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
-import { Actor } from '@domain/context/actor/actor.entity';
-import { Opportunity } from '@domain/challenge/opportunity/opportunity.entity';
-import { IActorGroup } from './actor-group.interface';
+export enum RestrictedActorGroupNames {
+  Collaborators = 'collaborators',
+}
 
 @Entity()
-@ObjectType()
-export class ActorGroup extends BaseEntity implements IActorGroup {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String)
+export class ActorGroup extends BaseCherrytwistEntity implements IActorGroup {
   @Column()
   name: string;
 
-  @Field(() => String, {
-    nullable: true,
-    description: 'A description of this group of actors',
-  })
   @Column('text', { nullable: true })
   description?: string;
 
   @ManyToOne(
-    () => Opportunity,
-    opportunity => opportunity.projects
+    () => EcosystemModel,
+    ecosystemModel => ecosystemModel.actorGroups
   )
-  opportunity?: Opportunity;
+  ecosystemModel?: EcosystemModel;
 
-  @Field(() => [Actor], {
-    nullable: true,
-    description: 'The set of actors in this actor group',
-  })
   @OneToMany(
     () => Actor,
     actor => actor.actorGroup,

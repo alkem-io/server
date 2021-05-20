@@ -104,13 +104,15 @@ export class ProfileService {
 
     if (profile.tagsets) {
       for (const tagset of profile.tagsets) {
-        await this.tagsetService.removeTagset({ ID: tagset.id });
+        await this.tagsetService.removeTagset({ ID: tagset.id.toString() });
       }
     }
 
     if (profile.references) {
       for (const reference of profile.references) {
-        await this.referenceService.deleteReference({ ID: reference.id });
+        await this.referenceService.deleteReference({
+          ID: reference.id.toString(),
+        });
       }
     }
 

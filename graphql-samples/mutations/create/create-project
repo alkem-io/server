@@ -1,8 +1,7 @@
 mutation CreateProject($projectData: CreateProjectInput!) {
   createProject(projectData: $projectData) {
     name,
-    description,
-    state
+    description
   }
 }
 

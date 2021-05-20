@@ -10,7 +10,7 @@ import {
   removeUserGroupMutation,
   updateGroupMutation,
 } from '../group/group.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
+import { createChildChallengeMutation } from '../opportunity/opportunity.request.params';
 import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
 import { createGroupOnCommunityMutation } from '../community/community.request.params';
 
@@ -61,7 +61,7 @@ beforeAll(async () => {
     responseCreateChallenge.body.data.createChallenge.community.id;
 
   // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+  const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
     challengeId,
     opportunityName,
     opportunityTextId

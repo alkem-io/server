@@ -69,4 +69,26 @@ export class CredentialService {
       return credentialMatches;
     }
   }
+
+  async countMatchingCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<number> {
+    if (!credentialCriteria.resourceID) {
+      return await this.credentialRepository
+        .createQueryBuilder('credential')
+        .leftJoinAndSelect('credential.agent', 'agent')
+        .where({
+          type: `${credentialCriteria.type}`,
+        })
+        .getCount();
+    }
+    return await this.credentialRepository
+      .createQueryBuilder('credential')
+      .leftJoinAndSelect('credential.agent', 'agent')
+      .where({
+        type: `${credentialCriteria.type}`,
+        resourceID: `${credentialCriteria.resourceID}`,
+      })
+      .getCount();
+  }
 }

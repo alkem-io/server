@@ -2,7 +2,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
@@ -13,11 +12,15 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
-import { CreateTagsetInput, UpdateTagsetInput } from '@domain/common/tagset';
+import { ITagsetable } from '@src/common/interfaces';
+import {
+  CreateTagsetInput,
+  UpdateTagsetInput,
+  DeleteTagsetInput,
+} from '@domain/common/tagset';
 import validator from 'validator';
-import { Ecoverse } from '@domain/challenge/ecoverse';
-import { DeleteTagsetInput } from './tagset.dto.delete';
+import {} from './tagset.dto.delete';
+import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 
 @Injectable()
 export class TagsetService {
@@ -62,15 +65,15 @@ export class TagsetService {
   }
 
   async removeTagset(deleteData: DeleteTagsetInput): Promise<ITagset> {
-    const tagsetID = deleteData.ID;
+    const tagsetID = parseInt(deleteData.ID);
     const tagset = await this.getTagsetByIdOrFail(tagsetID);
     const result = await this.tagsetRepository.remove(tagset as Tagset);
-    result.id = deleteData.ID;
+    result.id = tagsetID;
     return result;
   }
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
-    const tagset = await this.getTagsetByIdOrFail(tagsetData.ID);
+    const tagset = await this.getTagsetByIdOrFail(parseInt(tagsetData.ID));
     this.updateTagsetValues(tagset, tagsetData);
     return await this.tagsetRepository.save(tagset);
   }
@@ -99,7 +102,9 @@ export class TagsetService {
     if (tagsetsData) {
       for (const tagsetData of tagsetsData) {
         // check the Tagset being update is part of the current entity
-        const tagset = tagsets.find(tagset => tagset.id == tagsetData.ID);
+        const tagset = tagsets.find(
+          tagset => tagset.id == parseInt(tagsetData.ID)
+        );
         if (!tagset)
           throw new EntityNotFoundException(
             `Unable to update Tagset with supplied ID: ${tagsetData.ID} - no such Tagset in parent entity.`,
@@ -111,7 +116,7 @@ export class TagsetService {
     return tagsets;
   }
 
-  replaceTagsOnEntity(entity: Challenge | Project | Ecoverse, tags: string[]) {
+  replaceTagsOnEntity(entity: BaseChallenge | Project, tags: string[]) {
     if (!entity.tagset)
       throw new EntityNotInitializedException(
         `Entity with id(${entity.id}) not initialised with a tagset!`,

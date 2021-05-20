@@ -1,58 +1,14 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToMany,
-  OneToMany,
-  OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Entity, JoinColumn, ManyToMany, OneToMany, OneToOne } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
-import { Challenge } from '@domain/challenge';
+import { Challenge } from '@domain/challenge/challenge';
+import { IdentifiableEntity } from '@domain/common/identifiable-entity';
 
 @Entity()
-@ObjectType()
-export class Organisation extends BaseEntity
+export class Organisation extends IdentifiableEntity
   implements IOrganisation, IGroupable {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String, { nullable: false, description: '' })
-  @Column()
-  name: string;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'A short text identifier for this Organisation',
-  })
-  @Column()
-  textID: string;
-
-  @OneToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.host
-  )
-  hostedEcoverse?: Ecoverse;
-
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
@@ -71,9 +27,7 @@ export class Organisation extends BaseEntity
   )
   challenges!: Challenge[];
 
-  constructor(textID: string) {
+  constructor() {
     super();
-    this.name = '';
-    this.textID = textID;
   }
 }

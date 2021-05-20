@@ -1,45 +1,18 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
-import { IUserGroup } from './user-group.interface';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { IUserGroup } from '@domain/community/user-group';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { Community } from '../community';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
-@ObjectType()
-export class UserGroup extends BaseEntity implements IUserGroup {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String)
+export class UserGroup extends BaseCherrytwistEntity implements IUserGroup {
   @Column()
   name: string;
 
-  @Field(() => Profile, {
-    nullable: true,
-    description: 'The profile for the user group',
-  })
+  @Column()
+  ecoverseID?: string;
+
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;

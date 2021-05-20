@@ -4,8 +4,6 @@ import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { CreateOpportunityInput } from '@domain/challenge/opportunity/opportunity.dto.create';
-import { OpportunityService } from '@domain/challenge/opportunity/opportunity.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -13,12 +11,8 @@ import { DataManagementService } from './data-management.service';
 import { CreateOrganisationInput } from '@domain/community/organisation/organisation.dto.create';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import { CreateProjectInput } from '@domain/collaboration/project';
-import { CreateAspectInput } from '@domain/context/aspect';
-import { CreateRelationInput } from '@domain/collaboration/relation';
-import { CreateActorGroupInput } from '@domain/context/actor-group';
-import { CreateActorInput } from '@domain/context/actor';
-import { CreateUserGroupInput } from '@domain/community';
+import { ContextService } from '@domain/context/context/context.service';
+import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
 
 export type TestDataServiceInitResult = {
   userId: number;
@@ -33,16 +27,16 @@ export type TestDataServiceInitResult = {
   removeChallangeId: number;
   opportunityId: number;
   removeOpportunityId: number;
-  projectId: number;
-  aspectId: number;
-  aspectOnProjectId: number;
-  relationId: number;
-  //addUserToOpportunityId: number;
-  groupIdEcoverse: number;
-  createGroupOnChallengeId: number;
+  // projectId: number;
+  // //aspectId: number;
+  // aspectOnProjectId: number;
+  // relationId: number;
+  // //addUserToOpportunityId: number;
+  // groupIdEcoverse: number;
+  // createGroupOnChallengeId: number;
   //assignGroupFocalPointId: number;
-  actorGroupId: number;
-  actorId: number;
+  // actorGroupId: number;
+  // actorId: number;
   tagsetId: number;
   contextId: number;
 };
@@ -54,8 +48,9 @@ export class TestDataService {
     private userService: UserService,
     private challengeService: ChallengeService,
     private communityService: CommunityService,
+    private contextService: ContextService,
+    private ecosystemModelService: EcosystemModelService,
     private organisationService: OrganisationService,
-    private opportunityService: OpportunityService,
     private userGroupService: UserGroupService,
     private projectService: ProjectService,
     private actorGroupService: ActorGroupService,
@@ -97,7 +92,7 @@ export class TestDataService {
 
   async initChallenge(): Promise<number> {
     const challenge = new CreateChallengeInput();
-    challenge.parentID = 1;
+    challenge.parentID = '1';
     challenge.name = `${this.challengeName}`;
     challenge.textID = `${this.uniqueTextId}`;
     challenge.context = {
@@ -121,7 +116,7 @@ export class TestDataService {
 
   async initRemoveChallenge(): Promise<number> {
     const response = await this.ecoverseService.createChallenge({
-      parentID: 1,
+      parentID: '1',
       name: 'Remove-challenge',
       textID: 'remove-chall',
       tags: ['test1', 'test2'],
@@ -129,9 +124,9 @@ export class TestDataService {
     return response.id;
   }
 
-  async initOpportunity(challengeId: number): Promise<number> {
-    const opportunity = new CreateOpportunityInput();
-    opportunity.parentID = `${challengeId}`;
+  async initChildChallenge(challengeId: number): Promise<number> {
+    const opportunity = new CreateChallengeInput();
+    opportunity.parentID = challengeId.toString();
     opportunity.name = 'init opportunity name';
     opportunity.textID = 'init-opport';
     opportunity.context = {
@@ -148,60 +143,66 @@ export class TestDataService {
       vision: 'test opportunity vision',
       who: 'test opportunity who',
     };
-    const response = await this.challengeService.createOpportunity(opportunity);
+    const response = await this.challengeService.createChildChallenge(
+      opportunity
+    );
     return response.id;
   }
 
-  async initRemoveOpportunity(challengeId: number): Promise<number> {
-    const opportunity = new CreateOpportunityInput();
-    opportunity.parentID = `${challengeId}`;
+  async initRemoveChildChallenge(challengeId: number): Promise<number> {
+    const opportunity = new CreateChallengeInput();
+    opportunity.parentID = challengeId.toString();
     opportunity.name = 'init remove opportunity name';
     opportunity.textID = 'remove-opport';
-    const response = await this.challengeService.createOpportunity(opportunity);
+    const response = await this.challengeService.createChildChallenge(
+      opportunity
+    );
     return response.id;
   }
 
-  async initProject(opportunityId: number): Promise<number> {
-    const project = new CreateProjectInput();
-    project.name = 'init project name';
-    project.textID = 'init-project';
-    project.description = 'init project description';
-    project.parentID = opportunityId;
-    const response = await this.opportunityService.createProject(project);
-    return response.id;
-  }
+  // async initProject(opportunityId: number): Promise<number> {
+  //   const project = new CreateProjectInput();
+  //   project.name = 'init project name';
+  //   project.textID = 'init-project';
+  //   project.description = 'init project description';
+  //   project.parentID = opportunityId;
+  //   // const response = await this.opportunityService.createProject(project);
+  //   // return response.id;
+  //   return 1;
+  // }
 
-  async initAspect(opportunityId: number): Promise<number> {
-    const aspect = new CreateAspectInput();
-    aspect.explanation = 'init aspect explanation';
-    aspect.framing = 'init aspect framing';
-    aspect.title = 'init aspect title';
-    aspect.parentID = opportunityId;
-    const response = await this.opportunityService.createAspect(aspect);
-    return response.id;
-  }
+  // async initAspect(opportunityId: number): Promise<number> {
+  //   const aspect = new CreateAspectInput();
+  //   aspect.explanation = 'init aspect explanation';
+  //   aspect.framing = 'init aspect framing';
+  //   aspect.title = 'init aspect title';
+  //   aspect.parentID = opportunityId;
+  //   const response = await this.contextService.createAspect(aspect);
+  //   return response.id;
+  // }
 
-  async initAspectOnProject(projectId: number): Promise<number> {
-    const aspect = new CreateAspectInput();
-    aspect.explanation = 'init project aspect explanation';
-    aspect.framing = 'init project aspect framing';
-    aspect.title = 'init project aspect title';
-    aspect.parentID = projectId;
-    const response = await this.projectService.createAspect(aspect);
-    return response.id;
-  }
+  // async initAspectOnProject(projectId: number): Promise<number> {
+  //   const aspect = new CreateAspectInput();
+  //   aspect.explanation = 'init project aspect explanation';
+  //   aspect.framing = 'init project aspect framing';
+  //   aspect.title = 'init project aspect title';
+  //   aspect.parentID = projectId;
+  //   const response = await this.projectService.createAspect(aspect);
+  //   return response.id;
+  // }
 
-  async initRelation(opportunityId: number): Promise<number> {
-    const relation = new CreateRelationInput();
-    relation.actorName = 'init relation actor name';
-    relation.actorRole = 'init relation actor role';
-    relation.actorType = 'init relation actor type';
-    relation.description = 'init relation description';
-    relation.type = 'incoming';
-    relation.parentID = opportunityId;
-    const response = await this.opportunityService.createRelation(relation);
-    return response.id;
-  }
+  // async initRelation(opportunityId: number): Promise<number> {
+  //   const relation = new CreateRelationInput();
+  //   relation.actorName = 'init relation actor name';
+  //   relation.actorRole = 'init relation actor role';
+  //   relation.actorType = 'init relation actor type';
+  //   relation.description = 'init relation description';
+  //   relation.type = 'incoming';
+  //   relation.parentID = opportunityId;
+  //   // todo: const response = await this.opportunityService.createRelation(relation);
+  //   //todo: return response.id;
+  //   return 1;
+  // }
 
   // async initAddUserToOpportunity(opportunityId: number): Promise<number> {
   //   const createdTestUser = (await this.userService.getUserByEmail(
@@ -214,47 +215,49 @@ export class TestDataService {
   //   return response.id;
   // }
 
-  async initCreateGroupOnEcoverse(): Promise<number> {
-    const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail({
-      relations: ['community'],
-    });
-    const community = ecoverse.community;
-    if (!community) throw new Error();
-    const groupInput = new CreateUserGroupInput();
-    groupInput.name = this.groupName;
-    groupInput.parentID = community.id;
-    const response = await this.communityService.createGroup(groupInput);
-    return response.id;
-  }
+  // async initCreateGroupOnEcoverse(): Promise<number> {
+  //   const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail({
+  //     relations: ['community'],
+  //   });
+  //   const community = this.ecoverseService.getChallenge(ecoverse).community;
+  //   if (!community) throw new Error();
+  //   const groupInput = new CreateUserGroupInput();
+  //   groupInput.name = this.groupName;
+  //   groupInput.parentID = community.id;
+  //   const response = await this.communityService.createGroup(groupInput);
+  //   return response.id;
+  // }
 
-  async initCreateGroupOnChallenge(challengeId: number): Promise<number> {
-    const community = await this.challengeService.getCommunity(challengeId);
-    const groupInput = new CreateUserGroupInput();
-    groupInput.name = this.groupName;
-    groupInput.parentID = community.id;
-    const response = await this.communityService.createGroup(groupInput);
-    return response.id;
-  }
+  // async initCreateGroupOnChallenge(challengeId: number): Promise<number> {
+  //   const community = await this.challengeService.getCommunity(challengeId);
+  //   const groupInput = new CreateUserGroupInput();
+  //   groupInput.name = this.groupName;
+  //   groupInput.parentID = community.id;
+  //   const response = await this.communityService.createGroup(groupInput);
+  //   return response.id;
+  // }
 
-  async initActorGroup(opportunityId: number): Promise<number> {
-    const actorGroup = new CreateActorGroupInput();
-    actorGroup.name = 'init actorGroup name';
-    actorGroup.description = 'init actorGroup description';
-    actorGroup.parentID = opportunityId;
-    const response = await this.opportunityService.createActorGroup(actorGroup);
-    return response.id;
-  }
+  // async initActorGroup(opportunityId: number): Promise<number> {
+  //   const actorGroup = new CreateActorGroupInput();
+  //   actorGroup.name = 'init actorGroup name';
+  //   actorGroup.description = 'init actorGroup description';
+  //   actorGroup.parentID = opportunityId;
+  //   const response = await this.ecosystemModelService.createActorGroup(
+  //     actorGroup
+  //   );
+  //   return response.id;
+  // }
 
-  async initActor(actorGroupId: number): Promise<number> {
-    const actor = new CreateActorInput();
-    actor.parentID = actorGroupId;
-    actor.name = 'init actor name';
-    actor.impact = 'init actor impact';
-    actor.value = 'init actor value';
-    actor.description = 'init actor description';
-    const response = await this.actorGroupService.createActor(actor);
-    return response.id;
-  }
+  // async initActor(actorGroupId: number): Promise<number> {
+  //   const actor = new CreateActorInput();
+  //   actor.parentID = actorGroupId;
+  //   actor.name = 'init actor name';
+  //   actor.impact = 'init actor impact';
+  //   actor.value = 'init actor value';
+  //   actor.description = 'init actor description';
+  //   const response = await this.actorGroupService.createActor(actor);
+  //   return response.id;
+  // }
 
   async initGetUserId(userEmail: string): Promise<number> {
     const response = await this.userService.getUserByEmailOrFail(userEmail);
@@ -280,11 +283,21 @@ export class TestDataService {
     return response.context?.id;
   }
 
+  async initGetContextIdChildChallenge(opportunityId: number): Promise<any> {
+    const response = await this.challengeService.getChallengeByIdOrFail(
+      opportunityId
+    );
+    console.log(response);
+    return response.context?.id;
+  }
+
   async teardownChallenges(challengeId: number) {
     const challengeToRemove = (await this.challengeService.getChallengeByIdOrFail(
       challengeId
     )) as IChallenge;
-    await this.challengeService.deleteChallenge({ ID: challengeToRemove?.id });
+    await this.challengeService.deleteChallenge({
+      ID: challengeToRemove?.id.toString(),
+    });
   }
 
   // async removeUserFromGroups() {
@@ -309,24 +322,25 @@ export class TestDataService {
     const organisationId = await this.initOrganisation();
     const challengeId = await this.initChallenge();
     const removeChallangeId = await this.initRemoveChallenge();
-    const opportunityId = await this.initOpportunity(challengeId);
-    const removeOpportunityId = await this.initRemoveOpportunity(
+    const opportunityId = await this.initChildChallenge(challengeId);
+    const removeOpportunityId = await this.initRemoveChildChallenge(
       removeChallangeId
     );
-    const projectId = await this.initProject(opportunityId);
-    const aspectId = await this.initAspect(opportunityId);
-    const aspectOnProjectId = await this.initAspectOnProject(projectId);
-    const relationId = await this.initRelation(opportunityId);
-    // const addUserToOpportunityId = await this.initAddUserToOpportunity(
-    //   opportunityId
+    // // const contextIdChildChallenge = await this.initGetContextIdChildChallenge(opportunityId)
+    // //const aspectId = await this.initAspect(contextIdChildChallenge);
+    // const projectId = await this.initProject(opportunityId);
+    // const aspectOnProjectId = await this.initAspectOnProject(projectId);
+    // const relationId = await this.initRelation(opportunityId);
+    // // const addUserToOpportunityId = await this.initAddUserToOpportunity(
+    // //   opportunityId
+    // // );
+    // const groupIdEcoverse = await this.initCreateGroupOnEcoverse();
+    // const createGroupOnChallengeId = await this.initCreateGroupOnChallenge(
+    //   challengeId
     // );
-    const groupIdEcoverse = await this.initCreateGroupOnEcoverse();
-    const createGroupOnChallengeId = await this.initCreateGroupOnChallenge(
-      challengeId
-    );
 
-    const actorGroupId = await this.initActorGroup(opportunityId);
-    const actorId = await this.initActor(actorGroupId);
+    // const actorGroupId = await this.initActorGroup(opportunityId);
+    // const actorId = await this.initActor(actorGroupId);
     const tagsetId = await this.initGetTagsetId(challengeId);
     const contextId = await this.initGetContextId(challengeId);
     // const ecoverseAdminId = await this.initUserId(this.ecoverseAdminEmail);
@@ -346,16 +360,16 @@ export class TestDataService {
       removeChallangeId,
       opportunityId,
       removeOpportunityId,
-      projectId,
-      aspectId,
-      //addUserToOpportunityId,
-      groupIdEcoverse,
-      aspectOnProjectId,
-      relationId,
-      createGroupOnChallengeId,
-      // assignGroupFocalPointId,
-      actorGroupId,
-      actorId,
+      //   projectId,
+      //  // aspectId,
+      //   //addUserToOpportunityId,
+      //   groupIdEcoverse,
+      //   aspectOnProjectId,
+      //   relationId,
+      //   createGroupOnChallengeId,
+      //   // assignGroupFocalPointId,
+      //   actorGroupId,
+      //   actorId,
       tagsetId,
       contextId,
       // ecoverseAdminId,

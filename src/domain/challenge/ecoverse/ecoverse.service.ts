@@ -1,19 +1,11 @@
 import { IChallenge, CreateChallengeInput } from '@domain/challenge/challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { Context } from '@domain/context/context/context.entity';
-import { ContextService } from '@domain/context/context/context.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import {
-  RestrictedTagsetNames,
-  Tagset,
-} from '@domain/common/tagset/tagset.entity';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -26,20 +18,24 @@ import {
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { ICommunity } from '@domain/community/community';
-import { CommunityService } from '@domain/community/community/community.service';
-import { CommunityType } from '@common/enums/community.types';
-import { IOpportunity } from '@domain/challenge/opportunity';
 import validator from 'validator';
 import { IUserGroup } from '@domain/community/user-group';
+import { INVP, NVP } from '@domain/common/nvp';
+import { ProjectService } from '@domain/collaboration/project/project.service';
+import { IProject } from '@domain/collaboration/project';
+import { IContext } from '@domain/context';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
+    private projectService: ProjectService,
+    private opportunityService: OpportunityService,
+    private challengeBaseService: BaseChallengeService,
     private challengeService: ChallengeService,
-    private contextService: ContextService,
-    private communityService: CommunityService,
-    private tagsetService: TagsetService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -47,33 +43,27 @@ export class EcoverseService {
 
   async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
     const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
-    if (!ecoverse.challenges) {
-      ecoverse.challenges = [];
-    }
-
-    if (!ecoverse.organisations) {
-      ecoverse.organisations = [];
-    }
-
-    if (!ecoverse.tagset) {
-      ecoverse.tagset = await this.tagsetService.createTagset({
-        name: RestrictedTagsetNames.Default,
-      });
-    }
-
-    if (!ecoverse.context) {
-      ecoverse.context = await this.contextService.createContext({});
-    }
-
-    ecoverse.community = await this.communityService.createCommunity(
-      ecoverse.name,
-      CommunityType.ECOVERSE
+    await this.ecoverseRepository.save(ecoverse);
+    ecoverse.challenge = await this.challengeService.createChallenge(
+      {
+        parentID: ecoverse.id.toString(),
+        name: `ecoverse-${ecoverseData.name}`,
+        context: ecoverseData.context,
+        textID: `ecoverse-${ecoverseData.textID}`,
+        tags: ecoverseData.tags,
+      },
+      ecoverse.id.toString()
     );
+    ecoverse.challenge.ecoverseID = ecoverse.id.toString();
 
-    if (!ecoverse.host) {
+    if (ecoverseData.hostID) {
+      ecoverse.host = await this.organisationService.getOrganisationOrFail(
+        ecoverseData.hostID
+      );
+    } else {
       ecoverse.host = await this.organisationService.createOrganisation({
-        name: 'Default host organisation',
-        textID: 'DefaultHostOrg',
+        name: `host-org-${ecoverseData.textID}`,
+        textID: `host-${ecoverseData.textID}`,
       });
     }
     return await this.ecoverseRepository.save(ecoverse);
@@ -110,127 +100,99 @@ export class EcoverseService {
     return ecoverse;
   }
 
+  getChallenge(ecoverse: IEcoverse): IChallenge {
+    const challenge = ecoverse.challenge;
+    if (!challenge) {
+      throw new EntityNotInitializedException(
+        `Unable to find Ecoverse with ID: ${ecoverse.id}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return challenge;
+  }
+
   async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {
-    const ecoverseWithChallenges = await this.getEcoverseByIdOrFail(
-      ecoverse.id,
-      {
-        relations: ['challenges'],
-      }
-    );
-    return ecoverseWithChallenges.challenges || [];
+    const challenge = this.getChallenge(ecoverse);
+    return await this.challengeService.getChildChallenges(challenge);
   }
 
   async getGroups(ecoverse: IEcoverse): Promise<IUserGroup[]> {
-    const ecoverseWithGroups = await this.getEcoverseByIdOrFail(ecoverse.id, {
-      relations: ['community'],
-    });
-    return ecoverseWithGroups.community?.groups || [];
+    const community = await this.getCommunity(ecoverse);
+    return community.groups || [];
   }
 
   async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
-    const opportunities: IOpportunity[] = [];
     const challenges = await this.getChallenges(ecoverse);
+    const opportunities: IOpportunity[] = [];
     for (const challenge of challenges) {
       const childOpportunities = await this.challengeService.getOpportunities(
-        challenge
+        challenge.id
       );
-      childOpportunities.forEach(opportunity =>
-        opportunities.push(opportunity)
-      );
+      for (const childOpportunity of childOpportunities) {
+        const opportunity = await this.opportunityService.getOpportunityByIdOrFail(
+          childOpportunity.id,
+          {
+            relations: ['context'],
+          }
+        );
+        opportunities.push(opportunity);
+      }
     }
     return opportunities;
   }
 
-  async getCommunity(ecoverseId: number): Promise<ICommunity> {
-    const ecoverse = await this.getEcoverseByIdOrFail(ecoverseId, {
-      relations: ['community'],
-    });
-    const community = ecoverse.community;
-    if (!community)
-      throw new RelationshipNotFoundException(
-        `Unable to load community for ecoverse ${ecoverseId}`,
-        LogContext.COMMUNITY
-      );
-    return community;
+  async getCommunity(ecoverse: IEcoverse): Promise<ICommunity> {
+    const challenge = this.getChallenge(ecoverse);
+    return await this.challengeService.getCommunity(challenge.id);
+  }
+
+  async getContext(ecoverse: IEcoverse): Promise<IContext> {
+    const challenge = this.getChallenge(ecoverse);
+    return await this.challengeService.getContext(challenge.id);
   }
 
   async createChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
-    const ecoverse = await this.getEcoverseByIdOrFail(challengeData.parentID, {
-      relations: ['challenges', 'community'],
-    });
+    const ecoverse = await this.getEcoverseOrFail(challengeData.parentID);
+    const challenges = await this.getChallenges(ecoverse);
 
-    if (!ecoverse.challenges) {
-      throw new EntityNotInitializedException(
-        'Challenges must be defined',
-        LogContext.CHALLENGES
-      );
-    }
-    // First check if the challenge already exists on not...
-    let challenge = ecoverse.challenges.find(
-      c => c.name === challengeData.name
+    this.challengeBaseService.checkForIdentifiableNameDuplication(
+      challenges,
+      challengeData.name
     );
-    if (challenge) {
-      // already have a challenge with the given name, not allowed
-      throw new ValidationException(
-        `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`,
-        LogContext.CHALLENGES
-      );
-    }
-    // No existing challenge found, create and initialise a new one!
-    challenge = await this.challengeService.createChallenge(challengeData);
+    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
+      challenges,
+      challengeData.textID
+    );
 
-    ecoverse.challenges.push(challenge);
+    // No existing challenge found, create and initialise a new one!
+    const newChallenge = await this.challengeService.createChildChallenge(
+      challengeData
+    );
     await this.ecoverseRepository.save(ecoverse);
 
-    // Finally set the community relationship
-    await this.communityService.setParentCommunity(
-      challenge.community,
-      ecoverse.community
-    );
-
-    return challenge;
+    return newChallenge;
   }
 
   async update(ecoverseData: UpdateEcoverseInput): Promise<IEcoverse> {
     const ecoverse = await this.getEcoverseOrFail(ecoverseData.ID);
-
-    // Copy over the received data
-    if (ecoverseData.name) {
-      ecoverse.name = ecoverseData.name;
-    }
-
-    if (ecoverseData.context) {
-      if (!ecoverse.context) {
-        ecoverse.context = new Context();
-      }
-      ecoverse.context = await this.contextService.updateContext(
-        ecoverse.context,
-        ecoverseData.context
-      );
-    }
-
-    if (ecoverseData.tags) {
-      if (!ecoverse.tagset) {
-        ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
-      }
-      await this.tagsetService.replaceTagsOnEntity(
-        ecoverse as Ecoverse,
-        ecoverseData.tags
-      );
-    }
+    const challenge = this.getChallenge(ecoverse);
 
     if (ecoverseData.hostID) {
-      const organisation = await this.organisationService.getOrganisationOrFail(
+      ecoverse.host = await this.organisationService.getOrganisationOrFail(
         ecoverseData.hostID
       );
-      ecoverse.host = organisation;
     }
 
-    await this.ecoverseRepository.save(ecoverse);
+    ecoverse.challenge = await this.challengeService.updateChallenge({
+      ID: challenge.id.toString(),
+      name: ecoverseData.name,
+      context: ecoverseData.context,
+      tags: ecoverseData.tags,
+    });
 
-    return ecoverse;
+    return await this.ecoverseRepository.save(ecoverse);
   }
 
   async getDefaultEcoverseOrFail(
@@ -241,11 +203,7 @@ export class EcoverseService {
   }
 
   async getDefaultEcoverseId(): Promise<number> {
-    const ecoverse = await this.ecoverseRepository
-      .createQueryBuilder('ecoverse')
-      .select('ecoverse.id')
-      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
-
+    const ecoverse = await this.ecoverseRepository.findOne();
     if (!ecoverse) {
       throw new ValidationException(
         'Ecoverse is missing!',
@@ -253,5 +211,48 @@ export class EcoverseService {
       );
     }
     return ecoverse.id;
+  }
+
+  async getProjects(ecoverse: IEcoverse): Promise<IProject[]> {
+    return await this.projectService.getProjects(ecoverse.id.toString());
+  }
+
+  async getActivity(ecoverse: IEcoverse): Promise<INVP[]> {
+    const challenge = this.getChallenge(ecoverse);
+    // this will have members + challenges populated
+    const activity: INVP[] = [];
+
+    // Challenges
+    const childChallengesCount = await this.challengeService.getChildChallengesCount(
+      challenge.id
+    );
+    const challengesTopic = new NVP(
+      'challenges',
+      childChallengesCount.toString()
+    );
+    activity.push(challengesTopic);
+
+    const allChallengesCount = await this.challengeService.getAllChallengesCount(
+      ecoverse.id
+    );
+    const opportunitiesTopic = new NVP(
+      'opportunities',
+      (allChallengesCount - childChallengesCount - 1).toString()
+    );
+    activity.push(opportunitiesTopic);
+
+    // Projects
+    const projectsCount = await this.projectService.getProjectsCount(
+      ecoverse.id
+    );
+    const projectsTopic = new NVP('projects', projectsCount.toString());
+    activity.push(projectsTopic);
+
+    // Members
+    const membersCount = await this.challengeService.getMembersCount(challenge);
+    const membersTopic = new NVP('members', membersCount.toString());
+    activity.push(membersTopic);
+
+    return activity;
   }
 }

@@ -1,6 +1,7 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
-import { lifecycleData } from '@test/functional/integration/lifecycle/lifecycle.request.params';
+import { lifecycleData } from '@test/utils/common-params';
+
 
 export const appData = `{
       id
@@ -8,7 +9,9 @@ export const appData = `{
         name
         value
       }
-      ${lifecycleData}
+      lifecycle {
+        ${lifecycleData}
+      }
       user {
         id
       }
@@ -44,7 +47,9 @@ export const removeApplicationMutation = async (appId: any) => {
             id
             name
           }
-          ${lifecycleData}
+          lifecycle {
+            ${lifecycleData}
+          }
           user {
             id
           }}}`,

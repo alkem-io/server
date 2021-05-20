@@ -1,9 +1,9 @@
-import { AnyNsRecord } from 'dns';
+import { challengeDataTest, communityData, contextData, lifecycleData } from '@test/utils/common-params';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
 import { TestUser } from '../../../utils/token.helper';
-import { lifecycleData } from '../lifecycle/lifecycle.request.params';
 
-export const createOpportunityOnChallengeMutation = async (
+
+export const createChildChallengeMutation = async (
   challengeId: string,
   oppName: string,
   oppTextId: string,
@@ -11,31 +11,13 @@ export const createOpportunityOnChallengeMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createOpportunity($opportunityData: CreateOpportunityInput!) {
-      createOpportunity(opportunityData: $opportunityData) {
-        id
-        name
-        textID
-        ${lifecycleData}
-        context {
-          id
-          tagline
-          background
-          vision
-          impact
-          who
-          references {
-            id
-            name
-            uri
-            description
-          }
-        }
-        community{id members{id} }
+    query: `mutation createChildChallenge($challengeData: CreateChallengeInput!) {
+      createChildChallenge(challengeData: $challengeData) {
+        ${challengeDataTest}
       }
     }`,
     variables: {
-      opportunityData: {
+      challengeData: {
         parentID: challengeId,
         name: oppName,
         textID: oppTextId,
@@ -262,32 +244,13 @@ export const queryOpportunitySubEntities = async (opportunityId: string) => {
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
-export const queryOpportunitiesSubEntities = async () => {
+export const queryChallengesSubEntities = async () => {
   const requestParams = {
     operationName: null,
     query: `query {
       ecoverse{
-      opportunities {
-        aspects {
-          title
-        }
-        projects {
-          name
-        }
-        actorGroups {
-          name
-        }
-        relations {
-          actorName
-        }
-        community {
-          groups {
-            name
-          }
-        }
-        context {
-          tagline
-        }
+      challenges  {
+        ${subChallengesSubEntities}
       }
     }
   }`,
@@ -295,3 +258,34 @@ export const queryOpportunitiesSubEntities = async () => {
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
+
+export const subChallengesSubEntities = `
+  id
+  community {
+    groups {
+      id
+    }
+  }
+  collaboration {
+    relations {
+      id
+    }
+    projects {
+      id
+    }
+  }
+  context {
+    id
+    aspects {
+      id
+    }
+    ecosystemModel {
+      id
+      actorGroups {
+        id
+        actors {
+          id
+        }
+      }
+    }
+  }`;

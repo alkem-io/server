@@ -1,5 +1,6 @@
 import { TestUser } from '../../../utils/token.helper';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
+import { collaborationData, relationsData } from '@test/utils/common-params';
 
 export const createRelationMutation = async (
   opportunityId: string,
@@ -13,12 +14,7 @@ export const createRelationMutation = async (
     operationName: null,
     query: `mutation CreateRelation($relationData: CreateRelationInput!) {
       createRelation(relationData: $relationData) {
-        id
-        type
-        description
-        actorName
-        actorType
-        actorRole
+          ${relationsData}
       }
     }`,
     variables: {
@@ -48,12 +44,7 @@ export const updateRelationMutation = async (
     operationName: null,
     query: `mutation updateRelation($relationData: RelationInput!, $ID: Float!) {
         updateRelation(relationData: $relationData, ID: $ID) {
-          id
-          type
-          description
-          actorName
-          actorType
-          actorRole
+          ${relationsData}
         }
       }`,
     variables: {
@@ -91,8 +82,8 @@ export const removeRelationMutation = async (relationId: any) => {
 export const getRelationsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
-      relations{id type actorName actorType actorRole description}}}}`,
+    query: `query {ecoverse {challenge(ID: "${opportunityId}") {
+      ${collaborationData}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

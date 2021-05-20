@@ -1,5 +1,4 @@
 import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
@@ -7,7 +6,6 @@ import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import {
   CreateEcoverseInput,
-  Ecoverse,
   IEcoverse,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
@@ -22,7 +20,7 @@ export class EcoverseResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Ecoverse, {
+  @Mutation(() => IEcoverse, {
     description: 'Creates a new Ecoverse.',
   })
   @Profiling.api
@@ -34,7 +32,7 @@ export class EcoverseResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Ecoverse, {
+  @Mutation(() => IEcoverse, {
     description: 'Updates the Ecoverse.',
   })
   @Profiling.api
@@ -47,7 +45,7 @@ export class EcoverseResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Challenge, {
+  @Mutation(() => IChallenge, {
     description: 'Creates a new Challenge within the specified Ecoverse.',
   })
   @Profiling.api

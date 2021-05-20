@@ -1,11 +1,10 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
+import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { ProjectService } from './project.service';
 import {
   UpdateProjectInput,
-  Project,
   IProject,
   DeleteProjectInput,
   ProjectEventInput,
@@ -23,7 +22,7 @@ export class ProjectResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Project, {
+  @Mutation(() => IProject, {
     description: 'Deletes the specified Project.',
   })
   async deleteProject(
@@ -37,7 +36,7 @@ export class ProjectResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Project, {
+  @Mutation(() => IProject, {
     description: 'Updates the specified Project.',
   })
   async updateProject(
@@ -48,7 +47,7 @@ export class ProjectResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Aspect, {
+  @Mutation(() => IAspect, {
     description: 'Create a new Aspect on the Project.',
   })
   @Profiling.api
@@ -61,7 +60,7 @@ export class ProjectResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Project, {
+  @Mutation(() => IProject, {
     description: 'Trigger an event on the Project.',
   })
   async eventOnProject(

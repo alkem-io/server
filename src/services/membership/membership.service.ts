@@ -51,11 +51,11 @@ export class MembershipService {
             relations: ['ecoverse', 'challenge'],
           }
         );
-        const ecoverse = (community as Community).ecoverse;
+        const ecoverse = (community as Community).ecoverseID;
         const challenge = (community as Community).challenge;
         if (ecoverse) {
           const ecoverseResult = await this.createEcoverseMembershipResult(
-            ecoverse.id
+            Number(ecoverse)
           );
           membership.ecoverses.push(ecoverseResult);
         } else if (challenge) {

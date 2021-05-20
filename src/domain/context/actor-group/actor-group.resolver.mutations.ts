@@ -5,11 +5,10 @@ import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 
 import {
-  ActorGroup,
   IActorGroup,
   DeleteActorGroupInput,
 } from '@domain/context/actor-group';
-import { Actor, IActor, CreateActorInput } from '@domain/context/actor';
+import { IActor, CreateActorInput } from '@domain/context/actor';
 import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver()
@@ -18,7 +17,7 @@ export class ActorGroupResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Actor, {
+  @Mutation(() => IActor, {
     description: 'Creates a new Actor in the specified ActorGroup.',
   })
   async createActor(
@@ -31,7 +30,7 @@ export class ActorGroupResolverMutations {
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ActorGroup, {
+  @Mutation(() => IActorGroup, {
     description:
       'Deletes the specified Actor Group, including contained Actors.',
   })

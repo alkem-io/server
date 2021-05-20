@@ -1,6 +1,5 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 
@@ -8,7 +7,7 @@ import { OrganisationService } from './organisation.service';
 export class OrganisationResolverQueries {
   constructor(private organisationService: OrganisationService) {}
 
-  @Query(() => [Organisation], {
+  @Query(() => [IOrganisation], {
     nullable: false,
     description: 'The Organisations on this platform',
   })
@@ -17,7 +16,7 @@ export class OrganisationResolverQueries {
     return await this.organisationService.getOrganisations();
   }
 
-  @Query(() => Organisation, {
+  @Query(() => IOrganisation, {
     nullable: false,
     description: 'A particular Organisation',
   })

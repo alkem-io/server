@@ -35,7 +35,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT community admin user - queries - authorized', () => {
+describe.skip('DDT community admin user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expected             | expectedForb
@@ -132,7 +132,7 @@ describe('DDT community admin user - queries - authorized', () => {
 // ${opportunitiesProjectsId}          | ${forbiddenCode}
 // ${opportunitiesProjectsAspectsId}   | ${forbiddenCode}
 
-describe('DDT community admin user - Create mutations - authorized', () => {
+describe.skip('DDT community admin user - Create mutations - authorized', () => {
   // Skip due to bug ${'createOrganisationMutation'}       | ${'createOrganisationVariables'}       | ${''}              | ${forbiddenCode}
   // Bug: https://app.zenhub.com/workspaces/cherrytwist-5ecb98b262ebd9f4aec4194c/issues/cherrytwist/server/896
   // ArrangeidName
@@ -170,7 +170,7 @@ describe('DDT community admin user - Create mutations - authorized', () => {
 
 //  Scenario excluded not to load with fake data the AAD   ${createUserMutation}   | ${createUserVariables}  | ${forbiddenCode}
 
-describe('DDT community admin user - Create mutations - NOT authorized', () => {
+describe.skip('DDT community admin user - Create mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -208,7 +208,7 @@ describe('DDT community admin user - Create mutations - NOT authorized', () => {
   );
 });
 
-describe('DDT community admin user - Update mutations - authorized', () => {
+describe.skip('DDT community admin user - Update mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName               | expected
@@ -245,7 +245,7 @@ describe('DDT community admin user - Update mutations - authorized', () => {
   );
 });
 
-describe('DDT community admin user - Update mutations - NOT authorized', () => {
+describe.skip('DDT community admin user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName             | expected
@@ -278,7 +278,7 @@ describe('DDT community admin user - Update mutations - NOT authorized', () => {
   );
 });
 
-describe('DDT community admin user - Remove mutations - authorized', () => {
+describe.skip('DDT community admin user - Remove mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                | variables                | idName      | expected
@@ -310,7 +310,7 @@ describe('DDT community admin user - Remove mutations - authorized', () => {
   );
 });
 
-describe('DDT community admin user - Remove mutations - NOT authorized', () => {
+describe.skip('DDT community admin user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected

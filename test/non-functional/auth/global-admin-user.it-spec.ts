@@ -33,7 +33,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT global admin user - queries - authorized', () => {
+describe.skip('DDT global admin user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expectedAuth         | expectedForb
@@ -130,7 +130,7 @@ describe('DDT global admin user - queries - authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT global admin user - Create mutations - authorized', () => {
+describe.skip('DDT global admin user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -174,7 +174,7 @@ describe('DDT global admin user - Create mutations - authorized', () => {
   );
 });
 
-describe('DDT global admin user - Update mutations - authorized', () => {
+describe.skip('DDT global admin user - Update mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                                    | variables                                    | idName               | expected
@@ -215,7 +215,7 @@ describe('DDT global admin user - Update mutations - authorized', () => {
   );
 });
 
-describe('DDT global admin user - Remove mutations - authorized', () => {
+describe.skip('DDT global admin user - Remove mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected
