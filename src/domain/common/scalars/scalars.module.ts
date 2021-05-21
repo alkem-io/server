@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { TextID } from './scalar.textid';
+import { NameID } from './scalar.name.id';
 
 @Module({
   imports: [],
-  providers: [TextID],
+  providers: [NameID],
   exports: [],
 })
 export class ScalarsModule {}

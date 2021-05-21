@@ -40,7 +40,7 @@ export class MembershipService {
           credential.resourceID
         );
         const orgResult = new MembershipResultEntry(
-          organisation.name,
+          organisation.displayName,
           `organisation:${organisation.id.toString()}`
         );
         membership.organisations.push(orgResult);
@@ -75,7 +75,7 @@ export class MembershipService {
       const ecoverseResult = membership.ecoverses[0];
       for (const challenge of storedChallenges) {
         const challengeResult = new MembershipResultEntry(
-          challenge.name,
+          challenge.displayName,
           `challenge:${challenge.id.toString()}`
         );
         ecoverseResult.challenges.push(challengeResult);
@@ -102,7 +102,7 @@ export class MembershipService {
       }
     );
     const ecoverseResult = new MembershipEcoverseResultEntry();
-    ecoverseResult.name = ecoverse.name;
+    ecoverseResult.name = ecoverse.displayName;
     ecoverseResult.id = `ecoverse:${ecoverse.id.toString()}`;
     return ecoverseResult;
   }

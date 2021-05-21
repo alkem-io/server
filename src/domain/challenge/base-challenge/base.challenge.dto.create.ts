@@ -2,10 +2,10 @@ import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { CreateContextInput } from '@domain/context/context';
-import { CreateIdentifiableInput } from '@domain/common/identifiable-entity';
+import { CreateNameableInput } from '@domain/common/nameable-entity';
 
 @InputType()
-export class CreateBaseChallengeInput extends CreateIdentifiableInput {
+export class CreateBaseChallengeInput extends CreateNameableInput {
   @Field(() => CreateContextInput, { nullable: true })
   @IsOptional()
   context?: CreateContextInput;

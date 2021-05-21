@@ -109,8 +109,8 @@ export class ProjectService {
   async updateProject(projectData: UpdateProjectInput): Promise<IProject> {
     const project = await this.getProjectOrFail(projectData.ID);
 
-    if (projectData.name) {
-      project.name = projectData.name;
+    if (projectData.displayName) {
+      project.displayName = projectData.displayName;
     }
     if (projectData.description) {
       project.description = projectData.description;

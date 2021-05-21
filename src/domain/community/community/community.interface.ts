@@ -12,7 +12,7 @@ export abstract class ICommunity extends IBaseCherrytwist {
     nullable: false,
     description: 'The name of the Community',
   })
-  name!: string;
+  displayName!: string;
 
   groups?: IUserGroup[];
 
@@ -24,6 +24,6 @@ export abstract class ICommunity extends IBaseCherrytwist {
 
   constructor() {
     super();
-    this.name = '';
+    this.displayName = '';
   }
 }

@@ -82,8 +82,8 @@ export class TestDataService {
 
   async initOrganisation(): Promise<string> {
     const organisation = new CreateOrganisationInput();
-    organisation.name = `${this.organisationName}`;
-    organisation.textID = `${this.uniqueTextId}`;
+    organisation.displayName = `${this.organisationName}`;
+    organisation.nameID = `${this.uniqueTextId}`;
     const response = await this.organisationService.createOrganisation(
       organisation
     );
@@ -93,8 +93,8 @@ export class TestDataService {
   async initChallenge(): Promise<string> {
     const challenge = new CreateChallengeInput();
     challenge.parentID = '1';
-    challenge.name = `${this.challengeName}`;
-    challenge.textID = `${this.uniqueTextId}`;
+    challenge.displayName = `${this.challengeName}`;
+    challenge.nameID = `${this.uniqueTextId}`;
     challenge.context = {
       background: 'test challenge background',
       impact: 'test challenge impact',
@@ -117,8 +117,8 @@ export class TestDataService {
   async initRemoveChallenge(): Promise<string> {
     const response = await this.ecoverseService.createChallenge({
       parentID: '1',
-      name: 'Remove-challenge',
-      textID: 'remove-chall',
+      displayName: 'Remove-challenge',
+      nameID: 'remove-chall',
       tags: ['test1', 'test2'],
     });
     return response.id;
@@ -127,8 +127,8 @@ export class TestDataService {
   async initChildChallenge(challengeId: string): Promise<string> {
     const opportunity = new CreateChallengeInput();
     opportunity.parentID = challengeId.toString();
-    opportunity.name = 'init opportunity name';
-    opportunity.textID = 'init-opport';
+    opportunity.displayName = 'init opportunity name';
+    opportunity.nameID = 'init-opport';
     opportunity.context = {
       background: 'test opportunity background',
       impact: 'test opportunity impact',
@@ -152,8 +152,8 @@ export class TestDataService {
   async initRemoveChildChallenge(challengeId: string): Promise<string> {
     const opportunity = new CreateChallengeInput();
     opportunity.parentID = challengeId.toString();
-    opportunity.name = 'init remove opportunity name';
-    opportunity.textID = 'remove-opport';
+    opportunity.displayName = 'init remove opportunity name';
+    opportunity.nameID = 'remove-opport';
     const response = await this.challengeService.createChildChallenge(
       opportunity
     );
@@ -270,21 +270,21 @@ export class TestDataService {
   }
 
   async initGetTagsetId(challengeId: string): Promise<any> {
-    const response = await this.challengeService.getChallengeByIdOrFail(
+    const response = await this.challengeService.getChallengeOrFail(
       challengeId
     );
     return response.tagset?.id;
   }
 
   async initGetContextId(challengeId: string): Promise<any> {
-    const response = await this.challengeService.getChallengeByIdOrFail(
+    const response = await this.challengeService.getChallengeOrFail(
       challengeId
     );
     return response.context?.id;
   }
 
   async initGetContextIdChildChallenge(opportunityId: string): Promise<any> {
-    const response = await this.challengeService.getChallengeByIdOrFail(
+    const response = await this.challengeService.getChallengeOrFail(
       opportunityId
     );
     console.log(response);
@@ -292,7 +292,7 @@ export class TestDataService {
   }
 
   async teardownChallenges(challengeId: string) {
-    const challengeToRemove = (await this.challengeService.getChallengeByIdOrFail(
+    const challengeToRemove = (await this.challengeService.getChallengeOrFail(
       challengeId
     )) as IChallenge;
     await this.challengeService.deleteChallenge({

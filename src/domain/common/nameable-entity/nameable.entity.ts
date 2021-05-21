@@ -1,10 +1,10 @@
 import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 import { Column } from 'typeorm';
 
-export abstract class IdentifiableEntity extends BaseCherrytwistEntity {
+export abstract class NameableEntity extends BaseCherrytwistEntity {
   @Column()
-  name!: string;
+  displayName!: string;
 
   @Column()
-  textID!: string;
+  nameID!: string;
 }

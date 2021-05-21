@@ -3,10 +3,10 @@ import { IAspect } from '@domain/context/aspect';
 import { ITagset } from '@domain/common/tagset';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IIdentifiable } from '@domain/common/identifiable-entity';
+import { INameable } from '@domain/common/nameable-entity';
 
 @ObjectType('Project')
-export abstract class IProject extends IIdentifiable {
+export abstract class IProject extends INameable {
   @Field(() => String, { nullable: true, description: '' })
   description?: string;
 

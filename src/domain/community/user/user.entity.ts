@@ -4,10 +4,10 @@ import { Column, Entity, JoinColumn, OneToOne, OneToMany } from 'typeorm';
 import { IUser } from './user.interface';
 import { Application } from '@domain/community/application/application.entity';
 import { Agent } from '@domain/agent/agent';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { NameableEntity } from '@domain/common/nameable-entity';
 
 @Entity()
-export class User extends BaseCherrytwistEntity implements IUser {
+export class User extends NameableEntity implements IUser {
   @Column()
   name: string;
 

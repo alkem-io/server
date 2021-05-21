@@ -104,7 +104,7 @@ export class OpportunityService {
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity> {
     const opportunity = await this.opportunityRepository.findOne(
-      { textID: opportunityID },
+      { nameID: opportunityID },
       options
     );
     if (!opportunity)
@@ -200,13 +200,15 @@ export class OpportunityService {
     const opportunity = await this.getOpportunityByIdOrFail(opportunityId);
 
     // Check that do not already have an Project with the same name
-    const name = projectData.name;
+    const displayName = projectData.displayName;
     const existingProject = opportunity.projects?.find(
-      project => project.name === name || project.textID === projectData.textID
+      project =>
+        project.displayName === displayName ||
+        project.nameID === projectData.nameID
     );
     if (existingProject)
       throw new ValidationException(
-        `Already have an Project with the provided name or textID: ${name} - ${projectData.textID}`,
+        `Already have an Project with the provided name or textID: ${displayName} - ${projectData.nameID}`,
         LogContext.COLLABORATION
       );
 

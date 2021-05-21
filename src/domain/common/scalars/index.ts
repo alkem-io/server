@@ -1,2 +1,2 @@
-export * from './scalar.textid';
+export * from './scalar.name.id';
 export * from './scalar.did';

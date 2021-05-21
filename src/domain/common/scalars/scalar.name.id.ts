@@ -3,10 +3,10 @@ import { ValidationException } from '@common/exceptions';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
 import { Kind, ValueNode } from 'graphql';
 
-@Scalar('TextID')
-export class TextID implements CustomScalar<string, string> {
+@Scalar('NameID')
+export class NameID implements CustomScalar<string, string> {
   description =
-    'A short text based identifier, 3 <= length <= 20. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
+    'A short text based identifier, 3 <= length <= 25. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
 
   parseValue(value: string): string {
     return this.validate(value).toLowerCase();
@@ -37,9 +37,9 @@ export class TextID implements CustomScalar<string, string> {
         LogContext.API
       );
 
-    if (value.length > 20)
+    if (value.length > 25)
       throw new ValidationException(
-        `TextID type maximum length of 20: ${value}`,
+        `TextID type maximum length of 25: ${value}`,
         LogContext.API
       );
 

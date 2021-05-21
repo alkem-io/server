@@ -76,7 +76,7 @@ export class CommunityService {
   async getUserGroups(community: ICommunity): Promise<IUserGroup[]> {
     if (!community.groups) {
       throw new EntityNotInitializedException(
-        `Community not initialized: ${community.name}`,
+        `Community not initialized: ${community.displayName}`,
         LogContext.COMMUNITY
       );
     }
@@ -167,7 +167,7 @@ export class CommunityService {
       );
       if (!isParentMember)
         throw new ValidationException(
-          `User (${userID}) is not a member of parent community: ${community.parentCommunity.name}`,
+          `User (${userID}) is not a member of parent community: ${community.parentCommunity.displayName}`,
           LogContext.CHALLENGES
         );
     }
@@ -243,7 +243,7 @@ export class CommunityService {
       );
       if (!isMember)
         throw new InvalidStateTransitionException(
-          `User ${applicationData.userID} is not a member of the parent Community: ${parentCommunity.name}.`,
+          `User ${applicationData.userID} is not a member of the parent Community: ${parentCommunity.displayName}.`,
           LogContext.COMMUNITY
         );
     }

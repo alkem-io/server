@@ -46,9 +46,9 @@ export class EcoverseService {
     ecoverse.challenge = await this.challengeService.createChallenge(
       {
         parentID: ecoverse.id.toString(),
-        name: `ecoverse-${ecoverseData.name}`,
+        displayName: `ecoverse-${ecoverseData.displayName}`,
         context: ecoverseData.context,
-        textID: `ecoverse-${ecoverseData.textID}`,
+        nameID: `ecoverse-${ecoverseData.nameID}`,
         tags: ecoverseData.tags,
       },
       ecoverse.id.toString()
@@ -61,8 +61,8 @@ export class EcoverseService {
       );
     } else {
       ecoverse.host = await this.organisationService.createOrganisation({
-        name: `host-org-${ecoverseData.textID}`,
-        textID: `host-${ecoverseData.textID}`,
+        displayName: `host-org-${ecoverseData.displayName}`,
+        nameID: `host-${ecoverseData.nameID}`,
       });
     }
     return await this.ecoverseRepository.save(ecoverse);
@@ -151,11 +151,11 @@ export class EcoverseService {
 
     this.challengeBaseService.checkForIdentifiableNameDuplication(
       challenges,
-      challengeData.name
+      challengeData.displayName
     );
     this.challengeBaseService.checkForIdentifiableTextIdDuplication(
       challenges,
-      challengeData.textID
+      challengeData.nameID
     );
 
     // No existing challenge found, create and initialise a new one!
@@ -179,7 +179,7 @@ export class EcoverseService {
 
     ecoverse.challenge = await this.challengeService.updateChallenge({
       ID: challenge.id.toString(),
-      name: ecoverseData.name,
+      displayName: ecoverseData.displayName,
       context: ecoverseData.context,
       tags: ecoverseData.tags,
     });

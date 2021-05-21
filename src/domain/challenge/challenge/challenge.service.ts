@@ -88,7 +88,7 @@ export class ChallengeService {
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.getChallengeByIdOrFail(challengeID, {
+    const challenge = await this.getChallengeOrFail(challengeID, {
       relations: [
         'childChallenges',
         'community',
@@ -144,7 +144,7 @@ export class ChallengeService {
   }
 
   async getOpportunities(challengeId: string): Promise<IOpportunity[]> {
-    const challenge = await this.getChallengeByIdOrFail(challengeId, {
+    const challenge = await this.getChallengeOrFail(challengeId, {
       relations: ['opportunities'],
     });
     const opportunities = challenge.opportunities;
@@ -163,7 +163,7 @@ export class ChallengeService {
       return challenge.childChallenges;
     }
 
-    const challengeWithChildChallenges = await this.getChallengeByIdOrFail(
+    const challengeWithChildChallenges = await this.getChallengeOrFail(
       challenge.id,
       {
         relations: ['childChallenges'],
@@ -226,11 +226,11 @@ export class ChallengeService {
 
     this.challengeBaseService.checkForIdentifiableNameDuplication(
       childChallenges,
-      challengeData.name
+      challengeData.displayName
     );
     this.challengeBaseService.checkForIdentifiableTextIdDuplication(
       childChallenges,
-      challengeData.textID
+      challengeData.nameID
     );
   }
 
@@ -282,56 +282,45 @@ export class ChallengeService {
 
     this.challengeBaseService.checkForIdentifiableNameDuplication(
       opportunities,
-      opportunityData.name
+      opportunityData.displayName
     );
     this.challengeBaseService.checkForIdentifiableTextIdDuplication(
       opportunities,
-      opportunityData.textID
+      opportunityData.nameID
     );
   }
 
   async getChallengeOrFail(
     challengeID: string,
-    options?: FindOneOptions<Challenge>
+    options?: FindOneOptions<Challenge>,
+    ecoverseID?: string
   ): Promise<IChallenge> {
-    const conditions: FindConditions<Challenge> = {
+    const conditionsID: FindConditions<Challenge> = {
       id: challengeID,
-      //textID: challengeID,
     };
 
-    const challenge = await this.challengeRepository.findOne(
-      conditions,
+    let challenge = await this.challengeRepository.findOne(
+      conditionsID,
       options
     );
-    if (!challenge)
+    if (!challenge) {
+      const conditionsTextID: FindConditions<Challenge> = {
+        nameID: challengeID,
+        ecoverseID: ecoverseID,
+      };
+
+      challenge = await this.challengeRepository.findOne(
+        conditionsTextID,
+        options
+      );
+    }
+    if (!challenge) {
       throw new EntityNotFoundException(
         `Unable to find challenge with ID: ${challengeID}`,
         LogContext.CHALLENGES
       );
+    }
 
-    return challenge;
-  }
-
-  async getChallengeByIdOrFail(
-    challengeID: string,
-    options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
-    return await this.getChallengeOrFail(challengeID, options);
-  }
-
-  async getChallengeByTextIdOrFail(
-    challengeID: string,
-    options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeRepository.findOne(
-      { textID: challengeID },
-      options
-    );
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
     return challenge;
   }
 

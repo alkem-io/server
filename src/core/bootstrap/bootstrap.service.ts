@@ -157,8 +157,8 @@ export class BootstrapService {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       return await this.ecoverseService.createEcoverse({
-        textID: 'Eco1',
-        name: 'Empty ecoverse',
+        nameID: 'Eco1',
+        displayName: 'Empty ecoverse',
         context: {
           tagline: 'An empty ecoverse to be populated',
         },

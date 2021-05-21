@@ -18,7 +18,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
-import { IIdentifiable } from '@domain/common/identifiable-entity';
+import { INameable } from '@domain/common/nameable-entity';
 import { IBaseChallenge } from './base.challenge.interface';
 
 @Injectable()
@@ -36,7 +36,7 @@ export class BaseChallengeService {
     challengeData: CreateBaseChallengeInput
   ) {
     challengeBase.community = await this.communityService.createCommunity(
-      challengeBase.name
+      challengeBase.displayName
     );
     challengeBase.community.ecoverseID = challengeBase.ecoverseID;
 
@@ -140,7 +140,7 @@ export class BaseChallengeService {
     options?: FindOneOptions<BaseChallenge>
   ): Promise<IBaseChallenge> {
     const challenge = await repository.findOne(
-      { textID: challengeID },
+      { nameID: challengeID },
       options
     );
     if (!challenge)
@@ -152,11 +152,11 @@ export class BaseChallengeService {
   }
 
   checkForIdentifiableNameDuplication(
-    existingChildren: IIdentifiable[],
+    existingChildren: INameable[],
     name: string
   ) {
     const existingChildName = existingChildren.find(
-      child => child.name === name
+      child => child.displayName === name
     );
     if (existingChildName)
       throw new ValidationException(
@@ -166,11 +166,11 @@ export class BaseChallengeService {
   }
 
   checkForIdentifiableTextIdDuplication(
-    existingChildren: IIdentifiable[],
+    existingChildren: INameable[],
     textID: string
   ) {
     const existingChildTextId = existingChildren.find(
-      child => child.textID === textID
+      child => child.nameID === textID
     );
     if (existingChildTextId)
       throw new ValidationException(

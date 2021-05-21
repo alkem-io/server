@@ -10,7 +10,7 @@ import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 export class Community extends BaseCherrytwistEntity
   implements ICommunity, IGroupable {
   @Column()
-  name: string;
+  displayName: string;
 
   @Column()
   ecoverseID: string;
@@ -42,7 +42,7 @@ export class Community extends BaseCherrytwistEntity
 
   constructor(name: string) {
     super();
-    this.name = name;
+    this.displayName = name;
     this.ecoverseID = '';
   }
 }

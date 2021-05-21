@@ -57,11 +57,11 @@ export class OrganisationService {
   ): Promise<boolean> {
     const organisations = await this.getOrganisations();
     const organisation = organisations.find(
-      o => o.name === organisationData.name
+      o => o.displayName === organisationData.displayName
     );
     if (organisation)
       throw new ValidationException(
-        `Organisation with the provided name already exists: ${organisationData.name}`,
+        `Organisation with the provided name already exists: ${organisationData.displayName}`,
         LogContext.COMMUNITY
       );
 
@@ -76,8 +76,8 @@ export class OrganisationService {
     );
 
     // Merge in the data
-    if (organisationData.name) {
-      existingOrganisation.name = organisationData.name;
+    if (organisationData.displayName) {
+      existingOrganisation.displayName = organisationData.displayName;
       await this.organisationRepository.save(existingOrganisation);
     }
 
@@ -135,7 +135,7 @@ export class OrganisationService {
     options?: FindOneOptions<Organisation>
   ): Promise<IOrganisation> {
     const organisation = await this.organisationRepository.findOne(
-      { textID: textID },
+      { nameID: textID },
       options
     );
     if (!organisation)

@@ -112,16 +112,20 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    const conditionsID: FindConditions<User> = {
-      id: userID,
-    };
-    let user = await this.userRepository.findOne(conditionsID, options);
-    if (!user) {
+    let user: IUser | undefined;
+
+    if (this.validateEmail(userID)) {
       const conditionsEmail: FindConditions<User> = {
         email: userID,
       };
       user = await this.userRepository.findOne(conditionsEmail, options);
+    } else {
+      const conditionsID: FindConditions<User> = {
+        id: userID,
+      };
+      user = await this.userRepository.findOne(conditionsID, options);
     }
+
     if (!user) {
       throw new EntityNotFoundException(
         `Unable to find user with given ID: ${userID}`,
@@ -129,6 +133,11 @@ export class UserService {
       );
     }
     return user;
+  }
+
+  validateEmail(email: string): boolean {
+    const regex = /\S+@\S+\.\S+/;
+    return regex.test(email);
   }
 
   async isRegisteredUser(email: string): Promise<boolean> {

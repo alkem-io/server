@@ -4,10 +4,10 @@ import { Tagset } from '@domain/common/tagset';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Community } from '@domain/community/community';
 import { Context } from '@domain/context/context';
-import { IdentifiableEntity } from '@domain/common/identifiable-entity';
+import { NameableEntity } from '@domain/common/nameable-entity';
 import { IBaseChallenge } from './base.challenge.interface';
 
-export abstract class BaseChallenge extends IdentifiableEntity
+export abstract class BaseChallenge extends NameableEntity
   implements IBaseChallenge {
   @OneToOne(() => Context, { eager: false, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
@@ -34,8 +34,8 @@ export abstract class BaseChallenge extends IdentifiableEntity
 
   constructor() {
     super();
-    this.name = '';
-    this.textID = '';
+    this.displayName = '';
+    this.nameID = '';
     this.ecoverseID = '';
   }
 }
