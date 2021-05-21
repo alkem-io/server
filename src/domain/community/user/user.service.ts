@@ -108,28 +108,26 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  //Find a user either by id or email
   async getUserOrFail(
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    return this.getUserByIdOrFail(userID, options);
-  }
-
-  async getUserByIdOrFail(
-    userID: string,
-    options?: FindOneOptions<User>
-  ): Promise<IUser> {
-    const conditions: FindConditions<User> = {
+    const conditionsID: FindConditions<User> = {
       id: userID,
-      //email: userID
     };
-    const user = await this.userRepository.findOne(conditions, options);
-    if (!user)
+    let user = await this.userRepository.findOne(conditionsID, options);
+    if (!user) {
+      const conditionsEmail: FindConditions<User> = {
+        email: userID,
+      };
+      user = await this.userRepository.findOne(conditionsEmail, options);
+    }
+    if (!user) {
       throw new EntityNotFoundException(
         `Unable to find user with given ID: ${userID}`,
         LogContext.COMMUNITY
       );
+    }
     return user;
   }
 
@@ -139,23 +137,10 @@ export class UserService {
     return false;
   }
 
-  async getUserByEmailOrFail(
-    email: string,
-    options?: FindOneOptions<User>
-  ): Promise<IUser> {
-    const user = await this.userRepository.findOne({ email: email }, options);
-    if (!user)
-      throw new EntityNotFoundException(
-        `Unable to find user with given email: ${email}`,
-        LogContext.COMMUNITY
-      );
-    return user;
-  }
-
   async getUserAndCredentials(
     userID: string
   ): Promise<{ user: IUser; credentials: ICredential[] }> {
-    const user = await this.getUserByIdOrFail(userID, {
+    const user = await this.getUserOrFail(userID, {
       relations: ['agent'],
     });
 
@@ -171,7 +156,7 @@ export class UserService {
   async getUserAndAgent(
     userID: string
   ): Promise<{ user: IUser; agent: IAgent }> {
-    const user = await this.getUserByIdOrFail(userID, {
+    const user = await this.getUserOrFail(userID, {
       relations: ['agent'],
     });
 
@@ -235,13 +220,13 @@ export class UserService {
       await this.profileService.updateProfile(userInput.profileData);
     }
 
-    const populatedUser = await this.getUserByIdOrFail(user.id);
+    const populatedUser = await this.getUserOrFail(user.id);
 
     return populatedUser;
   }
 
   async getAgent(user: IUser): Promise<IAgent> {
-    const userWithAgent = await this.getUserByIdOrFail(user.id, {
+    const userWithAgent = await this.getUserOrFail(user.id, {
       relations: ['agent'],
     });
     const agent = userWithAgent.agent;
@@ -268,7 +253,7 @@ export class UserService {
       });
       const userID = (agent as Agent).user?.id;
       if (userID) {
-        const user = await this.getUserByIdOrFail(userID, {
+        const user = await this.getUserOrFail(userID, {
           relations: ['agent'],
         });
         users.push(user);

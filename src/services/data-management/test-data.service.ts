@@ -260,12 +260,12 @@ export class TestDataService {
   // }
 
   async initGetUserId(userEmail: string): Promise<string> {
-    const response = await this.userService.getUserByEmailOrFail(userEmail);
+    const response = await this.userService.getUserOrFail(userEmail);
     return response.id;
   }
 
   async initGetUserProfileId(userEmail: string): Promise<any> {
-    const response = await this.userService.getUserByEmailOrFail(userEmail);
+    const response = await this.userService.getUserOrFail(userEmail);
     return response.profile?.id;
   }
 
@@ -311,7 +311,7 @@ export class TestDataService {
   // }
 
   async initUserId(usersEmail: string): Promise<string> {
-    const response = await this.userService.getUserByEmailOrFail(usersEmail);
+    const response = await this.userService.getUserOrFail(usersEmail);
     return response.id;
   }
 
