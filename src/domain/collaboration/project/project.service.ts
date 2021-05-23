@@ -80,13 +80,13 @@ export class ProjectService {
     let project: IProject | undefined;
     if (projectID.length == UUID_LENGTH) {
       project = await this.projectRepository.findOne(
-        { id: projectID, nameableScopeID: nameableScopeID },
+        { id: projectID, ecoverseID: nameableScopeID },
         options
       );
     } else {
       // look up based on nameID
       project = await this.projectRepository.findOne(
-        { nameID: projectID, nameableScopeID: nameableScopeID },
+        { nameID: projectID, ecoverseID: nameableScopeID },
         options
       );
     }

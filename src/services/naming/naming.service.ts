@@ -24,17 +24,17 @@ export class NamingService {
   ): Promise<boolean> {
     const challengeCount = await this.challengeRepository.count({
       nameID: nameID,
-      nameableScopeID: ecoverseID,
+      ecoverseID: ecoverseID,
     });
     if (challengeCount > 0) return false;
     const opportunityCount = await this.opportunityRepository.count({
       nameID: nameID,
-      nameableScopeID: ecoverseID,
+      ecoverseID: ecoverseID,
     });
     if (opportunityCount > 0) return false;
     const projectCount = await this.projectRepository.count({
       nameID: nameID,
-      nameableScopeID: ecoverseID,
+      ecoverseID: ecoverseID,
     });
     if (projectCount > 0) return false;
     return true;

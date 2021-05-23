@@ -81,13 +81,13 @@ export class OpportunityService {
     let opportunity: IOpportunity | undefined;
     if (opportunityID.length == UUID_LENGTH) {
       opportunity = await this.opportunityRepository.findOne(
-        { id: opportunityID, nameableScopeID: nameableScopeID },
+        { id: opportunityID, ecoverseID: nameableScopeID },
         options
       );
     } else {
       // look up based on nameID
       opportunity = await this.opportunityRepository.findOne(
-        { nameID: opportunityID, nameableScopeID: nameableScopeID },
+        { nameID: opportunityID, ecoverseID: nameableScopeID },
         options
       );
     }
@@ -128,7 +128,7 @@ export class OpportunityService {
     nameableScopeID: string
   ): Promise<IOpportunity[]> {
     return await this.opportunityRepository.find({
-      nameableScopeID: nameableScopeID,
+      ecoverseID: nameableScopeID,
     });
   }
 
@@ -161,7 +161,7 @@ export class OpportunityService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           opportunityData.nameID,
-          opportunity.nameableScopeID
+          opportunity.ecoverseID
         );
         opportunity.nameID = opportunityData.nameID;
         await this.opportunityRepository.save(opportunity);

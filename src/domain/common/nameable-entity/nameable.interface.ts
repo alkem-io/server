@@ -16,7 +16,4 @@ export abstract class INameable extends IBaseCherrytwist {
       'A name identifier of the entity, unique within a given scope.',
   })
   nameID!: string;
-
-  // The scope within which the provided nameID is unique
-  nameableScopeID!: string;
 }

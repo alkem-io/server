@@ -91,7 +91,7 @@ export class ChallengeService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           challengeData.nameID,
-          challenge.nameableScopeID
+          challenge.ecoverseID
         );
         challenge.nameID = challengeData.nameID;
         await this.challengeRepository.save(challenge);
@@ -145,13 +145,13 @@ export class ChallengeService {
     let challenge: IChallenge | undefined;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne(
-        { id: challengeID, nameableScopeID: nameableScopeID },
+        { id: challengeID, ecoverseID: nameableScopeID },
         options
       );
     } else {
       // look up based on nameID
       challenge = await this.challengeRepository.findOne(
-        { nameID: challengeID, nameableScopeID: nameableScopeID },
+        { nameID: challengeID, ecoverseID: nameableScopeID },
         options
       );
     }
@@ -265,7 +265,7 @@ export class ChallengeService {
 
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      challenge.nameableScopeID
+      challenge.ecoverseID
     );
 
     const childChallenge = await this.createChallenge(
@@ -303,7 +303,7 @@ export class ChallengeService {
 
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      challenge.nameableScopeID
+      challenge.ecoverseID
     );
 
     const opportunity = await this.opportunityService.createOpportunity(

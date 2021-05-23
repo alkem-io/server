@@ -38,7 +38,7 @@ export class BaseChallengeService {
   ) {
     await this.isNameAvailableOrFail(
       baseChallengeData.nameID,
-      baseChallenge.nameableScopeID
+      baseChallenge.ecoverseID
     );
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName
