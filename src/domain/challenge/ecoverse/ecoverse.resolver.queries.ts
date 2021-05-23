@@ -3,12 +3,22 @@ import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse } from './ecoverse.interface';
 import { Args, Query, Resolver } from '@nestjs/graphql';
+import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
 
 @Resolver()
 export class EcoverseResolverQueries {
   constructor(
     @Inject(EcoverseService) private ecoverseService: EcoverseService
   ) {}
+
+  @Query(() => [IEcoverse], {
+    nullable: false,
+    description: 'The Ecoverses on this platform',
+  })
+  @Profiling.api
+  async organisations(): Promise<IEcoverse[]> {
+    return await this.ecoverseService.getEcoverses();
+  }
 
   @Query(() => IEcoverse, {
     nullable: false,
@@ -17,9 +27,9 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async ecoverse(
-    @Args('ID', { nullable: true }) ID?: string
+    @Args('ID', { type: () => UUID_NAMEID, nullable: true }) ID?: string
   ): Promise<IEcoverse> {
-    if (ID) return await this.ecoverseService.getEcoverseByIdOrFail(ID);
+    if (ID) return await this.ecoverseService.getEcoverseOrFail(ID);
     return await this.ecoverseService.getDefaultEcoverseOrFail();
   }
 }

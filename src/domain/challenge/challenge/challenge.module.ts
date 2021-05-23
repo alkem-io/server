@@ -12,6 +12,7 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
+import { NamingModule } from '@src/services/naming/naming.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options
     OpportunityModule,
     TagsetModule,
     OrganisationModule,
+    NamingModule,
     LifecycleModule,
     TypeOrmModule.forFeature([Challenge]),
   ],

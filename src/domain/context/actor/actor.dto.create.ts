@@ -1,11 +1,12 @@
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateActorInput {
-  @Field({ nullable: false })
-  parentID!: string;
+  @Field(() => UUID, { nullable: false })
+  actorGroupID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

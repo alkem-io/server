@@ -1,10 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindConditions, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  ValidationException,
 } from '@common/exceptions';
 import {
   Opportunity,
@@ -29,10 +28,12 @@ import { opportunityLifecycleConfigExtended } from './opportunity.lifecycle.conf
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { NVP } from '@domain/common/nvp';
+import { UUID_LENGTH } from '@common/constants';
+
 @Injectable()
 export class OpportunityService {
   constructor(
-    private challengeBaseService: BaseChallengeService,
+    private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
     private lifecycleService: LifecycleService,
     private communityService: CommunityService,
@@ -51,7 +52,7 @@ export class OpportunityService {
     opportunity.projects = [];
     opportunity.relations = [];
 
-    await this.challengeBaseService.initialise(opportunity, opportunityData);
+    await this.baseChallengeService.initialise(opportunity, opportunityData);
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = opportunityLifecycleConfigDefault;
@@ -65,63 +66,79 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
 
     opportunity.lifecycle = await this.lifecycleService.createLifecycle(
-      opportunity.id.toString(),
+      opportunity.id,
       machineConfig
     );
 
     return await this.saveOpportunity(opportunity);
   }
 
+  async getOpportunityInNameableScopeOrFail(
+    opportunityID: string,
+    nameableScopeID: string,
+    options?: FindOneOptions<Opportunity>
+  ): Promise<IOpportunity> {
+    let opportunity: IOpportunity | undefined;
+    if (opportunityID.length == UUID_LENGTH) {
+      opportunity = await this.opportunityRepository.findOne(
+        { id: opportunityID, nameableScopeID: nameableScopeID },
+        options
+      );
+    } else {
+      // look up based on nameID
+      opportunity = await this.opportunityRepository.findOne(
+        { nameID: opportunityID, nameableScopeID: nameableScopeID },
+        options
+      );
+    }
+
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with ID: ${opportunityID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return opportunity;
+  }
+
   async getOpportunityOrFail(
     opportunityID: string,
     options?: FindOneOptions<Opportunity>
   ): Promise<IOpportunity> {
-    return await this.getOpportunityByIdOrFail(opportunityID, options);
-  }
-
-  async getOpportunityByIdOrFail(
-    opportunityID: string,
-    options?: FindOneOptions<Opportunity>
-  ): Promise<IOpportunity> {
-    const conditions: FindConditions<Opportunity> = {
-      id: opportunityID,
-      //textID: opportunityID,
-    };
-    const opportunity = await this.opportunityRepository.findOne(
-      conditions,
-      options
-    );
-    if (!opportunity)
-      throw new EntityNotFoundException(
-        `No Opportunity found with the given id: ${opportunityID}`,
-        LogContext.COLLABORATION
+    let opportunity: IOpportunity | undefined;
+    if (opportunityID.length == UUID_LENGTH) {
+      opportunity = await this.opportunityRepository.findOne(
+        { id: opportunityID },
+        options
       );
-    return opportunity;
-  }
+    }
 
-  async getOpportunityByTextIdOrFail(
-    opportunityID: string,
-    options?: FindOneOptions<Opportunity>
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityRepository.findOne(
-      { nameID: opportunityID },
-      options
-    );
-    if (!opportunity)
+    if (!opportunity) {
       throw new EntityNotFoundException(
         `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.COLLABORATION
+        LogContext.CHALLENGES
       );
+    }
+
     return opportunity;
+  }
+
+  async getOpportunitiesInNameableScope(
+    nameableScopeID: string
+  ): Promise<IOpportunity[]> {
+    return await this.opportunityRepository.find({
+      nameableScopeID: nameableScopeID,
+    });
   }
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
     // Note need to load it in with all contained entities so can remove fully
-    const opportunity = await this.getOpportunityByIdOrFail(opportunityID, {
+    const opportunity = await this.getOpportunityOrFail(opportunityID, {
       relations: ['community', 'context', 'lifecycle', 'relations', 'projects'],
     });
 
-    await this.challengeBaseService.deleteEntities(opportunity);
+    await this.baseChallengeService.deleteEntities(opportunity);
 
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
@@ -135,10 +152,22 @@ export class OpportunityService {
   async updateOpportunity(
     opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
-    return await this.challengeBaseService.update(
+    const opportunity = await this.baseChallengeService.update(
       opportunityData,
       this.opportunityRepository
     );
+    if (opportunityData.nameID) {
+      if (opportunityData.nameID !== opportunity.nameID) {
+        // updating the nameID, check new value is allowed
+        await this.baseChallengeService.isNameAvailableOrFail(
+          opportunityData.nameID,
+          opportunity.nameableScopeID
+        );
+        opportunity.nameID = opportunityData.nameID;
+        await this.opportunityRepository.save(opportunity);
+      }
+    }
+    return opportunity;
   }
 
   async saveOpportunity(opportunity: IOpportunity): Promise<IOpportunity> {
@@ -146,21 +175,21 @@ export class OpportunityService {
   }
 
   async getCommunity(opportunityId: string): Promise<ICommunity> {
-    return await this.challengeBaseService.getCommunity(
+    return await this.baseChallengeService.getCommunity(
       opportunityId,
       this.opportunityRepository
     );
   }
 
   async getLifecycle(opportunityId: string): Promise<ILifecycle> {
-    return await this.challengeBaseService.getLifecycle(
+    return await this.baseChallengeService.getLifecycle(
       opportunityId,
       this.opportunityRepository
     );
   }
 
   async getContext(opportunityId: string): Promise<IContext> {
-    return await this.challengeBaseService.getContext(
+    return await this.baseChallengeService.getContext(
       opportunityId,
       this.opportunityRepository
     );
@@ -173,12 +202,9 @@ export class OpportunityService {
       return opportunity.relations;
     }
 
-    const opportunityLoaded = await this.getOpportunityByIdOrFail(
-      opportunity.id,
-      {
-        relations: ['relations'],
-      }
-    );
+    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
+      relations: ['relations'],
+    });
 
     if (!opportunityLoaded.relations)
       throw new EntityNotInitializedException(
@@ -197,22 +223,12 @@ export class OpportunityService {
       LogContext.COLLABORATION
     );
 
-    const opportunity = await this.getOpportunityByIdOrFail(opportunityId);
+    const opportunity = await this.getOpportunityOrFail(opportunityId);
 
-    // Check that do not already have an Project with the same name
-    const displayName = projectData.displayName;
-    const existingProject = opportunity.projects?.find(
-      project =>
-        project.displayName === displayName ||
-        project.nameID === projectData.nameID
+    const project = await this.projectService.createProject(
+      projectData,
+      opportunity.ecoverseID
     );
-    if (existingProject)
-      throw new ValidationException(
-        `Already have an Project with the provided name or textID: ${displayName} - ${projectData.nameID}`,
-        LogContext.COLLABORATION
-      );
-
-    const project = await this.projectService.createProject(projectData);
     if (!opportunity.projects)
       throw new EntityNotInitializedException(
         `Opportunity (${opportunityId}) not initialised`,
@@ -225,7 +241,7 @@ export class OpportunityService {
 
   async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
     const opportunityId = relationData.parentID;
-    const opportunity = await this.getOpportunityByIdOrFail(opportunityId, {
+    const opportunity = await this.getOpportunityOrFail(opportunityId, {
       relations: ['relations'],
     });
 

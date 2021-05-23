@@ -9,12 +9,14 @@ import { OrganisationResolverFields } from './organisation.resolver.fields';
 import { ProfileModule } from '@domain/community/profile/profile.module';
 import { OrganisationResolverQueries } from './organisation.resolver.queries';
 import { UserModule } from '../user/user.module';
+import { NamingModule } from '@src/services/naming/naming.module';
 
 @Module({
   imports: [
     UserModule,
     UserGroupModule,
     TagsetModule,
+    NamingModule,
     ProfileModule,
     TypeOrmModule.forFeature([Organisation]),
   ],

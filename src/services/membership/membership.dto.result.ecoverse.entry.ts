@@ -1,3 +1,4 @@
+import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 
@@ -9,7 +10,7 @@ export class MembershipEcoverseResultEntry {
   })
   name = '';
 
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: true,
     description: 'The ID of the Ecoverse',
   })

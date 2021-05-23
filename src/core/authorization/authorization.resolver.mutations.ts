@@ -8,7 +8,7 @@ import {
 } from '@src/common/decorators';
 import {
   GrantAuthorizationCredentialInput,
-  RemoveAuthorizationCredentialInput,
+  RevokeAuthorizationCredentialInput,
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
 import { IUser } from '@domain/community/user';
@@ -51,7 +51,7 @@ export class AuthorizationResolverMutations {
   @Profiling.api
   async revokeCredentialFromUser(
     @Args('revokeCredentialData')
-    credentialRemoveData: RemoveAuthorizationCredentialInput,
+    credentialRemoveData: RevokeAuthorizationCredentialInput,
     @CurrentUser() userInfo: UserInfo
   ): Promise<IUser> {
     return await this.authorizationService.revokeCredential(

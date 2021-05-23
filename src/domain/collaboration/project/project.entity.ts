@@ -17,7 +17,7 @@ import { NameableEntity } from '@domain/common/nameable-entity';
 @Entity()
 export class Project extends NameableEntity implements IProject {
   @Column()
-  ecoverseID?: string;
+  ecoverseID!: string;
 
   @Column('text', { nullable: true })
   description?: string;
@@ -50,9 +50,10 @@ export class Project extends NameableEntity implements IProject {
   )
   opportunity?: Opportunity;
 
-  constructor(name: string, textID: string) {
+  constructor(name: string, nameID: string) {
     super();
     this.displayName = name;
-    this.nameID = textID;
+    this.nameID = nameID;
+    this.ecoverseID = '';
   }
 }

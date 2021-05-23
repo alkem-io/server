@@ -9,7 +9,7 @@ mutation createTagsetOnProfile($tagsetData: CreateTagsetInput!) {
 Variables:
 {
   "tagsetData":{
-    "parentID": 1,
+    "profileID": "uuid",
     "name": "testTagset3",
     "tags": ["Tag 1", "Tag 2"]
   }

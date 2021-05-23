@@ -15,6 +15,7 @@ import { UserGroupModule } from '@domain/community/user-group/user-group.module'
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
+import { NamingModule } from '@src/services/naming/naming.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
     TagsetModule,
     UserGroupModule,
     ApplicationModule,
+    NamingModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],
   providers: [

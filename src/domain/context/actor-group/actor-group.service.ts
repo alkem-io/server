@@ -40,7 +40,7 @@ export class ActorGroupService {
     const actorGroup = await this.getActorGroupOrFail(actorGroupID);
     if (actorGroup.actors) {
       for (const actor of actorGroup.actors) {
-        await this.actorService.deleteActor({ ID: actor.id.toString() });
+        await this.actorService.deleteActor({ ID: actor.id });
       }
     }
     const result = await this.actorGroupRepository.remove(
@@ -63,12 +63,12 @@ export class ActorGroupService {
   }
 
   async createActor(actorData: CreateActorInput): Promise<IActor> {
-    const actorGroup = await this.getActorGroupOrFail(actorData.parentID);
+    const actorGroup = await this.getActorGroupOrFail(actorData.actorGroupID);
 
     const actor = await this.actorService.createActor(actorData);
     if (!actorGroup.actors)
       throw new GroupNotInitializedException(
-        `Non-initialised ActorGroup: ${actorData.parentID}`,
+        `Non-initialised ActorGroup: ${actorData.actorGroupID}`,
         LogContext.CHALLENGES
       );
     actorGroup.actors.push(actor);

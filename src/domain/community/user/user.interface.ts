@@ -1,16 +1,13 @@
 import { IProfile } from '@domain/community/profile';
 import { IAgent } from '@domain/agent';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { ISearchable } from '@domain/common/interfaces';
+import { INameable } from '@domain/common';
 
 @ObjectType('User', {
   implements: () => [ISearchable],
 })
-export abstract class IUser extends IBaseCherrytwist {
-  @Field(() => String)
-  name!: string;
-
+export abstract class IUser extends INameable {
   @Field(() => String, {
     description:
       'The unique personal identifier (upn) for the account associated with this user profile',

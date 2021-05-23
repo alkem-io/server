@@ -18,69 +18,77 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
-import { INameable } from '@domain/common/nameable-entity';
 import { IBaseChallenge } from './base.challenge.interface';
+import { NamingService } from '@src/services/naming/naming.service';
 
 @Injectable()
 export class BaseChallengeService {
   constructor(
     private contextService: ContextService,
     private communityService: CommunityService,
+    private namingService: NamingService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async initialise(
-    challengeBase: IBaseChallenge,
-    challengeData: CreateBaseChallengeInput
+    baseChallenge: IBaseChallenge,
+    baseChallengeData: CreateBaseChallengeInput
   ) {
-    challengeBase.community = await this.communityService.createCommunity(
-      challengeBase.displayName
+    await this.isNameAvailableOrFail(
+      baseChallengeData.nameID,
+      baseChallenge.nameableScopeID
     );
-    challengeBase.community.ecoverseID = challengeBase.ecoverseID;
+    baseChallenge.community = await this.communityService.createCommunity(
+      baseChallenge.displayName
+    );
+    baseChallenge.community.ecoverseID = baseChallenge.ecoverseID;
 
-    if (!challengeData.context) {
-      challengeBase.context = await this.contextService.createContext({});
+    if (!baseChallengeData.context) {
+      baseChallenge.context = await this.contextService.createContext({});
     } else {
-      challengeBase.context = await this.contextService.createContext(
-        challengeData.context
+      baseChallenge.context = await this.contextService.createContext(
+        baseChallengeData.context
       );
     }
 
-    challengeBase.tagset = this.tagsetService.createDefaultTagset();
+    baseChallenge.tagset = this.tagsetService.createDefaultTagset();
   }
 
   async update(
-    challengeBaseData: UpdateBaseChallengeInput,
+    baseChallengeData: UpdateBaseChallengeInput,
     repository: Repository<BaseChallenge>
   ): Promise<IBaseChallenge> {
-    const challenge = await this.getChallengeBaseOrFail(
-      challengeBaseData.ID,
+    const baseChallenge = await this.getChallengeBaseOrFail(
+      baseChallengeData.ID,
       repository,
       {
         relations: ['context'],
       }
     );
 
-    if (challengeBaseData.context) {
-      if (!challenge.context)
+    if (baseChallengeData.context) {
+      if (!baseChallenge.context)
         throw new EntityNotInitializedException(
-          `Challenge not initialised: ${challengeBaseData.ID}`,
+          `Challenge not initialised: ${baseChallengeData.ID}`,
           LogContext.CHALLENGES
         );
-      challenge.context = await this.contextService.updateContext(
-        challenge.context,
-        challengeBaseData.context
+      baseChallenge.context = await this.contextService.updateContext(
+        baseChallenge.context,
+        baseChallengeData.context
       );
     }
-    if (challengeBaseData.tags)
+    if (baseChallengeData.tags)
       this.tagsetService.replaceTagsOnEntity(
-        challenge as BaseChallenge,
-        challengeBaseData.tags
+        baseChallenge as BaseChallenge,
+        baseChallengeData.tags
       );
 
-    return await repository.save(challenge);
+    if (baseChallengeData.displayName)
+      baseChallenge.displayName = baseChallengeData.displayName;
+
+    return await repository.save(baseChallenge);
   }
 
   async deleteEntities(challengeBase: IBaseChallenge) {
@@ -98,31 +106,18 @@ export class BaseChallengeService {
 
     if (challengeBase.tagset) {
       await this.tagsetService.removeTagset({
-        ID: challengeBase.tagset.id.toString(),
+        ID: challengeBase.tagset.id,
       });
     }
   }
 
   async getChallengeBaseOrFail(
-    challengeID: string,
-    repository: Repository<BaseChallenge>,
-    options?: FindOneOptions<BaseChallenge>
-  ): Promise<IBaseChallenge> {
-    return await this.getChallengeBaseByIdOrFail(
-      challengeID,
-      repository,
-      options
-    );
-  }
-
-  async getChallengeBaseByIdOrFail(
     challengeBaseID: string,
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
   ): Promise<IBaseChallenge> {
     const conditions: FindConditions<BaseChallenge> = {
       id: challengeBaseID,
-      //textID: challengeBaseID,
     };
 
     const challenge = await repository.findOne(conditions, options);
@@ -134,47 +129,15 @@ export class BaseChallengeService {
     return challenge;
   }
 
-  async getChallengeByTextIdOrFail(
-    challengeID: string,
-    repository: Repository<BaseChallenge>,
-    options?: FindOneOptions<BaseChallenge>
-  ): Promise<IBaseChallenge> {
-    const challenge = await repository.findOne(
-      { nameID: challengeID },
-      options
-    );
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    return challenge;
-  }
-
-  checkForIdentifiableNameDuplication(
-    existingChildren: INameable[],
-    name: string
-  ) {
-    const existingChildName = existingChildren.find(
-      child => child.displayName === name
-    );
-    if (existingChildName)
+  async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
+    if (
+      !(await this.namingService.isEcoverseNameAvailable(
+        nameID,
+        nameableScopeID
+      ))
+    )
       throw new ValidationException(
-        `Unable to create entity: parent already has a child with the given name: ${name}`,
-        LogContext.CHALLENGES
-      );
-  }
-
-  checkForIdentifiableTextIdDuplication(
-    existingChildren: INameable[],
-    textID: string
-  ) {
-    const existingChildTextId = existingChildren.find(
-      child => child.nameID === textID
-    );
-    if (existingChildTextId)
-      throw new ValidationException(
-        `Unable to create entity: parent already has a child with the given textID: ${textID}`,
+        `Unable to create entity: the provided nameID is already taken: ${nameID}`,
         LogContext.CHALLENGES
       );
   }
@@ -183,7 +146,7 @@ export class BaseChallengeService {
     challengeBaseId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ICommunity> {
-    const challengeWithCommunity = await this.getChallengeBaseByIdOrFail(
+    const challengeWithCommunity = await this.getChallengeBaseOrFail(
       challengeBaseId,
       repository,
       {
@@ -203,7 +166,7 @@ export class BaseChallengeService {
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<IContext> {
-    const challengeWithContext = await this.getChallengeBaseByIdOrFail(
+    const challengeWithContext = await this.getChallengeBaseOrFail(
       challengeId,
       repository,
       {
@@ -223,7 +186,7 @@ export class BaseChallengeService {
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ILifecycle> {
-    const challenge = await this.getChallengeBaseByIdOrFail(
+    const challenge = await this.getChallengeBaseOrFail(
       challengeId,
       repository,
       {

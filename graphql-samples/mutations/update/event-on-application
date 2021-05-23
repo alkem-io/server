@@ -11,7 +11,7 @@ variables:
 {
   "applicationEventData":
   {
-    "ID": 2,
+    "ID": "uuid",
   	"eventName": "APPROVE"
   }
 }

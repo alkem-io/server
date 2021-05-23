@@ -1,11 +1,12 @@
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { InputType, Field } from '@nestjs/graphql';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateAspectInput {
-  @Field({ nullable: false })
-  parentID!: string;
+  @Field(() => UUID, { nullable: false })
+  contextID!: string;
 
   @Field({ nullable: false })
   @MaxLength(MID_TEXT_LENGTH)

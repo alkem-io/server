@@ -7,4 +7,12 @@ export abstract class NameableEntity extends BaseCherrytwistEntity {
 
   @Column()
   nameID!: string;
+
+  @Column()
+  nameableScopeID!: string;
+
+  constructor() {
+    super();
+    this.nameableScopeID = '';
+  }
 }

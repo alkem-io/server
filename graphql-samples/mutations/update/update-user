@@ -10,7 +10,7 @@ query variables:
 {
   "userData":
   {
-    "ID": 7,
+    "ID": "uuid",
     "name": "Valentin",
     "city": "Sofia"
   }

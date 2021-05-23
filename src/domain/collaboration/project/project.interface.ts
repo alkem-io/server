@@ -25,4 +25,6 @@ export abstract class IProject extends INameable {
     description: 'The set of aspects for this Project. Note: likley to change.',
   })
   aspects?: IAspect[];
+
+  ecoverseID!: string;
 }

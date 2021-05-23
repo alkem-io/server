@@ -1,10 +1,11 @@
+import { UUID, UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class AssignCommunityMemberInput {
-  @Field({ nullable: false })
+  @Field(() => UUID, { nullable: false })
   communityID!: string;
 
-  @Field({ nullable: false })
+  @Field(() => UUID_NAMEID_EMAIL, { nullable: false })
   userID!: string;
 }

@@ -38,7 +38,7 @@ export class UserGroupService {
 
   async createUserGroup(
     userGroupData: CreateUserGroupInput,
-    ecoverseID = '-1'
+    ecoverseID = ''
   ): Promise<IUserGroup> {
     const group = UserGroup.create(userGroupData);
     group.ecoverseID = ecoverseID;
@@ -71,7 +71,6 @@ export class UserGroupService {
     };
   }
 
-  // Note: explicitly do not support updating of email addresses
   async updateUserGroup(
     userGroupInput: UpdateUserGroupInput
   ): Promise<IUserGroup> {
@@ -80,15 +79,15 @@ export class UserGroupService {
     const newName = userGroupInput.name;
     if (newName && newName.length > 0 && newName !== group.name) {
       group.name = newName;
-      await this.userGroupRepository.save(group);
     }
 
-    // Check the tagsets
-    if (userGroupInput.profileData && group.profile) {
-      await this.profileService.updateProfile(userGroupInput.profileData);
+    if (userGroupInput.profileData) {
+      group.profile = await this.profileService.updateProfile(
+        userGroupInput.profileData
+      );
     }
 
-    return await this.getUserGroupOrFail(group.id);
+    return await this.userGroupRepository.save(group);
   }
 
   async getParent(group: UserGroup): Promise<IGroupable> {

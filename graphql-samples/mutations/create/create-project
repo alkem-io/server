@@ -12,7 +12,7 @@ query variables:
   {
     "parentID": 1,
     "name": "firstProject",
-    "textID": "tech-stack",
+    "nameID": "tech-stack",
     "description": "How do I handle scalability?"
   }
 }

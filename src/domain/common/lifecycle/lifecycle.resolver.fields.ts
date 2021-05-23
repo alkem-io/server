@@ -24,12 +24,12 @@ export class LifecycleResolverFields {
     return await this.lifecycleService.getNextEvents(lifecycle);
   }
 
-  @ResolveField('templateId', () => String, {
+  @ResolveField('templateName', () => String, {
     nullable: true,
-    description: 'The Lifecycle template identifier.',
+    description: 'The Lifecycle template name.',
   })
   @Profiling.api
-  async templateId(@Parent() lifecycle: ILifecycle) {
+  async templateName(@Parent() lifecycle: ILifecycle) {
     return await this.lifecycleService.getTemplateIdentifier(lifecycle);
   }
 }

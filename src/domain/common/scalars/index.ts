@@ -1,2 +1,5 @@
-export * from './scalar.name.id';
+export * from './scalar.nameid';
 export * from './scalar.did';
+export * from './scalar.uuid';
+export * from './scalar.uuid.nameid';
+export * from './scalar.uuid.nameid.email';

@@ -11,7 +11,7 @@ query variables:
   {
     "parentID": "1",
     "name": "Balance the grid",
-    "textID": "balance-grid",
+    "nameID": "balance-grid",
     "lifecycleTemplate": "EXTENDED",
     "context": {
         "tagline": "How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?",

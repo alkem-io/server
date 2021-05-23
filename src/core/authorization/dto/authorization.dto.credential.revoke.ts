@@ -1,9 +1,10 @@
 import { AuthorizationCredential } from '@common/enums';
+import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
-export class RemoveAuthorizationCredentialInput {
-  @Field({
+export class RevokeAuthorizationCredentialInput {
+  @Field(() => UUID_NAMEID_EMAIL, {
     nullable: false,
     description: 'The user from whom the credential is being removed.',
   })

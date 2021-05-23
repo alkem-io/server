@@ -7,9 +7,15 @@ import { ProjectService } from './project.service';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 import { ProjectResolverFields } from './project.resolver.fields';
+import { NamingModule } from '@src/services/naming/naming.module';
 
 @Module({
-  imports: [AspectModule, LifecycleModule, TypeOrmModule.forFeature([Project])],
+  imports: [
+    AspectModule,
+    NamingModule,
+    LifecycleModule,
+    TypeOrmModule.forFeature([Project]),
+  ],
   providers: [
     ProjectService,
     ProjectResolverMutations,

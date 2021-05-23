@@ -37,9 +37,7 @@ export class OpportunityLifecycleOptionsProvider {
       this.challengeLifecycleMachineOptions
     );
 
-    return await this.opportunityService.getOpportunityByIdOrFail(
-      opportunityID
-    );
+    return await this.opportunityService.getOpportunityOrFail(opportunityID);
   }
 
   private challengeLifecycleMachineOptions: Partial<

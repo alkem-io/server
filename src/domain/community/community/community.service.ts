@@ -109,7 +109,7 @@ export class CommunityService {
     if (community.groups) {
       for (const group of community.groups) {
         await this.userGroupService.removeUserGroup({
-          ID: group.id.toString(),
+          ID: group.id,
         });
       }
     }
@@ -118,7 +118,7 @@ export class CommunityService {
     if (community.applications) {
       for (const application of community.applications) {
         await this.applicationService.deleteApplication({
-          ID: application.id.toString(),
+          ID: application.id,
         });
       }
     }

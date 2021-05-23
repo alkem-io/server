@@ -41,7 +41,7 @@ export class MembershipService {
         );
         const orgResult = new MembershipResultEntry(
           organisation.displayName,
-          `organisation:${organisation.id.toString()}`
+          `organisation:${organisation.id}`
         );
         membership.organisations.push(orgResult);
       } else if (credential.type === AuthorizationCredential.CommunityMember) {
@@ -76,14 +76,14 @@ export class MembershipService {
       for (const challenge of storedChallenges) {
         const challengeResult = new MembershipResultEntry(
           challenge.displayName,
-          `challenge:${challenge.id.toString()}`
+          `challenge:${challenge.id}`
         );
         ecoverseResult.challenges.push(challengeResult);
       }
       for (const group of storedUserGroups) {
         const groupResult = new MembershipResultEntry(
           group.name,
-          `group:${group.id.toString()}`
+          `group:${group.id}`
         );
         ecoverseResult.userGroups.push(groupResult);
       }
@@ -95,15 +95,12 @@ export class MembershipService {
   async createEcoverseMembershipResult(
     ecoverseID: string
   ): Promise<MembershipEcoverseResultEntry> {
-    const ecoverse = await this.ecoverseService.getEcoverseByIdOrFail(
-      ecoverseID,
-      {
-        relations: ['challenges'],
-      }
-    );
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID, {
+      relations: ['challenges'],
+    });
     const ecoverseResult = new MembershipEcoverseResultEntry();
     ecoverseResult.name = ecoverse.displayName;
-    ecoverseResult.id = `ecoverse:${ecoverse.id.toString()}`;
+    ecoverseResult.id = `ecoverse:${ecoverse.id}`;
     return ecoverseResult;
   }
 }

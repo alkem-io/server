@@ -41,7 +41,7 @@ export class ApplicationService {
     await this.applicationRepository.save(application);
 
     (application as IApplication).lifecycle = await this.lifecycleService.createLifecycle(
-      application.id.toString(),
+      application.id,
       applicationLifecycleConfig
     );
 

@@ -5,7 +5,7 @@ import { ICommunity } from '@domain/community/community';
 
 @InterfaceType('Groupable', {
   resolveType(groupable) {
-    if (groupable.textID) {
+    if (groupable.profile) {
       return IOrganisation;
     }
     return ICommunity;

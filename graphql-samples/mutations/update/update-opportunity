@@ -9,7 +9,7 @@ Variables:
 {
   "opportunityData":
   {
-    "ID": "1",
+    "ID": "uuid",
     "name": "AI for good222"
   }
 }

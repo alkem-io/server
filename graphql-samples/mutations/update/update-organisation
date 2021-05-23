@@ -9,7 +9,7 @@ query variables:
 {
   "organisationData":
   {
-    "ID": "1",
+    "ID": "uuid",
     "name": "Cherrytwist2",
     "profileData": {
       "description": "some description",

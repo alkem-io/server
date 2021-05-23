@@ -9,9 +9,6 @@ import { NameableEntity } from '@domain/common/nameable-entity';
 @Entity()
 export class User extends NameableEntity implements IUser {
   @Column()
-  name: string;
-
-  @Column()
   accountUpn: string = '';
 
   @Column()
@@ -50,8 +47,7 @@ export class User extends NameableEntity implements IUser {
   )
   applications?: Application[];
 
-  constructor(name: string) {
+  constructor() {
     super();
-    this.name = name;
   }
 }

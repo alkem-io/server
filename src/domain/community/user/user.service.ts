@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindConditions, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -21,10 +21,13 @@ import { DeleteUserInput } from './user.dto.delete';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Agent, IAgent } from '@domain/agent/agent';
+import { NamingService } from '@src/services/naming/naming.service';
+import { UUID_LENGTH } from '@common/constants';
 
 @Injectable()
 export class UserService {
   constructor(
+    private namingService: NamingService,
     private profileService: ProfileService,
     private agentService: AgentService,
     @InjectRepository(User)
@@ -88,20 +91,27 @@ export class UserService {
   async validateUserProfileCreationRequest(
     userData: CreateUserInput
   ): Promise<boolean> {
-    if (!userData.email || userData.email.length == 0)
-      throw new ValidationException(
-        `User profile creation (${userData.firstName}) missing required email`,
-        LogContext.COMMUNITY
-      );
+    await this.isNameIdAvailableOrFail(userData.nameID);
     const userCheck = await this.isRegisteredUser(userData.email);
     if (userCheck)
       throw new ValidationException(
         `User profile with the specified email (${userData.email}) already exists`,
         LogContext.COMMUNITY
       );
-    // Trim all values to remove space issues
+    // Trim values to remove space issues
     userData.email = userData.email.trim();
     return true;
+  }
+
+  async isNameIdAvailableOrFail(nameID: string) {
+    const userCount = await this.userRepository.count({
+      nameID: nameID,
+    });
+    if (userCount != 0)
+      throw new ValidationException(
+        `Unable to create User: the provided nameID is already taken: ${nameID}`,
+        LogContext.COMMUNITY
+      );
   }
 
   async saveUser(user: IUser): Promise<IUser> {
@@ -115,15 +125,28 @@ export class UserService {
     let user: IUser | undefined;
 
     if (this.validateEmail(userID)) {
-      const conditionsEmail: FindConditions<User> = {
-        email: userID,
-      };
-      user = await this.userRepository.findOne(conditionsEmail, options);
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
+      );
+    } else if (userID.length === UUID_LENGTH) {
+      {
+        user = await this.userRepository.findOne(
+          {
+            id: userID,
+          },
+          options
+        );
+      }
     } else {
-      const conditionsID: FindConditions<User> = {
-        id: userID,
-      };
-      user = await this.userRepository.findOne(conditionsID, options);
+      user = await this.userRepository.findOne(
+        {
+          nameID: userID,
+        },
+        options
+      );
     }
 
     if (!user) {
@@ -199,9 +222,15 @@ export class UserService {
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID);
 
-    // Convert the data to json
-    if (userInput.name) {
-      user.name = userInput.name;
+    if (userInput.nameID) {
+      if (userInput.nameID !== user.nameID) {
+        // new NameID, check for uniqueness
+        await this.isNameIdAvailableOrFail(userInput.nameID);
+        user.nameID = userInput.nameID;
+      }
+    }
+    if (userInput.displayName) {
+      user.displayName = userInput.displayName;
     }
     if (userInput.firstName) {
       user.firstName = userInput.firstName;
@@ -222,16 +251,13 @@ export class UserService {
       user.gender = userInput.gender;
     }
 
-    await this.userRepository.save(user);
-
-    // Check the tagsets
-    if (userInput.profileData && user.profile) {
-      await this.profileService.updateProfile(userInput.profileData);
+    if (userInput.profileData) {
+      user.profile = await this.profileService.updateProfile(
+        userInput.profileData
+      );
     }
 
-    const populatedUser = await this.getUserOrFail(user.id);
-
-    return populatedUser;
+    return await this.userRepository.save(user);
   }
 
   async getAgent(user: IUser): Promise<IAgent> {

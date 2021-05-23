@@ -9,7 +9,7 @@ variables:
 {
   "challengeData":
 		{
-  	  "ID": "1",
+  	  "ID": "uuid",
       "name": "Balance the grid22",
       "context": {
         "ID": "2",

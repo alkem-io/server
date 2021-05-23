@@ -102,14 +102,14 @@ export class ProfileService {
 
     if (profile.tagsets) {
       for (const tagset of profile.tagsets) {
-        await this.tagsetService.removeTagset({ ID: tagset.id.toString() });
+        await this.tagsetService.removeTagset({ ID: tagset.id });
       }
     }
 
     if (profile.references) {
       for (const reference of profile.references) {
         await this.referenceService.deleteReference({
-          ID: reference.id.toString(),
+          ID: reference.id,
         });
       }
     }
@@ -223,11 +223,11 @@ export class ProfileService {
     try {
       const uri = await this.ipfsService.uploadFileFromBuffer(buffer);
       const profileData: UpdateProfileInput = {
-        ID: profileID.toString(),
+        ID: profileID,
         avatar: uri,
       };
       await this.updateProfile(profileData);
-      return await this.getProfileOrFail(profileID.toString());
+      return await this.getProfileOrFail(profileID);
     } catch (error) {
       throw new IpfsUploadFailedException(
         `Ipfs upload of ${fileName} failed! Error: ${error.message}`

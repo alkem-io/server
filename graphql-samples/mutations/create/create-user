@@ -9,7 +9,8 @@ query variables:
 {
   "userData":
   {
-      "name": "Valentin",
+      "nameID": "Valentin",
+      "displayName": "Valentin",
       "firstName": "Valentin",
       "lastName": "Valentin",
       "email": "test@test.com",

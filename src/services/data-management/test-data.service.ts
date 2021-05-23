@@ -126,7 +126,7 @@ export class TestDataService {
 
   async initChildChallenge(challengeId: string): Promise<string> {
     const opportunity = new CreateChallengeInput();
-    opportunity.parentID = challengeId.toString();
+    opportunity.parentID = challengeId;
     opportunity.displayName = 'init opportunity name';
     opportunity.nameID = 'init-opport';
     opportunity.context = {
@@ -151,7 +151,7 @@ export class TestDataService {
 
   async initRemoveChildChallenge(challengeId: string): Promise<string> {
     const opportunity = new CreateChallengeInput();
-    opportunity.parentID = challengeId.toString();
+    opportunity.parentID = challengeId;
     opportunity.displayName = 'init remove opportunity name';
     opportunity.nameID = 'remove-opport';
     const response = await this.challengeService.createChildChallenge(
@@ -296,7 +296,7 @@ export class TestDataService {
       challengeId
     )) as IChallenge;
     await this.challengeService.deleteChallenge({
-      ID: challengeToRemove?.id.toString(),
+      ID: challengeToRemove?.id,
     });
   }
 

@@ -1,3 +1,4 @@
+import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
@@ -7,8 +8,8 @@ export class MembershipResultEntry {
   })
   name: string;
 
-  @Field(() => String, {
-    description: 'ID of the entry',
+  @Field(() => UUID, {
+    description: 'The ID of the entry the user is a member of.',
   })
   id: string;
 

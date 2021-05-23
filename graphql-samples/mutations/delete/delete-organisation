@@ -8,6 +8,6 @@ mutation deleteOrganisation($deleteData: DeleteOrganisationInput!) {
 Variables:
 {
   "deleteData": {
-    "ID": 7
+    "ID": "uuid"
   }
 }

@@ -7,6 +7,6 @@ mutation deleteActor($deleteData: DeleteActorInput!) {
 Variables:
 {
   "deleteData": {
-    "ID": 7
+    "ID": "uuid"
   }
 }

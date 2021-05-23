@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   GrantAuthorizationCredentialInput,
-  RemoveAuthorizationCredentialInput,
+  RevokeAuthorizationCredentialInput,
   UsersWithAuthorizationCredentialInput,
 } from '@core/authorization';
 import { IUser } from '@domain/community/user';
@@ -59,7 +59,7 @@ export class AuthorizationService {
   }
 
   async revokeCredential(
-    revokeCredentialData: RemoveAuthorizationCredentialInput,
+    revokeCredentialData: RevokeAuthorizationCredentialInput,
     currentUserInfo?: UserInfo
   ): Promise<IUser> {
     // check the inputs
