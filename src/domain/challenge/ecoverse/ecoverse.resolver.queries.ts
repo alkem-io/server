@@ -16,7 +16,7 @@ export class EcoverseResolverQueries {
     description: 'The Ecoverses on this platform',
   })
   @Profiling.api
-  async organisations(): Promise<IEcoverse[]> {
+  async ecoverses(): Promise<IEcoverse[]> {
     return await this.ecoverseService.getEcoverses();
   }
 

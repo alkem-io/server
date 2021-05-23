@@ -168,7 +168,7 @@ export class ProjectService {
   }
 
   async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
-    const projectId = aspectData.contextID;
+    const projectId = aspectData.parentID;
     const project = await this.getProjectOrFail(projectId);
 
     // Check that do not already have an aspect with the same title

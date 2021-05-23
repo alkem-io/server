@@ -141,7 +141,7 @@ export class ContextService {
   }
 
   async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
-    const contextID = aspectData.contextID;
+    const contextID = aspectData.parentID;
     const context = await this.getContextOrFail(contextID, {
       relations: ['aspects'],
     });
