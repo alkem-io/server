@@ -1,10 +1,11 @@
 mutation CreateOrganisation($organisationData: CreateOrganisationInput!) {
   createOrganisation(organisationData: $organisationData) {
-    name,
+    displayName
+    nameID,
     id
     members
     {
-     	name
+     	nameID
     }
   }
 }
@@ -14,7 +15,7 @@ query variables:
 {
   "organisationData":
   {
-    "name": "Cherrytwist",
-    "nameID": "ctrocks"
+    "nameID": "CherrytwistOrg",
+    "displayName": "Stichting Cherrytwist"
   }
 }

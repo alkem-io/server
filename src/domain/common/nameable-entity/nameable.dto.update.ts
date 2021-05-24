@@ -2,7 +2,7 @@ import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity';
-import { NameID } from '../scalars';
+import { NameID } from '@domain/common/scalars';
 
 @InputType()
 export class UpdateNameableInput extends UpdateBaseCherrytwistInput {
@@ -12,9 +12,9 @@ export class UpdateNameableInput extends UpdateBaseCherrytwistInput {
   displayName?: string;
 
   @Field(() => NameID, {
-    nullable: false,
+    nullable: true,
     description:
       'A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.',
   })
-  nameID!: string;
+  nameID?: string;
 }

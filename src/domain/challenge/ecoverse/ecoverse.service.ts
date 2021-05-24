@@ -220,7 +220,7 @@ export class EcoverseService {
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
     const ecoverse = await this.getEcoverseOrFail(challengeData.parentID);
-    const nameAvailable = await this.namingService.isEcoverseNameAvailable(
+    const nameAvailable = await this.namingService.isNameIdAvailableInEcoverse(
       challengeData.nameID,
       ecoverse.id
     );

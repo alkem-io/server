@@ -131,7 +131,7 @@ export class BaseChallengeService {
 
   async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
     if (
-      !(await this.namingService.isEcoverseNameAvailable(
+      !(await this.namingService.isNameIdAvailableInEcoverse(
         nameID,
         nameableScopeID
       ))

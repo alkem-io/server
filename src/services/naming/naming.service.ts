@@ -18,7 +18,7 @@ export class NamingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async isEcoverseNameAvailable(
+  async isNameIdAvailableInEcoverse(
     nameID: string,
     ecoverseID: string
   ): Promise<boolean> {
