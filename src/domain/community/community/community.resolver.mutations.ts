@@ -51,7 +51,7 @@ export class CommunityResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IUserGroup, {
+  @Mutation(() => IUser, {
     description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api

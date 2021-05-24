@@ -1,11 +1,7 @@
 mutation assignUserToCommunity($membershipData: AssignCommunityMemberInput!) {
   assignUserToCommunity(membershipData: $membershipData) {
-    name,
+    nameID,
     id,
-    members {
-      id,
-      name
-    }
   }
 }
 
