@@ -13,7 +13,7 @@ export class AuthorizationRuleCommunityMember implements IAuthorizationRule {
 
   constructor(parentArg: any, priority?: number) {
     this.communityID = parentArg.id;
-    if (this.communityID === '-1') {
+    if (this.communityID === '') {
       throw new ForbiddenException(
         'Community Member guard not set up properly.',
         LogContext.AUTH

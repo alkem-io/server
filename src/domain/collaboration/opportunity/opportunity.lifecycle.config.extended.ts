@@ -1,7 +1,7 @@
 export const opportunityLifecycleConfigExtended = {
   id: 'opportunity-lifecycle-extended',
   context: {
-    parentID: '-1',
+    parentID: '',
   },
   initial: 'new',
   states: {

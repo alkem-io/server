@@ -60,7 +60,7 @@ export class BaseChallengeService {
     baseChallengeData: UpdateBaseChallengeInput,
     repository: Repository<BaseChallenge>
   ): Promise<IBaseChallenge> {
-    const baseChallenge = await this.getChallengeBaseOrFail(
+    const baseChallenge = await this.getBaseChallengeOrFail(
       baseChallengeData.ID,
       repository,
       {
@@ -91,39 +91,39 @@ export class BaseChallengeService {
     return await repository.save(baseChallenge);
   }
 
-  async deleteEntities(challengeBase: IBaseChallenge) {
-    if (challengeBase.context) {
-      await this.contextService.removeContext(challengeBase.context.id);
+  async deleteEntities(baseChallenge: IBaseChallenge) {
+    if (baseChallenge.context) {
+      await this.contextService.removeContext(baseChallenge.context.id);
     }
 
-    if (challengeBase.community) {
-      await this.communityService.removeCommunity(challengeBase.community.id);
+    if (baseChallenge.community) {
+      await this.communityService.removeCommunity(baseChallenge.community.id);
     }
 
-    if (challengeBase.lifecycle) {
-      await this.lifecycleService.deleteLifecycle(challengeBase.lifecycle.id);
+    if (baseChallenge.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(baseChallenge.lifecycle.id);
     }
 
-    if (challengeBase.tagset) {
+    if (baseChallenge.tagset) {
       await this.tagsetService.removeTagset({
-        ID: challengeBase.tagset.id,
+        ID: baseChallenge.tagset.id,
       });
     }
   }
 
-  async getChallengeBaseOrFail(
-    challengeBaseID: string,
+  async getBaseChallengeOrFail(
+    baseChallengeID: string,
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
   ): Promise<IBaseChallenge> {
     const conditions: FindConditions<BaseChallenge> = {
-      id: challengeBaseID,
+      id: baseChallengeID,
     };
 
     const challenge = await repository.findOne(conditions, options);
     if (!challenge)
       throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeBaseID}`,
+        `Unable to find challenge with ID: ${baseChallengeID}`,
         LogContext.CHALLENGES
       );
     return challenge;
@@ -143,11 +143,11 @@ export class BaseChallengeService {
   }
 
   async getCommunity(
-    challengeBaseId: string,
+    baseChallengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ICommunity> {
-    const challengeWithCommunity = await this.getChallengeBaseOrFail(
-      challengeBaseId,
+    const challengeWithCommunity = await this.getBaseChallengeOrFail(
+      baseChallengeId,
       repository,
       {
         relations: ['community'],
@@ -156,7 +156,7 @@ export class BaseChallengeService {
     const community = challengeWithCommunity.community;
     if (!community)
       throw new RelationshipNotFoundException(
-        `Unable to load community for challenge ${challengeBaseId} `,
+        `Unable to load community for challenge ${baseChallengeId} `,
         LogContext.COMMUNITY
       );
     return community;
@@ -166,7 +166,7 @@ export class BaseChallengeService {
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<IContext> {
-    const challengeWithContext = await this.getChallengeBaseOrFail(
+    const challengeWithContext = await this.getBaseChallengeOrFail(
       challengeId,
       repository,
       {
@@ -186,7 +186,7 @@ export class BaseChallengeService {
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ILifecycle> {
-    const challenge = await this.getChallengeBaseOrFail(
+    const challenge = await this.getBaseChallengeOrFail(
       challengeId,
       repository,
       {
