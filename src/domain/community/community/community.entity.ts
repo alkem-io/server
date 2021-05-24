@@ -5,6 +5,7 @@ import { ICommunity } from '@domain/community/community';
 import { Challenge } from '@domain/challenge/challenge';
 import { Application, IApplication } from '@domain/community/application';
 import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { Opportunity } from '@domain/collaboration/opportunity';
 
 @Entity()
 export class Community extends BaseCherrytwistEntity
@@ -35,6 +36,13 @@ export class Community extends BaseCherrytwistEntity
     { eager: false, cascade: false }
   )
   challenge?: Challenge;
+
+  @OneToOne(
+    () => Opportunity,
+    opportunity => opportunity.community,
+    { eager: false, cascade: false }
+  )
+  opportunity?: Opportunity;
 
   // The parent community can have many child communities; the relationship is controlled by the child.
   @ManyToOne(() => Community, { eager: false, cascade: false })

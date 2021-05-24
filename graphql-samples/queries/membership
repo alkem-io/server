@@ -1,0 +1,26 @@
+query {
+  membership(membershipData: {userID: "luveniakena"}) {
+   	ecoverses {
+      name
+      id
+      challenges {
+        nameID
+        id
+      }
+      opportunities {
+        nameID
+        displayName
+        id
+      }
+      userGroups {
+        nameID
+        id
+      }
+    }
+    organisations {
+      nameID
+      id
+    }
+  }
+
+}

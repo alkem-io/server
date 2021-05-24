@@ -22,6 +22,11 @@ export class MembershipEcoverseResultEntry {
   challenges: MembershipResultEntry[] = [];
 
   @Field(() => [MembershipResultEntry], {
+    description: 'Names and IDs of the Opportunities the user is a member of',
+  })
+  opportunities: MembershipResultEntry[] = [];
+
+  @Field(() => [MembershipResultEntry], {
     description: 'Names and IDs of  the UserGroups the user is a member of',
   })
   userGroups: MembershipResultEntry[] = [];
