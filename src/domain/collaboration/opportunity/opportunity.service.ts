@@ -259,7 +259,7 @@ export class OpportunityService {
 
   async getProjectsCount(opportunityID: string): Promise<number> {
     return await this.opportunityRepository.count({
-      where: { opportunity: opportunityID },
+      where: { id: opportunityID },
     });
   }
 
@@ -271,9 +271,9 @@ export class OpportunityService {
     const membersTopic = new NVP('members', membersCount.toString());
     activity.push(membersTopic);
 
-    const challengesCount = await this.getProjectsCount(opportunity.id);
-    const challengesTopic = new NVP('challenges', challengesCount.toString());
-    activity.push(challengesTopic);
+    const projectsCount = await this.getProjectsCount(opportunity.id);
+    const projectsTopic = new NVP('projects', projectsCount.toString());
+    activity.push(projectsTopic);
 
     return activity;
   }

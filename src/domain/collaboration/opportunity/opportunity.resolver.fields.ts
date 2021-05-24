@@ -6,6 +6,7 @@ import { IRelation } from '@domain/collaboration';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
 import { ICommunity } from '@domain/community/community/community.interface';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
@@ -45,5 +46,14 @@ export class OpportunityResolverFields {
   @Profiling.api
   async context(@Parent() opportunity: Opportunity) {
     return await this.opportunityService.getContext(opportunity.id);
+  }
+
+  @ResolveField('activity', () => [INVP], {
+    nullable: true,
+    description: 'The activity within this Opportunity.',
+  })
+  @Profiling.api
+  async activity(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.getActivity(opportunity);
   }
 }
