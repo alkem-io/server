@@ -10,9 +10,8 @@ variables:
   "challengeData":
 		{
   	  "ID": "uuid",
-      "name": "Balance the grid22",
+      "displayName": "Balance the grid22",
       "context": {
-        "ID": "2",
         "references": [
               {
                 "ID": 1,

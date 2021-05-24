@@ -5,7 +5,7 @@ import { Kind, ValueNode } from 'graphql';
 
 @Scalar('UUID')
 export class UUID implements CustomScalar<string, string> {
-  static LENGTH = 25;
+  static LENGTH = 36;
   static REGEX = /^[a-zA-Z0-9.\-_]+$/;
 
   description = 'A uuid identifier. Length 36 charachters.';

@@ -10,7 +10,7 @@ query variables:
   "challengeData":
   {
     "ecoverseID": "1",
-    "name": "Balance the grid",
+    "displayName": "Balance the grid",
     "nameID": "balance-grid",
     "lifecycleTemplate": "EXTENDED",
     "context": {

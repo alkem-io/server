@@ -10,6 +10,6 @@ Variables:
   "opportunityData":
   {
     "ID": "uuid",
-    "name": "AI for good222"
+    "displayName": "AI for good222"
   }
 }

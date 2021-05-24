@@ -230,6 +230,8 @@ export class EcoverseService {
         LogContext.CHALLENGES
       );
 
+    // Update the challenge data being passed in to state set the parent ID to the contained challenge
+    challengeData.parentID = this.getContainedChallenge(ecoverse).id;
     const newChallenge = await this.challengeService.createChildChallenge(
       challengeData
     );

@@ -10,7 +10,7 @@ query variables:
   "organisationData":
   {
     "ID": "uuid",
-    "name": "Cherrytwist2",
+    "displayName": "Cherrytwist2",
     "profileData": {
       "description": "some description",
       "avatar": "http://someUri"
