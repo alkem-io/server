@@ -1,6 +1,6 @@
 mutation updateOrganisation($organisationData: UpdateOrganisationInput!) {
   updateOrganisation(organisationData: $organisationData) {
-    name,
+    displayName,
     id
   }
 }

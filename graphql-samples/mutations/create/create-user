@@ -1,6 +1,6 @@
 mutation CreateUser($userData: CreateUserInput!) {
   createUser(userData: $userData) {
-    name
+    displayName
   }
 }
 

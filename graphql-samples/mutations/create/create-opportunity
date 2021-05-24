@@ -1,6 +1,6 @@
 mutation createOpportunity($opportunityData: CreateOpportunityInput!) {
   createOpportunity(opportunityData: $opportunityData) {
-    name,
+    displayName,
     id
   }
 }
@@ -10,7 +10,7 @@ query variables:
   "opportunityData":
   {
     "parentID": "1",
-    "name": "Balance the grid",
+    "displayName": "Balance the grid",
     "nameID": "balance-grid",
     "lifecycleTemplate": "EXTENDED",
     "context": {

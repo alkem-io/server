@@ -1,15 +1,14 @@
 mutation UpdateEcoverse($ecoverseData: UpdateEcoverseInput!) {
   updateEcoverse(ecoverseData: $ecoverseData) {
-    name,
+    displayName,
     id
   }
 }
-
 {
   "ecoverseData":
 		{
       "ID": "uuid",
-      "name": "New CT 3",
+      "displayName": "New CT 3",
       "hostID": "uuid"
 		}
 }

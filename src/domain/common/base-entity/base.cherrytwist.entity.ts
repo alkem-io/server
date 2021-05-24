@@ -22,4 +22,9 @@ export abstract class BaseCherrytwistEntity extends BaseEntity {
 
   @Column()
   authorizationRules?: string;
+
+  constructor() {
+    super();
+    this.authorizationRules = '';
+  }
 }

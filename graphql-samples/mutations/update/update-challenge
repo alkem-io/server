@@ -1,6 +1,6 @@
 mutation UpdateChallenge($challengeData: UpdateChallengeInput!) {
   updateChallenge(challengeData: $challengeData) {
-    name,
+    displayName,
     id
   }
 }
