@@ -7,7 +7,10 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateReferenceInput, IReference } from '@domain/common/reference';
+import {
+  CreateReferenceParentInput,
+  IReference,
+} from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import {
   CreateContextInput,
@@ -108,15 +111,9 @@ export class ContextService {
   }
 
   async createReference(
-    referenceInput: CreateReferenceInput
+    referenceInput: CreateReferenceParentInput
   ): Promise<IReference> {
-    const contextID = referenceInput.parentID;
-    if (!contextID)
-      throw new ValidationException(
-        'No parendId specified for reference creation',
-        LogContext.CHALLENGES
-      );
-    const context = await this.getContextOrFail(contextID);
+    const context = await this.getContextOrFail(referenceInput.parentID);
 
     if (!context.references)
       throw new EntityNotInitializedException(

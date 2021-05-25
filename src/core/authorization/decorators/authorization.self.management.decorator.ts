@@ -1,4 +1,4 @@
 import { SetMetadata } from '@nestjs/common';
 
-export const AuthorizationSelfManagement = () =>
-  SetMetadata('self-management', true);
+export const AuthorizationSelfRegistration = () =>
+  SetMetadata('self-registration', true);

@@ -14,7 +14,7 @@ export class AuthorizationEngineService {
   async grantAccessOrFail(
     credentials: ICredential[],
     rulesStr: string,
-    privilegeRequested: AuthorizationPrivilege,
+    privilegeRequired: AuthorizationPrivilege,
     msg: string
   ) {
     const rules = this.convertRulesStr(rulesStr);
@@ -25,7 +25,7 @@ export class AuthorizationEngineService {
           credential.resourceID === rule.resourceID
         ) {
           for (const privilege of rule.grantedPrivileges) {
-            if (privilege === privilegeRequested) return true;
+            if (privilege === privilegeRequired) return true;
           }
         }
       }
@@ -33,7 +33,7 @@ export class AuthorizationEngineService {
 
     // If get to here then no match was found
     throw new ForbiddenException(
-      `Authorization: unable to grant ${privilegeRequested} access: ${msg}`,
+      `Authorization: unable to grant ${privilegeRequired} access: ${msg}`,
       LogContext.AUTH
     );
   }

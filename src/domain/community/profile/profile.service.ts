@@ -13,13 +13,13 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { CreateReferenceInput } from '@domain/common/reference';
+import { CreateReferenceParentInput } from '@domain/common/reference';
 import {
   UpdateProfileInput,
   Profile,
   IProfile,
 } from '@domain/community/profile';
-import { CreateTagsetInput } from '@domain/common/tagset';
+import { CreateTagsetParentInput } from '@domain/common/tagset';
 import { CreateProfileInput } from './profile.dto.create';
 
 import { ReadStream } from 'fs';
@@ -117,34 +117,24 @@ export class ProfileService {
     return await this.profileRepository.remove(profile as Profile);
   }
 
-  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
-    const profileID = tagsetData.parentID;
-    if (!profileID)
-      throw new ValidationException(
-        'No parendId specified for tagset creation',
-        LogContext.COMMUNITY
-      );
-    const profile = await this.getProfileOrFail(profileID);
+  async createTagset(tagsetData: CreateTagsetParentInput): Promise<ITagset> {
+    const profile = await this.getProfileOrFail(tagsetData.parentID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
       tagsetData
     );
+    tagset.authorizationRules = profile.authorizationRules;
+
     await this.profileRepository.save(profile);
 
     return tagset;
   }
 
   async createReference(
-    referenceInput: CreateReferenceInput
+    referenceInput: CreateReferenceParentInput
   ): Promise<IReference> {
-    const profileID = referenceInput.parentID;
-    if (!profileID)
-      throw new ValidationException(
-        'No parendId specified for reference creation',
-        LogContext.COMMUNITY
-      );
-    const profile = await this.getProfileOrFail(profileID);
+    const profile = await this.getProfileOrFail(referenceInput.parentID);
 
     if (!profile.references)
       throw new EntityNotInitializedException(
@@ -161,6 +151,7 @@ export class ProfileService {
     const newReference = await this.referenceService.createReference(
       referenceInput
     );
+    newReference.authorizationRules = profile.authorizationRules;
 
     await profile.references.push(newReference as Reference);
     await this.profileRepository.save(profile);

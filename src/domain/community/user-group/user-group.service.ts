@@ -23,10 +23,12 @@ import {
 } from '@domain/community/user-group';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
 @Injectable()
 export class UserGroupService {
   constructor(
+    private authorizationEngine: AuthorizationEngineService,
     private userService: UserService,
     private profileService: ProfileService,
     private tagsetService: TagsetService,

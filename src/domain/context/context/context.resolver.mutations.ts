@@ -1,6 +1,9 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { CreateReferenceInput, IReference } from '@domain/common/reference';
+import {
+  CreateReferenceParentInput,
+  IReference,
+} from '@domain/common/reference';
 import { ContextService } from './context.service';
 import { CreateAspectInput, IAspect } from '@domain/context';
 import { AuthorizationGlobalRoles } from '@common/decorators';
@@ -21,7 +24,7 @@ export class ContextResolverMutations {
   })
   @Profiling.api
   async createReferenceOnContext(
-    @Args('referenceInput') referenceInput: CreateReferenceInput
+    @Args('referenceInput') referenceInput: CreateReferenceParentInput
   ): Promise<IReference> {
     const reference = await this.contextService.createReference(referenceInput);
     return reference;

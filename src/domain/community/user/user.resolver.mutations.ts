@@ -2,7 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
-  AuthorizationSelfManagement,
+  AuthorizationSelfRegistration,
   AuthorizationGlobalRoles,
   GraphqlGuard,
 } from '@core/authorization';
@@ -29,7 +29,7 @@ export class UserResolverMutations {
     AuthorizationRoleGlobal.CommunityAdmin,
     AuthorizationRoleGlobal.Admin
   )
-  @AuthorizationSelfManagement()
+  @AuthorizationSelfRegistration()
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Creates a new User on the platform.',
@@ -41,11 +41,6 @@ export class UserResolverMutations {
     return await this.userService.createUser(userData);
   }
 
-  // @AuthorizationGlobalRoles(
-  //   AuthorizationRoleGlobal.CommunityAdmin,
-  //   AuthorizationRoleGlobal.Admin
-  // )
-  // @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Updates the User.',
@@ -75,6 +70,7 @@ export class UserResolverMutations {
   })
   @Profiling.api
   async deleteUser(
+    @CurrentUser() userInfo: UserInfo,
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
     return await this.userService.deleteUser(deleteData);

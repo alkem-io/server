@@ -24,10 +24,12 @@ import { Agent, IAgent } from '@domain/agent/agent';
 import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationRule } from '@src/services/authorization-engine/authorizationRule';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
 @Injectable()
 export class UserService {
   constructor(
+    private authorizationEngine: AuthorizationEngineService,
     private profileService: ProfileService,
     private agentService: AgentService,
     @InjectRepository(User)
@@ -66,6 +68,15 @@ export class UserService {
     // Rules for who can update this user and contained entities
     user.authorizationRules = this.createAuthorizationRules(user.id);
     user.profile.authorizationRules = user.authorizationRules;
+    // Extend to grant create / delete on child entities in profile
+    user.profile.authorizationRules = await this.authorizationEngine.appendAuthorizationRule(
+      user.profile.authorizationRules,
+      {
+        type: AuthorizationCredential.GlobalAdminCommunity,
+        resourceID: user.id,
+      },
+      [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.DELETE]
+    );
 
     // Credentials assigned to this user
     await this.agentService.grantCredential({
