@@ -8,12 +8,14 @@ import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@src/services/naming/naming.module';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
 
 @Module({
   imports: [
     ProfileModule,
     AgentModule,
     NamingModule,
+    AuthorizationEngineModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [

@@ -20,8 +20,8 @@ export abstract class BaseCherrytwistEntity extends BaseEntity {
   @VersionColumn()
   version?: number;
 
-  @Column()
-  authorizationRules?: string;
+  @Column('text')
+  authorizationRules!: string;
 
   constructor() {
     super();

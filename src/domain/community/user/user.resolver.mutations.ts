@@ -1,6 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   AuthorizationSelfManagement,
   AuthorizationGlobalRoles,
@@ -14,10 +14,16 @@ import {
 } from '@domain/community/user';
 import { UserService } from './user.service';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { UserInfo } from '@core/authentication';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private readonly userService: UserService
+  ) {}
 
   @AuthorizationGlobalRoles(
     AuthorizationRoleGlobal.CommunityAdmin,
@@ -35,21 +41,28 @@ export class UserResolverMutations {
     return await this.userService.createUser(userData);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
-  @AuthorizationSelfManagement()
+  // @AuthorizationGlobalRoles(
+  //   AuthorizationRoleGlobal.CommunityAdmin,
+  //   AuthorizationRoleGlobal.Admin
+  // )
+  // @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Updates the User.',
   })
   @Profiling.api
   async updateUser(
+    @CurrentUser() userInfo: UserInfo,
     @Args('userData') userData: UpdateUserInput
   ): Promise<IUser> {
-    const user = await this.userService.updateUser(userData);
-    return user;
+    const user = await this.userService.getUserOrFail(userData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo.credentials,
+      user.authorizationRules,
+      AuthorizationPrivilege.UPDATE,
+      `userUpdate: ${user.nameID}`
+    );
+    return await this.userService.updateUser(userData);
   }
 
   @AuthorizationGlobalRoles(

@@ -21,13 +21,13 @@ import { DeleteUserInput } from './user.dto.delete';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Agent, IAgent } from '@domain/agent/agent';
-import { NamingService } from '@src/services/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants';
+import { AuthorizationRule } from '@src/services/authorization-engine/authorizationRule';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Injectable()
 export class UserService {
   constructor(
-    private namingService: NamingService,
     private profileService: ProfileService,
     private agentService: AgentService,
     @InjectRepository(User)
@@ -39,6 +39,7 @@ export class UserService {
     await this.validateUserProfileCreationRequest(userData);
 
     const user: IUser = User.create(userData);
+
     user.profile = await this.profileService.createProfile(
       userData.profileData
     );
@@ -47,25 +48,36 @@ export class UserService {
       parentDisplayID: user.email,
     });
 
-    // Need to save to get the object identifiers assigned
-    const savedUser = await this.userRepository.save(user);
     this.logger.verbose?.(
-      `Created a new user with id: ${savedUser.id}`,
+      `Created a new user with id: ${user.id}`,
       LogContext.COMMUNITY
     );
 
+    // save the user to get the id
+    await this.userRepository.save(user);
+
     // Ensure the user has the global registered credential
-    if (!savedUser.agent)
+    if (!user.agent)
       throw new EntityNotInitializedException(
-        `User Agent not initialized: ${savedUser.id}`,
+        `User Agent not initialized: ${user.id}`,
         LogContext.AUTH
       );
+
+    // Rules for who can update this user and contained entities
+    user.authorizationRules = this.createAuthorizationRules(user.id);
+    user.profile.authorizationRules = user.authorizationRules;
+
+    // Credentials assigned to this user
     await this.agentService.grantCredential({
       type: AuthorizationCredential.GlobalRegistered,
-      agentID: savedUser.agent.id,
+      agentID: user.agent.id,
     });
-
-    return savedUser;
+    await this.agentService.grantCredential({
+      type: AuthorizationCredential.UserSelfManagement,
+      agentID: user.agent.id,
+      resourceID: user.id,
+    });
+    return await this.userRepository.save(user);
   }
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
@@ -333,5 +345,45 @@ export class UserService {
     } else {
       existingEntity.groups?.push(group);
     }
+  }
+
+  createAuthorizationRules(userID: string): string {
+    const rules: AuthorizationRule[] = [];
+
+    const globalAdmin = {
+      type: AuthorizationCredential.GlobalAdmin,
+      resourceID: '',
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    rules.push(globalAdmin);
+
+    const communityAdmin = {
+      type: AuthorizationCredential.GlobalAdminCommunity,
+      resourceID: '',
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    rules.push(communityAdmin);
+
+    const userSelfAdmin = {
+      type: AuthorizationCredential.UserSelfManagement,
+      resourceID: userID,
+      grantedPrivileges: [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+      ],
+    };
+    rules.push(userSelfAdmin);
+
+    return JSON.stringify(rules);
   }
 }

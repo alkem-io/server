@@ -135,6 +135,9 @@ export class GraphqlGuard extends AuthGuard([
       throw new AuthenticationException(msg);
     }
 
+    // If no rules then allow the request to proceed
+    if (this.authorizationRules.length == 0) return userInfo;
+
     const authorizationRuleEngine = new AuthorizationRuleEngine(
       this.authorizationRules
     );

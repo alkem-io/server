@@ -4,7 +4,7 @@ import { CredentialsSearchInput, ICredential } from '@domain/agent';
 import { AuthorizationRule } from './authorizationRule';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationRoleGlobal, LogContext } from '@common/enums';
 
 export class AuthorizationEngineService {
   constructor(
@@ -63,5 +63,18 @@ export class AuthorizationEngineService {
       this.logger.error(msg);
       throw new ForbiddenException(msg, LogContext.AUTH);
     }
+  }
+
+  createRuleGlobalAdmin(): AuthorizationRule {
+    return {
+      type: AuthorizationRoleGlobal.Admin,
+      resourceID: '',
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
   }
 }

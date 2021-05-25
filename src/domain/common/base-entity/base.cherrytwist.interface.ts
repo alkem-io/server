@@ -9,7 +9,10 @@ export abstract class IBaseCherrytwist {
   })
   id!: string;
 
+  authorizationRules!: string;
+
   constructor() {
     this.id = '';
+    this.authorizationRules = '';
   }
 }

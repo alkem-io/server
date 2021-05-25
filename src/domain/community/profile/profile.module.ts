@@ -6,9 +6,15 @@ import { Profile } from './profile.entity';
 import { ProfileResolverMutations } from './profile.resolver.mutations';
 import { ProfileService } from './profile.service';
 import { IpfsService } from '@src/services/ipfs/ipfs.service';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
 
 @Module({
-  imports: [TagsetModule, ReferenceModule, TypeOrmModule.forFeature([Profile])],
+  imports: [
+    AuthorizationEngineModule,
+    TagsetModule,
+    ReferenceModule,
+    TypeOrmModule.forFeature([Profile]),
+  ],
   providers: [ProfileResolverMutations, ProfileService, IpfsService],
   exports: [ProfileService],
 })

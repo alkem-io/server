@@ -11,6 +11,8 @@ export class AuthenticationService {
     try {
       knownUser = await this.userService.getUserWithAgent(email);
     } catch (_error) {}
-    return { email, user: knownUser };
+    let credentials = knownUser?.agent?.credentials;
+    if (!credentials) credentials = [];
+    return { email, user: knownUser, credentials: credentials };
   }
 }

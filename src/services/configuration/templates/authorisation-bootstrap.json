@@ -34,23 +34,13 @@
       "email": "ecoverse.member@cherrytwist.org",
       "firstName": "ecoverse",
       "lastName": "member",
-      "credentials": [
-        {
-          "type": "community-member",
-          "resourceID": "1"
-        }
-      ]
+      "credentials": []
     },
     {
       "email": "qa.user@cherrytwist.org",
       "firstName": "Qa",
       "lastName": "User",
-      "credentials": [
-        {
-          "type": "community-member",
-          "resourceID": "1"
-        }
-      ]
+      "credentials": []
     },
     {
       "email": "non.ecoverse@cherrytwist.org",

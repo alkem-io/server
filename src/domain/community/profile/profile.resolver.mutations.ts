@@ -7,7 +7,7 @@ import {
 } from '@domain/community/profile';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
 import {
@@ -16,24 +16,42 @@ import {
   AuthorizationSelfManagement,
 } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { UserInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver()
 export class ProfileResolverMutations {
-  constructor(private profileService: ProfileService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private profileService: ProfileService
+  ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
-  @AuthorizationSelfManagement()
+  // @AuthorizationGlobalRoles(
+  //   AuthorizationRoleGlobal.CommunityAdmin,
+  //   AuthorizationRoleGlobal.Admin
+  // )
+  // @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
   @Mutation(() => ITagset, {
     description: 'Creates a new Tagset on the specified Profile',
   })
   @Profiling.api
   async createTagsetOnProfile(
+    @CurrentUser() userInfo: UserInfo,
     @Args('tagsetData') tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
+    if (!tagsetData.parentID) tagsetData.parentID = '';
+    const profile = await this.profileService.getProfileOrFail(
+      tagsetData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo.credentials,
+      profile.authorizationRules,
+      AuthorizationPrivilege.UPDATE,
+      `profile: ${profile.id}`
+    );
+
     return await this.profileService.createTagset(tagsetData);
   }
 
