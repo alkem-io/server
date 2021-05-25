@@ -13,8 +13,10 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { ContextService } from '@domain/context/context/context.service';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
+import { CreateEcoverseInput } from '@domain/challenge';
 
 export type TestDataServiceInitResult = {
+  ecoverseId: string;
   userId: string;
   // ecoverseAdminId: number;
   // globalAdminId: number;
@@ -65,6 +67,23 @@ export class TestDataService {
     await this.dataManagementService.reset_to_empty_ecoverse();
   }
 
+  // async initEcoverseId(): Promise<string> {
+  //   const response = await this.ecoverseService.getEcoverses();
+  //   return response[0].id;
+  // }
+
+  async initEcoverseId(): Promise<string> {
+    const response = await this.ecoverseService.getEcoverseOrFail('Eco1');
+    return response.id;
+  }
+
+  async initEcoverse(): Promise<string> {
+    const ecoverse = new CreateEcoverseInput();
+    ecoverse.nameID = 'Test Ecoverse';
+    const response = await this.ecoverseService.createEcoverse(ecoverse);
+    return response.id;
+  }
+
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
@@ -90,9 +109,9 @@ export class TestDataService {
     return response.id;
   }
 
-  async initChallenge(): Promise<string> {
+  async initChallenge(ecoverseId: string): Promise<string> {
     const challenge = new CreateChallengeInput();
-    challenge.parentID = '1';
+    challenge.parentID = ecoverseId;
     challenge.displayName = `${this.challengeName}`;
     challenge.nameID = `${this.uniqueTextId}`;
     challenge.context = {
@@ -114,9 +133,9 @@ export class TestDataService {
     return response.id;
   }
 
-  async initRemoveChallenge(): Promise<string> {
+  async initRemoveChallenge(ecoverseId: string): Promise<string> {
     const response = await this.ecoverseService.createChallenge({
-      parentID: '1',
+      parentID: ecoverseId,
       displayName: 'Remove-challenge',
       nameID: 'remove-chall',
       tags: ['test1', 'test2'],
@@ -316,12 +335,13 @@ export class TestDataService {
   }
 
   async initFunctions(): Promise<TestDataServiceInitResult> {
+    const ecoverseId = await this.initEcoverseId();
     // await this.removeUserFromGroups();
     const userProfileId = await this.initGetUserProfileId(this.userEmail);
     const userId = await this.initGetUserId(this.userEmail);
     const organisationId = await this.initOrganisation();
-    const challengeId = await this.initChallenge();
-    const removeChallangeId = await this.initRemoveChallenge();
+    const challengeId = await this.initChallenge(ecoverseId);
+    const removeChallangeId = await this.initRemoveChallenge(ecoverseId);
     const opportunityId = await this.initChildChallenge(challengeId);
     const removeOpportunityId = await this.initRemoveChildChallenge(
       removeChallangeId
@@ -353,6 +373,7 @@ export class TestDataService {
     //const assignGroupFocalPointId = -1;
 
     return {
+      ecoverseId,
       userId,
       userProfileId,
       organisationId,

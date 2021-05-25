@@ -12,7 +12,7 @@ mutation UpdateUser($userData: UpdateUserInput!) {
     }
   }`;
 
-export const updateUserVariables = (id: number) => `
+export const updateUserVariables = (id: string) => `
 {
     "userData":
     {
@@ -35,7 +35,7 @@ mutation UpdateUser($userData: UpdateUserInput!) {
     }
   }`;
 
-export const updateNonEcoverseVariables = (id: any) => `
+export const updateNonEcoverseVariables = (id: string) => `
 {
 
     "userData":
@@ -55,7 +55,7 @@ mutation updateProfile($profileData: UpdateProfileInput!) {
   }
 }`;
 
-export const updateProfileVariables = (id: number) => `
+export const updateProfileVariables = (id: string) => `
 {
     "profileData": {
       "ID": "${id}",
@@ -72,7 +72,7 @@ mutation updateOrganisation($organisationData: UpdateOrganisationInput!) {
   }
 }`;
 
-export const updateOrganisationVariabls = (id: number) => `
+export const updateOrganisationVariabls = (id: string) => `
 {
     "organisationData":
     {
@@ -89,7 +89,7 @@ mutation UpdateChallenge($challengeData: UpdateChallengeInput!) {
     }
   }`;
 
-export const updateChallengeVariables = (id: number) => `
+export const updateChallengeVariables = (id: string) => `
 {
     "challengeData":
           {
@@ -106,7 +106,7 @@ mutation updateOpportunity($opportunityData: UpdateOpportunityInput!) {
     }
   }`;
 
-export const updateOpportunityVariables = (id: number) => `
+export const updateOpportunityVariables = (id: string) => `
 {
     "opportunityData":
     {
@@ -123,7 +123,7 @@ mutation updateAspect($aspectData: UpdateAspectInput!) {
     }
   }`;
 
-export const updateAspectVariable = (id: number) => `
+export const updateAspectVariable = (id: string) => `
 {
     "aspectData": {
       "ID": "${id}",
@@ -144,7 +144,7 @@ mutation updateActor($actorData: UpdateActorInput!) {
     }
   }`;
 
-export const updateActorVariables = (id: number) => `
+export const updateActorVariables = (id: string) => `
 {
     "actorData": {
       "ID": "${id}",
@@ -167,7 +167,7 @@ mutation assignUserToCommunity($membershipData: AssignCommunityMemberInput!) {
     }
   }`;
 
-export const addUserToCommunityVariables = (id: number) => `
+export const addUserToCommunityVariables = (id: string) => `
 {
   "membershipData": {
     "userID": ${userId},
@@ -188,7 +188,7 @@ mutation assignUserToGroup($membershipData: AssignUserGroupMemberInput!) {
   }
 }`;
 
-export const addUserToGroupVariables = (id: number) => `
+export const addUserToGroupVariables = (id: string) => `
 {
   "membershipData": {
     "userID": ${userId},
@@ -241,7 +241,7 @@ mutation assignChallengeLead($assignInput: AssignChallengeLeadInput!) {
   }
 }`;
 
-export const addChallengeLeadToOrganisationVariables = (id: number) => `
+export const addChallengeLeadToOrganisationVariables = (id: string) => `
 {
   "assignInput":{
     "organisationID": "${organisationId}",
@@ -261,7 +261,7 @@ mutation removeUserFromGroup($membershipData: RemoveUserGroupMemberInput!) {
     }
   }`;
 
-export const removeUserFromGroupVariables = (id: number) => `
+export const removeUserFromGroupVariables = (id: string) => `
 {
   "membershipData": {
     "userID": ${userId},
@@ -284,7 +284,7 @@ const mutations: Record<string, string> = {
   updateNonEcoverseMutation,
 };
 
-const variables: Record<string, (id: number, emailName?: any) => string> = {
+const variables: Record<string, (id: string, emailName?: any) => string> = {
   updateUserVariables,
   updateProfileVariables,
   updateOrganisationVariabls,

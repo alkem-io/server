@@ -19,8 +19,8 @@ export const createChildChallengeMutation = async (
     variables: {
       challengeData: {
         parentID: challengeId,
-        name: oppName,
-        textID: oppTextId,
+        displayName: oppName,
+        nameID: oppTextId,
         context: {
           background: 'test background',
           vision: 'test vision',

@@ -24,7 +24,7 @@ export const profileData = `
 
 export const userData = `
   id
-  name
+  nameID
   firstName
   lastName
   email
@@ -70,7 +70,7 @@ export const lifecycleData = `
   state
   nextEvents
   machineDef
-  templateId
+  templateName
 `;
 
 export const applicationData = `
@@ -86,7 +86,7 @@ export const applicationData = `
 
 export const communityData = `
   id
-  name
+  displayName
   ${membersData}
   groups {
     ${groupData}
@@ -181,8 +181,8 @@ export const contextData = `
 
 export const leadOrganisationsData = `
   id
-  name
-  textID
+  nameID
+
   groups {
     ${groupData}
   }
@@ -194,10 +194,9 @@ export const leadOrganisationsData = `
 
 export const challengesData = `
     id
-    name
-    textID
+    displayName
+    nameID
     ${activityData}
-    ${collaborationData}
     community {
       ${communityData}
     }
@@ -217,10 +216,9 @@ export const challengesData = `
 
 export const challengeData = `
   id
-  name
-  textID
+  displayName
+  nameID
   ${activityData}
-  ${collaborationData}
   community {
     ${communityData}
   }
@@ -243,10 +241,10 @@ export const challengeData = `
 //${activityData}
 export const challengeDataTest = `
   id
-  name
-  textID
+  displayName
+  nameID
 
-  ${collaborationData}
+
   community {
     ${communityData}
   }
@@ -319,8 +317,8 @@ me{
 export const organisationData = `
   {
     id
-    name
-    textID
+    displayName
+    nameID
     groups {
       ${groupData}
     }

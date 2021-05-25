@@ -75,7 +75,7 @@ describe.skip('DDT anonymous user - queries - Not authorized', () => {
       // Act
       const requestParamsQueryData = {
         operationName: null,
-        query: getQueries(query, (data as Record<string, number>)[idName]),
+        query: getQueries(query, (data as Record<string, string>)[idName]),
         variables: null,
       };
       const response = await graphqlRequest(requestParamsQueryData);
@@ -136,7 +136,7 @@ describe.skip('DDT anonymous user - queries - authorized', () => {
       // Act
       const requestParamsQueryData = {
         operationName: null,
-        query: getQueries(query, (data as Record<string, number>)[idName]),
+        query: getQueries(query, (data as Record<string, string>)[idName]),
         variables: null,
       };
       const response = await graphqlRequest(requestParamsQueryData);
@@ -177,7 +177,7 @@ describe.skip('DDT anonymous user - Create mutations - Not authorized', () => {
         query: getCreateMutation(mutation),
         variables: getCreateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequest(requestParamsCreateMutations);
@@ -212,7 +212,7 @@ describe.skip('DDT anonymous user - Update mutations - NOT authorized', () => {
         query: getUpdateMutation(mutation),
         variables: getUpdateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequest(requestParamsUpdateMutations);
@@ -247,7 +247,7 @@ describe.skip('DDT anonymous user - Remove mutations - NOT authorized', () => {
         query: getRemoveMutation(mutation),
         variables: getRemoveVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequest(requestParamsRemoveMutations);
