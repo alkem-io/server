@@ -150,7 +150,7 @@ export class CommunityService {
 
   async assignMember(
     membershipData: AssignCommunityMemberInput
-  ): Promise<IUser> {
+  ): Promise<ICommunity> {
     const community = await this.getCommunityOrFail(
       membershipData.communityID,
       {
@@ -182,12 +182,12 @@ export class CommunityService {
       type: AuthorizationCredential.CommunityMember,
       resourceID: membershipData.communityID,
     });
-    return user;
+    return community;
   }
 
   async removeMember(
     membershipData: RemoveCommunityMemberInput
-  ): Promise<IUser> {
+  ): Promise<ICommunity> {
     const { user, agent } = await this.userService.getUserAndAgent(
       membershipData.userID
     );
@@ -198,7 +198,7 @@ export class CommunityService {
       resourceID: membershipData.communityID,
     });
 
-    return user;
+    return await this.getCommunityOrFail(membershipData.communityID);
   }
 
   async isMember(userID: string, communityID: string): Promise<boolean> {

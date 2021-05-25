@@ -18,7 +18,7 @@ export const createProjectMutation = async (
     }`,
     variables: {
       projectData: {
-        parentID: parseFloat(opportunityId),
+        opportunityID: parseFloat(opportunityId),
         name: `${projectName}`,
         textID: `${textId}`,
         description: `${projectDescritpion}`,

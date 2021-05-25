@@ -7,7 +7,7 @@ import {
   removeRelationMutation,
   updateRelationMutation,
 } from './relations.request.params';
-import { createChildChallengeMutation } from '../opportunity/opportunity.request.params';
+import { createChildChallengeMutation, createOpportunityMutation } from '../opportunity/opportunity.request.params';
 
 const relationIncoming = 'incoming';
 const relationOutgoing = 'outgoing';
@@ -27,14 +27,14 @@ let collaborationId = '';
 let relationCountPerOpportunity = async (): Promise<number> => {
   const responseQuery = await getRelationsPerOpportunity(opportunityId);
   let response =
-    responseQuery.body.data.ecoverse.challenge.collaboration.relations;
+    responseQuery.body.data.ecoverse.opportunity.relations;
   return response;
 };
 
 let relationDataPerOpportunity = async (): Promise<String> => {
   const responseQuery = await getRelationsPerOpportunity(opportunityId);
   let response =
-    responseQuery.body.data.ecoverse.challenge.collaboration.relations[0];
+    responseQuery.body.data.ecoverse.opportunity.relations[0];
   return response;
 };
 beforeEach(async () => {
@@ -67,20 +67,18 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
   // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
+  const responseCreateOpportunityOnChallenge = await createOpportunityMutation(
     challengeId,
     opportunityName,
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
-  collaborationId =
-    responseCreateOpportunityOnChallenge.body.data.createChildChallenge
-      .collaboration.id;
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+
 
   // Create Relation
   const createRelationResponse = await createRelationMutation(
-    collaborationId,
+    opportunityId,
     relationIncoming,
     relationDescription,
     relationActorName,
@@ -124,7 +122,7 @@ describe('Relations', () => {
     // Act
     // Create Relation
     const createRelationResponse = await createRelationMutation(
-      collaborationId,
+      opportunityId,
       'testRelationType',
       relationDescription,
       relationActorName,
@@ -144,7 +142,7 @@ describe('Relations', () => {
     // Act
     // Create second relation with same name
     await createRelationMutation(
-      collaborationId,
+      opportunityId,
       relationOutgoing,
       relationDescription,
       relationActorName,
