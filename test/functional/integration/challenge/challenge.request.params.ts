@@ -95,7 +95,7 @@ export const removeChallangeMutation = async (challengeId: string) => {
       }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(challengeId),
+        ID: challengeId,
       },
     },
   };

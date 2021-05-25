@@ -12,6 +12,7 @@ import {
 } from '../project/project.request.params';
 import {
   createChildChallengeMutation,
+  createOpportunityMutation,
   queryOpportunity,
 } from '../opportunity/opportunity.request.params';
 import {
@@ -162,21 +163,18 @@ describe('Lifecycle', () => {
       challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
       // Create Opportunity
-      const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
+      const responseCreateOpportunityOnChallenge = await createOpportunityMutation(
         challengeId,
         opportunityName,
         opportunityTextId,
         contextTagline
       );
       opportunityId =
-        responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
-      let collaborationId =
-        responseCreateOpportunityOnChallenge.body.data.createChildChallenge
-          .collaboration.id;
+        responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
 
       // Create Project
       const responseCreateProject = await createProjectMutation(
-        collaborationId,
+        opportunityId,
         projectName,
         projectTextId
       );
@@ -205,6 +203,33 @@ describe('Lifecycle', () => {
         expect(data.state).toEqual(state);
         expect(data.nextEvents).toEqual(nextEvents);
         expect(data).toEqual(challengeDataResponse);
+      }
+    );
+
+    // Arrange
+    test.each`
+      setEvent       | state             | nextEvents
+      ${'REFINE'}    | ${'beingRefined'} | ${['ACTIVE', 'ABANDONED']}
+      ${'ACTIVE'}    | ${'inProgress'}   | ${['COMPLETED', 'ABANDONED']}
+      ${'COMPLETED'} | ${'complete'}     | ${['ARCHIVE', 'ABANDONED']}
+      ${'ARCHIVE'}   | ${'archived'}     | ${[]}
+    `(
+      'should update opportunity, when set event: "$setEvent" to state: "$state", nextEvents: "$nextEvents"',
+      async ({ setEvent, state, nextEvents }) => {
+        // Act
+        let updateState = await eventOnOpportunityMutation(
+          opportunityId,
+          setEvent
+        );
+        let data = updateState.body.data.eventOnOpportunity.lifecycle;
+        let opportunityData = await queryOpportunity(opportunityId);
+        let opportunityDataResponse =
+          opportunityData.body.data.ecoverse.opportunity.lifecycle;
+
+        // Assert
+        expect(data.state).toEqual(state);
+        expect(data.nextEvents).toEqual(nextEvents);
+        expect(data).toEqual(opportunityDataResponse);
       }
     );
 

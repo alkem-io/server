@@ -67,7 +67,7 @@ export const removeActorMutation = async (actorId: string) => {
       }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(actorId),
+        ID: actorId,
       },
     },
   };

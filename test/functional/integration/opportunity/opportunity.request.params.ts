@@ -1,7 +1,12 @@
-import { challengeDataTest, communityData, contextData, lifecycleData } from '@test/utils/common-params';
+import {
+  challengeDataTest,
+  communityData,
+  contextData,
+  lifecycleData,
+  opportunityData,
+} from '@test/utils/common-params';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
 import { TestUser } from '../../../utils/token.helper';
-
 
 export const createChildChallengeMutation = async (
   challengeId: string,
@@ -40,6 +45,43 @@ export const createChildChallengeMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+export const createOpportunityMutation = async (
+  challengeId: string,
+  oppName: string,
+  oppTextId: string,
+  contextTagline?: string
+) => {
+  const requestParams = {
+    operationName: null,
+    query: `mutation createOpportunity($opportunityData: CreateOpportunityInput!) {
+      createOpportunity(opportunityData: $opportunityData) {
+        ${opportunityData}
+      }
+    }`,
+    variables: {
+      opportunityData: {
+        challengeID: challengeId,
+        name: oppName,
+        textID: oppTextId,
+        context: {
+          background: 'test background',
+          vision: 'test vision',
+          tagline: `${contextTagline}`,
+          who: 'test who',
+          impact: 'test impact',
+          references: {
+            name: 'test ref name',
+            uri: 'https://test.com/',
+            description: 'test description',
+          },
+        },
+      },
+    },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
 export const updateOpportunityOnChallengeMutation = async (
   opportunityId: string
 ) => {
@@ -47,25 +89,7 @@ export const updateOpportunityOnChallengeMutation = async (
     operationName: null,
     query: `mutation updateOpportunity($opportunityData: UpdateOpportunityInput!) {
       updateOpportunity(opportunityData: $opportunityData) {
-        id
-        name
-        textID
-        ${lifecycleData}
-        context {
-          id
-          tagline
-          background
-          vision
-          impact
-          who
-          references {
-            id
-            name
-            uri
-            description
-          }
-        }
-        community{id members{id} }
+        ${opportunityData}
       }
     }`,
     variables: {
@@ -120,7 +144,7 @@ export const removeOpportunityMutation = async (opportunityId: string) => {
       }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(opportunityId),
+        ID: opportunityId,
       },
     },
   };
@@ -133,25 +157,7 @@ export const queryOpportunity = async (opportunityId: string) => {
     operationName: null,
     query: `query {ecoverse{
       opportunity(ID: "${opportunityId}") {
-        id
-        name
-        textID
-        ${lifecycleData}
-          context {
-          id
-          tagline
-          background
-          vision
-          impact
-          who
-          references {
-            id
-            name
-            uri
-            description
-          }
-        }
-        community{id members{id} }
+        ${opportunityData}
       }
     }}`,
   };
@@ -165,25 +171,7 @@ export const queryOpportunities = async () => {
     query: `query {
       ecoverse{
       opportunities {
-        id
-        name
-        textID
-        ${lifecycleData}
-        context {
-          id
-          tagline
-          background
-          vision
-          impact
-          who
-          references {
-            id
-            name
-            uri
-            description
-          }
-        }
-        community{id members{id} }
+        ${opportunityData}
       }
     }
   }`,
@@ -192,6 +180,7 @@ export const queryOpportunities = async () => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+// remove potentially
 export const queryOpportunityGroups = async (opportunityId: any) => {
   const requestParams = {
     operationName: null,
@@ -206,6 +195,7 @@ export const queryOpportunityGroups = async (opportunityId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+// remove potentially
 export const queryOpportunitySubEntities = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
@@ -244,6 +234,8 @@ export const queryOpportunitySubEntities = async (opportunityId: string) => {
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
+
+// remove potentially
 export const queryChallengesSubEntities = async () => {
   const requestParams = {
     operationName: null,
@@ -259,6 +251,7 @@ export const queryChallengesSubEntities = async () => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
+// remove potentially
 export const subChallengesSubEntities = `
   id
   community {
