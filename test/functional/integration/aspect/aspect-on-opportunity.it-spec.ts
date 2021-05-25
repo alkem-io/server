@@ -7,7 +7,7 @@ import {
   getAspectPerOpportunity,
   updateAspectMutation,
 } from './aspect.request.params';
-import { createChildChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
+import { createChildChallengeMutation, createOpportunityMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';
@@ -23,13 +23,13 @@ let uniqueTextId = '';
 let contextId = '';
 let aspectCountPerOpportunity = async (): Promise<number> => {
   const responseQuery = await getAspectPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.ecoverse.challenge.context.aspects;
+  let response = responseQuery.body.data.ecoverse.opportunity.context.aspects;
   return response;
 };
 
 let aspectDataPerOpportunity = async (): Promise<String> => {
   const responseQuery = await getAspectPerOpportunity(opportunityId);
-  let response = responseQuery.body.data.ecoverse.challenge.context.aspects[0];
+  let response = responseQuery.body.data.ecoverse.opportunity.context.aspects[0];
   return response;
 };
 beforeEach(async () => {
@@ -61,15 +61,16 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
   // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
+  const responseCreateOpportunityOnChallenge = await createOpportunityMutation(
     challengeId,
     opportunityName,
     opportunityTextId
   );
+
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
   contextId =
-    responseCreateOpportunityOnChallenge.body.data.createChildChallenge.context
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity.context
       .id;
 
   // Create Aspect on opportunity group

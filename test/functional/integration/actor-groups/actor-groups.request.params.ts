@@ -35,7 +35,7 @@ export const removeActorGroupMutation = async (actorGroupId: any) => {
       }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(actorGroupId),
+        ID: actorGroupId,
       },
     },
   };

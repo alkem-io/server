@@ -1,6 +1,6 @@
 import { TestUser } from '../../../utils/token.helper';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
-import { collaborationData, relationsData } from '@test/utils/common-params';
+import { collaborationData, opportunityData, relationsData } from '@test/utils/common-params';
 
 export const createRelationMutation = async (
   opportunityId: string,
@@ -82,8 +82,11 @@ export const removeRelationMutation = async (relationId: any) => {
 export const getRelationsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {challenge(ID: "${opportunityId}") {
-      ${collaborationData}}}}`,
+    query: `query {ecoverse{ opportunity(ID: "${opportunityId}") {
+            ${opportunityData}
+        }
+      }
+    }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

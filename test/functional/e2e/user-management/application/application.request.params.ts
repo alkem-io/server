@@ -38,7 +38,7 @@ export const createApplicationMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.NON_ECOVERSE_MEMBER);
 };
 
-export const removeApplicationMutation = async (appId: any) => {
+export const removeApplicationMutation = async (appId: string) => {
   const requestParams = {
     operationName: null,
     query: `mutation deleteUserApplication($deleteData: DeleteApplicationInput!) {
@@ -55,7 +55,7 @@ export const removeApplicationMutation = async (appId: any) => {
           }}}`,
     variables: {
       deleteData: {
-        ID: parseFloat(appId),
+        ID: appId,
       },
     },
   };

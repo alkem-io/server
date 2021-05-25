@@ -5,6 +5,7 @@ import {
 } from './user.request.params';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
+import { response } from 'express';
 
 let userName = '';
 let userId = '';
@@ -59,7 +60,7 @@ describe('Remove user', () => {
 
   test('should receive a message for removing unexisting user', async () => {
     // Act
-    const responseQuery = await removeUserMutation(77777);
+    const responseQuery = await removeUserMutation("77777");
 
     // Assert
     expect(responseQuery.status).toBe(200);

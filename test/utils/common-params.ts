@@ -136,6 +136,8 @@ collaboration {
   }
 }`;
 
+
+
 export const actorData = `
       id
     name
@@ -192,12 +194,39 @@ export const leadOrganisationsData = `
   ${membersData}
 `;
 
+export const opportunityData = `
+  id
+  name
+  textID
+  community {
+    ${communityData}
+  }
+  context {
+    ${contextData}
+  }
+  lifecycle {
+    ${lifecycleData}
+  }
+  tagset {
+    ${tagsetData}
+  }
+  projects{
+    ${projectData}
+  }
+  relations{
+    ${relationsData}
+  }
+`;
+
 export const challengesData = `
     id
     name
     textID
     ${activityData}
-    ${collaborationData}
+
+    opportunities {
+      ${opportunityData}
+    }
     community {
       ${communityData}
     }
@@ -220,7 +249,9 @@ export const challengeData = `
   name
   textID
   ${activityData}
-  ${collaborationData}
+  opportunities {
+    ${opportunityData}
+  }
   community {
     ${communityData}
   }
@@ -246,7 +277,9 @@ export const challengeDataTest = `
   name
   textID
 
-  ${collaborationData}
+  opportunities {
+    ${opportunityData}
+  }
   community {
     ${communityData}
   }
