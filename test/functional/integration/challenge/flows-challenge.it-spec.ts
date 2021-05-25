@@ -94,7 +94,7 @@ describe('Flows challenge', () => {
     ).toHaveLength(0);
   });
 
-  test('should not be able to modify challenge name to allready existing challenge name and/or textId', async () => {
+  test.skip('should not be able to modify challenge name to allready existing challenge name and/or textId', async () => {
     // Arrange
     // Create second challenge and get its id and name
     const responseSecondChallenge = await createChallangeMutation(
@@ -135,7 +135,7 @@ describe('Flows challenge', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(response.text).toContain(
-      `Unable to create challenge: already have a challenge with the provided name (${challengeName})`
+      `Unable to create entity: parent already has a child with the given name: ${challengeName}`
     );
   });
 
@@ -150,7 +150,7 @@ describe('Flows challenge', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(response.text).toContain(
-      `Trying to create an child challenge but one with the given textID already exists: ${uniqueTextId}`
+      `Unable to create entity: parent already has a child with the given textID: ${uniqueTextId}`
     );
   });
 

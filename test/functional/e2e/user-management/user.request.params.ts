@@ -139,7 +139,7 @@ export const removeUserMutation = async (removeUserID: any) => {
         }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(removeUserID),
+        ID: removeUserID,
       },
     },
   };
