@@ -18,11 +18,11 @@ import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '../application/application.service';
 import {
   AssignCommunityMemberInput,
+  ICommunity,
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
-import { IUser } from '@domain/community/user';
 import { UserInfo } from '@core/authentication';
 import { AuthorizationRoleGlobal } from '@common/enums';
 @Resolver()
@@ -51,13 +51,13 @@ export class CommunityResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
+  @Mutation(() => ICommunity, {
     description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api
   async assignUserToCommunity(
     @Args('membershipData') membershipData: AssignCommunityMemberInput
-  ): Promise<IUser> {
+  ): Promise<ICommunity> {
     return await this.communityService.assignMember(membershipData);
   }
 
@@ -66,13 +66,13 @@ export class CommunityResolverMutations {
     AuthorizationRoleGlobal.Admin
   )
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IUserGroup, {
+  @Mutation(() => ICommunity, {
     description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
   async removeUserFromCommunity(
     @Args('membershipData') membershipData: RemoveCommunityMemberInput
-  ): Promise<IUser> {
+  ): Promise<ICommunity> {
     return await this.communityService.removeMember(membershipData);
   }
 

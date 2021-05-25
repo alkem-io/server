@@ -1,6 +1,5 @@
 mutation removeUserFromCommunity($membershipData: RemoveCommunityMemberInput!) {
   removeUserFromCommunity(membershipData: $membershipData) {
-    name,
     id,
     members {
       id,
