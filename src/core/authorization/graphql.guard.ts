@@ -14,20 +14,18 @@ import {
   AuthorizationRoleGlobal,
   ConfigurationTypes,
   LogContext,
+  CherrytwistErrorStatus,
 } from '@common/enums';
-import { AuthenticationException } from '@common/exceptions/authentication.exception';
-import { TokenException } from '@common/exceptions/token.exception';
-import { ForbiddenException } from '@common/exceptions/forbidden.exception';
-import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
+import {
+  AuthenticationException,
+  TokenException,
+  ForbiddenException,
+} from '@common/exceptions';
 import {
   IAuthorizationRule,
   AuthorizationRuleGlobalRole,
-  AuthorizationRuleOrganisationMember,
 } from '@src/core/authorization/rules';
-import {
-  AuthorizationRuleSelfRegistration,
-  AuthorizationRuleCommunityMember,
-} from '@core/authorization';
+import { AuthorizationRuleSelfRegistration } from '@core/authorization';
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 
 @Injectable()
@@ -62,14 +60,6 @@ export class GraphqlGuard extends AuthGuard([
       'self-registration',
       context.getHandler()
     );
-    const communityMember = this.reflector.get<boolean>(
-      'community-member',
-      context.getHandler()
-    );
-    const organisationMember = this.reflector.get<boolean>(
-      'organisation-member',
-      context.getHandler()
-    );
 
     if (globalRoles) {
       for (const role of globalRoles) {
@@ -90,18 +80,6 @@ export class GraphqlGuard extends AuthGuard([
       const args = context.getArgByIndex(1);
       const fieldName = context.getArgByIndex(3).fieldName;
       const rule = new AuthorizationRuleSelfRegistration(fieldName, args, 1);
-      this.authorizationRules.push(rule);
-    }
-
-    if (communityMember) {
-      const parentArg = context.getArgByIndex(0);
-      const rule = new AuthorizationRuleCommunityMember(parentArg, 3);
-      this.authorizationRules.push(rule);
-    }
-
-    if (organisationMember) {
-      const parentArg = context.getArgByIndex(0);
-      const rule = new AuthorizationRuleOrganisationMember(parentArg, 3);
       this.authorizationRules.push(rule);
     }
 
