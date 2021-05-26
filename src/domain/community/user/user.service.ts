@@ -7,29 +7,24 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import {
   UpdateUserInput,
   CreateUserInput,
+  DeleteUserInput,
   User,
   IUser,
 } from '@domain/community/user';
-import { DeleteUserInput } from './user.dto.delete';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Agent, IAgent } from '@domain/agent/agent';
 import { UUID_LENGTH } from '@common/constants';
-import { AuthorizationRule } from '@src/services/authorization-engine/authorizationRule';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { IProfile } from '@domain/community/profile';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class UserService {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
     private profileService: ProfileService,
     private agentService: AgentService,
     @InjectRepository(User)
@@ -65,29 +60,6 @@ export class UserService {
         LogContext.AUTH
       );
 
-    // Rules for who can update this user and contained entities
-    user.authorizationRules = this.createAuthorizationRules(user.id);
-    user.profile.authorizationRules = user.authorizationRules;
-    // Extend to grant create / delete on child entities in profile
-    user.profile.authorizationRules = await this.authorizationEngine.appendAuthorizationRule(
-      user.profile.authorizationRules,
-      {
-        type: AuthorizationCredential.GlobalAdminCommunity,
-        resourceID: user.id,
-      },
-      [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.DELETE]
-    );
-
-    // Credentials assigned to this user
-    await this.agentService.grantCredential({
-      type: AuthorizationCredential.GlobalRegistered,
-      agentID: user.agent.id,
-    });
-    await this.agentService.grantCredential({
-      type: AuthorizationCredential.UserSelfManagement,
-      agentID: user.agent.id,
-      resourceID: user.id,
-    });
     return await this.userRepository.save(user);
   }
 
@@ -297,6 +269,16 @@ export class UserService {
     return agent;
   }
 
+  getProfile(user: IUser): IProfile {
+    const profile = user.profile;
+    if (!profile)
+      throw new EntityNotInitializedException(
+        `User Profile not initialized: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    return profile;
+  }
+
   async usersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<IUser[]> {
@@ -339,62 +321,5 @@ export class UserService {
       agent.id,
       credentialCriteria
     );
-  }
-
-  // Membership related functionality
-
-  addGroupToEntity(
-    entities: IGroupable[],
-    entity: IGroupable,
-    group: IUserGroup
-  ) {
-    const existingEntity = entities.find(e => e.id === entity.id);
-    if (!existingEntity) {
-      //first time through
-      entities.push(entity);
-      entity.groups = [group];
-    } else {
-      existingEntity.groups?.push(group);
-    }
-  }
-
-  createAuthorizationRules(userID: string): string {
-    const rules: AuthorizationRule[] = [];
-
-    const globalAdmin = {
-      type: AuthorizationCredential.GlobalAdmin,
-      resourceID: '',
-      grantedPrivileges: [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-    };
-    rules.push(globalAdmin);
-
-    const communityAdmin = {
-      type: AuthorizationCredential.GlobalAdminCommunity,
-      resourceID: '',
-      grantedPrivileges: [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-    };
-    rules.push(communityAdmin);
-
-    const userSelfAdmin = {
-      type: AuthorizationCredential.UserSelfManagement,
-      resourceID: userID,
-      grantedPrivileges: [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-      ],
-    };
-    rules.push(userSelfAdmin);
-
-    return JSON.stringify(rules);
   }
 }

@@ -1,8 +1,8 @@
 import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import {
   CreateEcoverseInput,
@@ -13,10 +13,16 @@ import {
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { UserInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 @Resolver()
 export class EcoverseResolverMutations {
   constructor(
-    @Inject(EcoverseService) private ecoverseService: EcoverseService
+    private authorizationEngine: AuthorizationEngineService,
+    private ecoverseService: EcoverseService,
+    private ecoverseAuthorizationService: EcoverseAuthorizationService
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
@@ -28,42 +34,73 @@ export class EcoverseResolverMutations {
   async createEcoverse(
     @Args('ecoverseData') ecoverseData: CreateEcoverseInput
   ): Promise<IEcoverse> {
-    return await this.ecoverseService.createEcoverse(ecoverseData);
+    const ecoverse = await this.ecoverseService.createEcoverse(ecoverseData);
+    return await this.ecoverseAuthorizationService.applyAuthorizationRules(
+      ecoverse
+    );
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IEcoverse, {
     description: 'Updates the Ecoverse.',
   })
   @Profiling.api
   async updateEcoverse(
+    @CurrentUser() userInfo: UserInfo,
     @Args('ecoverseData') ecoverseData: UpdateEcoverseInput
   ): Promise<IEcoverse> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      ecoverseData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo.credentials,
+      ecoverse.authorizationRules,
+      AuthorizationPrivilege.UPDATE,
+      `updateEcoverse: ${ecoverse.nameID}`
+    );
+
     const ctVerse = await this.ecoverseService.update(ecoverseData);
     return ctVerse;
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IEcoverse, {
     description: 'Deletes the specified Ecoverse.',
   })
   async deleteEcoverse(
+    @CurrentUser() userInfo: UserInfo,
     @Args('deleteData') deleteData: DeleteEcoverseInput
   ): Promise<IEcoverse> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      deleteData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo.credentials,
+      ecoverse.authorizationRules,
+      AuthorizationPrivilege.DELETE,
+      `deleteEcoverse: ${ecoverse.nameID}`
+    );
     return await this.ecoverseService.deleteEcoverse(deleteData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IChallenge, {
     description: 'Creates a new Challenge within the specified Ecoverse.',
   })
   @Profiling.api
   async createChallenge(
+    @CurrentUser() userInfo: UserInfo,
     @Args('challengeData') challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      challengeData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo.credentials,
+      ecoverse.authorizationRules,
+      AuthorizationPrivilege.CREATE,
+      `challengeCreate: ${ecoverse.nameID}`
+    );
     const challenge = await this.ecoverseService.createChallenge(challengeData);
 
     return challenge;

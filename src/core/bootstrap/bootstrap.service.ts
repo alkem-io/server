@@ -12,11 +12,13 @@ import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
+import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 @Injectable()
 export class BootstrapService {
   constructor(
     private ecoverseService: EcoverseService,
     private userService: UserService,
+    private userAuthorizationService: UserAuthorizationService,
     private authorizationService: AuthorizationService,
     private configService: ConfigService,
     @InjectRepository(Ecoverse)
@@ -123,7 +125,7 @@ export class BootstrapService {
           userData.email
         );
         if (!userExists) {
-          const user = await this.userService.createUser({
+          let user = await this.userService.createUser({
             nameID: `${userData.firstName}_${userData.lastName}`,
             email: userData.email,
             displayName: `${userData.firstName} ${userData.lastName}`,
@@ -139,6 +141,10 @@ export class BootstrapService {
               resourceID: credentialData.resourceID,
             });
           }
+          user = await this.userAuthorizationService.grantCredentials(user);
+          user = await this.userAuthorizationService.applyAuthorizationRules(
+            user
+          );
         }
       }
     } catch (error) {

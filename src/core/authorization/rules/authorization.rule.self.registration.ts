@@ -3,7 +3,7 @@ import { ForbiddenException } from '@common/exceptions';
 import { UserInfo } from '@core/authentication/user-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
 
-export class AuthorizationRuleSelfManagement implements IAuthorizationRule {
+export class AuthorizationRuleSelfRegistration implements IAuthorizationRule {
   userEmail?: string;
   operation!: string;
   priority: number;

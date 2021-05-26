@@ -17,12 +17,14 @@ import { AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UserInfo } from '@core/authentication';
+import { UserAuthorizationService } from './user.service.authorization';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
     private authorizationEngine: AuthorizationEngineService,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly userAuthorizationService: UserAuthorizationService
   ) {}
 
   @AuthorizationGlobalRoles(
@@ -38,7 +40,9 @@ export class UserResolverMutations {
   async createUser(
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
-    return await this.userService.createUser(userData);
+    let user = await this.userService.createUser(userData);
+    user = await this.userAuthorizationService.grantCredentials(user);
+    return await this.userAuthorizationService.applyAuthorizationRules(user);
   }
 
   @UseGuards(GraphqlGuard)

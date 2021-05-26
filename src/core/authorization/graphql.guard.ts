@@ -25,7 +25,7 @@ import {
   AuthorizationRuleOrganisationMember,
 } from '@src/core/authorization/rules';
 import {
-  AuthorizationRuleSelfManagement,
+  AuthorizationRuleSelfRegistration,
   AuthorizationRuleCommunityMember,
 } from '@core/authorization';
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
@@ -58,8 +58,8 @@ export class GraphqlGuard extends AuthGuard([
       'authorizationGlobalRoles',
       context.getHandler()
     );
-    const selfManagement = this.reflector.get<boolean>(
-      'self-management',
+    const selfRegistration = this.reflector.get<boolean>(
+      'self-registration',
       context.getHandler()
     );
     const communityMember = this.reflector.get<boolean>(
@@ -86,10 +86,10 @@ export class GraphqlGuard extends AuthGuard([
       }
     }
 
-    if (selfManagement) {
+    if (selfRegistration) {
       const args = context.getArgByIndex(1);
       const fieldName = context.getArgByIndex(3).fieldName;
-      const rule = new AuthorizationRuleSelfManagement(fieldName, args, 1);
+      const rule = new AuthorizationRuleSelfRegistration(fieldName, args, 1);
       this.authorizationRules.push(rule);
     }
 

@@ -16,9 +16,12 @@ import { ApplicationModule } from '@domain/community/application/application.mod
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
 import { NamingModule } from '@src/services/naming/naming.module';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
+import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 
 @Module({
   imports: [
+    AuthorizationEngineModule,
     ContextModule,
     CommunityModule,
     ChallengeModule,
@@ -34,6 +37,7 @@ import { NamingModule } from '@src/services/naming/naming.module';
   ],
   providers: [
     EcoverseService,
+    EcoverseAuthorizationService,
     EcoverseResolverFields,
     EcoverseResolverQueries,
     EcoverseResolverMutations,

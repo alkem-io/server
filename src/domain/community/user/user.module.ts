@@ -9,6 +9,7 @@ import { UserResolverMutations } from './user.resolver.mutations';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@src/services/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
+import { UserAuthorizationService } from './user.service.authorization';
 
 @Module({
   imports: [
@@ -20,10 +21,11 @@ import { AuthorizationEngineModule } from '@src/services/authorization-engine/au
   ],
   providers: [
     UserService,
+    UserAuthorizationService,
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
   ],
-  exports: [UserService],
+  exports: [UserService, UserAuthorizationService],
 })
 export class UserModule {}
