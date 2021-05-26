@@ -112,8 +112,8 @@ export const aspectData = `
 
 export const projectData = `
   id
-  name
-  textID
+  displayName
+  nameID
   description
   aspects{
     ${aspectData}
@@ -196,8 +196,8 @@ export const leadOrganisationsData = `
 
 export const opportunityData = `
   id
-  name
-  textID
+  displayName
+  nameID
   community {
     ${communityData}
   }

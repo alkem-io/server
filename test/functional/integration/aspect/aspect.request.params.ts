@@ -17,7 +17,7 @@ export const createAspectOnProjectMutation = async (
     }`,
     variables: {
       aspectData: {
-        parentID: parseFloat(projectId),
+        parentID: projectId,
         title: `${aspectTitle}`,
         framing: `${aspectFraming}`,
         explanation: `${aspectExplenation}`,
@@ -43,7 +43,7 @@ export const createAspectOnOpportunityMutation = async (
     }`,
     variables: {
       aspectData: {
-        parentID: parseFloat(opportunityContextId),
+        parentID: opportunityContextId,
         title: `${aspectTitle}`,
         framing: `${aspectFraming}`,
         explanation: `${aspectExplenation}`,

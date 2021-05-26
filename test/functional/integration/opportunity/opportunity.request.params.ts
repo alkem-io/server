@@ -61,8 +61,8 @@ export const createOpportunityMutation = async (
     variables: {
       opportunityData: {
         challengeID: challengeId,
-        name: oppName,
-        textID: oppTextId,
+        displayName: oppName,
+        nameID: oppTextId,
         context: {
           background: 'test background',
           vision: 'test vision',
@@ -95,7 +95,7 @@ export const updateOpportunityOnChallengeMutation = async (
     variables: {
       opportunityData: {
         ID: opportunityId,
-        name: '1',
+        displayName: '1',
         context: {
           background: '1',
           vision: '1',
@@ -186,7 +186,7 @@ export const queryOpportunityGroups = async (opportunityId: any) => {
     operationName: null,
     query: `query {ecoverse{
       opportunity(ID: "${opportunityId}") {
-        community{id name groups{id name members{id name}}}
+        community{id displayName groups{id name members{id name}}}
       }
     }
   }`,

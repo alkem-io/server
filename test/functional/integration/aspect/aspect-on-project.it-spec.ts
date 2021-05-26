@@ -7,9 +7,7 @@ import {
   removeAspectMutation,
   updateAspectMutation,
 } from './aspect.request.params';
-import {
-  createOpportunityMutation,
-} from '@test/functional/integration/opportunity/opportunity.request.params';
+import { createOpportunityMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 import { createProjectMutation } from '@test/functional/integration/project/project.request.params';
 
 let opportunityName = '';
@@ -43,7 +41,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   projectName = `projectName ${uniqueTextId}`;
   projectTextId = `pr${uniqueTextId}`;
   aspectTitle = `aspectTitle-${uniqueTextId}`;
