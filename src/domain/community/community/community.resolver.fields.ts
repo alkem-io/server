@@ -1,8 +1,5 @@
 import { AuthorizationRoleGlobal } from '@common/enums';
-import {
-  AuthorizationCommunityMember,
-  GraphqlGuard,
-} from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
@@ -20,7 +17,6 @@ export class CommunityResolverFields {
     AuthorizationRoleGlobal.Admin,
     AuthorizationRoleGlobal.CommunityAdmin
   )
-  @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
@@ -35,7 +31,6 @@ export class CommunityResolverFields {
     AuthorizationRoleGlobal.Admin,
     AuthorizationRoleGlobal.CommunityAdmin
   )
-  @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,
@@ -50,7 +45,6 @@ export class CommunityResolverFields {
     AuthorizationRoleGlobal.Admin,
     AuthorizationRoleGlobal.CommunityAdmin
   )
-  @AuthorizationCommunityMember()
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,
