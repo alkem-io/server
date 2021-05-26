@@ -18,7 +18,7 @@ export const eventOnChallengeMutation = async (
     }`,
     variables: {
       challengeEventData: {
-        ID: parseFloat(challengeId),
+        ID: challengeId,
         eventName: `${eventsName}`,
       },
     },
@@ -43,7 +43,7 @@ export const eventOnOpportunityMutation = async (
     }`,
     variables: {
       opportunityEventData: {
-        ID: parseFloat(opportunityId),
+        ID: opportunityId,
         eventName: `${eventsName}`,
       },
     },
@@ -68,7 +68,7 @@ export const eventOnProjectMutation = async (
     }`,
     variables: {
       projectEventData: {
-        ID: parseFloat(projectId),
+        ID: projectId,
         eventName: `${eventsName}`,
       },
     },
@@ -93,7 +93,7 @@ export const eventOnApplicationMutation = async (
     }`,
     variables: {
       applicationEventData: {
-        ID: parseFloat(applicationId),
+        ID: applicationId,
         eventName: `${eventsName}`,
       },
     },

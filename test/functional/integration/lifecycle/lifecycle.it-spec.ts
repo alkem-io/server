@@ -65,7 +65,7 @@ describe('Lifecycle', () => {
       groupName = `groupName ${uniqueTextId}`;
       challengeName = `testChallenge ${uniqueTextId}`;
       opportunityName = `opportunityName ${uniqueTextId}`;
-      opportunityTextId = `${uniqueTextId}`;
+      opportunityTextId = `opp${uniqueTextId}`;
       projectName = `projectName ${uniqueTextId}`;
       projectTextId = `pr${uniqueTextId}`;
       // Create Challenge
@@ -152,7 +152,7 @@ describe('Lifecycle', () => {
       groupName = `groupName ${uniqueTextId}`;
       challengeName = `testChallenge ${uniqueTextId}`;
       opportunityName = `opportunityName ${uniqueTextId}`;
-      opportunityTextId = `${uniqueTextId}`;
+      opportunityTextId = `opp${uniqueTextId}`;
       projectName = `projectName ${uniqueTextId}`;
       projectTextId = `pr${uniqueTextId}`;
       // Create Challenge

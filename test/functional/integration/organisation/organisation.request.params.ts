@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { organisationData } from '@test/utils/common-params';
 
 export const createOrganisationMutation = async (
   organisationName: string,
@@ -8,19 +9,12 @@ export const createOrganisationMutation = async (
   const requestParams = {
     operationName: null,
     query: `mutation CreateOrganisation($organisationData: CreateOrganisationInput!) {
-      createOrganisation(organisationData: $organisationData) {
-        id
-        name,
-        members
-        {
-           name
-        }
-      }
+      createOrganisation(organisationData: $organisationData) ${organisationData}
     }`,
     variables: {
       organisationData: {
-        name: organisationName,
-        textID: textId,
+        displayName: organisationName,
+        nameID: textId,
       },
     },
   };

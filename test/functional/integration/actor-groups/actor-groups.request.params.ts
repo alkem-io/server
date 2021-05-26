@@ -3,7 +3,7 @@ import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import { actorGrpupData, contextData } from '@test/utils/common-params';
 
 export const createActorGroupMutation = async (
-  opportunityId: string,
+  ecosystemModelId: string,
   actorGroupName: string,
   actorDescritpion?: string
 ) => {
@@ -16,7 +16,7 @@ export const createActorGroupMutation = async (
       }`,
     variables: {
       actorGroupData: {
-        parentID: parseFloat(opportunityId),
+        ecosystemModelID: ecosystemModelId,
         name: `${actorGroupName}`,
         description: `${actorDescritpion}`,
       },
@@ -43,10 +43,10 @@ export const removeActorGroupMutation = async (actorGroupId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getActorGroupsPerOpportunity = async (subChallengeId: string) => {
+export const getActorGroupsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {challenge(ID: "${subChallengeId}") {
+    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
           context{
             ${contextData}
             }

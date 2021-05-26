@@ -21,7 +21,7 @@ let data: TestDataServiceInitResult;
 //let userId: null
 
 const userName = 'Qa User';
-let userId: number;
+let userId: string;
 let groupName = '';
 let ecoverseGroupId = '';
 let organisationName = '';

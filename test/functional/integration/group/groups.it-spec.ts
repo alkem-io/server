@@ -15,7 +15,7 @@ import { TestDataServiceInitResult } from '@src/services/data-management/test-da
 import { createGroupOnCommunityMutation } from '../community/community.request.params';
 
 let data: TestDataServiceInitResult;
-let userId: number;
+let userId: string;
 let groupName = '';
 let communityGroupId = '';
 let organisationName = '';

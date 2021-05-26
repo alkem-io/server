@@ -1,24 +1,26 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth, mutation } from '@test/utils/graphql.request';
-import {
-  challengeDataTest,
-  communityData,
-  contextData,
-  lifecycleData,
-} from '@test/utils/common-params';
+import { challengeDataTest, lifecycleData } from '@test/utils/common-params';
 import { createChallengMut } from '@test/utils/mutations/create-mutation';
+import { getEcoverseId } from '../ecoverse/ecoverse.request.params';
 
 const uniqueId = (Date.now() + Math.random()).toString();
 
-export const challengeVariablesData = (
+let ecoverseId = async (): Promise<any> => {
+  const responseQuery = await getEcoverseId();
+  let response = responseQuery.body.data.ecoverse.id;
+  return response;
+};
+
+export const challengeVariablesData = async (
   challengeName: string,
   uniqueTextId: string
 ) => {
   const variables = {
     challengeData: {
-      parentID: '1',
-      name: challengeName,
-      textID: uniqueTextId,
+      parentID: await ecoverseId(),
+      displayName: challengeName,
+      nameID: uniqueTextId,
       tags: 'testTags',
       context: {
         tagline: 'test tagline' + uniqueId,
@@ -46,7 +48,7 @@ export const createChallangeMutation = async (
 ) => {
   return await mutation(
     createChallengMut,
-    challengeVariablesData(challengeName, uniqueTextId)
+    await challengeVariablesData(challengeName, uniqueTextId)
   );
 };
 
@@ -70,7 +72,7 @@ export const updateChallangeMutation = async (
     variables: {
       challengeData: {
         ID: challengeId,
-        name: challengeName,
+        displayName: challengeName,
         context: {
           tagline: taglineText,
           background: background,
@@ -172,9 +174,6 @@ export const getChallengesData = async () => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-
-
-
 export const getChallengeOpportunity = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
@@ -188,5 +187,3 @@ export const getChallengeOpportunity = async (challengeId: string) => {
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
-
-

@@ -8,11 +8,15 @@ import { graphqlRequestAuth } from '../../../utils/graphql.request';
 import '../../../utils/array.matcher';
 import { appSingleton } from '../../../utils/app.singleton';
 import { TestUser } from '../../../utils/token.helper';
+import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
+
+let data: TestDataServiceInitResult;
 
 let challengeName = '';
 let uniqueTextId = '';
 let challengeId = '';
 let challengeDataCreate = '';
+let ecoverseId = '';
 
 let challangeData = async (challengeId: string): Promise<String> => {
   const responseQuery = await getChallengeData(challengeId);
@@ -30,13 +34,19 @@ beforeEach(async () => {
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
-  const response = await createChallangeMutation(challengeName, uniqueTextId);
+  const response = await createChallangeMutation(
+    //  ecoverseId,
+    challengeName,
+    uniqueTextId
+  );
   challengeDataCreate = response.body.data.createChallenge;
   challengeId = response.body.data.createChallenge.id;
 });
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
+  data = appSingleton.Instance.getData();
+  ecoverseId = data.ecoverseId;
 });
 
 afterAll(async () => {
@@ -51,6 +61,7 @@ describe('Create Challenge', () => {
   test('should create a successfull challenge', async () => {
     // Act
     const response = await createChallangeMutation(
+      //  ecoverseId,
       'challengeName',
       'chal-texti'
     );
@@ -59,7 +70,7 @@ describe('Create Challenge', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(challengeDataCreate.name).toEqual('challengeName');
+    expect(challengeDataCreate.displayName).toEqual('challengeName');
     expect(challengeDataCreate).toEqual(await challangeData(challengeIdTest));
   });
 
@@ -83,6 +94,7 @@ describe('Create Challenge', () => {
   test('should create 2 challenges with different names and textIDs', async () => {
     // Act
     const responseChallengeTwo = await createChallangeMutation(
+      //  ecoverseId,
       `${challengeName}change`,
       `${uniqueTextId}c`
     );
@@ -101,6 +113,7 @@ describe('Create Challenge', () => {
   test('should create challenge with name and textId only', async () => {
     // Act
     const responseSimpleChallenge = await createChallangeMutation(
+      // ecoverseId,
       `${challengeName}change`,
       `${uniqueTextId}c`
     );
@@ -116,6 +129,7 @@ describe('Create Challenge', () => {
   test('should create a group, when create a challenge', async () => {
     // // Arrange
     const responseChallenge = await createChallangeMutation(
+      // ecoverseId,
       challengeName + 'd',
       uniqueTextId + 'd'
     );
@@ -125,9 +139,9 @@ describe('Create Challenge', () => {
 
     // Assert
     expect(responseChallenge.status).toBe(200);
-    expect(responseChallenge.body.data.createChallenge.community.name).toEqual(
-      challengeName + 'd'
-    );
+    expect(
+      responseChallenge.body.data.createChallenge.community.displayName
+    ).toEqual(challengeName + 'd');
     expect(
       responseChallenge.body.data.createChallenge.community.id
     ).not.toBeNull();
@@ -137,37 +151,21 @@ describe('Create Challenge', () => {
   describe('DDT invalid textId', () => {
     // Arrange
     test.each`
-      textId       | expected
-      ${'d'}       | ${'Expected type \\"TextID\\". TextID type has a minimum length of 3: d'}
-      ${'vvv,vvd'} | ${'Expected type \\"TextID\\". TextID has characters that are not allowed: vvv,vvd'}
-      ${'..-- d'}  | ${'Expected type \\"TextID\\". TextID has characters that are not allowed: ..-- d'}
+      nameId       | expected
+      ${'d'}       | ${'Expected type \\"NameID\\". NameID value not valid: d'}
+      ${'vvv,vvd'} | ${'Expected type \\"NameID\\". NameID value not valid: vvv,vvd'}
+      ${'..-- d'}  | ${'Expected type \\"NameID\\". NameID value not valid: ..-- d'}
     `(
-      'should throw error: "$expected" for textId value: "$textId"',
-      async ({ textId, expected }) => {
-        // Act
-        const requestParamsCreateChallenge = {
-          operationName: null,
-          query: `mutation CreateChallenge($challengeData: CreateChallengeInput!) {
-            createChallenge(challengeData: $challengeData) { name id } }`,
-          variables: {
-            challengeData: {
-              parentID: 1,
-              name: challengeName + 'd',
-              textID: textId + 'd',
-            },
-          },
-        };
-        const responseInvalidTextId = await graphqlRequestAuth(
-          requestParamsCreateChallenge,
-          TestUser.GLOBAL_ADMIN
+      'should throw error: "$expected" for nameId value: "$nameId"',
+      async ({ nameId, expected }) => {
+        let response = await createChallangeMutation(
+          challengeName + 'd',
+          nameId + 'd'
         );
 
         // Assert
-        expect(responseInvalidTextId.text).toContain(expected);
+        expect(response.text).toContain(expected);
       }
     );
   });
 });
-function createCh(createCh: any, arg1: string, arg2: string) {
-  throw new Error('Function not implemented.');
-}

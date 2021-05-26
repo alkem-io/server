@@ -18,9 +18,9 @@ export const createProjectMutation = async (
     }`,
     variables: {
       projectData: {
-        opportunityID: parseFloat(opportunityId),
-        name: `${projectName}`,
-        textID: `${textId}`,
+        opportunityID: opportunityId,
+        displayName: `${projectName}`,
+        nameID: `${textId}`,
         description: `${projectDescritpion}`,
       },
     },
@@ -36,7 +36,7 @@ export const removeProjectMutation = async (projectId: any) => {
       removeProject(ID: $ID)
     }`,
     variables: {
-      ID: parseFloat(projectId),
+      ID: projectId,
     },
   };
 

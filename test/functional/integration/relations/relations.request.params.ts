@@ -1,6 +1,6 @@
 import { TestUser } from '../../../utils/token.helper';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
-import { collaborationData, opportunityData, relationsData } from '@test/utils/common-params';
+import { opportunityData, relationsData } from '@test/utils/common-params';
 
 export const createRelationMutation = async (
   opportunityId: string,
@@ -19,7 +19,7 @@ export const createRelationMutation = async (
     }`,
     variables: {
       relationData: {
-        parentID: parseFloat(opportunityId),
+        parentID: opportunityId,
         type: `${relationType}`,
         description: `${relationDescription}`,
         actorName: `${relationActorName}`,
@@ -48,7 +48,7 @@ export const updateRelationMutation = async (
         }
       }`,
     variables: {
-      ID: parseFloat(relationId),
+      ID: relationId,
       relationData: {
         type: `${relationType}`,
         description: `${relationDescription}`,
@@ -71,7 +71,7 @@ export const removeRelationMutation = async (relationId: any) => {
       }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(relationId),
+        ID: relationId,
       },
     },
   };
