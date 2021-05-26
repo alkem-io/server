@@ -15,8 +15,8 @@ mutation createApplication($applicationData: CreateApplicationInput!) {
 query variables:
 {
   "applicationData": {
-    "parentID": 1,
-    "userId": 4,
+    "parentID": "uuid",
+    "userId": "uuid",
     "questions": [
       {"name": "Question 1", "value": "No"},
       {"name": "Question 2", "value": "Yes"},

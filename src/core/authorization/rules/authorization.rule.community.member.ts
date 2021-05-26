@@ -8,12 +8,12 @@ import { IAuthorizationRule } from '@core/authorization/rules';
 import { AuthorizationCredential } from '@common/enums';
 
 export class AuthorizationRuleCommunityMember implements IAuthorizationRule {
-  communityID: number;
+  communityID: string;
   priority: number;
 
   constructor(parentArg: any, priority?: number) {
     this.communityID = parentArg.id;
-    if (this.communityID == -1) {
+    if (this.communityID === '') {
       throw new ForbiddenException(
         'Community Member guard not set up properly.',
         LogContext.AUTH
@@ -34,7 +34,7 @@ export class AuthorizationRuleCommunityMember implements IAuthorizationRule {
     if (!userCredentials) return false;
     for (const userCredential of userCredentials) {
       if (userCredential.type === AuthorizationCredential.CommunityMember) {
-        if (userCredential.resourceID == this.communityID) return true;
+        if (userCredential.resourceID === this.communityID) return true;
       }
     }
     return false;

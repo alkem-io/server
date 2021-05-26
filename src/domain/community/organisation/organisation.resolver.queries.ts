@@ -1,3 +1,4 @@
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { IOrganisation } from './organisation.interface';
@@ -21,7 +22,9 @@ export class OrganisationResolverQueries {
     description: 'A particular Organisation',
   })
   @Profiling.api
-  async organisation(@Args('ID') id: string): Promise<IOrganisation> {
+  async organisation(
+    @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
+  ): Promise<IOrganisation> {
     return await this.organisationService.getOrganisationOrFail(id);
   }
 }

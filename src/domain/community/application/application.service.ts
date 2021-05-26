@@ -29,19 +29,19 @@ export class ApplicationService {
 
   async createApplication(
     applicationData: CreateApplicationInput,
-    ecoverseID = '-1'
+    ecoverseID = ''
   ): Promise<IApplication> {
     const application = Application.create(applicationData);
     application.ecoverseID = ecoverseID;
     (application as IApplication).user = await this.userService.getUserOrFail(
-      applicationData.userId.toString()
+      applicationData.userID
     );
 
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
     (application as IApplication).lifecycle = await this.lifecycleService.createLifecycle(
-      application.id.toString(),
+      application.id,
       applicationLifecycleConfig
     );
 
@@ -51,7 +51,7 @@ export class ApplicationService {
   async deleteApplication(
     deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
-    const applicationID = parseInt(deleteData.ID);
+    const applicationID = deleteData.ID;
     const application = await this.getApplicationOrFail(applicationID);
     if (application.questions) {
       for (const question of application.questions) {
@@ -70,7 +70,7 @@ export class ApplicationService {
   }
 
   async getApplicationOrFail(
-    applicationId: number,
+    applicationId: string,
     options?: FindOneOptions<Application>
   ): Promise<IApplication> {
     const application = await this.applicationRepository.findOne(

@@ -7,7 +7,10 @@ import {
   removeRelationMutation,
   updateRelationMutation,
 } from './relations.request.params';
-import { createChildChallengeMutation, createOpportunityMutation } from '../opportunity/opportunity.request.params';
+import {
+  createChildChallengeMutation,
+  createOpportunityMutation,
+} from '../opportunity/opportunity.request.params';
 
 const relationIncoming = 'incoming';
 const relationOutgoing = 'outgoing';
@@ -26,15 +29,13 @@ let relationDataCreate = '';
 let collaborationId = '';
 let relationCountPerOpportunity = async (): Promise<number> => {
   const responseQuery = await getRelationsPerOpportunity(opportunityId);
-  let response =
-    responseQuery.body.data.ecoverse.opportunity.relations;
+  let response = responseQuery.body.data.ecoverse.opportunity.relations;
   return response;
 };
 
 let relationDataPerOpportunity = async (): Promise<String> => {
   const responseQuery = await getRelationsPerOpportunity(opportunityId);
-  let response =
-    responseQuery.body.data.ecoverse.opportunity.relations[0];
+  let response = responseQuery.body.data.ecoverse.opportunity.relations[0];
   return response;
 };
 beforeEach(async () => {
@@ -43,7 +44,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   relationDescription = `relationDescription-${uniqueTextId}`;
   relationActorName = `relationActorName-${uniqueTextId}`;
   relationActorType = `relationActorType-${uniqueTextId}`;
@@ -74,7 +75,6 @@ beforeEach(async () => {
   );
   opportunityId =
     responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
-
 
   // Create Relation
   const createRelationResponse = await createRelationMutation(

@@ -1,9 +1,9 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { CreateProfileInput } from '@domain/community/profile';
-import { CreateIdentifiableInput } from '@domain/common/identifiable-entity';
+import { CreateNameableInput } from '@domain/common/nameable-entity';
 
 @InputType()
-export class CreateOrganisationInput extends CreateIdentifiableInput {
+export class CreateOrganisationInput extends CreateNameableInput {
   @Field(() => CreateProfileInput, { nullable: true })
   profileData?: CreateProfileInput;
 }

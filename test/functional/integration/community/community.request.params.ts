@@ -24,7 +24,7 @@ export const createGroupOnCommunityMutation = async (
     variables: {
       groupData: {
         name: groupNameText,
-        parentID: parseFloat(communityId),
+        parentID: communityId,
         profileData: {
           description: 'some description',
           avatar: 'http://someUri',

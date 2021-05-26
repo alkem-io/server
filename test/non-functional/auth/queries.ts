@@ -29,15 +29,15 @@ export const usersProfile = () => '{ users { profile { description }}}';
 export const usersMemberofAgentCredentials = () =>
   '{ users {agent {id credentials { id resourceID type }}}}';
 
-export const userName = (id: number) => `{ user ( ID: "${id}" ) { name }}`;
+export const userName = (id: string) => `{ user ( ID: "${id}" ) { name }}`;
 
-export const userAccountUPN = (id: number) =>
+export const userAccountUPN = (id: string) =>
   `{ user ( ID: "${id}" ){ accountUpn }}`;
 
-export const userProfile = (id: number) =>
+export const userProfile = (id: string) =>
   `{ user ( ID: "${id}" ){ profile { description }}}`;
 
-export const userMemberofAgentCredentials = (id: number) =>
+export const userMemberofAgentCredentials = (id: string) =>
   `{ user ( ID: "${id}" ){ agent {id credentials { id resourceID type }}}}`;
 
 export const usersById = () => '{ usersById (IDs: ["1", "2"]) { id }}';
@@ -99,33 +99,33 @@ export const challengesContributors = () =>
 export const challengesOpportunities = () =>
   '{ ecoverse{ challenges { opportunities { name }}}}';
 
-export const challengeName = (id: number) =>
+export const challengeName = (id: string) =>
   `{ecoverse{ challenge(ID: "${id}") { name }}}`;
 
-export const challengeTextId = (id: number) =>
+export const challengeTextId = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") { textID }}}`;
 
-export const challengeState = (id: number) =>
+export const challengeState = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") { lifecycle{state} }}}`;
-export const challengeContext = (id: number) =>
+export const challengeContext = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") { context { who }}}}`;
 
-export const challengeLeadOrganisation = (id: number) =>
+export const challengeLeadOrganisation = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") { leadOrganisations { name }}}}`;
 
-export const challengeLeadOrganisationGroups = (id: number) =>
+export const challengeLeadOrganisationGroups = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") { leadOrganisations { groups { name }}}}}`;
 
-export const challengeTagsets = (id: number) =>
+export const challengeTagsets = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") { tagset { name }}}}`;
 
-export const challengeGroups = (id: number) =>
+export const challengeGroups = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") {community {groups {name}}}}}`;
 
-export const challengeContributors = (id: number) =>
+export const challengeContributors = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") {community{id members{id}}}}}`;
 
-export const challengeOpportunities = (id: number) =>
+export const challengeOpportunities = (id: string) =>
   `{ecoverse{  challenge(ID: "${id}") { opportunities { name }}}}`;
 
 export const opportunitiesName = () => '{ecoverse{  opportunities { name }}}';
@@ -177,7 +177,7 @@ export const projectsTagset = () => '{ecoverse{  projects { tagset { name }}}}';
 export const projectsAspects = () =>
   '{ecoverse{ projects { aspects { title }}}}';
 
-const query: Record<string, (id: number) => string> = {
+const query: Record<string, (id: string) => string> = {
   name,
   hostMembers,
   hostGroups,
@@ -245,6 +245,6 @@ const query: Record<string, (id: number) => string> = {
   projectsAspects,
 };
 
-export const getQueries = (name: string, id: number) => {
+export const getQueries = (name: string, id: string) => {
   return query[name](id);
 };

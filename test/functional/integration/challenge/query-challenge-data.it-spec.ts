@@ -51,7 +51,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   groupName = `groupName ${uniqueTextId}`;
   organisationName = `organisationName ${uniqueTextId}`;
   taglineText = `taglineText ${uniqueTextId}`;
@@ -95,10 +95,10 @@ describe('Query Challenge data', () => {
       responseQueryData.body.data.ecoverse.challenge.opportunities
     ).toHaveLength(1);
     expect(
-      responseQueryData.body.data.ecoverse.challenge.opportunities[0].name
+      responseQueryData.body.data.ecoverse.challenge.opportunities[0].displayName
     ).toEqual(opportunityName);
     expect(
-      responseQueryData.body.data.ecoverse.challenge.opportunities[0].textID
+      responseQueryData.body.data.ecoverse.challenge.opportunities[0].nameID
     ).toEqual(opportunityTextId);
     expect(
       responseQueryData.body.data.ecoverse.challenge.opportunities[0].id
@@ -149,10 +149,10 @@ describe('Query Challenge data', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(updatedChallenge.name).toEqual(challengeName + 'change');
+    expect(updatedChallenge.displayName).toEqual(challengeName + 'change');
     expect(updatedChallenge.context.tagline).toEqual(taglineText);
     expect(updatedChallenge.tagset.tags).toEqual(tagsArray);
-    expect(getChallengeDatas.body.data.ecoverse.challenge.name).toEqual(
+    expect(getChallengeDatas.body.data.ecoverse.challenge.displayName).toEqual(
       challengeName + 'change'
     );
     expect(
@@ -211,6 +211,7 @@ describe('Query Challenge data', () => {
       organisationName,
       uniqueTextId + 'k'
     );
+    console.log(createOrganisationResponse.body)
     organisationId = createOrganisationResponse.body.data.createOrganisation.id;
 
     // Act

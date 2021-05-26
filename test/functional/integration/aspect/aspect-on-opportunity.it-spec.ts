@@ -38,7 +38,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   aspectTitle = `aspectTitle-${uniqueTextId}`;
   aspectFrame = `aspectFrame-${uniqueTextId}`;
   aspectExplanation = `aspectExplanation-${uniqueTextId}`;

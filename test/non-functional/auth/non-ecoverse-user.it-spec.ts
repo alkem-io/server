@@ -81,7 +81,7 @@ describe.skip('DDT non-ecoverse user - queries - Not authorized', () => {
       // Act
       const requestParamsQueryData = {
         operationName: null,
-        query: getQueries(query, (data as Record<string, number>)[idName]),
+        query: getQueries(query, (data as Record<string, string>)[idName]),
         variables: null,
       };
       const response = await graphqlRequestAuth(
@@ -145,7 +145,7 @@ describe.skip('DDT non-ecoverse user - queries - authorized', () => {
       // Act
       const requestParamsQueryData = {
         operationName: null,
-        query: getQueries(query, (data as Record<string, number>)[idName]),
+        query: getQueries(query, (data as Record<string, string>)[idName]),
         variables: null,
       };
       const response = await graphqlRequestAuth(
@@ -190,7 +190,7 @@ describe.skip('DDT non-ecoverse user - Create mutations - Not authorized', () =>
         query: getCreateMutation(mutation),
         variables: getCreateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -220,7 +220,7 @@ describe.skip('DDT non-ecoverse user - Create mutations - authorized', () => {
         query: getCreateMutation(mutation),
         variables: getCreateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -260,7 +260,7 @@ describe.skip('DDT non-ecoverse user - Update mutations - NOT authorized', () =>
         query: getUpdateMutation(mutation),
         variables: getUpdateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -291,7 +291,7 @@ describe.skip('DDT non-ecoverse user - Update mutations - authorized', () => {
         query: getUpdateMutation(mutation),
         variables: getUpdateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -328,7 +328,7 @@ describe.skip('DDT non-ecoverse user - Remove mutations - NOT authorized', () =>
         query: getRemoveMutation(mutation),
         variables: getRemoveVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(

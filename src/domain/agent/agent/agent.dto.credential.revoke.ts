@@ -8,7 +8,7 @@ export class RevokeCredentialInput {
     nullable: false,
     description: 'The Agent from whom the credential is being removed.',
   })
-  agentID!: number;
+  agentID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
@@ -18,5 +18,5 @@ export class RevokeCredentialInput {
     nullable: true,
     description: 'The resource to which access is being removed.',
   })
-  resourceID!: number;
+  resourceID!: string;
 }

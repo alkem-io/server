@@ -10,7 +10,7 @@ query variables:
 {
   "groupData":
   {
-    "parentID": 1,
+    "parentID": "uuid",
     "name": "Experts",
     "profileData": {
       "description": "How do I handle scalability?"

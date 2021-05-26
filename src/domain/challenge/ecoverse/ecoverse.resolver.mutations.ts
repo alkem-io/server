@@ -6,6 +6,7 @@ import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import {
   CreateEcoverseInput,
+  DeleteEcoverseInput,
   IEcoverse,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
@@ -41,6 +42,17 @@ export class EcoverseResolverMutations {
   ): Promise<IEcoverse> {
     const ctVerse = await this.ecoverseService.update(ecoverseData);
     return ctVerse;
+  }
+
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IEcoverse, {
+    description: 'Deletes the specified Ecoverse.',
+  })
+  async deleteEcoverse(
+    @Args('deleteData') deleteData: DeleteEcoverseInput
+  ): Promise<IEcoverse> {
+    return await this.ecoverseService.deleteEcoverse(deleteData);
   }
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)

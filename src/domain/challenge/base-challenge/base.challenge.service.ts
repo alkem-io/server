@@ -15,180 +15,139 @@ import { IContext } from '@domain/context/context';
 import { ContextService } from '@domain/context/context/context.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
-import validator from 'validator';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
-import { IIdentifiable } from '@domain/common/identifiable-entity';
 import { IBaseChallenge } from './base.challenge.interface';
+import { NamingService } from '@src/services/naming/naming.service';
 
 @Injectable()
 export class BaseChallengeService {
   constructor(
     private contextService: ContextService,
     private communityService: CommunityService,
+    private namingService: NamingService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async initialise(
-    challengeBase: IBaseChallenge,
-    challengeData: CreateBaseChallengeInput
+    baseChallenge: IBaseChallenge,
+    baseChallengeData: CreateBaseChallengeInput
   ) {
-    challengeBase.community = await this.communityService.createCommunity(
-      challengeBase.name
+    await this.isNameAvailableOrFail(
+      baseChallengeData.nameID,
+      baseChallenge.ecoverseID
     );
-    challengeBase.community.ecoverseID = challengeBase.ecoverseID;
+    baseChallenge.community = await this.communityService.createCommunity(
+      baseChallenge.displayName
+    );
+    baseChallenge.community.ecoverseID = baseChallenge.ecoverseID;
 
-    if (!challengeData.context) {
-      challengeBase.context = await this.contextService.createContext({});
+    if (!baseChallengeData.context) {
+      baseChallenge.context = await this.contextService.createContext({});
     } else {
-      challengeBase.context = await this.contextService.createContext(
-        challengeData.context
+      baseChallenge.context = await this.contextService.createContext(
+        baseChallengeData.context
       );
     }
 
-    challengeBase.tagset = this.tagsetService.createDefaultTagset();
+    baseChallenge.tagset = this.tagsetService.createDefaultTagset();
   }
 
   async update(
-    challengeBaseData: UpdateBaseChallengeInput,
+    baseChallengeData: UpdateBaseChallengeInput,
     repository: Repository<BaseChallenge>
   ): Promise<IBaseChallenge> {
-    const challenge = await this.getChallengeBaseOrFail(
-      challengeBaseData.ID,
+    const baseChallenge = await this.getBaseChallengeOrFail(
+      baseChallengeData.ID,
       repository,
       {
         relations: ['context'],
       }
     );
 
-    if (challengeBaseData.context) {
-      if (!challenge.context)
+    if (baseChallengeData.context) {
+      if (!baseChallenge.context)
         throw new EntityNotInitializedException(
-          `Challenge not initialised: ${challengeBaseData.ID}`,
+          `Challenge not initialised: ${baseChallengeData.ID}`,
           LogContext.CHALLENGES
         );
-      challenge.context = await this.contextService.updateContext(
-        challenge.context,
-        challengeBaseData.context
+      baseChallenge.context = await this.contextService.updateContext(
+        baseChallenge.context,
+        baseChallengeData.context
       );
     }
-    if (challengeBaseData.tags)
+    if (baseChallengeData.tags)
       this.tagsetService.replaceTagsOnEntity(
-        challenge as BaseChallenge,
-        challengeBaseData.tags
+        baseChallenge as BaseChallenge,
+        baseChallengeData.tags
       );
 
-    return await repository.save(challenge);
+    if (baseChallengeData.displayName)
+      baseChallenge.displayName = baseChallengeData.displayName;
+
+    return await repository.save(baseChallenge);
   }
 
-  async deleteEntities(challengeBase: IBaseChallenge) {
-    if (challengeBase.context) {
-      await this.contextService.removeContext(challengeBase.context.id);
+  async deleteEntities(baseChallenge: IBaseChallenge) {
+    if (baseChallenge.context) {
+      await this.contextService.removeContext(baseChallenge.context.id);
     }
 
-    if (challengeBase.community) {
-      await this.communityService.removeCommunity(challengeBase.community.id);
+    if (baseChallenge.community) {
+      await this.communityService.removeCommunity(baseChallenge.community.id);
     }
 
-    if (challengeBase.lifecycle) {
-      await this.lifecycleService.deleteLifecycle(challengeBase.lifecycle.id);
+    if (baseChallenge.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(baseChallenge.lifecycle.id);
     }
 
-    if (challengeBase.tagset) {
+    if (baseChallenge.tagset) {
       await this.tagsetService.removeTagset({
-        ID: challengeBase.tagset.id.toString(),
+        ID: baseChallenge.tagset.id,
       });
     }
   }
 
-  async getChallengeBaseOrFail(
-    challengeID: string,
+  async getBaseChallengeOrFail(
+    baseChallengeID: string,
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
   ): Promise<IBaseChallenge> {
-    if (validator.isNumeric(challengeID)) {
-      const idInt: number = parseInt(challengeID);
-      return await this.getChallengeBaseByIdOrFail(idInt, repository, options);
-    }
+    const conditions: FindConditions<BaseChallenge> = {
+      id: baseChallengeID,
+    };
 
-    return await this.getChallengeByTextIdOrFail(
-      challengeID,
-      repository,
-      options
-    );
-  }
-
-  async getChallengeBaseByIdOrFail(
-    challengeBaseID: number,
-    repository: Repository<BaseChallenge>,
-    options?: FindOneOptions<BaseChallenge>
-  ): Promise<IBaseChallenge> {
-    const challenge = await repository.findOne(
-      { id: challengeBaseID },
-      options
-    );
+    const challenge = await repository.findOne(conditions, options);
     if (!challenge)
       throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeBaseID}`,
+        `Unable to find challenge with ID: ${baseChallengeID}`,
         LogContext.CHALLENGES
       );
     return challenge;
   }
 
-  async getChallengeByTextIdOrFail(
-    challengeID: string,
-    repository: Repository<BaseChallenge>,
-    options?: FindOneOptions<BaseChallenge>
-  ): Promise<IBaseChallenge> {
-    const challenge = await repository.findOne(
-      { textID: challengeID },
-      options
-    );
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    return challenge;
-  }
-
-  checkForIdentifiableNameDuplication(
-    existingChildren: IIdentifiable[],
-    name: string
-  ) {
-    const existingChildName = existingChildren.find(
-      child => child.name === name
-    );
-    if (existingChildName)
+  async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
+    if (
+      !(await this.namingService.isNameIdAvailableInEcoverse(
+        nameID,
+        nameableScopeID
+      ))
+    )
       throw new ValidationException(
-        `Unable to create entity: parent already has a child with the given name: ${name}`,
-        LogContext.CHALLENGES
-      );
-  }
-
-  checkForIdentifiableTextIdDuplication(
-    existingChildren: IIdentifiable[],
-    textID: string
-  ) {
-    const existingChildTextId = existingChildren.find(
-      child => child.textID === textID
-    );
-    if (existingChildTextId)
-      throw new ValidationException(
-        `Unable to create entity: parent already has a child with the given textID: ${textID}`,
+        `Unable to create entity: the provided nameID is already taken: ${nameID}`,
         LogContext.CHALLENGES
       );
   }
 
   async getCommunity(
-    challengeBaseId: number,
+    baseChallengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ICommunity> {
-    const challengeWithCommunity = await this.getChallengeBaseByIdOrFail(
-      challengeBaseId,
+    const challengeWithCommunity = await this.getBaseChallengeOrFail(
+      baseChallengeId,
       repository,
       {
         relations: ['community'],
@@ -197,17 +156,17 @@ export class BaseChallengeService {
     const community = challengeWithCommunity.community;
     if (!community)
       throw new RelationshipNotFoundException(
-        `Unable to load community for challenge ${challengeBaseId} `,
+        `Unable to load community for challenge ${baseChallengeId} `,
         LogContext.COMMUNITY
       );
     return community;
   }
 
   async getContext(
-    challengeId: number,
+    challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<IContext> {
-    const challengeWithContext = await this.getChallengeBaseByIdOrFail(
+    const challengeWithContext = await this.getBaseChallengeOrFail(
       challengeId,
       repository,
       {
@@ -224,10 +183,10 @@ export class BaseChallengeService {
   }
 
   async getLifecycle(
-    challengeId: number,
+    challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ILifecycle> {
-    const challenge = await this.getChallengeBaseByIdOrFail(
+    const challenge = await this.getBaseChallengeOrFail(
       challengeId,
       repository,
       {

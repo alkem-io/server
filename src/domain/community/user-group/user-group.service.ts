@@ -21,7 +21,6 @@ import {
   DeleteUserGroupInput,
   CreateUserGroupInput,
 } from '@domain/community/user-group';
-import validator from 'validator';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
@@ -39,7 +38,7 @@ export class UserGroupService {
 
   async createUserGroup(
     userGroupData: CreateUserGroupInput,
-    ecoverseID = '-1'
+    ecoverseID = ''
   ): Promise<IUserGroup> {
     const group = UserGroup.create(userGroupData);
     group.ecoverseID = ecoverseID;
@@ -72,7 +71,6 @@ export class UserGroupService {
     };
   }
 
-  // Note: explicitly do not support updating of email addresses
   async updateUserGroup(
     userGroupInput: UpdateUserGroupInput
   ): Promise<IUserGroup> {
@@ -81,21 +79,19 @@ export class UserGroupService {
     const newName = userGroupInput.name;
     if (newName && newName.length > 0 && newName !== group.name) {
       group.name = newName;
-      await this.userGroupRepository.save(group);
     }
 
-    // Check the tagsets
-    if (userGroupInput.profileData && group.profile) {
-      await this.profileService.updateProfile(userGroupInput.profileData);
+    if (userGroupInput.profileData) {
+      group.profile = await this.profileService.updateProfile(
+        userGroupInput.profileData
+      );
     }
 
-    const populatedUserGroup = await this.getUserGroupByIdOrFail(group.id);
-
-    return populatedUserGroup;
+    return await this.userGroupRepository.save(group);
   }
 
   async getParent(group: UserGroup): Promise<IGroupable> {
-    const groupWithParent = (await this.getUserGroupByIdOrFail(group.id, {
+    const groupWithParent = (await this.getUserGroupOrFail(group.id, {
       relations: ['community', 'organisation'],
     })) as UserGroup;
     if (groupWithParent?.community) return groupWithParent?.community;
@@ -108,21 +104,6 @@ export class UserGroupService {
 
   async getUserGroupOrFail(
     groupID: string,
-    options?: FindOneOptions<UserGroup>
-  ): Promise<IUserGroup> {
-    if (validator.isNumeric(groupID)) {
-      const idInt: number = parseInt(groupID);
-      return await this.getUserGroupByIdOrFail(idInt, options);
-    }
-
-    throw new EntityNotFoundException(
-      `Unable to find group with ID: ${groupID}`,
-      LogContext.COMMUNITY
-    );
-  }
-
-  async getUserGroupByIdOrFail(
-    groupID: number,
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
     //const t1 = performance.now()
@@ -151,13 +132,13 @@ export class UserGroupService {
       resourceID: membershipData.groupID,
     });
 
-    return await this.getUserGroupByIdOrFail(membershipData.groupID, {
+    return await this.getUserGroupOrFail(membershipData.groupID, {
       relations: ['community'],
     });
   }
 
-  async isMember(userID: number, groupID: number): Promise<boolean> {
-    const agent = await this.userService.getUserByIdWithAgent(userID);
+  async isMember(userID: string, groupID: string): Promise<boolean> {
+    const agent = await this.userService.getUserWithAgent(userID);
 
     return await this.agentService.hasValidCredential(agent.id, {
       type: AuthorizationCredential.UserGroupMember,
@@ -178,7 +159,7 @@ export class UserGroupService {
       resourceID: membershipData.groupID,
     });
 
-    return await this.getUserGroupByIdOrFail(membershipData.groupID, {
+    return await this.getUserGroupOrFail(membershipData.groupID, {
       relations: ['community'],
     });
   }
@@ -228,7 +209,7 @@ export class UserGroupService {
     return newGroup;
   }
 
-  async getMembers(groupID: number): Promise<IUser[]> {
+  async getMembers(groupID: string): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
       type: AuthorizationCredential.UserGroupMember,
       resourceID: groupID,

@@ -7,6 +7,6 @@ mutation deleteUserGroup($deleteData: DeleteUserGroupInput!) {
 Variables:
 {
   "deleteData": {
-    "ID": 7
+    "ID": "uuid"
   }
 }

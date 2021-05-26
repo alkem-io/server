@@ -5,11 +5,12 @@ import {
   SMALL_TEXT_LENGTH,
 } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
+import { UUID } from '../scalars/scalar.uuid';
 @InputType()
 export class CreateReferenceInput {
-  @Field({ nullable: true })
+  @Field(() => UUID, { nullable: true })
   @IsOptional()
-  parentID?: number;
+  parentID?: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

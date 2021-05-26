@@ -27,7 +27,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   userPhone = `userPhone ${uniqueTextId}`;
   userEmail = `${uniqueTextId}@test.com`;
 
@@ -94,7 +94,7 @@ describe('Flows challenge', () => {
     ).toHaveLength(0);
   });
 
-  test.skip('should not be able to modify challenge name to allready existing challenge name and/or textId', async () => {
+  test('should  modify challenge name to allready existing challenge name and/or textId', async () => {
     // Arrange
     // Create second challenge and get its id and name
     const responseSecondChallenge = await createChallangeMutation(
@@ -102,10 +102,9 @@ describe('Flows challenge', () => {
       uniqueTextId + uniqueTextId
     );
     const secondchallengeName =
-      responseSecondChallenge.body.data.createChallenge.name;
+      responseSecondChallenge.body.data.createChallenge.displayName;
 
     // Act
-    // Get users assossiated with challenge or groups within challenge
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
       secondchallengeName,
@@ -116,15 +115,14 @@ describe('Flows challenge', () => {
       'who',
       'tagsArray'
     );
-
     // Assert
     expect(responseUpdateChallenge.status).toBe(200);
-    expect(responseUpdateChallenge.text).toContain(
-      `Unable to update challenge: already have a challenge with the provided name (${secondchallengeName})`
-    );
+    expect(
+      responseUpdateChallenge.body.data.updateChallenge.displayName
+    ).toEqual(secondchallengeName);
   });
 
-  test('should throw error - creating 2 challenges with same name', async () => {
+  test('should creating 2 challenges with same name', async () => {
     // Act
     // Create second challenge with same name
     const response = await createChallangeMutation(
@@ -134,8 +132,8 @@ describe('Flows challenge', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(response.text).toContain(
-      `Unable to create entity: parent already has a child with the given name: ${challengeName}`
+    expect(response.body.data.createChallenge.displayName).toContain(
+      challengeName
     );
   });
 
@@ -150,26 +148,26 @@ describe('Flows challenge', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(response.text).toContain(
-      `Unable to create entity: parent already has a child with the given textID: ${uniqueTextId}`
+      `Unable to create Ecoverse: the provided nameID is already taken: ${uniqueTextId}`
     );
   });
 
-  test('should add "opportunity" to "challenge"', async () => {
+  test('should add "childChallenge" to "challenge"', async () => {
     // Act
     // Add opportunity to a challenge
-    const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
+    const responseCreateChildChallenge = await createChildChallengeMutation(
       challengeId,
       opportunityName,
       opportunityTextId
     );
-    const oportunityNameResponse =
-      responseCreateOpportunityOnChallenge.body.data.createChildChallenge.name;
-    const oportunityIdResponse =
-      responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
+    const childChallengeNameResponse =
+      responseCreateChildChallenge.body.data.createChildChallenge.displayName;
+    const childChallengeIdResponse =
+      responseCreateChildChallenge.body.data.createChildChallenge.id;
 
     // Assert
-    expect(responseCreateOpportunityOnChallenge.status).toBe(200);
-    expect(oportunityNameResponse).toEqual(opportunityName);
-    expect(oportunityIdResponse).not.toBeNull;
+    expect(responseCreateChildChallenge.status).toBe(200);
+    expect(childChallengeNameResponse).toEqual(opportunityName);
+    expect(childChallengeIdResponse).not.toBeNull;
   });
 });

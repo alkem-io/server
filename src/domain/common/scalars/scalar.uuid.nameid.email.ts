@@ -2,11 +2,12 @@ import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
 import { Kind, ValueNode } from 'graphql';
+import { NameID } from './scalar.nameid';
+import { UUID } from './scalar.uuid';
 
-@Scalar('TextID')
-export class TextID implements CustomScalar<string, string> {
-  description =
-    'A short text based identifier, 3 <= length <= 20. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
+@Scalar('UUID_NAMEID_EMAIL')
+export class UUID_NAMEID_EMAIL implements CustomScalar<string, string> {
+  description = 'A UUID or Email identifier.';
 
   parseValue(value: string): string {
     return this.validate(value).toLowerCase();
@@ -26,30 +27,25 @@ export class TextID implements CustomScalar<string, string> {
   validate = (value: any) => {
     if (typeof value !== 'string') {
       throw new ValidationException(
-        `Value is not string: ${value}`,
+        `ID must be a string: ${value}`,
         LogContext.API
       );
     }
 
-    if (value.length < 3)
+    if (
+      !UUID.isValidFormat(value) &&
+      !NameID.isValidFormat(value) &&
+      !this.isEmailFormat(value)
+    )
       throw new ValidationException(
-        `TextID type has a minimum length of 3: ${value}`,
+        `ID is not in one of the accepted formats of UUID, NameID or Email: ${value}`,
         LogContext.API
       );
-
-    if (value.length > 20)
-      throw new ValidationException(
-        `TextID type maximum length of 20: ${value}`,
-        LogContext.API
-      );
-
-    const expression = /^[a-zA-Z0-9.\-_]+$/;
-    if (!expression.test(value))
-      throw new ValidationException(
-        `TextID has characters that are not allowed: ${value}`,
-        LogContext.CHALLENGES
-      );
-
     return value;
   };
+
+  isEmailFormat(value: string): boolean {
+    const emailRegex = /^\S+@\S+$/;
+    return emailRegex.test(value);
+  }
 }

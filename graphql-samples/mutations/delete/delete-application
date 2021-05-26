@@ -7,6 +7,6 @@ mutation deleteUserApplication($deleteData: DeleteApplicationInput!) {
 Variables:
 {
   "deleteData": {
-    "ID": 7
+    "ID": "uuid"
   }
 }

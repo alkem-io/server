@@ -9,7 +9,7 @@ mutation createReferenceOnContext($referenceInput: CreateReferenceInput!) {
 Variables:
 {
   "referenceInput": {
-      "parentID": 1,
+      "parentID": "uuid",
       "name": "wow",
       "uri": "something",
       "description": "this works"

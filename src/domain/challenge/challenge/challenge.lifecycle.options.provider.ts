@@ -32,7 +32,7 @@ export class ChallengeLifecycleOptionsProvider {
       this.challengeLifecycleMachineOptions
     );
 
-    return await this.challengeService.getChallengeByIdOrFail(challengeID);
+    return await this.challengeService.getChallengeOrFail(challengeID);
   }
 
   private challengeLifecycleMachineOptions: Partial<

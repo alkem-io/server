@@ -1,7 +1,7 @@
 export const applicationLifecycleConfig = {
   id: 'user-application',
   context: {
-    parentID: '-1',
+    parentID: '',
   },
   initial: 'new',
   states: {

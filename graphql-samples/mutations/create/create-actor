@@ -11,7 +11,7 @@ mutation createActor($actorData: CreateActorInput!) {
 query variables:
 {
   "actorData": {
-    "parentID": 1,
+    "actorGroupID": "uuid",
     "name": "developer1",
     "description": "Main architect for the solution",
     "value": "Ensuring a robust design",

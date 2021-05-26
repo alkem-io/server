@@ -6,8 +6,8 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export abstract class ICredential extends IBaseCherrytwist {
   agent?: IAgent;
 
-  @Field(() => Number)
-  resourceID!: number;
+  @Field(() => String)
+  resourceID!: string;
 
   @Field(() => String)
   type!: string;

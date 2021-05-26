@@ -11,5 +11,5 @@ export abstract class IEcoverse extends IBaseChallenge {
   })
   host?: IOrganisation;
 
-  challenge?: IChallenge;
+  containedChallenge?: IChallenge;
 }

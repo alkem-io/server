@@ -10,10 +10,14 @@ import { MembershipEcoverseResultEntry } from './membership.dto.result.ecoverse.
 import { CommunityService } from '@domain/community/community/community.service';
 import { Community } from '@domain/community/community';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { IChallenge } from '@domain/challenge/challenge';
+import { Challenge, IChallenge } from '@domain/challenge/challenge';
 import { IUserGroup } from '@domain/community/user-group';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { IOpportunity } from '@domain/collaboration/opportunity';
 
 export class MembershipService {
   constructor(
@@ -21,6 +25,7 @@ export class MembershipService {
     private userGroupService: UserGroupService,
     private communityService: CommunityService,
     private ecoverseService: EcoverseService,
+    private challengeService: ChallengeService,
     private organisationService: OrganisationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -33,36 +38,55 @@ export class MembershipService {
       return membership;
     }
     const storedChallenges: IChallenge[] = [];
+    const storedOpportunities: IOpportunity[] = [];
     const storedUserGroups: IUserGroup[] = [];
     for (const credential of credentials) {
       if (credential.type === AuthorizationCredential.OrganisationMember) {
-        const organisation = await this.organisationService.getOrganisationByIdOrFail(
+        const organisation = await this.organisationService.getOrganisationOrFail(
           credential.resourceID
         );
         const orgResult = new MembershipResultEntry(
-          organisation.name,
-          `organisation:${organisation.id.toString()}`
+          organisation.displayName,
+          `organisation:${organisation.id}`,
+          organisation.displayName
         );
         membership.organisations.push(orgResult);
       } else if (credential.type === AuthorizationCredential.CommunityMember) {
         const community = await this.communityService.getCommunityOrFail(
           credential.resourceID,
           {
-            relations: ['ecoverse', 'challenge'],
+            relations: ['challenge', 'opportunity'],
           }
         );
-        const ecoverse = (community as Community).ecoverseID;
         const challenge = (community as Community).challenge;
-        if (ecoverse) {
-          const ecoverseResult = await this.createEcoverseMembershipResult(
-            Number(ecoverse)
+        const opportunity = (community as Community).opportunity;
+        if (challenge) {
+          // Need to see if in ecoverse, or a Challenge
+          const challengeWithFields = await this.challengeService.getChallengeOrFail(
+            challenge?.id,
+            {
+              relations: ['ecoverse'],
+            }
           );
-          membership.ecoverses.push(ecoverseResult);
-        } else if (challenge) {
-          storedChallenges.push(challenge);
+          const ecoverse = (challengeWithFields as Challenge).ecoverse;
+          if (ecoverse) {
+            const ecoverseResult = await this.createEcoverseMembershipResult(
+              ecoverse.id
+            );
+            membership.ecoverses.push(ecoverseResult);
+          } else {
+            storedChallenges.push(challenge);
+          }
+        } else if (opportunity) {
+          storedOpportunities.push(opportunity);
+        } else {
+          throw new EntityNotInitializedException(
+            `Unable to identify community parent: ${community.displayName}`,
+            LogContext.COMMUNITY
+          );
         }
       } else if (credential.type === AuthorizationCredential.UserGroupMember) {
-        const group = await this.userGroupService.getUserGroupByIdOrFail(
+        const group = await this.userGroupService.getUserGroupOrFail(
           credential.resourceID
         );
         storedUserGroups.push(group);
@@ -75,15 +99,25 @@ export class MembershipService {
       const ecoverseResult = membership.ecoverses[0];
       for (const challenge of storedChallenges) {
         const challengeResult = new MembershipResultEntry(
-          challenge.name,
-          `challenge:${challenge.id.toString()}`
+          challenge.nameID,
+          `challenge:${challenge.id}`,
+          challenge.displayName
         );
         ecoverseResult.challenges.push(challengeResult);
+      }
+      for (const opportunity of storedOpportunities) {
+        const opportunityResult = new MembershipResultEntry(
+          opportunity.nameID,
+          `opportunity:${opportunity.id}`,
+          opportunity.displayName
+        );
+        ecoverseResult.opportunities.push(opportunityResult);
       }
       for (const group of storedUserGroups) {
         const groupResult = new MembershipResultEntry(
           group.name,
-          `group:${group.id.toString()}`
+          `group:${group.id}`,
+          group.name
         );
         ecoverseResult.userGroups.push(groupResult);
       }
@@ -93,17 +127,12 @@ export class MembershipService {
   }
 
   async createEcoverseMembershipResult(
-    ecoverseID: number
+    ecoverseID: string
   ): Promise<MembershipEcoverseResultEntry> {
-    const ecoverse = await this.ecoverseService.getEcoverseByIdOrFail(
-      ecoverseID,
-      {
-        relations: ['challenges'],
-      }
-    );
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID);
     const ecoverseResult = new MembershipEcoverseResultEntry();
-    ecoverseResult.name = ecoverse.name;
-    ecoverseResult.id = `ecoverse:${ecoverse.id.toString()}`;
+    ecoverseResult.name = ecoverse.nameID;
+    ecoverseResult.id = `ecoverse:${ecoverse.nameID}`;
     return ecoverseResult;
   }
 }

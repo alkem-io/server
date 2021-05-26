@@ -14,24 +14,24 @@ export class ProjectLifecycleOptionsProvider {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async eventOnProject(ProjectEventData: ProjectEventInput): Promise<IProject> {
-    const ProjectID = ProjectEventData.ID;
-    const lifecycle = await this.projectService.getLifecycle(ProjectID);
+  async eventOnProject(projectEventData: ProjectEventInput): Promise<IProject> {
+    const projectID = projectEventData.ID;
+    const lifecycle = await this.projectService.getLifecycle(projectID);
 
     // Send the event, translated if needed
     this.logger.verbose?.(
-      `Event ${ProjectEventData.eventName} triggered on Project: ${ProjectID} using lifecycle ${lifecycle.id}`,
+      `Event ${projectEventData.eventName} triggered on Project: ${projectID} using lifecycle ${lifecycle.id}`,
       LogContext.COMMUNITY
     );
     await this.lifecycleService.event(
       {
         ID: lifecycle.id,
-        eventName: ProjectEventData.eventName,
+        eventName: projectEventData.eventName,
       },
       this.ProjectLifecycleMachineOptions
     );
 
-    return await this.projectService.getProjectByIdOrFail(ProjectID);
+    return await this.projectService.getProjectOrFail(projectID);
   }
 
   private ProjectLifecycleMachineOptions: Partial<MachineOptions<any, any>> = {

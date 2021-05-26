@@ -1,6 +1,6 @@
 mutation updateOpportunity($opportunityData: UpdateOpportunityInput!) {
   updateOpportunity(opportunityData: $opportunityData) {
-    name,
+    displayName,
     id
   }
 }
@@ -9,7 +9,7 @@ Variables:
 {
   "opportunityData":
   {
-    "ID": "1",
-    "name": "AI for good222"
+    "ID": "uuid",
+    "displayName": "AI for good222"
   }
 }

@@ -37,7 +37,7 @@ mutation CreateUser($userData: UserInput!) {
 }
 `;
 
-export const createUserVariables = (id: number) => `
+export const createUserVariables = (id: string) => `
 {
     "userData": {
         "name": "user12",
@@ -65,7 +65,7 @@ mutation createReferenceOnProfile($referenceInput: CreateReferenceInput!) {
     }
   }`;
 
-export const createReferenceOnProfileVariable = (id: number) => `
+export const createReferenceOnProfileVariable = (id: string) => `
 {
     "referenceInput":
         {
@@ -131,7 +131,7 @@ mutation createGroupOnCommunity($groupData: CreateUserGroupInput!) {
   }
 }`;
 
-export const createGroupOnCommunityVariables = (id: number) => `
+export const createGroupOnCommunityVariables = (id: string) => `
 {
   "groupData":{
     "parentID": ${communityId},
@@ -147,7 +147,7 @@ mutation createOpportunity($opportunityData: CreateOpportunityInput!) {
       }
   }`;
 
-export const createOpportunityVariables = (id: number) => `
+export const createOpportunityVariables = (id: string) => `
 {
 
     "opportunityData": {
@@ -179,7 +179,7 @@ mutation CreateProject($projectData: CreateProjectInput!) {
     }
   }`;
 
-export const createProjectVariables = (id: number) => `
+export const createProjectVariables = (id: string) => `
 {
     "projectData": {
       "parentID":${id},
@@ -198,7 +198,7 @@ mutation CreateAspect($aspectData: CreateAspectInput!) {
     }
   }`;
 
-export const createAspectOnOpportunityVariables = (id: number) => `
+export const createAspectOnOpportunityVariables = (id: string) => `
 {
     "aspectData": {
       "parentID":${id},
@@ -215,7 +215,7 @@ mutation CreateRelation($relationData: CreateRelationInput!) {
     }
   }`;
 
-export const createRelationVariables = (id: number) => `
+export const createRelationVariables = (id: string) => `
 {
     "relationData":
     {
@@ -237,7 +237,7 @@ mutation CreateAspectOnProject($aspectData: CreateAspectInput!) {
     }
   }`;
 
-export const createAspectOnProjectVariables = (id: number) => `
+export const createAspectOnProjectVariables = (id: string) => `
 {
     "aspectData": {
       "parentID":${id},
@@ -258,7 +258,7 @@ mutation createActorGroup($actorGroupData: CreateActorGroupInput!) {
       }
   }`;
 
-export const createActorGroupVariables = (id: number) => `
+export const createActorGroupVariables = (id: string) => `
 {
     "actorGroupData": {
       "parentID":${id},
@@ -278,7 +278,7 @@ mutation createActor($actorData: CreateActorInput!) {
       }
   }`;
 
-export const createActorVariables = (id: number) => `
+export const createActorVariables = (id: string) => `
 {
     "actorData": {
       "parentID":${id},
@@ -298,7 +298,7 @@ mutation createReferenceOnContext($referenceInput: CreateReferenceInput!) {
     }
   }`;
 //  "contextID": 1,
-export const createReferenceOnContextVariables = (id: number) => `
+export const createReferenceOnContextVariables = (id: string) => `
 {
 
     "referenceInput":
@@ -319,7 +319,7 @@ mutation createTagsetOnProfile($tagsetData: CreateTagsetInput!) {
     }
   }`;
 
-export const createTagsetOnProfileVariables = (id: number) => `
+export const createTagsetOnProfileVariables = (id: string) => `
 {
   "tagsetData":{
     "parentID": ${id},
@@ -343,7 +343,7 @@ mutation createApplication($applicationData: CreateApplicationInput!) {
     }
   }`;
 
-export const createApplicationVariables = (id: number) => `
+export const createApplicationVariables = (id: string) => `
 {
   "applicationData": {
     "parentID": 1,
@@ -372,7 +372,7 @@ const mutations: Record<string, string> = {
   createApplicationMutation,
 };
 
-const variables: Record<string, (id: number) => string> = {
+const variables: Record<string, (id: string) => string> = {
   createOrganisationVariables,
 
   createUserVariables,

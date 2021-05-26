@@ -7,6 +7,6 @@ mutation deleteChallenge($deleteData: DeleteChallengeInput!) {
 Variables:
 {
   "deleteData": {
-    "ID": 7
+    "ID": "uuid"
   }
 }

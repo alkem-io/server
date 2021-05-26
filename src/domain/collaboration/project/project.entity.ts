@@ -12,12 +12,12 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { IdentifiableEntity } from '@domain/common/identifiable-entity';
+import { NameableEntity } from '@domain/common/nameable-entity';
 
 @Entity()
-export class Project extends IdentifiableEntity implements IProject {
+export class Project extends NameableEntity implements IProject {
   @Column()
-  ecoverseID?: string;
+  ecoverseID!: string;
 
   @Column('text', { nullable: true })
   description?: string;
@@ -50,9 +50,10 @@ export class Project extends IdentifiableEntity implements IProject {
   )
   opportunity?: Opportunity;
 
-  constructor(name: string, textID: string) {
+  constructor(name: string, nameID: string) {
     super();
-    this.name = name;
-    this.textID = textID;
+    this.displayName = name;
+    this.nameID = nameID;
+    this.ecoverseID = '';
   }
 }

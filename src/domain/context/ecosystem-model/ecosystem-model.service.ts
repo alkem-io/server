@@ -39,7 +39,7 @@ export class EcosystemModelService {
   }
 
   async getEcosystemModelOrFail(
-    ecosystemModelID: number
+    ecosystemModelID: string
   ): Promise<IEcosystemModel> {
     const ecosystemModel = await this.ecosystemModelRepository.findOne({
       id: ecosystemModelID,
@@ -61,7 +61,7 @@ export class EcosystemModelService {
   }
 
   async deleteEcosystemModel(
-    ecosystemModelID: number
+    ecosystemModelID: string
   ): Promise<IEcosystemModel> {
     // Note need to load it in with all contained entities so can remove fully
     const ecosystemModel = await this.getEcosystemModelOrFail(ecosystemModelID);
@@ -69,7 +69,7 @@ export class EcosystemModelService {
     if (ecosystemModel.actorGroups) {
       for (const actorGroup of ecosystemModel.actorGroups) {
         await this.actorGroupService.deleteActorGroup({
-          ID: actorGroup.id.toString(),
+          ID: actorGroup.id,
         });
       }
     }
@@ -102,7 +102,7 @@ export class EcosystemModelService {
   async createActorGroup(
     actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
-    const ecosystemId = actorGroupData.parentID;
+    const ecosystemId = actorGroupData.ecosystemModelID;
     if (!ecosystemId)
       throw new ValidationException(
         `Actor group input parent not specifiec: ${actorGroupData.name}`,

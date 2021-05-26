@@ -9,7 +9,6 @@ import {
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import validator from 'validator';
 import {
   IOrganisation,
   Organisation,
@@ -20,12 +19,15 @@ import {
 import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '../user/user.service';
+import { NamingService } from '@src/services/naming/naming.service';
+import { UUID_LENGTH } from '@common/constants';
 
 @Injectable()
 export class OrganisationService {
   constructor(
     private userService: UserService,
     private userGroupService: UserGroupService,
+    private namingService: NamingService,
     private profileService: ProfileService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>,
@@ -35,7 +37,7 @@ export class OrganisationService {
   async createOrganisation(
     organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
-    await this.validateOrganisationCreationRequest(organisationData);
+    await this.checkNameIdOrFail(organisationData.nameID);
 
     const organisation: IOrganisation = Organisation.create(organisationData);
     organisation.profile = await this.profileService.createProfile(
@@ -53,49 +55,49 @@ export class OrganisationService {
     return savedOrg;
   }
 
-  async validateOrganisationCreationRequest(
-    organisationData: CreateOrganisationInput
-  ): Promise<boolean> {
-    const organisations = await this.getOrganisations();
-    const organisation = organisations.find(
-      o => o.name === organisationData.name
-    );
-    if (organisation)
+  async checkNameIdOrFail(nameID: string) {
+    const organisationCount = await this.organisationRepository.count({
+      nameID: nameID,
+    });
+    if (organisationCount >= 1)
       throw new ValidationException(
-        `Organisation with the provided name already exists: ${organisationData.name}`,
+        `Organisation: the provided nameID is already taken: ${nameID}`,
         LogContext.COMMUNITY
       );
-
-    return true;
   }
 
   async updateOrganisation(
     organisationData: UpdateOrganisationInput
   ): Promise<IOrganisation> {
-    const existingOrganisation = await this.getOrganisationOrFail(
-      organisationData.ID
-    );
+    const organisation = await this.getOrganisationOrFail(organisationData.ID);
 
     // Merge in the data
-    if (organisationData.name) {
-      existingOrganisation.name = organisationData.name;
-      await this.organisationRepository.save(existingOrganisation);
-    }
+    if (organisationData.displayName)
+      organisation.displayName = organisationData.displayName;
 
     // Check the tagsets
-    if (organisationData.profileData && existingOrganisation.profile) {
-      await this.profileService.updateProfile(organisationData.profileData);
+    if (organisationData.profileData && organisation.profile) {
+      organisation.profile = await this.profileService.updateProfile(
+        organisationData.profileData
+      );
     }
 
-    // Reload the organisation for returning
-    return await this.getOrganisationByIdOrFail(existingOrganisation.id);
+    if (organisationData.nameID) {
+      if (organisationData.nameID !== organisation.nameID) {
+        // updating the nameID, check new value is allowed
+        await this.checkNameIdOrFail(organisationData.nameID);
+        organisation.nameID = organisationData.nameID;
+      }
+    }
+
+    return await this.organisationRepository.save(organisation);
   }
 
   async deleteOrganisation(
     deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
-    const orgID = parseInt(deleteData.ID);
-    const organisation = await this.getOrganisationByIdOrFail(orgID);
+    const orgID = deleteData.ID;
+    const organisation = await this.getOrganisationOrFail(orgID);
 
     if (organisation.profile) {
       await this.profileService.deleteProfile(organisation.profile.id);
@@ -104,7 +106,7 @@ export class OrganisationService {
     if (organisation.groups) {
       for (const group of organisation.groups) {
         await this.userGroupService.removeUserGroup({
-          ID: group.id.toString(),
+          ID: group.id,
         });
       }
     }
@@ -120,44 +122,25 @@ export class OrganisationService {
     organisationID: string,
     options?: FindOneOptions<Organisation>
   ): Promise<IOrganisation> {
-    if (validator.isNumeric(organisationID)) {
-      const idInt: number = parseInt(organisationID);
-      return await this.getOrganisationByIdOrFail(idInt, options);
+    let organisation: IOrganisation | undefined;
+    if (organisationID.length === UUID_LENGTH) {
+      organisation = await this.organisationRepository.findOne(
+        { id: organisationID },
+        options
+      );
+    } else {
+      // look up based on nameID
+      organisation = await this.organisationRepository.findOne(
+        { nameID: organisationID },
+        options
+      );
     }
-
-    return await this.getOrganisationByTextIdOrFail(organisationID);
-  }
-
-  async getOrganisationByIdOrFail(
-    organisationID: number,
-    options?: FindOneOptions<Organisation>
-  ): Promise<IOrganisation> {
-    const organisation = await Organisation.findOne(
-      { id: organisationID },
-      options
-    );
     if (!organisation)
       throw new EntityNotFoundException(
-        `Unable to find organisation with ID: ${organisationID}`,
+        `Unable to find Organisation with ID: ${organisationID}`,
         LogContext.CHALLENGES
       );
-    return organisation as IOrganisation;
-  }
-
-  async getOrganisationByTextIdOrFail(
-    textID: string,
-    options?: FindOneOptions<Organisation>
-  ): Promise<IOrganisation> {
-    const organisation = await this.organisationRepository.findOne(
-      { textID: textID },
-      options
-    );
-    if (!organisation)
-      throw new EntityNotFoundException(
-        `Unable to find organisation with given identifier: ${textID}`,
-        LogContext.COMMUNITY
-      );
-    return organisation as IOrganisation;
+    return organisation;
   }
 
   async getOrganisations(): Promise<Organisation[]> {
@@ -180,7 +163,7 @@ export class OrganisationService {
       `Adding userGroup (${groupName}) to organisation (${orgID})`
     );
     // Try to find the organisation
-    const organisation = await this.getOrganisationByIdOrFail(orgID, {
+    const organisation = await this.getOrganisationOrFail(orgID, {
       relations: ['groups'],
     });
 

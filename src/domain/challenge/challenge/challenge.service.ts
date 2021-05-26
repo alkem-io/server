@@ -28,18 +28,19 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LoggerService } from '@nestjs/common';
 import { IOrganisation } from '@domain/community/organisation';
-import validator from 'validator';
 import { ICommunity } from '@domain/community/community';
 import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
 import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
+import { UUID_LENGTH } from '@common/constants';
+
 @Injectable()
 export class ChallengeService {
   constructor(
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
-    private challengeBaseService: BaseChallengeService,
+    private baseChallengeService: BaseChallengeService,
     private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
     @InjectRepository(Challenge)
@@ -52,11 +53,12 @@ export class ChallengeService {
     ecoverseID: string
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
+
     challenge.ecoverseID = ecoverseID;
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
-    await this.challengeBaseService.initialise(challenge, challengeData);
+    await this.baseChallengeService.initialise(challenge, challengeData);
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = challengeLifecycleConfigDefault;
@@ -70,7 +72,7 @@ export class ChallengeService {
     await this.challengeRepository.save(challenge);
 
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
-      challenge.id.toString(),
+      challenge.id,
       machineConfig
     );
 
@@ -80,16 +82,28 @@ export class ChallengeService {
   async updateChallenge(
     challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
-    return await this.challengeBaseService.update(
+    const challenge = await this.baseChallengeService.update(
       challengeData,
       this.challengeRepository
     );
+    if (challengeData.nameID) {
+      if (challengeData.nameID !== challenge.nameID) {
+        // updating the nameID, check new value is allowed
+        await this.baseChallengeService.isNameAvailableOrFail(
+          challengeData.nameID,
+          challenge.ecoverseID
+        );
+        challenge.nameID = challengeData.nameID;
+        await this.challengeRepository.save(challenge);
+      }
+    }
+    return challenge;
   }
 
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
-    const challenge = await this.getChallengeByIdOrFail(parseInt(challengeID), {
+    const challenge = await this.getChallengeOrFail(challengeID, {
       relations: [
         'childChallenges',
         'community',
@@ -99,7 +113,7 @@ export class ChallengeService {
       ],
     });
 
-    await this.challengeBaseService.deleteEntities(challenge);
+    await this.baseChallengeService.deleteEntities(challenge);
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
     if (challenge.childChallenges && challenge.childChallenges.length > 0)
@@ -123,29 +137,86 @@ export class ChallengeService {
     };
   }
 
-  async getCommunity(challengeId: number): Promise<ICommunity> {
-    return await this.challengeBaseService.getCommunity(
+  async getChallengeInNameableScopeOrFail(
+    challengeID: string,
+    nameableScopeID: string,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge> {
+    let challenge: IChallenge | undefined;
+    if (challengeID.length == UUID_LENGTH) {
+      challenge = await this.challengeRepository.findOne(
+        { id: challengeID, ecoverseID: nameableScopeID },
+        options
+      );
+    } else {
+      // look up based on nameID
+      challenge = await this.challengeRepository.findOne(
+        { nameID: challengeID, ecoverseID: nameableScopeID },
+        options
+      );
+    }
+
+    if (!challenge) {
+      throw new EntityNotFoundException(
+        `Unable to find challenge with ID: ${challengeID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return challenge;
+  }
+
+  async getChallengeOrFail(
+    challengeID: string,
+    options?: FindOneOptions<Challenge>
+  ): Promise<IChallenge> {
+    let challenge: IChallenge | undefined;
+    if (challengeID.length == UUID_LENGTH) {
+      challenge = await this.challengeRepository.findOne(
+        { id: challengeID },
+        options
+      );
+    } else {
+      // look up based on nameID
+      challenge = await this.challengeRepository.findOne(
+        { nameID: challengeID },
+        options
+      );
+    }
+
+    if (!challenge) {
+      throw new EntityNotFoundException(
+        `Unable to find challenge with ID: ${challengeID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return challenge;
+  }
+
+  async getCommunity(challengeId: string): Promise<ICommunity> {
+    return await this.baseChallengeService.getCommunity(
       challengeId,
       this.challengeRepository
     );
   }
 
-  async getLifecycle(challengeId: number): Promise<ILifecycle> {
-    return await this.challengeBaseService.getLifecycle(
+  async getLifecycle(challengeId: string): Promise<ILifecycle> {
+    return await this.baseChallengeService.getLifecycle(
       challengeId,
       this.challengeRepository
     );
   }
 
-  async getContext(challengeId: number): Promise<IContext> {
-    return await this.challengeBaseService.getContext(
+  async getContext(challengeId: string): Promise<IContext> {
+    return await this.baseChallengeService.getContext(
       challengeId,
       this.challengeRepository
     );
   }
 
-  async getOpportunities(challengeId: number): Promise<IOpportunity[]> {
-    const challenge = await this.getChallengeByIdOrFail(challengeId, {
+  async getOpportunities(challengeId: string): Promise<IOpportunity[]> {
+    const challenge = await this.getChallengeOrFail(challengeId, {
       relations: ['opportunities'],
     });
     const opportunities = challenge.opportunities;
@@ -164,7 +235,7 @@ export class ChallengeService {
       return challenge.childChallenges;
     }
 
-    const challengeWithChildChallenges = await this.getChallengeByIdOrFail(
+    const challengeWithChildChallenges = await this.getChallengeOrFail(
       challenge.id,
       {
         relations: ['childChallenges'],
@@ -183,18 +254,19 @@ export class ChallengeService {
   async createChildChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
-    // First find the Challenge
-
     this.logger.verbose?.(
       `Adding child Challenge to Challenge (${challengeData.parentID})`,
       LogContext.CHALLENGES
     );
-    // Try to find the challenge
+
     const challenge = await this.getChallengeOrFail(challengeData.parentID, {
       relations: ['childChallenges', 'community'],
     });
 
-    await this.validateChildChallenge(challenge, challengeData);
+    await this.baseChallengeService.isNameAvailableOrFail(
+      challengeData.nameID,
+      challenge.ecoverseID
+    );
 
     const childChallenge = await this.createChallenge(
       challengeData,
@@ -214,27 +286,6 @@ export class ChallengeService {
     return childChallenge;
   }
 
-  async validateChildChallenge(
-    challenge: IChallenge,
-    challengeData: CreateChallengeInput
-  ) {
-    const childChallenges = challenge.childChallenges;
-    if (!childChallenges)
-      throw new EntityNotInitializedException(
-        `Challenge without initialised child challenges encountered ${challenge.id}`,
-        LogContext.CHALLENGES
-      );
-
-    this.challengeBaseService.checkForIdentifiableNameDuplication(
-      childChallenges,
-      challengeData.name
-    );
-    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
-      childChallenges,
-      challengeData.textID
-    );
-  }
-
   async createOpportunity(
     opportunityData: CreateOpportunityInput
   ): Promise<IOpportunity> {
@@ -250,7 +301,10 @@ export class ChallengeService {
       }
     );
 
-    await this.validateOpportunity(challenge, opportunityData);
+    await this.baseChallengeService.isNameAvailableOrFail(
+      opportunityData.nameID,
+      challenge.ecoverseID
+    );
 
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
@@ -268,71 +322,6 @@ export class ChallengeService {
     await this.challengeRepository.save(challenge);
 
     return opportunity;
-  }
-
-  async validateOpportunity(
-    challenge: IChallenge,
-    opportunityData: CreateOpportunityInput
-  ) {
-    const opportunities = challenge.opportunities;
-    if (!opportunities)
-      throw new EntityNotInitializedException(
-        `Challenge without initialised opportunities encountered ${challenge.id}`,
-        LogContext.CHALLENGES
-      );
-
-    this.challengeBaseService.checkForIdentifiableNameDuplication(
-      opportunities,
-      opportunityData.name
-    );
-    this.challengeBaseService.checkForIdentifiableTextIdDuplication(
-      opportunities,
-      opportunityData.textID
-    );
-  }
-
-  async getChallengeOrFail(
-    challengeID: string,
-    options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
-    if (validator.isNumeric(challengeID)) {
-      const idInt: number = parseInt(challengeID);
-      return await this.getChallengeByIdOrFail(idInt, options);
-    }
-
-    return await this.getChallengeByTextIdOrFail(challengeID, options);
-  }
-
-  async getChallengeByIdOrFail(
-    challengeID: number,
-    options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeRepository.findOne(
-      { id: challengeID },
-      options
-    );
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    return challenge;
-  }
-
-  async getChallengeByTextIdOrFail(
-    challengeID: string,
-    options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeRepository.findOne(
-      { textID: challengeID },
-      options
-    );
-    if (!challenge)
-      throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${challengeID}`,
-        LogContext.CHALLENGES
-      );
-    return challenge;
   }
 
   async getChallenges(): Promise<Challenge[]> {
@@ -392,14 +381,14 @@ export class ChallengeService {
     return await this.challengeRepository.save(challenge);
   }
 
-  async getAllChallengesCount(ecoverseID: number): Promise<number> {
+  async getAllChallengesCount(ecoverseID: string): Promise<number> {
     const count = await this.challengeRepository.count({
       where: { ecoverseID: ecoverseID },
     });
     return count;
   }
 
-  async getChildChallengesCount(challengeID: number): Promise<number> {
+  async getChildChallengesCount(challengeID: string): Promise<number> {
     return await this.challengeRepository.count({
       where: { parentChallenge: challengeID },
     });

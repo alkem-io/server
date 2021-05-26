@@ -4,10 +4,10 @@ import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge/challenge';
-import { IdentifiableEntity } from '@domain/common/identifiable-entity';
+import { NameableEntity } from '@domain/common/nameable-entity';
 
 @Entity()
-export class Organisation extends IdentifiableEntity
+export class Organisation extends NameableEntity
   implements IOrganisation, IGroupable {
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()

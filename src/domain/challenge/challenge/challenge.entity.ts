@@ -46,7 +46,7 @@ export class Challenge extends BaseChallenge implements IChallenge {
 
   @OneToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.challenge,
+    ecoverse => ecoverse.containedChallenge,
     { eager: false, cascade: false }
   )
   ecoverse?: Ecoverse;

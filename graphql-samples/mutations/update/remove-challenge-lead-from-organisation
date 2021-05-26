@@ -6,7 +6,7 @@ mutation removeChallengeLead($removeData: RemoveChallengeLeadInput!) {
 Variables:
 {
   "removeData": {
-    "organisationID": "1",
-    "challengeID": "1"
+    "organisationID": "uuid",
+    "challengeID": "uuid""
   }
 }

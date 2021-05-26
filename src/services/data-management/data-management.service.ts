@@ -59,7 +59,7 @@ export class DataManagementService {
     let ecoverseName = '<< No ecoverse >>';
     try {
       const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail();
-      ecoverseName = ecoverse.name;
+      ecoverseName = ecoverse.displayName;
     } catch (e) {
       // ecoverse not yet initialised so just skip the name
       this.logger.verbose?.(e.message, LogContext.DATA_MGMT);

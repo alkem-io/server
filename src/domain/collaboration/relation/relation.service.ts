@@ -54,7 +54,7 @@ export class RelationService {
     return true;
   }
 
-  async getRelationOrFail(relationID: number): Promise<IRelation> {
+  async getRelationOrFail(relationID: string): Promise<IRelation> {
     const relation = await this.relationRepository.findOne({ id: relationID });
     if (!relation)
       throw new EntityNotFoundException(

@@ -6,11 +6,13 @@ import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { MembershipService } from './membership.service';
 import { MembershipResolverQueries } from './membership.resolver.queries';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 
 @Module({
   imports: [
     UserModule,
     UserGroupModule,
+    ChallengeModule,
     CommunityModule,
     OrganisationModule,
     EcoverseModule,

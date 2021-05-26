@@ -9,6 +9,7 @@ import { UserInfo } from '@src/core/authentication/user-info';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -32,7 +33,9 @@ export class UserResolverQueries {
     description: 'A particular user, identified by the ID or by email',
   })
   @Profiling.api
-  async user(@Args('ID') id: string): Promise<IUser> {
+  async user(
+    @Args('ID', { type: () => UUID_NAMEID_EMAIL }) id: string
+  ): Promise<IUser> {
     return await this.userService.getUserOrFail(id);
   }
 
@@ -44,11 +47,11 @@ export class UserResolverQueries {
   })
   @Profiling.api
   async usersById(
-    @Args({ name: 'IDs', type: () => [String] }) ids: string[]
+    @Args({ name: 'IDs', type: () => [UUID_NAMEID_EMAIL] }) ids: string[]
   ): Promise<IUser[]> {
     const users = await this.userService.getUsers();
     return users.filter(x => {
-      return ids ? ids.indexOf(x.id.toString()) > -1 : false;
+      return ids ? ids.indexOf(x.id) > -1 : false;
     });
   }
 

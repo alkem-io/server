@@ -8,6 +8,6 @@ mutation deleteAspect($deleteData: DeleteAspectInput!) {
 Variables:
 {
   "deleteData": {
-    "ID": 7
+    "ID": "uuid"
   }
 }

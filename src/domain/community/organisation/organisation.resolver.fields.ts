@@ -38,7 +38,7 @@ export class OrganisationResolverFields {
   @Profiling.api
   async groups(@Parent() organisation: Organisation) {
     // get the organisation with the groups loaded
-    const organisationGroups = await this.organisationService.getOrganisationByIdOrFail(
+    const organisationGroups = await this.organisationService.getOrganisationOrFail(
       organisation.id,
       {
         relations: ['groups'],
@@ -47,7 +47,7 @@ export class OrganisationResolverFields {
     const groups = organisationGroups.groups;
     if (!groups)
       throw new ValidationException(
-        `No groups on organisation: ${organisation.name}`,
+        `No groups on organisation: ${organisation.displayName}`,
         LogContext.COMMUNITY
       );
     return groups;
@@ -77,7 +77,7 @@ export class OrganisationResolverFields {
     const profile = organisation.profile;
     if (!profile) {
       throw new EntityNotInitializedException(
-        `Profile not initialised on organisation: ${organisation.name}`,
+        `Profile not initialised on organisation: ${organisation.displayName}`,
         LogContext.COMMUNITY
       );
     }

@@ -18,7 +18,6 @@ import {
   UpdateTagsetInput,
   DeleteTagsetInput,
 } from '@domain/common/tagset';
-import validator from 'validator';
 import {} from './tagset.dto.delete';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 
@@ -44,17 +43,6 @@ export class TagsetService {
   }
 
   async getTagsetOrFail(tagsetID: string): Promise<ITagset> {
-    if (validator.isNumeric(tagsetID)) {
-      const idInt: number = parseInt(tagsetID);
-      return await this.getTagsetByIdOrFail(idInt);
-    }
-    throw new EntityNotFoundException(
-      `Tagset with id(${tagsetID}) not found!`,
-      LogContext.COMMUNITY
-    );
-  }
-
-  async getTagsetByIdOrFail(tagsetID: number): Promise<ITagset> {
     const tagset = await this.tagsetRepository.findOne({ id: tagsetID });
     if (!tagset)
       throw new EntityNotFoundException(
@@ -65,15 +53,15 @@ export class TagsetService {
   }
 
   async removeTagset(deleteData: DeleteTagsetInput): Promise<ITagset> {
-    const tagsetID = parseInt(deleteData.ID);
-    const tagset = await this.getTagsetByIdOrFail(tagsetID);
+    const tagsetID = deleteData.ID;
+    const tagset = await this.getTagsetOrFail(tagsetID);
     const result = await this.tagsetRepository.remove(tagset as Tagset);
     result.id = tagsetID;
     return result;
   }
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
-    const tagset = await this.getTagsetByIdOrFail(parseInt(tagsetData.ID));
+    const tagset = await this.getTagsetOrFail(tagsetData.ID);
     this.updateTagsetValues(tagset, tagsetData);
     return await this.tagsetRepository.save(tagset);
   }
@@ -102,9 +90,7 @@ export class TagsetService {
     if (tagsetsData) {
       for (const tagsetData of tagsetsData) {
         // check the Tagset being update is part of the current entity
-        const tagset = tagsets.find(
-          tagset => tagset.id == parseInt(tagsetData.ID)
-        );
+        const tagset = tagsets.find(tagset => tagset.id === tagsetData.ID);
         if (!tagset)
           throw new EntityNotFoundException(
             `Unable to update Tagset with supplied ID: ${tagsetData.ID} - no such Tagset in parent entity.`,

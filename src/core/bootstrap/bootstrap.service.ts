@@ -119,13 +119,15 @@ export class BootstrapService {
   async createUserProfiles(usersData: any[]) {
     try {
       for (const userData of usersData) {
-        // If the user does not exist create + add credentials
-        let user = await this.userService.getUserByEmail(userData.email);
-        if (!user) {
-          user = await this.userService.createUser({
+        const userExists = await this.userService.isRegisteredUser(
+          userData.email
+        );
+        if (!userExists) {
+          const user = await this.userService.createUser({
+            nameID: `${userData.firstName}_${userData.lastName}`,
             email: userData.email,
+            displayName: `${userData.firstName} ${userData.lastName}`,
             accountUpn: userData.email,
-            name: `${userData.firstName} ${userData.lastName}`,
             firstName: userData.firstName,
             lastName: userData.lastName,
           });
@@ -156,8 +158,8 @@ export class BootstrapService {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       return await this.ecoverseService.createEcoverse({
-        textID: 'Eco1',
-        name: 'Empty ecoverse',
+        nameID: 'Eco1',
+        displayName: 'Empty ecoverse',
         context: {
           tagline: 'An empty ecoverse to be populated',
         },

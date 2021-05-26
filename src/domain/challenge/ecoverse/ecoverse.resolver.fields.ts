@@ -11,21 +11,20 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { IChallenge } from '../challenge';
-import { ChallengeService } from '../challenge/challenge.service';
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse } from '@domain/challenge/ecoverse';
-import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context';
 import { ITagset } from '@domain/common/tagset';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IApplication } from '@domain/community/application';
 import { INVP } from '@domain/common/nvp';
+import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
   constructor(
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private projectService: ProjectService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
@@ -65,21 +64,19 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async tagset(@Parent() ecoverse: Ecoverse) {
-    return this.ecoverseService.getChallenge(ecoverse).tagset;
+    return this.ecoverseService.getContainedChallenge(ecoverse).tagset;
   }
 
   @ResolveField('challenge', () => IChallenge, {
     nullable: false,
-    description: 'A particular Challenge, either by its ID or textID',
+    description: 'A particular Challenge, either by its ID or nameID',
   })
   @Profiling.api
   async challenge(
-    @Parent() ecoverse: Ecoverse,
-    @Args('ID') id: string
+    @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @Parent() ecoverse: Ecoverse
   ): Promise<IChallenge> {
-    return await this.challengeService.getChallengeOrFail(id, {
-      where: { ecoverseID: ecoverse.id.toString() },
-    });
+    return await this.ecoverseService.getChallengeInNameableScope(id, ecoverse);
   }
 
   @ResolveField('opportunities', () => [IOpportunity], {
@@ -88,21 +85,22 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
-    return await this.ecoverseService.getOpportunities(ecoverse);
+    return await this.ecoverseService.getOpportunitiesInNameableScope(ecoverse);
   }
 
   @ResolveField('opportunity', () => IOpportunity, {
     nullable: false,
-    description: 'A particular Opportunity, either by its ID or textID',
+    description: 'A particular Opportunity, either by its ID or nameID',
   })
   @Profiling.api
   async opportunity(
-    @Parent() ecoverse: Ecoverse,
-    @Args('ID') id: string
-  ): Promise<IChallenge> {
-    return await this.opportunityService.getOpportunityOrFail(id, {
-      where: { ecoverseID: ecoverse.id.toString() },
-    });
+    @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @Parent() ecoverse: Ecoverse
+  ): Promise<IOpportunity> {
+    return await this.ecoverseService.getOpportunityInNameableScope(
+      id,
+      ecoverse
+    );
   }
 
   @ResolveField('projects', () => [IProject], {
@@ -121,10 +119,10 @@ export class EcoverseResolverFields {
   @Profiling.api
   async project(
     @Parent() ecoverse: Ecoverse,
-    @Args('ID') projectID: string
+    @Args('ID', { type: () => UUID_NAMEID }) projectID: string
   ): Promise<IProject> {
     return await this.projectService.getProjectOrFail(projectID, {
-      where: { ecoverseID: ecoverse.id.toString() },
+      where: { ecoverseID: ecoverse.id },
     });
   }
 
@@ -137,7 +135,7 @@ export class EcoverseResolverFields {
   @Profiling.api
   async groups(@Parent() ecoverse: Ecoverse): Promise<IUserGroup[]> {
     return await this.groupService.getGroups({
-      ecoverseID: ecoverse.id.toString(),
+      ecoverseID: ecoverse.id,
     });
   }
 
@@ -153,7 +151,7 @@ export class EcoverseResolverFields {
     @Args('tag') tag: string
   ): Promise<IUserGroup[]> {
     return await this.groupService.getGroupsWithTag(tag, {
-      ecoverseID: ecoverse.id.toString(),
+      ecoverseID: ecoverse.id,
     });
   }
 
@@ -167,10 +165,10 @@ export class EcoverseResolverFields {
   @Profiling.api
   async group(
     @Parent() ecoverse: Ecoverse,
-    @Args('ID') groupID: string
+    @Args('ID', { type: () => UUID }) groupID: string
   ): Promise<IUserGroup> {
     return await this.groupService.getUserGroupOrFail(groupID, {
-      where: { ecoverseID: ecoverse.id.toString() },
+      where: { ecoverseID: ecoverse.id },
     });
   }
 
@@ -185,10 +183,10 @@ export class EcoverseResolverFields {
   })
   async application(
     @Parent() ecoverse: Ecoverse,
-    @Args('ID') applicationID: number
+    @Args('ID', { type: () => UUID }) applicationID: string
   ): Promise<IApplication> {
     return await this.applicationService.getApplicationOrFail(applicationID, {
-      where: { ecoverseID: ecoverse.id.toString() },
+      where: { ecoverseID: ecoverse.id },
     });
   }
 

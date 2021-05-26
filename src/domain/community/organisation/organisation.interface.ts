@@ -3,11 +3,11 @@ import { IProfile } from '@domain/community/profile/profile.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { ObjectType } from '@nestjs/graphql';
 import { IGroupable, ISearchable } from '@domain/common/interfaces';
-import { IIdentifiable } from '@domain/common/identifiable-entity';
+import { INameable } from '@domain/common/nameable-entity';
 @ObjectType('Organisation', {
   implements: () => [IGroupable, ISearchable],
 })
-export abstract class IOrganisation extends IIdentifiable {
+export abstract class IOrganisation extends INameable {
   profile?: IProfile;
   challenges?: IChallenge[];
   groups?: IUserGroup[];

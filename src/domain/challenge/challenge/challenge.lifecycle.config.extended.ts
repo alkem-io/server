@@ -1,7 +1,7 @@
 export const challengeLifecycleConfigExtended = {
   id: 'challenge-lifecycle-extended',
   context: {
-    parentID: '-1',
+    parentID: '',
   },
   initial: 'new',
   states: {

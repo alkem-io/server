@@ -1,5 +1,6 @@
 import {
   BaseEntity,
+  Column,
   CreateDateColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -7,8 +8,8 @@ import {
 } from 'typeorm';
 
 export abstract class BaseCherrytwistEntity extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
   @CreateDateColumn()
   createdDate?: Date;
@@ -18,4 +19,12 @@ export abstract class BaseCherrytwistEntity extends BaseEntity {
 
   @VersionColumn()
   version?: number;
+
+  @Column()
+  authorizationRules?: string;
+
+  constructor() {
+    super();
+    this.authorizationRules = '';
+  }
 }

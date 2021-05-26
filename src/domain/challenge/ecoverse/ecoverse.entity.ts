@@ -14,7 +14,7 @@ export class Ecoverse extends BaseChallenge implements IEcoverse {
     { eager: true, cascade: true }
   )
   @JoinColumn()
-  challenge?: Challenge;
+  containedChallenge?: Challenge;
 
   constructor() {
     super();

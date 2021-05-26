@@ -18,7 +18,7 @@ export const createActorMutation = async (
         }`,
     variables: {
       actorData: {
-        parentID: parseFloat(actorGroupId),
+        actorGroupID: actorGroupId,
         name: `${actorName}`,
         description: `${actorDescritpion}`,
         value: `${actorValue}`,
@@ -75,10 +75,10 @@ export const removeActorMutation = async (actorId: string) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getActorData = async (subChallengeId: string) => {
+export const getActorData = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {challenge(ID: "${subChallengeId}") {
+    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
       context{
         ${contextData}
         }
