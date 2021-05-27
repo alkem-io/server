@@ -92,7 +92,7 @@ export class UserGroupService {
     return await this.userGroupRepository.save(group);
   }
 
-  async getParent(group: UserGroup): Promise<IGroupable> {
+  async getParent(group: IUserGroup): Promise<IGroupable> {
     const groupWithParent = (await this.getUserGroupOrFail(group.id, {
       relations: ['community', 'organisation'],
     })) as UserGroup;
