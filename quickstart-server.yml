@@ -6,7 +6,7 @@ services:
     image: ct_server
     build: .
     networks:
-      - ct_server_dev
+      - ct_dev_net
     environment:
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD

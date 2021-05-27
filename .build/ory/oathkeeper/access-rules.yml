@@ -55,7 +55,7 @@
 - id: 'cherrytwist:graphql:protected'
   upstream:
     preserve_host: true
-    url: 'http://ct_server:4000'
+    url: 'http://192.168.0.1:4000'
   match:
     url: 'http://localhost:4455/graphql'
     methods:

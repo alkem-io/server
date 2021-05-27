@@ -2,6 +2,13 @@ version: '3.7'
 
 networks:
   ct_server_dev:
+  ct_dev_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.0.0/24
+          gateway: 192.168.0.1
 
 volumes:
   ct_server_dev:
@@ -12,7 +19,7 @@ services:
     container_name: ct_server_dev_db
     image: mysql:8.0.11
     networks:
-      - ct_server_dev
+      - ct_dev_net
     command: --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
     restart: always
     ports:
@@ -28,7 +35,7 @@ services:
     container_name: ct_ipfs_server
     image: ipfs/go-ipfs
     networks:
-      - ct_server_dev
+      - ct_dev_net
     restart: always
     ports:
       - 4001:4001/tcp
@@ -42,7 +49,7 @@ services:
     container_name: ct_server_dev_demo_auth
     image: cherrytwist/demo-auth:v0.1.8
     networks:
-      - ct_server_dev
+      - ct_dev_net
     environment:
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
@@ -71,7 +78,7 @@ services:
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
     restart: on-failure
     networks:
-      - ct_server_dev
+      - ct_dev_net
 
   kratos:
     depends_on:
@@ -91,7 +98,7 @@ services:
         source: ./.build/ory/kratos/email-password
         target: /etc/config/kratos
     networks:
-      - ct_server_dev
+      - ct_dev_net
 
   kratos-selfservice-ui-node:
     image: oryd/kratos-selfservice-ui-node:v0.6.0-alpha.1
@@ -103,7 +110,7 @@ services:
       - JWKS_URL=http://oathkeeper:4456/.well-known/jwks.json
       - SECURITY_MODE=jwks
     networks:
-      - ct_server_dev
+      - ct_dev_net
     restart: on-failure
 
   mailslurper:
@@ -112,7 +119,7 @@ services:
       - '4436:4436'
       - '4437:4437'
     networks:
-      - ct_server_dev
+      - ct_dev_net
 
   oathkeeper:
     image: oryd/oathkeeper:v0.38
@@ -126,6 +133,6 @@ services:
       - LOG_LEVEL=debug
     restart: on-failure
     networks:
-      - ct_server_dev
+      - ct_dev_net
     volumes:
       - ./.build/ory/oathkeeper:/etc/config/oathkeeper
