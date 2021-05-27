@@ -21,6 +21,7 @@ import {
 import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AspectService } from '../aspect/aspect.service';
 import { EcosystemModel, IEcosystemModel } from '../ecosystem-model';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ContextService {
@@ -34,6 +35,7 @@ export class ContextService {
   async createContext(contextData: CreateContextInput): Promise<IContext> {
     const context: IContext = Context.create(contextData);
     context.ecosystemModel = new EcosystemModel();
+    context.authorization = new AuthorizationDefinition();
     if (!context.references) context.references = [];
     return context;
   }

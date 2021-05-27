@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { IChallenge } from '@domain/challenge/challenge';
 import { IBaseChallenge } from './base.challenge.interface';
 
 @Injectable()
@@ -9,7 +8,7 @@ export class BaseChallengeAuthorizationService {
 
   async applyAuthorizationRules(
     baseChallenge: IBaseChallenge
-  ): Promise<IChallenge> {
+  ): Promise<IBaseChallenge> {
     // propagate authorization rules for child entitie
     const community = baseChallenge.community;
     if (community) {

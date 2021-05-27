@@ -31,24 +31,24 @@ export class EcoverseAuthorizationService {
     this.baseChallengeAuthorizationService.applyAuthorizationRules(ecoverse);
 
     // propagate authorization rules for child entities
-    let containedChallenge = await this.ecoverseService.getContainedChallenge(
-      ecoverse
-    );
-    containedChallenge.authorization = await this.authorizationEngine.inheritParentAuthorization(
-      containedChallenge.authorization,
-      ecoverse.authorization
-    );
-    containedChallenge = await this.challengeAuthorizationService.applyAuthorizationRules(
-      containedChallenge
-    );
-    containedChallenge.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
-      ecoverse.authorization,
-      {
-        type: AuthorizationCredential.EcoverseAdmin,
-        resourceID: ecoverse.id,
-      },
-      [AuthorizationPrivilege.DELETE]
-    );
+    const challenges = await this.ecoverseService.getChallenges(ecoverse);
+    for (const challenge of challenges) {
+      challenge.authorization = await this.authorizationEngine.inheritParentAuthorization(
+        challenge.authorization,
+        ecoverse.authorization
+      );
+      challenge.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
+        challenge.authorization,
+        {
+          type: AuthorizationCredential.EcoverseAdmin,
+          resourceID: ecoverse.id,
+        },
+        [AuthorizationPrivilege.DELETE]
+      );
+      await this.challengeAuthorizationService.applyAuthorizationRules(
+        challenge
+      );
+    }
 
     return await this.ecoverseRepository.save(ecoverse);
   }

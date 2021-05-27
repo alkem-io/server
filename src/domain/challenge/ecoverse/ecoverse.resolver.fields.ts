@@ -72,7 +72,7 @@ export class EcoverseResolverFields {
   @UseGuards(GraphqlGuard)
   @Profiling.api
   async tagset(@Parent() ecoverse: Ecoverse) {
-    return this.ecoverseService.getContainedChallenge(ecoverse).tagset;
+    return ecoverse.tagset;
   }
 
   @ResolveField('challenge', () => IChallenge, {

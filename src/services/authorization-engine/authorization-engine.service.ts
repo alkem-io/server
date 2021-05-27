@@ -86,19 +86,20 @@ export class AuthorizationEngineService {
   }
 
   appendCredentialAuthorizationRule(
-    authorization: IAuthorizationDefinition,
+    authorization: IAuthorizationDefinition | undefined,
     credentialCriteria: CredentialsSearchInput,
     privileges: AuthorizationPrivilege[]
   ): IAuthorizationDefinition {
-    const rules = this.convertCredentialRulesStr(authorization.credentialRules);
+    const auth = this.validateAuthorization(authorization);
+    const rules = this.convertCredentialRulesStr(auth.credentialRules);
     const newRule: AuthorizationCredentialRule = {
       type: credentialCriteria.type,
       resourceID: credentialCriteria.type,
       grantedPrivileges: privileges,
     };
     rules.push(newRule);
-    authorization.credentialRules = JSON.stringify(rules);
-    return authorization;
+    auth.credentialRules = JSON.stringify(rules);
+    return auth;
   }
 
   setAnonymousAccess(

@@ -52,7 +52,11 @@ export class OpportunityService {
     opportunity.projects = [];
     opportunity.relations = [];
 
-    await this.baseChallengeService.initialise(opportunity, opportunityData);
+    await this.baseChallengeService.initialise(
+      opportunity,
+      opportunityData,
+      ecoverseID
+    );
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = opportunityLifecycleConfigDefault;
@@ -152,19 +156,20 @@ export class OpportunityService {
   async updateOpportunity(
     opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
-    const opportunity = await this.baseChallengeService.update(
+    const baseOpportunity = await this.baseChallengeService.update(
       opportunityData,
       this.opportunityRepository
     );
+    const opportunity = await this.getOpportunityOrFail(baseOpportunity.id);
     if (opportunityData.nameID) {
-      if (opportunityData.nameID !== opportunity.nameID) {
+      if (opportunityData.nameID !== baseOpportunity.nameID) {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           opportunityData.nameID,
           opportunity.ecoverseID
         );
-        opportunity.nameID = opportunityData.nameID;
-        await this.opportunityRepository.save(opportunity);
+        baseOpportunity.nameID = opportunityData.nameID;
+        await this.opportunityRepository.save(baseOpportunity);
       }
     }
     return opportunity;

@@ -60,7 +60,11 @@ export class ChallengeService {
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
-    await this.baseChallengeService.initialise(challenge, challengeData);
+    await this.baseChallengeService.initialise(
+      challenge,
+      challengeData,
+      ecoverseID
+    );
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = challengeLifecycleConfigDefault;
@@ -84,10 +88,11 @@ export class ChallengeService {
   async updateChallenge(
     challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
-    const challenge = await this.baseChallengeService.update(
+    const baseChallenge = await this.baseChallengeService.update(
       challengeData,
       this.challengeRepository
     );
+    const challenge = await this.getChallengeOrFail(baseChallenge.id);
     if (challengeData.nameID) {
       if (challengeData.nameID !== challenge.nameID) {
         // updating the nameID, check new value is allowed

@@ -35,17 +35,15 @@ export class BaseChallengeService {
 
   async initialise(
     baseChallenge: IBaseChallenge,
-    baseChallengeData: CreateBaseChallengeInput
+    baseChallengeData: CreateBaseChallengeInput,
+    ecoverseID: string
   ) {
     baseChallenge.authorization = new AuthorizationDefinition();
-    await this.isNameAvailableOrFail(
-      baseChallengeData.nameID,
-      baseChallenge.ecoverseID
-    );
+    await this.isNameAvailableOrFail(baseChallengeData.nameID, ecoverseID);
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName
     );
-    baseChallenge.community.ecoverseID = baseChallenge.ecoverseID;
+    baseChallenge.community.ecoverseID = ecoverseID;
 
     if (!baseChallengeData.context) {
       baseChallenge.context = await this.contextService.createContext({});
@@ -53,6 +51,7 @@ export class BaseChallengeService {
       baseChallenge.context = await this.contextService.createContext(
         baseChallengeData.context
       );
+      baseChallenge.authorization = new AuthorizationDefinition();
     }
 
     baseChallenge.tagset = this.tagsetService.createDefaultTagset();
@@ -204,5 +203,13 @@ export class BaseChallengeService {
     }
 
     return challenge.lifecycle;
+  }
+
+  async getMembersCount(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<number> {
+    const community = await this.getCommunity(baseChallenge.id, repository);
+    return await this.communityService.getMembersCount(community);
   }
 }

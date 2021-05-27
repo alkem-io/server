@@ -12,4 +12,6 @@ export abstract class IChallenge extends IBaseChallenge {
     description: 'The Organisations that are leading this Challenge.',
   })
   leadOrganisations?: IOrganisation[];
+
+  ecoverseID!: string;
 }

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { Column, JoinColumn, OneToOne } from 'typeorm';
+import { JoinColumn, OneToOne } from 'typeorm';
 import { Tagset } from '@domain/common/tagset';
 import { Lifecycle } from '@domain/common/lifecycle';
 import { Community } from '@domain/community/community';
@@ -29,13 +29,9 @@ export abstract class BaseChallenge extends NameableEntity
   @JoinColumn()
   tagset?: Tagset;
 
-  @Column()
-  ecoverseID!: string;
-
   constructor() {
     super();
     this.displayName = '';
     this.nameID = '';
-    this.ecoverseID = '';
   }
 }

@@ -1,6 +1,6 @@
 import { Relation } from '@domain/collaboration/relation';
 import { Project } from '@domain/collaboration/project';
-import { Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { IOpportunity } from '@domain/collaboration';
 import { Challenge } from '@domain/challenge/challenge';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
@@ -27,6 +27,9 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
     { eager: false, cascade: true }
   )
   relations?: Relation[];
+
+  @Column()
+  ecoverseID!: string;
 
   constructor() {
     super();
