@@ -42,6 +42,6 @@ import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
     EcoverseResolverQueries,
     EcoverseResolverMutations,
   ],
-  exports: [EcoverseService],
+  exports: [EcoverseService, EcoverseAuthorizationService],
 })
 export class EcoverseModule {}

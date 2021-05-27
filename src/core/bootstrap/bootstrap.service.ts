@@ -13,12 +13,14 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
 @Injectable()
 export class BootstrapService {
   constructor(
     private ecoverseService: EcoverseService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
+    private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private authorizationService: AuthorizationService,
     private configService: ConfigService,
     @InjectRepository(Ecoverse)
@@ -163,13 +165,16 @@ export class BootstrapService {
     if (ecoverseCount == 0) {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
-      return await this.ecoverseService.createEcoverse({
+      const ecoverse = await this.ecoverseService.createEcoverse({
         nameID: 'Eco1',
         displayName: 'Empty ecoverse',
         context: {
           tagline: 'An empty ecoverse to be populated',
         },
       });
+      return await this.ecoverseAuthorizationService.applyAuthorizationRules(
+        ecoverse
+      );
     }
   }
 }

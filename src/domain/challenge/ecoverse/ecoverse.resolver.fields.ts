@@ -1,6 +1,9 @@
 import { AuthorizationGlobalRoles, CurrentUser } from '@common/decorators';
 import { AuthorizationRoleGlobal } from '@common/enums';
-import { GraphqlGuard } from '@core/authorization';
+import {
+  AuthorizationCredentialPrivilege,
+  GraphqlGuard,
+} from '@core/authorization';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { IProject } from '@domain/collaboration/project';
 import { ProjectService } from '@domain/collaboration/project/project.service';
@@ -38,17 +41,19 @@ export class EcoverseResolverFields {
     nullable: true,
     description: 'The community for the ecoverse.',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async community(
     @CurrentUser() userInfo: UserInfo,
     @Parent() ecoverse: Ecoverse
   ) {
-    await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
-      AuthorizationPrivilege.READ,
-      `readCommunity: ${ecoverse.nameID}`
-    );
+    // await this.authorizationEngine.grantAccessOrFail(
+    //   userInfo.credentials,
+    //   ecoverse.authorizationRules,
+    //   AuthorizationPrivilege.READ,
+    //   `readCommunity: ${ecoverse.nameID}`
+    // );
     return await this.ecoverseService.getCommunity(ecoverse);
   }
 
@@ -56,6 +61,7 @@ export class EcoverseResolverFields {
     nullable: true,
     description: 'The context for the ecoverse.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async context(
     @CurrentUser() userInfo: UserInfo,
@@ -74,6 +80,7 @@ export class EcoverseResolverFields {
     nullable: true,
     description: 'The challenges for the ecoverse.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async challenges(
     @CurrentUser() userInfo: UserInfo,
@@ -86,6 +93,7 @@ export class EcoverseResolverFields {
     nullable: true,
     description: 'The set of tags for the  ecoverse.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async tagset(@Parent() ecoverse: Ecoverse) {
     return this.ecoverseService.getContainedChallenge(ecoverse).tagset;
@@ -95,6 +103,7 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'A particular Challenge, either by its ID or nameID',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async challenge(
     @CurrentUser() userInfo: UserInfo,
@@ -108,6 +117,7 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'All opportunities within the ecoverse',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async opportunities(
     @CurrentUser() userInfo: UserInfo,
@@ -120,6 +130,7 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'A particular Opportunity, either by its ID or nameID',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async opportunity(
     @CurrentUser() userInfo: UserInfo,
@@ -136,6 +147,7 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'All projects within this ecoverse',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async projects(
     @CurrentUser() userInfo: UserInfo,
@@ -148,6 +160,7 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'A particular Project, identified by the ID',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async project(
     @CurrentUser() userInfo: UserInfo,

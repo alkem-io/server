@@ -11,11 +11,26 @@ export class AuthorizationEngineService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async grantAccessOrFail(
+  grantAccessOrFail(
     credentials: ICredential[],
     rulesStr: string,
     privilegeRequired: AuthorizationPrivilege,
     msg: string
+  ) {
+    if (this.isAccessGranted(credentials, rulesStr, privilegeRequired))
+      return true;
+
+    // If get to here then no match was found
+    throw new ForbiddenException(
+      `Authorization: unable to grant ${privilegeRequired} access: ${msg}`,
+      LogContext.AUTH
+    );
+  }
+
+  isAccessGranted(
+    credentials: ICredential[],
+    rulesStr: string,
+    privilegeRequired: AuthorizationPrivilege
   ) {
     const rules = this.convertRulesStr(rulesStr);
     for (const rule of rules) {
@@ -30,15 +45,10 @@ export class AuthorizationEngineService {
         }
       }
     }
-
-    // If get to here then no match was found
-    throw new ForbiddenException(
-      `Authorization: unable to grant ${privilegeRequired} access: ${msg}`,
-      LogContext.AUTH
-    );
+    return false;
   }
 
-  async appendAuthorizationRule(
+  appendAuthorizationRule(
     rulesStr: string,
     credentialCriteria: CredentialsSearchInput,
     privileges: AuthorizationPrivilege[]
@@ -51,6 +61,19 @@ export class AuthorizationEngineService {
     };
     rules.push(newRule);
     return JSON.stringify(rules);
+  }
+
+  appendAuthorizationRules(
+    existingRulesStr: string,
+    additionalRulesStr: string
+  ) {
+    const existingRules = this.convertRulesStr(existingRulesStr);
+    const additionalRules = this.convertRulesStr(additionalRulesStr);
+    for (const additionalRule of additionalRules) {
+      existingRules.push(additionalRule);
+    }
+
+    return JSON.stringify(existingRules);
   }
 
   convertRulesStr(rulesStr: string): AuthorizationRule[] {

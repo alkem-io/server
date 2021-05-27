@@ -7,11 +7,13 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse, Ecoverse } from '@domain/challenge/ecoverse';
+import { ChallengeAuthorizationService } from '../challenge/challenge.service.authorization';
 
 @Injectable()
 export class EcoverseAuthorizationService {
   constructor(
     private authorizationEngine: AuthorizationEngineService,
+    private challengeAuthorizationService: ChallengeAuthorizationService,
     private ecoverseService: EcoverseService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>
@@ -31,6 +33,9 @@ export class EcoverseAuthorizationService {
         resourceID: ecoverse.id,
       },
       [AuthorizationPrivilege.DELETE]
+    );
+    await this.challengeAuthorizationService.applyAuthorizationRules(
+      containedChallenge
     );
 
     return await this.ecoverseRepository.save(ecoverse);

@@ -43,11 +43,11 @@ export class UserAuthorizationService {
   async grantCredentials(user: IUser): Promise<IUser> {
     const agent = await this.userService.getAgent(user);
 
-    await this.agentService.grantCredential({
+    user.agent = await this.agentService.grantCredential({
       type: AuthorizationCredential.GlobalRegistered,
       agentID: agent.id,
     });
-    await this.agentService.grantCredential({
+    user.agent = await this.agentService.grantCredential({
       type: AuthorizationCredential.UserSelfManagement,
       agentID: agent.id,
       resourceID: user.id,

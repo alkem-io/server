@@ -15,6 +15,7 @@ import {
   ConfigurationTypes,
   LogContext,
   CherrytwistErrorStatus,
+  AuthorizationPrivilege,
 } from '@common/enums';
 import {
   AuthenticationException,
@@ -27,6 +28,8 @@ import {
 } from '@src/core/authorization/rules';
 import { AuthorizationRuleSelfRegistration } from '@core/authorization';
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
+import { AuthorizationRulePrivilege } from './rules/authorization.rule.credential.privilege';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
@@ -37,9 +40,9 @@ export class GraphqlGuard extends AuthGuard([
   JWT_EXPIRED = 'jwt is expired';
 
   private authorizationRules!: IAuthorizationRule[];
-  private fieldName!: string;
 
   constructor(
+    private authorizationEngine: AuthorizationEngineService,
     private configService: ConfigService,
     private reflector: Reflector,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -49,6 +52,7 @@ export class GraphqlGuard extends AuthGuard([
 
   canActivate(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
+    const graphqlInfo = ctx.getInfo();
     const { req } = ctx.getContext();
     this.authorizationRules = [];
 
@@ -58,6 +62,10 @@ export class GraphqlGuard extends AuthGuard([
     );
     const selfRegistration = this.reflector.get<boolean>(
       'self-registration',
+      context.getHandler()
+    );
+    const privilege = this.reflector.get<AuthorizationPrivilege>(
+      'privilege',
       context.getHandler()
     );
 
@@ -78,8 +86,20 @@ export class GraphqlGuard extends AuthGuard([
 
     if (selfRegistration) {
       const args = context.getArgByIndex(1);
-      const fieldName = context.getArgByIndex(3).fieldName;
+      const fieldName = graphqlInfo.fieldName;
       const rule = new AuthorizationRuleSelfRegistration(fieldName, args, 1);
+      this.authorizationRules.push(rule);
+    }
+
+    if (privilege) {
+      const fieldName = graphqlInfo.fieldName;
+      const fieldParent = ctx.getRoot();
+      const rule = new AuthorizationRulePrivilege(
+        this.authorizationEngine,
+        privilege,
+        fieldParent,
+        fieldName
+      );
       this.authorizationRules.push(rule);
     }
 
