@@ -1,5 +1,3 @@
-import { AuthorizationGlobalRoles, CurrentUser } from '@common/decorators';
-import { AuthorizationRoleGlobal } from '@common/enums';
 import {
   AuthorizationCredentialPrivilege,
   GraphqlGuard,
@@ -23,14 +21,11 @@ import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IApplication } from '@domain/community/application';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
-import { UserInfo } from '@core/authentication/user-info';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
     private projectService: ProjectService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
@@ -44,16 +39,7 @@ export class EcoverseResolverFields {
   @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async community(
-    @CurrentUser() userInfo: UserInfo,
-    @Parent() ecoverse: Ecoverse
-  ) {
-    // await this.authorizationEngine.grantAccessOrFail(
-    //   userInfo.credentials,
-    //   ecoverse.authorizationRules,
-    //   AuthorizationPrivilege.READ,
-    //   `readCommunity: ${ecoverse.nameID}`
-    // );
+  async community(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getCommunity(ecoverse);
   }
 
@@ -61,18 +47,10 @@ export class EcoverseResolverFields {
     nullable: true,
     description: 'The context for the ecoverse.',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async context(
-    @CurrentUser() userInfo: UserInfo,
-    @Parent() ecoverse: Ecoverse
-  ) {
-    await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
-      AuthorizationPrivilege.READ,
-      `readCommunity: ${ecoverse.nameID}`
-    );
+  async context(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getContext(ecoverse);
   }
 
@@ -82,10 +60,7 @@ export class EcoverseResolverFields {
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async challenges(
-    @CurrentUser() userInfo: UserInfo,
-    @Parent() ecoverse: Ecoverse
-  ) {
+  async challenges(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getChallenges(ecoverse);
   }
 
@@ -93,6 +68,7 @@ export class EcoverseResolverFields {
     nullable: true,
     description: 'The set of tags for the  ecoverse.',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @Profiling.api
   async tagset(@Parent() ecoverse: Ecoverse) {
@@ -103,10 +79,10 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'A particular Challenge, either by its ID or nameID',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @Profiling.api
   async challenge(
-    @CurrentUser() userInfo: UserInfo,
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
     @Parent() ecoverse: Ecoverse
   ): Promise<IChallenge> {
@@ -117,12 +93,10 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'All opportunities within the ecoverse',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async opportunities(
-    @CurrentUser() userInfo: UserInfo,
-    @Parent() ecoverse: Ecoverse
-  ): Promise<IOpportunity[]> {
+  async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
     return await this.ecoverseService.getOpportunitiesInNameableScope(ecoverse);
   }
 
@@ -130,10 +104,10 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'A particular Opportunity, either by its ID or nameID',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @Profiling.api
   async opportunity(
-    @CurrentUser() userInfo: UserInfo,
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
     @Parent() ecoverse: Ecoverse
   ): Promise<IOpportunity> {
@@ -147,12 +121,10 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'All projects within this ecoverse',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async projects(
-    @CurrentUser() userInfo: UserInfo,
-    @Parent() ecoverse: Ecoverse
-  ): Promise<IProject[]> {
+  async projects(@Parent() ecoverse: Ecoverse): Promise<IProject[]> {
     return await this.ecoverseService.getProjects(ecoverse);
   }
 
@@ -160,10 +132,10 @@ export class EcoverseResolverFields {
     nullable: false,
     description: 'A particular Project, identified by the ID',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @Profiling.api
   async project(
-    @CurrentUser() userInfo: UserInfo,
     @Parent() ecoverse: Ecoverse,
     @Args('ID', { type: () => UUID_NAMEID }) projectID: string
   ): Promise<IProject> {
@@ -172,30 +144,21 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: false,
     description: 'The User Groups on this Ecoverse',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @Profiling.api
-  async groups(
-    @CurrentUser() userInfo: UserInfo,
-    @Parent() ecoverse: Ecoverse
-  ): Promise<IUserGroup[]> {
-    await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
-      AuthorizationPrivilege.READ,
-      `readCommunityGroups: ${ecoverse.nameID}`
-    );
-
+  async groups(@Parent() ecoverse: Ecoverse): Promise<IUserGroup[]> {
     return await this.groupService.getGroups({
       ecoverseID: ecoverse.id,
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groupsWithTag', () => [IUserGroup], {
     nullable: false,
@@ -203,21 +166,15 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async groupsWithTag(
-    @CurrentUser() userInfo: UserInfo,
     @Parent() ecoverse: Ecoverse,
     @Args('tag') tag: string
   ): Promise<IUserGroup[]> {
-    await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
-      AuthorizationPrivilege.READ,
-      `readCommunity: ${ecoverse.nameID}`
-    );
     return await this.groupService.getGroupsWithTag(tag, {
       ecoverseID: ecoverse.id,
     });
   }
 
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: false,
@@ -226,37 +183,24 @@ export class EcoverseResolverFields {
   })
   @Profiling.api
   async group(
-    @CurrentUser() userInfo: UserInfo,
     @Parent() ecoverse: Ecoverse,
     @Args('ID', { type: () => UUID }) groupID: string
   ): Promise<IUserGroup> {
-    await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
-      AuthorizationPrivilege.READ,
-      `readCommunity: ${ecoverse.nameID}`
-    );
     return await this.groupService.getUserGroupOrFail(groupID, {
       where: { ecoverseID: ecoverse.id },
     });
   }
 
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('application', () => IApplication, {
     nullable: false,
     description: 'All applications to join',
   })
   async application(
-    @CurrentUser() userInfo: UserInfo,
     @Parent() ecoverse: Ecoverse,
     @Args('ID', { type: () => UUID }) applicationID: string
   ): Promise<IApplication> {
-    await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
-      AuthorizationPrivilege.READ,
-      `readCommunity: ${ecoverse.nameID}`
-    );
     return await this.applicationService.getApplicationOrFail(applicationID, {
       where: { ecoverseID: ecoverse.id },
     });
