@@ -8,9 +8,11 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 import { ProjectResolverFields } from './project.resolver.fields';
 import { NamingModule } from '@src/services/naming/naming.module';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
 
 @Module({
   imports: [
+    AuthorizationEngineModule,
     AspectModule,
     NamingModule,
     LifecycleModule,

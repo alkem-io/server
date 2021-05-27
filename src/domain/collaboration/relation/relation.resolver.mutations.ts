@@ -5,9 +5,13 @@ import { IRelation, DeleteRelationInput } from '@domain/collaboration/relation';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 @Resolver()
 export class RelationResolverMutations {
-  constructor(private relationService: RelationService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private relationService: RelationService
+  ) {}
 
   @AuthorizationGlobalRoles(
     AuthorizationRoleGlobal.CommunityAdmin,

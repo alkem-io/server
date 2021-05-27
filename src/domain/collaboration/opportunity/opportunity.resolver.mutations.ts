@@ -1,10 +1,9 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { CreateProjectInput, IProject } from '@domain/collaboration/project';
-import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
 import {
@@ -13,79 +12,123 @@ import {
   OpportunityEventInput,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
-import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { UserInfo } from '@core/authentication';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
+    private authorizationEngine: AuthorizationEngineService,
     private opportunityService: OpportunityService,
     private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOpportunity, {
     description: 'Updates the specified Opportunity.',
   })
   @Profiling.api
   async updateOpportunity(
+    @CurrentUser() userInfo: UserInfo,
     @Args('opportunityData') opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
-    const challenge = await this.opportunityService.updateOpportunity(
-      opportunityData
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityData.ID
     );
-    return challenge;
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update opportunity: ${opportunity.nameID}`
+    );
+    return await this.opportunityService.updateOpportunity(opportunityData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOpportunity, {
     description: 'Deletes the specified Opportunity.',
   })
   async deleteOpportunity(
+    @CurrentUser() userInfo: UserInfo,
     @Args('deleteData') deleteData: DeleteOpportunityInput
   ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      deleteData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete opportunity: ${opportunity.nameID}`
+    );
     return await this.opportunityService.deleteOpportunity(deleteData.ID);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IProject, {
     description: 'Create a new Project on the Opportunity',
   })
   @Profiling.api
   async createProject(
+    @CurrentUser() userInfo: UserInfo,
     @Args('projectData') projectData: CreateProjectInput
   ): Promise<IProject> {
-    const project = await this.opportunityService.createProject(projectData);
-    return project;
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      projectData.opportunityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `create project: ${opportunity.nameID}`
+    );
+    return await this.opportunityService.createProject(projectData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IRelation, {
     description: 'Create a new Relation on the Opportunity.',
   })
   @Profiling.api
   async createRelation(
+    @CurrentUser() userInfo: UserInfo,
     @Args('relationData') relationData: CreateRelationInput
   ): Promise<IRelation> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      relationData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `create relation: ${opportunity.nameID}`
+    );
     return await this.opportunityService.createRelation(relationData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOpportunity, {
     description: 'Trigger an event on the Opportunity.',
   })
   async eventOnOpportunity(
+    @CurrentUser() userInfo: UserInfo,
     @Args('opportunityEventData')
-    challengeEventData: OpportunityEventInput
+    opportunityEventData: OpportunityEventInput
   ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityEventData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `event on opportunity: ${opportunity.nameID}`
+    );
     return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity({
-      eventName: challengeEventData.eventName,
-      ID: challengeEventData.ID,
+      eventName: opportunityEventData.eventName,
+      ID: opportunityEventData.ID,
     });
   }
 }

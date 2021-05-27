@@ -25,10 +25,12 @@ import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options
 import { GraphqlGuard } from '@core/authorization';
 import { UserInfo } from '@core/authentication';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    @Inject(CommunityService) private communityService: CommunityService,
+    private authorizationEngine: AuthorizationEngineService,
+    private communityService: CommunityService,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService

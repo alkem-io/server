@@ -10,9 +10,13 @@ import { AuthorizationGlobalRoles } from '@common/decorators';
 import { AuthorizationRoleGlobal } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 @Resolver()
 export class ContextResolverMutations {
-  constructor(private contextService: ContextService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private contextService: ContextService
+  ) {}
 
   @AuthorizationGlobalRoles(
     AuthorizationRoleGlobal.CommunityAdmin,

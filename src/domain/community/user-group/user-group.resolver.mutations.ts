@@ -12,9 +12,13 @@ import {
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 @Resolver()
 export class UserGroupResolverMutations {
-  constructor(private groupService: UserGroupService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private groupService: UserGroupService
+  ) {}
 
   @AuthorizationGlobalRoles(
     AuthorizationRoleGlobal.CommunityAdmin,

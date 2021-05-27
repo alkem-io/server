@@ -9,10 +9,14 @@ import { ActorService } from './actor.service';
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
 @Resolver()
 export class ActorResolverMutations {
-  constructor(private actorService: ActorService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private actorService: ActorService
+  ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
