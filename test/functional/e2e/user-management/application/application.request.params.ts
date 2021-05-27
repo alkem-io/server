@@ -2,7 +2,6 @@ import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
 import { lifecycleData } from '@test/utils/common-params';
 
-
 export const appData = `{
       id
       questions {
@@ -28,8 +27,8 @@ export const createApplicationMutation = async (
       }`,
     variables: {
       applicationData: {
-        parentID: parseFloat(communityid),
-        userId: parseFloat(userid),
+        parentID: communityid,
+        userID: userid,
         questions: [{ name: 'Test Question 1', value: 'Test answer' }],
       },
     },
@@ -63,12 +62,12 @@ export const removeApplicationMutation = async (appId: string) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getApplication = async (appId: any) => {
+export const getApplication = async (appId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
     query: `query{ecoverse {
-      application(ID: ${appId})${appData}}}`,
+      application(ID: "${appId}")${appData}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

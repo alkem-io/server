@@ -17,6 +17,7 @@ import { CreateEcoverseInput } from '@domain/challenge';
 
 export type TestDataServiceInitResult = {
   ecoverseId: string;
+  // communityId: string;
   userId: string;
   // ecoverseAdminId: number;
   // globalAdminId: number;
@@ -302,6 +303,13 @@ export class TestDataService {
     return response.context?.id;
   }
 
+  // async initGetCommunityId(ecoverseId:string): Promise<string> {
+  //   const response = await this.communityService.getCommunities(
+  //     ecoverseId
+  //   );
+  //   return response[0].id;
+  // }
+
   async initGetContextIdChildChallenge(opportunityId: string): Promise<any> {
     const response = await this.challengeService.getChallengeOrFail(
       opportunityId
@@ -337,6 +345,7 @@ export class TestDataService {
   async initFunctions(): Promise<TestDataServiceInitResult> {
     const ecoverseId = await this.initEcoverseId();
     // await this.removeUserFromGroups();
+    //const communityId = await this.initGetCommunityId(ecoverseId);
     const userProfileId = await this.initGetUserProfileId(this.userEmail);
     const userId = await this.initGetUserId(this.userEmail);
     const organisationId = await this.initOrganisation();
@@ -374,6 +383,7 @@ export class TestDataService {
 
     return {
       ecoverseId,
+      // communityId,
       userId,
       userProfileId,
       organisationId,
@@ -381,6 +391,7 @@ export class TestDataService {
       removeChallangeId,
       opportunityId,
       removeOpportunityId,
+
       //   projectId,
       //  // aspectId,
       //   //addUserToOpportunityId,
