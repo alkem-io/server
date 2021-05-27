@@ -10,7 +10,7 @@ export class Ecoverse extends BaseChallenge implements IEcoverse {
 
   @OneToMany(
     () => Challenge,
-    challenge => challenge.ecoverse2,
+    challenge => challenge.parentEcoverse,
     { eager: false, cascade: true }
   )
   challenges?: Challenge[];

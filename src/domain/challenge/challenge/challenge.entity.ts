@@ -49,7 +49,7 @@ export class Challenge extends BaseChallenge implements IChallenge {
     ecoverse => ecoverse.challenges,
     { eager: false, cascade: false }
   )
-  ecoverse2?: Challenge;
+  parentEcoverse?: Challenge;
 
   @Column()
   ecoverseID!: string;

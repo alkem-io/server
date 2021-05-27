@@ -18,6 +18,7 @@ import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
 import { NamingModule } from '@src/services/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
+import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
     CommunityModule,
     ChallengeModule,
     BaseChallengeModule,
+    LifecycleModule,
     OpportunityModule,
     ProjectModule,
     OrganisationModule,

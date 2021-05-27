@@ -22,21 +22,33 @@ export class ChallengeAuthorizationService {
     private challengeRepository: Repository<Challenge>
   ) {}
 
-  async applyAuthorizationRules(challenge: IChallenge): Promise<IChallenge> {
+  async applyAuthorizationRules(
+    challenge: IChallenge,
+    parentAuthorization: IAuthorizationDefinition | undefined
+  ): Promise<IChallenge> {
+    if (!parentAuthorization)
+      throw new EntityNotInitializedException(
+        `parentAuthorization definition not found for: ${challenge.id}`,
+        LogContext.CHALLENGES
+      );
+
+    challenge.authorization = this.authorizationEngine.inheritParentAuthorization(
+      challenge.authorization,
+      parentAuthorization
+    );
     challenge.authorization = this.updateAuthorizationDefinition(
       challenge.authorization,
       challenge.id
     );
-    this.baseChallengeAuthorizationService.applyAuthorizationRules(challenge);
 
     // propagate authorization rules for child entities
+    this.baseChallengeAuthorizationService.applyAuthorizationRules(challenge);
     if (challenge.childChallenges) {
       for (const childChallenge of challenge.childChallenges) {
-        childChallenge.authorization = this.authorizationEngine.inheritParentAuthorization(
-          childChallenge.authorization,
+        await this.applyAuthorizationRules(
+          childChallenge,
           challenge.authorization
         );
-        await this.applyAuthorizationRules(childChallenge);
       }
     }
     if (challenge.opportunities) {

@@ -33,8 +33,8 @@ export class EcoverseAuthorizationService {
     // propagate authorization rules for child entities
     const challenges = await this.ecoverseService.getChallenges(ecoverse);
     for (const challenge of challenges) {
-      challenge.authorization = await this.authorizationEngine.inheritParentAuthorization(
-        challenge.authorization,
+      await this.challengeAuthorizationService.applyAuthorizationRules(
+        challenge,
         ecoverse.authorization
       );
       challenge.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
@@ -44,9 +44,6 @@ export class EcoverseAuthorizationService {
           resourceID: ecoverse.id,
         },
         [AuthorizationPrivilege.DELETE]
-      );
-      await this.challengeAuthorizationService.applyAuthorizationRules(
-        challenge
       );
     }
 

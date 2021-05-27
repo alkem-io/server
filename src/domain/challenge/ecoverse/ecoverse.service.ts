@@ -30,11 +30,14 @@ import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 import { NamingService } from '@src/services/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants';
 import { ILifecycle } from '@domain/common/lifecycle';
+import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
+    private lifecycleService: LifecycleService,
     private projectService: ProjectService,
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
@@ -65,6 +68,13 @@ export class EcoverseService {
         nameID: `host-${ecoverseData.nameID}`,
       });
     }
+
+    // Lifecycle
+    const machineConfig: any = challengeLifecycleConfigDefault;
+    ecoverse.lifecycle = await this.lifecycleService.createLifecycle(
+      ecoverse.id,
+      machineConfig
+    );
 
     return await this.ecoverseRepository.save(ecoverse);
   }

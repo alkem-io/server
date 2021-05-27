@@ -105,7 +105,8 @@ export class EcoverseResolverMutations {
     );
     const challenge = await this.ecoverseService.createChallenge(challengeData);
     return await this.challengeAuthorizationService.applyAuthorizationRules(
-      challenge
+      challenge,
+      ecoverse.authorization
     );
   }
 }
