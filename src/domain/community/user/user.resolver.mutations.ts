@@ -56,8 +56,8 @@ export class UserResolverMutations {
   ): Promise<IUser> {
     const user = await this.userService.getUserOrFail(userData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      user.authorizationRules,
+      userInfo,
+      user.authorization,
       AuthorizationPrivilege.UPDATE,
       `userUpdate: ${user.nameID}`
     );

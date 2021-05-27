@@ -1,8 +1,11 @@
-import { AuthorizationRoleGlobal } from '@common/enums';
-import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredentialPrivilege,
+  GraphqlGuard,
+} from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
+import { Profiling } from '@src/common/decorators';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from './community.service';
 import { IUser } from '@domain/community/user';
@@ -13,10 +16,7 @@ import { IApplication } from '@domain/community/application';
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.Admin,
-    AuthorizationRoleGlobal.CommunityAdmin
-  )
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
@@ -27,10 +27,7 @@ export class CommunityResolverFields {
     return await this.communityService.getUserGroups(community);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.Admin,
-    AuthorizationRoleGlobal.CommunityAdmin
-  )
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,
@@ -41,10 +38,7 @@ export class CommunityResolverFields {
     return await this.communityService.getMembers(community);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.Admin,
-    AuthorizationRoleGlobal.CommunityAdmin
-  )
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,

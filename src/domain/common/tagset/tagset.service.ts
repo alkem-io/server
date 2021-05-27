@@ -20,6 +20,7 @@ import {
 } from '@domain/common/tagset';
 import {} from './tagset.dto.delete';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
+import { AuthorizationDefinition } from '../authorization-definition';
 
 @Injectable()
 export class TagsetService {
@@ -31,6 +32,7 @@ export class TagsetService {
 
   async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
     const tagset = Tagset.create(tagsetData);
+    tagset.authorization = new AuthorizationDefinition();
     if (!tagset.tags) tagset.tags = [];
     return await this.tagsetRepository.save(tagset);
   }

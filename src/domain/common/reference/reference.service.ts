@@ -10,6 +10,7 @@ import {
   Reference,
   IReference,
 } from '@domain/common/reference';
+import { AuthorizationDefinition } from '../authorization-definition';
 @Injectable()
 export class ReferenceService {
   constructor(
@@ -25,6 +26,7 @@ export class ReferenceService {
       referenceInput.uri || '',
       referenceInput.description
     );
+    reference.authorization = new AuthorizationDefinition();
     await this.referenceRepository.save(reference);
     return reference;
   }

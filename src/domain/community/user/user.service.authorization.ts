@@ -1,13 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { User, IUser } from '@domain/community/user';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationRule } from '@src/services/authorization-engine/authorizationRule';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationCredentialRule } from '@src/services/authorization-engine/authorization.credential.rule';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -21,12 +27,19 @@ export class UserAuthorizationService {
   ) {}
 
   async applyAuthorizationRules(user: IUser): Promise<IUser> {
-    user.authorizationRules = this.createAuthorizationRules(user.id);
+    user.authorization = this.updateAuthorizationDefinition(
+      user.authorization,
+      user.id
+    );
 
     // cascade
     const profile = this.userService.getProfile(user);
-    profile.authorizationRules = await this.authorizationEngine.appendAuthorizationRule(
-      user.authorizationRules,
+    profile.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      profile.authorization,
+      user.authorization
+    );
+    profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
+      user.authorization,
       {
         type: AuthorizationCredential.GlobalAdminCommunity,
         resourceID: user.id,
@@ -55,8 +68,16 @@ export class UserAuthorizationService {
     return await this.userRepository.save(user);
   }
 
-  private createAuthorizationRules(userID: string): string {
-    const rules: AuthorizationRule[] = [];
+  private updateAuthorizationDefinition(
+    authorization: IAuthorizationDefinition | undefined,
+    userID: string
+  ): IAuthorizationDefinition {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    const newRules: AuthorizationCredentialRule[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GlobalAdmin,
@@ -68,7 +89,7 @@ export class UserAuthorizationService {
         AuthorizationPrivilege.DELETE,
       ],
     };
-    rules.push(globalAdmin);
+    newRules.push(globalAdmin);
 
     const communityAdmin = {
       type: AuthorizationCredential.GlobalAdminCommunity,
@@ -80,7 +101,7 @@ export class UserAuthorizationService {
         AuthorizationPrivilege.DELETE,
       ],
     };
-    rules.push(communityAdmin);
+    newRules.push(communityAdmin);
 
     const userSelfAdmin = {
       type: AuthorizationCredential.UserSelfManagement,
@@ -91,8 +112,13 @@ export class UserAuthorizationService {
         AuthorizationPrivilege.UPDATE,
       ],
     };
-    rules.push(userSelfAdmin);
+    newRules.push(userSelfAdmin);
 
-    return JSON.stringify(rules);
+    this.authorizationEngine.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
   }
 }

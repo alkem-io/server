@@ -21,6 +21,7 @@ import { Agent, IAgent } from '@domain/agent/agent';
 import { UUID_LENGTH } from '@common/constants';
 import { IProfile } from '@domain/community/profile';
 import { LogContext } from '@common/enums';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class UserService {
@@ -36,6 +37,7 @@ export class UserService {
     await this.validateUserProfileCreationRequest(userData);
 
     const user: IUser = User.create(userData);
+    user.authorization = new AuthorizationDefinition();
 
     user.profile = await this.profileService.createProfile(
       userData.profileData

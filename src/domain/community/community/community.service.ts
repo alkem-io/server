@@ -26,6 +26,7 @@ import {
 import { ApplicationService } from '../application/application.service';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class CommunityService {
@@ -41,6 +42,7 @@ export class CommunityService {
 
   async createCommunity(name: string): Promise<ICommunity> {
     const community = new Community(name);
+    community.authorization = new AuthorizationDefinition();
 
     community.groups = [];
     await this.communityRepository.save(community);

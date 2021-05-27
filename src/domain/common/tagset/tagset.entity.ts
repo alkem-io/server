@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ITagset } from '@domain/common/tagset';
 import { Profile } from '@domain/community/profile';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '../authorizable-entity';
 
 export enum RestrictedTagsetNames {
   Default = 'default',
@@ -9,7 +9,7 @@ export enum RestrictedTagsetNames {
 }
 
 @Entity()
-export class Tagset extends BaseCherrytwistEntity implements ITagset {
+export class Tagset extends AuthorizableEntity implements ITagset {
   @Column({ default: RestrictedTagsetNames.Default })
   name: string;
 

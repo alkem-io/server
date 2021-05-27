@@ -34,6 +34,7 @@ import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.e
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ChallengeService {
@@ -53,6 +54,7 @@ export class ChallengeService {
     ecoverseID: string
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
+    challenge.authorization = new AuthorizationDefinition();
 
     challenge.ecoverseID = ecoverseID;
     challenge.childChallenges = [];

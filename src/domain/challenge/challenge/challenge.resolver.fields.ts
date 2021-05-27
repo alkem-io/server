@@ -8,11 +8,17 @@ import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IChallenge } from '@domain/challenge/challenge';
 import { INVP } from '@domain/common/nvp';
+import { AuthorizationCredentialPrivilege } from '@core/authorization/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { UseGuards } from '@nestjs/common/decorators';
+import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
   constructor(private challengeService: ChallengeService) {}
 
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the challenge.',

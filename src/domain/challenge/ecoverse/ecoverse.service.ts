@@ -29,6 +29,7 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 import { NamingService } from '@src/services/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class EcoverseService {
@@ -47,6 +48,7 @@ export class EcoverseService {
   async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
     await this.validateEcoverseData(ecoverseData);
     const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
+    ecoverse.authorization = new AuthorizationDefinition();
     await this.ecoverseRepository.save(ecoverse);
     ecoverse.containedChallenge = await this.challengeService.createChallenge(
       {

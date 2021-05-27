@@ -61,8 +61,8 @@ export class OrganisationResolverMutations {
       groupData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      organisation.authorizationRules,
+      userInfo,
+      organisation.authorization,
       AuthorizationPrivilege.CREATE,
       `orgCreateGroup: ${organisation.nameID}`
     );
@@ -83,8 +83,8 @@ export class OrganisationResolverMutations {
       organisationData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      organisation.authorizationRules,
+      userInfo,
+      organisation.authorization,
       AuthorizationPrivilege.UPDATE,
       `orgUpdate: ${organisation.nameID}`
     );
@@ -104,8 +104,8 @@ export class OrganisationResolverMutations {
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      organisation.authorizationRules,
+      userInfo,
+      organisation.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteOrg: ${organisation.nameID}`
     );

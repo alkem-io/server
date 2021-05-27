@@ -17,12 +17,14 @@ import { UserInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
+import { ChallengeAuthorizationService } from '../challenge/challenge.service.authorization';
 @Resolver()
 export class EcoverseResolverMutations {
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private ecoverseService: EcoverseService,
-    private ecoverseAuthorizationService: EcoverseAuthorizationService
+    private ecoverseAuthorizationService: EcoverseAuthorizationService,
+    private challengeAuthorizationService: ChallengeAuthorizationService
   ) {}
 
   @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
@@ -53,8 +55,8 @@ export class EcoverseResolverMutations {
       ecoverseData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
+      userInfo,
+      ecoverse.authorization,
       AuthorizationPrivilege.UPDATE,
       `updateEcoverse: ${ecoverse.nameID}`
     );
@@ -75,8 +77,8 @@ export class EcoverseResolverMutations {
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
+      userInfo,
+      ecoverse.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteEcoverse: ${ecoverse.nameID}`
     );
@@ -96,13 +98,14 @@ export class EcoverseResolverMutations {
       challengeData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      ecoverse.authorizationRules,
+      userInfo,
+      ecoverse.authorization,
       AuthorizationPrivilege.CREATE,
       `challengeCreate: ${ecoverse.nameID}`
     );
     const challenge = await this.ecoverseService.createChallenge(challengeData);
-
-    return challenge;
+    return await this.challengeAuthorizationService.applyAuthorizationRules(
+      challenge
+    );
   }
 }

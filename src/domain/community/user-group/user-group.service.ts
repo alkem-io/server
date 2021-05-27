@@ -23,12 +23,11 @@ import {
 } from '@domain/community/user-group';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class UserGroupService {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
     private userService: UserService,
     private profileService: ProfileService,
     private tagsetService: TagsetService,
@@ -44,6 +43,7 @@ export class UserGroupService {
   ): Promise<IUserGroup> {
     const group = UserGroup.create(userGroupData);
     group.ecoverseID = ecoverseID;
+    group.authorization = new AuthorizationDefinition();
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
       userGroupData.profileData

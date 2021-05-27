@@ -1,7 +1,7 @@
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 import { Column } from 'typeorm';
+import { AuthorizableEntity } from '../authorizable-entity';
 
-export abstract class NameableEntity extends BaseCherrytwistEntity {
+export abstract class NameableEntity extends AuthorizableEntity {
   @Column()
   displayName!: string;
 

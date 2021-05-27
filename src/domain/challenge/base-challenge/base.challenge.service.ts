@@ -20,6 +20,7 @@ import { BaseChallenge } from './base.challenge.entity';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
 import { IBaseChallenge } from './base.challenge.interface';
 import { NamingService } from '@src/services/naming/naming.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class BaseChallengeService {
@@ -36,6 +37,7 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput
   ) {
+    baseChallenge.authorization = new AuthorizationDefinition();
     await this.isNameAvailableOrFail(
       baseChallengeData.nameID,
       baseChallenge.ecoverseID

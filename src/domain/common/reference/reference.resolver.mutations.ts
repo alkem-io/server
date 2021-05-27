@@ -27,8 +27,8 @@ export class ReferenceResolverMutations {
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      reference.authorizationRules,
+      userInfo,
+      reference.authorization,
       AuthorizationPrivilege.DELETE,
       `delete reference: ${reference.id}`
     );

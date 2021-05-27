@@ -38,8 +38,8 @@ export class ProfileResolverMutations {
       tagsetData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      profile.authorizationRules,
+      userInfo,
+      profile.authorization,
       AuthorizationPrivilege.CREATE,
       `profile: ${profile.id}`
     );
@@ -60,8 +60,8 @@ export class ProfileResolverMutations {
       referenceInput.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      profile.authorizationRules,
+      userInfo,
+      profile.authorization,
       AuthorizationPrivilege.CREATE,
       `profile: ${profile.id}`
     );
@@ -79,8 +79,8 @@ export class ProfileResolverMutations {
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(profileData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      profile.authorizationRules,
+      userInfo,
+      profile.authorization,
       AuthorizationPrivilege.UPDATE,
       `profile: ${profile.id}`
     );
@@ -100,8 +100,8 @@ export class ProfileResolverMutations {
       uploadData.profileID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo.credentials,
-      profile.authorizationRules,
+      userInfo,
+      profile.authorization,
       AuthorizationPrivilege.UPDATE,
       `profile: ${profile.id}`
     );

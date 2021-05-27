@@ -4,7 +4,8 @@ import { UserInfo } from '@core/authentication/user-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
-export class AuthorizationRulePrivilege implements IAuthorizationRule {
+export class AuthorizationRuleCredentialPrivilege
+  implements IAuthorizationRule {
   privilege: AuthorizationPrivilege;
   priority: number;
   fieldParent: any;

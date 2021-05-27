@@ -19,15 +19,14 @@ import {
 import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '../user/user.service';
-import { NamingService } from '@src/services/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class OrganisationService {
   constructor(
     private userService: UserService,
     private userGroupService: UserGroupService,
-    private namingService: NamingService,
     private profileService: ProfileService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>,
@@ -40,6 +39,7 @@ export class OrganisationService {
     await this.checkNameIdOrFail(organisationData.nameID);
 
     const organisation: IOrganisation = Organisation.create(organisationData);
+    organisation.authorization = new AuthorizationDefinition();
     organisation.profile = await this.profileService.createProfile(
       organisationData.profileData
     );

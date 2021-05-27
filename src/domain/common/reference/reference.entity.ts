@@ -2,10 +2,10 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IReference } from './reference.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '../authorizable-entity';
 
 @Entity()
-export class Reference extends BaseCherrytwistEntity implements IReference {
+export class Reference extends AuthorizableEntity implements IReference {
   @Column()
   name: string;
 

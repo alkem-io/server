@@ -27,6 +27,7 @@ import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { streamToBuffer, validateImageDimensions } from '@common/utils';
 import { IpfsService } from '@src/services/ipfs/ipfs.service';
 import { UploadProfileAvatarInput } from './profile.dto.upload.avatar';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ProfileService {
@@ -46,6 +47,7 @@ export class ProfileService {
     let data = profileData;
     if (!data) data = {};
     const profile: IProfile = Profile.create(data);
+    profile.authorization = new AuthorizationDefinition();
     if (!profile.references) {
       profile.references = [];
     }
@@ -124,7 +126,7 @@ export class ProfileService {
       profile,
       tagsetData
     );
-    tagset.authorizationRules = profile.authorizationRules;
+    tagset.authorization = profile.authorization;
 
     await this.profileRepository.save(profile);
 
@@ -151,7 +153,7 @@ export class ProfileService {
     const newReference = await this.referenceService.createReference(
       referenceInput
     );
-    newReference.authorizationRules = profile.authorizationRules;
+    newReference.authorization = profile.authorization;
 
     await profile.references.push(newReference as Reference);
     await this.profileRepository.save(profile);

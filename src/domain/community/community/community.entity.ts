@@ -4,11 +4,11 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community';
 import { Challenge } from '@domain/challenge/challenge';
 import { Application, IApplication } from '@domain/community/application';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 import { Opportunity } from '@domain/collaboration/opportunity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
-export class Community extends BaseCherrytwistEntity
+export class Community extends AuthorizableEntity
   implements ICommunity, IGroupable {
   @Column()
   displayName: string;

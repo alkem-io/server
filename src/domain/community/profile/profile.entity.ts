@@ -5,10 +5,10 @@ import {
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
 import { IProfile } from './profile.interface';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
-export class Profile extends BaseCherrytwistEntity implements IProfile {
+export class Profile extends AuthorizableEntity implements IProfile {
   @OneToMany(
     () => Reference,
     reference => reference.profile,

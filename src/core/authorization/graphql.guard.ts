@@ -28,7 +28,7 @@ import {
 } from '@src/core/authorization/rules';
 import { AuthorizationRuleSelfRegistration } from '@core/authorization';
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
-import { AuthorizationRulePrivilege } from './rules/authorization.rule.credential.privilege';
+import { AuthorizationRuleCredentialPrivilege } from './rules/authorization.rule.credential.privilege';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
 @Injectable()
@@ -94,7 +94,7 @@ export class GraphqlGuard extends AuthGuard([
     if (privilege) {
       const fieldName = graphqlInfo.fieldName;
       const fieldParent = ctx.getRoot();
-      const rule = new AuthorizationRulePrivilege(
+      const rule = new AuthorizationRuleCredentialPrivilege(
         this.authorizationEngine,
         privilege,
         fieldParent,

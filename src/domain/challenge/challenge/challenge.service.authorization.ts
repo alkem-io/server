@@ -1,59 +1,66 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { Repository } from 'typeorm';
-import { AuthorizationRule } from '@src/services/authorization-engine/authorizationRule';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { Challenge, IChallenge } from '@domain/challenge/challenge';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationCredentialRule } from '@src/services/authorization-engine/authorization.credential.rule';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {
   constructor(
+    private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationEngine: AuthorizationEngineService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
   ) {}
 
   async applyAuthorizationRules(challenge: IChallenge): Promise<IChallenge> {
-    challenge.authorizationRules = this.authorizationEngine.appendAuthorizationRules(
-      challenge.authorizationRules,
-      this.createAuthorizationRules(challenge.id)
+    challenge.authorization = this.updateAuthorizationDefinition(
+      challenge.authorization,
+      challenge.id
     );
+    this.baseChallengeAuthorizationService.applyAuthorizationRules(challenge);
 
     // propagate authorization rules for child entities
     if (challenge.childChallenges) {
       for (const childChallenge of challenge.childChallenges) {
-        childChallenge.authorizationRules = challenge.authorizationRules;
+        childChallenge.authorization = this.authorizationEngine.inheritParentAuthorization(
+          childChallenge.authorization,
+          challenge.authorization
+        );
         await this.applyAuthorizationRules(childChallenge);
       }
     }
     if (challenge.opportunities) {
       for (const opportunity of challenge.opportunities) {
-        opportunity.authorizationRules = challenge.authorizationRules;
+        opportunity.authorization = this.authorizationEngine.inheritParentAuthorization(
+          opportunity.authorization,
+          challenge.authorization
+        );
       }
-    }
-
-    if (challenge.community) {
-      challenge.community.authorizationRules = challenge.authorizationRules;
-    }
-
-    if (challenge.context) {
-      challenge.context.authorizationRules = challenge.authorizationRules;
-      this.authorizationEngine.appendAuthorizationRule(
-        challenge.context.authorizationRules,
-        {
-          type: AuthorizationCredential.GlobalRegistered,
-          resourceID: 'challengeID',
-        },
-        [AuthorizationPrivilege.READ]
-      );
     }
 
     return await this.challengeRepository.save(challenge);
   }
 
-  private createAuthorizationRules(challengeID: string): string {
-    const rules: AuthorizationRule[] = [];
+  private updateAuthorizationDefinition(
+    authorization: IAuthorizationDefinition | undefined,
+    challengeID: string
+  ): IAuthorizationDefinition {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${challengeID}`,
+        LogContext.CHALLENGES
+      );
+    const newRules: AuthorizationCredentialRule[] = [];
 
     const challengeAdmin = {
       type: AuthorizationCredential.ChallengeAdmin,
@@ -64,15 +71,20 @@ export class ChallengeAuthorizationService {
         AuthorizationPrivilege.UPDATE,
       ],
     };
-    rules.push(challengeAdmin);
+    newRules.push(challengeAdmin);
 
     const challengeMember = {
       type: AuthorizationCredential.EcoverseMember,
       resourceID: challengeID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
-    rules.push(challengeMember);
+    newRules.push(challengeMember);
 
-    return JSON.stringify(rules);
+    this.authorizationEngine.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
   }
 }
