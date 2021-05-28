@@ -61,8 +61,7 @@ export class EcoverseResolverMutations {
       `updateEcoverse: ${ecoverse.nameID}`
     );
 
-    const ctVerse = await this.ecoverseService.update(ecoverseData);
-    return ctVerse;
+    return await this.ecoverseService.update(ecoverseData);
   }
 
   @UseGuards(GraphqlGuard)

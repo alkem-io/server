@@ -8,12 +8,10 @@ import {
   Actor,
   IActor,
 } from '@domain/context/actor';
-import {
-  ValidationException,
-  EntityNotFoundException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { DeleteActorInput } from './actor.dto.delete';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ActorService {
@@ -24,18 +22,9 @@ export class ActorService {
   ) {}
 
   async createActor(actorData: CreateActorInput): Promise<IActor> {
-    if (!actorData.name)
-      throw new ValidationException(
-        'A name is required to create an Actor',
-        LogContext.CHALLENGES
-      );
+    const actor = Actor.create(actorData);
+    actor.authorization = new AuthorizationDefinition();
 
-    const actor = new Actor(actorData.name);
-    if (actorData.description) {
-      actor.description = actorData.description;
-    }
-    actor.value = actorData.value;
-    actor.impact = actorData.impact;
     await this.actorRepository.save(actor);
     return actor;
   }

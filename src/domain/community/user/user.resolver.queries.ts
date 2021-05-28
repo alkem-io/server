@@ -55,7 +55,6 @@ export class UserResolverQueries {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Query(() => IUser, {
     nullable: false,

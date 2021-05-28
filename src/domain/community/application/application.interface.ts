@@ -2,11 +2,11 @@ import { IQuestion, Question } from '@domain/community/application';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { ICommunity } from '../community';
 import { IUser } from '@domain/community/user';
-import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IAuthorizable } from '@domain/common/authorizable-entity';
 
 @ObjectType('Application')
-export abstract class IApplication extends IBaseCherrytwist {
+export abstract class IApplication extends IAuthorizable {
   @Field(() => IUser)
   user?: IUser;
 
@@ -17,4 +17,6 @@ export abstract class IApplication extends IBaseCherrytwist {
 
   @Field(() => [IQuestion])
   questions?: Question[];
+
+  ecoverseID?: string;
 }

@@ -64,10 +64,6 @@ export class UserResolverMutations {
     return await this.userService.updateUser(userData);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Deletes the specified User.',
@@ -77,6 +73,13 @@ export class UserResolverMutations {
     @CurrentUser() userInfo: UserInfo,
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
+    const user = await this.userService.getUserOrFail(deleteData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      user.authorization,
+      AuthorizationPrivilege.DELETE,
+      `user delete: ${user.nameID}`
+    );
     return await this.userService.deleteUser(deleteData);
   }
 }

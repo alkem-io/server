@@ -51,8 +51,8 @@ export class BaseChallengeService {
       baseChallenge.context = await this.contextService.createContext(
         baseChallengeData.context
       );
-      baseChallenge.authorization = new AuthorizationDefinition();
     }
+    baseChallenge.authorization = new AuthorizationDefinition();
 
     baseChallenge.tagset = this.tagsetService.createDefaultTagset();
   }

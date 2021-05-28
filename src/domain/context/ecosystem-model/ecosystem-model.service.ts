@@ -18,6 +18,7 @@ import {
 } from '@domain/context/actor-group';
 import { LogContext } from '@common/enums';
 import { ActorGroupService } from '../actor-group/actor-group.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class EcosystemModelService {
@@ -33,9 +34,10 @@ export class EcosystemModelService {
     const ecosystemModel: IEcosystemModel = EcosystemModel.create(
       ecosystemModelData
     );
+    ecosystemModel.authorization = new AuthorizationDefinition();
     await this.createRestrictedActorGroups(ecosystemModel);
     ecosystemModel.actorGroups = [];
-    return ecosystemModel;
+    return await this.ecosystemModelRepository.save(ecosystemModel);
   }
 
   async getEcosystemModelOrFail(
@@ -90,6 +92,7 @@ export class EcosystemModelService {
     }
     for (const name of ecosystem.restrictedActorGroupNames) {
       const actorGroup = await this.actorGroupService.createActorGroup({
+        ecosystemModelID: '',
         name: name,
         description: 'Default actor group',
       });

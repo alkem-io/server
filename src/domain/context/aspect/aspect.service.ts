@@ -11,6 +11,7 @@ import {
   IAspect,
   DeleteAspectInput,
 } from '@domain/context/aspect';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class AspectService {
@@ -21,11 +22,8 @@ export class AspectService {
   ) {}
 
   async createAspect(aspectInput: CreateAspectInput): Promise<IAspect> {
-    const aspect = new Aspect(
-      aspectInput.title,
-      aspectInput.framing,
-      aspectInput.explanation
-    );
+    const aspect = Aspect.create(aspectInput);
+    aspect.authorization = new AuthorizationDefinition();
     await this.aspectRepository.save(aspect);
     return aspect;
   }

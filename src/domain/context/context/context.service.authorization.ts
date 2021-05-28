@@ -27,6 +27,14 @@ export class ContextAuthorizationService {
       ecosystemModel
     );
 
+    const aspects = await this.contextService.getAspects(context);
+    for (const aspect of aspects) {
+      aspect.authorization = await this.authorizationEngine.inheritParentAuthorization(
+        aspect.authorization,
+        context.authorization
+      );
+    }
+
     return await this.contextRepository.save(context);
   }
 }

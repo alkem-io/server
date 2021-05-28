@@ -11,6 +11,7 @@ import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
+import { CommunityAuthorizationService } from './community.service.authorization';
 
 @Module({
   imports: [
@@ -24,10 +25,11 @@ import { CommunityService } from './community.service';
   ],
   providers: [
     CommunityService,
+    CommunityAuthorizationService,
     CommunityResolverMutations,
     CommunityResolverFields,
     CommunityLifecycleOptionsProvider,
   ],
-  exports: [CommunityService],
+  exports: [CommunityService, CommunityAuthorizationService],
 })
 export class CommunityModule {}

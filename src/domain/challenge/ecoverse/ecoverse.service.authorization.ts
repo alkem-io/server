@@ -28,7 +28,10 @@ export class EcoverseAuthorizationService {
       ecoverse.authorization,
       ecoverse.id
     );
-    this.baseChallengeAuthorizationService.applyAuthorizationRules(ecoverse);
+    this.baseChallengeAuthorizationService.applyAuthorizationRules(
+      ecoverse,
+      this.ecoverseRepository
+    );
 
     // propagate authorization rules for child entities
     const challenges = await this.ecoverseService.getChallenges(ecoverse);

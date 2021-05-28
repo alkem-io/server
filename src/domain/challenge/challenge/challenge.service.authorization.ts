@@ -26,12 +26,6 @@ export class ChallengeAuthorizationService {
     challenge: IChallenge,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): Promise<IChallenge> {
-    if (!parentAuthorization)
-      throw new EntityNotInitializedException(
-        `parentAuthorization definition not found for: ${challenge.id}`,
-        LogContext.CHALLENGES
-      );
-
     challenge.authorization = this.authorizationEngine.inheritParentAuthorization(
       challenge.authorization,
       parentAuthorization
@@ -42,7 +36,10 @@ export class ChallengeAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    this.baseChallengeAuthorizationService.applyAuthorizationRules(challenge);
+    this.baseChallengeAuthorizationService.applyAuthorizationRules(
+      challenge,
+      this.challengeRepository
+    );
     if (challenge.childChallenges) {
       for (const childChallenge of challenge.childChallenges) {
         await this.applyAuthorizationRules(

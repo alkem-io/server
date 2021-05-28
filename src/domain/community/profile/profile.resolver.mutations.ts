@@ -1,9 +1,8 @@
+import { IReference } from '@domain/common/reference';
+import { ITagset } from '@domain/common/tagset';
 import {
-  IReference,
-  CreateReferenceParentInput,
-} from '@domain/common/reference';
-import { ITagset, CreateTagsetParentInput } from '@domain/common/tagset';
-import {
+  CreateReferenceOnProfileInput,
+  CreateTagsetOnProfileInput,
   IProfile,
   UpdateProfileInput,
   UploadProfileAvatarInput,
@@ -32,10 +31,10 @@ export class ProfileResolverMutations {
   @Profiling.api
   async createTagsetOnProfile(
     @CurrentUser() userInfo: UserInfo,
-    @Args('tagsetData') tagsetData: CreateTagsetParentInput
+    @Args('tagsetData') tagsetData: CreateTagsetOnProfileInput
   ): Promise<ITagset> {
     const profile = await this.profileService.getProfileOrFail(
-      tagsetData.parentID
+      tagsetData.profileID
     );
     await this.authorizationEngine.grantAccessOrFail(
       userInfo,
@@ -54,10 +53,10 @@ export class ProfileResolverMutations {
   @Profiling.api
   async createReferenceOnProfile(
     @CurrentUser() userInfo: UserInfo,
-    @Args('referenceInput') referenceInput: CreateReferenceParentInput
+    @Args('referenceInput') referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
     const profile = await this.profileService.getProfileOrFail(
-      referenceInput.parentID
+      referenceInput.profileID
     );
     await this.authorizationEngine.grantAccessOrFail(
       userInfo,

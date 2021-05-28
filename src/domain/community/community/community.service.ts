@@ -16,14 +16,15 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { Community, ICommunity } from '@domain/community/community';
 import { IUser } from '@domain/community/user';
 import { CreateUserGroupInput } from '@domain/community/user-group';
 import {
+  Community,
+  ICommunity,
   AssignCommunityMemberInput,
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
-import { ApplicationService } from '../application/application.service';
+import { ApplicationService } from '@domain/community/application/application.service';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
@@ -75,7 +76,7 @@ export class CommunityService {
   }
 
   // Loads the group into the Community entity if not already present
-  async getUserGroups(community: ICommunity): Promise<IUserGroup[]> {
+  getUserGroups(community: ICommunity): IUserGroup[] {
     if (!community.groups) {
       throw new EntityNotInitializedException(
         `Community not initialized: ${community.displayName}`,

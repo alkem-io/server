@@ -51,6 +51,8 @@ export class EcoverseService {
   async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
     await this.validateEcoverseData(ecoverseData);
     const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
+    // remove context before saving as want to control that creation
+    ecoverse.context = undefined;
     await this.ecoverseRepository.save(ecoverse);
     await this.baseChallengeService.initialise(
       ecoverse,

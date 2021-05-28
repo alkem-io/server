@@ -353,7 +353,7 @@ export class ChallengeService {
     );
     if (existingOrg)
       throw new ValidationException(
-        `Community ${challengeID} already has an organisation with the provided organisation ID: ${organisationID}`,
+        `Challenge ${challenge.nameID} already has an organisation with the provided organisation ID: ${organisationID}`,
         LogContext.COMMUNITY
       );
     // ok to add the org

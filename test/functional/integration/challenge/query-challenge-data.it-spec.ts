@@ -95,7 +95,8 @@ describe('Query Challenge data', () => {
       responseQueryData.body.data.ecoverse.challenge.opportunities
     ).toHaveLength(1);
     expect(
-      responseQueryData.body.data.ecoverse.challenge.opportunities[0].displayName
+      responseQueryData.body.data.ecoverse.challenge.opportunities[0]
+        .displayName
     ).toEqual(opportunityName);
     expect(
       responseQueryData.body.data.ecoverse.challenge.opportunities[0].nameID
@@ -211,7 +212,7 @@ describe('Query Challenge data', () => {
       organisationName,
       uniqueTextId + 'k'
     );
-    console.log(createOrganisationResponse.body)
+    console.log(createOrganisationResponse.body);
     organisationId = createOrganisationResponse.body.data.createOrganisation.id;
 
     // Act
@@ -253,7 +254,7 @@ describe('Query Challenge data', () => {
     expect(responseOne.body.data.assignChallengeLead.id).toEqual(challengeId);
     expect(responseTwo.status).toBe(200);
     expect(responseTwo.text).toContain(
-      `Community ${challengeId} already has an organisation with the provided organisation ID: ${organisationIdService}`
+      `Challenge ${challengeId} already has an organisation with the provided organisation ID: ${organisationIdService}`
     );
   });
 

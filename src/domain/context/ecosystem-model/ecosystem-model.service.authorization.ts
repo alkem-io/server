@@ -32,7 +32,8 @@ export class EcosystemModelAuthorizationService {
         ecosystemModel.authorization
       );
       await this.actorGroupAuthorizationService.applyAuthorizationRules(
-        actorGroup
+        actorGroup,
+        ecosystemModel.authorization
       );
     }
 

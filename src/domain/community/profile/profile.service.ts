@@ -13,15 +13,14 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { CreateReferenceParentInput } from '@domain/common/reference';
 import {
   UpdateProfileInput,
   Profile,
   IProfile,
+  CreateReferenceOnProfileInput,
+  CreateProfileInput,
+  CreateTagsetOnProfileInput,
 } from '@domain/community/profile';
-import { CreateTagsetParentInput } from '@domain/common/tagset';
-import { CreateProfileInput } from './profile.dto.create';
-
 import { ReadStream } from 'fs';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { streamToBuffer, validateImageDimensions } from '@common/utils';
@@ -119,8 +118,8 @@ export class ProfileService {
     return await this.profileRepository.remove(profile as Profile);
   }
 
-  async createTagset(tagsetData: CreateTagsetParentInput): Promise<ITagset> {
-    const profile = await this.getProfileOrFail(tagsetData.parentID);
+  async createTagset(tagsetData: CreateTagsetOnProfileInput): Promise<ITagset> {
+    const profile = await this.getProfileOrFail(tagsetData.profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
@@ -134,9 +133,9 @@ export class ProfileService {
   }
 
   async createReference(
-    referenceInput: CreateReferenceParentInput
+    referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
-    const profile = await this.getProfileOrFail(referenceInput.parentID);
+    const profile = await this.getProfileOrFail(referenceInput.profileID);
 
     if (!profile.references)
       throw new EntityNotInitializedException(

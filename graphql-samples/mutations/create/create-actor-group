@@ -1,8 +1,9 @@
 mutation createActorGroup($actorGroupData: CreateActorGroupInput!) {
   createActorGroup(actorGroupData: $actorGroupData) {
-    title,
-    framing,
-    explanation
+    name,
+    actors {
+      name
+    }
   }
 }
 
@@ -13,6 +14,6 @@ query variables:
   {
     "ecosystemModelID": "uuid",
     "name": "TechStack2",
-    "description": "How do I handle scalability?",
+    "description": "How do I handle scalability?"
   }
 }

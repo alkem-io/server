@@ -6,7 +6,7 @@ import { MaxLength } from 'class-validator';
 @InputType()
 export class CreateActorGroupInput {
   @Field(() => UUID, { nullable: false })
-  ecosystemModelID?: string;
+  ecosystemModelID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
