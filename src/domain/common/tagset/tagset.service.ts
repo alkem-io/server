@@ -209,4 +209,8 @@ export class TagsetService {
     }
     return false;
   }
+
+  async saveTagset(tagset: ITagset): Promise<ITagset> {
+    return await this.tagsetRepository.save(tagset);
+  }
 }

@@ -71,4 +71,8 @@ export class ActorService {
 
     return actor;
   }
+
+  async saveActor(actor: IActor): Promise<IActor> {
+    return await this.actorRepository.save(actor);
+  }
 }

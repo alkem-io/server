@@ -16,10 +16,14 @@ import { GraphqlGuard } from '@core/authorization';
 import { UserInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ReferenceService } from '@domain/common/reference/reference.service';
 
 @Resolver()
 export class ProfileResolverMutations {
   constructor(
+    private tagsetService: TagsetService,
+    private referenceService: ReferenceService,
     private authorizationEngine: AuthorizationEngineService,
     private profileService: ProfileService
   ) {}
@@ -43,7 +47,12 @@ export class ProfileResolverMutations {
       `profile: ${profile.id}`
     );
 
-    return await this.profileService.createTagset(tagsetData);
+    const tagset = await this.profileService.createTagset(tagsetData);
+    tagset.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      tagset.authorization,
+      profile.authorization
+    );
+    return await this.tagsetService.saveTagset(tagset);
   }
 
   @UseGuards(GraphqlGuard)
@@ -64,7 +73,12 @@ export class ProfileResolverMutations {
       AuthorizationPrivilege.CREATE,
       `profile: ${profile.id}`
     );
-    return await this.profileService.createReference(referenceInput);
+    const reference = await this.profileService.createReference(referenceInput);
+    reference.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      reference.authorization,
+      profile.authorization
+    );
+    return await this.referenceService.saveReference(reference);
   }
 
   @UseGuards(GraphqlGuard)

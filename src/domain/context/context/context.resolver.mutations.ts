@@ -9,9 +9,13 @@ import { UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { UserInfo } from '@core/authentication';
 import { CreateReferenceOnContextInput } from './context.dto.create.reference';
+import { ReferenceService } from '@domain/common/reference/reference.service';
+import { AspectService } from '../aspect/aspect.service';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
+    private aspectService: AspectService,
+    private referenceService: ReferenceService,
     private authorizationEngine: AuthorizationEngineService,
     private contextService: ContextService
   ) {}
@@ -34,7 +38,12 @@ export class ContextResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create reference on context: ${context.id}`
     );
-    return await this.contextService.createReference(referenceInput);
+    const reference = await this.contextService.createReference(referenceInput);
+    reference.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      reference.authorization,
+      context.authorization
+    );
+    return await this.referenceService.saveReference(reference);
   }
 
   @UseGuards(GraphqlGuard)
@@ -55,6 +64,11 @@ export class ContextResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create aspect on context: ${context.id}`
     );
-    return await this.contextService.createAspect(aspectData);
+    const aspect = await this.contextService.createAspect(aspectData);
+    aspect.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      aspect.authorization,
+      context.authorization
+    );
+    return await this.aspectService.saveAspect(aspect);
   }
 }

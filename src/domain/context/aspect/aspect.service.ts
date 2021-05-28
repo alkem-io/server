@@ -64,4 +64,8 @@ export class AspectService {
 
     return aspect;
   }
+
+  async saveAspect(aspect: IAspect): Promise<IAspect> {
+    return await this.aspectRepository.save(aspect);
+  }
 }

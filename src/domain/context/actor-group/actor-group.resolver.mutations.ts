@@ -7,7 +7,7 @@ import {
   IActorGroup,
   DeleteActorGroupInput,
 } from '@domain/context/actor-group';
-import { IActor, CreateActorInput } from '@domain/context/actor';
+import { IActor, CreateActorInput, ActorService } from '@domain/context/actor';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UserInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
@@ -16,6 +16,7 @@ import { CurrentUser } from '@common/decorators';
 @Resolver()
 export class ActorGroupResolverMutations {
   constructor(
+    private actorService: ActorService,
     private authorizationEngine: AuthorizationEngineService,
     private actorGroupService: ActorGroupService
   ) {}
@@ -37,7 +38,12 @@ export class ActorGroupResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create actor on actor group: ${actorGroup.name}`
     );
-    return await this.actorGroupService.createActor(actorData);
+    const actor = await this.actorGroupService.createActor(actorData);
+    actor.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      actor.authorization,
+      actorGroup.authorization
+    );
+    return await this.actorService.saveActor(actor);
   }
 
   @UseGuards(GraphqlGuard)

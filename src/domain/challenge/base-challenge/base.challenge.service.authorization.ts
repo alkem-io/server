@@ -1,5 +1,5 @@
-// import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
-// import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
+import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
+import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { Injectable } from '@nestjs/common';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { Repository } from 'typeorm';
@@ -11,7 +11,9 @@ import { BaseChallengeService } from './base.challenge.service';
 export class BaseChallengeAuthorizationService {
   constructor(
     private baseChallengeService: BaseChallengeService,
-    private authorizationEngine: AuthorizationEngineService // private contextAuthorizationService: ContextAuthorizationService, // private communityAuthorizationService: CommunityAuthorizationService
+    private authorizationEngine: AuthorizationEngineService,
+    private contextAuthorizationService: ContextAuthorizationService,
+    private communityAuthorizationService: CommunityAuthorizationService
   ) {}
 
   async applyAuthorizationRules(
@@ -29,9 +31,9 @@ export class BaseChallengeAuthorizationService {
     );
     // disable anonymous access for community
     community.authorization.anonymousReadAccess = false;
-    // baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
-    //   community
-    // );
+    baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
+      community
+    );
 
     const context = await this.baseChallengeService.getContext(
       baseChallenge.id,
@@ -41,9 +43,9 @@ export class BaseChallengeAuthorizationService {
       context.authorization,
       baseChallenge.authorization
     );
-    // baseChallenge.context = await this.contextAuthorizationService.applyAuthorizationRules(
-    //   context
-    // );
+    baseChallenge.context = await this.contextAuthorizationService.applyAuthorizationRules(
+      context
+    );
 
     return baseChallenge;
   }

@@ -110,4 +110,8 @@ export class ReferenceService {
       id,
     };
   }
+
+  async saveReference(reference: IReference): Promise<IReference> {
+    return await this.referenceRepository.save(reference);
+  }
 }
