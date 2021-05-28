@@ -167,7 +167,7 @@ export class ContextService {
     return aspect;
   }
 
-  async getAspects(context: Context): Promise<IAspect[]> {
+  async getAspects(context: IContext): Promise<IAspect[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['aspects'],
     });
@@ -180,7 +180,7 @@ export class ContextService {
     return contextLoaded.aspects;
   }
 
-  async getEcosystemModel(context: Context): Promise<IEcosystemModel> {
+  async getEcosystemModel(context: IContext): Promise<IEcosystemModel> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['ecosystemModel'],
     });

@@ -11,6 +11,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorService } from '@domain/context/actor/actor.service';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   GroupNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -76,5 +77,15 @@ export class ActorGroupService {
     await this.actorGroupRepository.save(actorGroup);
 
     return actor;
+  }
+
+  getActors(actorGroup: IActorGroup): IActor[] {
+    const actors = actorGroup.actors;
+    if (!actors)
+      throw new EntityNotInitializedException(
+        `Actor groups not initialized: ${actorGroup.id}`,
+        LogContext.CONTEXT
+      );
+    return actors;
   }
 }

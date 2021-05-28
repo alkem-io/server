@@ -13,11 +13,11 @@ import {
   IEcosystemModel,
 } from '@domain/context/ecosystem-model';
 import {
-  ActorGroupService,
   CreateActorGroupInput,
   IActorGroup,
 } from '@domain/context/actor-group';
 import { LogContext } from '@common/enums';
+import { ActorGroupService } from '../actor-group/actor-group.service';
 
 @Injectable()
 export class EcosystemModelService {
@@ -132,5 +132,15 @@ export class EcosystemModelService {
     ecosystemModel.actorGroups.push(actorGroup);
     await this.ecosystemModelRepository.save(ecosystemModel);
     return actorGroup;
+  }
+
+  getActorGroups(ecosysteModel: IEcosystemModel): IActorGroup[] {
+    const actorGroups = ecosysteModel.actorGroups;
+    if (!actorGroups)
+      throw new EntityNotInitializedException(
+        `Actor groups not initialized: ${ecosysteModel.id}`,
+        LogContext.CONTEXT
+      );
+    return actorGroups;
   }
 }

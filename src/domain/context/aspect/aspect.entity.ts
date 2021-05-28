@@ -2,10 +2,10 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { Context } from '@domain/context';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
-export class Aspect extends BaseCherrytwistEntity implements IAspect {
+export class Aspect extends AuthorizableEntity implements IAspect {
   @Column()
   title: string;
 
