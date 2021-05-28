@@ -21,13 +21,14 @@
 - id: 'cherrytwist:graphql:protected'
   upstream:
     preserve_host: true
-    url: 'http://192.168.0.1:4000'
+    url: 'http://192.168.10.1:4000'
   match:
     url: 'http://localhost:4455/graphql'
     methods:
       - POST
   authenticators:
     - handler: cookie_session
+    - handler: noop
   authorizer:
     handler: allow
   mutators:

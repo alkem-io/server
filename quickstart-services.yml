@@ -7,8 +7,8 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 192.168.0.0/24
-          gateway: 192.168.0.1
+        - subnet: 192.168.10.0/24
+          gateway: 192.168.10.1
 
 volumes:
   ct_server_dev:
@@ -67,7 +67,7 @@ services:
       - 3003:3002
     command: sh -c "/wait && /create_db.sh && npm run start:prod"
 
-    kratos-migrate:
+  kratos-migrate:
     image: oryd/kratos:v0.6.1-alpha.1
     environment:
       - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
@@ -123,4 +123,3 @@ services:
       - ct_dev_net
     volumes:
       - ./.build/ory/oathkeeper:/etc/config/oathkeeper
-
