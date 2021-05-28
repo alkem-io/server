@@ -13,6 +13,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { EcosystemModelModule } from '@domain/context/ecosystem-model/ecosystem-model.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { EcosystemModelModule } from '@domain/context/ecosystem-model/ecosystem-
     OrganisationModule,
     UserModule,
     UserGroupModule,
+    OpportunityModule,
   ],
   providers: [DataManagementService, TestDataService],
   controllers: [DataManagementController],
