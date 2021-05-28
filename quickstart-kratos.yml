@@ -39,7 +39,7 @@ services:
     environment:
       - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
       - LOG_LEVEL=trace
-      - SERVE_PUBLIC_BASE_URL=http://127.0.0.1:4455/.ory/kratos/public/
+      - SERVE_PUBLIC_BASE_URL=http://localhost:4455/.ory/kratos/public/
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
     volumes:
       - type: bind
@@ -47,19 +47,6 @@ services:
         target: /etc/config/kratos
     networks:
       - ct_dev_net
-
-  kratos-selfservice-ui-node:
-    image: oryd/kratos-selfservice-ui-node:v0.6.0-alpha.1
-    environment:
-      - KRATOS_PUBLIC_URL=http://kratos:4433/
-      - KRATOS_ADMIN_URL=http://kratos:4434/
-      - PORT=4435
-      - KRATOS_BROWSER_URL=http://127.0.0.1:4455/.ory/kratos/public
-      - JWKS_URL=http://oathkeeper:4456/.well-known/jwks.json
-      - SECURITY_MODE=jwks
-    networks:
-      - ct_dev_net
-    restart: on-failure
 
   mailslurper:
     image: oryd/mailslurper:latest-smtps
