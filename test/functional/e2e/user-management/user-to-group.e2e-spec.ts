@@ -15,7 +15,10 @@ import {
 import { appSingleton } from '@test/utils/app.singleton';
 import { TestUser } from '../../../utils/token.helper';
 import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
-import { createGroupOnCommunityMutation } from '@test/functional/integration/community/community.request.params';
+import {
+  createGroupOnCommunityMutation,
+  getCommunityData,
+} from '@test/functional/integration/community/community.request.params';
 
 let userName = '';
 let userFirstName = '';
@@ -27,6 +30,7 @@ let groupName = '';
 let communityGroupId = '';
 let challengeName = '';
 let challengeCommunityId = '';
+let ecoverseCommunityId = '';
 //let uniqueTextId = '';
 let uniqueId = '';
 
@@ -46,7 +50,7 @@ beforeEach(async () => {
   //   .toString(12)
   //   .slice(-6);
   challengeName = `testChallenge ${uniqueId}`;
-  userName = `testUser${uniqueId}`;
+  userName = `testuser${uniqueId}`;
   userFirstName = `userFirstName${uniqueId}`;
   userLastName = `userLastName${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
@@ -63,19 +67,15 @@ beforeEach(async () => {
   userId = responseCreateUser.body.data.createUser.id;
 
   groupName = 'groupName ' + Math.random().toString();
-  // Create challenge
-  const responseCreateChallenge = await createChallangeMutation(
-    challengeName,
-    uniqueId
-  );
-  challengeCommunityId =
-    responseCreateChallenge.body.data.createChallenge.community.id;
+  const ecoverseCommunityIds = await getCommunityData();
+  ecoverseCommunityId = ecoverseCommunityIds.body.data.ecoverse.community.id;
 
   // Create challenge community group
   const responseCreateGroupOnCommunnity = await createGroupOnCommunityMutation(
-    challengeCommunityId,
+    ecoverseCommunityId,
     groupName
   );
+
   communityGroupId =
     responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.id;
 });
@@ -106,7 +106,7 @@ describe('Users and Groups', () => {
   });
 
   // check if we should have a validation
-  test.skip('should throw error when add same "user", twice to same "group"', async () => {
+  test('should throw error when add same "user", twice to same "group"', async () => {
     // Act
     await addUserToGroup(userId, communityGroupId);
     const responseAddSameUserToGroup = await addUserToGroup(
@@ -116,14 +116,16 @@ describe('Users and Groups', () => {
 
     // Assert
     expect(responseAddSameUserToGroup.status).toBe(200);
-    expect(responseAddSameUserToGroup.text).toEqual(false);
+    expect(responseAddSameUserToGroup.text).toContain(
+      `Agent (${userEmail}) already has assigned credential: user-group-member`
+    );
   });
 
   test('should add same "user" to 2 different "groups"', async () => {
     // Arrange
     const testGroupTwo = 'testGroup2';
     const responseCreateGroupOnCommunnityTwo = await createGroupOnCommunityMutation(
-      challengeCommunityId,
+      ecoverseCommunityId,
       testGroupTwo
     );
     let communityGroupIdTwo =
@@ -187,10 +189,9 @@ describe('Users and Groups', () => {
     const getUsersForChallengeCommunity = await getUsersFromChallengeCommunity(
       communityGroupId
     );
-
     // Assert
     expect(responseRemoveUser.status).toBe(200);
-    expect(responseRemoveUser.body.data.deleteUser.name).toBe(userName);
+    expect(responseRemoveUser.body.data.deleteUser.nameID).toBe(userName);
     expect(
       getUsersForChallengeCommunity.body.data.ecoverse.group.members
     ).toHaveLength(0);

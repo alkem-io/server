@@ -11,7 +11,7 @@ export const searchMutation = async (terms: any, filter: any) => {
         result {
           __typename
           ... on User {
-            name
+            nameID
             id
           }
           ... on UserGroup {
@@ -19,7 +19,7 @@ export const searchMutation = async (terms: any, filter: any) => {
             id
           }
           ... on Organisation {
-            name
+            nameID
             id
           }
         }

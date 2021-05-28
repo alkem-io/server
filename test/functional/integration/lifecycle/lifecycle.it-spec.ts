@@ -3,7 +3,6 @@ import { appSingleton } from '@test/utils/app.singleton';
 import {
   createChallangeMutation,
   getChallengeData,
-  removeChallangeMutation,
 } from '@test/functional/integration/challenge/challenge.request.params';
 
 import {
@@ -11,7 +10,6 @@ import {
   getProjectData,
 } from '../project/project.request.params';
 import {
-  createChildChallengeMutation,
   createOpportunityMutation,
   queryOpportunity,
 } from '../opportunity/opportunity.request.params';
@@ -26,8 +24,8 @@ import {
   createApplicationMutation,
   getApplication,
 } from '@test/functional/e2e/user-management/application/application.request.params';
+import { getCommunityData } from '../community/community.request.params';
 
-let groupName = '';
 let opportunityName = '';
 let opportunityTextId = '';
 let opportunityId = '';
@@ -38,7 +36,6 @@ const contextTagline = 'contextTagline';
 let projectId = '';
 let projectName = '';
 let projectTextId = '';
-let lifeCycleData = '';
 let userName = '';
 let applicationId = '';
 let applicationData;
@@ -47,6 +44,8 @@ let userLastName = '';
 let userId = '';
 let userPhone = '';
 let userEmail = '';
+let ecoverseCommunityId = '';
+let groupName = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -268,6 +267,10 @@ describe('Lifecycle', () => {
       userLastName = `userLastName${uniqueTextId}`;
       userPhone = `userPhone ${uniqueTextId}`;
       userEmail = `${uniqueTextId}@test.com`;
+      challengeName = `testChallenge ${uniqueTextId}`;
+      const ecoverseCommunityIds = await getCommunityData();
+      ecoverseCommunityId =
+        ecoverseCommunityIds.body.data.ecoverse.community.id;
 
       // Create user
       const responseCreateUser = await createUserDetailsMutation(
@@ -279,7 +282,10 @@ describe('Lifecycle', () => {
       );
       userId = responseCreateUser.body.data.createUser.id;
 
-      applicationData = await createApplicationMutation('1', userId);
+      applicationData = await createApplicationMutation(
+        ecoverseCommunityId,
+        userId
+      );
       applicationId = applicationData.body.data.createApplication.id;
     });
 
