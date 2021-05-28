@@ -5,11 +5,9 @@ import { IAuthorizationRule } from '@core/authorization/rules';
 
 export class AuthorizationRuleSelfRegistration implements IAuthorizationRule {
   userEmail?: string;
-  operation!: string;
   priority: number;
 
   constructor(fieldName: string, args: any, priority?: number) {
-    this.operation = fieldName;
     this.priority = priority ?? 1000;
 
     if (fieldName === 'createUser') {
