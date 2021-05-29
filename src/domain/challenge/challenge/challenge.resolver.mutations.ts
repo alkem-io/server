@@ -21,11 +21,13 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 import { UserInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { ChallengeAuthorizationService } from './challenge.service.authorization';
+import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
+import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 
 @Resolver()
 export class ChallengeResolverMutations {
   constructor(
+    private opportunityAuthorizationService: OpportunityAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private authorizationEngine: AuthorizationEngineService,
     private challengeService: ChallengeService,
@@ -77,7 +79,13 @@ export class ChallengeResolverMutations {
       AuthorizationPrivilege.CREATE,
       `opportunityCreate: ${challenge.nameID}`
     );
-    return await this.challengeService.createOpportunity(opportunityData);
+    const opportunity = await this.challengeService.createOpportunity(
+      opportunityData
+    );
+    return await this.opportunityAuthorizationService.applyAuthorizationRules(
+      opportunity,
+      challenge.authorization
+    );
   }
 
   @UseGuards(GraphqlGuard)

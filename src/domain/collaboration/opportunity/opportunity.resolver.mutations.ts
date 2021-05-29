@@ -84,7 +84,12 @@ export class OpportunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `create project: ${opportunity.nameID}`
     );
-    return await this.opportunityService.createProject(projectData);
+    const project = await this.opportunityService.createProject(projectData);
+    project.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      project.authorization,
+      opportunity.authorization
+    );
+    return project;
   }
 
   @UseGuards(GraphqlGuard)
@@ -105,7 +110,12 @@ export class OpportunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `create relation: ${opportunity.nameID}`
     );
-    return await this.opportunityService.createRelation(relationData);
+    const relation = await this.opportunityService.createRelation(relationData);
+    relation.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      relation.authorization,
+      opportunity.authorization
+    );
+    return relation;
   }
 
   @UseGuards(GraphqlGuard)

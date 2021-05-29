@@ -54,7 +54,12 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create group community: ${community.displayName}`
     );
-    return await this.communityService.createGroup(groupData);
+    const group = await this.communityService.createGroup(groupData);
+    group.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      group.authorization,
+      community.authorization
+    );
+    return group;
   }
 
   @UseGuards(GraphqlGuard)
@@ -108,7 +113,17 @@ export class CommunityResolverMutations {
   async createApplication(
     @Args('applicationData') applicationData: CreateApplicationInput
   ): Promise<IApplication> {
-    return await this.communityService.createApplication(applicationData);
+    const community = await this.communityService.getCommunityOrFail(
+      applicationData.parentID
+    );
+    const application = await this.communityService.createApplication(
+      applicationData
+    );
+    application.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      application.authorization,
+      community.authorization
+    );
+    return application;
   }
 
   @UseGuards(GraphqlGuard)

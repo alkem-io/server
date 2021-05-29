@@ -83,7 +83,7 @@ export class ChallengeAuthorizationService {
     newRules.push(challengeAdmin);
 
     const challengeMember = {
-      type: AuthorizationCredential.EcoverseMember,
+      type: AuthorizationCredential.ChallengeMember,
       resourceID: challengeID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
