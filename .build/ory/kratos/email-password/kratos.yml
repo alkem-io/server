@@ -18,6 +18,19 @@ selfservice:
   methods:
     password:
       enabled: true
+    oidc:
+      enabled: true
+      config:
+        providers:
+          - id: microsoft
+            provider: microsoft
+            client_id: feb6d8b1-8cc2-4e7d-a419-ad7b544b0832
+            client_secret: -jC_0s6nvb~IzMExUnt.ka2zx4Y57_H9XO
+            tenant: 524e761c-d162-4fdf-ab43-2855246d986c
+            mapper_url: file:///etc/config/kratos/oidc.microsoft.jsonnet
+            scope:
+              - profile
+              - email
 
   flows:
     error:
