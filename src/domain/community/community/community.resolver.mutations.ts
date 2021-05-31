@@ -166,7 +166,7 @@ export class CommunityResolverMutations {
     );
     return await this.communityLifecycleOptionsProvider.eventOnApplication(
       applicationEventData,
-      userInfo.user
+      userInfo
     );
   }
 }

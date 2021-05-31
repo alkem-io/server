@@ -15,6 +15,7 @@ import {
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserInfo } from '@core/authentication';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 
 @Injectable()
 export class AuthorizationService {
@@ -44,7 +45,7 @@ export class AuthorizationService {
     if (grantCredentialData.type === AuthorizationCredential.GlobalAdmin) {
       if (currentUserInfo) {
         await this.validateMandatedCredential(
-          currentUserInfo.user,
+          currentUserInfo.credentials,
           AuthorizationCredential.GlobalAdmin
         );
       }
@@ -82,7 +83,7 @@ export class AuthorizationService {
     if (revokeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
       if (currentUserInfo) {
         await this.validateMandatedCredential(
-          currentUserInfo.user,
+          currentUserInfo.credentials,
           AuthorizationCredential.GlobalAdmin
         );
       }
@@ -98,22 +99,31 @@ export class AuthorizationService {
   }
 
   async validateMandatedCredential(
-    user: IUser | undefined,
+    credentials: ICredential[],
     credentialType: AuthorizationCredential
   ) {
-    if (!user)
-      throw new ForbiddenException(
-        `Current user could not be retried to check credential: ${credentialType}`,
-        LogContext.AUTH
-      );
-    const result = await this.userService.hasMatchingCredential(user, {
+    const result = await this.hasMatchingCredential(credentials, {
       type: credentialType,
     });
     if (!result)
       throw new ForbiddenException(
-        `User (${user.id}) does not have required credential assigned: ${credentialType}`,
+        `User does not have required credential assigned: ${credentialType}`,
         LogContext.AUTH
       );
+  }
+
+  hasMatchingCredential(
+    credentials: ICredential[],
+    credentialCriteria: CredentialsSearchInput
+  ): boolean {
+    for (const credential of credentials) {
+      if (credential.type === credentialCriteria.type) {
+        if (!credentialCriteria.resourceID) return true;
+        if (credentialCriteria.resourceID === credential.resourceID)
+          return true;
+      }
+    }
+    return false;
   }
 
   async removeValidationSingleGlobalAdmin(

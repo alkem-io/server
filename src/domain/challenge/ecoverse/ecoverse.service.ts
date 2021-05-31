@@ -105,9 +105,21 @@ export class EcoverseService {
   }
 
   async deleteEcoverse(deleteData: DeleteEcoverseInput): Promise<IEcoverse> {
-    const ecoverse = await this.getEcoverseOrFail(deleteData.ID);
+    const ecoverse = await this.getEcoverseOrFail(deleteData.ID, {
+      relations: ['challenges'],
+    });
 
-    await this.baseChallengeService.deleteEntities(ecoverse);
+    // Do not remove an ecoverse that has child challenges , require these to be individually first removed
+    if (ecoverse.challenges && ecoverse.challenges.length > 0)
+      throw new ValidationException(
+        `Unable to remove Ecoverse (${ecoverse.nameID}) as it contains ${ecoverse.challenges.length} challenges`,
+        LogContext.CHALLENGES
+      );
+
+    const baseChallenge = await this.getEcoverseOrFail(deleteData.ID, {
+      relations: ['community', 'context', 'lifecycle'],
+    });
+    await this.baseChallengeService.deleteEntities(baseChallenge);
 
     const result = await this.ecoverseRepository.remove(ecoverse as Ecoverse);
     result.id = deleteData.ID;

@@ -3,5 +3,5 @@ export enum AuthorizationPrivilege {
   READ = 'read',
   UPDATE = 'update',
   DELETE = 'delete',
-  CREDENTIALS = 'credentials', // allow the issuing / revoking of credentials
+  GRANT = 'grant', // allow the issuing / revoking of credentials of the same type within a given scope
 }

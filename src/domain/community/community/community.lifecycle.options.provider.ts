@@ -11,7 +11,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
 import { ICredential } from '@domain/agent';
-import { IUser } from '@domain/community/user';
+import { UserInfo } from '@core/authentication';
 
 @Injectable()
 export class CommunityLifecycleOptionsProvider {
@@ -24,7 +24,7 @@ export class CommunityLifecycleOptionsProvider {
 
   async eventOnApplication(
     applicationEventData: ApplicationEventInput,
-    user?: IUser
+    userInfo: UserInfo
   ): Promise<IApplication> {
     const applicationID = applicationEventData.ID;
     const application = await this.applicationService.getApplicationOrFail(
@@ -37,7 +37,7 @@ export class CommunityLifecycleOptionsProvider {
         LogContext.COMMUNITY
       );
 
-    const credentials = user?.agent?.credentials;
+    const credentials = userInfo.credentials;
 
     // Send the event, translated if needed
     this.logger.verbose?.(

@@ -111,16 +111,8 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: [
-        'childChallenges',
-        'community',
-        'context',
-        'lifecycle',
-        'opportunities',
-      ],
+      relations: ['childChallenges', 'opportunities'],
     });
-
-    await this.baseChallengeService.deleteEntities(challenge);
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
     if (challenge.childChallenges && challenge.childChallenges.length > 0)
@@ -134,14 +126,17 @@ export class ChallengeService {
         `Unable to remove challenge (${challengeID}) as it contains ${challenge.opportunities.length} opportunities`,
         LogContext.CHALLENGES
       );
-    const { id } = challenge;
+
+    const baseChallenge = await this.getChallengeOrFail(challengeID, {
+      relations: ['community', 'context', 'lifecycle'],
+    });
+    await this.baseChallengeService.deleteEntities(baseChallenge);
+
     const result = await this.challengeRepository.remove(
       challenge as Challenge
     );
-    return {
-      ...result,
-      id,
-    };
+    result.id = deleteData.ID;
+    return result;
   }
 
   async getChallengeInNameableScopeOrFail(

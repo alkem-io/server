@@ -138,15 +138,24 @@ export class OpportunityService {
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
     // Note need to load it in with all contained entities so can remove fully
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['community', 'context', 'lifecycle', 'relations', 'projects'],
+    const baseOpportunity = await this.getOpportunityOrFail(opportunityID, {
+      relations: ['community', 'context', 'lifecycle'],
     });
 
-    await this.baseChallengeService.deleteEntities(opportunity);
+    await this.baseChallengeService.deleteEntities(baseOpportunity);
 
+    const opportunity = await this.getOpportunityOrFail(opportunityID, {
+      relations: ['relations', 'projects'],
+    });
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
         await this.relationService.deleteRelation({ ID: relation.id });
+      }
+    }
+
+    if (opportunity.projects) {
+      for (const project of opportunity.projects) {
+        await this.projectService.deleteProject({ ID: project.id });
       }
     }
 
