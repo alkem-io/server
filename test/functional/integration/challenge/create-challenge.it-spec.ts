@@ -4,10 +4,8 @@ import {
   getChallengesData,
   removeChallangeMutation,
 } from './challenge.request.params';
-import { graphqlRequestAuth } from '../../../utils/graphql.request';
 import '../../../utils/array.matcher';
 import { appSingleton } from '../../../utils/app.singleton';
-import { TestUser } from '../../../utils/token.helper';
 import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
 
 let data: TestDataServiceInitResult;
@@ -34,11 +32,8 @@ beforeEach(async () => {
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
-  const response = await createChallangeMutation(
-    //  ecoverseId,
-    challengeName,
-    uniqueTextId
-  );
+  const response = await createChallangeMutation(challengeName, uniqueTextId);
+
   challengeDataCreate = response.body.data.createChallenge;
   challengeId = response.body.data.createChallenge.id;
 });
@@ -61,10 +56,10 @@ describe('Create Challenge', () => {
   test('should create a successfull challenge', async () => {
     // Act
     const response = await createChallangeMutation(
-      //  ecoverseId,
       'challengeName',
       'chal-texti'
     );
+
     let challengeDataCreate = response.body.data.createChallenge;
     let challengeIdTest = response.body.data.createChallenge.id;
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
+import { CreateChallengeInput } from '@domain/challenge/challenge';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
@@ -13,16 +13,14 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { ContextService } from '@domain/context/context/context.service';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
-import { CreateEcoverseInput } from '@domain/challenge';
+import { CreateEcoverseInput } from '@domain/challenge/ecoverse';
 import { CreateOpportunityInput } from '@domain/collaboration/opportunity';
-import {
-  CreateActorGroupInput,
-  CreateActorInput,
-  CreateAspectInput,
-} from '@domain/context';
+import { CreateActorInput } from '@domain/context/actor';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateProjectInput } from '@domain/collaboration/project';
 import { CreateRelationInput } from '@domain/collaboration/relation';
+import { CreateAspectInput } from '@domain/context/aspect';
+import { CreateActorGroupInput } from '@domain/context/actor-group';
 
 export type TestDataServiceInitResult = {
   ecoverseId: string;

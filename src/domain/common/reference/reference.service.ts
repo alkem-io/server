@@ -10,7 +10,8 @@ import {
   Reference,
   IReference,
 } from '@domain/common/reference';
-import { AuthorizationDefinition } from '../authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+
 @Injectable()
 export class ReferenceService {
   constructor(

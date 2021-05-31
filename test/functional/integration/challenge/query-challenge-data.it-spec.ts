@@ -253,7 +253,7 @@ describe('Query Challenge data', () => {
     expect(responseOne.body.data.assignChallengeLead.id).toEqual(challengeId);
     expect(responseTwo.status).toBe(200);
     expect(responseTwo.text).toContain(
-      `Challenge ${challengeId} already has an organisation with the provided organisation ID: ${organisationIdService}`
+      `Challenge ${uniqueTextId} already has an organisation with the provided organisation ID: ${organisationIdService}`
     );
   });
 

@@ -148,7 +148,7 @@ describe('Flows challenge', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(response.text).toContain(
-      `Unable to create Ecoverse: the provided nameID is already taken: ${uniqueTextId}`
+      `Unable to create Challenge: the provided nameID is already taken: ${uniqueTextId}`
     );
   });
 
