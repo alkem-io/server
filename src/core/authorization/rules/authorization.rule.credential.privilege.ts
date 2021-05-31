@@ -33,7 +33,7 @@ export class AuthorizationRuleCredentialPrivilege
   execute(userInfo: UserInfo): boolean {
     const accessGranted = this.authorizationEngine.isAccessGranted(
       userInfo.credentials,
-      this.fieldParent.authorizationRules,
+      this.fieldParent.authorization,
       this.privilege
     );
     if (!accessGranted)

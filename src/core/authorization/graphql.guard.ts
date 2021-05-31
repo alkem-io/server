@@ -128,10 +128,10 @@ export class GraphqlGuard extends AuthGuard([
 
     if (err) throw new AuthenticationException(err);
 
-    if (!userInfo) {
-      const msg = this.buildErrorMessage(err, info);
-      throw new AuthenticationException(msg);
-    }
+    // if (!userInfo) {
+    //   const msg = this.buildErrorMessage(err, info);
+    //   throw new AuthenticationException(msg);
+    // }
 
     // If no rules then allow the request to proceed
     if (this.authorizationRules.length == 0) return userInfo;
