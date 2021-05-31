@@ -31,7 +31,7 @@ errors:
     redirect:
       enabled: true
       config:
-        to: http://127.0.0.1:4455/auth/login
+        to: http://localhost:4455/auth/login
         when:
           - error:
               - unauthorized
@@ -80,7 +80,7 @@ mutators:
   id_token:
     enabled: true
     config:
-      issuer_url: http://127.0.0.1:4455/
+      issuer_url: http://localhost:4455/
       jwks_url: file:///etc/config/oathkeeper/id_token.jwks.json
       claims: |
         {

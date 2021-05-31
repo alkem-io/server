@@ -170,10 +170,10 @@ identity:
         clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
 
       # Ory Kratos Next Gen Identity Provider (https://github.com/ory/kratos).
-      ory_kratos:
+      ory:
         # Issuer of the kratos cookie. The cookie can be used as is or mutated by
         # Ory Oathkeeper into an ID token. The session can be found at (default)
-        # http://127.0.0.1:4433/sessions/whoami
+        # http://localhost:4433/sessions/whoami
         # A session looks like:
         #
         # {
@@ -185,7 +185,7 @@ identity:
         #   "identity": {
         #     "id": "972164de-efdd-4a4c-bfcb-382a9ba9b6f4",
         #     "schema_id": "default",
-        #     "schema_url": "http://127.0.0.1:4455/.ory/kratos/public/schemas/default",
+        #     "schema_url": "http://localhost:4455/.ory/kratos/public/schemas/default",
         #     "traits": {
         #       "name": { "last": "Admin", "first": "Admin" },
         #       "email": "admin@cherrytwist.org"
@@ -209,7 +209,7 @@ identity:
         #     ]
         #   }
         # }
-        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://127.0.0.1:4455/
+        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://localhost:4455/
 
         # JSON Web Key Sets endpoint. Used for validating the JWT token signed
         # by Ory Oathkeeper. A set of keys looks like:
@@ -225,7 +225,14 @@ identity:
         #     }
         #   ]
         # }
-        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://127.0.0.1:4456/.well-known/jwks.json
+        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://localhost:4456/.well-known/jwks.json
+
+        # Ory Kratos Base Public URL. It is used as prefix for all Kratos flows.
+        # Locally, Kratos Public API works on localhost:4433 and by default in k8s it works on https://[HOST]/auth/.ory/kratos/public
+        # NB: The default kratos.yml config defines the selfservice endpoints with base address http://localhost:3000/auth.
+        # That is used as there is a reverse proxy in front of the CT Web Client that forwards the calls to the Kratos Public URL.
+        # You can check the currently logged in user at http://localhost:4433/sessions/whoami.
+        kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:4433
 
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.

@@ -1,8 +1,7 @@
 import { AuthenticationProviderConfigs } from '@common/enums';
 import { createUnionType, Field, ObjectType } from '@nestjs/graphql';
-import { AadAuthProviderConfig } from './aad/aad.config.entity';
 import { IAuthenticationProviderConfig } from './authentication.provider.config.interface';
-import { DemoAuthProviderConfig } from './demo-auth/demo-auth.provider.config.entity';
+import { OryConfig } from './ory/ory.config.entity';
 
 @ObjectType()
 export class AuthenticationProviderConfig
@@ -41,13 +40,10 @@ export class AuthenticationProviderConfig
 
 export const AuthenticationProviderConfigUnion = createUnionType({
   name: 'AuthenticationProviderConfigUnion',
-  types: () => [AadAuthProviderConfig, DemoAuthProviderConfig],
+  types: () => [OryConfig],
   resolveType(value) {
-    if (value.msalConfig) {
-      return AuthenticationProviderConfigs.AAD;
-    }
-    if (value.tokenEndpoint) {
-      return AuthenticationProviderConfigs.DEMO_AUTH;
+    if (value.kratosPublicBaseURL) {
+      return AuthenticationProviderConfigs.ORY;
     }
     return null;
   },
