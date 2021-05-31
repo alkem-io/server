@@ -211,7 +211,6 @@ describe('Query Challenge data', () => {
       organisationName,
       uniqueTextId + 'k'
     );
-    console.log(createOrganisationResponse.body)
     organisationId = createOrganisationResponse.body.data.createOrganisation.id;
 
     // Act

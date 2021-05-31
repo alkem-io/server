@@ -4,7 +4,7 @@ mutation assignUserToGroup($membershipData: AssignUserGroupMemberInput!) {
     id,
     members {
       id,
-      name
+      nameID
     }
   }
 }

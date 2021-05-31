@@ -24,6 +24,7 @@ export const profileData = `
 
 export const userData = `
   id
+  displayName
   nameID
   firstName
   lastName

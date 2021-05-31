@@ -107,7 +107,7 @@ describe('Update user', () => {
         expect.objectContaining({
           email: userEmail,
           id: userId,
-          name: userNameAfterUpdate,
+          displayName: userNameAfterUpdate,
           phone: userPhone,
         }),
       ])
