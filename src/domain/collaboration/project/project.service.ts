@@ -201,4 +201,8 @@ export class ProjectService {
     });
     return count;
   }
+
+  async saveProject(project: IProject): Promise<IProject> {
+    return await this.projectRepository.save(project);
+  }
 }

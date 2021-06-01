@@ -117,13 +117,13 @@ export class ChallengeService {
     // Do not remove a challenge that has child challenges , require these to be individually first removed
     if (challenge.childChallenges && challenge.childChallenges.length > 0)
       throw new ValidationException(
-        `Unable to remove challenge (${challengeID}) as it contains ${challenge.childChallenges.length} child challenges`,
+        `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.childChallenges.length} child challenges`,
         LogContext.CHALLENGES
       );
 
     if (challenge.opportunities && challenge.opportunities.length > 0)
       throw new ValidationException(
-        `Unable to remove challenge (${challengeID}) as it contains ${challenge.opportunities.length} opportunities`,
+        `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.opportunities.length} opportunities`,
         LogContext.CHALLENGES
       );
 

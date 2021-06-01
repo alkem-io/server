@@ -4,6 +4,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import {
   Opportunity,
@@ -137,6 +138,24 @@ export class OpportunityService {
   }
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
+    const opportunity = await this.getOpportunityOrFail(opportunityID, {
+      relations: ['relations', 'projects'],
+    });
+    // disable deletion if projects are present
+    const projects = opportunity.projects;
+    if (projects && projects.length > 0) {
+      throw new ValidationException(
+        `Unable to remove Opportunity (${opportunity.nameID}) as it contains ${projects.length} Projects`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    if (opportunity.relations) {
+      for (const relation of opportunity.relations) {
+        await this.relationService.deleteRelation({ ID: relation.id });
+      }
+    }
+
     // Note need to load it in with all contained entities so can remove fully
     const baseOpportunity = await this.getOpportunityOrFail(opportunityID, {
       relations: ['community', 'context', 'lifecycle'],
@@ -144,22 +163,9 @@ export class OpportunityService {
 
     await this.baseChallengeService.deleteEntities(baseOpportunity);
 
-    const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['relations', 'projects'],
-    });
-    if (opportunity.relations) {
-      for (const relation of opportunity.relations) {
-        await this.relationService.deleteRelation({ ID: relation.id });
-      }
-    }
-
-    if (opportunity.projects) {
-      for (const project of opportunity.projects) {
-        await this.projectService.deleteProject({ ID: project.id });
-      }
-    }
-
-    return await this.opportunityRepository.remove(opportunity as Opportunity);
+    return await this.opportunityRepository.remove(
+      baseOpportunity as Opportunity
+    );
   }
 
   async updateOpportunity(

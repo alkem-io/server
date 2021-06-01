@@ -77,4 +77,8 @@ export class RelationService {
       id,
     };
   }
+
+  async saveRelation(relation: IRelation): Promise<IRelation> {
+    return await this.relationRepository.save(relation);
+  }
 }

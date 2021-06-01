@@ -10,7 +10,7 @@ query variables:
 {
   "projectData":
   {
-    "parentID": 1,
+    "opportunityID": "uuid",
     "displayName": "firstProject",
     "nameID": "tech-stack",
     "description": "How do I handle scalability?"

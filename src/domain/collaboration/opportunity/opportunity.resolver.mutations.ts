@@ -2,7 +2,11 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
+import {
+  CreateRelationInput,
+  IRelation,
+  RelationService,
+} from '@domain/collaboration/relation';
 import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
@@ -16,10 +20,13 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { UserInfo } from '@core/authentication';
+import { ProjectService } from '../project/project.service';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
+    private relationService: RelationService,
+    private projectService: ProjectService,
     private authorizationEngine: AuthorizationEngineService,
     private opportunityService: OpportunityService,
     private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
@@ -89,7 +96,7 @@ export class OpportunityResolverMutations {
       project.authorization,
       opportunity.authorization
     );
-    return project;
+    return await this.projectService.saveProject(project);
   }
 
   @UseGuards(GraphqlGuard)
@@ -111,11 +118,11 @@ export class OpportunityResolverMutations {
       `create relation: ${opportunity.nameID}`
     );
     const relation = await this.opportunityService.createRelation(relationData);
-    relation.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    relation.authorization = this.authorizationEngine.inheritParentAuthorization(
       relation.authorization,
       opportunity.authorization
     );
-    return relation;
+    return await this.relationService.saveRelation(relation);
   }
 
   @UseGuards(GraphqlGuard)
