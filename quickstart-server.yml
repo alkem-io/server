@@ -25,7 +25,6 @@ services:
       - AUTH_ORY_KRATOS_JWKS_URI
     depends_on:
       - db
-      - ct_demo_auth_provider
     restart: always
     ports:
       - 4003:4000
