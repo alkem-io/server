@@ -1,16 +1,14 @@
-import { Args, Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { User } from '@domain/community/user/user.entity';
+import { UseGuards } from '@nestjs/common';
+import { Args, Resolver, Parent, ResolveField } from '@nestjs/graphql';
+import { User, IUser } from '@domain/community/user';
 import { UserService } from './user.service';
 import { IAgent } from '@domain/agent/agent';
 import { Profiling } from '@common/decorators';
-import { IUser } from '@domain/community/user';
 import {
   CommunicationRoomDetailsResult,
   CommunicationRoomResult,
 } from '@src/services/communication';
 import { CommunicationService } from '@src/services/communication/communication.service';
-import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization';
 @Resolver(() => IUser)
 export class UserResolverFields {
