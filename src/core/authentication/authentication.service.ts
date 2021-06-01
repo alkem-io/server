@@ -13,6 +13,6 @@ export class AuthenticationService {
     } catch (_error) {}
     let credentials = knownUser?.agent?.credentials;
     if (!credentials) credentials = [];
-    return { email, user: knownUser, credentials: credentials };
+    return { email, credentials: credentials };
   }
 }

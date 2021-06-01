@@ -155,6 +155,24 @@ export class UserService {
     return user;
   }
 
+  async getUserByEmail(
+    userID: string,
+    options?: FindOneOptions<User>
+  ): Promise<IUser | undefined> {
+    let user: IUser | undefined;
+
+    if (this.validateEmail(userID)) {
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
+      );
+    }
+
+    return user;
+  }
+
   validateEmail(email: string): boolean {
     const regex = /\S+@\S+\.\S+/;
     return regex.test(email);

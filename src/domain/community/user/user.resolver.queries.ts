@@ -62,14 +62,16 @@ export class UserResolverQueries {
   })
   @Profiling.api
   async me(@CurrentUser() userInfo: UserInfo): Promise<IUser> {
-    if (!userInfo) {
+    const email = userInfo.email;
+    if (!email || email.length == 0) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated user.'
       );
     }
-    if (!userInfo.user) {
+    const user = await this.userService.getUserByEmail(email);
+    if (!user) {
       throw new UserNotRegisteredException();
     }
-    return userInfo.user;
+    return user;
   }
 }
