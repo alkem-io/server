@@ -89,7 +89,7 @@ export class OpportunityResolverMutations {
       userInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE,
-      `create project: ${opportunity.nameID}`
+      `create project (${projectData.nameID}) on Opportunity: ${opportunity.nameID}`
     );
     const project = await this.opportunityService.createProject(projectData);
     project.authorization = await this.authorizationEngine.inheritParentAuthorization(
