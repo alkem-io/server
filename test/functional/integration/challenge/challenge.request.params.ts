@@ -6,11 +6,11 @@ import { getEcoverseId } from '../ecoverse/ecoverse.request.params';
 
 const uniqueId = (Date.now() + Math.random()).toString();
 
-let ecoverseId = async (): Promise<any> => {
-  const responseQuery = await getEcoverseId();
-  let response = responseQuery.body.data.ecoverse.id;
-  return response;
-};
+// let ecoverseId = async (): Promise<any> => {
+//   const responseQuery = await getEcoverseId();
+//   let response = responseQuery.body.data.ecoverse.id;
+//   return response;
+// };
 
 export const challengeVariablesData = async (
   challengeName: string,
@@ -18,7 +18,7 @@ export const challengeVariablesData = async (
 ) => {
   const variables = {
     challengeData: {
-      parentID: await ecoverseId(),
+      parentID: 'Eco1',//await ecoverseId(),
       displayName: challengeName,
       nameID: uniqueTextId,
       tags: 'testTags',
