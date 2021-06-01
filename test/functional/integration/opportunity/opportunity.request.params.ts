@@ -1,10 +1,4 @@
-import {
-  challengeDataTest,
-  communityData,
-  contextData,
-  lifecycleData,
-  opportunityData,
-} from '@test/utils/common-params';
+import { challengeDataTest, opportunityData } from '@test/utils/common-params';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
 import { TestUser } from '../../../utils/token.helper';
 
@@ -110,31 +104,6 @@ export const updateOpportunityOnChallengeMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const addUserToOpportunityMutation = async (
-  opportunityId: any,
-  userId: any
-) => {
-  const requestParams = {
-    operationName: null,
-    query: `mutation addUserToOpportunity($userID: Float!, $opportunityID: Float!) {
-      addUserToOpportunity(opportunityID: $opportunityID, userID: $userID) {
-        name,
-        id,
-        members {
-          id,
-          name
-        }
-      }
-    }`,
-    variables: {
-      userID: parseFloat(userId),
-      opportunityID: parseFloat(opportunityId),
-    },
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
 export const removeOpportunityMutation = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
@@ -179,106 +148,3 @@ export const queryOpportunities = async () => {
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
-
-// remove potentially
-export const queryOpportunityGroups = async (opportunityId: any) => {
-  const requestParams = {
-    operationName: null,
-    query: `query {ecoverse{
-      opportunity(ID: "${opportunityId}") {
-        community{id displayName groups{id name members{id name}}}
-      }
-    }
-  }`,
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
-// remove potentially
-export const queryOpportunitySubEntities = async (opportunityId: string) => {
-  const requestParams = {
-    operationName: null,
-    query: `query {
-      ecoverse{
-      opportunity(ID: "${opportunityId}") {
-        aspects {
-
-          title
-        }
-        projects {
-
-          name
-        }
-        actorGroups {
-
-          name
-        }
-        relations {
-
-          actorName
-        }
-        community {
-          groups {
-            name
-          }
-        }
-        context{
-
-          tagline
-        }
-      }
-    }
-  }`,
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
-// remove potentially
-export const queryChallengesSubEntities = async () => {
-  const requestParams = {
-    operationName: null,
-    query: `query {
-      ecoverse{
-      challenges  {
-        ${subChallengesSubEntities}
-      }
-    }
-  }`,
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
-// remove potentially
-export const subChallengesSubEntities = `
-  id
-  community {
-    groups {
-      id
-    }
-  }
-  collaboration {
-    relations {
-      id
-    }
-    projects {
-      id
-    }
-  }
-  context {
-    id
-    aspects {
-      id
-    }
-    ecosystemModel {
-      id
-      actorGroups {
-        id
-        actors {
-          id
-        }
-      }
-    }
-  }`;
