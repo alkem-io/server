@@ -45,28 +45,6 @@ services:
     volumes:
       - /tmp/ipfs-docker-data:/data/ipfs
 
-  ct_demo_auth_provider:
-    container_name: ct_server_dev_demo_auth
-    image: cherrytwist/demo-auth:v0.1.8
-    networks:
-      - ct_dev_net
-    environment:
-      - DATABASE_HOST
-      - MYSQL_ROOT_PASSWORD
-      - MYSQL_DATABASE=ct_auth_db
-      - WAIT_HOSTS
-      - WAIT_HOSTS_TIMEOUT
-      - WAIT_SLEEP_INTERVAL
-      - WAIT_HOST_CONNECT_TIMEOUT
-      - SERVICE_ENDPOINT_PORT
-      - SECRET=${AUTH_DEMO_AUTH_CLIENT_SECRET}
-    depends_on:
-      - db
-    restart: always
-    ports:
-      - 3003:3002
-    command: sh -c "/wait && /create_db.sh && npm run start:prod"
-
   kratos-migrate:
     image: oryd/kratos:v0.6.1-alpha.1
     environment:
