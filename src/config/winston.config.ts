@@ -2,48 +2,57 @@ import { Injectable } from '@nestjs/common';
 import * as winston from 'winston';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
-import { ILoggingConfig } from '@src/common/interfaces/logging.config.interface';
 import * as WinstonElasticsearch from 'winston-elasticsearch';
+import { ConfigurationTypes } from '@common/enums';
 
 @Injectable()
 export class WinstonConfigService {
   constructor(private configService: ConfigService) {}
 
   async createWinstonModuleOptions() {
+    const consoleEnabled: boolean = this.configService.get(
+      ConfigurationTypes.Monitoring
+    )?.logging?.consoleLoggingEnabled;
     const transports: any[] = [
       new winston.transports.Console({
         format: winston.format.combine(
           winston.format.timestamp(),
           nestWinstonModuleUtilities.format.nestLike()
         ),
-        level: this.configService.get<ILoggingConfig>('logging')?.loggingLevel,
-        silent: !this.configService.get<ILoggingConfig>('logging')
-          ?.consoleLoggingEnabled,
+        level: this.configService
+          .get(ConfigurationTypes.Monitoring)
+          ?.logging?.level.toLowerCase(),
+        silent: !consoleEnabled,
       }),
     ];
 
-    if (this.configService.get<ILoggingConfig>('logging')?.elkConfig?.enabled) {
+    if (
+      this.configService.get(ConfigurationTypes.Monitoring)?.elastic?.enabled
+    ) {
       transports.push(
         new WinstonElasticsearch.ElasticsearchTransport({
-          level: this.configService.get<ILoggingConfig>('logging')?.elkConfig
+          level: this.configService.get(ConfigurationTypes.Monitoring)?.elastic
             ?.loggingLevel,
           transformer: logData => {
             return {
               '@timestamp': new Date().getTime(),
               severity: logData.level,
               message: `[${logData.level}] LOG Message: ${logData.message}`,
-              environment: this.configService.get<ILoggingConfig>('logging')
-                ?.elkConfig?.environment as string,
+              environment: this.configService.get(ConfigurationTypes.Hosting)
+                ?.environment as string,
               fields: { ...logData.meta },
             };
           },
           clientOpts: {
             cloud: {
-              id: process.env.ELASTIC_CLOUD_ID || '',
+              id: this.configService.get(ConfigurationTypes.Monitoring)?.elastic
+                ?.cloud?.id,
             },
             auth: {
-              username: process.env.ELASTIC_CLOUD_USERNAME || '',
-              password: process.env.ELASTIC_CLOUD_PASSWORD || '',
+              username: this.configService.get(ConfigurationTypes.Monitoring)
+                ?.elastic?.cloud?.username,
+              password: this.configService.get(ConfigurationTypes.Monitoring)
+                ?.elastic?.cloud?.password,
             },
           },
         })

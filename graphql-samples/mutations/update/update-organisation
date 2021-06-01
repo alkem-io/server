@@ -1,6 +1,6 @@
 mutation updateOrganisation($organisationData: UpdateOrganisationInput!) {
   updateOrganisation(organisationData: $organisationData) {
-    name,
+    displayName,
     id
   }
 }
@@ -9,8 +9,8 @@ query variables:
 {
   "organisationData":
   {
-    "ID": "1",
-    "name": "Cherrytwist2",
+    "ID": "uuid",
+    "displayName": "Cherrytwist2",
     "profileData": {
       "description": "some description",
       "avatar": "http://someUri"

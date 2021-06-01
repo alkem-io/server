@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { aspectData, collaborationData, contextData, opportunityData, projectData } from '@test/utils/common-params';
 
 export const createAspectOnProjectMutation = async (
   projectId: string,
@@ -11,15 +12,12 @@ export const createAspectOnProjectMutation = async (
     operationName: null,
     query: `mutation CreateAspectOnProject($aspectData: CreateAspectInput!) {
       createAspectOnProject(aspectData: $aspectData) {
-        id,
-        title,
-        framing,
-        explanation
+        ${aspectData}
       }
     }`,
     variables: {
       aspectData: {
-        parentID: parseFloat(projectId),
+        parentID: projectId,
         title: `${aspectTitle}`,
         framing: `${aspectFraming}`,
         explanation: `${aspectExplenation}`,
@@ -31,7 +29,7 @@ export const createAspectOnProjectMutation = async (
 };
 
 export const createAspectOnOpportunityMutation = async (
-  opportunityId: string,
+  opportunityContextId: string,
   aspectTitle: string,
   aspectFraming?: string,
   aspectExplenation?: string
@@ -40,15 +38,12 @@ export const createAspectOnOpportunityMutation = async (
     operationName: null,
     query: `mutation CreateAspect($aspectData: CreateAspectInput!) {
       createAspect(aspectData: $aspectData)  {
-        id,
-        title,
-        framing,
-        explanation
+        ${aspectData}
       }
     }`,
     variables: {
       aspectData: {
-        parentID: parseFloat(opportunityId),
+        parentID: opportunityContextId,
         title: `${aspectTitle}`,
         framing: `${aspectFraming}`,
         explanation: `${aspectExplenation}`,
@@ -69,7 +64,7 @@ export const updateAspectMutation = async (
     operationName: null,
     query: `mutation updateAspect($aspectData: UpdateAspectInput!) {
       updateAspect(aspectData: $aspectData) {
-        id, title, framing, explanation
+        ${aspectData}
       }
     }`,
     variables: {
@@ -94,7 +89,7 @@ export const removeAspectMutation = async (aspectId: string) => {
       }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(aspectId),
+        ID: aspectId,
       },
     },
   };
@@ -106,23 +101,25 @@ export const getAspectPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
     query: `query {ecoverse{ opportunity(ID: "${opportunityId}") {
-        aspects { id title framing explanation }}}}`,
+            ${opportunityData}
+        }
+      }
+    }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getAspectPerProject = async (opportunityId: string) => {
+export const getAspectPerProject = async (childChallenge: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse{ opportunity(ID: "${opportunityId}") {
-      projects{
+    query: `query {ecoverse{ project(ID: "${childChallenge}") {
         aspects{
-          id title framing explanation
+          ${aspectData}
         }
       }
     }
-  }}`,
+  }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

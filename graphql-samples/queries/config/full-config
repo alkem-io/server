@@ -24,39 +24,20 @@ query
       enabled
       providers
       {
+        name
+        label
+        icon
         enabled
-      	name
-      	config
-      {
-        __typename
-      	... on AadAuthProviderConfig
+        config
         {
-          msalConfig
+          __typename
+          ... on OryConfig
           {
-            auth
-            {
-              authority
-              clientId
-              redirectUri
-            }
-            cache
-            {
-              cacheLocation
-              storeAuthStateInCookie
-            }
+            issuer
+            kratosPublicBaseURL
           }
-          apiConfig
-          {
-            resourceScope
-          }
-      	}
-      ... on DemoAuthProviderConfig
-        {
-        	issuer
-        	tokenEndpoint
         }
-      	}
-    	}
-  	}
-}
+      }
+    }
+  }
 }

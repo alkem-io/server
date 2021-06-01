@@ -1,8 +1,7 @@
-import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { DataManagementService } from './data-management.service';
 
 @Controller('data-management')
@@ -13,11 +12,9 @@ export class DataManagementController {
   ) {}
 
   authenticationEnabled(): boolean {
-    if (
-      this.configService.get<IServiceConfig>('service')
-        ?.authenticationEnabled === 'false'
-    )
-      return false;
+    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
+      ?.authentication?.enabled;
+    if (!authEnabled) return false;
     return true;
   }
 

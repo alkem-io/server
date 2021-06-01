@@ -1,0 +1,33 @@
+version: '3.7'
+
+services:
+  ct_server:
+    container_name: ct_server_dev
+    image: ct_server
+    build: .
+    networks:
+      - ct_dev_net
+    environment:
+      - DATABASE_HOST
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+      - WAIT_HOSTS
+      - WAIT_HOSTS_TIMEOUT
+      - WAIT_SLEEP_INTERVAL
+      - WAIT_HOST_CONNECT_TIMEOUT
+      - GRAPHQL_ENDPOINT_PORT
+      - AUTH_ENABLED
+      - NODE_ENV
+      - IPFS_ENDPOINT
+      - IPFS_CLIENT_ENDPOINT
+      - IPFS_MAX_FILE_SIZE
+      - AUTH_ORY_KRATOS_ISSUER
+      - AUTH_ORY_KRATOS_JWKS_URI
+    depends_on:
+      - db
+    restart: always
+    ports:
+      - 4003:4000
+    command: sh -c "/wait && npm run migration:run && npm run start"
+    volumes:
+      - ct_server_dev:/usr/src/app/config

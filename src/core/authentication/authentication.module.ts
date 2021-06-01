@@ -6,6 +6,8 @@ import { JwtStrategy } from './jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AadBearerStrategy } from './aad.bearer.strategy';
+import { ConfigurationTypes } from '@common/enums';
+import { OryStrategy } from './ory.strategy';
 @Module({
   imports: [
     PassportModule.register({ session: false, defaultStrategy: 'azure-ad' }),
@@ -14,12 +16,18 @@ import { AadBearerStrategy } from './aad.bearer.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get('demo_auth_provider').clientSecret,
+        secret: configService.get(ConfigurationTypes.Identity)?.authentication
+          ?.providers?.demo_auth_provider?.clientSecret,
         signOptions: { expiresIn: '1d' },
       }),
     }),
   ],
-  providers: [AadBearerStrategy, AuthenticationService, JwtStrategy],
+  providers: [
+    AadBearerStrategy,
+    AuthenticationService,
+    JwtStrategy,
+    OryStrategy,
+  ],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}

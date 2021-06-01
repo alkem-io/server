@@ -1,40 +1,34 @@
-import { Roles } from '@common/decorators/roles.decorator';
+import { Args, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField } from '@nestjs/graphql';
 import { User } from '@domain/community/user/user.entity';
-import { UseGuards } from '@nestjs/common';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
+import { UserService } from './user.service';
+import { IAgent } from '@domain/agent/agent';
+import { Profiling } from '@common/decorators';
+import { IUser } from '@domain/community/user';
 import {
   CommunicationRoomDetailsResult,
   CommunicationRoomResult,
 } from '@src/services/communication';
 import { CommunicationService } from '@src/services/communication/communication.service';
-import { MemberOf } from './memberof.composite';
-import { UserService } from './user.service';
-
-@Resolver(() => User)
+import { UseGuards } from '@nestjs/common';
+import { GraphqlGuard } from '@core/authorization';
+@Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
     private userService: UserService,
     private communicationService: CommunicationService
   ) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('memberof', () => MemberOf, {
+  @ResolveField('agent', () => IAgent, {
     nullable: true,
-    description:
-      'An overview of the groups this user is a memberof. Note: all groups are returned without members to avoid recursion.',
+    description: 'The Agent representing this User.',
   })
   @Profiling.api
-  async membership(@Parent() user: User) {
-    const memberships = await this.userService.getMemberOf(user);
-    // Find all challenges the user is a member of
-    return memberships;
+  async agent(@Parent() user: User): Promise<IAgent> {
+    return await this.userService.getAgent(user);
   }
 
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('rooms', () => [CommunicationRoomResult], {
     nullable: true,
     description: 'An overview of the rooms this user is a member of',
@@ -44,7 +38,7 @@ export class UserResolverFields {
     return await this.communicationService.getRooms(user.email);
   }
 
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GraphqlGuard)
   @ResolveField('room', () => CommunicationRoomDetailsResult, {
     nullable: true,
     description: 'An overview of the rooms this user is a member of',

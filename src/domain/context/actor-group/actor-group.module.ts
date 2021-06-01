@@ -4,10 +4,20 @@ import { ActorModule } from '@domain/context/actor/actor.module';
 import { ActorGroup } from './actor-group.entity';
 import { ActorGroupResolverMutations } from './actor-group.resolver.mutations';
 import { ActorGroupService } from './actor-group.service';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
+import { ActorGroupAuthorizationService } from './actor-group.service.authorization';
 
 @Module({
-  imports: [ActorModule, TypeOrmModule.forFeature([ActorGroup])],
-  providers: [ActorGroupService, ActorGroupResolverMutations],
-  exports: [ActorGroupService],
+  imports: [
+    AuthorizationEngineModule,
+    ActorModule,
+    TypeOrmModule.forFeature([ActorGroup]),
+  ],
+  providers: [
+    ActorGroupService,
+    ActorGroupAuthorizationService,
+    ActorGroupResolverMutations,
+  ],
+  exports: [ActorGroupService, ActorGroupAuthorizationService],
 })
 export class ActorGroupModule {}

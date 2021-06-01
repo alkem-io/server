@@ -23,6 +23,7 @@ import { TestDataServiceInitResult } from '@src/services/data-management/test-da
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 const forbiddenCode = '"code":"FORBIDDEN"';
+const userNotRegistered = 'USER_NOT_REGISTERED';
 let data: TestDataServiceInitResult;
 
 beforeAll(async () => {
@@ -34,7 +35,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT ecoverse admin user - queries - authorized', () => {
+describe.skip('DDT ecoverse admin user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expectedAuth         | expectedForb
@@ -51,22 +52,18 @@ describe('DDT ecoverse admin user - queries - authorized', () => {
     ${'usersName'}                          | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersAccountUPN'}                    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersProfile'}                       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'usersMemberofGroupsName'}            | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'usersMemberofOrganisationsName'}     | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'usersMemberofAgentCredentials'}      | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userName'}                           | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userAccountUPN'}                     | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userProfile'}                        | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'userMemberofGroupsName'}             | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'userMemberofOrganisationsName'}      | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'userMemberofAgentCredentials'}       | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersById'}                          | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsName'}                         | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsFocalPointName'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsProfile'}                      | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsMembersName'}                  | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsParentCommunity'}              | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsParentOrganisation'}           | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagName'}                  | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsWithTagFocalPointName'}        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagProfile'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagMembersName'}           | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagParentCommunity'}       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
@@ -113,7 +110,7 @@ describe('DDT ecoverse admin user - queries - authorized', () => {
       // Act
       const requestParamsQueryData = {
         operationName: null,
-        query: getQueries(query, (data as Record<string, number>)[idName]),
+        query: getQueries(query, (data as Record<string, string>)[idName]),
         variables: null,
       };
       const response = await graphqlRequestAuth(
@@ -126,6 +123,7 @@ describe('DDT ecoverse admin user - queries - authorized', () => {
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expectedAuth);
       expect(responseData).not.toContain(expectedForb);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
@@ -134,7 +132,7 @@ describe('DDT ecoverse admin user - queries - authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT ecoverse admin user - Create mutations - authorized', () => {
+describe.skip('DDT ecoverse admin user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -160,7 +158,7 @@ describe('DDT ecoverse admin user - Create mutations - authorized', () => {
         query: getCreateMutation(mutation),
         variables: getCreateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -172,29 +170,28 @@ describe('DDT ecoverse admin user - Create mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(forbiddenCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
 //  Scenario excluded not to load with fake data the AAD   ${createUserMutation}   | ${createUserVariables}  | ${notAuthorizedCode}
 
-describe('DDT ecoverse admin user - Update mutations - authorized', () => {
+describe.skip('DDT ecoverse admin user - Update mutations - authorized', () => {
   // Arrange
   test.each`
-    mutation                                    | variables                                    | idName                        | expected
-    ${'updateUserMutation'}                     | ${'updateUserVariables'}                     | ${'userId'}                   | ${notAuthorizedCode}
-    ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}            | ${notAuthorizedCode}
-    ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}           | ${notAuthorizedCode}
-    ${'updateChallengeMutation'}                | ${'updateChallengeVariables'}                | ${'challengeId'}              | ${notAuthorizedCode}
-    ${'updateOpportunityMutation'}              | ${'updateOpportunityVariables'}              | ${'opportunityId'}            | ${notAuthorizedCode}
-    ${'updateAspectMutation'}                   | ${'updateAspectVariable'}                    | ${'aspectId'}                 | ${notAuthorizedCode}
-    ${'updateActorMutation'}                    | ${'updateActorVariables'}                    | ${'actorId'}                  | ${notAuthorizedCode}
-    ${'addUserToCommunityMutation'}             | ${'addUserToCommunityVariables'}             | ${''}                         | ${notAuthorizedCode}
-    ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'}          | ${notAuthorizedCode}
-    ${'assignGroupFocalPointMutation'}          | ${'assignGroupFocalPointVariables'}          | ${'groupIdEcoverse'}          | ${notAuthorizedCode}
-    ${'removeGroupFocalPointMutation'}          | ${'removeGroupFocalPointVariables'}          | ${'createGroupOnChallengeId'} | ${notAuthorizedCode}
-    ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}              | ${notAuthorizedCode}
-    ${'removeUserFromGroupMutation'}            | ${'removeUserFromGroupVariables'}            | ${'addUserToOpportunityId'}   | ${notAuthorizedCode}
+    mutation                                    | variables                                    | idName               | expected
+    ${'updateUserMutation'}                     | ${'updateUserVariables'}                     | ${'userId'}          | ${notAuthorizedCode}
+    ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}   | ${notAuthorizedCode}
+    ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}  | ${notAuthorizedCode}
+    ${'updateChallengeMutation'}                | ${'updateChallengeVariables'}                | ${'challengeId'}     | ${notAuthorizedCode}
+    ${'updateOpportunityMutation'}              | ${'updateOpportunityVariables'}              | ${'opportunityId'}   | ${notAuthorizedCode}
+    ${'updateAspectMutation'}                   | ${'updateAspectVariable'}                    | ${'aspectId'}        | ${notAuthorizedCode}
+    ${'updateActorMutation'}                    | ${'updateActorVariables'}                    | ${'actorId'}         | ${notAuthorizedCode}
+    ${'addUserToCommunityMutation'}             | ${'addUserToCommunityVariables'}             | ${''}                | ${notAuthorizedCode}
+    ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'} | ${notAuthorizedCode}
+    ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}     | ${notAuthorizedCode}
   `(
     "should NOT expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, idName, expected }) => {
@@ -204,7 +201,7 @@ describe('DDT ecoverse admin user - Update mutations - authorized', () => {
         query: getUpdateMutation(mutation),
         variables: getUpdateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -216,11 +213,13 @@ describe('DDT ecoverse admin user - Update mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(forbiddenCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
-describe('DDT ecoverse admin user - Remove mutations - authorized', () => {
+describe.skip('DDT ecoverse admin user - Remove mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected
@@ -239,7 +238,7 @@ describe('DDT ecoverse admin user - Remove mutations - authorized', () => {
         query: getRemoveMutation(mutation),
         variables: getRemoveVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -251,6 +250,8 @@ describe('DDT ecoverse admin user - Remove mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(forbiddenCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });

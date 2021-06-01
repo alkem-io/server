@@ -1,66 +1,52 @@
 {
-  "globalAdmins": [
+  "users": [
     {
       "email": "admin@cherrytwist.org",
       "firstName": "admin",
-      "lastName": "cherrytwist"
-    },
-
-    {
-      "email": "valentin_yanakiev@yahoo.co.uk",
-      "firstName": "Valentin",
-      "lastName": "Yanakiev"
-    }
-  ],
-  "ecoverseAdmins": [
-    {
-      "email": "neil@cherrytwist.org",
-      "firstName": "Neil",
-      "lastName": "Smyth"
-    },
-    {
-      "email": "valentin@cherrytwist.org",
-      "firstName": "Valentin",
-      "lastName": "Yanakiev"
-    },
-    {
-      "email": "ecoverse.admin@cherrytwist.org",
-      "firstName": "Ecoverse",
-      "lastName": "Admin"
-    }
-  ],
-  "communityAdmins": [
-    {
-      "email": "evgeni@cherrytwist.org",
-      "firstName": "Evgeni",
-      "lastName": "Dimitrov"
-    },
-    {
-      "email": "comoque@gmail.com",
-      "firstName": "Evgeni",
-      "lastName": "Dimitrov"
+      "lastName": "cherrytwist",
+      "credentials": [
+        {
+          "type": "global-admin"
+        }
+      ]
     },
     {
       "email": "community.admin@cherrytwist.org",
-      "firstName": "Community",
-      "lastName": "Admin"
+      "firstName": "community",
+      "lastName": "admin",
+      "credentials": [
+        {
+          "type": "global-admin-community"
+        }
+      ]
+    },
+    {
+      "email": "ecoverse.admin@cherrytwist.org",
+      "firstName": "ecoverse",
+      "lastName": "admin",
+      "credentials": [
+        {
+          "type": "global-admin-challenges"
+        }
+      ]
+    },
+    {
+      "email": "ecoverse.member@cherrytwist.org",
+      "firstName": "ecoverse",
+      "lastName": "member",
+      "credentials": []
     },
     {
       "email": "qa.user@cherrytwist.org",
       "firstName": "Qa",
-      "lastName": "User"
-    }
-  ],
-  "members": [
-    {
-      "email": "ecoverse-member@cherrytwist.com",
-      "firstName": "Ecoverse",
-      "lastName": "Member"
+      "lastName": "User",
+      "credentials": []
     },
     {
-      "email": "non-ecoverse@cherrytwist.com",
-      "firstName": "Non",
-      "lastName": "Ecoverse"
+      "email": "non.ecoverse@cherrytwist.org",
+      "firstName": "non",
+      "lastName": "ecoverse",
+      "credentials": []
     }
   ]
 }

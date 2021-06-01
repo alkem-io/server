@@ -1,33 +1,38 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { OrganisationService } from './organisation.service';
-import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import {
+  AuthorizationGlobalRoles,
+  CurrentUser,
+  Profiling,
+} from '@src/common/decorators';
 import {
   CreateOrganisationInput,
   UpdateOrganisationInput,
-  Organisation,
   IOrganisation,
   DeleteOrganisationInput,
 } from '@domain/community/organisation';
-import {
-  CreateUserGroupInput,
-  IUserGroup,
-  UserGroup,
-} from '@domain/community/user-group';
+import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { OrganisationAuthorizationService } from './organisation.service.authorization';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { UserInfo } from '@core/authentication/user-info';
 
-@Resolver(() => Organisation)
+@Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
   constructor(
-    @Inject(OrganisationService)
-    private organisationService: OrganisationService
+    private organisationAuthorizationService: OrganisationAuthorizationService,
+    private organisationService: OrganisationService,
+    private authorizationEngine: AuthorizationEngineService
   ) {}
 
-  @Roles(AuthorizationRoles.GlobalAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Organisation, {
+  @AuthorizationGlobalRoles(
+    AuthorizationRoleGlobal.CommunityAdmin,
+    AuthorizationRoleGlobal.Admin
+  )
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganisation, {
     description: 'Creates a new Organisation on the platform.',
   })
   @Profiling.api
@@ -38,45 +43,72 @@ export class OrganisationResolverMutations {
       organisationData
     );
 
-    return organisation;
+    return await this.organisationAuthorizationService.applyAuthorizationRules(
+      organisation
+    );
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUserGroup, {
     description: 'Creates a new User Group for the specified Organisation.',
   })
   @Profiling.api
   async createGroupOnOrganisation(
+    @CurrentUser() userInfo: UserInfo,
     @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.organisationService.createGroup(groupData);
-    return group;
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      groupData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.CREATE,
+      `orgCreateGroup: ${organisation.nameID}`
+    );
+
+    return await this.organisationService.createGroup(groupData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Organisation, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganisation, {
     description: 'Updates the specified Organisation.',
   })
   @Profiling.api
   async updateOrganisation(
+    @CurrentUser() userInfo: UserInfo,
     @Args('organisationData') organisationData: UpdateOrganisationInput
   ): Promise<IOrganisation> {
-    const org = await this.organisationService.updateOrganisation(
-      organisationData
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      organisationData.ID
     );
-    return org;
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `orgUpdate: ${organisation.nameID}`
+    );
+
+    return await this.organisationService.updateOrganisation(organisationData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Organisation, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganisation, {
     description: 'Deletes the specified Organisation.',
   })
   async deleteOrganisation(
+    @CurrentUser() userInfo: UserInfo,
     @Args('deleteData') deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      deleteData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.DELETE,
+      `deleteOrg: ${organisation.nameID}`
+    );
     return await this.organisationService.deleteOrganisation(deleteData);
   }
 }

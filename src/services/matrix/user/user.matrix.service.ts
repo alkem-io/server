@@ -1,13 +1,13 @@
 import { HttpService, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
-import { IMatrixAuthProviderConfig } from '@src/services/configuration/config/matrix';
 import { MatrixCryptographyService } from '@src/services/matrix/cryptography/cryptography.matrix.service';
 import {
   IMatrixUser,
   IMatrixUserService,
   IOperationalMatrixUser,
 } from './user.matrix.interface';
+import { ConfigurationTypes } from '@common/enums';
 
 class SynapseEndpoints {
   static REGISTRATION = '/_synapse/admin/v1/register';
@@ -40,30 +40,35 @@ export class MatrixTransforms {
 
 @Injectable()
 export class MatrixUserService implements IMatrixUserService {
-  private _config: IMatrixAuthProviderConfig;
   _matrixClient: any;
+  idBaseUrl: string;
+  baseUrl: string;
+
   constructor(
     private configService: ConfigService,
     private cryptographyServive: MatrixCryptographyService,
     private httpService: HttpService
   ) {
-    this._config = this.configService.get<IMatrixAuthProviderConfig>(
-      'matrix'
-    ) as IMatrixAuthProviderConfig;
+    this.idBaseUrl = this.configService.get(
+      ConfigurationTypes.Communications
+    )?.matrix?.server?.name;
+    this.baseUrl = this.configService.get(
+      ConfigurationTypes.Communications
+    )?.matrix?.server?.name;
 
-    if (!this._config || !this._config.baseUrl) {
+    if (!this.idBaseUrl || !this.baseUrl) {
       throw new Error('Matrix configuration is not provided');
     }
 
     // Create a single instance of the matrix client - non authenticated
     this._matrixClient = createClient({
-      baseUrl: this._config.baseUrl,
-      idBaseUrl: this._config.idBaseUrl,
+      baseUrl: this.baseUrl,
+      idBaseUrl: this.idBaseUrl,
     });
   }
 
   async register(email: string): Promise<IOperationalMatrixUser> {
-    const url = new URL(SynapseEndpoints.REGISTRATION, this._config?.baseUrl);
+    const url = new URL(SynapseEndpoints.REGISTRATION, this.baseUrl);
     const user = this.resolveUser(email);
 
     const nonceResponse = await this.httpService

@@ -1,20 +1,19 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
 import { SearchService } from './search.service';
 import { ISearchResultEntry } from './search-result-entry.interface';
 import { Profiling } from '@src/common/decorators';
 import { SearchInput } from './search-input.dto';
 import { SearchResultEntry } from './search-result-entry.dto';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
 @Resolver()
 export class SearchResolver {
   constructor(private searchService: SearchService) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
+  @UseGuards(GraphqlGuard)
   @Query(() => [SearchResultEntry], {
     nullable: false,
     description: 'Search the ecoverse for terms supplied',

@@ -1,13 +1,13 @@
 import {
   createChallangeMutation,
-  getChallengeUsers,
+  getChallengeData,
   updateChallangeMutation,
 } from './challenge.request.params';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import { getGroup } from '@test/functional/integration/group/group.request.params';
 import { assignGroupFocalPointMutation } from '@test/functional/e2e/user-management/user.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
+import { createChildChallengeMutation } from '../opportunity/opportunity.request.params';
 
 const userNameOne = 'Evgeni Dimitrov';
 const userIdOne = '6';
@@ -20,13 +20,14 @@ let opportunityName = '';
 let opportunityTextId = '';
 let uniqueTextId = '';
 let challengeGroupId = '';
+let challengeCommunityId = '';
 beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   userPhone = `userPhone ${uniqueTextId}`;
   userEmail = `${uniqueTextId}@test.com`;
 
@@ -36,8 +37,8 @@ beforeEach(async () => {
     uniqueTextId
   );
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
-  challengeGroupId =
-    responseCreateChallenge.body.data.createChallenge.community.groups[0].id;
+  challengeCommunityId =
+    responseCreateChallenge.body.data.createChallenge.community.id;
 });
 
 beforeAll(async () => {
@@ -49,7 +50,7 @@ afterAll(async () => {
 });
 
 describe('Flows challenge', () => {
-  test('should add "user" to "group" as focal point', async () => {
+  test.skip('should add "user" to "group" as focal point', async () => {
     // Act
     // Assign first User as a focal point to the group
     const responseAddUserToGroup = await assignGroupFocalPointMutation(
@@ -58,7 +59,7 @@ describe('Flows challenge', () => {
     );
 
     // Query focal point through challenge group
-    const responseChallengeGroupQuery = await getChallengeUsers(challengeId);
+    const responseChallengeGroupQuery = await getChallengeData(challengeId);
     const groupFocalPointFromChallenge =
       responseChallengeGroupQuery.body.data.ecoverse.challenge.community
         .groups[0].focalPoint.name;
@@ -83,7 +84,7 @@ describe('Flows challenge', () => {
   test('should not result unassigned users to a challenge', async () => {
     // Act
     // Get users assossiated with challenge or groups within challenge
-    const responseGroupQuery = await getChallengeUsers(challengeId);
+    const responseGroupQuery = await getChallengeData(challengeId);
 
     // Assert
     //expect(responseCreateUserOne.status).toBe(200);
@@ -91,17 +92,9 @@ describe('Flows challenge', () => {
     expect(
       responseGroupQuery.body.data.ecoverse.challenge.community.members
     ).toHaveLength(0);
-    expect(
-      responseGroupQuery.body.data.ecoverse.challenge.community.groups[0]
-        .focalPoint
-    ).toEqual(null);
-    expect(
-      responseGroupQuery.body.data.ecoverse.challenge.community.groups[0]
-        .members
-    ).toHaveLength(0);
   });
 
-  test('should not be able to modify challenge name to allready existing challenge name and/or textId', async () => {
+  test('should  modify challenge name to allready existing challenge name and/or textId', async () => {
     // Arrange
     // Create second challenge and get its id and name
     const responseSecondChallenge = await createChallangeMutation(
@@ -109,10 +102,9 @@ describe('Flows challenge', () => {
       uniqueTextId + uniqueTextId
     );
     const secondchallengeName =
-      responseSecondChallenge.body.data.createChallenge.name;
+      responseSecondChallenge.body.data.createChallenge.displayName;
 
     // Act
-    // Get users assossiated with challenge or groups within challenge
     const responseUpdateChallenge = await updateChallangeMutation(
       challengeId,
       secondchallengeName,
@@ -123,15 +115,14 @@ describe('Flows challenge', () => {
       'who',
       'tagsArray'
     );
-
     // Assert
     expect(responseUpdateChallenge.status).toBe(200);
-    expect(responseUpdateChallenge.text).toContain(
-      `Unable to update challenge: already have a challenge with the provided name (${secondchallengeName})`
-    );
+    expect(
+      responseUpdateChallenge.body.data.updateChallenge.displayName
+    ).toEqual(secondchallengeName);
   });
 
-  test('should throw error - creating 2 challenges with same name', async () => {
+  test('should creating 2 challenges with same name', async () => {
     // Act
     // Create second challenge with same name
     const response = await createChallangeMutation(
@@ -141,8 +132,8 @@ describe('Flows challenge', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(response.text).toContain(
-      `Unable to create challenge: already have a challenge with the provided name (${challengeName})`
+    expect(response.body.data.createChallenge.displayName).toContain(
+      challengeName
     );
   });
 
@@ -157,26 +148,26 @@ describe('Flows challenge', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(response.text).toContain(
-      'property textID has failed the following constraints: isUniqueTextId'
+      `Unable to create Challenge: the provided nameID is already taken: ${uniqueTextId}`
     );
   });
 
-  test('should add "opportunity" to "challenge"', async () => {
+  test('should add "childChallenge" to "challenge"', async () => {
     // Act
     // Add opportunity to a challenge
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+    const responseCreateChildChallenge = await createChildChallengeMutation(
       challengeId,
       opportunityName,
       opportunityTextId
     );
-    const oportunityNameResponse =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity.name;
-    const oportunityIdResponse =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+    const childChallengeNameResponse =
+      responseCreateChildChallenge.body.data.createChildChallenge.displayName;
+    const childChallengeIdResponse =
+      responseCreateChildChallenge.body.data.createChildChallenge.id;
 
     // Assert
-    expect(responseCreateOpportunityOnChallenge.status).toBe(200);
-    expect(oportunityNameResponse).toEqual(opportunityName);
-    expect(oportunityIdResponse).not.toBeNull;
+    expect(responseCreateChildChallenge.status).toBe(200);
+    expect(childChallengeNameResponse).toEqual(opportunityName);
+    expect(childChallengeIdResponse).not.toBeNull;
   });
 });

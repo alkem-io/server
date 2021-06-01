@@ -1,6 +1,6 @@
 mutation UpdateChallenge($challengeData: UpdateChallengeInput!) {
   updateChallenge(challengeData: $challengeData) {
-    name,
+    displayName,
     id
   }
 }
@@ -9,18 +9,17 @@ variables:
 {
   "challengeData":
 		{
-  	  "ID": "1",
-      "name": "Balance the grid22",
+  	  "ID": "uuid",
+      "displayName": "Balance the grid22",
       "context": {
-        "ID": "2",
-        "updateReferences": [
+        "references": [
               {
-                "ID": 11,
+                "ID": 1,
         				"name": "videoxxxx",
                 "uri": "https://www.youtube.com/watch?v=v4qj6MRCdIo"
               },
               {
-                "ID": 12,
+                "ID": 2,
         				"name": "visualxxxx",
                 "uri": "https://sdgs.un.org/sites/default/files/2020-07/The-Sustainable-Development-Goals-Report-2020_Page_09.png"
               }

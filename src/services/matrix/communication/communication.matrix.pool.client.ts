@@ -1,7 +1,7 @@
+import { ConfigurationTypes } from '@common/enums';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IMatrixAuthProviderConfig } from '@src/services/configuration/config/matrix';
 import { IOperationalMatrixUser } from '@src/services/matrix/user/user.matrix.interface';
 import { createClient } from 'matrix-js-sdk';
 import { MatrixTransforms } from '../user/user.matrix.service';
@@ -25,7 +25,9 @@ import { MatrixRoomEntityAdapter } from './room/room.communication.matrix.adapte
 @Injectable()
 export class MatrixCommunicationClient
   implements IMatrixCommunicationClient, Disposable {
-  private _config: IMatrixAuthProviderConfig;
+  idBaseUrl: string;
+  baseUrl: string;
+
   _matrixClient: MatrixClient;
   protected _roomEntityAdapter: MatrixRoomEntityAdapter;
   protected _groupEntityAdapter: MatrixGroupEntityAdapter;
@@ -35,17 +37,20 @@ export class MatrixCommunicationClient
     private configService: ConfigService,
     operator: IOperationalMatrixUser
   ) {
-    this._config = this.configService.get<IMatrixAuthProviderConfig>(
-      'matrix'
-    ) as IMatrixAuthProviderConfig;
+    this.idBaseUrl = this.configService.get(
+      ConfigurationTypes.Communications
+    )?.matrix?.server?.name;
+    this.baseUrl = this.configService.get(
+      ConfigurationTypes.Communications
+    )?.matrix?.server?.name;
 
-    if (!this._config || !this._config.baseUrl) {
+    if (!this.idBaseUrl || !this.baseUrl) {
       throw new Error('Matrix configuration is not provided');
     }
 
     this._matrixClient = createClient({
-      baseUrl: this._config.baseUrl,
-      idBaseUrl: this._config.idBaseUrl,
+      baseUrl: this.baseUrl,
+      idBaseUrl: this.idBaseUrl,
       userId: operator.username,
       accessToken: operator.accessToken,
     });

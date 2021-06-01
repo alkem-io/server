@@ -15,6 +15,7 @@ import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '../user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ApplicationService {
@@ -28,19 +29,21 @@ export class ApplicationService {
   ) {}
 
   async createApplication(
-    applicationData: CreateApplicationInput
+    applicationData: CreateApplicationInput,
+    ecoverseID = ''
   ): Promise<IApplication> {
     const application: IApplication = Application.create(applicationData);
-    const user = await this.userService.getUserOrFail(
-      applicationData.userId.toString()
+    application.ecoverseID = ecoverseID;
+    application.user = await this.userService.getUserOrFail(
+      applicationData.userID
     );
-    application.user = user;
 
+    application.authorization = new AuthorizationDefinition();
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
     application.lifecycle = await this.lifecycleService.createLifecycle(
-      application.id.toString(),
+      application.id,
       applicationLifecycleConfig
     );
 
@@ -51,9 +54,7 @@ export class ApplicationService {
     deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
     const applicationID = deleteData.ID;
-
     const application = await this.getApplicationOrFail(applicationID);
-
     if (application.questions) {
       for (const question of application.questions) {
         await this.nvpService.removeNVP(question.id);
@@ -62,7 +63,7 @@ export class ApplicationService {
     const result = await this.applicationRepository.remove(
       application as Application
     );
-    result.id = deleteData.ID;
+    result.id = applicationID;
     return result;
   }
 
@@ -71,7 +72,7 @@ export class ApplicationService {
   }
 
   async getApplicationOrFail(
-    applicationId: number,
+    applicationId: string,
     options?: FindOneOptions<Application>
   ): Promise<IApplication> {
     const application = await this.applicationRepository.findOne(
@@ -88,14 +89,5 @@ export class ApplicationService {
 
   async save(application: Application): Promise<Application> {
     return await this.applicationRepository.save(application);
-  }
-
-  async delete(deleteData: DeleteApplicationInput): Promise<IApplication> {
-    const application = await this.getApplicationOrFail(deleteData.ID);
-    const result = await this.applicationRepository.remove(
-      application as Application
-    );
-    result.id = deleteData.ID;
-    return result;
   }
 }

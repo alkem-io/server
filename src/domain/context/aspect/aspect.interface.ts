@@ -1,6 +1,14 @@
-export interface IAspect {
-  id: number;
-  title: string;
-  framing: string;
-  explanation: string;
+import { IAuthorizable } from '@domain/common/authorizable-entity';
+import { Field, ObjectType } from '@nestjs/graphql';
+
+@ObjectType('Aspect')
+export abstract class IAspect extends IAuthorizable {
+  @Field(() => String)
+  title!: string;
+
+  @Field(() => String)
+  framing!: string;
+
+  @Field(() => String)
+  explanation!: string;
 }

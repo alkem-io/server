@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { lifecycleData } from '@test/utils/common-params';
 
 export const appData = `{
       id
@@ -7,15 +8,17 @@ export const appData = `{
         name
         value
       }
-      status
+      lifecycle {
+        ${lifecycleData}
+      }
       user {
         id
       }
     }`;
 
 export const createApplicationMutation = async (
-  communityid: number,
-  userid: any
+  communityid: string,
+  userid: string
 ) => {
   const requestParams = {
     operationName: null,
@@ -25,7 +28,7 @@ export const createApplicationMutation = async (
     variables: {
       applicationData: {
         parentID: communityid,
-        userId: parseFloat(userid),
+        userID: userid,
         questions: [{ name: 'Test Question 1', value: 'Test answer' }],
       },
     },
@@ -34,7 +37,7 @@ export const createApplicationMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.NON_ECOVERSE_MEMBER);
 };
 
-export const removeApplicationMutation = async (appId: any) => {
+export const removeApplicationMutation = async (appId: string) => {
   const requestParams = {
     operationName: null,
     query: `mutation deleteUserApplication($deleteData: DeleteApplicationInput!) {
@@ -43,13 +46,15 @@ export const removeApplicationMutation = async (appId: any) => {
             id
             name
           }
-          status
+          lifecycle {
+            ${lifecycleData}
+          }
           user {
             id
           }}}`,
     variables: {
       deleteData: {
-        ID: parseFloat(appId),
+        ID: appId,
       },
     },
   };
@@ -57,12 +62,12 @@ export const removeApplicationMutation = async (appId: any) => {
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getApplication = async (appId: any) => {
+export const getApplication = async (appId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
     query: `query{ecoverse {
-      application(ID: ${appId})${appData}}}`,
+      application(ID: "${appId}")${appData}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

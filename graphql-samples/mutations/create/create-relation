@@ -9,7 +9,7 @@ query variables:
 {
   "relationData":
   {
-    "parentID": 1,
+    "opportunityID": "uuid",
     "type": "incoming",
     "description": "How do I handle scalability?",
     "actorName": "Test",

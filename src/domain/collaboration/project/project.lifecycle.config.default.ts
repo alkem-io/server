@@ -1,7 +1,7 @@
 export const projectLifecycleConfigDefault = {
   id: 'project-lifecycle-default',
   context: {
-    parentID: '-1',
+    parentID: '',
   },
   initial: 'new',
   states: {
@@ -21,13 +21,13 @@ export const projectLifecycleConfigDefault = {
       entry: ['sampleEvent'],
       on: {
         COMPLETED: 'complete',
-        ABAONDONED: 'abandoned',
+        ABANDONED: 'abandoned',
       },
     },
     complete: {
       on: {
         ARCHIVE: 'archived',
-        ABAONDONED: 'archived',
+        ABANDONED: 'archived',
       },
     },
     abandoned: {

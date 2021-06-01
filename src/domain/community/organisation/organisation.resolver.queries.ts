@@ -1,6 +1,6 @@
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { Organisation } from './organisation.entity';
 import { IOrganisation } from './organisation.interface';
 import { OrganisationService } from './organisation.service';
 
@@ -8,7 +8,7 @@ import { OrganisationService } from './organisation.service';
 export class OrganisationResolverQueries {
   constructor(private organisationService: OrganisationService) {}
 
-  @Query(() => [Organisation], {
+  @Query(() => [IOrganisation], {
     nullable: false,
     description: 'The Organisations on this platform',
   })
@@ -17,12 +17,14 @@ export class OrganisationResolverQueries {
     return await this.organisationService.getOrganisations();
   }
 
-  @Query(() => Organisation, {
+  @Query(() => IOrganisation, {
     nullable: false,
     description: 'A particular Organisation',
   })
   @Profiling.api
-  async organisation(@Args('ID') id: string): Promise<IOrganisation> {
+  async organisation(
+    @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
+  ): Promise<IOrganisation> {
     return await this.organisationService.getOrganisationOrFail(id);
   }
 }

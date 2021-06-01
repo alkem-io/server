@@ -1,0 +1,328 @@
+# Configuration file for Cherrytwist.
+#
+# This is a YAML file: see [1] for a quick introduction. Note in particular
+# that *indentation is important*: all the elements of a list or dictionary
+# should have the same indentation.
+#
+# [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+#
+# For most of the configuration values there is a default supplied, this is after the ":".
+# To overwrite the default value, set environment variable with the name as is shown before the ":".
+
+## hosting ##
+# The hosting configuration for the Cherrytwist Server
+hosting:
+  # The port that the CT server will be listening on.
+  # For clusters (e.g. docker-compose, kubernetes) this should also be the port that is used  in the ingress configuration (e.g. traefik).
+  # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.cherrytwist.org/graphql)
+  # to the ct-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
+  # The graphql port is also used for internal communication between the services inside the e.g. kubernetes cluster.
+  #
+  port: ${GRAPHQL_ENDPOINT}:4000
+
+  # The type of environment is used in multiple places to determine whether dev tooling is enabled.
+  # The tyoe of environment can also be used for monitoring / logging / analysis in an ELK cluster / ElasticCloud instance.
+  # For production deployments it should be set to Prod.
+  #
+  # Options: Dev, Prod
+  environment: ${ENVIRONMENT}:Dev
+
+## bootstrap ##
+# Used to determine the the information that is used to to initialize a functional Cherrytwist instance.
+bootstrap:
+  # The bootstrap authorisation file specifies the minimum set of users and their associated credentials that are always available
+  # in the Cherrytwist instance.
+  #
+  # Default: the default file that is picked up is: src/services/configuraiton/templates/authorisation-bootstrap.json.
+  authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
+
+## security ##
+# The various means by which the security of the Cherrytwist platform can be configured.
+security:
+  # cors settings for the application
+  cors:
+    # Origin of the graphql requests to the Cherrytwist Server.
+    # Defaults to * (insecure, not recommended for production usage).
+    # Change to a value that whitelists your request origin.
+    origin: ${CORS_ORIGIN}:*
+
+    # Cors methods allowed in the Cherrytwist Server.
+    # Defaults to GET,HEAD,PUT,PATCH,POST,DELETE.
+    # Graphql uses mostly POST - the rest of the methods are left for utility REST endpoints.
+    # If no REST endpoints are used (they are kept for ease of development) the list of allowed methods can be reduced.
+    methods: ${CORS_METHODS}:GET,HEAD,PUT,PATCH,POST,DELETE
+
+    # Cors allowed headers.
+    allowedHeaders: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
+
+## identity ##
+
+# Defines all authentication and authorization configuration.
+# Authentication is pluggable, using the notion of "Authentication Providers", which have the responsibility to authenticate users.
+# Authorisation is handled within the platfor.
+#
+# Note: the term Authentication Provider is based on the more widely understood concept of Identity Providers (Servers, Services),
+# but it is in Cherrytwist restricted to Authentication. Configuration is unique per provider.
+#
+# The only functionality used from an Authentication Provider is acquiring an access token (in other words, authentication) and
+# extracting the users email .
+# The email is used for matching the user account (provided from the Identity Server, e.g. AAD) to the user profile in Cherrytwist.
+# Traditional Identity Provider functionality like federation, account management etc. are out-of-scope in Cherrytwist.
+#
+# Authorization is Credential-based, validating whether the user has valid credentials for the requested resource.
+identity:
+  ## authentication ##
+  # Defines both the configuration required for the server to process authentication requests (via passportJS strategies) and the
+  # client-side configuration required to authenticate to the Identity Servers (e.g. AAD) and generate
+  # valid Authorization Header (Bearer access token).
+  authentication:
+    # A flag setting whether Authentication is enabled on Cherrytwist.
+    enabled: ${AUTH_ENABLED}:true
+
+    # A list of Identity Providers that can be used for authenticating the user.
+    # The claims in the access token that are used in Cherrytwist are the user email and the token expiration time.
+    providers:
+      # Azure Active Directory Authentication Provider.
+      # Provides configuration for both Cherrytwist Server and Cherrytwist clients i.e. clients can connect to the server to
+      # retrieve the authentication configuration that they should use.
+      # Multiple flows are supported to cover the needs of the platform, including automated testing.
+      #
+      # All default values are from the Cherrytwist Playground AAD instance.
+      aad:
+        # Azure Active Directory Tenant.
+        tenant: ${AUTH_AAD_TENANT}:524e761c-d162-4fdf-ab43-2855246d986c
+
+        # OpenID Connect metadata document endpoint.
+        identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
+
+        # Cherrytwist Server clientID. The AAD application is called cherrytwist-api in the playground AAD instance.
+        clientID: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
+
+        # Flag checking whether the issuer of the access token needs to be validated.
+        validateIssuer: true
+
+        # Flag checking whether the request should be passed in the passportJS callback.
+        # By default it's passed in the platform - but it's not actively used.
+        # This setting is useful for debugging issues with Authentication Provider
+        # For example in src/core/authentication/aad.bearer.strategy.ts the _req field in validate function can
+        # be used for tracing issues.
+        passReqToCallback: true
+
+        # Issuer of the access token used in Cherrytwist Server
+        issuer: ${AUTH_AAD_ISSUER}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0
+
+        # Audience that the ID token issues by AAD is intended for.
+        # The relationship between audiences, scopes, APIs and access tokens is well defined in this article:
+        # https://www.pingidentity.com/en/company/blog/posts/2019/oauth2-access-token-multiple-resources-usage-strategies.html
+        audience: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
+
+        # Logging level.
+        # Valid values are info|warn|error.
+        loggingLevel: ${AUTH_AAD_LOGGING_LEVEL}:Error
+
+        # Flag setting whether Personal Identifiable Information (PII) can be logged by AAD.
+        # Note: there is a bug in the microsoft strategy that makes setting this flag to 'true' returning meaningful exception messages
+        # upon access token validation and thus invalidating all flows checking whether the access token has expired.
+        loggingNoPII: false
+
+        # Cherrytwist Client authentication configuration.
+        # The parameters provided in this section are exposed in the configuration GraphQL query consumed by the Cherrytwist Web Client.
+        client:
+          # Cherrytwist Client clientID. The AAD application is called cherrytwist-web in the playground AAD instance.
+          clientId: ${AUTH_AAD_CLIENT_APP_ID}:feb6d8b1-8cc2-4e7d-a419-ad7b544b0832
+
+          # The OIDC claims authority endpoint.
+          authority: ${AUTH_AAD_AUTHORITY}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c
+
+          # The client redirect UI. Defaults to the default Cherrytwist Web Client endpoint.
+
+          redirectUri: ${AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI}:http://localhost:3000
+
+        # Resource Owner Password Credentials (ROPC) flow configuration.
+        # Username and Password are required to authenticate the user against AAD. MFA is not supported.
+        # ClientSecret is not mandatory - it can be used to invoke the Client Credentials Grant flow
+        # for testing purposes in case MFA is mandated.
+        ropc:
+          # Client secret. Not used by default. Used only if ROPC is replaced with Client Credentials Grant Flow.
+          clientSecret: ${AUTH_AAD_CLIENT_APP_SECRET}
+
+          # Username of the user used in ROPC flow.
+          username: ${AUTH_AAD_USER_UPN}:admin@playgroundcherrytwist.onmicrosoft.com
+
+          # Password of the user used in ROPC flow.
+          password: ${AUTH_AAD_USER_PASSWORD}
+
+      # Demo Authentication Provider (https://github.com/cherrytwist/demo-authentication-provider).
+      # Basic Authentication Provider used for demo purposes. Issues a JWT token with claims about issuer,
+      # issue time, expiry time and user account email. Not suitable for production environments.
+      demo_auth_provider:
+        # Issuer of the access token used in Cherrytwist Server.
+        # Picked up by the Cherrytwist Client - used as an endpoint.
+        issuer: ${AUTH_DEMO_AUTH_ISSUER}:http://localhost:3002
+
+        # Token endpoint for demo auth provider.
+        # REST endpoint that takes username and password to acquire JWT access token.
+        # Can be tested with curl -X POST http://localhost:3002/auth/login -d '{"username": "admin@test.com", "password": "changeMeNow!"}' -H "Content-Type: application/json".
+        tokenEndpoint: ${AUTH_DEMO_AUTH_TOKEN_ENDPOINT}:http://localhost:3002/auth/login
+
+        # Client secret shared between the demo auth provider and the Cherrytwist Server.
+        # If the secret doesn't match JWT validation will fail.
+        clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
+
+      # Ory Kratos Next Gen Identity Provider (https://github.com/ory/kratos).
+      ory:
+        # Issuer of the kratos cookie. The cookie can be used as is or mutated by
+        # Ory Oathkeeper into an ID token. The session can be found at (default)
+        # http://localhost:4433/sessions/whoami
+        # A session looks like:
+        #
+        # {
+        #   "id": "b237fd33-cb69-4670-a154-7c70f7d8db52",
+        #   "active": true,
+        #   "expires_at": "2021-05-20T13:29:55Z",
+        #   "authenticated_at": "2021-05-19T13:29:55Z",
+        #   "issued_at": "2021-05-19T13:29:55Z",
+        #   "identity": {
+        #     "id": "972164de-efdd-4a4c-bfcb-382a9ba9b6f4",
+        #     "schema_id": "default",
+        #     "schema_url": "http://localhost:4455/.ory/kratos/public/schemas/default",
+        #     "traits": {
+        #       "name": { "last": "Admin", "first": "Admin" },
+        #       "email": "admin@cherrytwist.org"
+        #     },
+        #     "verifiable_addresses": [
+        #       {
+        #         "id": "f271a114-ef14-4f07-9899-5c1dbfeebee1",
+        #         "value": "admin@cherrytwist.org",
+        #         "verified": false,
+        #         "via": "email",
+        #         "status": "sent",
+        #         "verified_at": null
+        #       }
+        #     ],
+        #     "recovery_addresses": [
+        #       {
+        #         "id": "796b183e-49b0-493f-acbc-c821dd4eb177",
+        #         "value": "admin@cherrytwist.org",
+        #         "via": "email"
+        #       }
+        #     ]
+        #   }
+        # }
+        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://localhost:4455/
+
+        # JSON Web Key Sets endpoint. Used for validating the JWT token signed
+        # by Ory Oathkeeper. A set of keys looks like:
+        # {
+        #   "keys": [
+        #     {
+        #       "use": "sig",
+        #       "kty": "RSA",
+        #       "kid": "a2aa9739-d753-4a0d-87ee-61f101050277",
+        #       "alg": "RS256",
+        #       "n": "zpjSl0ySsdk_YC4ZJYYV-cSznWkzndTo0lyvkYmeBkW60YHuHzXaviHqonY_DjFBdnZC0Vs_QTWmBlZvPzTp4Oni-eOetP-Ce3-B8jkGWpKFOjTLw7uwR3b3jm_mFNiz1dV_utWiweqx62Se0SyYaAXrgStU8-3P2Us7_kz5NnBVL1E7aEP40aB7nytLvPhXau-YhFmUfgykAcov0QrnNY0DH0eTcwL19UysvlKx6Uiu6mnbaFE1qx8X2m2xuLpErfiqj6wLCdCYMWdRTHiVsQMtTzSwuPuXfH7J06GTo3I1cEWN8Mb-RJxlosJA_q7hEd43yYisCO-8szX0lgCasw",
+        #       "e": "AQAB"
+        #     }
+        #   ]
+        # }
+        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://localhost:4456/.well-known/jwks.json
+
+        # Ory Kratos Base Public URL. It is used as prefix for all Kratos flows.
+        # Locally, Kratos Public API works on localhost:4433 and by default in k8s it works on https://[HOST]/auth/.ory/kratos/public
+        # NB: The default kratos.yml config defines the selfservice endpoints with base address http://localhost:3000/auth.
+        # That is used as there is a reverse proxy in front of the CT Web Client that forwards the calls to the Kratos Public URL.
+        # You can check the currently logged in user at http://localhost:4433/sessions/whoami.
+        kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:4433/
+
+## monitoring ##
+# This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
+monitoring:
+  # logging & profiling section.
+  logging:
+    # A flag setting whether Winston Console transport will be enabled.
+    # If the flag is set to true logs of the appropriate level (see below) will be outputted to the console
+    # after the application has been bootstrapped.
+    # The NestJS bootstrap process is handled by the internal NestJS logging.
+    consoleLoggingEnabled: ${LOGGING_CONSOLE_ENABLED}:false
+
+    # Logging level for outputs to console.
+    # Valid values are log|error|warn|debug|verbose.
+    level: ${LOGGING_LEVEL_CONSOLE}:Error
+
+    # A flag enabling / disabling performance logging.
+    profilingEnabled: ${LOGGING_PROFILING_ENABLED}:true
+
+  # Elastic logging configuration
+  elastic:
+    # A flag setting whether Winston Elastic transport will be enabled.
+    # If the flag is set to true logs of the appropriate level (see below) will be outputted to Elastic
+    # given a correct Elastic Cloud endpoints are provided.
+    enabled: ${LOGGING_ELK_ENABLED}:false
+
+    # Logging level for outputs to elastic.
+    # Valid values are log|error|warn|debug|verbose.
+    loggingLevel: ${LOGGING_LEVEL_ELK}:Error
+
+    # Elastic Cloud configuration
+    cloud:
+      # Elastic Cloud ID. Typically it will look like (e.g., this is not a valid value):
+      # elastic-observability-deployment-dev:d2VzdGV1cm9wZS5henVyZS5lbGFzdGljLWNsb3VkLVfBcTo5MjQzJGMyZjJiYTM4ZmM0ZTQyZjY5N2Q5MDU2YjIxYzkyNzY3JDRjMDAxNjYzZTQzMDQzNThhNTkwMzY2MWI2ZDU5MTVl
+      id: ${ELASTIC_CLOUD_ID}
+
+      # Elastic Cloud username. Defaults to 'elastic'.
+      username: ${ELASTIC_CLOUD_USERNAME}
+
+      # Elastic Cloud password.
+      password: ${ELASTIC_CLOUD_PASSWORD}
+
+## communications ##
+# Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Cherrytwist.
+communications:
+  # matrix configuration #
+  matrix:
+    # Synapse server (https://github.com/matrix-org/synapse) configuration.
+    server:
+      # Synapse server name, defined in homeserver.yaml on the Synapse instance.
+      name: ${SYNAPSE_SERVER_NAME}:cherrytwist.matrix.host
+    shared:
+      # Synapse shared secret, defined in homeserver.yaml on the Synapse instance.
+      secret: ${SYNAPSE_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+
+## storage ##
+# Cherrytwist uses multiple types of persistent storage, including SQL database and IPFS.
+storage:
+  # MySQL database configuration for usage by the Cherrytwist Server.
+  # The authentication method used by Cherrytwist Server is MySQL Native Password.
+  # Note: both schema / database name are used for configuration and they need to have the same value.
+  database:
+    # Database host.
+    host: ${DATABASE_HOST}:localhost
+
+    # MySQL daemon port.
+    port: 3306
+
+    # MySQL username.
+    username: 'root'
+
+    # MySQL password.
+    password: ${MYSQL_ROOT_PASSWORD}:toor
+
+    # MySQL schema / database name.
+    schema: ${MYSQL_DATABASE}:cherrytwist
+
+    # MySQL schema / database name.
+    database: ${MYSQL_DATABASE}:cherrytwist
+
+    # Flag setting whether MySQL operations should be logged to the console.
+    logging: false
+
+  # IPFS (https://ipfs.io/) configuration.
+  ipfs:
+    # IPFS API endpoint.
+    endpoint: ${IPFS_ENDPOINT}:http://ct_ipfs_server:5001
+
+    # IPFS http proxy endpoint. Exposed through traefik (or any ingress / reverse proxy of choice).
+    clientEndpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:8080/ipfs
+
+    # Max file size of files that will be uploaded to IPFS (in bytes).
+    maxFileSize: 1048576

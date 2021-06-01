@@ -1,6 +1,6 @@
 mutation CreateEcoverse($ecoverseData: CreateEcoverseInput!) {
   createEcoverse(ecoverseData: $ecoverseData) {
-    name,
+    displayName,
     id
   }
 }
@@ -9,7 +9,7 @@ query variables:
 {
   "ecoverseData":
   {
-    "name": "Test ecoverse2",
-    "textID": "eco2"
+    "displayName": "Test ecoverse2",
+    "nameID": "eco2"
   }
 }

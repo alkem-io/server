@@ -5,7 +5,7 @@ mutation deleteUser($deleteData: DeleteUserInput!) {
       name
     }}`;
 
-export const removeUserVariables = (id: number) => `
+export const removeUserVariables = (id: string) => `
 {
   "deleteData": {
     "ID": ${id}
@@ -18,7 +18,7 @@ mutation deleteChallenge($deleteData: DeleteChallengeInput!) {
     id
   }}`;
 
-export const removeChallengeVariables = (id: number) => `
+export const removeChallengeVariables = (id: string) => `
 {
   "deleteData": {
     "ID": ${id}
@@ -31,7 +31,7 @@ mutation deleteOpportunity($deleteData: DeleteOpportunityInput!) {
     id
   }}`;
 
-export const removeOpportunityVariables = (id: number) => `
+export const removeOpportunityVariables = (id: string) => `
 {
   "deleteData": {
     "ID": ${id}
@@ -44,7 +44,7 @@ mutation deleteAspect($deleteData: DeleteAspectInput!) {
     id
   }}`;
 
-export const removeAspectVariables = (id: number) => `
+export const removeAspectVariables = (id: string) => `
 {
   "deleteData": {
     "ID": ${id}
@@ -56,7 +56,7 @@ mutation deleteActor($deleteData: DeleteActorInput!) {
   deleteActor(deleteData: $deleteData)
   {id}}`;
 
-export const removeActorVariables = (id: number) => `
+export const removeActorVariables = (id: string) => `
 {
   "deleteData": {
     "ID": ${id}
@@ -69,7 +69,7 @@ mutation deleteActorGroup($deleteData: DeleteActorGroupInput!) {
     id
   }}`;
 
-export const removeActorGroupVariables = (id: number) => `
+export const removeActorGroupVariables = (id: string) => `
 {
   "deleteData": {
     "ID": ${id}
@@ -85,7 +85,7 @@ const mutations: Record<string, string> = {
   removeUserMutation,
 };
 
-const variables: Record<string, (id: number) => string> = {
+const variables: Record<string, (id: string) => string> = {
   removeAspectVariables,
   removeActorVariables,
   removeActorGroupVariables,
@@ -98,6 +98,6 @@ export const getRemoveMutation = (name: string) => {
   return mutations[name];
 };
 
-export const getRemoveVariables = (name: string, id: number) => {
+export const getRemoveVariables = (name: string, id: string) => {
   return variables[name](id);
 };

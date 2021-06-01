@@ -1,6 +1,6 @@
-import { IUser } from '@domain/community/user/user.interface';
+import { ICredential } from '@domain/agent';
 
 export class UserInfo {
   email!: string;
-  user?: IUser;
+  credentials: ICredential[] = [];
 }

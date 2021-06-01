@@ -11,7 +11,7 @@ import {
   IAspect,
   DeleteAspectInput,
 } from '@domain/context/aspect';
-import validator from 'validator';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class AspectService {
@@ -22,35 +22,21 @@ export class AspectService {
   ) {}
 
   async createAspect(aspectInput: CreateAspectInput): Promise<IAspect> {
-    const aspect = new Aspect(
-      aspectInput.title,
-      aspectInput.framing,
-      aspectInput.explanation
-    );
+    const aspect = Aspect.create(aspectInput);
+    aspect.authorization = new AuthorizationDefinition();
     await this.aspectRepository.save(aspect);
     return aspect;
   }
 
   async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
-    const aspect = await this.getAspectByIdOrFail(aspectID);
+    const aspect = await this.getAspectOrFail(aspectID);
     const result = await this.aspectRepository.remove(aspect as Aspect);
-    result.id = deleteData.ID;
+    result.id = aspectID;
     return result;
   }
 
   async getAspectOrFail(aspectID: string): Promise<IAspect> {
-    if (validator.isNumeric(aspectID)) {
-      const idInt: number = parseInt(aspectID);
-      return await this.getAspectByIdOrFail(idInt);
-    }
-    throw new EntityNotFoundException(
-      `Not able to locate aspect with the specified ID: ${aspectID}`,
-      LogContext.CHALLENGES
-    );
-  }
-
-  async getAspectByIdOrFail(aspectID: number): Promise<IAspect> {
     const aspect = await this.aspectRepository.findOne({ id: aspectID });
     if (!aspect)
       throw new EntityNotFoundException(
@@ -77,5 +63,9 @@ export class AspectService {
     await this.aspectRepository.save(aspect);
 
     return aspect;
+  }
+
+  async saveAspect(aspect: IAspect): Promise<IAspect> {
+    return await this.aspectRepository.save(aspect);
   }
 }

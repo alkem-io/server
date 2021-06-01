@@ -3,11 +3,11 @@ import { appSingleton } from '@test/utils/app.singleton';
 import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 import {
   createAspectOnProjectMutation,
+  getAspectPerProject,
   removeAspectMutation,
   updateAspectMutation,
-  getAspectPerProject,
 } from './aspect.request.params';
-import { createOpportunityOnChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
+import { createOpportunityMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 import { createProjectMutation } from '@test/functional/integration/project/project.request.params';
 
 let opportunityName = '';
@@ -25,16 +25,14 @@ let aspectExplanation = '';
 let uniqueTextId = '';
 let aspectDataCreate = '';
 let aspectCountPerProject = async (): Promise<number> => {
-  const responseQuery = await getAspectPerProject(opportunityId);
-  let response =
-    responseQuery.body.data.ecoverse.opportunity.projects[0].aspects;
+  const responseQuery = await getAspectPerProject(projectId);
+  let response = responseQuery.body.data.ecoverse.project.aspects;
   return response;
 };
 
 let aspectDataPerPerproject = async (): Promise<String> => {
-  const responseQuery = await getAspectPerProject(opportunityId);
-  let response =
-    responseQuery.body.data.ecoverse.opportunity.projects[0].aspects[0];
+  const responseQuery = await getAspectPerProject(projectId);
+  let response = responseQuery.body.data.ecoverse.project.aspects[0];
   return response;
 };
 beforeEach(async () => {
@@ -43,7 +41,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   projectName = `projectName ${uniqueTextId}`;
   projectTextId = `pr${uniqueTextId}`;
   aspectTitle = `aspectTitle-${uniqueTextId}`;
@@ -68,7 +66,7 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
   // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+  const responseCreateOpportunityOnChallenge = await createOpportunityMutation(
     challengeId,
     opportunityName,
     opportunityTextId

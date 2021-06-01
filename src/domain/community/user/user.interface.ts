@@ -1,19 +1,49 @@
-import { IDID } from '@domain/agent/did/did.interface';
-import { IProfile } from '@domain/community/profile/profile.interface';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
+import { IProfile } from '@domain/community/profile';
+import { IAgent } from '@domain/agent';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { ISearchable } from '@domain/common/interfaces';
+import { INameable } from '@domain/common';
 
-export interface IUser {
-  id: number;
-  name: string;
-  accountUpn: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  city: string;
-  country: string;
-  gender: string;
-  DID: IDID;
+@ObjectType('User', {
+  implements: () => [ISearchable],
+})
+export abstract class IUser extends INameable {
+  @Field(() => String, {
+    description:
+      'The unique personal identifier (upn) for the account associated with this user profile',
+  })
+  accountUpn!: string;
+
+  @Field(() => String)
+  firstName!: string;
+
+  @Field(() => String)
+  lastName!: string;
+
+  @Field(() => String)
+  email!: string;
+
+  @Field(() => String)
+  phone!: string;
+
+  @Field(() => String)
+  city!: string;
+
+  @Field(() => String)
+  country!: string;
+
+  @Field(() => String)
+  gender!: string;
+
+  @Field(() => IProfile, {
+    nullable: true,
+    description: 'The profile for this User',
+  })
   profile?: IProfile;
-  userGroups?: IUserGroup[];
+
+  @Field(() => IAgent, {
+    nullable: true,
+    description: 'The agent for this User',
+  })
+  agent?: IAgent;
 }

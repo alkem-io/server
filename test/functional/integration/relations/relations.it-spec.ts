@@ -7,7 +7,10 @@ import {
   removeRelationMutation,
   updateRelationMutation,
 } from './relations.request.params';
-import { createOpportunityOnChallengeMutation } from '../opportunity/opportunity.request.params';
+import {
+  createChildChallengeMutation,
+  createOpportunityMutation,
+} from '../opportunity/opportunity.request.params';
 
 const relationIncoming = 'incoming';
 const relationOutgoing = 'outgoing';
@@ -23,6 +26,7 @@ let relationActorType = '';
 let relationActorRole = '';
 let uniqueTextId = '';
 let relationDataCreate = '';
+let collaborationId = '';
 let relationCountPerOpportunity = async (): Promise<number> => {
   const responseQuery = await getRelationsPerOpportunity(opportunityId);
   let response = responseQuery.body.data.ecoverse.opportunity.relations;
@@ -40,7 +44,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   relationDescription = `relationDescription-${uniqueTextId}`;
   relationActorName = `relationActorName-${uniqueTextId}`;
   relationActorType = `relationActorType-${uniqueTextId}`;
@@ -64,7 +68,7 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
   // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+  const responseCreateOpportunityOnChallenge = await createOpportunityMutation(
     challengeId,
     opportunityName,
     opportunityTextId
@@ -156,7 +160,9 @@ describe('Relations', () => {
 
     // Assert
     expect(await relationCountPerOpportunity()).toHaveLength(0);
-    expect(responseRemoveRelation.body.data.deleteRelation.id).toEqual(relationId);
+    expect(responseRemoveRelation.body.data.deleteRelation.id).toEqual(
+      relationId
+    );
   });
 
   test('should throw error for removing unexisting relation', async () => {

@@ -1,162 +1,217 @@
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
-import { Inject, UseGuards } from '@nestjs/common';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
-import { Profiling } from '@src/common/decorators';
-import { EcoverseService } from './ecoverse.service';
-import { Community } from '@domain/community/community';
-import { Challenge } from '../challenge/challenge.entity';
-import { ChallengeService } from '../challenge/challenge.service';
-import { IChallenge } from '../challenge';
-import { IOpportunity, Opportunity } from '../opportunity';
-import { OpportunityService } from '../opportunity/opportunity.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { Project, IProject } from '@domain/collaboration/project';
 import {
-  UserGroup,
-  IUserGroup,
-  Application,
-  IApplication,
-} from '@domain/community';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { ApplicationService } from '@domain/community/application/application.service';
+  AuthorizationCredentialPrivilege,
+  GraphqlGuard,
+} from '@core/authorization';
+import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { IProject } from '@domain/collaboration/project';
 import { ProjectService } from '@domain/collaboration/project/project.service';
+import { IUserGroup } from '@domain/community/user-group';
+import { ApplicationService } from '@domain/community/application/application.service';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { UseGuards } from '@nestjs/common';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Profiling } from '@src/common/decorators';
+import { IChallenge } from '../challenge';
+import { EcoverseService } from './ecoverse.service';
+import { IEcoverse } from '@domain/challenge/ecoverse';
+import { ICommunity } from '@domain/community/community';
+import { IContext } from '@domain/context/context';
+import { ITagset } from '@domain/common/tagset';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IApplication } from '@domain/community/application';
+import { INVP } from '@domain/common/nvp';
+import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
-@Resolver(() => Ecoverse)
+@Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
   constructor(
-    private challengeService: ChallengeService,
-    private opportunityService: OpportunityService,
     private projectService: ProjectService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
-    @Inject(EcoverseService) private ecoverseService: EcoverseService
+    private ecoverseService: EcoverseService
   ) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('community', () => Community, {
+  @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the ecoverse.',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async community(@Parent() ecoverse: Ecoverse) {
-    const community = await this.ecoverseService.getCommunity(ecoverse.id);
-    return community;
+    return await this.ecoverseService.getCommunity(ecoverse);
   }
 
-  @ResolveField('challenges', () => [Challenge], {
+  @ResolveField('context', () => IContext, {
+    nullable: true,
+    description: 'The context for the ecoverse.',
+  })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @Profiling.api
+  async context(@Parent() ecoverse: Ecoverse) {
+    return await this.ecoverseService.getContext(ecoverse);
+  }
+
+  @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
     description: 'The challenges for the ecoverse.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async challenges(@Parent() ecoverse: Ecoverse) {
-    const challenges = await this.ecoverseService.getChallenges(ecoverse);
-    return challenges;
+    return await this.ecoverseService.getChallenges(ecoverse);
   }
 
-  @ResolveField('challenge', () => Challenge, {
-    nullable: false,
-    description: 'A particular Challenge, either by its ID or textID',
+  @ResolveField('tagset', () => ITagset, {
+    nullable: true,
+    description: 'The set of tags for the  ecoverse.',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @Profiling.api
-  async challenge(@Args('ID') id: string): Promise<IChallenge> {
-    return await this.challengeService.getChallengeOrFail(id);
+  async tagset(@Parent() ecoverse: Ecoverse) {
+    return ecoverse.tagset;
   }
 
-  @ResolveField('opportunities', () => [Opportunity], {
+  @ResolveField('challenge', () => IChallenge, {
+    nullable: false,
+    description: 'A particular Challenge, either by its ID or nameID',
+  })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @Profiling.api
+  async challenge(
+    @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @Parent() ecoverse: Ecoverse
+  ): Promise<IChallenge> {
+    return await this.ecoverseService.getChallengeInNameableScope(id, ecoverse);
+  }
+
+  @ResolveField('opportunities', () => [IOpportunity], {
     nullable: false,
     description: 'All opportunities within the ecoverse',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
-    return await this.ecoverseService.getOpportunities(ecoverse);
+    return await this.ecoverseService.getOpportunitiesInNameableScope(ecoverse);
   }
 
-  @ResolveField('opportunity', () => Opportunity, {
+  @ResolveField('opportunity', () => IOpportunity, {
     nullable: false,
-    description: 'A particular opportunitiy, identified by the ID or textID',
+    description: 'A particular Opportunity, either by its ID or nameID',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @Profiling.api
-  async opportunity(@Args('ID') id: string): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(id);
-    if (opportunity) return opportunity;
-
-    throw new EntityNotFoundException(
-      `Unable to locate opportunity with given id: ${id}`,
-      LogContext.CHALLENGES
+  async opportunity(
+    @Args('ID', { type: () => UUID_NAMEID }) id: string,
+    @Parent() ecoverse: Ecoverse
+  ): Promise<IOpportunity> {
+    return await this.ecoverseService.getOpportunityInNameableScope(
+      id,
+      ecoverse
     );
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('projects', () => [Project], {
+  @ResolveField('projects', () => [IProject], {
     nullable: false,
     description: 'All projects within this ecoverse',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @Profiling.api
-  async projects(): Promise<IProject[]> {
-    return await this.projectService.getProjects();
+  async projects(@Parent() ecoverse: Ecoverse): Promise<IProject[]> {
+    return await this.ecoverseService.getProjects(ecoverse);
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('project', () => Project, {
+  @ResolveField('project', () => IProject, {
     nullable: false,
     description: 'A particular Project, identified by the ID',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @Profiling.api
-  async project(@Args('ID') id: string): Promise<IProject> {
-    return await this.projectService.getProjectOrFail(id);
+  async project(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID', { type: () => UUID_NAMEID }) projectID: string
+  ): Promise<IProject> {
+    return await this.projectService.getProjectOrFail(projectID, {
+      where: { ecoverseID: ecoverse.id },
+    });
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('groups', () => [UserGroup], {
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('groups', () => [IUserGroup], {
     nullable: false,
     description: 'The User Groups on this Ecoverse',
   })
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @Profiling.api
-  async groups(): Promise<IUserGroup[]> {
-    return await this.groupService.getGroups();
+  async groups(@Parent() ecoverse: Ecoverse): Promise<IUserGroup[]> {
+    return await this.groupService.getGroups({
+      ecoverseID: ecoverse.id,
+    });
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('groupsWithTag', () => [UserGroup], {
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('groupsWithTag', () => [IUserGroup], {
     nullable: false,
     description: 'All groups on this Ecoverse that have the provided tag',
   })
   @Profiling.api
-  async groupsWithTag(@Args('tag') tag: string): Promise<IUserGroup[]> {
-    return await this.groupService.getGroupsWithTag(tag);
+  async groupsWithTag(
+    @Parent() ecoverse: Ecoverse,
+    @Args('tag') tag: string
+  ): Promise<IUserGroup[]> {
+    return await this.groupService.getGroupsWithTag(tag, {
+      ecoverseID: ecoverse.id,
+    });
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('group', () => UserGroup, {
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('group', () => IUserGroup, {
     nullable: false,
     description:
       'The user group with the specified id anywhere in the ecoverse',
   })
   @Profiling.api
-  async group(@Args('ID') id: string): Promise<IUserGroup> {
-    const group = await this.groupService.getUserGroupOrFail(id, {
-      relations: ['members', 'focalPoint'],
+  async group(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID', { type: () => UUID }) groupID: string
+  ): Promise<IUserGroup> {
+    return await this.groupService.getUserGroupOrFail(groupID, {
+      where: { ecoverseID: ecoverse.id },
     });
-    return group;
   }
 
-  @Roles(AuthorizationRoles.Members, AuthorizationRoles.CommunityAdmins)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('application', () => Application, {
+  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('application', () => IApplication, {
     nullable: false,
     description: 'All applications to join',
   })
-  async application(@Args('ID') id: number): Promise<IApplication> {
-    return await this.applicationService.getApplicationOrFail(id);
+  async application(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID', { type: () => UUID }) applicationID: string
+  ): Promise<IApplication> {
+    return await this.applicationService.getApplicationOrFail(applicationID, {
+      where: { ecoverseID: ecoverse.id },
+    });
+  }
+
+  @ResolveField('activity', () => [INVP], {
+    nullable: true,
+    description: 'The activity within this Ecoverse.',
+  })
+  @Profiling.api
+  async activity(@Parent() ecoverse: Ecoverse) {
+    return await this.ecoverseService.getActivity(ecoverse);
   }
 }

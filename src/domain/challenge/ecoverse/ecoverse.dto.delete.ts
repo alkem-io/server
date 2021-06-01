@@ -1,7 +1,8 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { UUID_NAMEID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class DeleteEcoverseInput {
-  @Field({ nullable: false })
-  ID!: number;
+  @Field(() => UUID_NAMEID, { nullable: false })
+  ID!: string;
 }

@@ -3,13 +3,15 @@ import {
   ApplicationEventInput,
 } from '@domain/community/application';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
+import { ICredential } from '@domain/agent';
+import { UserInfo } from '@core/authentication';
 
 @Injectable()
 export class CommunityLifecycleOptionsProvider {
@@ -21,7 +23,8 @@ export class CommunityLifecycleOptionsProvider {
   ) {}
 
   async eventOnApplication(
-    applicationEventData: ApplicationEventInput
+    applicationEventData: ApplicationEventInput,
+    userInfo: UserInfo
   ): Promise<IApplication> {
     const applicationID = applicationEventData.ID;
     const application = await this.applicationService.getApplicationOrFail(
@@ -34,6 +37,8 @@ export class CommunityLifecycleOptionsProvider {
         LogContext.COMMUNITY
       );
 
+    const credentials = userInfo.credentials;
+
     // Send the event, translated if needed
     this.logger.verbose?.(
       `Event ${applicationEventData.eventName} triggered on application: ${application.id} using lifecycle ${application.lifecycle.id}`,
@@ -44,7 +49,8 @@ export class CommunityLifecycleOptionsProvider {
         ID: application.lifecycle.id,
         eventName: applicationEventData.eventName,
       },
-      this.applicationLifecycleMachineOptions
+      this.applicationLifecycleMachineOptions,
+      credentials
     );
 
     return await this.applicationService.getApplicationOrFail(applicationID);
@@ -61,13 +67,33 @@ export class CommunityLifecycleOptionsProvider {
             relations: ['community'],
           }
         );
-        const userID = application.user?.id as number;
-        const communityID = application.community?.id as number;
+        const userID = application.user?.id;
+        const communityID = application.community?.id;
+        if (!userID || !communityID)
+          throw new EntityNotInitializedException(
+            `Lifecycle not initialized on Application: ${application.id}`,
+            LogContext.COMMUNITY
+          );
 
         await this.communityService.assignMember({
           userID: userID,
           communityID: communityID,
         });
+      },
+    },
+    guards: {
+      communityUpdateAuthorized: (_, event) => {
+        const invokingUserCredentials: ICredential[] = event.credentials;
+        for (const credential of invokingUserCredentials) {
+          if (
+            credential.type === AuthorizationCredential.GlobalAdmin ||
+            credential.type === AuthorizationCredential.GlobalAdminCommunity
+          ) {
+            return true;
+          }
+        }
+
+        return false;
       },
     },
   };

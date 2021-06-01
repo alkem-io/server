@@ -1,122 +1,60 @@
 import { TestUser } from '@test/utils/token.helper';
-import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { graphqlRequestAuth, mutation } from '@test/utils/graphql.request';
+import { challengeDataTest, lifecycleData } from '@test/utils/common-params';
+import { createChallengMut } from '@test/utils/mutations/create-mutation';
+import { getEcoverseId } from '../ecoverse/ecoverse.request.params';
 
 const uniqueId = (Date.now() + Math.random()).toString();
+
+let ecoverseId = async (): Promise<any> => {
+  const responseQuery = await getEcoverseId();
+  let response = responseQuery.body.data.ecoverse.id;
+  return response;
+};
+
+export const challengeVariablesData = async (
+  challengeName: string,
+  uniqueTextId: string
+) => {
+  const variables = {
+    challengeData: {
+      parentID: await ecoverseId(),
+      displayName: challengeName,
+      nameID: uniqueTextId,
+      tags: 'testTags',
+      context: {
+        tagline: 'test tagline' + uniqueId,
+        background: 'test background' + uniqueId,
+        vision: 'test vision' + uniqueId,
+        impact: 'test impact' + uniqueId,
+        who: 'test who' + uniqueId,
+        references: [
+          {
+            name: 'test video' + uniqueId,
+            uri: 'https://youtu.be/-wGlzcjs',
+            description: 'dest description' + uniqueId,
+          },
+        ],
+      },
+    },
+  };
+  const responseData = JSON.stringify(variables);
+  return responseData;
+};
 
 export const createChallangeMutation = async (
   challengeName: string,
   uniqueTextId: string
 ) => {
-  const requestParams = {
-    operationName: null,
-    query: `mutation CreateChallenge($challengeData: CreateChallengeInput!) {
-              createChallenge(challengeData: $challengeData) {
-                name
-                id
-                textID
-                lifecycle{state}
-                community {
-                  id
-                  groups {
-                    id
-                    name
-                  }
-                }
-                context {
-                  id
-                  tagline
-                  background
-                  vision
-                  impact
-                  who
-                  references {
-                    id
-                    name
-                    uri
-
-                  }
-                }
-              }
-            }`,
-    variables: {
-      challengeData: {
-        parentID: 1,
-        name: challengeName,
-        textID: uniqueTextId,
-        tags: 'testTags',
-        context: {
-          tagline: 'test tagline' + uniqueId,
-          background: 'test background' + uniqueId,
-          vision: 'test vision' + uniqueId,
-          impact: 'test impact' + uniqueId,
-          who: 'test who' + uniqueId,
-          references: [
-            {
-              name: 'test video' + uniqueId,
-              uri: 'https://youtu.be/-wGlzcjs',
-              description: 'dest description' + uniqueId,
-            },
-          ],
-        },
-      },
-    },
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
-export const createBasicChallangeMutation = async (
-  challengeName: string,
-  uniqueTextId: string
-) => {
-  const requestParams = {
-    operationName: null,
-    query: `mutation CreateChallenge($challengeData: CreateChallengeInput!) {
-              createChallenge(challengeData: $challengeData) {
-                name
-                id
-                textID
-                lifecycle{state}
-
-                community {
-                  id
-                  groups {
-                    id
-                    name
-                  }
-                }
-                context {
-                  id
-                  tagline
-                  background
-                  vision
-                  impact
-                  who
-                  references {
-                    id
-                    name
-                    uri
-
-                  }
-                }
-              }
-            }`,
-    variables: {
-      challengeData: {
-        parentID: 1,
-        name: challengeName,
-        textID: uniqueTextId,
-      },
-    },
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+  return await mutation(
+    createChallengMut,
+    await challengeVariablesData(challengeName, uniqueTextId)
+  );
 };
 
 export const updateChallangeMutation = async (
   challengeId: string,
   challengeName: string,
-
   taglineText?: string,
   background?: string,
   vision?: string,
@@ -128,41 +66,13 @@ export const updateChallangeMutation = async (
     operationName: null,
     query: `mutation UpdateChallenge($challengeData: UpdateChallengeInput!) {
       updateChallenge(challengeData: $challengeData)  {
-        name
-        id
-        textID
-        lifecycle{state}
-
-        community {
-          id
-          groups {
-            id
-            name
-          }
-        }
-        context {
-          id
-          tagline
-          background
-          vision
-          impact
-          who
-          references {
-            id
-            name
-            uri
-
-            }
-        }
-        tagset{
-          tags
-        }
+        ${challengeDataTest}
       }
     }`,
     variables: {
       challengeData: {
         ID: challengeId,
-        name: challengeName,
+        displayName: challengeName,
         context: {
           tagline: taglineText,
           background: background,
@@ -187,7 +97,7 @@ export const removeChallangeMutation = async (challengeId: string) => {
       }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(challengeId),
+        ID: challengeId,
       },
     },
   };
@@ -236,46 +146,12 @@ export const removeChallengeLeadFromOrganisationMutation = async (
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getChallenges = async () => {
-  const requestParams = {
-    operationName: null,
-    variables: {},
-    query: 'query{challenges {name id}}',
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
 export const getChallengeData = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
     query: `query{ecoverse {challenge (ID: "${challengeId}") {
-      name
-      id
-      textID
-      lifecycle{state}
-
-      community {
-        id
-        groups {
-          id
-          name
-        }
-      }
-      context {
-        id
-        tagline
-        background
-        vision
-        impact
-        who
-        references {
-          id
-          name
-          uri
-        }
-        }
+      ${challengeDataTest}
       }
     }
   }`,
@@ -289,85 +165,10 @@ export const getChallengesData = async () => {
     operationName: null,
     variables: {},
     query: `query{ecoverse{ challenges{
-      name
-      id
-      textID
-      lifecycle{state}
-
-      community {
-        id
-        groups {
-          id
-          name
+        ${challengeDataTest}
         }
       }
-      context {
-        id
-        tagline
-        background
-        vision
-        impact
-        who
-        references {
-          id
-          name
-          uri
-        }
-        }
-      }
-    }
     }`,
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
-export const getChallenge = async (challengeId: string) => {
-  const requestParams = {
-    operationName: null,
-    variables: {},
-    query: `query{ecoverse{ challenge (ID: "${challengeId}") {
-      name
-      id
-      lifecycle{state}
-
-      context
-      {tagline}
-        tagset{
-      tags
-    }}}}`,
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
-export const getChallengeUsers = async (challengeId: string) => {
-  const requestParams = {
-    operationName: null,
-    variables: {},
-    query: `query {
-      ecoverse{
-      challenge(ID: "${challengeId}") {
-        id
-    community {
-      id
-      groups {
-        members{
-          id
-          name
-        }
-        id
-        name
-        focalPoint {
-          name
-        }
-      }
-      members {
-        name
-      }
-    }
-  }
-}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
@@ -381,22 +182,7 @@ export const getChallengeOpportunity = async (challengeId: string) => {
       challenge(ID: "${challengeId}") {
         id
         name
-        opportunities{id name textID lifecycle{state}}}}}`,
-  };
-
-  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
-};
-
-export const getChallengeGroups = async (challengeId: string) => {
-  const requestParams = {
-    operationName: null,
-    variables: {},
-    query: `query {ecoverse{
-      challenge(ID: "${challengeId}") {
-        id
-        name
-        community{ id
-        groups{id name}}}}}`,
+        opportunities{id name textID ${lifecycleData}}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

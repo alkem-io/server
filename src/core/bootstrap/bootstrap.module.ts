@@ -6,6 +6,7 @@ import { ProfileModule } from '@domain/community/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { BootstrapService } from './bootstrap.service';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { BootstrapService } from './bootstrap.service';
     ProfileModule,
     TagsetModule,
     UserModule,
+    AuthorizationModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],
   providers: [BootstrapService],

@@ -1,11 +1,17 @@
+import { IAuthorizable } from '@domain/common/authorizable-entity';
+import { ISearchable } from '@domain/common/interfaces';
 import { IProfile } from '@domain/community/profile/profile.interface';
-import { IUser } from '@domain/community/user/user.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
+@ObjectType('UserGroup', {
+  implements: () => [ISearchable],
+})
+export abstract class IUserGroup extends IAuthorizable {
+  @Field(() => String)
+  name!: string;
 
-export interface IUserGroup {
-  id: number;
-  name: string;
-  members?: IUser[];
-  focalPoint?: IUser | null; // because of https://github.com/typeorm/typeorm/issues/5454
+  @Field(() => IProfile, {
+    nullable: true,
+    description: 'The profile for the user group',
+  })
   profile?: IProfile;
-  includeInSearch: boolean;
 }

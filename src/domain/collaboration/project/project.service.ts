@@ -11,7 +11,6 @@ import { LogContext } from '@common/enums';
 import { CreateAspectInput } from '@domain/context/aspect';
 import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import validator from 'validator';
 import {
   UpdateProjectInput,
   CreateProjectInput,
@@ -22,24 +21,34 @@ import {
 import { DeleteProjectInput } from './project.dto.delete';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { UUID_LENGTH } from '@common/constants';
+import { NamingService } from '@src/services/naming/naming.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ProjectService {
   constructor(
     private aspectService: AspectService,
+    private namingService: NamingService,
     private lifecycleService: LifecycleService,
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createProject(projectData: CreateProjectInput): Promise<IProject> {
+  async createProject(
+    projectData: CreateProjectInput,
+    ecoverseID: string
+  ): Promise<IProject> {
+    await this.isNameAvailableOrFail(projectData.nameID, ecoverseID);
     const project: IProject = Project.create(projectData);
+    project.authorization = new AuthorizationDefinition();
+    project.ecoverseID = ecoverseID;
 
     await this.projectRepository.save(project);
 
     project.lifecycle = await this.lifecycleService.createLifecycle(
-      project.id.toString(),
+      project.id,
       projectLifecycleConfigDefault
     );
 
@@ -48,7 +57,7 @@ export class ProjectService {
 
   async deleteProject(deleteData: DeleteProjectInput): Promise<IProject> {
     const projectID = deleteData.ID;
-    const project = await this.getProjectByIdOrFail(projectID, {
+    const project = await this.getProjectOrFail(projectID, {
       relations: ['lifecycle'],
     });
     if (!project)
@@ -65,8 +74,50 @@ export class ProjectService {
     return result;
   }
 
-  async getProjectByIdOrFail(
-    projectID: number,
+  async getProjectInNameableScopeOrFail(
+    projectID: string,
+    nameableScopeID: string,
+    options?: FindOneOptions<Project>
+  ): Promise<IProject> {
+    let project: IProject | undefined;
+    if (projectID.length == UUID_LENGTH) {
+      project = await this.projectRepository.findOne(
+        { id: projectID, ecoverseID: nameableScopeID },
+        options
+      );
+    } else {
+      // look up based on nameID
+      project = await this.projectRepository.findOne(
+        { nameID: projectID, ecoverseID: nameableScopeID },
+        options
+      );
+    }
+
+    if (!project) {
+      throw new EntityNotFoundException(
+        `Unable to find Project with ID: ${projectID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return project;
+  }
+
+  async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
+    if (
+      !(await this.namingService.isNameIdAvailableInEcoverse(
+        nameID,
+        nameableScopeID
+      ))
+    )
+      throw new ValidationException(
+        `Unable to create Project: the provided nameID is already taken: ${nameID}`,
+        LogContext.COLLABORATION
+      );
+  }
+
+  async getProjectOrFail(
+    projectID: string,
     options?: FindOneOptions<Project>
   ): Promise<IProject> {
     const project = await this.projectRepository.findOne(
@@ -81,33 +132,18 @@ export class ProjectService {
     return project;
   }
 
-  async getProjectOrFail(
-    projectID: string,
-    options?: FindOneOptions<Project>
-  ): Promise<IProject> {
-    if (validator.isNumeric(projectID)) {
-      const idInt: number = parseInt(projectID);
-      return await this.getProjectByIdOrFail(idInt, options);
-    }
-    throw new EntityNotFoundException(
-      `Unable to find Project with ID: ${projectID}`,
-      LogContext.CHALLENGES
-    );
-  }
-
-  async getProjects(): Promise<Project[]> {
-    const projects = await this.projectRepository.find();
+  async getProjects(ecoverseID: string): Promise<Project[]> {
+    const projects = await this.projectRepository.find({
+      ecoverseID: ecoverseID,
+    });
     return projects || [];
   }
 
   async updateProject(projectData: UpdateProjectInput): Promise<IProject> {
     const project = await this.getProjectOrFail(projectData.ID);
 
-    // Note: do not update the textID
-
-    // Copy over the received data
-    if (projectData.name) {
-      project.name = projectData.name;
+    if (projectData.displayName) {
+      project.displayName = projectData.displayName;
     }
     if (projectData.description) {
       project.description = projectData.description;
@@ -118,19 +154,16 @@ export class ProjectService {
     return project;
   }
 
-  // Lazy load the lifecycle
-  async getLifecycle(projectId: number): Promise<ILifecycle> {
-    const project = await this.getProjectByIdOrFail(projectId, {
+  async getLifecycle(projectId: string): Promise<ILifecycle> {
+    const project = await this.getProjectOrFail(projectId, {
       relations: ['lifecycle'],
     });
 
-    // if no lifecycle then create + save...
     if (!project.lifecycle) {
-      project.lifecycle = await this.lifecycleService.createLifecycle(
-        projectId.toString(),
-        projectLifecycleConfigDefault
+      throw new EntityNotFoundException(
+        `Unable to find Lifecycle on Project with ID: ${projectId}`,
+        LogContext.COLLABORATION
       );
-      await this.projectRepository.save(project);
     }
 
     return project.lifecycle;
@@ -138,7 +171,7 @@ export class ProjectService {
 
   async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
     const projectId = aspectData.parentID;
-    const project = await this.getProjectByIdOrFail(projectId);
+    const project = await this.getProjectOrFail(projectId);
 
     // Check that do not already have an aspect with the same title
     const title = aspectData.title;
@@ -160,5 +193,16 @@ export class ProjectService {
     project.aspects.push(aspect);
     await this.projectRepository.save(project);
     return aspect;
+  }
+
+  async getProjectsCount(ecoverseID: string): Promise<number> {
+    const count = await this.projectRepository.count({
+      where: { ecoverseID: ecoverseID },
+    });
+    return count;
+  }
+
+  async saveProject(project: IProject): Promise<IProject> {
+    return await this.projectRepository.save(project);
   }
 }

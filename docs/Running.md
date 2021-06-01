@@ -14,13 +14,20 @@ To simplify setting up the Server development environment, a pre-configured dock
 1. Trigger the docker composition, which will then build the server image, pull the mySQL image and start the containers
 
    ```bash
-   docker-compose --env-file .env.docker up -d --build
+   docker-compose \
+   -f quickstart-server.yml \
+   -f quickstart-services.yml \
+   --env-file .env.docker \
+   up --build --force-recreate
    ```
 
-   if .env file has been added use:
+   if you'd like to debug cherrytwist server and only need the dependent services, run:
 
    ```bash
-   docker-compose up -d --build
+    docker-compose \
+   -f quickstart-services.yml \
+   --env-file .env.docker \
+   up --build --force-recreate
    ```
 
 2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4001/graphql).

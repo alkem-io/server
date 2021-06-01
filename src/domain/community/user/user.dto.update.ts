@@ -2,21 +2,18 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateProfileInput } from '@domain/community/profile';
+import { UpdateNameableInput } from '@domain/common/nameable-entity';
+import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 
 @InputType()
-export class UpdateUserInput {
-  @Field({ nullable: false })
+export class UpdateUserInput extends UpdateNameableInput {
+  @Field(() => UUID_NAMEID_EMAIL, { nullable: false })
   ID!: string;
 
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   accountUpn?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  name?: string;
 
   @Field({ nullable: true })
   @IsOptional()

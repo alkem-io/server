@@ -1,6 +1,6 @@
+import { ConfigurationTypes } from '@common/enums';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IMatrixAuthProviderConfig } from '@src/services/configuration/config/matrix';
 import { IMatrixUser } from '@src/services/matrix/user/user.matrix.interface';
 import * as crypto from 'crypto-js';
 import { IMatrixCryptographyService } from './cryptography.matrix.interface';
@@ -10,13 +10,15 @@ export class MatrixCryptographyService implements IMatrixCryptographyService {
   constructor(private configService: ConfigService) {}
 
   generateHmac(user: IMatrixUser, nonce: string, isAdmin?: boolean): string {
-    const config = this.configService.get<IMatrixAuthProviderConfig>('matrix');
+    const sharedSecret = this.configService.get(
+      ConfigurationTypes.Communications
+    )?.matrix?.shared?.secret;
 
-    if (!config || !config.sharedSecret) {
+    if (!sharedSecret) {
       throw new Error('Matrix configuration is not provided');
     }
 
-    const mac = crypto.enc.Utf8.parse(config.sharedSecret);
+    const mac = crypto.enc.Utf8.parse(sharedSecret);
     const hmac = crypto.algo.HMAC.create(crypto.algo.SHA1, mac);
 
     const toUft8 = (value: string) => crypto.enc.Utf8.parse(value);

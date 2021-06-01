@@ -1,0 +1,22 @@
+import { ICredential } from '@domain/agent/credential';
+import { IBaseCherrytwist } from '@domain/common/base-entity';
+import { DID } from '@domain/common/scalars';
+import { Field, ObjectType } from '@nestjs/graphql';
+
+@ObjectType('Agent')
+export abstract class IAgent extends IBaseCherrytwist {
+  @Field(() => String, {
+    nullable: true,
+    description: 'The Decentralized Identifier (DID) for this Agent.',
+  })
+  did?: DID;
+
+  @Field(() => [ICredential], {
+    nullable: true,
+    description: 'The Credentials held by this Agent.',
+  })
+  credentials?: ICredential[];
+
+  // primarily used to give meaningful error messages if something goes wrong with the agent
+  parentDisplayID?: string;
+}

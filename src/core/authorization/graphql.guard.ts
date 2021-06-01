@@ -8,97 +8,102 @@ import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import { ConfigService } from '@nestjs/config';
-import { IServiceConfig } from '@src/common/interfaces/service.config.interface';
 import { Reflector } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { AuthenticationException } from '@common/exceptions/authentication.exception';
-import { TokenException } from '@common/exceptions/token.exception';
-import { ForbiddenException } from '@common/exceptions/forbidden.exception';
-import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
-import { UserInfo } from '@src/core/authentication/user-info';
-import { AuthorizationRoles } from './authorization.roles';
+import {
+  AuthorizationRoleGlobal,
+  ConfigurationTypes,
+  LogContext,
+  CherrytwistErrorStatus,
+  AuthorizationPrivilege,
+} from '@common/enums';
+import {
+  AuthenticationException,
+  TokenException,
+  ForbiddenException,
+} from '@common/exceptions';
+import {
+  IAuthorizationRule,
+  AuthorizationRuleGlobalRole,
+} from '@src/core/authorization/rules';
+import { AuthorizationRuleSelfRegistration } from '@core/authorization';
+import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
+import { AuthorizationRuleCredentialPrivilege } from './rules/authorization.rule.credential.privilege';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
 @Injectable()
-export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
+export class GraphqlGuard extends AuthGuard([
+  'azure-ad',
+  'demo-auth-jwt',
+  'oathkeeper-jwt',
+]) {
   JWT_EXPIRED = 'jwt is expired';
 
-  private _roles!: string[];
-  public get roles(): string[] {
-    return this._roles || [];
-  }
-  public set roles(value: string[]) {
-    this._roles = value;
-  }
-
-  private _selfManagement!: boolean;
-  public get selfManagement(): boolean {
-    return this._selfManagement || false;
-  }
-  public set selfManagement(v: boolean) {
-    this._selfManagement = v;
-  }
-
-  private _mutationDTO!: any;
-  public get mutationDTO(): any {
-    return this._mutationDTO;
-  }
-  public set mutationDTO(v: any) {
-    this._mutationDTO = v;
-  }
+  private authorizationRules!: IAuthorizationRule[];
 
   constructor(
+    private authorizationEngine: AuthorizationEngineService,
     private configService: ConfigService,
     private reflector: Reflector,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
   }
+
   canActivate(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
+    const graphqlInfo = ctx.getInfo();
     const { req } = ctx.getContext();
+    this.authorizationRules = [];
 
-    this.selfManagement = this.reflector.get<boolean>(
-      'self-management',
+    const globalRoles = this.reflector.get<string[]>(
+      'authorizationGlobalRoles',
       context.getHandler()
     );
-    if (this.selfManagement) {
-      // Store the incoming DTO
-      const args = ctx.getArgs();
-      // Mutations: createUser / updateUser
-      if (args.userData) this.mutationDTO = args.userData;
-      // Mutation: uploadAvatar
-      if (args.uploadData) this.mutationDTO = args.uploadData;
-      // Mutation: updateProfile
-      if (args.profileData) this.mutationDTO = args.profileData;
-      // Failsafe: if decorator SelfManagement was used then a DTO must have been set
-      if (!this.mutationDTO)
-        throw new ForbiddenException(
-          'User self-management not setup properly for requested access.',
-          LogContext.AUTH
-        );
+    const selfRegistration = this.reflector.get<boolean>(
+      'self-registration',
+      context.getHandler()
+    );
+    const privilege = this.reflector.get<AuthorizationPrivilege>(
+      'privilege',
+      context.getHandler()
+    );
+
+    if (globalRoles) {
+      for (const role of globalRoles) {
+        const allowedRoles: string[] = Object.values(AuthorizationRoleGlobal);
+        if (allowedRoles.includes(role)) {
+          const rule = new AuthorizationRuleGlobalRole(role, 2);
+          this.authorizationRules.push(rule);
+        } else {
+          throw new ForbiddenException(
+            `Invalid global role specified: ${role}`,
+            LogContext.AUTH
+          );
+        }
+      }
     }
 
-    // if (userData) email = userData.email;
-    const auth_roles = this.reflector.get<string[]>(
-      'roles',
-      context.getHandler()
-    );
-    this.roles = auth_roles;
+    if (selfRegistration) {
+      const args = context.getArgByIndex(1);
+      const fieldName = graphqlInfo.fieldName;
+      const rule = new AuthorizationRuleSelfRegistration(fieldName, args, 1);
+      this.authorizationRules.push(rule);
+    }
+
+    if (privilege) {
+      const fieldName = graphqlInfo.fieldName;
+      const fieldParent = ctx.getRoot();
+      const rule = new AuthorizationRuleCredentialPrivilege(
+        this.authorizationEngine,
+        privilege,
+        fieldParent,
+        fieldName
+      );
+      this.authorizationRules.push(rule);
+    }
 
     return super.canActivate(new ExecutionContextHost([req]));
-  }
-
-  matchRoles(userInfo: UserInfo): boolean {
-    if (this.roles.length == 0) return true;
-    const groups = userInfo.user?.userGroups;
-
-    if (!groups) return false;
-
-    return groups.some(
-      ({ name }) =>
-        name === AuthorizationRoles.GlobalAdmins || this.roles.includes(name)
-    );
   }
 
   handleRequest(
@@ -109,10 +114,9 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
     _status?: any
   ) {
     // Always handle the request if authentication is disabled
-    if (
-      this.configService.get<IServiceConfig>('service')
-        ?.authenticationEnabled === 'false'
-    ) {
+    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
+      ?.authentication?.enabled;
+    if (!authEnabled) {
       return userInfo;
     }
 
@@ -124,40 +128,20 @@ export class GqlAuthGuard extends AuthGuard(['azure-ad', 'demo-auth-jwt']) {
 
     if (err) throw new AuthenticationException(err);
 
-    if (!userInfo) {
-      const msg = this.buildErrorMessage(err, info);
-      throw new AuthenticationException(msg);
-    }
+    // if (!userInfo) {
+    //   const msg = this.buildErrorMessage(err, info);
+    //   throw new AuthenticationException(msg);
+    // }
 
-    if (this.selfManagement) {
-      // createUser mutation
-      if (
-        this.mutationDTO.email &&
-        this.mutationDTO.email.toLowerCase() === userInfo.email.toLowerCase()
-      ) {
-        return userInfo;
-      }
-      // updateUser mutation
-      if (this.mutationDTO.ID && this.mutationDTO.ID == userInfo.user.ID) {
-        return userInfo;
-      }
-      // uploadAvatar mutation
-      if (
-        this.mutationDTO.profileID &&
-        this.mutationDTO.profileID == userInfo.user.profile.ID
-      ) {
-        return userInfo;
-      }
-      // updateProfile mutation
-      if (
-        this.mutationDTO.ID &&
-        this.mutationDTO.ID == userInfo.user.profile.ID
-      ) {
-        return userInfo;
-      }
-    }
+    // If no rules then allow the request to proceed
+    if (this.authorizationRules.length == 0) return userInfo;
 
-    if (this.matchRoles(userInfo)) return userInfo;
+    const authorizationRuleEngine = new AuthorizationRuleEngine(
+      this.authorizationRules
+    );
+
+    if (authorizationRuleEngine.run(userInfo)) return userInfo;
+
     throw new ForbiddenException(
       `User '${userInfo.email}' is not authorised to access requested resources.`,
       LogContext.AUTH

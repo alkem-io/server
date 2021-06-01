@@ -1,18 +1,22 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { NVP } from '@domain/common/nvp/nvp.entity';
-import { CreateNVPInput } from '@domain/common/nvp';
+import { CreateNVPInput, INVP } from '@domain/common/nvp';
+import { Entity } from 'typeorm';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @InputType()
 export class CreateApplicationInput {
-  @Field({ nullable: false })
-  userId!: number;
+  @Field(() => UUID, { nullable: false })
+  userID!: string;
 
-  @Field({ nullable: false })
-  parentID!: number;
+  @Field(() => UUID, { nullable: false })
+  parentID!: string;
 
   @Field(() => [CreateNVPInput], { nullable: false })
   questions!: CreateNVPInput[];
 }
 
-@ObjectType()
-export class Question extends NVP {}
+@ObjectType('Question')
+export class IQuestion extends INVP {}
+
+@Entity()
+export class Question extends INVP implements IQuestion {}

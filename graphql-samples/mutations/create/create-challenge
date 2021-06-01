@@ -1,6 +1,6 @@
 mutation CreateChallenge($challengeData: CreateChallengeInput!) {
   createChallenge(challengeData: $challengeData) {
-    name,
+    displayName,
     id
   }
 }
@@ -9,9 +9,9 @@ query variables:
 {
   "challengeData":
   {
-    "parentID": 1,
-    "name": "Balance the grid",
-    "textID": "balance-grid",
+    "parentID": "1",
+    "displayName": "Balance the grid",
+    "nameID": "balance-grid",
     "lifecycleTemplate": "EXTENDED",
     "context": {
         "tagline": "How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?",

@@ -3,12 +3,12 @@ import { join } from 'path';
 
 export const typeormCliConfig: ConnectionOptions = {
   type: 'mysql',
-  host: process.env.DATABASE_HOST,
+  host: process.env.DATABASE_HOST ?? 'localhost',
   port: process.env.MYSQL_DB_PORT ? Number(process.env.MYSQL_DB_PORT) : 3306,
   cache: true,
   username: 'root',
-  password: '138820',
-  database: 'cherrytwist',
+  password: process.env.MYSQL_ROOT_PASSWORD ?? 'toor',
+  database: process.env.MYSQL_DATABASE ?? 'cherrytwist',
   insecureAuth: true,
   synchronize: false,
   logger: 'advanced-console',

@@ -1,28 +1,22 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { actorGrpupData, contextData } from '@test/utils/common-params';
 
 export const createActorGroupMutation = async (
-  opportunityId: string,
+  ecosystemModelId: string,
   actorGroupName: string,
   actorDescritpion?: string
 ) => {
   const requestParams = {
     operationName: null,
     query: `mutation createActorGroup($actorGroupData: CreateActorGroupInput!) {
-      createActorGroup(actorGroupData: $actorGroupData) {
-          id
-          name
-          description
-            actors {
-                    id
-                    name
-                    description
-                  }
-          }
+      createActorGroup(actorGroupData: $actorGroupData){
+          ${actorGrpupData}
+        }
       }`,
     variables: {
       actorGroupData: {
-        parentID: parseFloat(opportunityId),
+        ecosystemModelID: ecosystemModelId,
         name: `${actorGroupName}`,
         description: `${actorDescritpion}`,
       },
@@ -41,7 +35,7 @@ export const removeActorGroupMutation = async (actorGroupId: any) => {
       }}`,
     variables: {
       deleteData: {
-        ID: parseFloat(actorGroupId),
+        ID: actorGroupId,
       },
     },
   };
@@ -53,23 +47,27 @@ export const getActorGroupsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
     query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
-        actorGroups { id name description actors { name }}}}}`,
+          context{
+            ${contextData}
+            }
+          }
+        }
+      }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
 };
 
-export const getActorData = async (opportunityId: any) => {
+export const getActorData = async (subChallengeId: any) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
-      actorGroups{
-        actors{
-          id name description value impact
+    query: `query {ecoverse {challenge(ID: "${subChallengeId}") {
+        context{
+          ${contextData}
+          }
         }
       }
-    }
-  }}`,
+    }`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

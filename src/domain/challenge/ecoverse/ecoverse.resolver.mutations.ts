@@ -1,62 +1,111 @@
 import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import {
   CreateEcoverseInput,
-  Ecoverse,
+  DeleteEcoverseInput,
   IEcoverse,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
-
+import { AuthorizationGlobalRoles } from '@common/decorators';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationRoleGlobal } from '@common/enums';
+import { UserInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
+import { ChallengeAuthorizationService } from '../challenge/challenge.service.authorization';
 @Resolver()
 export class EcoverseResolverMutations {
   constructor(
-    @Inject(EcoverseService) private ecoverseService: EcoverseService
+    private authorizationEngine: AuthorizationEngineService,
+    private ecoverseService: EcoverseService,
+    private ecoverseAuthorizationService: EcoverseAuthorizationService,
+    private challengeAuthorizationService: ChallengeAuthorizationService
   ) {}
 
-  @Roles(AuthorizationRoles.GlobalAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Ecoverse, {
+  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IEcoverse, {
     description: 'Creates a new Ecoverse.',
   })
   @Profiling.api
   async createEcoverse(
     @Args('ecoverseData') ecoverseData: CreateEcoverseInput
   ): Promise<IEcoverse> {
-    return await this.ecoverseService.createEcoverse(ecoverseData);
+    const ecoverse = await this.ecoverseService.createEcoverse(ecoverseData);
+    return await this.ecoverseAuthorizationService.applyAuthorizationRules(
+      ecoverse
+    );
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Ecoverse, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IEcoverse, {
     description: 'Updates the Ecoverse.',
   })
   @Profiling.api
   async updateEcoverse(
+    @CurrentUser() userInfo: UserInfo,
     @Args('ecoverseData') ecoverseData: UpdateEcoverseInput
   ): Promise<IEcoverse> {
-    const ctVerse = await this.ecoverseService.update(ecoverseData);
-    return ctVerse;
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      ecoverseData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      ecoverse.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `updateEcoverse: ${ecoverse.nameID}`
+    );
+
+    return await this.ecoverseService.update(ecoverseData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Challenge, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IEcoverse, {
+    description: 'Deletes the specified Ecoverse.',
+  })
+  async deleteEcoverse(
+    @CurrentUser() userInfo: UserInfo,
+    @Args('deleteData') deleteData: DeleteEcoverseInput
+  ): Promise<IEcoverse> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      deleteData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      ecoverse.authorization,
+      AuthorizationPrivilege.DELETE,
+      `deleteEcoverse: ${ecoverse.nameID}`
+    );
+    return await this.ecoverseService.deleteEcoverse(deleteData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IChallenge, {
     description: 'Creates a new Challenge within the specified Ecoverse.',
   })
   @Profiling.api
   async createChallenge(
+    @CurrentUser() userInfo: UserInfo,
     @Args('challengeData') challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      challengeData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      ecoverse.authorization,
+      AuthorizationPrivilege.CREATE,
+      `challengeCreate: ${ecoverse.nameID}`
+    );
     const challenge = await this.ecoverseService.createChallenge(challengeData);
-
-    return challenge;
+    return await this.challengeAuthorizationService.applyAuthorizationRules(
+      challenge,
+      ecoverse.authorization
+    );
   }
 }

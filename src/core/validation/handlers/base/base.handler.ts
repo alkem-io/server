@@ -3,20 +3,32 @@
 
 import { CreateActorGroupInput } from '@domain/context/actor-group';
 import { CreateAspectInput } from '@domain/context/aspect';
-import { CreateChallengeInput } from '@domain/challenge/challenge';
+import {
+  CreateChallengeInput,
+  UpdateChallengeInput,
+} from '@domain/challenge/challenge';
 import { CreateContextInput } from '@domain/context/context';
 import { UpdateEcoverseInput } from '@domain/challenge/ecoverse';
 import { CreateOrganisationInput } from '@domain/community/organisation';
 import { CreateProfileInput } from '@domain/community/profile';
-import { CreateProjectInput } from '@domain/collaboration/project';
+import {
+  CreateProjectInput,
+  UpdateProjectInput,
+} from '@domain/collaboration/project';
 import { CreateReferenceInput } from '@domain/common/reference';
 import { CreateRelationInput } from '@domain/collaboration/relation';
 import { CreateTagsetInput } from '@domain/common/tagset';
-import { CreateUserInput } from '@domain/community/user';
+import { CreateUserInput, UpdateUserInput } from '@domain/community/user';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';
 import { AbstractHandler } from './abstract.handler';
+import { CreateApplicationInput } from '@domain/community/application';
+import {
+  CreateOpportunityInput,
+  UpdateOpportunityInput,
+} from '@domain/collaboration/opportunity';
+import { UpdateUserGroupInput } from '@domain/community/user-group';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -24,11 +36,12 @@ export class BaseHandler extends AbstractHandler {
     metatype: Function
   ): Promise<ValidationError[]> {
     const types: Function[] = [
+      CreateApplicationInput,
       CreateActorGroupInput,
       CreateAspectInput,
       CreateChallengeInput,
       CreateContextInput,
-      UpdateEcoverseInput,
+      CreateOpportunityInput,
       CreateOrganisationInput,
       CreateProfileInput,
       CreateProjectInput,
@@ -36,6 +49,12 @@ export class BaseHandler extends AbstractHandler {
       CreateRelationInput,
       CreateTagsetInput,
       CreateUserInput,
+      UpdateEcoverseInput,
+      UpdateOpportunityInput,
+      UpdateChallengeInput,
+      UpdateUserGroupInput,
+      UpdateUserInput,
+      UpdateProjectInput,
     ];
 
     if (types.includes(metatype)) {

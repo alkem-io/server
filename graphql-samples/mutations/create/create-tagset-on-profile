@@ -1,4 +1,4 @@
-mutation createTagsetOnProfile($tagsetData: CreateTagsetInput!) {
+mutation createTagsetOnProfile($tagsetData: CreateTagsetOnProfileInput!) {
     createTagsetOnProfile(tagsetData: $tagsetData) {
       name,
       id
@@ -9,7 +9,8 @@ mutation createTagsetOnProfile($tagsetData: CreateTagsetInput!) {
 Variables:
 {
   "tagsetData":{
-    "parentID": 1,
-    "name": "testTagset"
+    "profileID": "uuid",
+    "name": "testTagset3",
+    "tags": ["Tag 1", "Tag 2"]
   }
 }

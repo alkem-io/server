@@ -1,13 +1,13 @@
 import { TestUser } from '../../../utils/token.helper';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
+import { challengeDataTest } from '@test/utils/common-params';
 
 export const getContextQuery = async (
   challengeId?: string
 ) => {
   const requestParams = {
     operationName: null,
-    query: `query{ecoverse{challenge(ID: "${challengeId}") {id name context{id tagline background vision impact who references{id name uri }}}
-    }}`,
+    query: `query{ecoverse{challenge(ID: "${challengeId}") {${challengeDataTest}}}}`,
     variables: null,
   };
 

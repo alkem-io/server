@@ -1,71 +1,102 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { Roles } from '@common/decorators/roles.decorator';
-import { Profiling } from '@src/common/decorators';
-import { CreateAspectInput, IAspect, Aspect } from '@domain/context/aspect';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { ProjectService } from './project.service';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
 import {
   UpdateProjectInput,
-  Project,
   IProject,
   DeleteProjectInput,
   ProjectEventInput,
 } from '@domain/collaboration/project';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
-
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { UserInfo } from '@core/authentication';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(
+    private authorizationEngine: AuthorizationEngineService,
     private projectService: ProjectService,
     private projectLifecycleOptionsProvider: ProjectLifecycleOptionsProvider
   ) {}
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Project, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IProject, {
     description: 'Deletes the specified Project.',
   })
   async deleteProject(
+    @CurrentUser() userInfo: UserInfo,
     @Args('deleteData') deleteData: DeleteProjectInput
   ): Promise<IProject> {
+    const project = await this.projectService.getProjectOrFail(deleteData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      project.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete project: ${project.nameID}`
+    );
     return await this.projectService.deleteProject(deleteData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Project, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IProject, {
     description: 'Updates the specified Project.',
   })
   async updateProject(
+    @CurrentUser() userInfo: UserInfo,
     @Args('projectData') projectData: UpdateProjectInput
   ): Promise<IProject> {
+    const project = await this.projectService.getProjectOrFail(projectData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      project.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update project: ${project.nameID}`
+    );
     return await this.projectService.updateProject(projectData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Aspect, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAspect, {
     description: 'Create a new Aspect on the Project.',
   })
   @Profiling.api
   async createAspectOnProject(
+    @CurrentUser() userInfo: UserInfo,
     @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
-    const aspect = await this.projectService.createAspect(aspectData);
-    return aspect;
+    const project = await this.projectService.getProjectOrFail(
+      aspectData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      project.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create aspect: ${project.nameID}`
+    );
+    return await this.projectService.createAspect(aspectData);
   }
 
-  @Roles(AuthorizationRoles.EcoverseAdmins, AuthorizationRoles.GlobalAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Project, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IProject, {
     description: 'Trigger an event on the Project.',
   })
   async eventOnProject(
+    @CurrentUser() userInfo: UserInfo,
     @Args('projectEventData')
     projectEventData: ProjectEventInput
   ): Promise<IProject> {
+    const project = await this.projectService.getProjectOrFail(
+      projectEventData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      project.authorization,
+      AuthorizationPrivilege.CREATE,
+      `event on project: ${project.nameID}`
+    );
     return await this.projectLifecycleOptionsProvider.eventOnProject(
       projectEventData
     );
