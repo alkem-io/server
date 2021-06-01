@@ -9,13 +9,8 @@ let data: TestDataServiceInitResult;
 
 const userName = 'Qa User';
 let userId: string;
-let groupName = '';
-
 let organisationName = '';
 let organisationId = '';
-
-let challengeName = '';
-let challengeCommunityId = '';
 let uniqueTextId = '';
 const typeFilterAll = ['user', 'organisation'];
 const filterOnlyUser = ['user'];
@@ -52,9 +47,7 @@ beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
-  groupName = `QA groupName ${uniqueTextId}`;
   organisationName = `QA organisationName ${uniqueTextId}`;
-  challengeName = `testChallenge ${uniqueTextId}`;
 
   // Create organisation
   const responseCreateOrganisation = await createOrganisationMutation(
@@ -62,15 +55,6 @@ beforeEach(async () => {
     'org' + uniqueTextId
   );
   organisationId = responseCreateOrganisation.body.data.createOrganisation.id;
-
-  // Create Challenge
-  const responseCreateChallenge = await createChallangeMutation(
-    challengeName,
-    uniqueTextId
-  );
-  const challengeId = responseCreateChallenge.body.data.createChallenge.id;
-  challengeCommunityId =
-    responseCreateChallenge.body.data.createChallenge.community.id;
 });
 
 describe('Query Challenge data', () => {
