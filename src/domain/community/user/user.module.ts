@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/community/profile/profile.module';
@@ -15,7 +15,7 @@ import { UserAuthorizationService } from './user.service.authorization';
 @Module({
   imports: [
     ProfileModule,
-    CommunicationModule,
+    forwardRef(() => CommunicationModule),
     AgentModule,
     NamingModule,
     AuthorizationEngineModule,
