@@ -163,9 +163,11 @@ export class OpportunityService {
 
     await this.baseChallengeService.deleteEntities(baseOpportunity);
 
-    return await this.opportunityRepository.remove(
+    const result = await this.opportunityRepository.remove(
       baseOpportunity as Opportunity
     );
+    result.id = opportunityID;
+    return result;
   }
 
   async updateOpportunity(
