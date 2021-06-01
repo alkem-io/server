@@ -1,13 +1,14 @@
 log:
   level: debug
   format: json
+  leak_sensitive_values: true
 
 serve:
   proxy:
     cors:
       enabled: true
       allowed_origins:
-        - "*"
+        - '*'
       allowed_methods:
         - POST
         - GET
@@ -30,10 +31,9 @@ errors:
     redirect:
       enabled: true
       config:
-        to: http://127.0.0.1:4455/auth/login
+        to: http://localhost:4455/auth/login
         when:
-          -
-            error:
+          - error:
               - unauthorized
               - forbidden
             request:
@@ -61,8 +61,8 @@ authenticators:
     config:
       check_session_url: http://kratos:4433/sessions/whoami
       preserve_path: true
-      extra_from: "@this"
-      subject_from: "identity.id"
+      extra_from: '@this'
+      subject_from: 'identity.id'
       only:
         - ory_kratos_session
 
@@ -80,7 +80,7 @@ mutators:
   id_token:
     enabled: true
     config:
-      issuer_url: http://127.0.0.1:4455/
+      issuer_url: http://localhost:4455/
       jwks_url: file:///etc/config/oathkeeper/id_token.jwks.json
       claims: |
         {

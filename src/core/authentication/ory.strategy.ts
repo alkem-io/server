@@ -19,10 +19,10 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
         rateLimit: true,
         jwksRequestsPerMinute: 5,
         jwksUri: configService.get(ConfigurationTypes.Identity)?.authentication
-          ?.providers?.ory_kratos?.jwks_uri,
+          ?.providers?.ory?.jwks_uri,
       }),
       issuer: configService.get(ConfigurationTypes.Identity)?.authentication
-        ?.providers?.ory_kratos?.issuer,
+        ?.providers?.ory?.issuer,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: true,
     });
