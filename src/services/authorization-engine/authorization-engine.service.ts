@@ -23,6 +23,17 @@ export class AuthorizationEngineService {
     if (this.isUserAccessGranted(userInfo, auth, privilegeRequired))
       return true;
 
+    this.logger.verbose?.(
+      `Unable to grant '${privilegeRequired}' privilege; userInfo: ${
+        userInfo.email
+      } has credentials '${JSON.stringify(
+        userInfo.credentials
+      )}'; authorization definition: anonymousAccess=${
+        authorization?.anonymousReadAccess
+      } & rules: ${JSON.stringify(authorization?.credentialRules)}`,
+      LogContext.AUTH
+    );
+
     // If get to here then no match was found
     throw new ForbiddenException(
       `Authorization: unable to grant ${privilegeRequired} access: ${msg}`,

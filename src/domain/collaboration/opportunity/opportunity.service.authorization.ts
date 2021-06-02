@@ -27,7 +27,7 @@ export class OpportunityAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
       opportunity,
       this.opportunityRepository
     );
