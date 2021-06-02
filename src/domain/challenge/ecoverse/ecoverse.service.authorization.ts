@@ -28,7 +28,7 @@ export class EcoverseAuthorizationService {
       ecoverse.authorization,
       ecoverse.id
     );
-    this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
       ecoverse,
       this.ecoverseRepository
     );

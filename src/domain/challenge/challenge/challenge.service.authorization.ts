@@ -36,7 +36,7 @@ export class ChallengeAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
       challenge,
       this.challengeRepository
     );
