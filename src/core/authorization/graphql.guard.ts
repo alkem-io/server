@@ -31,11 +31,7 @@ import {
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 
 @Injectable()
-export class GraphqlGuard extends AuthGuard([
-  'azure-ad',
-  'demo-auth-jwt',
-  'oathkeeper-jwt',
-]) {
+export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
   JWT_EXPIRED = 'jwt is expired';
 
   private authorizationRules!: IAuthorizationRule[];
