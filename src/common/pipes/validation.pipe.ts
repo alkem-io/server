@@ -8,9 +8,9 @@ import { BaseHandler } from '../../core/validation/handlers/base/base.handler';
 export class ValidationPipe implements PipeTransform<any> {
   async transform(value: any, { metatype }: ArgumentMetadata) {
     if (!metatype || !this.toValidate(metatype)) {
-      return value;
+      return await value;
     }
-    const object = plainToClass(metatype, value);
+    const object = await plainToClass(metatype, value);
     // const opportunityHandler = new OpportunityHandler();
     // const actorHandler = new ActorHandler();
     const baseHandler = new BaseHandler();
