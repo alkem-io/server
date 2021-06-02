@@ -14,10 +14,12 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { UserInfo } from '@core/authentication';
+import { AspectService } from '@domain/context/aspect/aspect.service';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(
     private authorizationEngine: AuthorizationEngineService,
+    private aspectService: AspectService,
     private projectService: ProjectService,
     private projectLifecycleOptionsProvider: ProjectLifecycleOptionsProvider
   ) {}
@@ -76,7 +78,13 @@ export class ProjectResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create aspect: ${project.nameID}`
     );
-    return await this.projectService.createAspect(aspectData);
+
+    const aspect = await this.projectService.createAspect(aspectData);
+    aspect.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      aspect.authorization,
+      project.authorization
+    );
+    return await this.aspectService.saveAspect(aspect);
   }
 
   @UseGuards(GraphqlGuard)
