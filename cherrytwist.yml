@@ -152,23 +152,6 @@ identity:
           # Password of the user used in ROPC flow.
           password: ${AUTH_AAD_USER_PASSWORD}
 
-      # Demo Authentication Provider (https://github.com/cherrytwist/demo-authentication-provider).
-      # Basic Authentication Provider used for demo purposes. Issues a JWT token with claims about issuer,
-      # issue time, expiry time and user account email. Not suitable for production environments.
-      demo_auth_provider:
-        # Issuer of the access token used in Cherrytwist Server.
-        # Picked up by the Cherrytwist Client - used as an endpoint.
-        issuer: ${AUTH_DEMO_AUTH_ISSUER}:http://localhost:3002
-
-        # Token endpoint for demo auth provider.
-        # REST endpoint that takes username and password to acquire JWT access token.
-        # Can be tested with curl -X POST http://localhost:3002/auth/login -d '{"username": "admin@test.com", "password": "changeMeNow!"}' -H "Content-Type: application/json".
-        tokenEndpoint: ${AUTH_DEMO_AUTH_TOKEN_ENDPOINT}:http://localhost:3002/auth/login
-
-        # Client secret shared between the demo auth provider and the Cherrytwist Server.
-        # If the secret doesn't match JWT validation will fail.
-        clientSecret: ${AUTH_DEMO_AUTH_CLIENT_SECRET}:!#@$#SDFRSF
-
       # Ory Kratos Next Gen Identity Provider (https://github.com/ory/kratos).
       ory:
         # Issuer of the kratos cookie. The cookie can be used as is or mutated by
