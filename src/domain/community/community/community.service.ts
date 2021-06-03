@@ -243,7 +243,7 @@ export class CommunityService {
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
-      relations: ['applications', 'parentCommunity', 'challenge'],
+      relations: ['applications', 'parentCommunity'],
     })) as Community;
 
     const existingApplication = community.applications?.find(
@@ -270,10 +270,10 @@ export class CommunityService {
         );
     }
 
-    const ecoverseID = community.challenge?.ecoverseID;
+    const ecoverseID = community.ecoverseID;
     if (!ecoverseID)
       throw new EntityNotInitializedException(
-        `Unable to locate containing ecoverse: ${community.id}`,
+        `Unable to locate containing ecoverse: ${community.displayName}`,
         LogContext.COMMUNITY
       );
     const application = await this.applicationService.createApplication(
