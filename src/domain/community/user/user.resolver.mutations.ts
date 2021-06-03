@@ -16,7 +16,7 @@ import { UserService } from './user.service';
 import { AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
 
 @Resolver(() => IUser)
@@ -51,12 +51,12 @@ export class UserResolverMutations {
   })
   @Profiling.api
   async updateUser(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('userData') userData: UpdateUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserOrFail(userData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       user.authorization,
       AuthorizationPrivilege.UPDATE,
       `userUpdate: ${user.nameID}`
@@ -70,12 +70,12 @@ export class UserResolverMutations {
   })
   @Profiling.api
   async deleteUser(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserOrFail(deleteData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       user.authorization,
       AuthorizationPrivilege.DELETE,
       `user delete: ${user.nameID}`

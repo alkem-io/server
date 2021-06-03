@@ -30,13 +30,10 @@ import { AuthorizationRuleSelfRegistration } from '@core/authorization';
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 import { AuthorizationRuleCredentialPrivilege } from './rules/authorization.rule.credential.privilege';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
-export class GraphqlGuard extends AuthGuard([
-  'azure-ad',
-  'demo-auth-jwt',
-  'oathkeeper-jwt',
-]) {
+export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
   JWT_EXPIRED = 'jwt is expired';
 
   private authorizationRules!: IAuthorizationRule[];
@@ -108,7 +105,7 @@ export class GraphqlGuard extends AuthGuard([
 
   handleRequest(
     err: any,
-    userInfo: any,
+    agentInfo: any,
     info: any,
     _context: any,
     _status?: any
@@ -117,7 +114,8 @@ export class GraphqlGuard extends AuthGuard([
     const authEnabled = this.configService.get(ConfigurationTypes.Identity)
       ?.authentication?.enabled;
     if (!authEnabled) {
-      return userInfo;
+      if (!agentInfo) return new AgentInfo();
+      return agentInfo;
     }
 
     if (info && info[0] === this.JWT_EXPIRED)
@@ -128,22 +126,22 @@ export class GraphqlGuard extends AuthGuard([
 
     if (err) throw new AuthenticationException(err);
 
-    // if (!userInfo) {
+    // if (!agentInfo) {
     //   const msg = this.buildErrorMessage(err, info);
     //   throw new AuthenticationException(msg);
     // }
 
     // If no rules then allow the request to proceed
-    if (this.authorizationRules.length == 0) return userInfo;
+    if (this.authorizationRules.length == 0) return agentInfo;
 
     const authorizationRuleEngine = new AuthorizationRuleEngine(
       this.authorizationRules
     );
 
-    if (authorizationRuleEngine.run(userInfo)) return userInfo;
+    if (authorizationRuleEngine.run(agentInfo)) return agentInfo;
 
     throw new ForbiddenException(
-      `User '${userInfo.email}' is not authorised to access requested resources.`,
+      `User '${agentInfo.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
   }

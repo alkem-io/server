@@ -1,4 +1,4 @@
-import { UserInfo } from '@core/authentication/user-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { IAuthorizationRule } from './authorization.rule.interface';
 
 export class AuthorizationRuleEngine {
@@ -8,7 +8,7 @@ export class AuthorizationRuleEngine {
     this.authorizationRules = authorizationRules;
   }
 
-  run(user: UserInfo): boolean {
+  run(user: AgentInfo): boolean {
     const orderedRules = this.authorizationRules.sort((a, b) =>
       a.priority < b.priority ? -1 : a.priority > b.priority ? 1 : 0
     );

@@ -16,6 +16,7 @@ import { IChallenge } from '@domain/challenge/challenge';
 import { IUserGroup } from '@domain/community/user-group';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 import { ICommunity } from '@domain/community/community';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 
 export class MembershipService {
   constructor(
@@ -23,6 +24,7 @@ export class MembershipService {
     private userGroupService: UserGroupService,
     private ecoverseService: EcoverseService,
     private challengeService: ChallengeService,
+    private opportunityService: OpportunityService,
     private organisationService: OrganisationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -65,6 +67,13 @@ export class MembershipService {
           credential.resourceID
         );
         storedChallenges.push(challenge);
+      } else if (
+        credential.type === AuthorizationCredential.OpportunityMember
+      ) {
+        const opportunity = await this.opportunityService.getOpportunityOrFail(
+          credential.resourceID
+        );
+        storedOpportunities.push(opportunity);
       } else if (credential.type === AuthorizationCredential.UserGroupMember) {
         const group = await this.userGroupService.getUserGroupOrFail(
           credential.resourceID

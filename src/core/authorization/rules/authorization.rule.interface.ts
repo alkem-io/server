@@ -1,6 +1,6 @@
-import { UserInfo } from '@core/authentication/user-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 export interface IAuthorizationRule {
-  execute(user: UserInfo): boolean;
+  execute(user: AgentInfo): boolean;
   priority: number;
 }

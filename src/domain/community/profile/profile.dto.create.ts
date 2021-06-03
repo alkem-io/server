@@ -17,10 +17,8 @@ export class CreateProfileInput {
   description?: string;
 
   @Field(() => [CreateTagsetInput], { nullable: true })
-  @IsOptional()
   tagsetsData?: CreateTagsetInput[];
 
   @Field(() => [CreateReferenceInput], { nullable: true })
-  @IsOptional()
   referencesData?: CreateReferenceInput[];
 }

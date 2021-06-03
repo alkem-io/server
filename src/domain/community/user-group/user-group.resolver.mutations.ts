@@ -12,7 +12,7 @@ import {
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 @Resolver()
 export class UserGroupResolverMutations {
   constructor(
@@ -25,12 +25,12 @@ export class UserGroupResolverMutations {
     description: 'Deletes the specified User Group.',
   })
   async deleteUserGroup(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteUserGroupInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(deleteData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       group.authorization,
       AuthorizationPrivilege.DELETE,
       `user group delete: ${group.name}`
@@ -44,12 +44,12 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async updateUserGroup(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('userGroupData') userGroupData: UpdateUserGroupInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(userGroupData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       group.authorization,
       AuthorizationPrivilege.UPDATE,
       `user group update: ${group.name}`
@@ -63,14 +63,14 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async assignUserToGroup(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: AssignUserGroupMemberInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(
       membershipData.groupID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       group.authorization,
       AuthorizationPrivilege.DELETE,
       `user group assign user: ${group.name}`
@@ -84,14 +84,14 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async removeUserFromGroup(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(
       membershipData.groupID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       group.authorization,
       AuthorizationPrivilege.DELETE,
       `user group remove user: ${group.name}`

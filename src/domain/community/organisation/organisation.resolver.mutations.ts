@@ -17,7 +17,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { OrganisationAuthorizationService } from './organisation.service.authorization';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { UserInfo } from '@core/authentication/user-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
@@ -54,14 +54,14 @@ export class OrganisationResolverMutations {
   })
   @Profiling.api
   async createGroupOnOrganisation(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       groupData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       organisation.authorization,
       AuthorizationPrivilege.CREATE,
       `orgCreateGroup: ${organisation.nameID}`
@@ -76,14 +76,14 @@ export class OrganisationResolverMutations {
   })
   @Profiling.api
   async updateOrganisation(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('organisationData') organisationData: UpdateOrganisationInput
   ): Promise<IOrganisation> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       organisationData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       organisation.authorization,
       AuthorizationPrivilege.UPDATE,
       `orgUpdate: ${organisation.nameID}`
@@ -97,14 +97,14 @@ export class OrganisationResolverMutations {
     description: 'Deletes the specified Organisation.',
   })
   async deleteOrganisation(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       organisation.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteOrg: ${organisation.nameID}`

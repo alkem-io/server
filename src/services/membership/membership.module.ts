@@ -7,12 +7,14 @@ import { MembershipService } from './membership.service';
 import { MembershipResolverQueries } from './membership.resolver.queries';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 
 @Module({
   imports: [
     UserModule,
     UserGroupModule,
     ChallengeModule,
+    OpportunityModule,
     CommunityModule,
     OrganisationModule,
     EcoverseModule,

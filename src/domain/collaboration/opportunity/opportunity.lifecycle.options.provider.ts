@@ -8,6 +8,7 @@ import {
   OpportunityEventInput,
   IOpportunity,
 } from '@domain/collaboration/opportunity';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class OpportunityLifecycleOptionsProvider {
@@ -18,10 +19,13 @@ export class OpportunityLifecycleOptionsProvider {
   ) {}
 
   async eventOnOpportunity(
-    eventData: OpportunityEventInput
+    eventData: OpportunityEventInput,
+    agentInfo: AgentInfo
   ): Promise<IOpportunity> {
     const opportunityID = eventData.ID;
-
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityID
+    );
     const lifecycle = await this.opportunityService.getLifecycle(opportunityID);
 
     // Send the event, translated if needed
@@ -34,7 +38,9 @@ export class OpportunityLifecycleOptionsProvider {
         ID: lifecycle.id,
         eventName: eventData.eventName,
       },
-      this.challengeLifecycleMachineOptions
+      this.challengeLifecycleMachineOptions,
+      agentInfo,
+      opportunity.authorization
     );
 
     return await this.opportunityService.getOpportunityOrFail(opportunityID);

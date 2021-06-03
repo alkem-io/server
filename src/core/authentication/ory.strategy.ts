@@ -35,7 +35,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
         CherrytwistErrorStatus.TOKEN_EXPIRED
       );
 
-    return await this.authService.createUserInfo(
+    return await this.authService.createAgentInfo(
       payload.session.identity.traits.email
     );
   }

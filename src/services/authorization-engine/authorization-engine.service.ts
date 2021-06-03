@@ -4,30 +4,43 @@ import { CredentialsSearchInput, ICredential } from '@domain/agent';
 import { AuthorizationCredentialRule } from './authorization.credential.rule';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
+import { ConfigService } from '@nestjs/config';
 
 export class AuthorizationEngineService {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private configService: ConfigService
   ) {}
 
   grantAccessOrFail(
-    userInfo: UserInfo,
+    agentInfo: AgentInfo,
     authorization: IAuthorizationDefinition | undefined,
     privilegeRequired: AuthorizationPrivilege,
     msg: string
   ) {
     const auth = this.validateAuthorization(authorization);
-    if (this.isUserAccessGranted(userInfo, auth, privilegeRequired))
+    if (this.isUserAccessGranted(agentInfo, auth, privilegeRequired))
       return true;
 
-    // If get to here then no match was found
-    throw new ForbiddenException(
-      `Authorization: unable to grant ${privilegeRequired} access: ${msg}`,
+    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
+
+    this.logger.verbose?.(
+      `${errorMsg}; agentInfo: ${
+        agentInfo.email
+      } has credentials '${JSON.stringify(
+        agentInfo.credentials
+      )}'; authorization definition: anonymousAccess=${
+        authorization?.anonymousReadAccess
+      } & rules: ${JSON.stringify(authorization?.credentialRules)}`,
       LogContext.AUTH
     );
+
+    // If get to here then no match was found
+    throw new ForbiddenException(errorMsg, LogContext.AUTH);
   }
 
   validateAuthorization(
@@ -42,18 +55,20 @@ export class AuthorizationEngineService {
   }
 
   isUserAccessGranted(
-    userInfo: UserInfo,
+    agentInfo: AgentInfo,
     authorization: IAuthorizationDefinition,
     privilegeRequired: AuthorizationPrivilege
   ) {
-    if (userInfo) {
-      return this.isAccessGranted(
-        userInfo.credentials,
-        authorization,
-        privilegeRequired
-      );
-    }
-    return true;
+    // always allow if authorization is disabled
+    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
+      ?.authentication?.enabled;
+    if (!authEnabled) return true;
+
+    return this.isAccessGranted(
+      agentInfo.credentials,
+      authorization,
+      privilegeRequired
+    );
   }
 
   isAccessGranted(

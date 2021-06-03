@@ -13,7 +13,7 @@ import {
 import { AuthorizationService } from './authorization.service';
 import { IUser } from '@domain/community/user';
 import { GraphqlGuard } from './graphql.guard';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 import { AuthorizationRoleGlobal } from '@common/enums';
 
 @Resolver()
@@ -32,11 +32,11 @@ export class AuthorizationResolverMutations {
   async grantCredentialToUser(
     @Args('grantCredentialData')
     grantCredentialData: GrantAuthorizationCredentialInput,
-    @CurrentUser() userInfo: UserInfo
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
     return await this.authorizationService.grantCredential(
       grantCredentialData,
-      userInfo
+      agentInfo
     );
   }
 
@@ -52,11 +52,11 @@ export class AuthorizationResolverMutations {
   async revokeCredentialFromUser(
     @Args('revokeCredentialData')
     credentialRemoveData: RevokeAuthorizationCredentialInput,
-    @CurrentUser() userInfo: UserInfo
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
     return await this.authorizationService.revokeCredential(
       credentialRemoveData,
-      userInfo
+      agentInfo
     );
   }
 }

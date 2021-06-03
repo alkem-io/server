@@ -19,7 +19,11 @@ import { NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { ChallengeLifecycleTemplate, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  ChallengeLifecycleTemplate,
+  LogContext,
+} from '@common/enums';
 import { Inject, Injectable } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
@@ -80,6 +84,12 @@ export class ChallengeService {
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
       challenge.id,
       machineConfig
+    );
+
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      challenge,
+      AuthorizationCredential.ChallengeMember
     );
 
     return await this.challengeRepository.save(challenge);

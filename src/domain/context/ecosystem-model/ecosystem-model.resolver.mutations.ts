@@ -9,7 +9,7 @@ import {
 } from '@domain/context/actor-group';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 import { ActorGroupAuthorizationService } from '../actor-group/actor-group.service.authorization';
 @Resolver()
 export class EcosystemModelResolverMutations {
@@ -25,14 +25,14 @@ export class EcosystemModelResolverMutations {
   })
   @Profiling.api
   async createActorGroup(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('actorGroupData') actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
     const ecosystemModel = await this.ecosystemModelService.getEcosystemModelOrFail(
       actorGroupData.ecosystemModelID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       ecosystemModel.authorization,
       AuthorizationPrivilege.CREATE,
       `create actor group on ecosystem model: ${ecosystemModel.description}`
@@ -40,7 +40,7 @@ export class EcosystemModelResolverMutations {
     const actorGroup = await this.ecosystemModelService.createActorGroup(
       actorGroupData
     );
-    return this.actorGroupAuthorizationService.applyAuthorizationRules(
+    return await this.actorGroupAuthorizationService.applyAuthorizationRules(
       actorGroup,
       ecosystemModel.authorization
     );

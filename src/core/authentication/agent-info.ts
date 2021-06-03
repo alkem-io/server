@@ -1,6 +1,6 @@
 import { ICredential } from '@domain/agent';
 
-export class UserInfo {
-  email!: string;
+export class AgentInfo {
+  email = '';
   credentials: ICredential[] = [];
 }

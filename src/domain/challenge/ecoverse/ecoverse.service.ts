@@ -8,7 +8,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -58,6 +58,11 @@ export class EcoverseService {
       ecoverse,
       ecoverseData,
       ecoverse.id
+    );
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      ecoverse,
+      AuthorizationCredential.EcoverseMember
     );
 
     if (ecoverseData.hostID) {

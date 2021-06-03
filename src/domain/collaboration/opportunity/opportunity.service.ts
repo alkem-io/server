@@ -12,7 +12,7 @@ import {
   CreateOpportunityInput,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '../project/project.service';
 import { RelationService } from '../relation/relation.service';
 import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
@@ -73,6 +73,12 @@ export class OpportunityService {
     opportunity.lifecycle = await this.lifecycleService.createLifecycle(
       opportunity.id,
       machineConfig
+    );
+
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      opportunity,
+      AuthorizationCredential.OpportunityMember
     );
 
     return await this.saveOpportunity(opportunity);

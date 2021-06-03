@@ -9,7 +9,7 @@ import { UUID } from '../scalars';
     if (searchable.groups) {
       return IOrganisation;
     }
-    if (searchable.name) {
+    if (searchable.email) {
       return IUser;
     }
     return IUserGroup;

@@ -19,8 +19,8 @@ import {
 } from '@domain/community/community';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
-import { UserInfo } from '@core/authentication';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { UserService } from '../user/user.service';
 @Resolver()
@@ -40,14 +40,14 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async createGroupOnCommunity(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
     const community = await this.communityService.getCommunityOrFail(
       groupData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       community.authorization,
       AuthorizationPrivilege.CREATE,
       `create group community: ${community.displayName}`
@@ -66,14 +66,14 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async assignUserToCommunity(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: AssignCommunityMemberInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,
       `assign user community: ${community.displayName}`
@@ -87,14 +87,14 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async removeUserFromCommunity(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: RemoveCommunityMemberInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,
       `remove user community: ${community.displayName}`
@@ -141,7 +141,7 @@ export class CommunityResolverMutations {
       application.authorization,
       community.authorization
     );
-    return application;
+    return await this.applicationService.save(application);
   }
 
   @UseGuards(GraphqlGuard)
@@ -149,14 +149,14 @@ export class CommunityResolverMutations {
     description: 'Removes the specified User Application.',
   })
   async deleteUserApplication(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,
       `delete application community: ${community.displayName}`
@@ -171,20 +171,20 @@ export class CommunityResolverMutations {
   async eventOnApplication(
     @Args('applicationEventData')
     applicationEventData: ApplicationEventInput,
-    @CurrentUser() userInfo: UserInfo
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<IApplication> {
-    const community = await this.communityService.getCommunityOrFail(
-      applicationEventData.ID
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationEventData.applicationID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
-      community.authorization,
+      agentInfo,
+      application.authorization,
       AuthorizationPrivilege.UPDATE,
-      `event on community: ${community.displayName}`
+      `event on application: ${application.id}`
     );
     return await this.communityLifecycleOptionsProvider.eventOnApplication(
       applicationEventData,
-      userInfo
+      agentInfo
     );
   }
 }

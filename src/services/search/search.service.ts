@@ -146,6 +146,7 @@ export class SearchService {
         .createQueryBuilder('user')
         .leftJoinAndSelect('user.profile', 'profile')
         .where('user.firstName like :term')
+        .orWhere('user.nameID like :term')
         .orWhere('user.lastName like :term')
         .orWhere('user.email like :term')
         .orWhere('user.country like :term')
@@ -182,7 +183,8 @@ export class SearchService {
         .createQueryBuilder('organisation')
         .leftJoinAndSelect('organisation.profile', 'profile')
         .leftJoinAndSelect('organisation.groups', 'groups')
-        .where('organisation.name like :term')
+        .where('organisation.nameID like :term')
+        .where('organisation.displayName like :term')
         .orWhere('profile.description like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();

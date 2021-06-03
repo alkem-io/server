@@ -10,7 +10,7 @@ import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 
 @Resolver()
 export class AspectResolverMutations {
@@ -24,12 +24,12 @@ export class AspectResolverMutations {
     description: 'Deletes the specified Aspect.',
   })
   async deleteAspect(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteAspectInput
   ): Promise<IAspect> {
     const aspect = await this.aspectService.getAspectOrFail(deleteData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       aspect.authorization,
       AuthorizationPrivilege.DELETE,
       `delete aspect: ${aspect.title}`
@@ -42,12 +42,12 @@ export class AspectResolverMutations {
     description: 'Updates the specified Aspect.',
   })
   async updateAspect(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('aspectData') aspectData: UpdateAspectInput
   ): Promise<IAspect> {
     const aspect = await this.aspectService.getAspectOrFail(aspectData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       aspect.authorization,
       AuthorizationPrivilege.UPDATE,
       `update aspect: ${aspect.title}`

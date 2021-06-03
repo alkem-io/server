@@ -8,12 +8,12 @@ export enum AuthorizationCredential {
   GlobalRegistered = 'global-registered', // credential issued to all registered users
   EcoverseAdmin = 'ecoverse-admin',
   EcoverseMember = 'ecoverse-member',
+  ChallengeAdmin = 'challenge-admin',
+  ChallengeMember = 'challenge-member',
+  OpportunityMember = 'opportunity-member',
   OrganisationAdmin = 'organisation-admin', // Able to administer an organisation
   OrganisationMember = 'organisation-member', // Able to be a part of an organisation
   UserGroupMember = 'user-group-member', // Able to be a part of an user group
-  ChallengeAdmin = 'challenge-admin', // able to manage all aspects of a particular Ecoverse
-  ChallengeMember = 'challenge-member', // able to manage all aspects of a particular Ecoverse
-  CommunityMember = 'community-member', // Able to be a part of a community
   UserSelfManagement = 'user-self', // able to update a user
 }
 
