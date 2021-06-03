@@ -69,11 +69,6 @@ export class ChallengeService {
       challengeData,
       ecoverseID
     );
-    // set the credential type in use by the community
-    await this.baseChallengeService.setMembershipCredential(
-      challenge,
-      AuthorizationCredential.ChallengeMember
-    );
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = challengeLifecycleConfigDefault;
@@ -89,6 +84,12 @@ export class ChallengeService {
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
       challenge.id,
       machineConfig
+    );
+
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      challenge,
+      AuthorizationCredential.ChallengeMember
     );
 
     return await this.challengeRepository.save(challenge);

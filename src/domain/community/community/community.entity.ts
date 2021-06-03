@@ -1,4 +1,11 @@
-import { Column, Entity, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community';
@@ -46,6 +53,12 @@ export class Community extends AuthorizableEntity
   opportunity?: Opportunity;
 
   // The credential profile  that is used for determining membership of this community
+  @OneToOne(() => Credential, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
   credential!: Credential;
 
   // The parent community can have many child communities; the relationship is controlled by the child.

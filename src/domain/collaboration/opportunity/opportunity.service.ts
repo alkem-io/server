@@ -58,11 +58,6 @@ export class OpportunityService {
       opportunityData,
       ecoverseID
     );
-    // set the credential type in use by the community
-    await this.baseChallengeService.setMembershipCredential(
-      opportunity,
-      AuthorizationCredential.OpportunityMember
-    );
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = opportunityLifecycleConfigDefault;
@@ -78,6 +73,12 @@ export class OpportunityService {
     opportunity.lifecycle = await this.lifecycleService.createLifecycle(
       opportunity.id,
       machineConfig
+    );
+
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      opportunity,
+      AuthorizationCredential.OpportunityMember
     );
 
     return await this.saveOpportunity(opportunity);
