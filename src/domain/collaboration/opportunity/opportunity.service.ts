@@ -12,7 +12,7 @@ import {
   CreateOpportunityInput,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '../project/project.service';
 import { RelationService } from '../relation/relation.service';
 import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
@@ -57,6 +57,11 @@ export class OpportunityService {
       opportunity,
       opportunityData,
       ecoverseID
+    );
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      opportunity,
+      AuthorizationCredential.OpportunityMember
     );
 
     // Lifecycle, that has both a default and extended version
