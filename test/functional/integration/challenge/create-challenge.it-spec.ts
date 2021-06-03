@@ -18,12 +18,14 @@ let ecoverseId = '';
 
 let challangeData = async (challengeId: string): Promise<String> => {
   const responseQuery = await getChallengeData(challengeId);
+// console.log(responseQuery.body)
   let response = responseQuery.body.data.ecoverse.challenge;
   return response;
 };
 
 let challengesList = async (): Promise<String> => {
   const responseQuery = await getChallengesData();
+  console.log(responseQuery.body)
   let response = responseQuery.body.data.ecoverse.challenges;
   return response;
 };
@@ -33,7 +35,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   const response = await createChallangeMutation(challengeName, uniqueTextId);
-
+  //console.log(response.body)
   challengeDataCreate = response.body.data.createChallenge;
   challengeId = response.body.data.createChallenge.id;
 });
@@ -44,13 +46,13 @@ beforeAll(async () => {
   ecoverseId = data.ecoverseId;
 });
 
-afterAll(async () => {
-  if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
-});
+// afterAll(async () => {
+//   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
+// });
 
-afterEach(async () => {
-  await removeChallangeMutation(challengeId);
-});
+// afterEach(async () => {
+//   await removeChallangeMutation(challengeId);
+// });
 
 describe('Create Challenge', () => {
   test('should create a successfull challenge', async () => {
@@ -59,7 +61,7 @@ describe('Create Challenge', () => {
       'challengeName',
       'chal-texti'
     );
-
+   // console.log(response.body)
     let challengeDataCreate = response.body.data.createChallenge;
     let challengeIdTest = response.body.data.createChallenge.id;
 
