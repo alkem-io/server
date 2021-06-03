@@ -23,8 +23,10 @@ export class AuthorizationEngineService {
     if (this.isUserAccessGranted(userInfo, auth, privilegeRequired))
       return true;
 
+    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
+
     this.logger.verbose?.(
-      `Unable to grant '${privilegeRequired}' privilege; userInfo: ${
+      `${errorMsg}; userInfo: ${
         userInfo.email
       } has credentials '${JSON.stringify(
         userInfo.credentials
@@ -35,10 +37,7 @@ export class AuthorizationEngineService {
     );
 
     // If get to here then no match was found
-    throw new ForbiddenException(
-      `Authorization: unable to grant ${privilegeRequired} access: ${msg}`,
-      LogContext.AUTH
-    );
+    throw new ForbiddenException(errorMsg, LogContext.AUTH);
   }
 
   validateAuthorization(

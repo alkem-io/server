@@ -26,7 +26,7 @@ export class CommunityLifecycleOptionsProvider {
     applicationEventData: ApplicationEventInput,
     userInfo: UserInfo
   ): Promise<IApplication> {
-    const applicationID = applicationEventData.ID;
+    const applicationID = applicationEventData.applicationID;
     const application = await this.applicationService.getApplicationOrFail(
       applicationID
     );

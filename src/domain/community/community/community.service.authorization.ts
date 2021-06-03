@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { CommunityService } from './community.service';
 import { Community, ICommunity } from '@domain/community/community';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -15,6 +16,21 @@ export class CommunityAuthorizationService {
   ) {}
 
   async applyAuthorizationRules(community: ICommunity): Promise<ICommunity> {
+    // give the global community admin permissions
+    community.authorization = this.authorizationEngine.appendCredentialAuthorizationRule(
+      community.authorization,
+      {
+        type: AuthorizationCredential.GlobalAdminCommunity,
+        resourceID: '',
+      },
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.GRANT,
+      ]
+    );
     // cascade
     const groups = await this.communityService.getUserGroups(community);
     for (const group of groups) {

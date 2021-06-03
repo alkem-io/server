@@ -30,6 +30,7 @@ import { AuthorizationRuleSelfRegistration } from '@core/authorization';
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 import { AuthorizationRuleCredentialPrivilege } from './rules/authorization.rule.credential.privilege';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { UserInfo } from '@core/authentication';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
@@ -113,6 +114,7 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     const authEnabled = this.configService.get(ConfigurationTypes.Identity)
       ?.authentication?.enabled;
     if (!authEnabled) {
+      if (!userInfo) return new UserInfo();
       return userInfo;
     }
 

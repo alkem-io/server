@@ -123,7 +123,7 @@ export class CommunityResolverMutations {
       application.authorization,
       community.authorization
     );
-    return application;
+    return await this.applicationService.save(application);
   }
 
   @UseGuards(GraphqlGuard)
@@ -155,14 +155,14 @@ export class CommunityResolverMutations {
     applicationEventData: ApplicationEventInput,
     @CurrentUser() userInfo: UserInfo
   ): Promise<IApplication> {
-    const community = await this.communityService.getCommunityOrFail(
-      applicationEventData.ID
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationEventData.applicationID
     );
     await this.authorizationEngine.grantAccessOrFail(
       userInfo,
-      community.authorization,
+      application.authorization,
       AuthorizationPrivilege.UPDATE,
-      `event on community: ${community.displayName}`
+      `event on application: ${application.id}`
     );
     return await this.communityLifecycleOptionsProvider.eventOnApplication(
       applicationEventData,

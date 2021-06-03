@@ -74,6 +74,7 @@ export class EcoverseAuthorizationService {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.GRANT,
       ],
     };
     newRules.push(globalAdmin);
@@ -92,6 +93,8 @@ export class EcoverseAuthorizationService {
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.GRANT,
       ],
     };
     newRules.push(ecoverseAdmin);

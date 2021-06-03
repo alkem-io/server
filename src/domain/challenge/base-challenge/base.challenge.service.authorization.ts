@@ -34,6 +34,9 @@ export class BaseChallengeAuthorizationService {
     baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
       community
     );
+    baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
+      community
+    );
 
     const context = await this.baseChallengeService.getContext(
       baseChallenge.id,
