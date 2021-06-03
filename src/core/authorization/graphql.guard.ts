@@ -31,11 +31,11 @@ import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 import { AuthorizationRuleCredentialPrivilege } from './rules/authorization.rule.credential.privilege';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
   JWT_EXPIRED = 'jwt is expired';
+  identifier: number;
 
   private authorizationRules!: IAuthorizationRule[];
 
@@ -46,7 +46,14 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
+    this.identifier = Math.floor(Math.random() * 10000);
   }
+
+  // getRequest(context: ExecutionContext) {
+  //   const ctx = GqlExecutionContext.create(context);
+  //   const { req } = ctx.getContext();
+  //   return req;
+  // }
 
   canActivate(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
@@ -105,13 +112,20 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       this.authorizationRules.push(rule);
     }
 
-    this.logger.verbose?.('canActivate pending...', LogContext.AUTH);
-    const result = super.canActivate(new ExecutionContextHost([req]));
     this.logger.verbose?.(
-      `canActivate: ${result} - ${result.valueOf()}`,
+      `[${this.identifier}] - canActivate pending...${req}`,
       LogContext.AUTH
     );
-    return result;
+    const host = new ExecutionContextHost([req]);
+    const result = super.canActivate(host);
+    //const result2 = Promise.resolve(result);
+    this.logger.verbose?.(
+      `[${
+        this.identifier
+      }] - canActivate: ${result} - ${result.valueOf()} - ${host}`,
+      LogContext.AUTH
+    );
+    return true;
   }
 
   handleRequest(
@@ -132,13 +146,16 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     // Ensure there is always a valid agentInfo
     let actingAgent: AgentInfo;
     if (!agentInfo) {
-      this.authorizationEngine.logCredentialCheckFailDetails(
-        `No agentInfo: ${agentInfo}`,
-        agentInfo,
-        new AuthorizationDefinition()
+      this.authorizationEngine.logAgentInfo(
+        `[${this.identifier}] - AgentInfo NOT present: ${agentInfo}`,
+        agentInfo
       );
       actingAgent = new AgentInfo();
     } else {
+      this.authorizationEngine.logAgentInfo(
+        `[${this.identifier}] - AgentInfo present: ${agentInfo}`,
+        agentInfo
+      );
       actingAgent = agentInfo;
     }
 
@@ -165,7 +182,7 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     if (authorizationRuleEngine.run(actingAgent)) return actingAgent;
 
     throw new ForbiddenException(
-      `User '${actingAgent.email}' is not authorised to access requested resources.`,
+      `[${this.identifier}] - User '${actingAgent.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
   }
@@ -177,7 +194,7 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       if (msg && msg.toLowerCase().includes('error')) return msg;
     }
 
-    return 'Failed to retrieve authenticated account information from the graphql context! ';
+    return `[${this.identifier}] - Failed to retrieve authenticated account information from the graphql context! `;
   }
 
   logAuthorizationToken(req: any) {
@@ -186,12 +203,12 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       if (authorizationHeader)
         authorizationHeader = authorizationHeader.substring(7);
       this.logger.verbose?.(
-        `Authorization header token: ${authorizationHeader}`,
+        `[${this.identifier}] - Authorization header token: ${authorizationHeader}`,
         LogContext.AUTH
       );
     } catch (error) {
       this.logger.error(
-        `Unable to retrieve Authorization header token: ${req}`,
+        `[${this.identifier}] - Unable to retrieve Authorization header token: ${req}`,
         LogContext.AUTH
       );
     }

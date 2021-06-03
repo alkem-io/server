@@ -29,7 +29,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   }
 
   async validate(payload: any) {
-    if (await this.checkIfTokenHasExpired(payload.exp))
+    if (this.checkIfTokenHasExpired(payload.exp))
       throw new TokenException(
         'Access token has expired!',
         CherrytwistErrorStatus.TOKEN_EXPIRED
@@ -40,7 +40,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     );
   }
 
-  private async checkIfTokenHasExpired(exp: number): Promise<boolean> {
+  private checkIfTokenHasExpired(exp: number): boolean {
     if (Date.now() >= exp * 1000) {
       return true;
     }

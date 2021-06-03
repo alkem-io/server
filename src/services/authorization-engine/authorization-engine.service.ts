@@ -50,6 +50,15 @@ export class AuthorizationEngineService {
     );
   }
 
+  logAgentInfo(msg: string, agentInfo: AgentInfo) {
+    this.logger.verbose?.(
+      `${msg}; agentInfo: ${agentInfo.email} has credentials '${JSON.stringify(
+        agentInfo.credentials
+      )}'`,
+      LogContext.AUTH
+    );
+  }
+
   validateAuthorization(
     authorization: IAuthorizationDefinition | undefined
   ): IAuthorizationDefinition {
