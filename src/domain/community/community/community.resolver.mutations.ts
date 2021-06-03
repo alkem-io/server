@@ -3,11 +3,7 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
-import {
-  AuthorizationGlobalRoles,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   CreateApplicationInput,
   DeleteApplicationInput,
@@ -26,10 +22,12 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { UserService } from '../user/user.service';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
     private authorizationEngine: AuthorizationEngineService,
+    private userService: UserService,
     private communityService: CommunityService,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
@@ -104,18 +102,38 @@ export class CommunityResolverMutations {
     return await this.communityService.removeMember(membershipData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Creates Application for a User to join this Community.',
   })
   @Profiling.api
   async createApplication(
+    @CurrentUser() userInfo: UserInfo,
     @Args('applicationData') applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
       applicationData.parentID
     );
+    // Check that the application creation is authorized, after first updating the rules for the community entity
+    // so that the current user can also update their details (by creating an application)
+    const user = await this.userService.getUserOrFail(applicationData.userID);
+    const authorization = this.authorizationEngine.appendCredentialAuthorizationRule(
+      community.authorization,
+      {
+        type: AuthorizationCredential.UserSelfManagement,
+        resourceID: user.id,
+      },
+      [AuthorizationPrivilege.UPDATE]
+    );
+
+    await this.authorizationEngine.grantAccessOrFail(
+      userInfo,
+      authorization,
+      AuthorizationPrivilege.UPDATE,
+      `create application community: ${community.displayName}`
+    );
+
+    // Authorized, so create + return
     const application = await this.communityService.createApplication(
       applicationData
     );
