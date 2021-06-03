@@ -27,7 +27,17 @@ export class AuthorizationEngineService {
       return true;
 
     const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
+    this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
 
+    // If get to here then no match was found
+    throw new ForbiddenException(errorMsg, LogContext.AUTH);
+  }
+
+  logCredentialCheckFailDetails(
+    errorMsg: string,
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationDefinition
+  ) {
     this.logger.verbose?.(
       `${errorMsg}; agentInfo: ${
         agentInfo.email
@@ -38,9 +48,6 @@ export class AuthorizationEngineService {
       } & rules: ${JSON.stringify(authorization?.credentialRules)}`,
       LogContext.AUTH
     );
-
-    // If get to here then no match was found
-    throw new ForbiddenException(errorMsg, LogContext.AUTH);
   }
 
   validateAuthorization(

@@ -36,11 +36,15 @@ export class AuthorizationRuleCredentialPrivilege
       this.fieldParent.authorization,
       this.privilege
     );
-    if (!accessGranted)
-      throw new ForbiddenException(
-        `User (${agentInfo.email}) does not have credentials that grant '${this.privilege}' access to ${this.fieldParent}.${this.fieldName}`,
-        LogContext.AUTH
+    if (!accessGranted) {
+      const errorMsg = `User (${agentInfo.email}) does not have credentials that grant '${this.privilege}' access to ${this.fieldParent}.${this.fieldName}`;
+      this.authorizationEngine.logCredentialCheckFailDetails(
+        errorMsg,
+        agentInfo,
+        this.fieldParent.authorization
       );
+      throw new ForbiddenException(errorMsg, LogContext.AUTH);
+    }
 
     return true;
   }
