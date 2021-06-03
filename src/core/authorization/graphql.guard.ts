@@ -31,6 +31,7 @@ import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
 import { AuthorizationRuleCredentialPrivilege } from './rules/authorization.rule.credential.privilege';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
@@ -104,7 +105,13 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       this.authorizationRules.push(rule);
     }
 
-    return super.canActivate(new ExecutionContextHost([req]));
+    this.logger.verbose?.('canActivate pending...', LogContext.AUTH);
+    const result = super.canActivate(new ExecutionContextHost([req]));
+    this.logger.verbose?.(
+      `canActivate: ${result} - ${result.valueOf()}`,
+      LogContext.AUTH
+    );
+    return result;
   }
 
   handleRequest(
@@ -125,6 +132,11 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     // Ensure there is always a valid agentInfo
     let actingAgent: AgentInfo;
     if (!agentInfo) {
+      this.authorizationEngine.logCredentialCheckFailDetails(
+        `No agentInfo: ${agentInfo}`,
+        agentInfo,
+        new AuthorizationDefinition()
+      );
       actingAgent = new AgentInfo();
     } else {
       actingAgent = agentInfo;
@@ -153,7 +165,7 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     if (authorizationRuleEngine.run(actingAgent)) return actingAgent;
 
     throw new ForbiddenException(
-      `User '${agentInfo.email}' is not authorised to access requested resources.`,
+      `User '${actingAgent.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
   }
