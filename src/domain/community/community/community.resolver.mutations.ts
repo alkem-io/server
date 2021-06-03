@@ -20,7 +20,7 @@ import {
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { UserService } from '../user/user.service';
 @Resolver()
@@ -108,7 +108,7 @@ export class CommunityResolverMutations {
   })
   @Profiling.api
   async createApplication(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('applicationData') applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
@@ -127,7 +127,7 @@ export class CommunityResolverMutations {
     );
 
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       authorization,
       AuthorizationPrivilege.UPDATE,
       `create application community: ${community.displayName}`
