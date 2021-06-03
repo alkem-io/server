@@ -13,7 +13,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
 import { GraphqlGuard } from '@core/authorization';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -34,14 +34,14 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async createTagsetOnProfile(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('tagsetData') tagsetData: CreateTagsetOnProfileInput
   ): Promise<ITagset> {
     const profile = await this.profileService.getProfileOrFail(
       tagsetData.profileID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       profile.authorization,
       AuthorizationPrivilege.CREATE,
       `profile: ${profile.id}`
@@ -61,14 +61,14 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async createReferenceOnProfile(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('referenceInput') referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
     const profile = await this.profileService.getProfileOrFail(
       referenceInput.profileID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       profile.authorization,
       AuthorizationPrivilege.CREATE,
       `profile: ${profile.id}`
@@ -87,12 +87,12 @@ export class ProfileResolverMutations {
   })
   @Profiling.api
   async updateProfile(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('profileData') profileData: UpdateProfileInput
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(profileData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       profile.authorization,
       AuthorizationPrivilege.UPDATE,
       `profile: ${profile.id}`
@@ -104,7 +104,7 @@ export class ProfileResolverMutations {
     description: 'Uploads and sets an avatar image for the specified Profile.',
   })
   async uploadAvatar(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('uploadData') uploadData: UploadProfileAvatarInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
@@ -113,7 +113,7 @@ export class ProfileResolverMutations {
       uploadData.profileID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       profile.authorization,
       AuthorizationPrivilege.UPDATE,
       `profile: ${profile.id}`

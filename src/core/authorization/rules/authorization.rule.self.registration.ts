@@ -1,6 +1,6 @@
 import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
-import { UserInfo } from '@core/authentication/user-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
 
 export class AuthorizationRuleSelfRegistration implements IAuthorizationRule {
@@ -21,9 +21,9 @@ export class AuthorizationRuleSelfRegistration implements IAuthorizationRule {
     }
   }
 
-  execute(userInfo: UserInfo): boolean {
+  execute(agentInfo: AgentInfo): boolean {
     // createUser mutation
-    if (this.userEmail && this.userEmail === userInfo.email) {
+    if (this.userEmail && this.userEmail === agentInfo.email) {
       return true;
     }
     return false;

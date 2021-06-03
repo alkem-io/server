@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
-import { UserInfo } from '@core/authentication/user-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
@@ -30,15 +30,15 @@ export class AuthorizationRuleCredentialPrivilege
     }
   }
 
-  execute(userInfo: UserInfo): boolean {
+  execute(agentInfo: AgentInfo): boolean {
     const accessGranted = this.authorizationEngine.isAccessGranted(
-      userInfo.credentials,
+      agentInfo.credentials,
       this.fieldParent.authorization,
       this.privilege
     );
     if (!accessGranted)
       throw new ForbiddenException(
-        `User (${userInfo.email}) does not have credentials that grant '${this.privilege}' access to ${this.fieldParent}.${this.fieldName}`,
+        `User (${agentInfo.email}) does not have credentials that grant '${this.privilege}' access to ${this.fieldParent}.${this.fieldName}`,
         LogContext.AUTH
       );
 

@@ -5,7 +5,7 @@ import { IUser } from '@domain/community/user';
 import { UserService } from './user.service';
 import { AuthenticationException } from '@common/exceptions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { UserInfo } from '@src/core/authentication/user-info';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
@@ -61,8 +61,8 @@ export class UserResolverQueries {
     description: 'The currently logged in user',
   })
   @Profiling.api
-  async me(@CurrentUser() userInfo: UserInfo): Promise<IUser> {
-    const email = userInfo.email;
+  async me(@CurrentUser() agentInfo: AgentInfo): Promise<IUser> {
+    const email = agentInfo.email;
     if (!email || email.length == 0) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated user.'

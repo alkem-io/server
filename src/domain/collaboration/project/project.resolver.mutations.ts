@@ -13,7 +13,7 @@ import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.pro
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 @Resolver()
 export class ProjectResolverMutations {
@@ -29,12 +29,12 @@ export class ProjectResolverMutations {
     description: 'Deletes the specified Project.',
   })
   async deleteProject(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteProjectInput
   ): Promise<IProject> {
     const project = await this.projectService.getProjectOrFail(deleteData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       project.authorization,
       AuthorizationPrivilege.DELETE,
       `delete project: ${project.nameID}`
@@ -47,12 +47,12 @@ export class ProjectResolverMutations {
     description: 'Updates the specified Project.',
   })
   async updateProject(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('projectData') projectData: UpdateProjectInput
   ): Promise<IProject> {
     const project = await this.projectService.getProjectOrFail(projectData.ID);
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       project.authorization,
       AuthorizationPrivilege.UPDATE,
       `update project: ${project.nameID}`
@@ -66,14 +66,14 @@ export class ProjectResolverMutations {
   })
   @Profiling.api
   async createAspectOnProject(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
     const project = await this.projectService.getProjectOrFail(
       aspectData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       project.authorization,
       AuthorizationPrivilege.CREATE,
       `create aspect: ${project.nameID}`
@@ -92,7 +92,7 @@ export class ProjectResolverMutations {
     description: 'Trigger an event on the Project.',
   })
   async eventOnProject(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('projectEventData')
     projectEventData: ProjectEventInput
   ): Promise<IProject> {
@@ -100,13 +100,14 @@ export class ProjectResolverMutations {
       projectEventData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       project.authorization,
       AuthorizationPrivilege.CREATE,
       `event on project: ${project.nameID}`
     );
     return await this.projectLifecycleOptionsProvider.eventOnProject(
-      projectEventData
+      projectEventData,
+      agentInfo
     );
   }
 }

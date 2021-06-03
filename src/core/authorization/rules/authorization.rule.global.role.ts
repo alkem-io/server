@@ -1,4 +1,4 @@
-import { UserInfo } from '@core/authentication/user-info';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { IAuthorizationRule } from '@core/authorization/rules';
 
 export class AuthorizationRuleGlobalRole implements IAuthorizationRule {
@@ -10,8 +10,8 @@ export class AuthorizationRuleGlobalRole implements IAuthorizationRule {
     this.priority = priority ?? 1000;
   }
 
-  execute(userInfo: UserInfo): boolean {
-    for (const userCredential of userInfo.credentials) {
+  execute(agentInfo: AgentInfo): boolean {
+    for (const userCredential of agentInfo.credentials) {
       if (userCredential.type === this.type) return true;
     }
     return false;

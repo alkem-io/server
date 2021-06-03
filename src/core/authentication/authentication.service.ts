@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserInfo } from './user-info';
+import { AgentInfo } from './agent-info';
 
 @Injectable()
 export class AuthenticationService {
@@ -11,9 +11,9 @@ export class AuthenticationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createUserInfo(email: string): Promise<UserInfo> {
-    const userInfo = new UserInfo();
-    userInfo.email = email;
+  async createAgentInfo(email: string): Promise<AgentInfo> {
+    const agentInfo = new AgentInfo();
+    agentInfo.email = email;
     const userExists = await this.userService.isRegisteredUser(email);
     if (userExists) {
       const user = await this.userService.getUserWithAgent(email);
@@ -28,7 +28,7 @@ export class AuthenticationService {
           LogContext.AUTH
         );
       } else {
-        userInfo.credentials = credentials;
+        agentInfo.credentials = credentials;
       }
     } else {
       this.logger.verbose?.(
@@ -36,6 +36,6 @@ export class AuthenticationService {
         LogContext.AUTH
       );
     }
-    return userInfo;
+    return agentInfo;
   }
 }

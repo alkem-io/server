@@ -14,7 +14,7 @@ import {
 } from '@common/enums';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 
 @Injectable()
@@ -27,7 +27,7 @@ export class AuthorizationService {
 
   async grantCredential(
     grantCredentialData: GrantAuthorizationCredentialInput,
-    currentUserInfo?: UserInfo
+    currentAgentInfo?: AgentInfo
   ): Promise<IUser> {
     // check the inputs
     if (this.isGlobalAuthorizationCredential(grantCredentialData.type)) {
@@ -43,9 +43,9 @@ export class AuthorizationService {
 
     // Only a global-admin can assign/remove other global-admins
     if (grantCredentialData.type === AuthorizationCredential.GlobalAdmin) {
-      if (currentUserInfo) {
+      if (currentAgentInfo) {
         await this.validateMandatedCredential(
-          currentUserInfo.credentials,
+          currentAgentInfo.credentials,
           AuthorizationCredential.GlobalAdmin
         );
       }
@@ -61,7 +61,7 @@ export class AuthorizationService {
 
   async revokeCredential(
     revokeCredentialData: RevokeAuthorizationCredentialInput,
-    currentUserInfo?: UserInfo
+    currentAgentInfo?: AgentInfo
   ): Promise<IUser> {
     // check the inputs
     if (this.isGlobalAuthorizationCredential(revokeCredentialData.type)) {
@@ -81,9 +81,9 @@ export class AuthorizationService {
 
     // Only a global-admin can assign/remove other global-admins
     if (revokeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
-      if (currentUserInfo) {
+      if (currentAgentInfo) {
         await this.validateMandatedCredential(
-          currentUserInfo.credentials,
+          currentAgentInfo.credentials,
           AuthorizationCredential.GlobalAdmin
         );
       }

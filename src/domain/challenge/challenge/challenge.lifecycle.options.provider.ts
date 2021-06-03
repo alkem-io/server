@@ -5,6 +5,7 @@ import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ChallengeService } from './challenge.service';
 import { ChallengeEventInput, IChallenge } from '@domain/challenge/challenge';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class ChallengeLifecycleOptionsProvider {
@@ -14,8 +15,14 @@ export class ChallengeLifecycleOptionsProvider {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async eventOnChallenge(eventData: ChallengeEventInput): Promise<IChallenge> {
+  async eventOnChallenge(
+    eventData: ChallengeEventInput,
+    agentInfo: AgentInfo
+  ): Promise<IChallenge> {
     const challengeID = eventData.ID;
+    const challenge = await this.challengeService.getChallengeOrFail(
+      challengeID
+    );
 
     const lifecycle = await this.challengeService.getLifecycle(challengeID);
 
@@ -29,7 +36,9 @@ export class ChallengeLifecycleOptionsProvider {
         ID: lifecycle.id,
         eventName: eventData.eventName,
       },
-      this.challengeLifecycleMachineOptions
+      this.challengeLifecycleMachineOptions,
+      agentInfo,
+      challenge.authorization
     );
 
     return await this.challengeService.getChallengeOrFail(challengeID);

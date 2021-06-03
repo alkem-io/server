@@ -13,7 +13,7 @@ import {
 import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
@@ -48,14 +48,14 @@ export class EcoverseResolverMutations {
   })
   @Profiling.api
   async updateEcoverse(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ecoverseData') ecoverseData: UpdateEcoverseInput
   ): Promise<IEcoverse> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       ecoverseData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.UPDATE,
       `updateEcoverse: ${ecoverse.nameID}`
@@ -69,14 +69,14 @@ export class EcoverseResolverMutations {
     description: 'Deletes the specified Ecoverse.',
   })
   async deleteEcoverse(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteEcoverseInput
   ): Promise<IEcoverse> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteEcoverse: ${ecoverse.nameID}`
@@ -90,14 +90,14 @@ export class EcoverseResolverMutations {
   })
   @Profiling.api
   async createChallenge(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('challengeData') challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       challengeData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.CREATE,
       `challengeCreate: ${ecoverse.nameID}`
