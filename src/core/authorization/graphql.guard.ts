@@ -51,9 +51,12 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     const ctx = GqlExecutionContext.create(context);
     const graphqlInfo = ctx.getInfo();
     const { req } = ctx.getContext();
+    const fieldName = graphqlInfo.fieldName;
     this.authorizationRules = [];
 
-    this.logAuthorizationToken(req);
+    if (fieldName === 'me') {
+      this.logAuthorizationToken(req);
+    }
 
     const globalRoles = this.reflector.get<string[]>(
       'authorizationGlobalRoles',
@@ -85,7 +88,6 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
 
     if (selfRegistration) {
       const args = context.getArgByIndex(1);
-      const fieldName = graphqlInfo.fieldName;
       const rule = new AuthorizationRuleSelfRegistration(fieldName, args, 1);
       this.authorizationRules.push(rule);
     }
