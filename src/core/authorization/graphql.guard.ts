@@ -53,6 +53,8 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     const { req } = ctx.getContext();
     this.authorizationRules = [];
 
+    this.logAuthorizationToken(req);
+
     const globalRoles = this.reflector.get<string[]>(
       'authorizationGlobalRoles',
       context.getHandler()
@@ -118,6 +120,14 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       return agentInfo;
     }
 
+    // Ensure there is always a valid agentInfo
+    let actingAgent: AgentInfo;
+    if (!agentInfo) {
+      actingAgent = new AgentInfo();
+    } else {
+      actingAgent = agentInfo;
+    }
+
     if (info && info[0] === this.JWT_EXPIRED)
       throw new TokenException(
         'Access token has expired!',
@@ -132,13 +142,13 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     // }
 
     // If no rules then allow the request to proceed
-    if (this.authorizationRules.length == 0) return agentInfo;
+    if (this.authorizationRules.length == 0) return actingAgent;
 
     const authorizationRuleEngine = new AuthorizationRuleEngine(
       this.authorizationRules
     );
 
-    if (authorizationRuleEngine.run(agentInfo)) return agentInfo;
+    if (authorizationRuleEngine.run(actingAgent)) return actingAgent;
 
     throw new ForbiddenException(
       `User '${agentInfo.email}' is not authorised to access requested resources.`,
@@ -154,5 +164,22 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     }
 
     return 'Failed to retrieve authenticated account information from the graphql context! ';
+  }
+
+  logAuthorizationToken(req: any) {
+    try {
+      let authorizationHeader: string = req.headers.authorization;
+      if (authorizationHeader)
+        authorizationHeader = authorizationHeader.substring(7);
+      this.logger.verbose?.(
+        `Authorization header token: ${authorizationHeader}`,
+        LogContext.AUTH
+      );
+    } catch (error) {
+      this.logger.error(
+        `Unable to retrieve Authorization header token: ${req}`,
+        LogContext.AUTH
+      );
+    }
   }
 }
