@@ -48,19 +48,9 @@ export class UserService {
     });
 
     this.logger.verbose?.(
-      `Created a new user with id: ${user.id}`,
+      `Created a new user with nameID: ${user.nameID}`,
       LogContext.COMMUNITY
     );
-
-    // save the user to get the id
-    await this.userRepository.save(user);
-
-    // Ensure the user has the global registered credential
-    if (!user.agent)
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${user.id}`,
-        LogContext.AUTH
-      );
 
     return await this.userRepository.save(user);
   }
