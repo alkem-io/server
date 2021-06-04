@@ -1,11 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { OrganisationService } from './organisation.service';
-import {
-  AuthorizationGlobalRoles,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   CreateOrganisationInput,
   UpdateOrganisationInput,
@@ -27,18 +23,25 @@ export class OrganisationResolverMutations {
     private authorizationEngine: AuthorizationEngineService
   ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganisation, {
     description: 'Creates a new Organisation on the platform.',
   })
   @Profiling.api
   async createOrganisation(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('organisationData') organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
+    const authorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
+      [AuthorizationPrivilege.CREATE]
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      authorizationDefinition,
+      AuthorizationPrivilege.CREATE,
+      `create Organisation: ${organisationData.nameID}`
+    );
     const organisation = await this.organisationService.createOrganisation(
       organisationData
     );

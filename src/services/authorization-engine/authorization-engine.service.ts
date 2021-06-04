@@ -4,8 +4,16 @@ import { CredentialsSearchInput, ICredential } from '@domain/agent';
 import { AuthorizationCredentialRule } from './authorization.credential.rule';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import {
+  AuthorizationCredential,
+  AuthorizationRoleGlobal,
+  ConfigurationTypes,
+  LogContext,
+} from '@common/enums';
+import {
+  AuthorizationDefinition,
+  IAuthorizationDefinition,
+} from '@domain/common/authorization-definition';
 import { AgentInfo } from '@core/authentication';
 import { ConfigService } from '@nestjs/config';
 
@@ -72,11 +80,21 @@ export class AuthorizationEngineService {
   logAgentInfo(msg: string, agentInfo: AgentInfo) {
     this.logger.verbose?.(
       `${msg}; agentInfo: ${agentInfo.email} has credentials '${JSON.stringify(
-        agentInfo.credentials
+        agentInfo.credentials,
+        this.replacer
       )}'`,
       LogContext.AUTH
     );
   }
+
+  // Utility function to avoid having a bunch of fields that are not relevant on log output for credentials logging.
+  replacer = (key: any, value: any) => {
+    if (key == 'createdDate') return undefined;
+    else if (key == 'updatedDate') return undefined;
+    else if (key == 'version') return undefined;
+    else if (key == 'id') return undefined;
+    else return value;
+  };
 
   validateAuthorization(
     authorization: IAuthorizationDefinition | undefined
@@ -198,5 +216,38 @@ export class AuthorizationEngineService {
       this.logger.error(msg);
       throw new ForbiddenException(msg, LogContext.AUTH);
     }
+  }
+
+  createGlobalRolesAuthorizationDefinition(
+    globalRoles: AuthorizationRoleGlobal[],
+    privileges: AuthorizationPrivilege[]
+  ): IAuthorizationDefinition {
+    const authorization = new AuthorizationDefinition();
+    const newRules: AuthorizationCredentialRule[] = [];
+
+    for (const globalRole of globalRoles) {
+      let credType: AuthorizationCredential;
+      if (globalRole === AuthorizationRoleGlobal.Admin) {
+        credType = AuthorizationCredential.GlobalAdmin;
+      } else if (globalRole === AuthorizationRoleGlobal.CommunityAdmin) {
+        credType = AuthorizationCredential.GlobalAdminCommunity;
+      } else if (globalRole === AuthorizationRoleGlobal.Registered) {
+        credType = AuthorizationCredential.GlobalRegistered;
+      } else {
+        throw new ForbiddenException(
+          `Authorization: invalid global role encountered: ${globalRole}`,
+          LogContext.AUTH
+        );
+      }
+      const roleCred = {
+        type: credType,
+        resourceID: '',
+        grantedPrivileges: privileges,
+      };
+      newRules.push(roleCred);
+    }
+    this.appendCredentialAuthorizationRules(authorization, newRules);
+
+    return authorization;
   }
 }

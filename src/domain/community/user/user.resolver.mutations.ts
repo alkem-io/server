@@ -1,11 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import {
-  AuthorizationSelfRegistration,
-  AuthorizationGlobalRoles,
-  GraphqlGuard,
-} from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 import {
   CreateUserInput,
   UpdateUserInput,
@@ -13,7 +9,6 @@ import {
   DeleteUserInput,
 } from '@domain/community/user';
 import { UserService } from './user.service';
-import { AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
@@ -27,19 +22,24 @@ export class UserResolverMutations {
     private readonly userAuthorizationService: UserAuthorizationService
   ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
-  @AuthorizationSelfRegistration()
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Creates a new User on the platform.',
   })
   @Profiling.api
   async createUser(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
+    const authorization = this.userAuthorizationService.createUserAuthorizationDefinition(
+      agentInfo.email
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      AuthorizationPrivilege.CREATE,
+      `create new User: ${agentInfo.email}`
+    );
     let user = await this.userService.createUser(userData);
     user = await this.userAuthorizationService.grantCredentials(user);
     return await this.userAuthorizationService.applyAuthorizationRules(user);

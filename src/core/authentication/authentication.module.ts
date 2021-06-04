@@ -6,10 +6,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AadBearerStrategy } from './aad.bearer.strategy';
 import { OryStrategy } from './ory.strategy';
+import { CredentialModule } from '@domain/agent/credential/credential.module';
 @Module({
   imports: [
     PassportModule.register({ session: false, defaultStrategy: 'azure-ad' }),
     UserModule,
+    CredentialModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -10,7 +10,6 @@ import {
   IEcoverse,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
-import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
@@ -27,15 +26,25 @@ export class EcoverseResolverMutations {
     private challengeAuthorizationService: ChallengeAuthorizationService
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IEcoverse, {
     description: 'Creates a new Ecoverse.',
   })
   @Profiling.api
   async createEcoverse(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('ecoverseData') ecoverseData: CreateEcoverseInput
   ): Promise<IEcoverse> {
+    const authorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      [AuthorizationRoleGlobal.Admin],
+      [AuthorizationPrivilege.CREATE]
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      authorizationDefinition,
+      AuthorizationPrivilege.CREATE,
+      `updateEcoverse: ${ecoverseData.nameID}`
+    );
     const ecoverse = await this.ecoverseService.createEcoverse(ecoverseData);
     return await this.ecoverseAuthorizationService.applyAuthorizationRules(
       ecoverse

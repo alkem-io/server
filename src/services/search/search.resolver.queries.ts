@@ -1,43 +1,44 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
-import { MembershipService } from './membership.service';
+import { SearchService } from './search.service';
+import { ISearchResultEntry } from './search-result-entry.interface';
 import { CurrentUser, Profiling } from '@src/common/decorators';
+import { SearchInput } from './search-input.dto';
+import { SearchResultEntry } from './search-result-entry.dto';
 import { GraphqlGuard } from '@core/authorization';
-import { Membership, MembershipInput } from './index';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
-import { AuthorizationEngineService } from '../authorization-engine/authorization-engine.service';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationEngineService } from '../authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
-
 @Resolver()
-export class MembershipResolverQueries {
-  private membershipAuthorizationDefinition: IAuthorizationDefinition;
+export class SearchResolverQueries {
+  private searchAuthorizationDefinition: IAuthorizationDefinition;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
-    private membershipService: MembershipService
+    private searchService: SearchService
   ) {
-    this.membershipAuthorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+    this.searchAuthorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
       [AuthorizationRoleGlobal.Registered],
       [AuthorizationPrivilege.READ]
     );
   }
 
   @UseGuards(GraphqlGuard)
-  @Query(() => Membership, {
+  @Query(() => [SearchResultEntry], {
     nullable: false,
     description: 'Search the ecoverse for terms supplied',
   })
   @Profiling.api
-  async membership(
+  async search(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: MembershipInput
-  ): Promise<Membership> {
+    @Args('searchData') searchData: SearchInput
+  ): Promise<ISearchResultEntry[]> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.membershipAuthorizationDefinition,
-      `membership query: ${agentInfo.email}`
+      this.searchAuthorizationDefinition,
+      `search query: ${agentInfo.email}`
     );
-    return await this.membershipService.membership(membershipData);
+    return await this.searchService.search(searchData);
   }
 }

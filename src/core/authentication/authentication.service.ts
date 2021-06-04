@@ -1,13 +1,14 @@
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from './agent-info';
+import { Credential } from '@domain/agent/credential';
 
 @Injectable()
 export class AuthenticationService {
   constructor(
-    private readonly userService: UserService,
+    private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -35,6 +36,12 @@ export class AuthenticationService {
         `Authentication Info: User not registered: ${email}`,
         LogContext.AUTH
       );
+      // Allow the user to create a credential for themselves for the context of this request
+      const createUserCredential = new Credential(
+        AuthorizationCredential.UserSelfManagement,
+        agentInfo.email
+      );
+      agentInfo.credentials.push(createUserCredential);
     }
     return agentInfo;
   }
