@@ -23,6 +23,11 @@ export class AuthorizationEngineService {
     privilegeRequired: AuthorizationPrivilege,
     msg: string
   ) {
+    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
+      ?.authentication?.enabled;
+    if (!authEnabled) return true;
+
+    // Authorization is enabled...
     const auth = this.validateAuthorization(authorization);
     if (this.isUserAccessGranted(agentInfo, auth, privilegeRequired))
       return true;
@@ -32,6 +37,19 @@ export class AuthorizationEngineService {
 
     // If get to here then no match was found
     throw new ForbiddenException(errorMsg, LogContext.AUTH);
+  }
+
+  grantReadAccessOrFail(
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationDefinition | undefined,
+    msg: string
+  ) {
+    this.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      AuthorizationPrivilege.READ,
+      msg
+    );
   }
 
   logCredentialCheckFailDetails(

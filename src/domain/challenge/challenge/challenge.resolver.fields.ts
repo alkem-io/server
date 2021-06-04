@@ -1,5 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 import { ICommunity } from '@domain/community/community';
@@ -8,23 +8,34 @@ import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IChallenge } from '@domain/challenge/challenge';
 import { INVP } from '@domain/common/nvp';
-import { AuthorizationCredentialPrivilege } from '@core/authorization/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
-  constructor(private challengeService: ChallengeService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private challengeService: ChallengeService
+  ) {}
 
-  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the challenge.',
   })
   @Profiling.api
-  async community(@Parent() challenge: Challenge) {
+  async community(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() challenge: Challenge
+  ) {
+    await this.authorizationEngine.grantReadAccessOrFail(
+      agentInfo,
+      challenge.authorization,
+      `community on challenge: ${challenge.nameID}`
+    );
+
     return await this.challengeService.getCommunity(challenge.id);
   }
 
@@ -33,7 +44,15 @@ export class ChallengeResolverFields {
     description: 'The context for the challenge.',
   })
   @Profiling.api
-  async context(@Parent() challenge: Challenge) {
+  async context(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() challenge: Challenge
+  ) {
+    await this.authorizationEngine.grantReadAccessOrFail(
+      agentInfo,
+      challenge.authorization,
+      `context on challenge: ${challenge.nameID}`
+    );
     return await this.challengeService.getContext(challenge.id);
   }
 
@@ -42,7 +61,15 @@ export class ChallengeResolverFields {
     description: 'The Opportunities for the challenge.',
   })
   @Profiling.api
-  async opportunities(@Parent() challenge: Challenge) {
+  async opportunities(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() challenge: Challenge
+  ) {
+    await this.authorizationEngine.grantReadAccessOrFail(
+      agentInfo,
+      challenge.authorization,
+      `opportunities on challenge: ${challenge.nameID}`
+    );
     return await this.challengeService.getOpportunities(challenge.id);
   }
 

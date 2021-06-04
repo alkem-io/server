@@ -10,16 +10,9 @@ import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-hos
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  AuthorizationRoleGlobal,
-  ConfigurationTypes,
-  LogContext,
-  CherrytwistErrorStatus,
-  AuthorizationPrivilege,
-} from '@common/enums';
+import { AuthorizationRoleGlobal, LogContext } from '@common/enums';
 import {
   AuthenticationException,
-  TokenException,
   ForbiddenException,
 } from '@common/exceptions';
 import {
@@ -28,13 +21,11 @@ import {
 } from '@src/core/authorization/rules';
 import { AuthorizationRuleSelfRegistration } from '@core/authorization';
 import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
-import { AuthorizationRuleCredentialPrivilege } from './rules/authorization.rule.credential.privilege';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
-  JWT_EXPIRED = 'jwt is expired';
   identifier: number;
 
   private authorizationRules!: IAuthorizationRule[];
@@ -70,10 +61,6 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       'self-registration',
       context.getHandler()
     );
-    const privilege = this.reflector.get<AuthorizationPrivilege>(
-      'privilege',
-      context.getHandler()
-    );
 
     if (globalRoles) {
       for (const role of globalRoles) {
@@ -96,18 +83,6 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       this.authorizationRules.push(rule);
     }
 
-    if (privilege) {
-      const fieldName = graphqlInfo.fieldName;
-      const fieldParent = ctx.getRoot();
-      const rule = new AuthorizationRuleCredentialPrivilege(
-        this.authorizationEngine,
-        privilege,
-        fieldParent,
-        fieldName
-      );
-      this.authorizationRules.push(rule);
-    }
-
     const identifier2 = Math.floor(Math.random() * 10000);
 
     this.logger.verbose?.(
@@ -116,8 +91,9 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     );
     const result = await super.canActivate(new ExecutionContextHost([req]));
     this.logger.verbose?.(
-      `[${this.identifier} - ${identifier2}] -
-      canActivate completed: ${result} - ${result.valueOf()}`,
+      `[${
+        this.identifier
+      } - ${identifier2}] - canActivate completed: ${result} - ${result.valueOf()}`,
       LogContext.AUTH
     );
     return true;
@@ -130,42 +106,20 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     _context: any,
     _status?: any
   ) {
-    // Always handle the request if authentication is disabled
-    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
-      ?.authentication?.enabled;
-    if (!authEnabled) {
-      if (!agentInfo) return new AgentInfo();
-      return agentInfo;
-    }
-
-    // Ensure there is always a valid agentInfo
-    let actingAgent: AgentInfo;
+    if (err) throw new AuthenticationException(err);
+    // There should also be an AgentInfo
     if (!agentInfo) {
       this.logger.verbose?.(
-        `[${this.identifier}] - AgentInfo NOT present: ${agentInfo}`,
+        `[${this.identifier}] - AgentInfo NOT present: ${agentInfo}, creating an empty AgentInfo.....`,
         LogContext.AUTH
       );
-      actingAgent = new AgentInfo();
-    } else {
-      this.authorizationEngine.logAgentInfo(
-        `[${this.identifier}] - AgentInfo present: ${agentInfo}`,
-        agentInfo
-      );
-      actingAgent = agentInfo;
+      return new AgentInfo();
     }
 
-    if (info && info[0] === this.JWT_EXPIRED)
-      throw new TokenException(
-        'Access token has expired!',
-        CherrytwistErrorStatus.TOKEN_EXPIRED
-      );
-
-    if (err) throw new AuthenticationException(err);
-
-    // if (!agentInfo) {
-    //   const msg = this.buildErrorMessage(err, info);
-    //   throw new AuthenticationException(msg);
-    // }
+    this.authorizationEngine.logAgentInfo(
+      `[${this.identifier}] - AgentInfo present: ${agentInfo}, info: ${info}`,
+      agentInfo
+    );
 
     // If no rules then allow the request to proceed
     if (this.authorizationRules.length == 0) return agentInfo;
@@ -174,7 +128,7 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       this.authorizationRules
     );
 
-    if (authorizationRuleEngine.run(actingAgent)) {
+    if (authorizationRuleEngine.run(agentInfo)) {
       this.authorizationEngine.logAgentInfo(
         `[${this.identifier}] - Request handled, returning: ${agentInfo}`,
         agentInfo
@@ -186,16 +140,6 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       `[${this.identifier}] - User '${agentInfo.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
-  }
-
-  private buildErrorMessage(err: any, info: any): string {
-    if (err) return err;
-    if (info) {
-      const msg = info[0] as string;
-      if (msg && msg.toLowerCase().includes('error')) return msg;
-    }
-
-    return `[${this.identifier}] - Failed to retrieve authenticated account information from the graphql context! `;
   }
 
   logAuthorizationToken(req: any) {

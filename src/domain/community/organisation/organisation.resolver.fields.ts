@@ -7,28 +7,37 @@ import {
   ValidationException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import {
-  AuthorizationCredentialPrivilege,
-  GraphqlGuard,
-} from '@core/authorization';
+import { LogContext } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
 import { IOrganisation } from '@domain/community/organisation';
 import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/community/profile';
-import { Profiling } from '@common/decorators';
+import { CurrentUser, Profiling } from '@common/decorators';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 @Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
-  constructor(private organisationService: OrganisationService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private organisationService: OrganisationService
+  ) {}
 
-  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
     description: 'Groups defined on this organisation.',
   })
   @Profiling.api
-  async groups(@Parent() organisation: Organisation) {
+  async groups(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() organisation: Organisation
+  ) {
+    await this.authorizationEngine.grantReadAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      `groups on Organisation: ${organisation.displayName}`
+    );
     // get the organisation with the groups loaded
     const organisationGroups = await this.organisationService.getOrganisationOrFail(
       organisation.id,
@@ -45,14 +54,22 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,
     description: 'All users that are members of this Organisation.',
   })
   @Profiling.api
-  async members(@Parent() organisation: Organisation) {
+  async members(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() organisation: Organisation
+  ) {
+    await this.authorizationEngine.grantReadAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      `members on Organisation: ${organisation.displayName}`
+    );
+
     return await this.organisationService.getMembers(organisation);
   }
 
