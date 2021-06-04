@@ -49,17 +49,13 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     this.identifier = Math.floor(Math.random() * 10000);
   }
 
-  // getRequest(context: ExecutionContext) {
-  //   const ctx = GqlExecutionContext.create(context);
-  //   const { req } = ctx.getContext();
-  //   return req;
-  // }
-
-  canActivate(context: ExecutionContext) {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const ctx = GqlExecutionContext.create(context);
+    const req = ctx.getContext().req;
     const graphqlInfo = ctx.getInfo();
-    const { req } = ctx.getContext();
     const fieldName = graphqlInfo.fieldName;
+
+    // ok to go
     this.authorizationRules = [];
 
     if (fieldName === 'me') {
@@ -112,17 +108,16 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       this.authorizationRules.push(rule);
     }
 
+    const identifier2 = Math.floor(Math.random() * 10000);
+
     this.logger.verbose?.(
-      `[${this.identifier}] - canActivate pending...${req}`,
+      `[${this.identifier} - ${identifier2}] - canActivate pending...`,
       LogContext.AUTH
     );
-    const host = new ExecutionContextHost([req]);
-    const result = super.canActivate(host);
-    //const result2 = Promise.resolve(result);
+    const result = await super.canActivate(new ExecutionContextHost([req]));
     this.logger.verbose?.(
-      `[${
-        this.identifier
-      }] - canActivate: ${result} - ${result.valueOf()} - ${host}`,
+      `[${this.identifier} - ${identifier2}] -
+      canActivate completed: ${result} - ${result.valueOf()}`,
       LogContext.AUTH
     );
     return true;
@@ -146,9 +141,9 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     // Ensure there is always a valid agentInfo
     let actingAgent: AgentInfo;
     if (!agentInfo) {
-      this.authorizationEngine.logAgentInfo(
+      this.logger.verbose?.(
         `[${this.identifier}] - AgentInfo NOT present: ${agentInfo}`,
-        agentInfo
+        LogContext.AUTH
       );
       actingAgent = new AgentInfo();
     } else {
@@ -173,16 +168,22 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     // }
 
     // If no rules then allow the request to proceed
-    if (this.authorizationRules.length == 0) return actingAgent;
+    if (this.authorizationRules.length == 0) return agentInfo;
 
     const authorizationRuleEngine = new AuthorizationRuleEngine(
       this.authorizationRules
     );
 
-    if (authorizationRuleEngine.run(actingAgent)) return actingAgent;
+    if (authorizationRuleEngine.run(actingAgent)) {
+      this.authorizationEngine.logAgentInfo(
+        `[${this.identifier}] - Request handled, returning: ${agentInfo}`,
+        agentInfo
+      );
+      return agentInfo;
+    }
 
     throw new ForbiddenException(
-      `[${this.identifier}] - User '${actingAgent.email}' is not authorised to access requested resources.`,
+      `[${this.identifier}] - User '${agentInfo.email}' is not authorised to access requested resources.`,
       LogContext.AUTH
     );
   }

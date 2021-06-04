@@ -1,4 +1,4 @@
-import { Inject, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CredentialsSearchInput, ICredential } from '@domain/agent';
 import { AuthorizationCredentialRule } from './authorization.credential.rule';
@@ -9,6 +9,7 @@ import { IAuthorizationDefinition } from '@domain/common/authorization-definitio
 import { AgentInfo } from '@core/authentication';
 import { ConfigService } from '@nestjs/config';
 
+@Injectable()
 export class AuthorizationEngineService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
