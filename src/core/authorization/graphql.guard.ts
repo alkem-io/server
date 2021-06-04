@@ -63,14 +63,14 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     // There should always be an AgentInfo returned, even if it is empty
     if (!agentInfo) {
       this.logger.verbose?.(
-        `[${this.identifier}] - AgentInfo NOT present: ${agentInfo}, creating an empty AgentInfo.....`,
+        `[${this.identifier}] - AgentInfo NOT present, creating an empty AgentInfo.....`,
         LogContext.AUTH
       );
       return new AgentInfo();
     }
 
     this.authorizationEngine.logAgentInfo(
-      `[${this.identifier}] - AgentInfo present: ${agentInfo}, info: ${info}`,
+      `[${this.identifier}] - AgentInfo present with info: ${info}`,
       agentInfo
     );
 
