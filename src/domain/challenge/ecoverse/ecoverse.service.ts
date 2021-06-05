@@ -269,24 +269,6 @@ export class EcoverseService {
     return newChallenge;
   }
 
-  async getDefaultEcoverseOrFail(
-    options?: FindOneOptions<Ecoverse>
-  ): Promise<IEcoverse> {
-    const ecoverseId = await this.getDefaultEcoverseId(); // todo - remove when can have multiple ecoverses
-    return await this.getEcoverseOrFail(ecoverseId, options);
-  }
-
-  async getDefaultEcoverseId(): Promise<string> {
-    const ecoverse = await this.ecoverseRepository.findOne();
-    if (!ecoverse) {
-      throw new ValidationException(
-        'Ecoverse is missing!',
-        LogContext.BOOTSTRAP
-      );
-    }
-    return ecoverse.id;
-  }
-
   async getChallenge(
     challengeID: string,
     ecoverse: IEcoverse

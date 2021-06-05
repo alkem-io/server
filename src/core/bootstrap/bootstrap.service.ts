@@ -14,6 +14,10 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
+import {
+  DEFAULT_ECOVERSE_DISPLAYNAME,
+  DEFAULT_ECOVERSE_NAMEID,
+} from '@common/constants';
 @Injectable()
 export class BootstrapService {
   constructor(
@@ -166,8 +170,8 @@ export class BootstrapService {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       const ecoverse = await this.ecoverseService.createEcoverse({
-        nameID: 'Eco1',
-        displayName: 'Empty ecoverse',
+        nameID: DEFAULT_ECOVERSE_NAMEID,
+        displayName: DEFAULT_ECOVERSE_DISPLAYNAME,
         context: {
           tagline: 'An empty ecoverse to be populated',
         },

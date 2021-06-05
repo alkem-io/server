@@ -21,6 +21,7 @@ import { CreateProjectInput } from '@domain/collaboration/project';
 import { CreateRelationInput } from '@domain/collaboration/relation';
 import { CreateAspectInput } from '@domain/context/aspect';
 import { CreateActorGroupInput } from '@domain/context/actor-group';
+import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
 
 export type TestDataServiceInitResult = {
   ecoverseId: string;
@@ -52,6 +53,7 @@ export type TestDataServiceInitResult = {
 export class TestDataService {
   constructor(
     private ecoverseService: EcoverseService,
+    private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private userService: UserService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
@@ -90,10 +92,10 @@ export class TestDataService {
   testEcoverseNameId = 'TestEcoverse';
 
   async initCreateEcoverse(): Promise<string> {
-    const ecoverse = new CreateEcoverseInput();
-    ecoverse.nameID = this.testEcoverseNameId;
-    ecoverse.displayName = this.testEcoverseNameId;
-    ecoverse.context = {
+    const ecoverseInput = new CreateEcoverseInput();
+    ecoverseInput.nameID = this.testEcoverseNameId;
+    ecoverseInput.displayName = this.testEcoverseNameId;
+    ecoverseInput.context = {
       background: 'test ecoverse background',
       impact: 'test ecoverse impact',
       references: [
@@ -107,9 +109,10 @@ export class TestDataService {
       vision: 'test ecoverse vision',
       who: 'test ecoverse who',
     };
-    ecoverse.tags = ['ecoverseTest1', 'ecoverseTest2'];
-    const response = await this.ecoverseService.createEcoverse(ecoverse);
-    return response.id;
+    ecoverseInput.tags = ['ecoverseTest1', 'ecoverseTest2'];
+    const ecoverse = await this.ecoverseService.createEcoverse(ecoverseInput);
+    await this.ecoverseAuthorizationService.applyAuthorizationRules(ecoverse);
+    return ecoverse.id;
   }
 
   async initGetCommunity(): Promise<string> {

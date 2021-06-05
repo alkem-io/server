@@ -65,17 +65,16 @@ export class AuthorizationEngineService {
     agentInfo: AgentInfo,
     authorization: IAuthorizationDefinition
   ) {
-    this.logger.verbose?.(
-      `${errorMsg}; agentInfo: ${
-        agentInfo.email
-      } has credentials '${JSON.stringify(
-        agentInfo.credentials,
-        this.replacer
-      )}'; authorization definition: anonymousAccess=${
-        authorization?.anonymousReadAccess
-      } & rules: ${authorization?.credentialRules}`,
-      LogContext.AUTH
-    );
+    const msg = `${errorMsg}; agentInfo: ${
+      agentInfo.email
+    } has credentials '${JSON.stringify(
+      agentInfo.credentials,
+      this.replacer
+    )}'; authorization definition: anonymousAccess=${
+      authorization?.anonymousReadAccess
+    } & rules: ${authorization?.credentialRules}`;
+    //console.log(msg);
+    this.logger.verbose?.(msg, LogContext.AUTH);
   }
 
   logAgentInfo(msg: string, agentInfo: AgentInfo) {

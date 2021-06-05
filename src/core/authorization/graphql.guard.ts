@@ -15,6 +15,7 @@ import { AgentInfo } from '@core/authentication';
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
   identifier: number;
+  cachedAgentInfo?: AgentInfo;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
@@ -51,7 +52,18 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     // There should always be an AgentInfo returned, even if it is empty
     if (!agentInfo) {
       this.logger.verbose?.(
-        `[${this.identifier}] - AgentInfo NOT present, creating an empty AgentInfo.....`,
+        `[${this.identifier}] - AgentInfo NOT present`,
+        LogContext.AUTH
+      );
+      if (this.cachedAgentInfo) {
+        this.logger.verbose?.(
+          `[${this.identifier}] - ...returning cached AgentInfo`,
+          LogContext.AUTH
+        );
+        return this.cachedAgentInfo;
+      }
+      this.logger.verbose?.(
+        `[${this.identifier}] - ...returning new AgentInfo`,
         LogContext.AUTH
       );
       return new AgentInfo();
@@ -61,6 +73,7 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       `[${this.identifier}] - AgentInfo present with info: ${info}`,
       agentInfo
     );
+    this.cachedAgentInfo = agentInfo;
 
     return agentInfo;
   }
