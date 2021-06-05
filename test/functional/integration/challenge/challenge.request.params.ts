@@ -18,7 +18,7 @@ export const challengeVariablesData = async (
 ) => {
   const variables = {
     challengeData: {
-      parentID: 'Eco1',//await ecoverseId(),
+      parentID: 'TestEcoverse', //await ecoverseId(),
       displayName: challengeName,
       nameID: uniqueTextId,
       tags: 'testTags',
@@ -150,7 +150,7 @@ export const getChallengeData = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{ecoverse {challenge (ID: "${challengeId}") {
+    query: `query{ecoverse (ID: "TestEcoverse") {challenge (ID: "${challengeId}") {
       ${challengeDataTest}
       }
     }
@@ -164,7 +164,7 @@ export const getChallengesData = async () => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{ecoverse{ challenges{
+    query: `query{ecoverse (ID: "TestEcoverse"){ challenges{
         ${challengeDataTest}
         }
       }
@@ -178,7 +178,7 @@ export const getChallengeOpportunity = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query { ecoverse{
+    query: `query { ecoverse (ID: "TestEcoverse"){
       challenge(ID: "${challengeId}") {
         id
         name

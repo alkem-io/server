@@ -16,17 +16,17 @@ let challengeId = '';
 let challengeDataCreate = '';
 let ecoverseId = '';
 
-let challangeData = async (challengeId: string): Promise<String> => {
+const challangeData = async (challengeId: string): Promise<string> => {
   const responseQuery = await getChallengeData(challengeId);
-// console.log(responseQuery.body)
-  let response = responseQuery.body.data.ecoverse.challenge;
+  console.log(responseQuery.body);
+  const response = responseQuery.body.data.ecoverse.challenge;
   return response;
 };
 
-let challengesList = async (): Promise<String> => {
+const challengesList = async (): Promise<string> => {
   const responseQuery = await getChallengesData();
-  console.log(responseQuery.body)
-  let response = responseQuery.body.data.ecoverse.challenges;
+  //console.log(responseQuery.body);
+  const response = responseQuery.body.data.ecoverse.challenges;
   return response;
 };
 beforeEach(async () => {
@@ -61,9 +61,9 @@ describe('Create Challenge', () => {
       'challengeName',
       'chal-texti'
     );
-   // console.log(response.body)
-    let challengeDataCreate = response.body.data.createChallenge;
-    let challengeIdTest = response.body.data.createChallenge.id;
+    // console.log(response.body)
+    const challengeDataCreate = response.body.data.createChallenge;
+    const challengeIdTest = response.body.data.createChallenge.id;
 
     // Assert
     expect(response.status).toBe(200);
@@ -73,7 +73,7 @@ describe('Create Challenge', () => {
 
   test('should remove a challenge', async () => {
     // Arrange
-    let challangeDataBeforeRemove = await challangeData(challengeId);
+    const challangeDataBeforeRemove = await challangeData(challengeId);
 
     // Act
     const removeChallengeResponse = await removeChallangeMutation(challengeId);
@@ -95,7 +95,7 @@ describe('Create Challenge', () => {
       `${challengeName}change`,
       `${uniqueTextId}c`
     );
-    let responseChallengeTwoId =
+    const responseChallengeTwoId =
       responseChallengeTwo.body.data.createChallenge.id;
 
     // Assert
@@ -114,7 +114,7 @@ describe('Create Challenge', () => {
       `${challengeName}change`,
       `${uniqueTextId}c`
     );
-    let responseSimpleChallengeId =
+    const responseSimpleChallengeId =
       responseSimpleChallenge.body.data.createChallenge.id;
 
     // Assert
@@ -155,7 +155,7 @@ describe('Create Challenge', () => {
     `(
       'should throw error: "$expected" for nameId value: "$nameId"',
       async ({ nameId, expected }) => {
-        let response = await createChallangeMutation(
+        const response = await createChallangeMutation(
           challengeName + 'd',
           nameId + 'd'
         );
