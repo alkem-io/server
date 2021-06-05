@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
@@ -25,30 +24,10 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     this.identifier = Math.floor(Math.random() * 10000);
   }
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  // Need to override base method for graphql requests
+  getRequest(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
-    const req = ctx.getContext().req;
-    const graphqlInfo = ctx.getInfo();
-    const fieldName = graphqlInfo.fieldName;
-
-    if (fieldName === 'me') {
-      this.logAuthorizationToken(req);
-    }
-
-    const identifier2 = Math.floor(Math.random() * 10000);
-
-    this.logger.verbose?.(
-      `[${this.identifier} - ${identifier2}] - canActivate pending...`,
-      LogContext.AUTH
-    );
-    const result = await super.canActivate(new ExecutionContextHost([req]));
-    this.logger.verbose?.(
-      `[${
-        this.identifier
-      } - ${identifier2}] - canActivate completed: ${result} - ${result.valueOf()}`,
-      LogContext.AUTH
-    );
-    return true;
+    return ctx.getContext().req;
   }
 
   handleRequest(
@@ -59,6 +38,15 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     _status?: any
   ) {
     if (err) throw new AuthenticationException(err);
+
+    const gqlContext = GqlExecutionContext.create(_context);
+    const req = gqlContext.getContext().req;
+    const graphqlInfo = gqlContext.getInfo();
+    const fieldName = graphqlInfo.fieldName;
+
+    if (fieldName === 'me') {
+      this.logAuthorizationToken(req);
+    }
 
     // There should always be an AgentInfo returned, even if it is empty
     if (!agentInfo) {

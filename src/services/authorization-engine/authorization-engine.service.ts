@@ -69,10 +69,11 @@ export class AuthorizationEngineService {
       `${errorMsg}; agentInfo: ${
         agentInfo.email
       } has credentials '${JSON.stringify(
-        agentInfo.credentials
+        agentInfo.credentials,
+        this.replacer
       )}'; authorization definition: anonymousAccess=${
         authorization?.anonymousReadAccess
-      } & rules: ${JSON.stringify(authorization?.credentialRules)}`,
+      } & rules: ${authorization?.credentialRules}`,
       LogContext.AUTH
     );
   }
