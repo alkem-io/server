@@ -284,7 +284,7 @@ export const getUsersFromChallengeCommunity = async (
     operationName: null,
     variables: {},
     query: `query {
-      ecoverse {
+      ecoverse(ID: "TestEcoverse" ) {
         group(ID: "${communityGroupId}") {
           name
           id

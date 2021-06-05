@@ -7,7 +7,7 @@ export const getContextQuery = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `query{ecoverse{challenge(ID: "${challengeId}") {${challengeDataTest}}}}`,
+    query: `query{ecoverse(ID: "testEcoverse") {challenge(ID: "${challengeId}") {${challengeDataTest}}}}`,
     variables: null,
   };
 

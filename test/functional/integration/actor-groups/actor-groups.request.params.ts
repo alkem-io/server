@@ -46,7 +46,7 @@ export const removeActorGroupMutation = async (actorGroupId: any) => {
 export const getActorGroupsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
+    query: `query {ecoverse(ID: "TestEcoverse" ) {opportunity(ID: "${opportunityId}") {
           context{
             ${contextData}
             }
@@ -61,7 +61,7 @@ export const getActorGroupsPerOpportunity = async (opportunityId: string) => {
 export const getActorData = async (subChallengeId: any) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {challenge(ID: "${subChallengeId}") {
+    query: `query {ecoverse(ID: "TestEcoverse" ) {challenge(ID: "${subChallengeId}") {
         context{
           ${contextData}
           }
