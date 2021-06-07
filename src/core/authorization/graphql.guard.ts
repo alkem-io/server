@@ -15,8 +15,7 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
-  identifier: number;
-  cachedAgentInfo?: AgentInfo;
+  agentInfo?: AgentInfo;
 
   constructor(
     private reflector: Reflector,
@@ -24,7 +23,6 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
-    this.identifier = Math.floor(Math.random() * 10000);
   }
 
   // Need to override base method for graphql requests
@@ -52,30 +50,23 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     }
 
     // There should always be an AgentInfo returned, even if it is empty
+    let resultAgentInfo = agentInfo;
     if (!agentInfo) {
-      this.logger.verbose?.(
-        `[${this.identifier}] - AgentInfo NOT present`,
-        LogContext.AUTH
-      );
-      if (this.cachedAgentInfo) {
-        this.logger.verbose?.(
-          `[${this.identifier}] - ...returning cached AgentInfo`,
-          LogContext.AUTH
-        );
-        return this.cachedAgentInfo;
+      this.logger.verbose?.('AgentInfo NOT present', LogContext.AUTH);
+      if (this.agentInfo) {
+        this.logger.verbose?.('...using cached AgentInfo', LogContext.AUTH);
+        resultAgentInfo = this.agentInfo;
+      } else {
+        this.logger.verbose?.('...using an empty AgentInfo', LogContext.AUTH);
+        resultAgentInfo = new AgentInfo();
       }
-      this.logger.verbose?.(
-        `[${this.identifier}] - ...returning new AgentInfo`,
-        LogContext.AUTH
+    } else {
+      this.authorizationEngine.logAgentInfo(
+        `AgentInfo present with info: ${info}`,
+        agentInfo
       );
-      return new AgentInfo();
+      this.agentInfo = agentInfo;
     }
-
-    this.authorizationEngine.logAgentInfo(
-      `[${this.identifier}] - AgentInfo present with info: ${info}`,
-      agentInfo
-    );
-    this.cachedAgentInfo = agentInfo;
 
     // Apply any rules
     const privilege = this.reflector.get<AuthorizationPrivilege>(
@@ -90,10 +81,10 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
         fieldParent,
         fieldName
       );
-      rule.execute(agentInfo);
+      rule.execute(resultAgentInfo);
     }
 
-    return agentInfo;
+    return resultAgentInfo;
   }
 
   logAuthorizationToken(req: any) {
@@ -102,12 +93,12 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       if (authorizationHeader)
         authorizationHeader = authorizationHeader.substring(7);
       this.logger.verbose?.(
-        `[${this.identifier}] - Authorization header token: ${authorizationHeader}`,
+        `Authorization header token: ${authorizationHeader}`,
         LogContext.AUTH
       );
     } catch (error) {
       this.logger.error(
-        `[${this.identifier}] - Unable to retrieve Authorization header token: ${req}`,
+        `Unable to retrieve Authorization header token: ${req}`,
         LogContext.AUTH
       );
     }
