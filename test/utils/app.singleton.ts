@@ -3,14 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import {
-  TestDataService,
+  DataManagementService,
   TestDataServiceInitResult,
-} from '@src/services/data-management/test-data.service';
+} from '@src/services/data-management';
 import { TokenHelper } from './token.helper';
 
 export class appSingleton {
   private static _instance: appSingleton;
-  private static testDataService: TestDataService;
+  private static dataManagementService: DataManagementService;
   private data!: TestDataServiceInitResult;
   private _app!: INestApplication;
   public get app(): INestApplication {
@@ -49,16 +49,20 @@ export class appSingleton {
 
     this.app = testModule.createNestApplication();
     await this.app.init();
-    appSingleton.testDataService = await testModule.get(TestDataService);
+    appSingleton.dataManagementService = await testModule.get(
+      DataManagementService
+    );
     const configService = await testModule.get(ConfigService);
     await this.getTokensForAllTestUsers(configService);
 
-    await appSingleton.testDataService.initDB();
-    this.data = await appSingleton.testDataService.initFunctions();
+    await appSingleton.dataManagementService.bootstrapTestDatabase();
+
+    //this will need to be reimplemented
+    //this.data = await appSingleton.dataManagementService.initFunctions();
   }
 
   async teardownServer() {
-    await appSingleton.testDataService.teardownDB();
+    // await appSingleton.dataManagementService.dropDb();
     await this.app.close();
   }
 

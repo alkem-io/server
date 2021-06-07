@@ -37,7 +37,7 @@ export class DataManagementController {
         'Data management endpoints are enabled only with disabled authentication!',
         LogContext.DATA_MGMT
       );
-    const msg = await this.dataManagementService.reset_to_empty_ecoverse();
+    const msg = await this.dataManagementService.bootstrapDatabase();
     const content = await this.dataManagementService.populatePageContent(msg);
     return content;
   }
