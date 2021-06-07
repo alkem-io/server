@@ -1,10 +1,11 @@
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { UserGroupService } from './user-group.service';
-import { Profiling } from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
 import { UserGroup, IUserGroup } from '@domain/community/user-group';
 import { IGroupable } from '../../common/interfaces/groupable.interface';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Resolver(() => IUserGroup)
 export class UserGroupResolverFields {
@@ -19,6 +20,7 @@ export class UserGroupResolverFields {
     return await this.userGroupService.getParent(userGroup);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('members', () => [IUser], {
     nullable: true,
     description: 'The Users that are members of this User Group.',

@@ -3,13 +3,15 @@ import { Parent, ResolveField } from '@nestjs/graphql';
 import { User } from '@domain/community/user/user.entity';
 import { UserService } from './user.service';
 import { IAgent } from '@domain/agent/agent';
-import { Profiling } from '@common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IUser } from '@domain/community/user';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(private userService: UserService) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this User.',

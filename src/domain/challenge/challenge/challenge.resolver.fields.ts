@@ -1,5 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 import { ICommunity } from '@domain/community/community';
@@ -10,8 +10,8 @@ import { IChallenge } from '@domain/challenge/challenge';
 import { INVP } from '@domain/common/nvp';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -20,59 +20,38 @@ export class ChallengeResolverFields {
     private challengeService: ChallengeService
   ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the challenge.',
   })
   @Profiling.api
-  async community(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() challenge: Challenge
-  ) {
-    await this.authorizationEngine.grantReadAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      `community on challenge: ${challenge.nameID}`
-    );
-
+  async community(@Parent() challenge: Challenge) {
     return await this.challengeService.getCommunity(challenge.id);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the challenge.',
   })
   @Profiling.api
-  async context(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() challenge: Challenge
-  ) {
-    await this.authorizationEngine.grantReadAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      `context on challenge: ${challenge.nameID}`
-    );
+  async context(@Parent() challenge: Challenge) {
     return await this.challengeService.getContext(challenge.id);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('opportunities', () => [IOpportunity], {
     nullable: true,
     description: 'The Opportunities for the challenge.',
   })
   @Profiling.api
-  async opportunities(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() challenge: Challenge
-  ) {
-    await this.authorizationEngine.grantReadAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      `opportunities on challenge: ${challenge.nameID}`
-    );
+  async opportunities(@Parent() challenge: Challenge) {
     return await this.challengeService.getOpportunities(challenge.id);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
     description: 'The lifeycle for the Challenge.',
@@ -82,6 +61,7 @@ export class ChallengeResolverFields {
     return await this.challengeService.getLifecycle(challenge.id);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
     description: 'The set of child Challenges within this challenge.',
