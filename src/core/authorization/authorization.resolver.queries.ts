@@ -2,13 +2,13 @@ import { Profiling } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from './authorization.service';
 import { UsersWithAuthorizationCredentialInput } from '@core/authorization';
-import { IUser, User } from '@domain/community/user';
+import { IUser } from '@domain/community/user';
 
 @Resolver()
 export class AuthorizationResolverQueries {
   constructor(private authorizationService: AuthorizationService) {}
 
-  @Query(() => [User], {
+  @Query(() => [IUser], {
     nullable: false,
     description:
       'All Users that hold credentials matching the supplied criteria.',

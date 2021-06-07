@@ -12,5 +12,5 @@ export class CreateCredentialInput {
     nullable: true,
     description: 'The resource to which access is being delegated.',
   })
-  resourceID?: number;
+  resourceID?: string;
 }

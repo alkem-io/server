@@ -1,35 +1,74 @@
-import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
-import {
-  CreateReferenceInput,
-  Reference,
-  IReference,
-} from '@domain/common/reference';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import { IReference } from '@domain/common/reference';
 import { ContextService } from './context.service';
-import { AuthorizationGlobalRoles } from '@common/decorators';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
-
+import { CreateAspectInput, IAspect } from '@domain/context';
+import { AuthorizationPrivilege } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
+import { UseGuards } from '@nestjs/common/decorators';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
+import { CreateReferenceOnContextInput } from './context.dto.create.reference';
+import { ReferenceService } from '@domain/common/reference/reference.service';
+import { AspectService } from '../aspect/aspect.service';
 @Resolver()
 export class ContextResolverMutations {
-  constructor(private contextService: ContextService) {}
+  constructor(
+    private aspectService: AspectService,
+    private referenceService: ReferenceService,
+    private authorizationEngine: AuthorizationEngineService,
+    private contextService: ContextService
+  ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
-  )
-  @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => Reference, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IReference, {
     description: 'Creates a new Reference on the specified Context.',
   })
   @Profiling.api
   async createReferenceOnContext(
-    @Args('referenceInput') referenceInput: CreateReferenceInput
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('referenceInput') referenceInput: CreateReferenceOnContextInput
   ): Promise<IReference> {
+    const context = await this.contextService.getContextOrFail(
+      referenceInput.contextID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      context.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create reference on context: ${context.id}`
+    );
     const reference = await this.contextService.createReference(referenceInput);
-    return reference;
+    reference.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      reference.authorization,
+      context.authorization
+    );
+    return await this.referenceService.saveReference(reference);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAspect, {
+    description: 'Create a new Aspect on the Opportunity.',
+  })
+  @Profiling.api
+  async createAspect(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('aspectData') aspectData: CreateAspectInput
+  ): Promise<IAspect> {
+    const context = await this.contextService.getContextOrFail(
+      aspectData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      context.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create aspect on context: ${context.id}`
+    );
+    const aspect = await this.contextService.createAspect(aspectData);
+    aspect.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      aspect.authorization,
+      context.authorization
+    );
+    return await this.aspectService.saveAspect(aspect);
   }
 }

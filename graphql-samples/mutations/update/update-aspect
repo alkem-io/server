@@ -7,7 +7,7 @@ mutation updateAspect($aspectData: UpdateAspectInput!) {
 Variables:
 {
   "aspectData": {
-    "ID": 1,
+    "ID": "uuid",
     "title": "some description",
     "framing": "http://someUri",
     "explanation": "http://someUri"

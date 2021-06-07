@@ -9,13 +9,14 @@ import {
 import {
   Agent,
   IAgent,
-  RemoveCredentialInput,
-  AssignCredentialInput,
+  RevokeCredentialInput,
+  GrantCredentialInput,
+  CreateAgentInput,
 } from '@domain/agent/agent';
 import { LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { SsiAgentService } from '@src/services/ssi/agent/agent.service';
+import { SsiAgentService } from '@src/services/ssi/agent/ssi.agent.service';
 
 @Injectable()
 export class AgentService {
@@ -26,15 +27,15 @@ export class AgentService {
     private agentRepository: Repository<Agent>
   ) {}
 
-  async createAgent(): Promise<IAgent> {
-    const agent: IAgent = new Agent();
+  async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
+    const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
 
     return await this.saveAgent(agent);
   }
 
   async getAgentOrFail(
-    agentID: number,
+    agentID: string,
     options?: FindOneOptions<Agent>
   ): Promise<IAgent> {
     const agent = await this.agentRepository.findOne({ id: agentID }, options);
@@ -46,7 +47,7 @@ export class AgentService {
     return agent;
   }
 
-  async deleteAgent(agentID: number): Promise<IAgent> {
+  async deleteAgent(agentID: string): Promise<IAgent> {
     // Note need to load it in with all contained entities so can remove fully
     const agent = await this.getAgentOrFail(agentID);
 
@@ -82,7 +83,7 @@ export class AgentService {
   }
 
   async getAgentCredentials(
-    agentID: number
+    agentID: string
   ): Promise<{ agent: IAgent; credentials: ICredential[] }> {
     const agent = await this.getAgentOrFail(agentID, {
       relations: ['credentials'],
@@ -97,33 +98,31 @@ export class AgentService {
     return { agent: agent, credentials: agent.credentials };
   }
 
-  async assignCredential(
-    assignCredentialData: AssignCredentialInput
+  async grantCredential(
+    grantCredentialData: GrantCredentialInput
   ): Promise<IAgent> {
     const { agent, credentials } = await this.getAgentCredentials(
-      assignCredentialData.agentID
+      grantCredentialData.agentID
     );
 
-    if (!assignCredentialData.resourceID) assignCredentialData.resourceID = -1;
+    if (!grantCredentialData.resourceID) grantCredentialData.resourceID = '';
 
     // Check if the agent already has this credential type + Value
     for (const credential of credentials) {
       if (
-        credential.type === assignCredentialData.type &&
-        credential.resourceID == assignCredentialData.resourceID
+        credential.type === grantCredentialData.type &&
+        credential.resourceID === grantCredentialData.resourceID
       ) {
         throw new ValidationException(
-          `Agent for user (${
-            (agent as Agent).user?.email
-          }) already has assigned credential: ${assignCredentialData.type}`,
+          `Agent (${agent.parentDisplayID}) already has assigned credential: ${grantCredentialData.type}`,
           LogContext.AUTH
         );
       }
     }
 
     const credential = await this.credentialService.createCredential({
-      type: assignCredentialData.type,
-      resourceID: assignCredentialData.resourceID,
+      type: grantCredentialData.type,
+      resourceID: grantCredentialData.resourceID,
     });
 
     agent.credentials?.push(credential);
@@ -131,19 +130,19 @@ export class AgentService {
     return await this.saveAgent(agent);
   }
 
-  async removeCredential(
-    removeCredentialData: RemoveCredentialInput
+  async revokeCredential(
+    revokeCredentialData: RevokeCredentialInput
   ): Promise<IAgent> {
     const { agent, credentials } = await this.getAgentCredentials(
-      removeCredentialData.agentID
+      revokeCredentialData.agentID
     );
 
-    if (!removeCredentialData.resourceID) removeCredentialData.resourceID = -1;
+    if (!revokeCredentialData.resourceID) revokeCredentialData.resourceID = '';
 
     for (const credential of credentials) {
       if (
-        credential.type === removeCredentialData.type &&
-        credential.resourceID == removeCredentialData.resourceID
+        credential.type === revokeCredentialData.type &&
+        credential.resourceID === revokeCredentialData.resourceID
       ) {
         await this.credentialService.deleteCredential(credential.id);
       }
@@ -153,15 +152,16 @@ export class AgentService {
   }
 
   async hasValidCredential(
-    userID: number,
+    agentID: string,
     credentialCriteria: CredentialsSearchInput
   ): Promise<boolean> {
-    const { credentials } = await this.getAgentCredentials(userID);
+    const { credentials } = await this.getAgentCredentials(agentID);
 
     for (const credential of credentials) {
       if (credential.type === credentialCriteria.type) {
         if (!credentialCriteria.resourceID) return true;
-        if (credentialCriteria.resourceID == credential.resourceID) return true;
+        if (credentialCriteria.resourceID === credential.resourceID)
+          return true;
       }
     }
 
@@ -175,5 +175,13 @@ export class AgentService {
 
     agent.did = await this.ssiAgentService.createIdentity(agent.password);
     return await this.saveAgent(agent);
+  }
+
+  async countAgentsWithMatchingCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<number> {
+    return await this.credentialService.countMatchingCredentials(
+      credentialCriteria
+    );
   }
 }

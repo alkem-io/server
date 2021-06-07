@@ -16,16 +16,18 @@ import {
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { Community, ICommunity } from '@domain/community/community';
 import { IUser } from '@domain/community/user';
 import { CreateUserGroupInput } from '@domain/community/user-group';
 import {
+  Community,
+  ICommunity,
   AssignCommunityMemberInput,
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
-import { ApplicationService } from '../application/application.service';
-import { AuthorizationCredential } from '@core/authorization/authorization.credential';
+import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { ICredential } from '@domain/agent/credential';
 
 @Injectable()
 export class CommunityService {
@@ -39,8 +41,9 @@ export class CommunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createCommunity(name: string, type: string): Promise<ICommunity> {
-    const community = new Community(name, type);
+  async createCommunity(name: string): Promise<ICommunity> {
+    const community = new Community(name);
+    community.authorization = new AuthorizationDefinition();
 
     community.groups = [];
     await this.communityRepository.save(community);
@@ -64,7 +67,8 @@ export class CommunityService {
 
     const group = await this.userGroupService.addGroupWithName(
       community,
-      groupName
+      groupName,
+      community.ecoverseID
     );
     await this.communityRepository.save(community);
 
@@ -72,17 +76,18 @@ export class CommunityService {
   }
 
   // Loads the group into the Community entity if not already present
-  async loadGroups(community: ICommunity): Promise<IUserGroup[]> {
-    if (community.groups && community.groups.length > 0) {
-      // Community already has groups loaded
-      return community.groups;
+  getUserGroups(community: ICommunity): IUserGroup[] {
+    if (!community.groups) {
+      throw new EntityNotInitializedException(
+        `Community not initialized: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
     }
-
-    return await this.userGroupService.getGroupsOnGroupable(community);
+    return community.groups;
   }
 
   async getCommunityOrFail(
-    communityID: number,
+    communityID: string,
     options?: FindOneOptions<Community>
   ): Promise<ICommunity> {
     const Community = await this.communityRepository.findOne(
@@ -97,7 +102,7 @@ export class CommunityService {
     return Community;
   }
 
-  async removeCommunity(communityID: number): Promise<boolean> {
+  async removeCommunity(communityID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
       relations: ['applications', 'groups'],
@@ -106,14 +111,16 @@ export class CommunityService {
     // Remove all groups
     if (community.groups) {
       for (const group of community.groups) {
-        await this.userGroupService.removeUserGroup({ ID: group.id });
+        await this.userGroupService.removeUserGroup({
+          ID: group.id,
+        });
       }
     }
 
     // Remove all applications
     if (community.applications) {
       for (const application of community.applications) {
-        await this.applicationService.delete({
+        await this.applicationService.deleteApplication({
           ID: application.id,
         });
       }
@@ -137,16 +144,17 @@ export class CommunityService {
     return community;
   }
 
-  async getMembers(community: Community): Promise<IUser[]> {
+  async getMembers(community: ICommunity): Promise<IUser[]> {
+    const membershipCredential = this.getMembershipCredential(community);
     return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: community.id,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
   }
 
   async assignMember(
     membershipData: AssignCommunityMemberInput
-  ): Promise<IUser> {
+  ): Promise<ICommunity> {
     const community = await this.getCommunityOrFail(
       membershipData.communityID,
       {
@@ -163,7 +171,7 @@ export class CommunityService {
       );
       if (!isParentMember)
         throw new ValidationException(
-          `User (${userID}) is not a member of parent community: ${community.parentCommunity.name}`,
+          `User (${userID}) is not a member of parent community: ${community.parentCommunity.displayName}`,
           LogContext.CHALLENGES
         );
     }
@@ -173,40 +181,58 @@ export class CommunityService {
       membershipData.userID
     );
 
-    user.agent = await this.agentService.assignCredential({
+    const membershipCredential = this.getMembershipCredential(community);
+
+    user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: membershipData.communityID,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
-    return user;
+    return community;
+  }
+
+  getMembershipCredential(community: ICommunity): ICredential {
+    const credential = community.credential;
+    if (!credential) {
+      throw new EntityNotInitializedException(
+        `Unable to locate credential type for community: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return credential;
   }
 
   async removeMember(
     membershipData: RemoveCommunityMemberInput
-  ): Promise<IUser> {
+  ): Promise<ICommunity> {
     const { user, agent } = await this.userService.getUserAndAgent(
       membershipData.userID
     );
 
-    user.agent = await this.agentService.removeCredential({
+    const community = await this.getCommunityOrFail(membershipData.communityID);
+    const membershipCredential = this.getMembershipCredential(community);
+    user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: membershipData.communityID,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
 
-    return user;
+    return await this.getCommunityOrFail(membershipData.communityID);
   }
 
-  async isMember(userID: number, communityID: number): Promise<boolean> {
-    const agent = await this.userService.getUserByIdWithAgent(userID);
+  async isMember(userID: string, communityID: string): Promise<boolean> {
+    const user = await this.userService.getUserWithAgent(userID);
+    const agent = await this.userService.getAgent(user);
+    const community = await this.getCommunityOrFail(communityID);
+    const membershipCredential = this.getMembershipCredential(community);
 
     return await this.agentService.hasValidCredential(agent.id, {
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: communityID,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
   }
 
-  async getCommunities(ecoverseId: number): Promise<Community[]> {
+  async getCommunities(ecoverseId: string): Promise<Community[]> {
     const communites = await this.communityRepository.find({
       where: { ecoverse: { id: ecoverseId } },
     });
@@ -221,7 +247,7 @@ export class CommunityService {
     })) as Community;
 
     const existingApplication = community.applications?.find(
-      x => x.user?.id === applicationData.userId
+      x => x.user?.id === applicationData.userID
     );
 
     if (existingApplication) {
@@ -234,18 +260,25 @@ export class CommunityService {
     const parentCommunity = community.parentCommunity;
     if (parentCommunity) {
       const isMember = await this.isMember(
-        applicationData.userId,
+        applicationData.userID,
         parentCommunity.id
       );
       if (!isMember)
         throw new InvalidStateTransitionException(
-          `User ${applicationData.userId} is not a member of the parent Community: ${parentCommunity.name}.`,
+          `User ${applicationData.userID} is not a member of the parent Community: ${parentCommunity.displayName}.`,
           LogContext.COMMUNITY
         );
     }
 
+    const ecoverseID = community.ecoverseID;
+    if (!ecoverseID)
+      throw new EntityNotInitializedException(
+        `Unable to locate containing ecoverse: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
     const application = await this.applicationService.createApplication(
-      applicationData
+      applicationData,
+      ecoverseID
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -253,10 +286,19 @@ export class CommunityService {
     return application;
   }
 
-  async getApplications(community: Community): Promise<IApplication[]> {
+  async getApplications(community: ICommunity): Promise<IApplication[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
       relations: ['applications'],
     });
     return communityApps?.applications || [];
+  }
+
+  async getMembersCount(community: ICommunity): Promise<number> {
+    const membershipCredential = this.getMembershipCredential(community);
+
+    return await this.agentService.countAgentsWithMatchingCredentials({
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
+    });
   }
 }

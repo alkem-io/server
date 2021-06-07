@@ -1,56 +1,18 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
-import { User } from '@domain/community/user/user.entity';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  JoinTable,
-  ManyToMany,
-  ManyToOne,
-  OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
-import { IUserGroup } from './user-group.interface';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { IUserGroup } from '@domain/community/user-group';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { Community } from '../community';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
-@ObjectType()
-export class UserGroup extends BaseEntity implements IUserGroup {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String)
+export class UserGroup extends AuthorizableEntity implements IUserGroup {
   @Column()
   name: string;
 
-  @ManyToMany(
-    () => User,
-    user => user.userGroups,
-    { eager: false, cascade: true }
-  )
-  @JoinTable({ name: 'user_group_members' })
-  members?: User[];
+  @Column()
+  ecoverseID?: string;
 
-  @Field(() => Profile, {
-    nullable: true,
-    description: 'The profile for the user group',
-  })
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
@@ -68,9 +30,6 @@ export class UserGroup extends BaseEntity implements IUserGroup {
     { eager: false, onDelete: 'CASCADE' }
   )
   community?: Community;
-
-  // Flag to say whether members field should be populated
-  membersPopulationEnabled = true;
 
   constructor(name: string) {
     super();

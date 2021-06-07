@@ -1,6 +1,5 @@
 mutation removeUserFromCommunity($membershipData: RemoveCommunityMemberInput!) {
   removeUserFromCommunity(membershipData: $membershipData) {
-    name,
     id,
     members {
       id,
@@ -12,7 +11,7 @@ mutation removeUserFromCommunity($membershipData: RemoveCommunityMemberInput!) {
 Variables:
 {
   "membershipData": {
-    "userID": 7,
-    "groupID": 1
+    "userID": "uuid",
+    "groupID": "uuid"
   }
 }

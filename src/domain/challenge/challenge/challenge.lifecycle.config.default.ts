@@ -1,7 +1,7 @@
 export const challengeLifecycleConfigDefault = {
   id: 'challenge-lifecycle-default',
   context: {
-    parentID: '-1',
+    parentID: '',
   },
   initial: 'new',
   states: {

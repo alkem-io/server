@@ -185,7 +185,7 @@
                 <stringProp name="Argument.value">{&#xd;
     &quot;operationName&quot;: null,&#xd;
     &quot;variables&quot;: {},&#xd;
-    &quot;query&quot;: &quot;{ ecoverse{groups{id focalPoint{id} members{id}  parent { __typename ... on Community {id  }}}}}&quot;&#xd;
+    &quot;query&quot;: &quot;{ ecoverse(ID: "testEcoverse") {groups{id focalPoint{id} members{id}  parent { __typename ... on Community {id  }}}}}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -217,7 +217,7 @@
                 <stringProp name="Argument.value">{&#xd;
     &quot;operationName&quot;: null,&#xd;
     &quot;variables&quot;: null,&#xd;
-    &quot;query&quot;: &quot;{ ecoverse{challenges {id context{id references{id}}community {id}}}}&quot;&#xd;
+    &quot;query&quot;: &quot;{ ecoverse(ID: "testEcoverse") {challenges {id context{id references{id}}community {id}}}}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -249,7 +249,7 @@
                 <stringProp name="Argument.value">{&#xd;
     &quot;operationName&quot;: null,&#xd;
     &quot;variables&quot;: null,&#xd;
-    &quot;query&quot;: &quot;{ ecoverse{ opportunities{id context{id references{id}}community {id}}}}&quot;&#xd;
+    &quot;query&quot;: &quot;{ ecoverse(ID: "testEcoverse") { opportunities{id context{id references{id}}community {id}}}}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -281,7 +281,7 @@
                 <stringProp name="Argument.value">{&#xd;
     &quot;operationName&quot;: null,&#xd;
     &quot;variables&quot;: null,&#xd;
-    &quot;query&quot;: &quot;{ ecoverse{ projects{id}}}&quot;&#xd;
+    &quot;query&quot;: &quot;{ ecoverse(ID: "testEcoverse") { projects{id}}}&quot;&#xd;
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>

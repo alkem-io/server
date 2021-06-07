@@ -1,38 +1,13 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { ICredential } from '@domain/agent/credential';
 import { Agent, IAgent } from '@domain/agent/agent';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
-@ObjectType()
-export class Credential extends BaseEntity implements ICredential {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => Number)
+export class Credential extends BaseCherrytwistEntity implements ICredential {
   @Column()
-  resourceID: number;
+  resourceID: string;
 
-  @Field(() => String)
   @Column()
   type: string;
 
@@ -43,10 +18,10 @@ export class Credential extends BaseEntity implements ICredential {
   )
   agent?: IAgent;
 
-  constructor(type: string, resourceID: number) {
+  constructor(type: string, resourceID: string) {
     super();
     this.type = type;
     this.resourceID = resourceID;
-    if (!this.resourceID) this.resourceID = -1;
+    if (!this.resourceID) this.resourceID = '';
   }
 }

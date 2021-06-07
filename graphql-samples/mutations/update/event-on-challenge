@@ -12,7 +12,7 @@ variables:
 {
   "challengeEventData":
   {
-    "ID": 2,
+    "ID": "uuid",
   	"eventName": "REFINE"
   }
 }

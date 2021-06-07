@@ -6,7 +6,10 @@ import {
   getActorGroupsPerOpportunity,
   removeActorGroupMutation,
 } from './actor-groups.request.params';
-import { createOpportunityOnChallengeMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
+import {
+  createChildChallengeMutation,
+  createOpportunityMutation,
+} from '@test/functional/integration/opportunity/opportunity.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';
@@ -18,16 +21,20 @@ let actorGroupDescription = '';
 let uniqueTextId = '';
 let actorGroupId = '';
 let actorGroupDataCreate = '';
+let ecosystemModelId = '';
 
 let getActorGroupData = async (): Promise<string> => {
   const getActor = await getActorGroupsPerOpportunity(opportunityId);
-  let response = getActor.body.data.ecoverse.opportunity.actorGroups[0];
+  let response =
+    getActor.body.data.ecoverse.opportunity.context.ecosystemModel
+      .actorGroups[0];
   return response;
 };
 
 let getActorGroupsCountPerOpportunityData = async (): Promise<string> => {
   const getActor = await getActorGroupsPerOpportunity(opportunityId);
-  let response = getActor.body.data.ecoverse.opportunity.actorGroups;
+  let response =
+    getActor.body.data.ecoverse.opportunity.context.ecosystemModel.actorGroups;
   return response;
 };
 beforeEach(async () => {
@@ -36,7 +43,7 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   actorGroupName = `actorGroupName-${uniqueTextId}`;
   actorGroupDescription = `actorGroupDescription-${uniqueTextId}`;
 });
@@ -58,25 +65,26 @@ beforeEach(async () => {
   challengeId = responseCreateChallenge.body.data.createChallenge.id;
 
   // Create Opportunity
-  const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+  const responseCreateOpportunityOnChallenge = await createOpportunityMutation(
     challengeId,
     opportunityName,
     opportunityTextId
   );
   opportunityId =
-    responseCreateOpportunityOnChallenge.body.data.createOpportunity
-      .id;
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+  ecosystemModelId =
+    responseCreateOpportunityOnChallenge.body.data.createOpportunity.context
+      .ecosystemModel.id;
 
   // Create Actor group
   const createActorGroupResponse = await createActorGroupMutation(
-    opportunityId,
+    ecosystemModelId,
     actorGroupName,
     actorGroupDescription
   );
   actorGroupId = createActorGroupResponse.body.data.createActorGroup.id;
   actorGroupDataCreate = createActorGroupResponse.body.data.createActorGroup;
 });
-
 
 afterEach(async () => {
   await removeActorGroupMutation(actorGroupId);
@@ -92,7 +100,7 @@ describe('Actor groups', () => {
     // Act
     // Create second actor group with different name
     await createActorGroupMutation(
-      opportunityId,
+      ecosystemModelId,
       actorGroupName + actorGroupName,
       actorGroupDescription
     );
@@ -105,7 +113,7 @@ describe('Actor groups', () => {
     // Act
     // Create second actor group with same name
     const responseSecondActorGroup = await createActorGroupMutation(
-      opportunityId,
+      ecosystemModelId,
       actorGroupName,
       actorGroupDescription
     );
@@ -125,6 +133,8 @@ describe('Actor groups', () => {
 
     // Assert
     expect(await getActorGroupsCountPerOpportunityData()).toHaveLength(0);
-    expect(responseRemoveActorGroup.body.data.deleteActorGroup.id).toEqual(actorGroupId);
+    expect(responseRemoveActorGroup.body.data.deleteActorGroup.id).toEqual(
+      actorGroupId
+    );
   });
 });

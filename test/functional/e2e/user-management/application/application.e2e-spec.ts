@@ -5,7 +5,10 @@ import {
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
-import { createGroupOnCommunityMutation } from '@test/functional/integration/community/community.request.params';
+import {
+  createGroupOnCommunityMutation,
+  getCommunityData,
+} from '@test/functional/integration/community/community.request.params';
 import {
   appData,
   createApplicationMutation,
@@ -26,6 +29,7 @@ let communityGroupId = '';
 let challengeName = '';
 let challengeCommunityId = '';
 let uniqueId = '';
+let ecoverseCommunityId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
@@ -40,7 +44,7 @@ beforeEach(async () => {
     .toString(12)
     .slice(-6);
   challengeName = `testChallenge ${uniqueId}`;
-  userName = `testUser${uniqueId}`;
+  userName = `testuser${uniqueId}`;
   userFirstName = `userFirstName${uniqueId}`;
   userLastName = `userLastName${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
@@ -57,6 +61,10 @@ beforeEach(async () => {
   userId = responseCreateUser.body.data.createUser.id;
 
   groupName = 'groupName ' + Math.random().toString();
+
+  const ecoverseCommunityIds = await getCommunityData();
+  ecoverseCommunityId = ecoverseCommunityIds.body.data.ecoverse.community.id;
+
   // Create challenge
   const responseCreateChallenge = await createChallangeMutation(
     challengeName,
@@ -67,7 +75,7 @@ beforeEach(async () => {
 
   // Create challenge community group
   const responseCreateGroupOnCommunnity = await createGroupOnCommunityMutation(
-    challengeCommunityId,
+    ecoverseCommunityId,
     groupName
   );
   communityGroupId =
@@ -82,15 +90,19 @@ describe('Application', () => {
 
   test('should create application', async () => {
     // Act
-    applicationData = await createApplicationMutation("1", userId);
-    console.log(applicationData.body)
+    applicationData = await createApplicationMutation(
+      ecoverseCommunityId,
+      userId
+    );
     applicationId = applicationData.body.data.createApplication.id;
 
     const getApp = await getApplication(applicationId);
 
     // Assert
     expect(applicationData.status).toBe(200);
-    expect(applicationData.body.data.createApplication.lifecycle.state).toEqual('new');
+    expect(applicationData.body.data.createApplication.lifecycle.state).toEqual(
+      'new'
+    );
     expect(applicationData.body.data.createApplication).toEqual(
       getApp.body.data.ecoverse.application
     );
@@ -98,19 +110,25 @@ describe('Application', () => {
 
   test('should throw error for creating the same application twice', async () => {
     // Act
-    let applicationDataOne = await createApplicationMutation("1", userId);
+    let applicationDataOne = await createApplicationMutation(
+      ecoverseCommunityId,
+      userId
+    );
     applicationId = applicationDataOne.body.data.createApplication.id;
-    let applicationDataTwo = await createApplicationMutation("1", userId);
+    let applicationDataTwo = await createApplicationMutation(
+      ecoverseCommunityId,
+      userId
+    );
 
     // Assert
     expect(applicationDataTwo.text).toContain(
-      `An application for user ${userEmail} already exists for Community: 1.`
+      `An application for user ${userEmail} already exists for Community: ${ecoverseCommunityId}.`
     );
   });
 
-  test('should throw error for quering not existing application', async () => {
+  test.skip('should throw error for quering not existing application', async () => {
     // Act
-    let appId = 727;
+    let appId = '727';
     const getApp = await getApplication(appId);
 
     // Assert
@@ -122,7 +140,10 @@ describe('Application', () => {
 
   test('should remove application', async () => {
     // Arrange
-    applicationData = await createApplicationMutation("1", userId);
+    applicationData = await createApplicationMutation(
+      ecoverseCommunityId,
+      userId
+    );
     applicationId = applicationData.body.data.createApplication.id;
 
     // Act

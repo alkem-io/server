@@ -1,3 +1,3 @@
 export * from './challenge';
 export * from './ecoverse';
-export * from './opportunity';
+export * from './base-challenge';

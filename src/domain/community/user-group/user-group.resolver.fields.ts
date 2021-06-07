@@ -1,23 +1,17 @@
-import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { UserGroup } from './user-group.entity';
 import { UserGroupService } from './user-group.service';
-import { UserGroupParent } from './user-group-parent.dto';
-import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
-import { User } from '@domain/community/user/user.entity';
-import {
-  AuthorizationRolesGlobal,
-  AuthorizationRulesGuard,
-} from '@core/authorization';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { IUser } from '@domain/community/user';
+import { UserGroup, IUserGroup } from '@domain/community/user-group';
+import { IGroupable } from '../../common/interfaces/groupable.interface';
+import { AuthorizationPrivilege } from '@common/enums';
 
-@Resolver(() => UserGroup)
+@Resolver(() => IUserGroup)
 export class UserGroupResolverFields {
   constructor(private userGroupService: UserGroupService) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
-  @ResolveField('parent', () => UserGroupParent, {
+  @ResolveField('parent', () => IGroupable, {
     nullable: true,
     description: 'Containing entity for this UserGroup.',
   })
@@ -26,17 +20,13 @@ export class UserGroupResolverFields {
     return await this.userGroupService.getParent(userGroup);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRolesGlobal.Registered)
-  @UseGuards(AuthorizationRulesGuard)
-  @ResolveField('members', () => [User], {
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('members', () => [IUser], {
     nullable: true,
     description: 'The Users that are members of this User Group.',
   })
   @Profiling.api
-  async members(@Parent() group: UserGroup): Promise<User[]> {
-    if (!group || !group.membersPopulationEnabled) return [];
-
-    const members = await this.userGroupService.getMembers(group.id);
-    return (members || []) as User[];
+  async members(@Parent() group: UserGroup): Promise<IUser[]> {
+    return await this.userGroupService.getMembers(group.id);
   }
 }

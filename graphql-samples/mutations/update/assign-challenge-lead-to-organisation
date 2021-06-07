@@ -8,7 +8,7 @@ mutation assignChallengeLead($assignInput: AssignChallengeLeadInput!) {
 Variables:
 {
   "assignInput": {
-    "organisationID": "1",
-    "challengeID": "1"
+    "organisationID": "uuid",
+    "challengeID": "uuid"
   }
 }

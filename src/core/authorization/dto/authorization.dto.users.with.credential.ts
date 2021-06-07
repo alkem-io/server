@@ -1,17 +1,18 @@
+import { AuthorizationCredential } from '@common/enums';
+import { UUID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
-import { AuthorizationCredential } from '@core/authorization';
 
 @InputType()
 export class UsersWithAuthorizationCredentialInput {
-  @Field({
+  @Field(() => AuthorizationCredential, {
     nullable: false,
     description: 'The type of credential.',
   })
   type!: AuthorizationCredential;
 
-  @Field({
+  @Field(() => UUID, {
     nullable: true,
     description: 'The resource to which a credential needs to be bound.',
   })
-  resourceID?: number;
+  resourceID?: string;
 }

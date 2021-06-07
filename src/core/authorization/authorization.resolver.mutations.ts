@@ -1,50 +1,103 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
-  AssignAuthorizationCredentialInput,
-  RemoveAuthorizationCredentialInput,
+  GrantAuthorizationCredentialInput,
+  RevokeAuthorizationCredentialInput,
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
-import { IUser, User } from '@domain/community/user';
-import { AuthorizationRolesGlobal } from './authorization.roles.global';
-import { AuthorizationRulesGuard } from './authorization.rules.guard';
+import { IUser } from '@domain/community/user';
+import { GraphqlGuard } from './graphql.guard';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { SsiAgentService } from '@src/services/ssi/agent/ssi.agent.service';
 
 @Resolver()
 export class AuthorizationResolverMutations {
-  constructor(private authorizationService: AuthorizationService) {}
+  private authorizationDefinition: IAuthorizationDefinition;
 
-  // @AuthorizationGlobalRoles(AuthorizationRolesGlobal.CommunityAdmin, AuthorizationRolesGlobal.Admin)
-  // @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => User, {
-    description: 'Assigns an authorization credential to a User.',
-  })
-  @Profiling.api
-  async assignCredentialToUser(
-    @Args('assignCredentialData')
-    credentialAssignData: AssignAuthorizationCredentialInput
-  ): Promise<IUser> {
-    return await this.authorizationService.assignCredential(
-      credentialAssignData
+  constructor(
+    private ssiAgentService: SsiAgentService,
+    private challengeService: ChallengeService,
+    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService
+  ) {
+    this.authorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
+      [AuthorizationPrivilege.GRANT]
     );
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
-  )
-  @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => User, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Grants an authorization credential to a User.',
+  })
+  @Profiling.api
+  async grantCredentialToUser(
+    @Args('grantCredentialData')
+    grantCredentialData: GrantAuthorizationCredentialInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IUser> {
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      this.authorizationDefinition,
+      AuthorizationPrivilege.GRANT,
+      `grant credential: ${agentInfo.email}`
+    );
+    return await this.authorizationService.grantCredential(
+      grantCredentialData,
+      agentInfo
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
     description: 'Removes an authorization credential from a User.',
   })
   @Profiling.api
-  async removeCredentialFromUser(
-    @Args('removeCredentialData')
-    credentialRemoveData: RemoveAuthorizationCredentialInput
+  async revokeCredentialFromUser(
+    @Args('revokeCredentialData')
+    credentialRemoveData: RevokeAuthorizationCredentialInput,
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
-    return await this.authorizationService.removeCredential(
-      credentialRemoveData
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      this.authorizationDefinition,
+      AuthorizationPrivilege.GRANT,
+      `revoke credential: ${agentInfo.email}`
     );
+    return await this.authorizationService.revokeCredential(
+      credentialRemoveData,
+      agentInfo
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Assigns the StateModification credential to a particular user for a particular challenge',
+  })
+  @Profiling.api
+  async grantStateModificationVC(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('userID') userID: string,
+    @Args('challengeID') challengeID: string
+  ): Promise<boolean> {
+    const user = await this.challengeService.getChallengeOrFail(challengeID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      user.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create VC on user ${user.id}`
+    );
+    const success = await this.ssiAgentService.authoriseStateModification(
+      userID,
+      challengeID
+    );
+    return success;
   }
 }

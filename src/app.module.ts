@@ -8,12 +8,10 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
-import { IDatabaseConfig } from '@src/common/interfaces/database.config.interface';
 import { DataManagementModule } from '@src/services/data-management/data-management.module';
 import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
 import { WinstonModule } from 'nest-winston';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { SearchModule } from '@src/services/search/search.module';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { MetadataModule } from '@src/services/metadata/metadata.module';
@@ -23,6 +21,10 @@ import { IpfsModule } from './services/ipfs/ipfs.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { SearchModule } from './services/search/search.module';
+import { ConfigurationTypes } from '@common/enums';
+import { MembershipModule } from './services/membership/membership.module';
+import { SsiAgentModule } from './services/ssi/agent/ssi.agent.module';
 
 @Module({
   imports: [
@@ -38,15 +40,19 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
       useFactory: async (configService: ConfigService) => ({
         type: 'mysql',
         insecureAuth: true,
-        synchronize: true,
+        synchronize: false,
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        host: configService.get<IDatabaseConfig>('database')?.host,
-        port: configService.get<IDatabaseConfig>('database')?.port,
-        username: configService.get<IDatabaseConfig>('database')?.username,
-        password: configService.get<IDatabaseConfig>('database')?.password,
-        database: configService.get<IDatabaseConfig>('database')?.schema,
-        logging: configService.get<IDatabaseConfig>('database')?.logging,
+        host: configService.get(ConfigurationTypes.Storage)?.database?.host,
+        port: configService.get(ConfigurationTypes.Storage)?.database?.port,
+        username: configService.get(ConfigurationTypes.Storage)?.database
+          ?.username,
+        password: configService.get(ConfigurationTypes.Storage)?.database
+          ?.password,
+        database: configService.get(ConfigurationTypes.Storage)?.database
+          ?.schema,
+        logging: configService.get(ConfigurationTypes.Storage)?.database
+          ?.logging,
       }),
     }),
     TypeOrmModule.forRootAsync({
@@ -61,12 +67,16 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
         entities: [
           'node_modules/@jolocom/sdk-storage-typeorm/js/src/entities/*.js',
         ],
-        host: configService.get<IDatabaseConfig>('database')?.host,
-        port: configService.get<IDatabaseConfig>('database')?.port,
-        username: configService.get<IDatabaseConfig>('database')?.username,
-        password: configService.get<IDatabaseConfig>('database')?.password,
+        host: configService.get(ConfigurationTypes.Storage)?.database?.host,
+        port: configService.get(ConfigurationTypes.Storage)?.database?.port,
+        username: configService.get(ConfigurationTypes.Storage)?.database
+          ?.username,
+        password: configService.get(ConfigurationTypes.Storage)?.database
+          ?.password,
+
+        logging: configService.get(ConfigurationTypes.Storage)?.database
+          ?.logging,
         database: 'jolocom',
-        logging: configService.get<IDatabaseConfig>('database')?.logging,
       }),
     }),
     WinstonModule.forRootAsync({
@@ -88,8 +98,10 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
     DataManagementModule,
     BootstrapModule,
     SearchModule,
+    MembershipModule,
     KonfigModule,
     IpfsModule,
+    SsiAgentModule,
   ],
   controllers: [AppController],
   providers: [

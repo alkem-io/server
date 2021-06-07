@@ -1,22 +1,14 @@
 import { IChallenge, CreateChallengeInput } from '@domain/challenge/challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { Context } from '@domain/context/context/context.entity';
-import { ContextService } from '@domain/context/context/context.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import {
-  RestrictedTagsetNames,
-  Tagset,
-} from '@domain/common/tagset/tagset.entity';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -24,83 +16,143 @@ import {
   IEcoverse,
   CreateEcoverseInput,
   UpdateEcoverseInput,
+  DeleteEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { ICommunity } from '@domain/community/community';
-import { CommunityService } from '@domain/community/community/community.service';
-import { CommunityType } from '@common/enums/community.types';
-import { IOpportunity } from '@domain/challenge/opportunity';
-import validator from 'validator';
+import { IUserGroup } from '@domain/community/user-group';
+import { INVP, NVP } from '@domain/common/nvp';
+import { ProjectService } from '@domain/collaboration/project/project.service';
+import { IProject } from '@domain/collaboration/project';
+import { IContext } from '@domain/context';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { BaseChallengeService } from '../base-challenge/base.challenge.service';
+import { NamingService } from '@src/services/naming/naming.service';
+import { UUID_LENGTH } from '@common/constants';
+import { ILifecycle } from '@domain/common/lifecycle';
+import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
     private organisationService: OrganisationService,
+    private lifecycleService: LifecycleService,
+    private projectService: ProjectService,
+    private opportunityService: OpportunityService,
+    private baseChallengeService: BaseChallengeService,
+    private namingService: NamingService,
     private challengeService: ChallengeService,
-    private contextService: ContextService,
-    private communityService: CommunityService,
-    private tagsetService: TagsetService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
+    await this.validateEcoverseData(ecoverseData);
     const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
-    if (!ecoverse.challenges) {
-      ecoverse.challenges = [];
-    }
-
-    if (!ecoverse.organisations) {
-      ecoverse.organisations = [];
-    }
-
-    if (!ecoverse.tagset) {
-      ecoverse.tagset = await this.tagsetService.createTagset({
-        name: RestrictedTagsetNames.Default,
-      });
-    }
-
-    if (!ecoverse.context) {
-      ecoverse.context = await this.contextService.createContext({});
-    }
-
-    ecoverse.community = await this.communityService.createCommunity(
-      ecoverse.name,
-      CommunityType.ECOVERSE
+    // remove context before saving as want to control that creation
+    ecoverse.context = undefined;
+    await this.ecoverseRepository.save(ecoverse);
+    await this.baseChallengeService.initialise(
+      ecoverse,
+      ecoverseData,
+      ecoverse.id
+    );
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      ecoverse,
+      AuthorizationCredential.EcoverseMember
     );
 
-    if (!ecoverse.host) {
+    if (ecoverseData.hostID) {
+      ecoverse.host = await this.organisationService.getOrganisationOrFail(
+        ecoverseData.hostID
+      );
+    } else {
       ecoverse.host = await this.organisationService.createOrganisation({
-        name: 'Default host organisation',
-        textID: 'DefaultHostOrg',
+        displayName: `host-org-${ecoverseData.displayName}`,
+        nameID: `host-${ecoverseData.nameID}`,
       });
     }
+
+    // Lifecycle
+    const machineConfig: any = challengeLifecycleConfigDefault;
+    ecoverse.lifecycle = await this.lifecycleService.createLifecycle(
+      ecoverse.id,
+      machineConfig
+    );
+
     return await this.ecoverseRepository.save(ecoverse);
+  }
+
+  async validateEcoverseData(ecoverseData: CreateEcoverseInput) {
+    if (!(await this.isNameIdAvailable(ecoverseData.nameID)))
+      throw new ValidationException(
+        `Unable to create Ecoverse: the provided nameID is already taken: ${ecoverseData.nameID}`,
+        LogContext.CHALLENGES
+      );
+  }
+
+  async update(ecoverseData: UpdateEcoverseInput): Promise<IEcoverse> {
+    const ecoverse: IEcoverse = await this.baseChallengeService.update(
+      ecoverseData,
+      this.ecoverseRepository
+    );
+
+    if (ecoverseData.hostID) {
+      ecoverse.host = await this.organisationService.getOrganisationOrFail(
+        ecoverseData.hostID
+      );
+    }
+
+    return await this.ecoverseRepository.save(ecoverse);
+  }
+
+  async deleteEcoverse(deleteData: DeleteEcoverseInput): Promise<IEcoverse> {
+    const ecoverse = await this.getEcoverseOrFail(deleteData.ID, {
+      relations: ['challenges'],
+    });
+
+    // Do not remove an ecoverse that has child challenges , require these to be individually first removed
+    if (ecoverse.challenges && ecoverse.challenges.length > 0)
+      throw new ValidationException(
+        `Unable to remove Ecoverse (${ecoverse.nameID}) as it contains ${ecoverse.challenges.length} challenges`,
+        LogContext.CHALLENGES
+      );
+
+    const baseChallenge = await this.getEcoverseOrFail(deleteData.ID, {
+      relations: ['community', 'context', 'lifecycle'],
+    });
+    await this.baseChallengeService.deleteEntities(baseChallenge);
+
+    const result = await this.ecoverseRepository.remove(ecoverse as Ecoverse);
+    result.id = deleteData.ID;
+    return result;
+  }
+
+  async getEcoverses(): Promise<IEcoverse[]> {
+    const ecoverses = await this.ecoverseRepository.find();
+    return ecoverses || [];
   }
 
   async getEcoverseOrFail(
     ecoverseID: string,
     options?: FindOneOptions<Ecoverse>
   ): Promise<IEcoverse> {
-    if (validator.isNumeric(ecoverseID)) {
-      const idInt: number = parseInt(ecoverseID);
-      return await this.getEcoverseByIdOrFail(idInt, options);
+    let ecoverse: IEcoverse | undefined;
+    if (ecoverseID.length === UUID_LENGTH) {
+      ecoverse = await this.ecoverseRepository.findOne(
+        { id: ecoverseID },
+        options
+      );
+    } else {
+      // look up based on nameID
+      ecoverse = await this.ecoverseRepository.findOne(
+        { nameID: ecoverseID },
+        options
+      );
     }
-
-    throw new EntityNotFoundException(
-      `Unable to find Ecoverse with ID: ${ecoverseID}`,
-      LogContext.CHALLENGES
-    );
-  }
-
-  async getEcoverseByIdOrFail(
-    ecoverseID: number,
-    options?: FindOneOptions<Ecoverse>
-  ): Promise<IEcoverse> {
-    const ecoverse = await this.ecoverseRepository.findOne(
-      { id: ecoverseID },
-      options
-    );
     if (!ecoverse)
       throw new EntityNotFoundException(
         `Unable to find Ecoverse with ID: ${ecoverseID}`,
@@ -109,141 +161,170 @@ export class EcoverseService {
     return ecoverse;
   }
 
-  async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {
-    const ecoverseWithChallenges = await this.getEcoverseByIdOrFail(
-      ecoverse.id,
-      {
-        relations: ['challenges'],
-      }
-    );
-    return ecoverseWithChallenges.challenges || [];
-  }
-
-  async getOpportunities(ecoverse: IEcoverse): Promise<IOpportunity[]> {
-    const opportunities: IOpportunity[] = [];
-    const challenges = await this.getChallenges(ecoverse);
-    for (const challenge of challenges) {
-      const childOpportunities = await this.challengeService.getOpportunities(
-        challenge
-      );
-      childOpportunities.forEach(opportunity =>
-        opportunities.push(opportunity)
-      );
-    }
-    return opportunities;
-  }
-
-  async getCommunity(ecoverseId: number): Promise<ICommunity> {
-    const ecoverse = await this.getEcoverseByIdOrFail(ecoverseId, {
-      relations: ['community'],
+  async isNameIdAvailable(nameID: string): Promise<boolean> {
+    const challengeCount = await this.ecoverseRepository.count({
+      nameID: nameID,
     });
-    const community = ecoverse.community;
-    if (!community)
+    if (challengeCount == 0) return true;
+    return false;
+  }
+
+  async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {
+    const ecoverseWithChallenges = await this.getEcoverseOrFail(ecoverse.id, {
+      relations: ['challenges'],
+    });
+    const challenges = ecoverseWithChallenges.challenges;
+    if (!challenges)
       throw new RelationshipNotFoundException(
-        `Unable to load community for ecoverse ${ecoverseId}`,
-        LogContext.COMMUNITY
+        `Unable to load challenges for Ecoverse ${ecoverse.id} `,
+        LogContext.CHALLENGES
       );
-    return community;
+
+    return challenges;
+  }
+
+  async getGroups(ecoverse: IEcoverse): Promise<IUserGroup[]> {
+    const community = await this.getCommunity(ecoverse);
+    return community.groups || [];
+  }
+
+  async getOpportunitiesInNameableScope(
+    ecoverse: IEcoverse
+  ): Promise<IOpportunity[]> {
+    return await this.opportunityService.getOpportunitiesInNameableScope(
+      ecoverse.id
+    );
+  }
+
+  async getOpportunityInNameableScope(
+    opportunityID: string,
+    ecoverse: IEcoverse
+  ): Promise<IOpportunity> {
+    return await this.opportunityService.getOpportunityInNameableScopeOrFail(
+      opportunityID,
+      ecoverse.id
+    );
+  }
+
+  async getChallengeInNameableScope(
+    challengeID: string,
+    ecoverse: IEcoverse
+  ): Promise<IChallenge> {
+    return await this.challengeService.getChallengeInNameableScopeOrFail(
+      challengeID,
+      ecoverse.id
+    );
+  }
+
+  async getCommunity(ecoverse: IEcoverse): Promise<ICommunity> {
+    return await this.baseChallengeService.getCommunity(
+      ecoverse.id,
+      this.ecoverseRepository
+    );
+  }
+
+  async getContext(ecoverse: IEcoverse): Promise<IContext> {
+    return await this.baseChallengeService.getContext(
+      ecoverse.id,
+      this.ecoverseRepository
+    );
+  }
+
+  async getLifecycle(ecoverse: IEcoverse): Promise<ILifecycle> {
+    return await this.baseChallengeService.getLifecycle(
+      ecoverse.id,
+      this.ecoverseRepository
+    );
   }
 
   async createChallenge(
     challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
-    const ecoverse = await this.getEcoverseByIdOrFail(challengeData.parentID, {
-      relations: ['challenges', 'community'],
+    const ecoverse = await this.getEcoverseOrFail(challengeData.parentID, {
+      relations: ['challenges'],
     });
-
-    if (!ecoverse.challenges) {
-      throw new EntityNotInitializedException(
-        'Challenges must be defined',
+    const nameAvailable = await this.namingService.isNameIdAvailableInEcoverse(
+      challengeData.nameID,
+      ecoverse.id
+    );
+    if (!nameAvailable)
+      throw new ValidationException(
+        `Unable to create Challenge: the provided nameID is already taken: ${challengeData.nameID}`,
         LogContext.CHALLENGES
       );
-    }
-    // First check if the challenge already exists on not...
-    let challenge = ecoverse.challenges.find(
-      c => c.name === challengeData.name
+
+    // Update the challenge data being passed in to state set the parent ID to the contained challenge
+    const newChallenge = await this.challengeService.createChallenge(
+      challengeData,
+      ecoverse.id
     );
-    if (challenge) {
-      // already have a challenge with the given name, not allowed
+    if (!ecoverse.challenges)
       throw new ValidationException(
-        `Unable to create challenge: already have a challenge with the provided name (${challengeData.name})`,
+        `Unable to create Challenge: challenges not initialized: ${challengeData.parentID}`,
         LogContext.CHALLENGES
       );
-    }
-    // No existing challenge found, create and initialise a new one!
-    challenge = await this.challengeService.createChallenge(challengeData);
 
-    ecoverse.challenges.push(challenge);
+    ecoverse.challenges.push(newChallenge);
     await this.ecoverseRepository.save(ecoverse);
+    return newChallenge;
+  }
 
-    // Finally set the community relationship
-    await this.communityService.setParentCommunity(
-      challenge.community,
-      ecoverse.community
+  async getChallenge(
+    challengeID: string,
+    ecoverse: IEcoverse
+  ): Promise<IChallenge> {
+    return await this.challengeService.getChallengeInNameableScopeOrFail(
+      challengeID,
+      ecoverse.id
     );
-
-    return challenge;
   }
 
-  async update(ecoverseData: UpdateEcoverseInput): Promise<IEcoverse> {
-    const ecoverse = await this.getEcoverseOrFail(ecoverseData.ID);
-
-    // Copy over the received data
-    if (ecoverseData.name) {
-      ecoverse.name = ecoverseData.name;
-    }
-
-    if (ecoverseData.context) {
-      if (!ecoverse.context) {
-        ecoverse.context = new Context();
-      }
-      ecoverse.context = await this.contextService.updateContext(
-        ecoverse.context,
-        ecoverseData.context
-      );
-    }
-
-    if (ecoverseData.tags) {
-      if (!ecoverse.tagset) {
-        ecoverse.tagset = new Tagset(RestrictedTagsetNames.Default);
-      }
-      await this.tagsetService.replaceTagsOnEntity(
-        ecoverse as Ecoverse,
-        ecoverseData.tags
-      );
-    }
-
-    if (ecoverseData.hostID) {
-      const organisation = await this.organisationService.getOrganisationOrFail(
-        ecoverseData.hostID
-      );
-      ecoverse.host = organisation;
-    }
-
-    await this.ecoverseRepository.save(ecoverse);
-
-    return ecoverse;
+  async getProjects(ecoverse: IEcoverse): Promise<IProject[]> {
+    return await this.projectService.getProjects(ecoverse.id);
   }
 
-  async getDefaultEcoverseOrFail(
-    options?: FindOneOptions<Ecoverse>
-  ): Promise<IEcoverse> {
-    const ecoverseId = await this.getDefaultEcoverseId(); // todo - remove when can have multiple ecoverses
-    return await this.getEcoverseByIdOrFail(ecoverseId, options);
+  async getActivity(ecoverse: IEcoverse): Promise<INVP[]> {
+    const activity: INVP[] = [];
+
+    // Challenges
+    const challengesCount = await this.getChallengesCount(ecoverse.id);
+    const challengesTopic = new NVP('challenges', challengesCount.toString());
+    activity.push(challengesTopic);
+
+    const allChallengesCount = await this.challengeService.getAllChallengesCount(
+      ecoverse.id
+    );
+    const opportunitiesTopic = new NVP(
+      'opportunities',
+      (allChallengesCount - challengesCount - 1).toString()
+    );
+    activity.push(opportunitiesTopic);
+
+    // Projects
+    const projectsCount = await this.projectService.getProjectsCount(
+      ecoverse.id
+    );
+    const projectsTopic = new NVP('projects', projectsCount.toString());
+    activity.push(projectsTopic);
+
+    // Members
+    const membersCount = await this.getMembersCount(ecoverse);
+    const membersTopic = new NVP('members', membersCount.toString());
+    activity.push(membersTopic);
+
+    return activity;
   }
 
-  async getDefaultEcoverseId(): Promise<number> {
-    const ecoverse = await this.ecoverseRepository
-      .createQueryBuilder('ecoverse')
-      .select('ecoverse.id')
-      .getOne(); // TODO [ATS] Replace with getOneOrFail when it is released. https://github.com/typeorm/typeorm/blob/06903d1c914e8082620dbf16551caa302862d328/src/query-builder/SelectQueryBuilder.ts#L1112
+  async getChallengesCount(ecoverseID: string): Promise<number> {
+    return await this.ecoverseRepository.count({
+      where: { ecoverse: ecoverseID },
+    });
+  }
 
-    if (!ecoverse) {
-      throw new ValidationException(
-        'Ecoverse is missing!',
-        LogContext.BOOTSTRAP
-      );
-    }
-    return ecoverse.id;
+  async getMembersCount(ecoverse: IEcoverse): Promise<number> {
+    return await this.baseChallengeService.getMembersCount(
+      ecoverse,
+      this.ecoverseRepository
+    );
   }
 }

@@ -24,7 +24,7 @@ export class CredentialService {
     return credential;
   }
 
-  async getCredentialOrFail(credentialID: number): Promise<ICredential> {
+  async getCredentialOrFail(credentialID: string): Promise<ICredential> {
     const credential = await this.credentialRepository.findOne({
       id: credentialID,
     });
@@ -36,7 +36,7 @@ export class CredentialService {
     return credential;
   }
 
-  async deleteCredential(credentialID: number): Promise<ICredential> {
+  async deleteCredential(credentialID: string): Promise<ICredential> {
     const credential = await this.getCredentialOrFail(credentialID);
     const result = await this.credentialRepository.remove(
       credential as Credential
@@ -68,5 +68,27 @@ export class CredentialService {
         .getMany();
       return credentialMatches;
     }
+  }
+
+  async countMatchingCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<number> {
+    if (!credentialCriteria.resourceID) {
+      return await this.credentialRepository
+        .createQueryBuilder('credential')
+        .leftJoinAndSelect('credential.agent', 'agent')
+        .where({
+          type: `${credentialCriteria.type}`,
+        })
+        .getCount();
+    }
+    return await this.credentialRepository
+      .createQueryBuilder('credential')
+      .leftJoinAndSelect('credential.agent', 'agent')
+      .where({
+        type: `${credentialCriteria.type}`,
+        resourceID: `${credentialCriteria.resourceID}`,
+      })
+      .getCount();
   }
 }

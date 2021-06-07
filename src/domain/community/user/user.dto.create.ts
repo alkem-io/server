@@ -6,9 +6,10 @@ import {
   SMALL_TEXT_LENGTH,
   MID_TEXT_LENGTH,
 } from '@src/common/constants';
+import { CreateNameableInput } from '@domain/common/nameable-entity';
 
 @InputType()
-export class CreateUserInput {
+export class CreateUserInput extends CreateNameableInput {
   @Field({
     nullable: false,
   })
@@ -20,11 +21,6 @@ export class CreateUserInput {
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   accountUpn?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  name?: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -57,6 +53,5 @@ export class CreateUserInput {
   gender?: string;
 
   @Field(() => CreateProfileInput, { nullable: true })
-  @IsOptional()
   profileData?: CreateProfileInput;
 }

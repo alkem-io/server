@@ -5,6 +5,7 @@ import { BootstrapService } from '../../core/bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { exec } from 'child_process';
+import { DEFAULT_ECOVERSE_NAMEID } from '@common/constants';
 
 @Injectable()
 export class DataManagementService {
@@ -58,8 +59,10 @@ export class DataManagementService {
   async populatePageContent(message: string): Promise<string> {
     let ecoverseName = '<< No ecoverse >>';
     try {
-      const ecoverse = await this.ecoverseService.getDefaultEcoverseOrFail();
-      ecoverseName = ecoverse.name;
+      const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+        DEFAULT_ECOVERSE_NAMEID
+      );
+      ecoverseName = ecoverse.displayName;
     } catch (e) {
       // ecoverse not yet initialised so just skip the name
       this.logger.verbose?.(e.message, LogContext.DATA_MGMT);

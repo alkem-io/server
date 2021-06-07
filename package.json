@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.11.0",
+  "version": "0.11.3",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -69,6 +69,7 @@
     "ipfs-http-client": "^49.0.4",
     "jolocom-lib": "^5.1.0",
     "js-yaml": "^4.1.0",
+    "jwks-rsa": "^2.0.3",
     "module-alias": "^2.2.2",
     "mysql": "^2.18.1",
     "nest-winston": "^1.4.0",

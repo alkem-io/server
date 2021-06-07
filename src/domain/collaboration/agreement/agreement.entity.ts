@@ -1,44 +1,17 @@
-import { ID, Field, ObjectType } from '@nestjs/graphql';
 import { Project } from '@domain/collaboration/project/project.entity';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAgreement } from './agreement.interface';
 import {
   RestrictedTagsetNames,
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
-@ObjectType()
-export class Agreement extends BaseEntity implements IAgreement {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String)
+export class Agreement extends BaseCherrytwistEntity implements IAgreement {
   @Column()
   name: string;
 
-  @Field(() => String)
   @Column('text', { nullable: true })
   description?: string;
 
@@ -48,10 +21,6 @@ export class Agreement extends BaseEntity implements IAgreement {
   )
   project?: Project;
 
-  @Field(() => Tagset, {
-    nullable: true,
-    description: 'The set of tags for the agreement',
-  })
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset: Tagset;

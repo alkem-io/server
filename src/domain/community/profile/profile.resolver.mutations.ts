@@ -1,92 +1,123 @@
-import { Reference } from '@domain/common/reference/reference.entity';
-import { IReference } from '@domain/common/reference/reference.interface';
-import { Tagset } from '@domain/common/tagset/tagset.entity';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { CreateReferenceInput } from '@domain/common/reference';
+import { IReference } from '@domain/common/reference';
+import { ITagset } from '@domain/common/tagset';
 import {
+  CreateReferenceOnProfileInput,
+  CreateTagsetOnProfileInput,
   IProfile,
-  Profile,
   UpdateProfileInput,
   UploadProfileAvatarInput,
 } from '@domain/community/profile';
-import { CreateTagsetInput } from '@domain/common/tagset';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
-import {
-  AuthorizationRulesGuard,
-  AuthorizationRolesGlobal,
-  AuthorizationGlobalRoles,
-  AuthorizationSelfManagement,
-} from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ReferenceService } from '@domain/common/reference/reference.service';
 
 @Resolver()
 export class ProfileResolverMutations {
-  constructor(private profileService: ProfileService) {}
+  constructor(
+    private tagsetService: TagsetService,
+    private referenceService: ReferenceService,
+    private authorizationEngine: AuthorizationEngineService,
+    private profileService: ProfileService
+  ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
-  )
-  @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => Tagset, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ITagset, {
     description: 'Creates a new Tagset on the specified Profile',
   })
   @Profiling.api
   async createTagsetOnProfile(
-    @Args('tagsetData') tagsetData: CreateTagsetInput
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('tagsetData') tagsetData: CreateTagsetOnProfileInput
   ): Promise<ITagset> {
-    return await this.profileService.createTagset(tagsetData);
+    const profile = await this.profileService.getProfileOrFail(
+      tagsetData.profileID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.CREATE,
+      `profile: ${profile.id}`
+    );
+
+    const tagset = await this.profileService.createTagset(tagsetData);
+    tagset.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      tagset.authorization,
+      profile.authorization
+    );
+    return await this.tagsetService.saveTagset(tagset);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.CommunityAdmin,
-    AuthorizationRolesGlobal.Admin
-  )
-  @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => Reference, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IReference, {
     description: 'Creates a new Reference on the specified Profile.',
   })
   @Profiling.api
   async createReferenceOnProfile(
-    @Args('referenceInput') referenceInput: CreateReferenceInput
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('referenceInput') referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
-    return await this.profileService.createReference(referenceInput);
+    const profile = await this.profileService.getProfileOrFail(
+      referenceInput.profileID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.CREATE,
+      `profile: ${profile.id}`
+    );
+    const reference = await this.profileService.createReference(referenceInput);
+    reference.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      reference.authorization,
+      profile.authorization
+    );
+    return await this.referenceService.saveReference(reference);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
-  )
-  @AuthorizationSelfManagement()
-  @UseGuards(AuthorizationRulesGuard)
-  @Mutation(() => Profile, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IProfile, {
     description: 'Updates the specified Profile.',
   })
   @Profiling.api
   async updateProfile(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('profileData') profileData: UpdateProfileInput
   ): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(profileData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `profile: ${profile.id}`
+    );
     return await this.profileService.updateProfile(profileData);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRolesGlobal.Admin,
-    AuthorizationRolesGlobal.CommunityAdmin
-  )
-  @AuthorizationSelfManagement()
-  @Mutation(() => Profile, {
+  @Mutation(() => IProfile, {
     description: 'Uploads and sets an avatar image for the specified Profile.',
   })
   async uploadAvatar(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('uploadData') uploadData: UploadProfileAvatarInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(
+      uploadData.profileID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `profile: ${profile.id}`
+    );
     const readStream = createReadStream();
     return await this.profileService.uploadAvatar(
       readStream,

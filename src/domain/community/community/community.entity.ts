@@ -1,51 +1,28 @@
-import { ID, Field, ObjectType } from '@nestjs/graphql';
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community';
-import { Challenge, Ecoverse, Opportunity } from '@domain/challenge';
+import { Challenge } from '@domain/challenge/challenge';
 import { Application, IApplication } from '@domain/community/application';
+import { Opportunity } from '@domain/collaboration/opportunity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { Credential } from '@domain/agent/credential';
 
 @Entity()
-@ObjectType()
-export class Community extends BaseEntity implements ICommunity, IGroupable {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'The name of the Community',
-  })
+export class Community extends AuthorizableEntity
+  implements ICommunity, IGroupable {
   @Column()
-  name: string;
+  displayName: string;
 
-  @Field(() => String, {
-    nullable: false,
-    description: 'The type of the Community',
-  })
   @Column()
-  type: string;
+  ecoverseID: string;
 
   @OneToMany(
     () => UserGroup,
@@ -62,13 +39,6 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   applications?: IApplication[];
 
   @OneToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.community,
-    { eager: false, cascade: false }
-  )
-  ecoverse?: Ecoverse;
-
-  @OneToOne(
     () => Challenge,
     challenge => challenge.community,
     { eager: false, cascade: false }
@@ -82,13 +52,22 @@ export class Community extends BaseEntity implements ICommunity, IGroupable {
   )
   opportunity?: Opportunity;
 
+  // The credential profile  that is used for determining membership of this community
+  @OneToOne(() => Credential, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  credential!: Credential;
+
   // The parent community can have many child communities; the relationship is controlled by the child.
   @ManyToOne(() => Community, { eager: false, cascade: false })
   parentCommunity?: Community;
 
-  constructor(name: string, communityType: string) {
+  constructor(name: string) {
     super();
-    this.name = name;
-    this.type = communityType;
+    this.displayName = name;
+    this.ecoverseID = '';
   }
 }

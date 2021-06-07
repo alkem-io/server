@@ -26,6 +26,7 @@ import { TestUser } from '@test/utils/token.helper';
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 const forbiddenCode = '"code":"FORBIDDEN"';
+const userNotRegistered = 'USER_NOT_REGISTERED';
 let nonEcoverseEmail = 'non-ecoverse@cherrytwist.com';
 let data: TestDataServiceInitResult;
 
@@ -38,7 +39,7 @@ afterAll(async () => {
   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
 });
 
-describe('DDT anonymous user - queries - Not authorized', () => {
+describe.skip('DDT non-ecoverse user - queries - Not authorized', () => {
   // Arrange
   test.each`
     query                                | idName           | expectedAuth         | expectedForb
@@ -46,22 +47,18 @@ describe('DDT anonymous user - queries - Not authorized', () => {
     ${'usersName'}                       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersAccountUPN'}                 | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersProfile'}                    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'usersMemberofGroupsName'}         | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'usersMemberofOrganisationsName'}  | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'usersMemberofAgentCredentials'}   | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userName'}                        | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userAccountUPN'}                  | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'userProfile'}                     | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'userMemberofGroupsName'}          | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'userMemberofOrganisationsName'}   | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
+    ${'userMemberofAgentCredentials'}    | ${'userId'}      | ${notAuthorizedCode} | ${forbiddenCode}
     ${'usersById'}                       | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsName'}                      | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsFocalPointName'}            | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsProfile'}                   | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsMembersName'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsParentCommunity'}           | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsParentOrganisation'}        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagName'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
-    ${'groupsWithTagFocalPointName'}     | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagProfile'}            | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagMembersName'}        | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'groupsWithTagParentCommunity'}    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
@@ -84,7 +81,7 @@ describe('DDT anonymous user - queries - Not authorized', () => {
       // Act
       const requestParamsQueryData = {
         operationName: null,
-        query: getQueries(query, (data as Record<string, number>)[idName]),
+        query: getQueries(query, (data as Record<string, string>)[idName]),
         variables: null,
       };
       const response = await graphqlRequestAuth(
@@ -108,7 +105,7 @@ describe('DDT anonymous user - queries - Not authorized', () => {
 // ${opportunitiesProjectsId}          | ${notAuthorizedCode}
 // ${opportunitiesProjectsAspectsId}   | ${notAuthorizedCode}
 
-describe('DDT anonymous user - queries - authorized', () => {
+describe.skip('DDT non-ecoverse user - queries - authorized', () => {
   // Arrange
   test.each`
     query                                   | idName           | expectedAuth         | expectedForb
@@ -148,7 +145,7 @@ describe('DDT anonymous user - queries - authorized', () => {
       // Act
       const requestParamsQueryData = {
         operationName: null,
-        query: getQueries(query, (data as Record<string, number>)[idName]),
+        query: getQueries(query, (data as Record<string, string>)[idName]),
         variables: null,
       };
       const response = await graphqlRequestAuth(
@@ -162,11 +159,12 @@ describe('DDT anonymous user - queries - authorized', () => {
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expectedAuth);
       expect(responseData).not.toContain(expectedForb);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
-describe('DDT anonymous user - Create mutations - Not authorized', () => {
+describe.skip('DDT non-ecoverse user - Create mutations - Not authorized', () => {
   // Arrange
   test.each`
     mutation                               | variables                               | idName             | expected
@@ -192,7 +190,7 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
         query: getCreateMutation(mutation),
         variables: getCreateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -208,7 +206,7 @@ describe('DDT anonymous user - Create mutations - Not authorized', () => {
   );
 });
 
-describe('DDT anonymous user - Create mutations - authorized', () => {
+describe.skip('DDT non-ecoverse user - Create mutations - authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName             | expected
@@ -222,7 +220,7 @@ describe('DDT anonymous user - Create mutations - authorized', () => {
         query: getCreateMutation(mutation),
         variables: getCreateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -234,26 +232,25 @@ describe('DDT anonymous user - Create mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(notAuthorizedCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
-describe('DDT anonymous user - Update mutations - NOT authorized', () => {
+describe.skip('DDT non-ecoverse user - Update mutations - NOT authorized', () => {
   // Arrange
   test.each`
-    mutation                                    | variables                                    | idName                        | expected
-    ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}            | ${forbiddenCode}
-    ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}           | ${forbiddenCode}
-    ${'updateChallengeMutation'}                | ${'updateChallengeVariables'}                | ${'challengeId'}              | ${forbiddenCode}
-    ${'updateOpportunityMutation'}              | ${'updateOpportunityVariables'}              | ${'opportunityId'}            | ${forbiddenCode}
-    ${'updateAspectMutation'}                   | ${'updateAspectVariable'}                    | ${'aspectId'}                 | ${forbiddenCode}
-    ${'updateActorMutation'}                    | ${'updateActorVariables'}                    | ${'actorId'}                  | ${forbiddenCode}
-    ${'addUserToCommunityMutation'}             | ${'addUserToCommunityVariables'}             | ${''}                         | ${forbiddenCode}
-    ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'}          | ${forbiddenCode}
-    ${'assignGroupFocalPointMutation'}          | ${'assignGroupFocalPointVariables'}          | ${'groupIdEcoverse'}          | ${forbiddenCode}
-    ${'removeGroupFocalPointMutation'}          | ${'removeGroupFocalPointVariables'}          | ${'createGroupOnChallengeId'} | ${forbiddenCode}
-    ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}              | ${forbiddenCode}
-    ${'removeUserFromGroupMutation'}            | ${'removeUserFromGroupVariables'}            | ${'addUserToOpportunityId'}   | ${forbiddenCode}
+    mutation                                    | variables                                    | idName               | expected
+    ${'updateProfileMutation'}                  | ${'updateProfileVariables'}                  | ${'userProfileId'}   | ${forbiddenCode}
+    ${'updateOrganisationMutation'}             | ${'updateOrganisationVariabls'}              | ${'organisationId'}  | ${forbiddenCode}
+    ${'updateChallengeMutation'}                | ${'updateChallengeVariables'}                | ${'challengeId'}     | ${forbiddenCode}
+    ${'updateOpportunityMutation'}              | ${'updateOpportunityVariables'}              | ${'opportunityId'}   | ${forbiddenCode}
+    ${'updateAspectMutation'}                   | ${'updateAspectVariable'}                    | ${'aspectId'}        | ${forbiddenCode}
+    ${'updateActorMutation'}                    | ${'updateActorVariables'}                    | ${'actorId'}         | ${forbiddenCode}
+    ${'addUserToCommunityMutation'}             | ${'addUserToCommunityVariables'}             | ${''}                | ${forbiddenCode}
+    ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'} | ${forbiddenCode}
+    ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}     | ${forbiddenCode}
   `(
     "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
     async ({ mutation, variables, idName, expected }) => {
@@ -263,7 +260,7 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
         query: getUpdateMutation(mutation),
         variables: getUpdateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -279,7 +276,7 @@ describe('DDT anonymous user - Update mutations - NOT authorized', () => {
   );
 });
 
-describe.skip('DDT anonymous user - Update mutations - authorized', () => {
+describe.skip('DDT non-ecoverse user - Update mutations - authorized', () => {
   // skipped due to bug with update user
   // Arrange
   test.each`
@@ -294,7 +291,7 @@ describe.skip('DDT anonymous user - Update mutations - authorized', () => {
         query: getUpdateMutation(mutation),
         variables: getUpdateVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(
@@ -306,11 +303,13 @@ describe.skip('DDT anonymous user - Update mutations - authorized', () => {
       // Assert
       expect(response.status).toBe(200);
       expect(responseData).not.toContain(expected);
+      expect(responseData).not.toContain(notAuthorizedCode);
+      expect(responseData).not.toContain(userNotRegistered);
     }
   );
 });
 
-describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
+describe.skip('DDT non-ecoverse user - Remove mutations - NOT authorized', () => {
   // Arrange
   test.each`
     mutation                       | variables                       | idName                   | expected
@@ -329,7 +328,7 @@ describe('DDT anonymous user - Remove mutations - NOT authorized', () => {
         query: getRemoveMutation(mutation),
         variables: getRemoveVariables(
           variables,
-          (data as Record<string, number>)[idName]
+          (data as Record<string, string>)[idName]
         ),
       };
       const response = await graphqlRequestAuth(

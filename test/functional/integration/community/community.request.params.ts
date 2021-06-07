@@ -1,5 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
+import { communityData } from '@test/utils/common-params';
 
 const uniqueId = (Date.now() + Math.random()).toString();
 
@@ -14,7 +15,7 @@ export const createGroupOnCommunityMutation = async (
         name,
         id
         members {
-          name
+          nameID
         }
         profile{
           id
@@ -24,13 +25,27 @@ export const createGroupOnCommunityMutation = async (
     variables: {
       groupData: {
         name: groupNameText,
-        parentID: parseFloat(communityId),
+        parentID: communityId,
         profileData: {
           description: 'some description',
           avatar: 'http://someUri',
         },
       },
     },
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const getCommunityData = async () => {
+  const requestParams = {
+    operationName: null,
+    query: `query {ecoverse(ID: "testEcoverse") {community {
+              id
+            }
+          }
+        }`,
+    variables: null,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

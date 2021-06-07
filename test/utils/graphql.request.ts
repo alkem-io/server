@@ -15,7 +15,7 @@ import { TestUser } from './token.helper';
  * @api public
  */
 export const graphqlRequest = async (requestParams: any) => {
-  return request(appSingleton.Instance.app.getHttpServer())
+  return await request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
     .send({ ...requestParams })
     .set('Accept', 'application/json');
@@ -37,14 +37,38 @@ export const graphqlRequestAuth = async (
     return await graphqlRequest(requestParams);
   } else {
     const res = appSingleton.Instance.userTokenMap.get(user);
+    //console.log(res);
     if (!res)
       throw new AuthenticationError(`Could not authenticate user ${user}`);
     else auth_token = res as string;
   }
 
-  return request(appSingleton.Instance.app.getHttpServer())
+  return await request(appSingleton.Instance.app.getHttpServer())
     .post('/graphql')
     .send({ ...requestParams })
     .set('Accept', 'application/json')
     .set('Authorization', `Bearer ${auth_token}`);
+};
+
+export const mutation = async (queryData: string, variablesData: string) => {
+  const requestParams = {
+    operationName: null,
+    query: queryData,
+    variables: variablesData,
+  };
+
+  return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
+};
+
+export const mutationNoAuth = async (
+  queryData: string,
+  variablesData: string
+) => {
+  const requestParams = {
+    operationName: null,
+    query: queryData,
+    variables: variablesData,
+  };
+
+  return await graphqlRequest(requestParams);
 };

@@ -1,0 +1,19 @@
+mutation createGroupOnCommunity($groupData: CreateUserGroupInput!) {
+  createGroupOnCommunity(groupData: $groupData) {
+    id,
+    name
+  }
+}
+
+
+query variables:
+{
+  "groupData":
+  {
+    "parentID": "uuid",
+    "name": "Experts",
+    "profileData": {
+      "description": "How do I handle scalability?"
+    }
+  }
+}

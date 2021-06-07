@@ -8,13 +8,10 @@ import {
   Actor,
   IActor,
 } from '@domain/context/actor';
-import {
-  ValidationException,
-  EntityNotFoundException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import validator from 'validator';
 import { DeleteActorInput } from './actor.dto.delete';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ActorService {
@@ -25,34 +22,14 @@ export class ActorService {
   ) {}
 
   async createActor(actorData: CreateActorInput): Promise<IActor> {
-    if (!actorData.name)
-      throw new ValidationException(
-        'A name is required to create an Actor',
-        LogContext.CHALLENGES
-      );
+    const actor = Actor.create(actorData);
+    actor.authorization = new AuthorizationDefinition();
 
-    const actor = new Actor(actorData.name);
-    if (actorData.description) {
-      actor.description = actorData.description;
-    }
-    actor.value = actorData.value;
-    actor.impact = actorData.impact;
     await this.actorRepository.save(actor);
     return actor;
   }
 
   async getActorOrFail(actorID: string): Promise<IActor> {
-    if (validator.isNumeric(actorID)) {
-      const idInt: number = parseInt(actorID);
-      return await this.getActorByIdOrFail(idInt);
-    }
-    throw new EntityNotFoundException(
-      `Not able to locate actor with the specified ID: ${actorID}`,
-      LogContext.CHALLENGES
-    );
-  }
-
-  async getActorByIdOrFail(actorID: number): Promise<IActor> {
     const actor = await this.actorRepository.findOne({ id: actorID });
     if (!actor)
       throw new EntityNotFoundException(
@@ -64,7 +41,7 @@ export class ActorService {
 
   async deleteActor(deleteData: DeleteActorInput): Promise<IActor> {
     const actorID = deleteData.ID;
-    const actor = await this.getActorByIdOrFail(actorID);
+    const actor = await this.getActorOrFail(actorID);
     const result = await this.actorRepository.remove(actor as Actor);
     result.id = deleteData.ID;
     return result;
@@ -93,5 +70,9 @@ export class ActorService {
     await this.actorRepository.save(actor);
 
     return actor;
+  }
+
+  async saveActor(actor: IActor): Promise<IActor> {
+    return await this.actorRepository.save(actor);
   }
 }

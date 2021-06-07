@@ -4,8 +4,8 @@ import { ITemplate } from './template/template.interface';
 import * as uxTemplate from '@templates/ux-template.json';
 import { IConfig } from './config.interface';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
-import { IDemoAuthProviderConfig } from './authentication/providers/demo-auth/demo-auth.provider.config.interface';
-import { IAadAuthProviderConfig } from './authentication/providers/aad/aad.config.interface';
+import { ConfigurationTypes } from '@common/enums';
+import { IOryConfig } from './authentication/providers/ory/ory.config.interface';
 
 @Injectable()
 export class KonfigService {
@@ -16,7 +16,8 @@ export class KonfigService {
       template: await this.getTemplate(),
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
-        enabled: this.configService.get('service').authenticationEnabled,
+        enabled: this.configService.get(ConfigurationTypes.Identity)
+          ?.authentication?.enabled,
       },
     };
   }
@@ -26,18 +27,11 @@ export class KonfigService {
   > {
     const authProviders = [
       {
-        name: 'Azure Active Directory',
-        label: 'Log in with Azure AD',
-        icon: 'https://portal.azure.com/favicon.ico',
-        enabled: true,
-        config: await this.getAadConfig(),
-      },
-      {
-        name: 'Demo Auth',
-        label: 'Log in with Demo Authentication Provider',
+        name: 'Ory Kratos Config',
+        label: 'Ory Kratos Config',
         icon: '',
         enabled: true,
-        config: await this.getDemoAuthProviderConfig(),
+        config: await this.getOryConfig(),
       },
     ];
 
@@ -52,39 +46,14 @@ export class KonfigService {
     return template;
   }
 
-  async getAadConfig(): Promise<IAadAuthProviderConfig> {
-    const aadConfig = await this.configService.get('aad');
-    const apiScope = `api://${aadConfig.clientID}/.default`;
-
-    return {
-      msalConfig: {
-        auth: {
-          ...aadConfig.client,
-        },
-        cache: {
-          cacheLocation: 'localStorage', // This configures where your cache will be stored
-          storeAuthStateInCookie: false, // Set this to "true" if you are having issues on IE11 or Edge
-        },
-      },
-      apiConfig: {
-        resourceScope: apiScope,
-      },
-      loginRequest: {
-        scopes: ['openid', 'profile', 'offline_access'],
-      },
-      tokenRequest: {
-        scopes: [apiScope],
-      },
-      silentRequest: {
-        scopes: ['openid', 'profile', apiScope],
-      },
-    };
-  }
-
-  async getDemoAuthProviderConfig(): Promise<IDemoAuthProviderConfig> {
-    const res = (await this.configService.get<IDemoAuthProviderConfig>(
-      'demo_auth_provider'
-    )) as IDemoAuthProviderConfig;
+  async getOryConfig(): Promise<IOryConfig> {
+    const oryConfig = (
+      await this.configService.get(ConfigurationTypes.Identity)
+    )?.authentication?.providers?.ory;
+    const res = {
+      kratosPublicBaseURL: oryConfig.kratos_public_base_url,
+      issuer: oryConfig.issuer,
+    } as IOryConfig;
     return res;
   }
 }

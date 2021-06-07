@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
 import { Relation } from './relation.entity';
 import { RelationResolverMutations } from './relation.resolver.mutations';
 import { RelationService } from './relation.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Relation])],
+  imports: [AuthorizationEngineModule, TypeOrmModule.forFeature([Relation])],
   providers: [RelationResolverMutations, RelationService],
   exports: [RelationService],
 })

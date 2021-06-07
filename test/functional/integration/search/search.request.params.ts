@@ -11,16 +11,12 @@ export const searchMutation = async (terms: any, filter: any) => {
         result {
           __typename
           ... on User {
-            name
             id
-          }
-          ... on UserGroup {
-            name
-            id       
+            displayName
           }
           ... on Organisation {
-            name
             id
+            displayName
           }
         }
       }
