@@ -40,7 +40,7 @@ export const createGroupOnCommunityMutation = async (
 export const getCommunityData = async () => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse{community {
+    query: `query {ecoverse(ID: "testEcoverse") {community {
               id
             }
           }

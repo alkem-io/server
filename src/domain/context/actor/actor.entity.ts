@@ -1,10 +1,10 @@
 import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { IActor } from '@domain/context/actor/actor.interface';
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
-export class Actor extends BaseCherrytwistEntity implements IActor {
+export class Actor extends AuthorizableEntity implements IActor {
   @Column()
   name: string;
 

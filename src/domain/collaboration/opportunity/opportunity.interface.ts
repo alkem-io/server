@@ -12,4 +12,6 @@ export abstract class IOpportunity extends IBaseChallenge {
   projects?: IProject[];
 
   relations?: IRelation[];
+
+  ecoverseID!: string;
 }

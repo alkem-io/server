@@ -1,9 +1,9 @@
-import { IBaseCherrytwist } from '@domain/common/base-entity';
+import { IAuthorizable } from '@domain/common/authorizable-entity';
 import { IActor } from '@domain/context/actor/actor.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('ActorGroup')
-export abstract class IActorGroup extends IBaseCherrytwist {
+export abstract class IActorGroup extends IAuthorizable {
   @Field(() => String)
   name!: string;
 

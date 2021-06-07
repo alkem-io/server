@@ -82,7 +82,7 @@ export const removeRelationMutation = async (relationId: any) => {
 export const getRelationsPerOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse{ opportunity(ID: "${opportunityId}") {
+    query: `query {ecoverse(ID: "testEcoverse") { opportunity(ID: "${opportunityId}") {
             ${opportunityData}
         }
       }

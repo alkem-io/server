@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
+import { CreateChallengeInput } from '@domain/challenge/challenge';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
@@ -13,16 +13,15 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { ContextService } from '@domain/context/context/context.service';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
-import { CreateEcoverseInput } from '@domain/challenge';
+import { CreateEcoverseInput } from '@domain/challenge/ecoverse';
 import { CreateOpportunityInput } from '@domain/collaboration/opportunity';
-import {
-  CreateActorGroupInput,
-  CreateActorInput,
-  CreateAspectInput,
-} from '@domain/context';
+import { CreateActorInput } from '@domain/context/actor';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateProjectInput } from '@domain/collaboration/project';
 import { CreateRelationInput } from '@domain/collaboration/relation';
+import { CreateAspectInput } from '@domain/context/aspect';
+import { CreateActorGroupInput } from '@domain/context/actor-group';
+import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
 
 export type TestDataServiceInitResult = {
   ecoverseId: string;
@@ -54,6 +53,7 @@ export type TestDataServiceInitResult = {
 export class TestDataService {
   constructor(
     private ecoverseService: EcoverseService,
+    private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private userService: UserService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
@@ -92,10 +92,10 @@ export class TestDataService {
   testEcoverseNameId = 'TestEcoverse';
 
   async initCreateEcoverse(): Promise<string> {
-    const ecoverse = new CreateEcoverseInput();
-    ecoverse.nameID = this.testEcoverseNameId;
-    ecoverse.displayName = this.testEcoverseNameId;
-    ecoverse.context = {
+    const ecoverseInput = new CreateEcoverseInput();
+    ecoverseInput.nameID = this.testEcoverseNameId;
+    ecoverseInput.displayName = this.testEcoverseNameId;
+    ecoverseInput.context = {
       background: 'test ecoverse background',
       impact: 'test ecoverse impact',
       references: [
@@ -109,9 +109,10 @@ export class TestDataService {
       vision: 'test ecoverse vision',
       who: 'test ecoverse who',
     };
-    ecoverse.tags = ['ecoverseTest1', 'ecoverseTest2'];
-    const response = await this.ecoverseService.createEcoverse(ecoverse);
-    return response.id;
+    ecoverseInput.tags = ['ecoverseTest1', 'ecoverseTest2'];
+    const ecoverse = await this.ecoverseService.createEcoverse(ecoverseInput);
+    await this.ecoverseAuthorizationService.applyAuthorizationRules(ecoverse);
+    return ecoverse.id;
   }
 
   async initGetCommunity(): Promise<string> {

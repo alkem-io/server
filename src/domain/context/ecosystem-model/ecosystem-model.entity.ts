@@ -1,9 +1,9 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { ActorGroup } from '@domain/context/actor-group';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 @Entity()
-export class EcosystemModel extends BaseCherrytwistEntity
+export class EcosystemModel extends AuthorizableEntity
   implements IEcosystemModel {
   @Column('varchar', { length: 255, nullable: true })
   description?: string = '';

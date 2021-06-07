@@ -8,9 +8,11 @@ import { ProfileModule } from '@domain/community/profile/profile.module';
 import { UserGroupResolverFields } from './user-group.resolver.fields';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
 
 @Module({
   imports: [
+    AuthorizationEngineModule,
     ProfileModule,
     UserModule,
     AgentModule,

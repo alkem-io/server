@@ -15,6 +15,7 @@ import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '../user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ApplicationService {
@@ -31,16 +32,17 @@ export class ApplicationService {
     applicationData: CreateApplicationInput,
     ecoverseID = ''
   ): Promise<IApplication> {
-    const application = Application.create(applicationData);
+    const application: IApplication = Application.create(applicationData);
     application.ecoverseID = ecoverseID;
-    (application as IApplication).user = await this.userService.getUserOrFail(
+    application.user = await this.userService.getUserOrFail(
       applicationData.userID
     );
 
+    application.authorization = new AuthorizationDefinition();
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
-    (application as IApplication).lifecycle = await this.lifecycleService.createLifecycle(
+    application.lifecycle = await this.lifecycleService.createLifecycle(
       application.id,
       applicationLifecycleConfig
     );
@@ -85,7 +87,7 @@ export class ApplicationService {
     return application;
   }
 
-  async save(application: Application): Promise<Application> {
+  async save(application: IApplication): Promise<IApplication> {
     return await this.applicationRepository.save(application);
   }
 }

@@ -1,13 +1,13 @@
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { EcosystemModel, IActorGroup, Actor } from '@domain/context';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 export enum RestrictedActorGroupNames {
   Collaborators = 'collaborators',
 }
 
 @Entity()
-export class ActorGroup extends BaseCherrytwistEntity implements IActorGroup {
+export class ActorGroup extends AuthorizableEntity implements IActorGroup {
   @Column()
   name: string;
 

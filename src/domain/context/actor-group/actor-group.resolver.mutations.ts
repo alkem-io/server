@@ -1,42 +1,69 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 
 import {
   IActorGroup,
   DeleteActorGroupInput,
 } from '@domain/context/actor-group';
-import { IActor, CreateActorInput } from '@domain/context/actor';
-import { AuthorizationRoleGlobal } from '@common/enums';
+import { IActor, CreateActorInput, ActorService } from '@domain/context/actor';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { CurrentUser } from '@common/decorators';
 
 @Resolver()
 export class ActorGroupResolverMutations {
-  constructor(private actorGroupService: ActorGroupService) {}
+  constructor(
+    private actorService: ActorService,
+    private authorizationEngine: AuthorizationEngineService,
+    private actorGroupService: ActorGroupService
+  ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IActor, {
     description: 'Creates a new Actor in the specified ActorGroup.',
   })
   async createActor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('actorData') actorData: CreateActorInput
   ): Promise<IActor> {
-    const result = await this.actorGroupService.createActor(actorData);
-
-    return result;
+    const actorGroup = await this.actorGroupService.getActorGroupOrFail(
+      actorData.actorGroupID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      actorGroup.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create actor on actor group: ${actorGroup.name}`
+    );
+    const actor = await this.actorGroupService.createActor(actorData);
+    actor.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      actor.authorization,
+      actorGroup.authorization
+    );
+    return await this.actorService.saveActor(actor);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IActorGroup, {
     description:
       'Deletes the specified Actor Group, including contained Actors.',
   })
   async deleteActorGroup(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteActorGroupInput
   ): Promise<IActorGroup> {
+    const actorGroup = await this.actorGroupService.getActorGroupOrFail(
+      deleteData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      actorGroup.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete actor group: ${actorGroup.name}`
+    );
     return await this.actorGroupService.deleteActorGroup(deleteData);
   }
 }

@@ -4,6 +4,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import {
   Opportunity,
@@ -11,7 +12,7 @@ import {
   CreateOpportunityInput,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '../project/project.service';
 import { RelationService } from '../relation/relation.service';
 import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
@@ -52,7 +53,11 @@ export class OpportunityService {
     opportunity.projects = [];
     opportunity.relations = [];
 
-    await this.baseChallengeService.initialise(opportunity, opportunityData);
+    await this.baseChallengeService.initialise(
+      opportunity,
+      opportunityData,
+      ecoverseID
+    );
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = opportunityLifecycleConfigDefault;
@@ -68,6 +73,12 @@ export class OpportunityService {
     opportunity.lifecycle = await this.lifecycleService.createLifecycle(
       opportunity.id,
       machineConfig
+    );
+
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      opportunity,
+      AuthorizationCredential.OpportunityMember
     );
 
     return await this.saveOpportunity(opportunity);
@@ -133,12 +144,17 @@ export class OpportunityService {
   }
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
-    // Note need to load it in with all contained entities so can remove fully
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['community', 'context', 'lifecycle', 'relations', 'projects'],
+      relations: ['relations', 'projects'],
     });
-
-    await this.baseChallengeService.deleteEntities(opportunity);
+    // disable deletion if projects are present
+    const projects = opportunity.projects;
+    if (projects && projects.length > 0) {
+      throw new ValidationException(
+        `Unable to remove Opportunity (${opportunity.nameID}) as it contains ${projects.length} Projects`,
+        LogContext.CHALLENGES
+      );
+    }
 
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
@@ -146,25 +162,37 @@ export class OpportunityService {
       }
     }
 
-    return await this.opportunityRepository.remove(opportunity as Opportunity);
+    // Note need to load it in with all contained entities so can remove fully
+    const baseOpportunity = await this.getOpportunityOrFail(opportunityID, {
+      relations: ['community', 'context', 'lifecycle'],
+    });
+
+    await this.baseChallengeService.deleteEntities(baseOpportunity);
+
+    const result = await this.opportunityRepository.remove(
+      baseOpportunity as Opportunity
+    );
+    result.id = opportunityID;
+    return result;
   }
 
   async updateOpportunity(
     opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
-    const opportunity = await this.baseChallengeService.update(
+    const baseOpportunity = await this.baseChallengeService.update(
       opportunityData,
       this.opportunityRepository
     );
+    const opportunity = await this.getOpportunityOrFail(baseOpportunity.id);
     if (opportunityData.nameID) {
-      if (opportunityData.nameID !== opportunity.nameID) {
+      if (opportunityData.nameID !== baseOpportunity.nameID) {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           opportunityData.nameID,
           opportunity.ecoverseID
         );
-        opportunity.nameID = opportunityData.nameID;
-        await this.opportunityRepository.save(opportunity);
+        baseOpportunity.nameID = opportunityData.nameID;
+        await this.opportunityRepository.save(baseOpportunity);
       }
     }
     return opportunity;

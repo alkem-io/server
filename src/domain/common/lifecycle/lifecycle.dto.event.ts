@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 
 @InputType()
@@ -15,7 +15,6 @@ export class LifecycleEventInput {
     description:
       'The name of the event. Simple text and matching an event in the Lifecycle definition.',
   })
-  @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   eventName!: string;
 }

@@ -5,6 +5,7 @@ import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ProjectEventInput, IProject } from '@domain/collaboration/project';
 import { ProjectService } from './project.service';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class ProjectLifecycleOptionsProvider {
@@ -14,8 +15,12 @@ export class ProjectLifecycleOptionsProvider {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async eventOnProject(projectEventData: ProjectEventInput): Promise<IProject> {
+  async eventOnProject(
+    projectEventData: ProjectEventInput,
+    agentInfo: AgentInfo
+  ): Promise<IProject> {
     const projectID = projectEventData.ID;
+    const project = await this.projectService.getProjectOrFail(projectID);
     const lifecycle = await this.projectService.getLifecycle(projectID);
 
     // Send the event, translated if needed
@@ -28,7 +33,9 @@ export class ProjectLifecycleOptionsProvider {
         ID: lifecycle.id,
         eventName: projectEventData.eventName,
       },
-      this.ProjectLifecycleMachineOptions
+      this.ProjectLifecycleMachineOptions,
+      agentInfo,
+      project.authorization
     );
 
     return await this.projectService.getProjectOrFail(projectID);

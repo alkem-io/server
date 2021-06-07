@@ -1,6 +1,5 @@
 import {
   BaseEntity,
-  Column,
   CreateDateColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -20,11 +19,7 @@ export abstract class BaseCherrytwistEntity extends BaseEntity {
   @VersionColumn()
   version?: number;
 
-  @Column()
-  authorizationRules?: string;
-
   constructor() {
     super();
-    this.authorizationRules = '';
   }
 }

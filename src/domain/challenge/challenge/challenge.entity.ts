@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import {
+  Column,
   Entity,
   JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
-  OneToOne,
 } from 'typeorm';
 import { Ecoverse } from '@domain/challenge/ecoverse';
 import { IChallenge } from './challenge.interface';
@@ -44,12 +44,15 @@ export class Challenge extends BaseChallenge implements IChallenge {
   )
   parentChallenge?: Challenge;
 
-  @OneToOne(
+  @ManyToOne(
     () => Ecoverse,
-    ecoverse => ecoverse.containedChallenge,
+    ecoverse => ecoverse.challenges,
     { eager: false, cascade: false }
   )
-  ecoverse?: Ecoverse;
+  parentEcoverse?: Challenge;
+
+  @Column()
+  ecoverseID!: string;
 
   constructor() {
     super();

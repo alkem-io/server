@@ -19,7 +19,11 @@ import { NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { ChallengeLifecycleTemplate, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  ChallengeLifecycleTemplate,
+  LogContext,
+} from '@common/enums';
 import { Inject, Injectable } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
@@ -34,6 +38,7 @@ import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.e
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ChallengeService {
@@ -53,12 +58,17 @@ export class ChallengeService {
     ecoverseID: string
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
+    challenge.authorization = new AuthorizationDefinition();
 
     challenge.ecoverseID = ecoverseID;
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
-    await this.baseChallengeService.initialise(challenge, challengeData);
+    await this.baseChallengeService.initialise(
+      challenge,
+      challengeData,
+      ecoverseID
+    );
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = challengeLifecycleConfigDefault;
@@ -76,16 +86,23 @@ export class ChallengeService {
       machineConfig
     );
 
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      challenge,
+      AuthorizationCredential.ChallengeMember
+    );
+
     return await this.challengeRepository.save(challenge);
   }
 
   async updateChallenge(
     challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
-    const challenge = await this.baseChallengeService.update(
+    const baseChallenge = await this.baseChallengeService.update(
       challengeData,
       this.challengeRepository
     );
+    const challenge = await this.getChallengeOrFail(baseChallenge.id);
     if (challengeData.nameID) {
       if (challengeData.nameID !== challenge.nameID) {
         // updating the nameID, check new value is allowed
@@ -104,37 +121,32 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: [
-        'childChallenges',
-        'community',
-        'context',
-        'lifecycle',
-        'opportunities',
-      ],
+      relations: ['childChallenges', 'opportunities'],
     });
-
-    await this.baseChallengeService.deleteEntities(challenge);
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
     if (challenge.childChallenges && challenge.childChallenges.length > 0)
       throw new ValidationException(
-        `Unable to remove challenge (${challengeID}) as it contains ${challenge.childChallenges.length} child challenges`,
+        `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.childChallenges.length} child challenges`,
         LogContext.CHALLENGES
       );
 
     if (challenge.opportunities && challenge.opportunities.length > 0)
       throw new ValidationException(
-        `Unable to remove challenge (${challengeID}) as it contains ${challenge.opportunities.length} opportunities`,
+        `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.opportunities.length} opportunities`,
         LogContext.CHALLENGES
       );
-    const { id } = challenge;
+
+    const baseChallenge = await this.getChallengeOrFail(challengeID, {
+      relations: ['community', 'context', 'lifecycle'],
+    });
+    await this.baseChallengeService.deleteEntities(baseChallenge);
+
     const result = await this.challengeRepository.remove(
       challenge as Challenge
     );
-    return {
-      ...result,
-      id,
-    };
+    result.id = deleteData.ID;
+    return result;
   }
 
   async getChallengeInNameableScopeOrFail(
@@ -346,7 +358,7 @@ export class ChallengeService {
     );
     if (existingOrg)
       throw new ValidationException(
-        `Community ${challengeID} already has an organisation with the provided organisation ID: ${organisationID}`,
+        `Challenge ${challenge.nameID} already has an organisation with the provided organisation ID: ${organisationID}`,
         LogContext.COMMUNITY
       );
     // ok to add the org

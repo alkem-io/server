@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { IUser } from '@domain/community/user/user.interface';
+import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationCredential, LogContext } from '@common/enums';
@@ -23,6 +23,8 @@ import {
 } from '@domain/community/user-group';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IProfile } from '@domain/community/profile';
 
 @Injectable()
 export class UserGroupService {
@@ -42,6 +44,7 @@ export class UserGroupService {
   ): Promise<IUserGroup> {
     const group = UserGroup.create(userGroupData);
     group.ecoverseID = ecoverseID;
+    group.authorization = new AuthorizationDefinition();
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
       userGroupData.profileData
@@ -240,5 +243,15 @@ export class UserGroupService {
         tagset !== undefined && this.tagsetService.hasTag(tagset, tagFilter)
       );
     });
+  }
+
+  getProfile(userGroup: IUserGroup): IProfile {
+    const profile = userGroup.profile;
+    if (!profile)
+      throw new EntityNotInitializedException(
+        `UserGroup Profile not initialized: ${userGroup.id}`,
+        LogContext.COMMUNITY
+      );
+    return profile;
   }
 }

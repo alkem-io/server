@@ -7,27 +7,25 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import {
   UpdateUserInput,
   CreateUserInput,
+  DeleteUserInput,
   User,
   IUser,
 } from '@domain/community/user';
-import { DeleteUserInput } from './user.dto.delete';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Agent, IAgent } from '@domain/agent/agent';
-import { NamingService } from '@src/services/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants';
+import { IProfile } from '@domain/community/profile';
+import { LogContext } from '@common/enums';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class UserService {
   constructor(
-    private namingService: NamingService,
     private profileService: ProfileService,
     private agentService: AgentService,
     @InjectRepository(User)
@@ -39,6 +37,8 @@ export class UserService {
     await this.validateUserProfileCreationRequest(userData);
 
     const user: IUser = User.create(userData);
+    user.authorization = new AuthorizationDefinition();
+
     user.profile = await this.profileService.createProfile(
       userData.profileData
     );
@@ -47,25 +47,12 @@ export class UserService {
       parentDisplayID: user.email,
     });
 
-    // Need to save to get the object identifiers assigned
-    const savedUser = await this.userRepository.save(user);
     this.logger.verbose?.(
-      `Created a new user with id: ${savedUser.id}`,
+      `Created a new user with nameID: ${user.nameID}`,
       LogContext.COMMUNITY
     );
 
-    // Ensure the user has the global registered credential
-    if (!savedUser.agent)
-      throw new EntityNotInitializedException(
-        `User Agent not initialized: ${savedUser.id}`,
-        LogContext.AUTH
-      );
-    await this.agentService.grantCredential({
-      type: AuthorizationCredential.GlobalRegistered,
-      agentID: savedUser.agent.id,
-    });
-
-    return savedUser;
+    return await this.userRepository.save(user);
   }
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
@@ -155,6 +142,24 @@ export class UserService {
         LogContext.COMMUNITY
       );
     }
+    return user;
+  }
+
+  async getUserByEmail(
+    userID: string,
+    options?: FindOneOptions<User>
+  ): Promise<IUser | undefined> {
+    let user: IUser | undefined;
+
+    if (this.validateEmail(userID)) {
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
+      );
+    }
+
     return user;
   }
 
@@ -274,6 +279,16 @@ export class UserService {
     return agent;
   }
 
+  getProfile(user: IUser): IProfile {
+    const profile = user.profile;
+    if (!profile)
+      throw new EntityNotInitializedException(
+        `User Profile not initialized: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    return profile;
+  }
+
   async usersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<IUser[]> {
@@ -316,22 +331,5 @@ export class UserService {
       agent.id,
       credentialCriteria
     );
-  }
-
-  // Membership related functionality
-
-  addGroupToEntity(
-    entities: IGroupable[],
-    entity: IGroupable,
-    group: IUserGroup
-  ) {
-    const existingEntity = entities.find(e => e.id === entity.id);
-    if (!existingEntity) {
-      //first time through
-      entities.push(entity);
-      entity.groups = [group];
-    } else {
-      existingEntity.groups?.push(group);
-    }
   }
 }

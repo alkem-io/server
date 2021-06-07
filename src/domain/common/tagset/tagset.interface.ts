@@ -1,8 +1,8 @@
-import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IAuthorizable } from '../authorizable-entity';
 
 @ObjectType('Tagset')
-export abstract class ITagset extends IBaseCherrytwist {
+export abstract class ITagset extends IAuthorizable {
   @Field(() => String)
   name!: string;
 

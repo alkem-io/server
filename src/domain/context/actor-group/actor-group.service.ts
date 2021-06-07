@@ -11,10 +11,12 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActorService } from '@domain/context/actor/actor.service';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   GroupNotInitializedException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CreateActorInput, IActor } from '@domain/context/actor';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ActorGroupService {
@@ -29,6 +31,7 @@ export class ActorGroupService {
     actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
     const actorGroup = ActorGroup.create(actorGroupData);
+    actorGroup.authorization = new AuthorizationDefinition();
     actorGroup.actors = [];
     return await this.actorGroupRepository.save(actorGroup);
   }
@@ -76,5 +79,15 @@ export class ActorGroupService {
     await this.actorGroupRepository.save(actorGroup);
 
     return actor;
+  }
+
+  getActors(actorGroup: IActorGroup): IActor[] {
+    const actors = actorGroup.actors;
+    if (!actors)
+      throw new EntityNotInitializedException(
+        `Actor groups not initialized: ${actorGroup.id}`,
+        LogContext.CONTEXT
+      );
+    return actors;
   }
 }

@@ -6,34 +6,32 @@ import { Membership } from './membership.dto.result';
 import { UserService } from '@domain/community/user/user.service';
 import { MembershipInput } from './membership.dto.input';
 import { MembershipResultEntryEcoverse } from './membership.dto.result.entry.ecoverse';
-
-import { CommunityService } from '@domain/community/community/community.service';
-import { Community, ICommunity } from '@domain/community/community';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { Challenge, IChallenge } from '@domain/challenge/challenge';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { AuthorizationCredential } from '@common/enums';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IOrganisation } from '@domain/community/organisation';
+import { MembershipResultEntryOrganisation } from './membership.dto.result.entry.organisation';
+import { IChallenge } from '@domain/challenge/challenge';
 import { IUserGroup } from '@domain/community/user-group';
 import { MembershipResultEntry } from './membership.dto.result.entry';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { IOpportunity } from '@domain/collaboration/opportunity';
-import { IOrganisation } from '@domain/community';
-import { MembershipResultEntryOrganisation } from './membership.dto.result.entry.organisation';
+import { ICommunity } from '@domain/community/community';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 
 export class MembershipService {
   constructor(
     private userService: UserService,
     private userGroupService: UserGroupService,
-    private communityService: CommunityService,
     private ecoverseService: EcoverseService,
     private challengeService: ChallengeService,
+    private opportunityService: OpportunityService,
     private organisationService: OrganisationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async membership(membershipData: MembershipInput): Promise<Membership> {
     const membership = new Membership();
+
     const user = await this.userService.getUserWithAgent(membershipData.userID);
     const credentials = user.agent?.credentials;
     if (!credentials) {
@@ -49,45 +47,33 @@ export class MembershipService {
           credential.resourceID
         );
         const orgResult = new MembershipResultEntryOrganisation(
-          organisation.displayName,
+          organisation.nameID,
           organisation.id,
           organisation.displayName
         );
         membership.organisations.push(orgResult);
-      } else if (credential.type === AuthorizationCredential.CommunityMember) {
-        const community = await this.communityService.getCommunityOrFail(
-          credential.resourceID,
-          {
-            relations: ['challenge', 'opportunity'],
-          }
+      } else if (credential.type === AuthorizationCredential.EcoverseMember) {
+        const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+          credential.resourceID
         );
-        const challenge = (community as Community).challenge;
-        const opportunity = (community as Community).opportunity;
-        if (challenge) {
-          // Need to see if in ecoverse, or a Challenge
-          const challengeWithFields = await this.challengeService.getChallengeOrFail(
-            challenge?.id,
-            {
-              relations: ['ecoverse'],
-            }
-          );
-          const ecoverse = (challengeWithFields as Challenge).ecoverse;
-          if (ecoverse) {
-            const ecoverseResult = await this.createEcoverseMembershipResult(
-              ecoverse.id
-            );
-            membership.ecoverses.push(ecoverseResult);
-          } else {
-            storedChallenges.push(challenge);
-          }
-        } else if (opportunity) {
-          storedOpportunities.push(opportunity);
-        } else {
-          throw new EntityNotInitializedException(
-            `Unable to identify community parent: ${community.displayName}`,
-            LogContext.COMMUNITY
-          );
-        }
+        const ecoverseResult = new MembershipResultEntryEcoverse(
+          ecoverse.nameID,
+          ecoverse.id,
+          ecoverse.displayName
+        );
+        membership.ecoverses.push(ecoverseResult);
+      } else if (credential.type === AuthorizationCredential.ChallengeMember) {
+        const challenge = await this.challengeService.getChallengeOrFail(
+          credential.resourceID
+        );
+        storedChallenges.push(challenge);
+      } else if (
+        credential.type === AuthorizationCredential.OpportunityMember
+      ) {
+        const opportunity = await this.opportunityService.getOpportunityOrFail(
+          credential.resourceID
+        );
+        storedOpportunities.push(opportunity);
       } else if (credential.type === AuthorizationCredential.UserGroupMember) {
         const group = await this.userGroupService.getUserGroupOrFail(
           credential.resourceID

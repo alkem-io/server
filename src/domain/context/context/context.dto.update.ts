@@ -34,6 +34,5 @@ export class UpdateContextInput {
     nullable: true,
     description: 'Update the set of References for the Context.',
   })
-  @IsOptional()
   references?: UpdateReferenceInput[];
 }

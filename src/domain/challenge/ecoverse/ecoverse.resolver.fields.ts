@@ -1,5 +1,3 @@
-import { AuthorizationGlobalRoles } from '@common/decorators';
-import { AuthorizationRoleGlobal } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { IProject } from '@domain/collaboration/project';
@@ -7,9 +5,9 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IUserGroup } from '@domain/community/user-group';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IChallenge } from '../challenge';
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse } from '@domain/challenge/ecoverse';
@@ -19,8 +17,8 @@ import { ITagset } from '@domain/common/tagset';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IApplication } from '@domain/community/application';
 import { INVP } from '@domain/common/nvp';
-import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
@@ -28,49 +26,59 @@ export class EcoverseResolverFields {
     private projectService: ProjectService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
-    @Inject(EcoverseService) private ecoverseService: EcoverseService
+    private ecoverseService: EcoverseService
   ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the ecoverse.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async community(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getCommunity(ecoverse);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the ecoverse.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async context(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getContext(ecoverse);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
     description: 'The challenges for the ecoverse.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async challenges(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getChallenges(ecoverse);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('tagset', () => ITagset, {
     nullable: true,
     description: 'The set of tags for the  ecoverse.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async tagset(@Parent() ecoverse: Ecoverse) {
-    return this.ecoverseService.getContainedChallenge(ecoverse).tagset;
+    return ecoverse.tagset;
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('challenge', () => IChallenge, {
     nullable: false,
     description: 'A particular Challenge, either by its ID or nameID',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async challenge(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
@@ -79,19 +87,23 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getChallengeInNameableScope(id, ecoverse);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('opportunities', () => [IOpportunity], {
     nullable: false,
     description: 'All opportunities within the ecoverse',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
     return await this.ecoverseService.getOpportunitiesInNameableScope(ecoverse);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('opportunity', () => IOpportunity, {
     nullable: false,
     description: 'A particular Opportunity, either by its ID or nameID',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async opportunity(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
@@ -103,19 +115,23 @@ export class EcoverseResolverFields {
     );
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('projects', () => [IProject], {
     nullable: false,
     description: 'All projects within this ecoverse',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async projects(@Parent() ecoverse: Ecoverse): Promise<IProject[]> {
     return await this.ecoverseService.getProjects(ecoverse);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('project', () => IProject, {
     nullable: false,
     description: 'A particular Project, identified by the ID',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async project(
     @Parent() ecoverse: Ecoverse,
@@ -126,7 +142,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: false,
@@ -139,7 +155,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groupsWithTag', () => [IUserGroup], {
     nullable: false,
@@ -155,7 +171,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: false,
@@ -172,10 +188,7 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.Registered,
-    AuthorizationRoleGlobal.CommunityAdmin
-  )
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('application', () => IApplication, {
     nullable: false,

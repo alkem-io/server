@@ -10,9 +10,12 @@ import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.chall
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
+import { OpportunityAuthorizationService } from './opportunity.service.authorization';
 
 @Module({
   imports: [
+    AuthorizationEngineModule,
     ProjectModule,
     RelationModule,
     BaseChallengeModule,
@@ -25,7 +28,8 @@ import { CommunityModule } from '@domain/community/community/community.module';
     OpportunityResolverFields,
     OpportunityResolverMutations,
     OpportunityLifecycleOptionsProvider,
+    OpportunityAuthorizationService,
   ],
-  exports: [OpportunityService],
+  exports: [OpportunityService, OpportunityAuthorizationService],
 })
 export class OpportunityModule {}

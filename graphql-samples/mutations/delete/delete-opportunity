@@ -1,0 +1,12 @@
+mutation deleteOpportunity($deleteData: DeleteOpportunityInput!) {
+  deleteOpportunity(deleteData: $deleteData) {
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+    "ID": "uuid"
+  }
+}

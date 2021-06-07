@@ -1,87 +1,123 @@
-import { IReference, CreateReferenceInput } from '@domain/common/reference';
-import { ITagset, CreateTagsetInput } from '@domain/common/tagset';
+import { IReference } from '@domain/common/reference';
+import { ITagset } from '@domain/common/tagset';
 import {
+  CreateReferenceOnProfileInput,
+  CreateTagsetOnProfileInput,
   IProfile,
   UpdateProfileInput,
   UploadProfileAvatarInput,
 } from '@domain/community/profile';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
-import {
-  GraphqlGuard,
-  AuthorizationGlobalRoles,
-  AuthorizationSelfManagement,
-} from '@core/authorization';
-import { AuthorizationRoleGlobal } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ReferenceService } from '@domain/common/reference/reference.service';
 
 @Resolver()
 export class ProfileResolverMutations {
-  constructor(private profileService: ProfileService) {}
+  constructor(
+    private tagsetService: TagsetService,
+    private referenceService: ReferenceService,
+    private authorizationEngine: AuthorizationEngineService,
+    private profileService: ProfileService
+  ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
-  @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
   @Mutation(() => ITagset, {
     description: 'Creates a new Tagset on the specified Profile',
   })
   @Profiling.api
   async createTagsetOnProfile(
-    @Args('tagsetData') tagsetData: CreateTagsetInput
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('tagsetData') tagsetData: CreateTagsetOnProfileInput
   ): Promise<ITagset> {
-    return await this.profileService.createTagset(tagsetData);
+    const profile = await this.profileService.getProfileOrFail(
+      tagsetData.profileID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.CREATE,
+      `profile: ${profile.id}`
+    );
+
+    const tagset = await this.profileService.createTagset(tagsetData);
+    tagset.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      tagset.authorization,
+      profile.authorization
+    );
+    return await this.tagsetService.saveTagset(tagset);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
-  @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
     description: 'Creates a new Reference on the specified Profile.',
   })
   @Profiling.api
   async createReferenceOnProfile(
-    @Args('referenceInput') referenceInput: CreateReferenceInput
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('referenceInput') referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
-    return await this.profileService.createReference(referenceInput);
+    const profile = await this.profileService.getProfileOrFail(
+      referenceInput.profileID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.CREATE,
+      `profile: ${profile.id}`
+    );
+    const reference = await this.profileService.createReference(referenceInput);
+    reference.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      reference.authorization,
+      profile.authorization
+    );
+    return await this.referenceService.saveReference(reference);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.Admin,
-    AuthorizationRoleGlobal.CommunityAdmin
-  )
-  @AuthorizationSelfManagement()
   @UseGuards(GraphqlGuard)
   @Mutation(() => IProfile, {
     description: 'Updates the specified Profile.',
   })
   @Profiling.api
   async updateProfile(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('profileData') profileData: UpdateProfileInput
   ): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(profileData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `profile: ${profile.id}`
+    );
     return await this.profileService.updateProfile(profileData);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.Admin,
-    AuthorizationRoleGlobal.CommunityAdmin
-  )
-  @AuthorizationSelfManagement()
   @Mutation(() => IProfile, {
     description: 'Uploads and sets an avatar image for the specified Profile.',
   })
   async uploadAvatar(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('uploadData') uploadData: UploadProfileAvatarInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(
+      uploadData.profileID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `profile: ${profile.id}`
+    );
     const readStream = createReadStream();
     return await this.profileService.uploadAvatar(
       readStream,

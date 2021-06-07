@@ -1,9 +1,9 @@
-import { IBaseCherrytwist } from '@domain/common/base-entity';
+import { IAuthorizable } from '@domain/common/authorizable-entity';
 import { IActorGroup } from '@domain/context';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('EcosystemModel')
-export abstract class IEcosystemModel extends IBaseCherrytwist {
+export abstract class IEcosystemModel extends IAuthorizable {
   @Field(() => String, {
     nullable: true,
     description: 'Overview of this ecosystem model.',

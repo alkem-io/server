@@ -3,11 +3,7 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
-import {
-  AuthorizationGlobalRoles,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   CreateApplicationInput,
   DeleteApplicationInput,
@@ -23,89 +19,151 @@ import {
 } from '@domain/community/community';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
-import { UserInfo } from '@core/authentication';
-import { AuthorizationRoleGlobal } from '@common/enums';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { UserService } from '../user/user.service';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    @Inject(CommunityService) private communityService: CommunityService,
+    private authorizationEngine: AuthorizationEngineService,
+    private userService: UserService,
+    private communityService: CommunityService,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService
   ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUserGroup, {
     description: 'Creates a new User Group in the specified Community.',
   })
   @Profiling.api
   async createGroupOnCommunity(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
-    return await this.communityService.createGroup(groupData);
+    const community = await this.communityService.getCommunityOrFail(
+      groupData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create group community: ${community.displayName}`
+    );
+    const group = await this.communityService.createGroup(groupData);
+    group.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      group.authorization,
+      community.authorization
+    );
+    return group;
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
     description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api
   async assignUserToCommunity(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: AssignCommunityMemberInput
   ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      membershipData.communityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `assign user community: ${community.displayName}`
+    );
     return await this.communityService.assignMember(membershipData);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
     description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
   async removeUserFromCommunity(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: RemoveCommunityMemberInput
   ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      membershipData.communityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `remove user community: ${community.displayName}`
+    );
     return await this.communityService.removeMember(membershipData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Creates Application for a User to join this Community.',
   })
   @Profiling.api
   async createApplication(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('applicationData') applicationData: CreateApplicationInput
   ): Promise<IApplication> {
-    return await this.communityService.createApplication(applicationData);
+    const community = await this.communityService.getCommunityOrFail(
+      applicationData.parentID
+    );
+    // Check that the application creation is authorized, after first updating the rules for the community entity
+    // so that the current user can also update their details (by creating an application)
+    const user = await this.userService.getUserOrFail(applicationData.userID);
+    const authorization = this.authorizationEngine.appendCredentialAuthorizationRule(
+      community.authorization,
+      {
+        type: AuthorizationCredential.UserSelfManagement,
+        resourceID: user.id,
+      },
+      [AuthorizationPrivilege.UPDATE]
+    );
+
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      AuthorizationPrivilege.UPDATE,
+      `create application community: ${community.displayName}`
+    );
+
+    // Authorized, so create + return
+    const application = await this.communityService.createApplication(
+      applicationData
+    );
+    application.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      application.authorization,
+      community.authorization
+    );
+    return await this.applicationService.save(application);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Removes the specified User Application.',
   })
   async deleteUserApplication(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
+    const community = await this.communityService.getCommunityOrFail(
+      deleteData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `delete application community: ${community.displayName}`
+    );
     return await this.applicationService.deleteApplication(deleteData);
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
     description: 'Trigger an event on the Application.',
@@ -113,11 +171,20 @@ export class CommunityResolverMutations {
   async eventOnApplication(
     @Args('applicationEventData')
     applicationEventData: ApplicationEventInput,
-    @CurrentUser() userInfo: UserInfo
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<IApplication> {
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationEventData.applicationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      application.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `event on application: ${application.id}`
+    );
     return await this.communityLifecycleOptionsProvider.eventOnApplication(
       applicationEventData,
-      userInfo.user
+      agentInfo
     );
   }
 }

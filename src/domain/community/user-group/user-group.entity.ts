@@ -3,10 +3,10 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IUserGroup } from '@domain/community/user-group';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { Community } from '../community';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
-export class UserGroup extends BaseCherrytwistEntity implements IUserGroup {
+export class UserGroup extends AuthorizableEntity implements IUserGroup {
   @Column()
   name: string;
 

@@ -4,13 +4,15 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { User } from '@domain/community/user/user.entity';
 import { UserModule } from '@domain/community/user/user.module';
-import { SearchResolver } from './search.resolver';
+import { SearchResolverQueries } from './search.resolver.queries';
 import { SearchService } from './search.service';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
+import { AuthorizationEngineModule } from '../authorization-engine/authorization-engine.module';
 
 @Module({
   imports: [
+    AuthorizationEngineModule,
     UserModule,
     UserGroupModule,
     OrganisationModule,
@@ -18,7 +20,7 @@ import { Organisation } from '@domain/community/organisation/organisation.entity
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organisation]),
   ],
-  providers: [SearchService, SearchResolver],
+  providers: [SearchService, SearchResolverQueries],
   exports: [SearchService],
 })
 export class SearchModule {}

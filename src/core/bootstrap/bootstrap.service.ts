@@ -12,11 +12,19 @@ import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
+import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
+import {
+  DEFAULT_ECOVERSE_DISPLAYNAME,
+  DEFAULT_ECOVERSE_NAMEID,
+} from '@common/constants';
 @Injectable()
 export class BootstrapService {
   constructor(
     private ecoverseService: EcoverseService,
     private userService: UserService,
+    private userAuthorizationService: UserAuthorizationService,
+    private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private authorizationService: AuthorizationService,
     private configService: ConfigService,
     @InjectRepository(Ecoverse)
@@ -123,7 +131,7 @@ export class BootstrapService {
           userData.email
         );
         if (!userExists) {
-          const user = await this.userService.createUser({
+          let user = await this.userService.createUser({
             nameID: `${userData.firstName}_${userData.lastName}`,
             email: userData.email,
             displayName: `${userData.firstName} ${userData.lastName}`,
@@ -139,6 +147,10 @@ export class BootstrapService {
               resourceID: credentialData.resourceID,
             });
           }
+          user = await this.userAuthorizationService.grantCredentials(user);
+          user = await this.userAuthorizationService.applyAuthorizationRules(
+            user
+          );
         }
       }
     } catch (error) {
@@ -157,13 +169,16 @@ export class BootstrapService {
     if (ecoverseCount == 0) {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
-      return await this.ecoverseService.createEcoverse({
-        nameID: 'Eco1',
-        displayName: 'Empty ecoverse',
+      const ecoverse = await this.ecoverseService.createEcoverse({
+        nameID: DEFAULT_ECOVERSE_NAMEID,
+        displayName: DEFAULT_ECOVERSE_DISPLAYNAME,
         context: {
           tagline: 'An empty ecoverse to be populated',
         },
       });
+      return await this.ecoverseAuthorizationService.applyAuthorizationRules(
+        ecoverse
+      );
     }
   }
 }

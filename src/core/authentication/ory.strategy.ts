@@ -29,18 +29,21 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   }
 
   async validate(payload: any) {
-    if (await this.checkIfTokenHasExpired(payload.exp))
+    if (this.checkIfTokenHasExpired(payload.exp))
       throw new TokenException(
         'Access token has expired!',
         CherrytwistErrorStatus.TOKEN_EXPIRED
       );
 
-    return await this.authService.createUserInfo(
-      payload.session.identity.traits.email
-    );
+    // Todo: not sure this is correct, but am hitting a case whereby session is null
+    let identifier = '';
+    if (payload.session) {
+      identifier = payload.session.identity.traits.email;
+    }
+    return await this.authService.createAgentInfo(identifier);
   }
 
-  private async checkIfTokenHasExpired(exp: number): Promise<boolean> {
+  private checkIfTokenHasExpired(exp: number): boolean {
     if (Date.now() >= exp * 1000) {
       return true;
     }

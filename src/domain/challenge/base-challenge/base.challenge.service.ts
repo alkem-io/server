@@ -1,4 +1,4 @@
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -20,11 +20,14 @@ import { BaseChallenge } from './base.challenge.entity';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
 import { IBaseChallenge } from './base.challenge.interface';
 import { NamingService } from '@src/services/naming/naming.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { CredentialService } from '@domain/agent/credential/credential.service';
 
 @Injectable()
 export class BaseChallengeService {
   constructor(
     private contextService: ContextService,
+    private credentialService: CredentialService,
     private communityService: CommunityService,
     private namingService: NamingService,
     private tagsetService: TagsetService,
@@ -34,16 +37,15 @@ export class BaseChallengeService {
 
   async initialise(
     baseChallenge: IBaseChallenge,
-    baseChallengeData: CreateBaseChallengeInput
+    baseChallengeData: CreateBaseChallengeInput,
+    ecoverseID: string
   ) {
-    await this.isNameAvailableOrFail(
-      baseChallengeData.nameID,
-      baseChallenge.ecoverseID
-    );
+    baseChallenge.authorization = new AuthorizationDefinition();
+    await this.isNameAvailableOrFail(baseChallengeData.nameID, ecoverseID);
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName
     );
-    baseChallenge.community.ecoverseID = baseChallenge.ecoverseID;
+    baseChallenge.community.ecoverseID = ecoverseID;
 
     if (!baseChallengeData.context) {
       baseChallenge.context = await this.contextService.createContext({});
@@ -52,8 +54,28 @@ export class BaseChallengeService {
         baseChallengeData.context
       );
     }
+    baseChallenge.authorization = new AuthorizationDefinition();
 
     baseChallenge.tagset = this.tagsetService.createDefaultTagset();
+  }
+
+  async setMembershipCredential(
+    baseChallenge: IBaseChallenge,
+    membershipCredentialType: AuthorizationCredential
+  ) {
+    const membershipCredential = await this.credentialService.createCredential({
+      type: membershipCredentialType,
+      resourceID: baseChallenge.id,
+    });
+    const community = baseChallenge.community;
+    if (!community) {
+      throw new EntityNotInitializedException(
+        `Base challenge not initialised: ${baseChallenge.id}`,
+        LogContext.CHALLENGES
+      );
+    }
+    community.credential = membershipCredential;
+    return community;
   }
 
   async update(
@@ -202,5 +224,13 @@ export class BaseChallengeService {
     }
 
     return challenge.lifecycle;
+  }
+
+  async getMembersCount(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<number> {
+    const community = await this.getCommunity(baseChallenge.id, repository);
+    return await this.communityService.getMembersCount(community);
   }
 }

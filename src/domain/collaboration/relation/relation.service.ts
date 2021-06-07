@@ -10,6 +10,7 @@ import { CreateRelationInput } from './relation.dto.create';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
 import { DeleteRelationInput } from './relation.dto.delete';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 const allowedRelationTypes = ['incoming', 'outgoing'];
 
@@ -28,6 +29,7 @@ export class RelationService {
         LogContext.CHALLENGES
       );
     const relation = Relation.create(relationData);
+    relation.authorization = new AuthorizationDefinition();
 
     // to do: set the rest of the fields
     await this.relationRepository.save(relation);
@@ -74,5 +76,9 @@ export class RelationService {
       ...result,
       id,
     };
+  }
+
+  async saveRelation(relation: IRelation): Promise<IRelation> {
+    return await this.relationRepository.save(relation);
   }
 }

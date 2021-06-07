@@ -6,32 +6,52 @@ import {
   UpdateAspectInput,
   IAspect,
 } from '@domain/context/aspect';
-import { AuthorizationGlobalRoles } from '@common/decorators';
+import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
+
 @Resolver()
 export class AspectResolverMutations {
-  constructor(private aspectService: AspectService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private aspectService: AspectService
+  ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
     description: 'Deletes the specified Aspect.',
   })
   async deleteAspect(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteAspectInput
   ): Promise<IAspect> {
+    const aspect = await this.aspectService.getAspectOrFail(deleteData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      aspect.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete aspect: ${aspect.title}`
+    );
     return await this.aspectService.removeAspect(deleteData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
     description: 'Updates the specified Aspect.',
   })
   async updateAspect(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('aspectData') aspectData: UpdateAspectInput
   ): Promise<IAspect> {
+    const aspect = await this.aspectService.getAspectOrFail(aspectData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      aspect.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update aspect: ${aspect.title}`
+    );
     return await this.aspectService.updateAspect(aspectData);
   }
 }

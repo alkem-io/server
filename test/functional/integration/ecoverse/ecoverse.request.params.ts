@@ -7,7 +7,7 @@ import { TestUser } from '@test/utils/token.helper';
 export const getEcoverseId = async () => {
   const requestParams = {
     operationName: null,
-    query: `query{ecoverse{id}}`,
+    query: `query{ecoverse(ID: "testEcoverse") {id}}`,
     variables: null,
   };
 

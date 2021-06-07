@@ -9,7 +9,7 @@ query variables:
 {
   "opportunityData":
   {
-    "parentID": "1",
+    "challengeID": "uuid",
     "displayName": "Balance the grid",
     "nameID": "balance-grid",
     "lifecycleTemplate": "EXTENDED",

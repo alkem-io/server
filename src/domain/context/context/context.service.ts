@@ -7,22 +7,26 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateReferenceInput, IReference } from '@domain/common/reference';
+import { IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import {
   CreateContextInput,
   UpdateContextInput,
   IContext,
   Context,
+  CreateReferenceOnContextInput,
 } from '@domain/context/context';
 import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AspectService } from '../aspect/aspect.service';
-import { EcosystemModel, IEcosystemModel } from '../ecosystem-model';
+import { IEcosystemModel } from '@domain/context/ecosystem-model';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { EcosystemModelService } from '../ecosystem-model/ecosystem-model.service';
 
 @Injectable()
 export class ContextService {
   constructor(
     private aspectService: AspectService,
+    private ecosystemModelService: EcosystemModelService,
     private referenceService: ReferenceService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
@@ -30,7 +34,10 @@ export class ContextService {
 
   async createContext(contextData: CreateContextInput): Promise<IContext> {
     const context: IContext = Context.create(contextData);
-    context.ecosystemModel = new EcosystemModel();
+    context.ecosystemModel = await this.ecosystemModelService.createEcosystemModel(
+      {}
+    );
+    context.authorization = new AuthorizationDefinition();
     if (!context.references) context.references = [];
     return context;
   }
@@ -108,15 +115,9 @@ export class ContextService {
   }
 
   async createReference(
-    referenceInput: CreateReferenceInput
+    referenceInput: CreateReferenceOnContextInput
   ): Promise<IReference> {
-    const contextID = referenceInput.parentID;
-    if (!contextID)
-      throw new ValidationException(
-        'No parendId specified for reference creation',
-        LogContext.CHALLENGES
-      );
-    const context = await this.getContextOrFail(contextID);
+    const context = await this.getContextOrFail(referenceInput.contextID);
 
     if (!context.references)
       throw new EntityNotInitializedException(
@@ -168,7 +169,7 @@ export class ContextService {
     return aspect;
   }
 
-  async getAspects(context: Context): Promise<IAspect[]> {
+  async getAspects(context: IContext): Promise<IAspect[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['aspects'],
     });
@@ -181,7 +182,7 @@ export class ContextService {
     return contextLoaded.aspects;
   }
 
-  async getEcosystemModel(context: Context): Promise<IEcosystemModel> {
+  async getEcosystemModel(context: IContext): Promise<IEcosystemModel> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['ecosystemModel'],
     });

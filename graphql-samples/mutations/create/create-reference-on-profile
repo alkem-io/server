@@ -1,4 +1,4 @@
-mutation createReferenceOnProfile($referenceInput: CreateReferenceInput!) {
+mutation createReferenceOnProfile($referenceInput: CreateReferenceOnProfileInput!) {
   createReferenceOnProfile(referenceInput: $referenceInput) {
     name,
     uri,
@@ -9,7 +9,7 @@ mutation createReferenceOnProfile($referenceInput: CreateReferenceInput!) {
 Variables:
 {
   "referenceInput": {
-      "parentID": "uuid",
+      "profileID": "uuid",
       "name": "wow",
       "uri": "something",
       "description": "this works"

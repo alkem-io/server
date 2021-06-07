@@ -1,9 +1,10 @@
 import { IAspect, IEcosystemModel } from '@domain/context';
 import { IReference } from '@domain/common/reference';
-import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IAuthorizable } from '@domain/common/authorizable-entity';
+
 @ObjectType('Context')
-export abstract class IContext extends IBaseCherrytwist {
+export abstract class IContext extends IAuthorizable {
   @Field(() => String, {
     nullable: true,
     description: 'A one line description',

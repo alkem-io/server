@@ -34,6 +34,5 @@ export class CreateContextInput {
     nullable: true,
     description: 'Set of References for the new Context.',
   })
-  @IsOptional()
   references?: CreateReferenceInput[];
 }

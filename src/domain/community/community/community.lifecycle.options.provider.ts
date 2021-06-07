@@ -3,30 +3,32 @@ import {
   ApplicationEventInput,
 } from '@domain/community/application';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
-import { ICredential } from '@domain/agent';
-import { IUser } from '@domain/community/user';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class CommunityLifecycleOptionsProvider {
   constructor(
     private lifecycleService: LifecycleService,
     private communityService: CommunityService,
+    private authorizationEngineService: AuthorizationEngineService,
     private applicationService: ApplicationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async eventOnApplication(
     applicationEventData: ApplicationEventInput,
-    user?: IUser
+    agentInfo: AgentInfo
   ): Promise<IApplication> {
-    const applicationID = applicationEventData.ID;
+    const applicationID = applicationEventData.applicationID;
     const application = await this.applicationService.getApplicationOrFail(
       applicationID
     );
@@ -36,8 +38,6 @@ export class CommunityLifecycleOptionsProvider {
         `Lifecycle not initialized on Application: ${applicationID}`,
         LogContext.COMMUNITY
       );
-
-    const credentials = user?.agent?.credentials;
 
     // Send the event, translated if needed
     this.logger.verbose?.(
@@ -50,7 +50,8 @@ export class CommunityLifecycleOptionsProvider {
         eventName: applicationEventData.eventName,
       },
       this.applicationLifecycleMachineOptions,
-      credentials
+      agentInfo,
+      application.authorization
     );
 
     return await this.applicationService.getApplicationOrFail(applicationID);
@@ -83,17 +84,14 @@ export class CommunityLifecycleOptionsProvider {
     },
     guards: {
       communityUpdateAuthorized: (_, event) => {
-        const invokingUserCredentials: ICredential[] = event.credentials;
-        for (const credential of invokingUserCredentials) {
-          if (
-            credential.type === AuthorizationCredential.GlobalAdmin ||
-            credential.type === AuthorizationCredential.GlobalAdminCommunity
-          ) {
-            return true;
-          }
-        }
-
-        return false;
+        const agentInfo: AgentInfo = event.agentInfo;
+        const authorizationDefinition: AuthorizationDefinition =
+          event.authorization;
+        return this.authorizationEngineService.isUserAccessGranted(
+          agentInfo,
+          authorizationDefinition,
+          AuthorizationPrivilege.UPDATE
+        );
       },
     },
   };

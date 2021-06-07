@@ -1,10 +1,10 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IRelation } from '@domain/collaboration/relation';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
-export class Relation extends BaseCherrytwistEntity implements IRelation {
+export class Relation extends AuthorizableEntity implements IRelation {
   @Column('varchar')
   type = '';
 

@@ -1,9 +1,9 @@
-import { IBaseCherrytwist } from '@domain/common/base-entity';
+import { IAuthorizable } from '@domain/common/authorizable-entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('Profile')
-export abstract class IProfile extends IBaseCherrytwist {
+export abstract class IProfile extends IAuthorizable {
   @Field(() => [IReference], {
     nullable: true,
     description: 'A list of URLs to relevant information.',

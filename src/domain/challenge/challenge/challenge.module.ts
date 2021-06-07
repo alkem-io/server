@@ -13,9 +13,12 @@ import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity
 import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 import { NamingModule } from '@src/services/naming/naming.module';
+import { ChallengeAuthorizationService } from './challenge.service.authorization';
+import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
 
 @Module({
   imports: [
+    AuthorizationEngineModule,
     ContextModule,
     BaseChallengeModule,
     CommunityModule,
@@ -28,10 +31,11 @@ import { NamingModule } from '@src/services/naming/naming.module';
   ],
   providers: [
     ChallengeService,
+    ChallengeAuthorizationService,
     ChallengeResolverMutations,
     ChallengeResolverFields,
     ChallengeLifecycleOptionsProvider,
   ],
-  exports: [ChallengeService],
+  exports: [ChallengeService, ChallengeAuthorizationService],
 })
 export class ChallengeModule {}

@@ -1,17 +1,28 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { MembershipService } from './membership.service';
-import { Profiling } from '@src/common/decorators';
-import { AuthorizationGlobalRoles } from '@common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { Membership, MembershipInput } from './index';
-import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationEngineService } from '../authorization-engine/authorization-engine.service';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AgentInfo } from '@core/authentication';
 
 @Resolver()
 export class MembershipResolverQueries {
-  constructor(private membershipService: MembershipService) {}
+  private membershipAuthorizationDefinition: IAuthorizationDefinition;
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Registered)
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private membershipService: MembershipService
+  ) {
+    this.membershipAuthorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      [AuthorizationRoleGlobal.Registered],
+      [AuthorizationPrivilege.READ]
+    );
+  }
+
   @UseGuards(GraphqlGuard)
   @Query(() => Membership, {
     nullable: false,
@@ -19,8 +30,14 @@ export class MembershipResolverQueries {
   })
   @Profiling.api
   async membership(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: MembershipInput
   ): Promise<Membership> {
+    await this.authorizationEngine.grantReadAccessOrFail(
+      agentInfo,
+      this.membershipAuthorizationDefinition,
+      `membership query: ${agentInfo.email}`
+    );
     return await this.membershipService.membership(membershipData);
   }
 }

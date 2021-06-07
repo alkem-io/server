@@ -4,152 +4,103 @@ import {
   Inject,
   LoggerService,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
-import { ConfigService } from '@nestjs/config';
-import { Reflector } from '@nestjs/core';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  AuthorizationRoleGlobal,
-  ConfigurationTypes,
-  LogContext,
-} from '@common/enums';
-import { AuthenticationException } from '@common/exceptions/authentication.exception';
-import { TokenException } from '@common/exceptions/token.exception';
-import { ForbiddenException } from '@common/exceptions/forbidden.exception';
-import { CherrytwistErrorStatus } from '@common/enums/cherrytwist.error.status';
-import {
-  IAuthorizationRule,
-  AuthorizationRuleGlobalRole,
-  AuthorizationRuleOrganisationMember,
-} from '@src/core/authorization/rules';
-import {
-  AuthorizationRuleSelfManagement,
-  AuthorizationRuleCommunityMember,
-} from '@core/authorization';
-import { AuthorizationRuleEngine } from './rules/authorization.rule.engine';
-
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthenticationException } from '@common/exceptions';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
-  JWT_EXPIRED = 'jwt is expired';
-
-  private authorizationRules!: IAuthorizationRule[];
-  private fieldName!: string;
+  agentInfo?: AgentInfo;
 
   constructor(
-    private configService: ConfigService,
     private reflector: Reflector,
+    private authorizationEngine: AuthorizationEngineService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
   }
 
-  canActivate(context: ExecutionContext) {
+  // Need to override base method for graphql requests
+  getRequest(context: ExecutionContext) {
     const ctx = GqlExecutionContext.create(context);
-    const { req } = ctx.getContext();
-    this.authorizationRules = [];
-
-    const globalRoles = this.reflector.get<string[]>(
-      'authorizationGlobalRoles',
-      context.getHandler()
-    );
-    const selfManagement = this.reflector.get<boolean>(
-      'self-management',
-      context.getHandler()
-    );
-    const communityMember = this.reflector.get<boolean>(
-      'community-member',
-      context.getHandler()
-    );
-    const organisationMember = this.reflector.get<boolean>(
-      'organisation-member',
-      context.getHandler()
-    );
-
-    if (globalRoles) {
-      for (const role of globalRoles) {
-        const allowedRoles: string[] = Object.values(AuthorizationRoleGlobal);
-        if (allowedRoles.includes(role)) {
-          const rule = new AuthorizationRuleGlobalRole(role, 2);
-          this.authorizationRules.push(rule);
-        } else {
-          throw new ForbiddenException(
-            `Invalid global role specified: ${role}`,
-            LogContext.AUTH
-          );
-        }
-      }
-    }
-
-    if (selfManagement) {
-      const args = context.getArgByIndex(1);
-      const fieldName = context.getArgByIndex(3).fieldName;
-      const rule = new AuthorizationRuleSelfManagement(fieldName, args, 1);
-      this.authorizationRules.push(rule);
-    }
-
-    if (communityMember) {
-      const parentArg = context.getArgByIndex(0);
-      const rule = new AuthorizationRuleCommunityMember(parentArg, 3);
-      this.authorizationRules.push(rule);
-    }
-
-    if (organisationMember) {
-      const parentArg = context.getArgByIndex(0);
-      const rule = new AuthorizationRuleOrganisationMember(parentArg, 3);
-      this.authorizationRules.push(rule);
-    }
-
-    return super.canActivate(new ExecutionContextHost([req]));
+    return ctx.getContext().req;
   }
 
   handleRequest(
     err: any,
-    userInfo: any,
+    agentInfo: any,
     info: any,
     _context: any,
     _status?: any
   ) {
-    // Always handle the request if authentication is disabled
-    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
-      ?.authentication?.enabled;
-    if (!authEnabled) {
-      return userInfo;
-    }
-
-    if (info && info[0] === this.JWT_EXPIRED)
-      throw new TokenException(
-        'Access token has expired!',
-        CherrytwistErrorStatus.TOKEN_EXPIRED
-      );
-
     if (err) throw new AuthenticationException(err);
 
-    if (!userInfo) {
-      const msg = this.buildErrorMessage(err, info);
-      throw new AuthenticationException(msg);
+    const gqlContext = GqlExecutionContext.create(_context);
+    const req = gqlContext.getContext().req;
+    const graphqlInfo = gqlContext.getInfo();
+    const fieldName = graphqlInfo.fieldName;
+
+    if (fieldName === 'me') {
+      this.logAuthorizationToken(req);
     }
 
-    const authorizationRuleEngine = new AuthorizationRuleEngine(
-      this.authorizationRules
-    );
+    // There should always be an AgentInfo returned, even if it is empty
+    let resultAgentInfo = agentInfo;
+    if (!agentInfo) {
+      this.logger.verbose?.('AgentInfo NOT present', LogContext.AUTH);
+      if (this.agentInfo) {
+        this.logger.verbose?.('...using cached AgentInfo', LogContext.AUTH);
+        resultAgentInfo = this.agentInfo;
+      } else {
+        this.logger.verbose?.('...using an empty AgentInfo', LogContext.AUTH);
+        resultAgentInfo = new AgentInfo();
+      }
+    } else {
+      this.authorizationEngine.logAgentInfo(
+        `AgentInfo present with info: ${info}`,
+        agentInfo
+      );
+      this.agentInfo = agentInfo;
+    }
 
-    if (authorizationRuleEngine.run(userInfo)) return userInfo;
-
-    throw new ForbiddenException(
-      `User '${userInfo.email}' is not authorised to access requested resources.`,
-      LogContext.AUTH
+    // Apply any rules
+    const privilege = this.reflector.get<AuthorizationPrivilege>(
+      'privilege',
+      _context.getHandler()
     );
+    if (privilege) {
+      const fieldParent = gqlContext.getRoot();
+      const rule = new AuthorizationRuleAgentPrivilege(
+        this.authorizationEngine,
+        privilege,
+        fieldParent,
+        fieldName
+      );
+      rule.execute(resultAgentInfo);
+    }
+
+    return resultAgentInfo;
   }
 
-  private buildErrorMessage(err: any, info: any): string {
-    if (err) return err;
-    if (info) {
-      const msg = info[0] as string;
-      if (msg && msg.toLowerCase().includes('error')) return msg;
+  logAuthorizationToken(req: any) {
+    try {
+      let authorizationHeader: string = req.headers.authorization;
+      if (authorizationHeader)
+        authorizationHeader = authorizationHeader.substring(7);
+      this.logger.verbose?.(
+        `Authorization header token: ${authorizationHeader}`,
+        LogContext.AUTH
+      );
+    } catch (error) {
+      this.logger.error(
+        `Unable to retrieve Authorization header token: ${req}`,
+        LogContext.AUTH
+      );
     }
-
-    return 'Failed to retrieve authenticated account information from the graphql context! ';
   }
 }

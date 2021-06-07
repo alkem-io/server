@@ -11,11 +11,11 @@ import { IQuestion } from '@domain/community/application';
 import { Community } from '@domain/community/community';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IApplication } from './application.interface';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 import { NVP } from '@domain/common/nvp';
 import { User } from '@domain/community/user';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 @Entity()
-export class Application extends BaseCherrytwistEntity implements IApplication {
+export class Application extends AuthorizableEntity implements IApplication {
   @Column()
   ecoverseID?: string;
 

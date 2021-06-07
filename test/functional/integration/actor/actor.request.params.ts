@@ -78,7 +78,7 @@ export const removeActorMutation = async (actorId: string) => {
 export const getActorData = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse {opportunity(ID: "${opportunityId}") {
+    query: `query {ecoverse(ID: "TestEcoverse" ) {opportunity(ID: "${opportunityId}") {
       context{
         ${contextData}
         }

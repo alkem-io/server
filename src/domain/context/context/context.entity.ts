@@ -2,9 +2,9 @@ import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { Aspect, IContext } from '@domain/context';
 import { EcosystemModel } from '../ecosystem-model';
 import { Reference } from '@domain/common/reference';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 @Entity()
-export class Context extends BaseCherrytwistEntity implements IContext {
+export class Context extends AuthorizableEntity implements IContext {
   @Column('varchar', { length: 255, nullable: true })
   tagline?: string = '';
 

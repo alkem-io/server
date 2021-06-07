@@ -1,35 +1,16 @@
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import {
-  createChallangeMutation,
-  removeChallangeMutation,
-} from '@test/functional/integration/challenge/challenge.request.params';
+import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 import { createOrganisationMutation } from '../organisation/organisation.request.params';
-import {
-  createGroupMutation,
-  removeUserGroupMutation,
-} from '../group/group.request.params';
 import { searchMutation } from '../search/search.request.params';
-import {
-  createUserMutation,
-  removeUserMutation,
-} from '@test/functional/e2e/user-management/user.request.params';
 import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
-import { createGroupOnCommunityMutation } from '../community/community.request.params';
-import { connectableObservableDescriptor } from 'rxjs/internal/observable/ConnectableObservable';
 
 let data: TestDataServiceInitResult;
-//let userId: null
 
 const userName = 'Qa User';
 let userId: string;
-let groupName = '';
-let ecoverseGroupId = '';
 let organisationName = '';
 let organisationId = '';
-let communityGroupId = '';
-let challengeName = '';
-let challengeCommunityId = '';
 let uniqueTextId = '';
 const typeFilterAll = ['user', 'organisation'];
 const filterOnlyUser = ['user'];
@@ -66,51 +47,29 @@ beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
-  groupName = `QA groupName ${uniqueTextId}`;
   organisationName = `QA organisationName ${uniqueTextId}`;
-  challengeName = `testChallenge ${uniqueTextId}`;
 
   // Create organisation
   const responseCreateOrganisation = await createOrganisationMutation(
     organisationName,
     'org' + uniqueTextId
   );
-  console.log(responseCreateOrganisation.body)
   organisationId = responseCreateOrganisation.body.data.createOrganisation.id;
-
-  // Create Challenge
-  const responseCreateChallenge = await createChallangeMutation(
-    challengeName,
-    uniqueTextId
-  );
-  const challengeId = responseCreateChallenge.body.data.createChallenge.id;
-  challengeCommunityId =
-    responseCreateChallenge.body.data.createChallenge.community.id;
-
-  // // Create challenge community group
-  // const responseCreateGroupOnCommunnity = await createGroupOnCommunityMutation(
-  //   challengeCommunityId,
-  //   groupName
-  // );
-  // console.log(responseCreateOrganisation.body)
-  // communityGroupId =
-  //   responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.id;
 });
 
-describe.skip('Query Challenge data', () => {
-  // afterEach(async () => {
-  //   //await removeUserMutation(userId);
-  //   await removeUserGroupMutation(communityGroupId);
-  // });
+describe('Query Challenge data', () => {
   test('should search with all filters applied', async () => {
     // Act
     const responseSearchData = await searchMutation(termAll, typeFilterAll);
-    console.log(responseSearchData.body)
     // Assert
     expect(responseSearchData.body.data.search).toContainObject({
       terms: termAll,
       score: 10,
-      result: { __typename: 'User', nameID: `${userName}`, id: `${userId}` },
+      result: {
+        __typename: 'User',
+        id: `${userId}`,
+        displayName: `${userName}`,
+      },
     });
 
     expect(responseSearchData.body.data.search).toContainObject({
@@ -118,8 +77,8 @@ describe.skip('Query Challenge data', () => {
       score: 10,
       result: {
         __typename: 'Organisation',
-        nameID: `${organisationName}`,
         id: `${organisationId}`,
+        displayName: `${organisationName}`,
       },
     });
   });
@@ -141,7 +100,11 @@ describe.skip('Query Challenge data', () => {
     expect(responseSearchData.body.data.search).toContainObject({
       terms: termAll,
       score: 10,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
+      result: {
+        __typename: 'User',
+        id: `${userId}`,
+        displayName: `${userName}`,
+      },
     });
 
     expect(responseSearchData.body.data.search).not.toContainObject({
@@ -149,8 +112,8 @@ describe.skip('Query Challenge data', () => {
       score: 10,
       result: {
         __typename: 'Organisation',
-        name: `${organisationName}`,
         id: `${organisationId}`,
+        displayName: `${organisationName}`,
       },
     });
   });
@@ -166,7 +129,11 @@ describe.skip('Query Challenge data', () => {
     expect(responseSearchData.body.data.search).toContainObject({
       terms: ['QA', 'user'],
       score: 30,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
+      result: {
+        __typename: 'User',
+        id: `${userId}`,
+        displayName: `${userName}`,
+      },
     });
 
     expect(responseSearchData.body.data.search).toContainObject({
@@ -174,8 +141,8 @@ describe.skip('Query Challenge data', () => {
       score: 20,
       result: {
         __typename: 'Organisation',
-        name: `${organisationName}`,
         id: `${organisationId}`,
+        displayName: `${organisationName}`,
       },
     });
   });
@@ -191,7 +158,11 @@ describe.skip('Query Challenge data', () => {
     expect(responseSearchData.body.data.search).toContainObject({
       terms: termUserOnly,
       score: 10,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
+      result: {
+        __typename: 'User',
+        id: `${userId}`,
+        displayName: `${userName}`,
+      },
     });
 
     expect(responseSearchData.body.data.search).not.toContainObject({
@@ -199,8 +170,8 @@ describe.skip('Query Challenge data', () => {
       score: 10,
       result: {
         __typename: 'Organisation',
-        name: `${organisationName}`,
         id: `${organisationId}`,
+        displayName: `${organisationName}`,
       },
     });
   });

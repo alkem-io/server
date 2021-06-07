@@ -13,8 +13,6 @@ export abstract class IBaseChallenge extends INameable {
   })
   tagset?: ITagset;
 
-  ecoverseID!: string;
-
   context?: IContext;
   community?: ICommunity;
   lifecycle?: ILifecycle;

@@ -1,11 +1,11 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { CreateNVPInput, INVP } from '@domain/common/nvp';
 import { Entity } from 'typeorm';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UUID, UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 
 @InputType()
 export class CreateApplicationInput {
-  @Field(() => UUID, { nullable: false })
+  @Field(() => UUID_NAMEID_EMAIL, { nullable: false })
   userID!: string;
 
   @Field(() => UUID, { nullable: false })

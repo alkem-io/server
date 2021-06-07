@@ -6,33 +6,52 @@ import {
   UpdateActorInput,
 } from '@domain/context/actor';
 import { ActorService } from './actor.service';
-import { AuthorizationGlobalRoles } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
+import { CurrentUser } from '@common/decorators';
 
 @Resolver()
 export class ActorResolverMutations {
-  constructor(private actorService: ActorService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private actorService: ActorService
+  ) {}
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IActor, {
     description: 'Deletes the specified Actor.',
   })
   async deleteActor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteActorInput
   ): Promise<IActor> {
+    const actor = await this.actorService.getActorOrFail(deleteData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      actor.authorization,
+      AuthorizationPrivilege.DELETE,
+      `actor delete: ${actor.name}`
+    );
     return await this.actorService.deleteActor(deleteData);
   }
 
-  @AuthorizationGlobalRoles(AuthorizationRoleGlobal.Admin)
   @UseGuards(GraphqlGuard)
   @Mutation(() => IActor, {
     description: 'Updates the specified Actor.',
   })
   async updateActor(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('actorData') actorData: UpdateActorInput
   ): Promise<IActor> {
+    const actor = await this.actorService.getActorOrFail(actorData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      actor.authorization,
+      AuthorizationPrivilege.DELETE,
+      `actor update: ${actor.name}`
+    );
     return await this.actorService.updateActor(actorData);
   }
 }

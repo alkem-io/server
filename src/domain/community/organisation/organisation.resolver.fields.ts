@@ -2,34 +2,27 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { Organisation } from './organisation.entity';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { AuthorizationGlobalRoles, Profiling } from '@src/common/decorators';
 import { OrganisationService } from './organisation.service';
 import {
   ValidationException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { AuthorizationRoleGlobal, LogContext } from '@common/enums';
-import {
-  GraphqlGuard,
-  AuthorizationOrganisationMember,
-} from '@core/authorization';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
 import { IOrganisation } from '@domain/community/organisation';
 import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/community/profile';
+import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 @Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
   constructor(
-    private organisationService: OrganisationService,
-    private userGroupService: UserGroupService
+    private authorizationEngine: AuthorizationEngineService,
+    private organisationService: OrganisationService
   ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.Admin,
-    AuthorizationRoleGlobal.CommunityAdmin
-  )
-  @AuthorizationOrganisationMember()
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
@@ -53,11 +46,7 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.Admin,
-    AuthorizationRoleGlobal.CommunityAdmin
-  )
-  @AuthorizationOrganisationMember()
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,

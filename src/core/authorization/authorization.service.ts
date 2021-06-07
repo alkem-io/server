@@ -14,7 +14,8 @@ import {
 } from '@common/enums';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { UserInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 
 @Injectable()
 export class AuthorizationService {
@@ -26,7 +27,7 @@ export class AuthorizationService {
 
   async grantCredential(
     grantCredentialData: GrantAuthorizationCredentialInput,
-    currentUserInfo?: UserInfo
+    currentAgentInfo?: AgentInfo
   ): Promise<IUser> {
     // check the inputs
     if (this.isGlobalAuthorizationCredential(grantCredentialData.type)) {
@@ -42,9 +43,9 @@ export class AuthorizationService {
 
     // Only a global-admin can assign/remove other global-admins
     if (grantCredentialData.type === AuthorizationCredential.GlobalAdmin) {
-      if (currentUserInfo) {
+      if (currentAgentInfo) {
         await this.validateMandatedCredential(
-          currentUserInfo.user,
+          currentAgentInfo.credentials,
           AuthorizationCredential.GlobalAdmin
         );
       }
@@ -60,7 +61,7 @@ export class AuthorizationService {
 
   async revokeCredential(
     revokeCredentialData: RevokeAuthorizationCredentialInput,
-    currentUserInfo?: UserInfo
+    currentAgentInfo?: AgentInfo
   ): Promise<IUser> {
     // check the inputs
     if (this.isGlobalAuthorizationCredential(revokeCredentialData.type)) {
@@ -80,9 +81,9 @@ export class AuthorizationService {
 
     // Only a global-admin can assign/remove other global-admins
     if (revokeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
-      if (currentUserInfo) {
+      if (currentAgentInfo) {
         await this.validateMandatedCredential(
-          currentUserInfo.user,
+          currentAgentInfo.credentials,
           AuthorizationCredential.GlobalAdmin
         );
       }
@@ -98,22 +99,31 @@ export class AuthorizationService {
   }
 
   async validateMandatedCredential(
-    user: IUser | undefined,
+    credentials: ICredential[],
     credentialType: AuthorizationCredential
   ) {
-    if (!user)
-      throw new ForbiddenException(
-        `Current user could not be retried to check credential: ${credentialType}`,
-        LogContext.AUTH
-      );
-    const result = await this.userService.hasMatchingCredential(user, {
+    const result = await this.hasMatchingCredential(credentials, {
       type: credentialType,
     });
     if (!result)
       throw new ForbiddenException(
-        `User (${user.id}) does not have required credential assigned: ${credentialType}`,
+        `User does not have required credential assigned: ${credentialType}`,
         LogContext.AUTH
       );
+  }
+
+  hasMatchingCredential(
+    credentials: ICredential[],
+    credentialCriteria: CredentialsSearchInput
+  ): boolean {
+    for (const credential of credentials) {
+      if (credential.type === credentialCriteria.type) {
+        if (!credentialCriteria.resourceID) return true;
+        if (credentialCriteria.resourceID === credential.resourceID)
+          return true;
+      }
+    }
+    return false;
   }
 
   async removeValidationSingleGlobalAdmin(
