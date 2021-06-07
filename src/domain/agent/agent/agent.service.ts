@@ -31,7 +31,7 @@ export class AgentService {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
 
-    return await this.saveAgent(agent);
+    return await this.createDidOnAgent(agent);
   }
 
   async getAgentOrFail(
