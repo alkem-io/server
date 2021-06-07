@@ -10,15 +10,15 @@ export const createReferenceOnContextMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createReferenceOnContext($referenceInput: CreateReferenceInput!) {
+    query: `mutation createReferenceOnContext($referenceInput: CreateReferenceOnContextInput!) {
       createReferenceOnContext(referenceInput: $referenceInput) {
         ${referencesData}
       }
     }`,
     variables: {
       referenceInput: {
-        parentID: contextId,
-        name: `${refName}`,
+        contextID: contextId,
+        name: `${refName}`, 
         uri: `${refUri}`,
         description: `${refDescription}`,
       },
