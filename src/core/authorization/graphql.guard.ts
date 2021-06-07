@@ -4,20 +4,22 @@ import {
   Inject,
   LoggerService,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
-
+import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 @Injectable()
 export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
   identifier: number;
   cachedAgentInfo?: AgentInfo;
 
   constructor(
+    private reflector: Reflector,
     private authorizationEngine: AuthorizationEngineService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
@@ -74,6 +76,22 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
       agentInfo
     );
     this.cachedAgentInfo = agentInfo;
+
+    // Apply any rules
+    const privilege = this.reflector.get<AuthorizationPrivilege>(
+      'privilege',
+      _context.getHandler()
+    );
+    if (privilege) {
+      const fieldParent = gqlContext.getRoot();
+      const rule = new AuthorizationRuleAgentPrivilege(
+        this.authorizationEngine,
+        privilege,
+        fieldParent,
+        fieldName
+      );
+      rule.execute(agentInfo);
+    }
 
     return agentInfo;
   }

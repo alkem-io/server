@@ -7,7 +7,11 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@src/common/decorators';
 import { IChallenge } from '../challenge';
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse } from '@domain/challenge/ecoverse';
@@ -20,6 +24,7 @@ import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
@@ -31,21 +36,14 @@ export class EcoverseResolverFields {
     private ecoverseService: EcoverseService
   ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the ecoverse.',
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async community(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() ecoverse: Ecoverse
-  ) {
-    await this.authorizationEngine.grantReadAccessOrFail(
-      agentInfo,
-      ecoverse.authorization,
-      `community on Ecoverse: ${ecoverse.nameID}`
-    );
+  async community(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getCommunity(ecoverse);
   }
 
