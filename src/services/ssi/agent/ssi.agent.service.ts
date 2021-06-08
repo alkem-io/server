@@ -7,6 +7,7 @@ import { JolocomTypeormStorage } from '@jolocom/sdk-storage-typeorm';
 
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions/validation.exception';
+import { VerifiedCredential } from '@src/services/ssi/agent';
 
 @Injectable()
 export class SsiAgentService {
@@ -50,6 +51,18 @@ export class SsiAgentService {
       password
     );
     return signedMsg.toString('hex');
+  }
+
+  async getVerifiedCredentials(
+    did: string,
+    password: string
+  ): Promise<VerifiedCredential[]> {
+    const credentials: VerifiedCredential[] = [];
+    const ssiDidDoc = await this.loadDidDoc(did, password);
+    const verifiedCredential = new VerifiedCredential();
+    verifiedCredential.info = ssiDidDoc;
+    credentials.push(verifiedCredential);
+    return credentials;
   }
 
   // Create an account for the specified user and update the user to store the UPN

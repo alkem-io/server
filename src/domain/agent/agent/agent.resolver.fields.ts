@@ -4,8 +4,9 @@ import { Parent, ResolveField } from '@nestjs/graphql';
 import { AgentService } from './agent.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
-import { Agent, IAgent, VerifiedCredential } from '@domain/agent/agent';
+import { Agent, IAgent } from '@domain/agent/agent';
 import { GraphqlGuard } from '@core/authorization';
+import { VerifiedCredential } from '@src/services/ssi/agent';
 
 @Resolver(() => IAgent)
 export class AgentResolverFields {
