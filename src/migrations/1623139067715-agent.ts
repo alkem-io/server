@@ -1,47 +1,35 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class agent1623134328791 implements MigrationInterface {
-  name = 'agent1623134328791';
+export class agent1623139067715 implements MigrationInterface {
+  name = 'agent1623139067715';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      'DROP INDEX `IDX_7671a7e33f6665764f4534a596` ON `organisation`'
-    );
-    await queryRunner.query(
-      'DROP INDEX `IDX_b0c3f360534db92017e36a00bb` ON `ecoverse`'
-    );
-    await queryRunner.query(
-      'DROP INDEX `IDX_b025a2720e5ee0e5b38774f7a8` ON `challenge`'
-    );
-    await queryRunner.query(
-      'DROP INDEX `IDX_c814aa7dc8a68f27d96d5d1782` ON `opportunity`'
-    );
-    await queryRunner.query(
-      'ALTER TABLE `organisation` CHANGE `agentId` `agentId` varchar(36) NULL'
+      'ALTER TABLE `organisation` ADD `agentId` varchar(36) NULL'
     );
     await queryRunner.query(
       'ALTER TABLE `organisation` ADD UNIQUE INDEX `IDX_7671a7e33f6665764f4534a596` (`agentId`)'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` CHANGE `agentId` `agentId` varchar(36) NULL'
+      'ALTER TABLE `ecoverse` ADD `agentId` varchar(36) NULL'
     );
     await queryRunner.query(
       'ALTER TABLE `ecoverse` ADD UNIQUE INDEX `IDX_b0c3f360534db92017e36a00bb` (`agentId`)'
     );
     await queryRunner.query(
-      'ALTER TABLE `challenge` CHANGE `agentId` `agentId` varchar(36) NULL'
+      'ALTER TABLE `challenge` ADD `agentId` varchar(36) NULL'
     );
     await queryRunner.query(
       'ALTER TABLE `challenge` ADD UNIQUE INDEX `IDX_b025a2720e5ee0e5b38774f7a8` (`agentId`)'
     );
     await queryRunner.query(
-      'ALTER TABLE `opportunity` CHANGE `agentId` `agentId` varchar(36) NULL'
+      'ALTER TABLE `opportunity` ADD `agentId` varchar(36) NULL'
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` ADD UNIQUE INDEX `IDX_c814aa7dc8a68f27d96d5d1782` (`agentId`)'
     );
     await queryRunner.query(
-      'ALTER TABLE `agent` CHANGE `password` `password` varchar(255) NULL'
+      'ALTER TABLE `agent` ADD `password` varchar(255) NULL'
     );
     await queryRunner.query(
       'CREATE UNIQUE INDEX `REL_7671a7e33f6665764f4534a596` ON `organisation` (`agentId`)'
@@ -94,44 +82,22 @@ export class agent1623134328791 implements MigrationInterface {
     await queryRunner.query(
       'DROP INDEX `REL_7671a7e33f6665764f4534a596` ON `organisation`'
     );
-    await queryRunner.query(
-      'ALTER TABLE `agent` CHANGE `password` `password` varchar(255) NOT NULL'
-    );
+    await queryRunner.query('ALTER TABLE `agent` DROP COLUMN `password`');
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP INDEX `IDX_c814aa7dc8a68f27d96d5d1782`'
     );
-    await queryRunner.query(
-      'ALTER TABLE `opportunity` CHANGE `agentId` `agentId` varchar(36) NULL'
-    );
+    await queryRunner.query('ALTER TABLE `opportunity` DROP COLUMN `agentId`');
     await queryRunner.query(
       'ALTER TABLE `challenge` DROP INDEX `IDX_b025a2720e5ee0e5b38774f7a8`'
     );
-    await queryRunner.query(
-      'ALTER TABLE `challenge` CHANGE `agentId` `agentId` varchar(36) NULL'
-    );
+    await queryRunner.query('ALTER TABLE `challenge` DROP COLUMN `agentId`');
     await queryRunner.query(
       'ALTER TABLE `ecoverse` DROP INDEX `IDX_b0c3f360534db92017e36a00bb`'
     );
-    await queryRunner.query(
-      'ALTER TABLE `ecoverse` CHANGE `agentId` `agentId` varchar(36) NULL'
-    );
+    await queryRunner.query('ALTER TABLE `ecoverse` DROP COLUMN `agentId`');
     await queryRunner.query(
       'ALTER TABLE `organisation` DROP INDEX `IDX_7671a7e33f6665764f4534a596`'
     );
-    await queryRunner.query(
-      'ALTER TABLE `organisation` CHANGE `agentId` `agentId` varchar(36) NULL'
-    );
-    await queryRunner.query(
-      'CREATE UNIQUE INDEX `IDX_c814aa7dc8a68f27d96d5d1782` ON `opportunity` (`agentId`)'
-    );
-    await queryRunner.query(
-      'CREATE UNIQUE INDEX `IDX_b025a2720e5ee0e5b38774f7a8` ON `challenge` (`agentId`)'
-    );
-    await queryRunner.query(
-      'CREATE UNIQUE INDEX `IDX_b0c3f360534db92017e36a00bb` ON `ecoverse` (`agentId`)'
-    );
-    await queryRunner.query(
-      'CREATE UNIQUE INDEX `IDX_7671a7e33f6665764f4534a596` ON `organisation` (`agentId`)'
-    );
+    await queryRunner.query('ALTER TABLE `organisation` DROP COLUMN `agentId`');
   }
 }

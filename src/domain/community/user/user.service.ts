@@ -265,14 +265,14 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  async getAgent(user: IUser): Promise<IAgent> {
-    const userWithAgent = await this.getUserOrFail(user.id, {
+  async getAgent(userID: string): Promise<IAgent> {
+    const userWithAgent = await this.getUserOrFail(userID, {
       relations: ['agent'],
     });
     const agent = userWithAgent.agent;
     if (!agent)
       throw new EntityNotInitializedException(
-        `User Agent not initialized: ${user.id}`,
+        `User Agent not initialized: ${userID}`,
         LogContext.AUTH
       );
 

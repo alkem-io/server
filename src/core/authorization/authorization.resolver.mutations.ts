@@ -4,6 +4,7 @@ import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   GrantAuthorizationCredentialInput,
+  GrantStateModificationVCInput,
   RevokeAuthorizationCredentialInput,
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
@@ -77,27 +78,28 @@ export class AuthorizationResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => IUser, {
     description:
       'Assigns the StateModification credential to a particular user for a particular challenge',
   })
   @Profiling.api
   async grantStateModificationVC(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('userID') userID: string,
-    @Args('challengeID') challengeID: string
-  ): Promise<boolean> {
-    const user = await this.challengeService.getChallengeOrFail(challengeID);
+    @Args('grantStateModificationVC')
+    grantStateModificationVC: GrantStateModificationVCInput
+  ): Promise<IUser> {
+    const challenge = await this.challengeService.getChallengeOrFail(
+      grantStateModificationVC.challengeID
+    );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      user.authorization,
+      challenge.authorization,
       AuthorizationPrivilege.CREATE,
-      `create VC on user ${user.id}`
+      `create VC on challenge (${challenge.nameID}) for user ${grantStateModificationVC.userID}`
     );
-    const success = await this.ssiAgentService.authoriseStateModification(
-      userID,
-      challengeID
+
+    return await this.authorizationService.authorizeChallengeStateModification(
+      grantStateModificationVC
     );
-    return success;
   }
 }

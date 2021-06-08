@@ -60,23 +60,23 @@ import { SsiAgentModule } from './services/ssi/agent/ssi.agent.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        type: 'mysql',
+        type: 'sqlite',
         insecureAuth: true,
         synchronize: true /* note: only for demo */,
         cache: true,
         entities: [
           'node_modules/@jolocom/sdk-storage-typeorm/js/src/entities/*.js',
         ],
-        host: configService.get(ConfigurationTypes.Storage)?.database?.host,
-        port: configService.get(ConfigurationTypes.Storage)?.database?.port,
-        username: configService.get(ConfigurationTypes.Storage)?.database
-          ?.username,
-        password: configService.get(ConfigurationTypes.Storage)?.database
-          ?.password,
+        // host: configService.get(ConfigurationTypes.Storage)?.database?.host,
+        // port: configService.get(ConfigurationTypes.Storage)?.database?.port,
+        // username: configService.get(ConfigurationTypes.Storage)?.database
+        //   ?.username,
+        // password: configService.get(ConfigurationTypes.Storage)?.database
+        //   ?.password,
 
         logging: configService.get(ConfigurationTypes.Storage)?.database
           ?.logging,
-        database: 'jolocom',
+        database: './jolocom.sqlite3',
       }),
     }),
     WinstonModule.forRootAsync({

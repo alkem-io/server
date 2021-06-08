@@ -5,9 +5,8 @@ export default {
     {
       SimpleExample: 'https://example.com/terms/SimpleExampleCredential',
       schema: 'https://schema.org/',
-      entityID: 'schema:integer',
-      userID: 'schema:integer',
-      name: 'schema:name',
+      challengeID: 'schema:uuid',
+      userID: 'schema:uuid',
     },
   ],
 };

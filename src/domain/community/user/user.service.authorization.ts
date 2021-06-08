@@ -57,7 +57,7 @@ export class UserAuthorizationService {
   }
 
   async grantCredentials(user: IUser): Promise<IUser> {
-    const agent = await this.userService.getAgent(user);
+    const agent = await this.userService.getAgent(user.id);
 
     user.agent = await this.agentService.grantCredential({
       type: AuthorizationCredential.GlobalRegistered,
