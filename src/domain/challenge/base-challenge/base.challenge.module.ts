@@ -1,3 +1,4 @@
+import { AgentModule } from '@domain/agent/agent/agent.module';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
@@ -11,6 +12,7 @@ import { BaseChallengeAuthorizationService } from './base.challenge.service.auth
 
 @Module({
   imports: [
+    AgentModule,
     AuthorizationEngineModule,
     ContextModule,
     CommunityModule,
