@@ -257,7 +257,7 @@ describe('Lifecycle', () => {
     );
   });
 
-  describe('Update application entity state - positive path - REJECT', () => {
+  describe.skip('Update application entity state - positive path - REJECT', () => {
     beforeAll(async () => {
       uniqueTextId = Math.random()
         .toString(12)
