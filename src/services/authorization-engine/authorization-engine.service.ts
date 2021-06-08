@@ -31,11 +31,8 @@ export class AuthorizationEngineService {
     privilegeRequired: AuthorizationPrivilege,
     msg: string
   ) {
-    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
-      ?.authentication?.enabled;
-    if (!authEnabled) return true;
+    if (this.isAuthenticationDisabled()) return true;
 
-    // Authorization is enabled...
     const auth = this.validateAuthorization(authorization);
     if (this.isUserAccessGranted(agentInfo, auth, privilegeRequired))
       return true;
@@ -112,10 +109,7 @@ export class AuthorizationEngineService {
     authorization: IAuthorizationDefinition,
     privilegeRequired: AuthorizationPrivilege
   ) {
-    // always allow if authorization is disabled
-    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
-      ?.authentication?.enabled;
-    if (!authEnabled) return true;
+    if (this.isAuthenticationDisabled()) return true;
 
     return this.isAccessGranted(
       agentInfo.credentials,
@@ -124,11 +118,19 @@ export class AuthorizationEngineService {
     );
   }
 
+  isAuthenticationDisabled(): boolean {
+    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
+      ?.authentication?.enabled;
+    if (!authEnabled) return true;
+    return false;
+  }
+
   isAccessGranted(
     credentials: ICredential[],
     authorization: IAuthorizationDefinition,
     privilegeRequired: AuthorizationPrivilege
   ) {
+    if (this.isAuthenticationDisabled()) return true;
     if (
       authorization.anonymousReadAccess &&
       privilegeRequired === AuthorizationPrivilege.READ
