@@ -50,37 +50,6 @@ afterAll(async () => {
 });
 
 describe('Flows challenge', () => {
-  test.skip('should add "user" to "group" as focal point', async () => {
-    // Act
-    // Assign first User as a focal point to the group
-    const responseAddUserToGroup = await assignGroupFocalPointMutation(
-      userIdOne,
-      challengeGroupId
-    );
-
-    // Query focal point through challenge group
-    const responseChallengeGroupQuery = await getChallengeData(challengeId);
-    const groupFocalPointFromChallenge =
-      responseChallengeGroupQuery.body.data.ecoverse.challenge.community
-        .groups[0].focalPoint.name;
-
-    // Query focal point directly from group
-    const responseGroupQuery = await getGroup(challengeGroupId);
-    const groupFocalPoint =
-      responseGroupQuery.body.data.ecoverse.group.focalPoint.name;
-
-    // Assert
-    expect(responseAddUserToGroup.status).toBe(200);
-    expect(
-      responseAddUserToGroup.body.data.assignGroupFocalPoint.focalPoint.name
-    ).toEqual(userNameOne);
-
-    expect(groupFocalPointFromChallenge).toEqual(userNameOne);
-    expect(groupFocalPointFromChallenge).not.toEqual(userNameTwo);
-    expect(groupFocalPoint).toEqual(userNameOne);
-    expect(groupFocalPoint).not.toEqual(userNameTwo);
-  });
-
   test('should not result unassigned users to a challenge', async () => {
     // Act
     // Get users assossiated with challenge or groups within challenge

@@ -32,6 +32,7 @@ export class ChallengeResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the challenge.',
@@ -42,6 +43,7 @@ export class ChallengeResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('opportunities', () => [IOpportunity], {
     nullable: true,
     description: 'The Opportunities for the challenge.',
@@ -52,6 +54,7 @@ export class ChallengeResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
     description: 'The lifeycle for the Challenge.',
@@ -62,6 +65,7 @@ export class ChallengeResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
     description: 'The set of child Challenges within this challenge.',
