@@ -12,6 +12,7 @@ import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums';
+import { IAgent } from '@domain/agent/agent';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -69,6 +70,16 @@ export class ChallengeResolverFields {
   @Profiling.api
   async challenges(@Parent() challenge: Challenge) {
     return await this.challengeService.getChildChallenges(challenge);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('agent', () => IAgent, {
+    nullable: true,
+    description: 'The Agent representing this Challenge.',
+  })
+  @Profiling.api
+  async agent(@Parent() challenge: Challenge): Promise<IAgent> {
+    return await this.challengeService.getAgent(challenge.id);
   }
 
   @ResolveField('activity', () => [INVP], {

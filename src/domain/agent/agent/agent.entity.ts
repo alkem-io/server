@@ -11,10 +11,10 @@ export class Agent extends BaseCherrytwistEntity implements IAgent {
 
   //todo: replace with output DID that resolves to a string
   @Column('varchar', { length: 255, nullable: true })
-  did?: string;
+  did!: string;
 
-  @Column()
-  password?: string;
+  @Column('varchar', { length: 255, nullable: true })
+  password!: string;
 
   @OneToMany(
     () => Credential,

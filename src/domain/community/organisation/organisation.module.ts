@@ -12,9 +12,11 @@ import { UserModule } from '../user/user.module';
 import { NamingModule } from '@src/services/naming/naming.module';
 import { OrganisationAuthorizationService } from './organisation.service.authorization';
 import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
   imports: [
+    AgentModule,
     AuthorizationEngineModule,
     UserModule,
     UserGroupModule,

@@ -6,6 +6,7 @@ import { Community } from '@domain/community/community';
 import { Context } from '@domain/context/context';
 import { NameableEntity } from '@domain/common/nameable-entity';
 import { IBaseChallenge } from './base.challenge.interface';
+import { Agent } from '@domain/agent/agent';
 
 export abstract class BaseChallenge extends NameableEntity
   implements IBaseChallenge {
@@ -28,6 +29,10 @@ export abstract class BaseChallenge extends NameableEntity
   @OneToOne(() => Tagset, { eager: true, cascade: true })
   @JoinColumn()
   tagset?: Tagset;
+
+  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'CASCADE' })
+  @JoinColumn()
+  agent?: Agent;
 
   constructor() {
     super();
