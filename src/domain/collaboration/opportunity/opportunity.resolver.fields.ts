@@ -8,12 +8,15 @@ import { IContext } from '@domain/context/context';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AuthorizationPrivilege } from '@common/enums';
+import { UseGuards } from '@nestjs/common/decorators';
+import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
   constructor(private opportunityService: OpportunityService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('relations', () => [IRelation], {
     nullable: true,
     description: 'The set of Relations within the context of this Opportunity.',
@@ -24,6 +27,7 @@ export class OpportunityResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
     description: 'The lifeycle for the Opportunity.',
@@ -34,6 +38,7 @@ export class OpportunityResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the Opportunity.',
@@ -44,6 +49,7 @@ export class OpportunityResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the Opportunity.',

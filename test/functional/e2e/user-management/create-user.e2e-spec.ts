@@ -103,7 +103,7 @@ describe('Create User', () => {
     expect(responseQuery.status).toBe(400);
   });
 
-  test.skip('should throw error - create user with LONG NAME', async () => {
+  test('should throw error - create user with LONG NAME', async () => {
     // Act
     const response = await createUserMutationWithParams(
       'very loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong name',
@@ -111,9 +111,9 @@ describe('Create User', () => {
     );
 
     // Assert
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
     expect(response.text).toContain(
-      'property name has failed the following constraints: maxLength'
+      `Variable \\\"$userData\\\" got invalid value \\\"very loo`
     );
   });
 

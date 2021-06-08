@@ -6,9 +6,6 @@ import {
 } from './challenge.request.params';
 import '../../../utils/array.matcher';
 import { appSingleton } from '../../../utils/app.singleton';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
-
-let data: TestDataServiceInitResult;
 
 let challengeName = '';
 let uniqueTextId = '';
@@ -18,14 +15,12 @@ let ecoverseId = '';
 
 const challangeData = async (challengeId: string): Promise<string> => {
   const responseQuery = await getChallengeData(challengeId);
-  console.log(responseQuery.body);
   const response = responseQuery.body.data.ecoverse.challenge;
   return response;
 };
 
 const challengesList = async (): Promise<string> => {
   const responseQuery = await getChallengesData();
-  //console.log(responseQuery.body);
   const response = responseQuery.body.data.ecoverse.challenges;
   return response;
 };
@@ -35,24 +30,21 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   const response = await createChallangeMutation(challengeName, uniqueTextId);
-  //console.log(response.body)
   challengeDataCreate = response.body.data.createChallenge;
   challengeId = response.body.data.createChallenge.id;
 });
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
-  data = appSingleton.Instance.getData();
-  ecoverseId = data.ecoverseId;
 });
 
-// afterAll(async () => {
-//   if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
-// });
+afterAll(async () => {
+  if (appSingleton.Instance.app) await appSingleton.Instance.teardownServer();
+});
 
-// afterEach(async () => {
-//   await removeChallangeMutation(challengeId);
-// });
+afterEach(async () => {
+  await removeChallangeMutation(challengeId);
+});
 
 describe('Create Challenge', () => {
   test('should create a successfull challenge', async () => {
@@ -61,7 +53,6 @@ describe('Create Challenge', () => {
       'challengeName',
       'chal-texti'
     );
-    // console.log(response.body)
     const challengeDataCreate = response.body.data.createChallenge;
     const challengeIdTest = response.body.data.createChallenge.id;
 

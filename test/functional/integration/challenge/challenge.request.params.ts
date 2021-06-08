@@ -112,8 +112,10 @@ export const addChallengeLeadToOrganisationMutation = async (
   const requestParams = {
     operationName: null,
     query: `mutation assignChallengeLead($assignInput: AssignChallengeLeadInput!) {
-      assignChallengeLead(assignInput: $assignInput){id}
-    }`,
+            assignChallengeLead(assignInput: $assignInput) {
+              id
+            }
+          }`,
     variables: {
       assignInput: {
         organisationID: organisationId,
@@ -134,7 +136,9 @@ export const removeChallengeLeadFromOrganisationMutation = async (
     query: `mutation removeChallengeLead($removeData: RemoveChallengeLeadInput!) {
       removeChallengeLead(removeData: $removeData) {
         id
-      }}`,
+      }
+    }
+    `,
     variables: {
       removeData: {
         organisationID: organisationId,
@@ -180,9 +184,7 @@ export const getChallengeOpportunity = async (challengeId: string) => {
     variables: {},
     query: `query { ecoverse (ID: "TestEcoverse"){
       challenge(ID: "${challengeId}") {
-        id
-        name
-        opportunities{id name textID ${lifecycleData}}}}}`,
+         ${challengeDataTest}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);
