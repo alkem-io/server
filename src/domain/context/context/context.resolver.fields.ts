@@ -5,12 +5,15 @@ import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { IAspect } from '@domain/context/aspect';
 import { AuthorizationPrivilege } from '@common/enums';
+import { UseGuards } from '@nestjs/common/decorators';
+import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
   constructor(private contextService: ContextService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('ecosystemModel', () => IEcosystemModel, {
     nullable: true,
     description: 'The EcosystemModel for this Context.',
@@ -21,6 +24,7 @@ export class ContextResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('aspects', () => [IAspect], {
     nullable: true,
     description: 'The Aspects for this Context.',
