@@ -17,6 +17,7 @@ import { LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { SsiAgentService } from '@src/services/ssi/agent/ssi.agent.service';
+import { VerifiedCredential } from './agent.dto.verified.credential';
 
 @Injectable()
 export class AgentService {
@@ -175,6 +176,17 @@ export class AgentService {
 
     agent.did = await this.ssiAgentService.createIdentity(agent.password);
     return await this.saveAgent(agent);
+  }
+
+  async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
+    const result: VerifiedCredential[] = [];
+    const ssiDidDoc = await this.ssiAgentService.loadDidDoc(
+      agent.did,
+      agent.password
+    );
+    const verifiedCredential = new VerifiedCredential();
+    verifiedCredential.info = ssiDidDoc;
+    return result;
   }
 
   async countAgentsWithMatchingCredentials(

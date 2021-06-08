@@ -1,6 +1,7 @@
 import { ICredential } from '@domain/agent/credential';
 
 import { IBaseCherrytwist } from '@domain/common/base-entity';
+import { DID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Agent')
@@ -9,7 +10,7 @@ export abstract class IAgent extends IBaseCherrytwist {
     nullable: true,
     description: 'The Decentralized Identifier (DID) for this Agent.',
   })
-  did?: string;
+  did!: string;
 
   @Field(() => [ICredential], {
     nullable: true,
@@ -21,5 +22,5 @@ export abstract class IAgent extends IBaseCherrytwist {
   parentDisplayID?: string;
 
   // used for accessing the SSI store
-  password?: string;
+  password!: string;
 }
