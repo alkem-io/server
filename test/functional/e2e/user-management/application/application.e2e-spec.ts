@@ -10,7 +10,6 @@ import {
   getCommunityData,
 } from '@test/functional/integration/community/community.request.params';
 import {
-  appData,
   createApplicationMutation,
   getApplication,
   removeApplicationMutation,
@@ -126,9 +125,9 @@ describe('Application', () => {
     );
   });
 
-  test.skip('should throw error for quering not existing application', async () => {
+  test('should throw error for quering not existing application', async () => {
     // Act
-    let appId = '727';
+    let appId = '8bf7752d-59bf-404a-97c8-e906d8377c37';
     const getApp = await getApplication(appId);
 
     // Assert

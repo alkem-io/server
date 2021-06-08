@@ -7,10 +7,7 @@ import {
   removeRelationMutation,
   updateRelationMutation,
 } from './relations.request.params';
-import {
-  createChildChallengeMutation,
-  createOpportunityMutation,
-} from '../opportunity/opportunity.request.params';
+import { createOpportunityMutation } from '../opportunity/opportunity.request.params';
 
 const relationIncoming = 'incoming';
 const relationOutgoing = 'outgoing';
@@ -26,7 +23,6 @@ let relationActorType = '';
 let relationActorRole = '';
 let uniqueTextId = '';
 let relationDataCreate = '';
-let collaborationId = '';
 let relationCountPerOpportunity = async (): Promise<number> => {
   const responseQuery = await getRelationsPerOpportunity(opportunityId);
   let response = responseQuery.body.data.ecoverse.opportunity.relations;
