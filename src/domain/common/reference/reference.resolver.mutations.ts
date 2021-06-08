@@ -5,7 +5,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { DeleteReferenceInput, IReference } from '@domain/common/reference';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ReferenceService } from './reference.service';
 
 @Resolver()

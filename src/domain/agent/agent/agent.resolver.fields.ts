@@ -6,7 +6,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { Agent, IAgent } from '@domain/agent/agent';
 import { GraphqlGuard } from '@core/authorization';
-import { VerifiedCredential } from '@src/services/ssi/agent';
+import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 
 @Resolver(() => IAgent)
 export class AgentResolverFields {

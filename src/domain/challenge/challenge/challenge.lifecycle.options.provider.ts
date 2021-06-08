@@ -1,15 +1,18 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ChallengeService } from './challenge.service';
 import { ChallengeEventInput, IChallenge } from '@domain/challenge/challenge';
 import { AgentInfo } from '@core/authentication';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 
 @Injectable()
 export class ChallengeLifecycleOptionsProvider {
   constructor(
+    private authorizationEngineService: AuthorizationEngineService,
     private lifecycleService: LifecycleService,
     private challengeService: ChallengeService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -53,6 +56,22 @@ export class ChallengeLifecycleOptionsProvider {
           `Command triggered on Opportunity with event: ${event.type}`,
           LogContext.CHALLENGES
         );
+      },
+    },
+    guards: {
+      challengeStateUpdateAuthorized: (_, event) => {
+        const agentInfo: AgentInfo = event.agentInfo;
+        const authorizationDefinition: AuthorizationDefinition =
+          event.authorization;
+        const simpleAuthorization = this.authorizationEngineService.isUserAccessGranted(
+          agentInfo,
+          authorizationDefinition,
+          AuthorizationPrivilege.UPDATE
+        );
+        if (!simpleAuthorization) {
+          // check the VC is issued!
+        }
+        return simpleAuthorization;
       },
     },
   };

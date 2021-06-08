@@ -23,7 +23,7 @@
       "@core/*": ["src/core/*"],
       "@constants": ["src/common/constants"],
       "@constants/*": ["src/common/constants/*"],
-      "@templates/*": ["src/services/configuration/templates/*"],
+      "@templates/*": ["src/services/domain/configuration/templates/*"],
       "@src/*": ["src/*"],
       "@test/*": ["test/*"]
     }

@@ -3,7 +3,7 @@ import { appSingleton } from '@test/utils/app.singleton';
 import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 import { createOrganisationMutation } from '../organisation/organisation.request.params';
 import { searchMutation } from '../search/search.request.params';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/domain/data-management/test-data.service';
 
 let data: TestDataServiceInitResult;
 
@@ -203,7 +203,7 @@ describe('Query Challenge data', () => {
     // Assert
 
     expect(responseSearchData.text).toContain(
-      `Search: Skipping term below minimum length: `
+      'Search: Skipping term below minimum length: '
     );
   });
 

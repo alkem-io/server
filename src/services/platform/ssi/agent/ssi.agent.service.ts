@@ -7,7 +7,7 @@ import { JolocomTypeormStorage } from '@jolocom/sdk-storage-typeorm';
 
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { VerifiedCredential } from '@src/services/ssi/agent';
+import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 
 import stateModificationMetadata from '../credentials/StateModificationCredentialMetaData';
 import { CredentialOfferRequestAttrs } from 'jolocom-lib/js/interactionTokens/types';

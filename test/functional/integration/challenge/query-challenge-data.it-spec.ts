@@ -15,7 +15,7 @@ import {
   updateChallangeMutation,
 } from './challenge.request.params';
 import { createOrganisationMutation } from '../organisation/organisation.request.params';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/domain/data-management/test-data.service';
 
 let data: TestDataServiceInitResult;
 let opportunityName = '';

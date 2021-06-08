@@ -16,8 +16,8 @@ import {
 import { LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { SsiAgentService } from '@src/services/ssi/agent/ssi.agent.service';
-import { VerifiedCredential } from '@src/services/ssi/agent';
+import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
+import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 
 @Injectable()
 export class AgentService {

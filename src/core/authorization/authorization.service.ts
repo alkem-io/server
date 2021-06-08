@@ -16,7 +16,7 @@ import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@core/authentication';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { SsiAgentService } from '@src/services/ssi/agent/ssi.agent.service';
+import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { GrantStateModificationVCInput } from './dto';
 

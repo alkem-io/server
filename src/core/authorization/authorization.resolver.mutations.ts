@@ -12,10 +12,10 @@ import { IUser } from '@domain/community/user';
 import { GraphqlGuard } from './graphql.guard';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { SsiAgentService } from '@src/services/ssi/agent/ssi.agent.service';
+import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 
 @Resolver()
 export class AuthorizationResolverMutations {

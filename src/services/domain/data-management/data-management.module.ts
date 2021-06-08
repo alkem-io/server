@@ -5,7 +5,7 @@ import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { BootstrapModule } from '../../core/bootstrap/bootstrap.module';
+import { BootstrapModule } from '../../../core/bootstrap/bootstrap.module';
 import { DataManagementController } from './data-management.controller';
 import { DataManagementService } from './data-management.service';
 import { TestDataService } from './test-data.service';

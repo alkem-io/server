@@ -19,7 +19,7 @@ import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
 import { IBaseChallenge } from './base.challenge.interface';
-import { NamingService } from '@src/services/naming/naming.service';
+import { NamingService } from '@src/services/platform/ssi/agent/naming/naming.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { CredentialService } from '@domain/agent/credential/credential.service';
 import { IAgent } from '@domain/agent/agent';

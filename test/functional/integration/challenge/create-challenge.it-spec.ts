@@ -6,7 +6,7 @@ import {
 } from './challenge.request.params';
 import '../../../utils/array.matcher';
 import { appSingleton } from '../../../utils/app.singleton';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/domain/data-management/test-data.service';
 
 let data: TestDataServiceInitResult;
 

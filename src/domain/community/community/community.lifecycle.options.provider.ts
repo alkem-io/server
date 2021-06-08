@@ -11,7 +11,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
