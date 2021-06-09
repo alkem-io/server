@@ -38,9 +38,13 @@
               "type": "string"
             }
           }
+        },
+        "accepted_terms": {
+          "title": "I accept terms of service",
+          "type": "boolean"
         }
       },
-      "required": ["email"],
+      "required": ["email", "accepted_terms"],
       "additionalProperties": false
     }
   }
