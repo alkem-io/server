@@ -50,8 +50,8 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     if (!agentInfo) {
       this.logger.verbose?.('AgentInfo NOT present', LogContext.AUTH);
       if (this.agentInfo) {
-        this.logger.verbose?.('...using cached AgentInfo', LogContext.AUTH);
-        resultAgentInfo = this.agentInfo;
+        this.logger.verbose?.('...using empty AgentInfo', LogContext.AUTH);
+        resultAgentInfo = new AgentInfo();
       } else {
         this.logger.verbose?.('...using an empty AgentInfo', LogContext.AUTH);
         resultAgentInfo = new AgentInfo();
