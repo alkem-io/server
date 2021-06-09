@@ -5,6 +5,7 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge/challenge';
 import { NameableEntity } from '@domain/common/nameable-entity';
+import { Agent } from '@domain/agent/agent';
 
 @Entity()
 export class Organisation extends NameableEntity
@@ -26,6 +27,10 @@ export class Organisation extends NameableEntity
     { eager: false, cascade: false }
   )
   challenges!: Challenge[];
+
+  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'CASCADE' })
+  @JoinColumn()
+  agent?: Agent;
 
   constructor() {
     super();

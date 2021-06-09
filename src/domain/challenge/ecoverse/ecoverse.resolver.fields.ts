@@ -19,6 +19,7 @@ import { IApplication } from '@domain/community/application';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { AuthorizationPrivilege } from '@common/enums';
+import { IAgent } from '@domain/agent/agent';
 
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
@@ -49,6 +50,16 @@ export class EcoverseResolverFields {
   @Profiling.api
   async context(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getContext(ecoverse);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('agent', () => IAgent, {
+    nullable: true,
+    description: 'The Agent representing this Ecoverse.',
+  })
+  @Profiling.api
+  async agent(@Parent() ecoverse: Ecoverse): Promise<IAgent> {
+    return await this.ecoverseService.getAgent(ecoverse.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

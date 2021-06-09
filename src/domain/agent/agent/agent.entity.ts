@@ -1,7 +1,6 @@
 import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
 import { IAgent } from '@domain/agent/agent';
 import { ICredential, Credential } from '@domain/agent/credential';
-import { DID } from '@domain/common/scalars';
 import { User } from '@domain/community/user';
 import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
@@ -11,7 +10,10 @@ export class Agent extends BaseCherrytwistEntity implements IAgent {
   parentDisplayID?: string = '';
 
   @Column('varchar', { length: 255, nullable: true })
-  did!: DID;
+  did!: string;
+
+  @Column('varchar', { length: 255, nullable: true })
+  password!: string;
 
   @OneToMany(
     () => Credential,
@@ -32,5 +34,7 @@ export class Agent extends BaseCherrytwistEntity implements IAgent {
 
   constructor() {
     super();
+    this.did = '';
+    this.password = '';
   }
 }

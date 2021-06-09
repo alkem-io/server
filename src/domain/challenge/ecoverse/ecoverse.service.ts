@@ -32,6 +32,7 @@ import { UUID_LENGTH } from '@common/constants';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { IAgent } from '@domain/agent/agent';
 
 @Injectable()
 export class EcoverseService {
@@ -122,7 +123,7 @@ export class EcoverseService {
       );
 
     const baseChallenge = await this.getEcoverseOrFail(deleteData.ID, {
-      relations: ['community', 'context', 'lifecycle'],
+      relations: ['community', 'context', 'lifecycle', 'agent'],
     });
     await this.baseChallengeService.deleteEntities(baseChallenge);
 
@@ -319,6 +320,13 @@ export class EcoverseService {
     return await this.ecoverseRepository.count({
       where: { ecoverse: ecoverseID },
     });
+  }
+
+  async getAgent(ecoverseID: string): Promise<IAgent> {
+    return await this.baseChallengeService.getAgent(
+      ecoverseID,
+      this.ecoverseRepository
+    );
   }
 
   async getMembersCount(ecoverse: IEcoverse): Promise<number> {
