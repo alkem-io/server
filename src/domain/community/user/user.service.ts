@@ -332,4 +332,8 @@ export class UserService {
       credentialCriteria
     );
   }
+
+  async getUserCount(): Promise<number> {
+    return await this.userRepository.count();
+  }
 }
