@@ -179,4 +179,8 @@ export class OrganisationService {
   async save(organisation: IOrganisation) {
     await this.organisationRepository.save(organisation);
   }
+
+  async getOrganisationCount(): Promise<number> {
+    return await this.organisationRepository.count();
+  }
 }

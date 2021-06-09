@@ -393,11 +393,15 @@ export class ChallengeService {
     return await this.challengeRepository.save(challenge);
   }
 
-  async getAllChallengesCount(ecoverseID: string): Promise<number> {
+  async getChallengesInEcoverseCount(ecoverseID: string): Promise<number> {
     const count = await this.challengeRepository.count({
       where: { ecoverseID: ecoverseID },
     });
     return count;
+  }
+
+  async getChallengeCount(): Promise<number> {
+    return await this.challengeRepository.count();
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {

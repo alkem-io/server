@@ -1,8 +1,13 @@
+import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
+import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
+import { OrganisationModule } from '@domain/community/organisation/organisation.module';
+import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
-import { MetadataResolver } from './metadata.resolver';
+import { MetadataResolverQueries } from './metadata.resolver.queries';
 import { MetadataService } from './metadata.service';
 
 @Module({
-  providers: [MetadataResolver, MetadataService],
+  imports: [UserModule, ChallengeModule, EcoverseModule, OrganisationModule],
+  providers: [MetadataResolverQueries, MetadataService],
 })
 export class MetadataModule {}

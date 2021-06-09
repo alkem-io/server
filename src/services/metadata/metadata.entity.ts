@@ -1,3 +1,4 @@
+import { INVP } from '@domain/common';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { IMetadata } from './metadata.interface';
 import { ServiceMetadata } from './service/service.metadata.entity';
@@ -10,4 +11,10 @@ export class Metadata implements IMetadata {
     description: 'Collection of metadata about Cherrytwist services.',
   })
   services?: IServiceMetadata[];
+
+  @Field(() => [INVP], {
+    nullable: false,
+    description: 'Metrics about the activity on the platform',
+  })
+  activity?: INVP[];
 }

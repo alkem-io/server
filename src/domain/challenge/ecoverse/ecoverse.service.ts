@@ -291,7 +291,7 @@ export class EcoverseService {
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     activity.push(challengesTopic);
 
-    const allChallengesCount = await this.challengeService.getAllChallengesCount(
+    const allChallengesCount = await this.challengeService.getChallengesInEcoverseCount(
       ecoverse.id
     );
     const opportunitiesTopic = new NVP(
@@ -326,5 +326,9 @@ export class EcoverseService {
       ecoverse,
       this.ecoverseRepository
     );
+  }
+
+  async getEcoverseCount(): Promise<number> {
+    return await this.ecoverseRepository.count();
   }
 }
