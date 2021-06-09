@@ -7,6 +7,7 @@ import { IAspect } from '@domain/context/aspect';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
+import { IReference } from '@domain/common/reference';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -32,5 +33,16 @@ export class ContextResolverFields {
   @Profiling.api
   async aspects(@Parent() context: Context) {
     return await this.contextService.getAspects(context);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('references', () => [IReference], {
+    nullable: true,
+    description: 'The References for this Context.',
+  })
+  @Profiling.api
+  async references(@Parent() context: Context) {
+    return await this.contextService.getReferences(context);
   }
 }
