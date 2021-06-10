@@ -37,3 +37,23 @@
     - handler: redirect
       config:
         to: https://localhost:4455/auth/login
+
+- id: 'cherrytwist:graphql:api:protected'
+  upstream:
+    preserve_host: true
+    url: 'http://192.168.10.1:4000'
+    strip_path: /admin
+  match:
+    url: 'http://localhost:4455/admin/graphql'
+    methods:
+      - POST
+  authenticators:
+    - handler: noop
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+  errors:
+    - handler: redirect
+      config:
+        to: https://localhost:4455/auth/login

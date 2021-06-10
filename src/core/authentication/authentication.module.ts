@@ -7,6 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AadBearerStrategy } from './aad.bearer.strategy';
 import { OryStrategy } from './ory.strategy';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
+import { OryApiStrategy } from './ory.api.strategy';
 @Module({
   imports: [
     PassportModule.register({ session: false, defaultStrategy: 'azure-ad' }),
@@ -20,7 +21,12 @@ import { CredentialModule } from '@domain/agent/credential/credential.module';
       }),
     }),
   ],
-  providers: [AadBearerStrategy, AuthenticationService, OryStrategy],
+  providers: [
+    AadBearerStrategy,
+    AuthenticationService,
+    OryStrategy,
+    OryApiStrategy,
+  ],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}
