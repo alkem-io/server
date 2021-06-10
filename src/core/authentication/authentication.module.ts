@@ -25,13 +25,7 @@ import { OryApiStrategy } from './ory.api.strategy';
       }),
     }),
   ],
-  providers: [AuthenticationService, OryStrategy],
-  providers: [
-    AadBearerStrategy,
-    AuthenticationService,
-    OryStrategy,
-    OryApiStrategy,
-  ],
+  providers: [AuthenticationService, OryStrategy, OryApiStrategy],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}

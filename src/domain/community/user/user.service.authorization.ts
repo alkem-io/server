@@ -15,8 +15,8 @@ import {
   AuthorizationDefinition,
   IAuthorizationDefinition,
 } from '@domain/common/authorization-definition';
-import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 
 @Injectable()
 export class UserAuthorizationService {

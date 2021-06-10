@@ -22,7 +22,7 @@ import { DeleteProjectInput } from './project.dto.delete';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { UUID_LENGTH } from '@common/constants';
-import { NamingService } from '@src/services/platform/ssi/agent/naming/naming.service';
+import { NamingService } from '@src/services/domain/naming/naming.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()

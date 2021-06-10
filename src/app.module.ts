@@ -17,13 +17,13 @@ import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filte
 import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
 import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
-import { IpfsModule } from './services/platform/ipfs/ipfs.module';
+import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { SearchModule } from './services/domain/search/search.module';
+import { SearchModule } from '@src/services/domain/search/search.module';
 import { ConfigurationTypes } from '@common/enums';
-import { MembershipModule } from './services/domain/membership/membership.module';
+import { MembershipModule } from '@src/services/domain/membership/membership.module';
 import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
 
 @Module({

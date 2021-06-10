@@ -10,10 +10,10 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IUserGroup, UserGroup } from '@domain/community/user-group';
 import { UserGroupService } from './user-group.service';
+import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 
 @Injectable()
 export class UserGroupAuthorizationService {
