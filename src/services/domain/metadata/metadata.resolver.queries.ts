@@ -4,7 +4,7 @@ import { IMetadata } from './metadata.interface';
 import { MetadataService } from './metadata.service';
 
 @Resolver()
-export class MetadataResolver {
+export class MetadataResolverQueries {
   constructor(private metadataService: MetadataService) {}
 
   @Query(() => Metadata, {

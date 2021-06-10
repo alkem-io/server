@@ -152,14 +152,14 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
-    const community = await this.communityService.getCommunityOrFail(
+    const application = await this.applicationService.getApplicationOrFail(
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      application.authorization,
       AuthorizationPrivilege.UPDATE,
-      `delete application community: ${community.displayName}`
+      `delete application community: ${application.id}`
     );
     return await this.applicationService.deleteApplication(deleteData);
   }

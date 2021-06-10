@@ -6,12 +6,15 @@ import { IAgent } from '@domain/agent/agent';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IUser } from '@domain/community/user';
 import { AuthorizationPrivilege } from '@common/enums';
+import { UseGuards } from '@nestjs/common/decorators';
+import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(private userService: UserService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this User.',

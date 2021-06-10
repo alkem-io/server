@@ -58,14 +58,16 @@ describe('Remove user', () => {
     );
   });
 
-  test.skip('should receive a message for removing unexisting user', async () => {
+  test('should receive a message for removing unexisting user', async () => {
     // Act
-    const responseQuery = await removeUserMutation('77777');
+    const responseQuery = await removeUserMutation(
+      '180f55ab-2286-415d-952c-c588c5b6f533'
+    );
 
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'Unable to find user with given ID: 77777'
+      'Unable to find user with given ID: 180f55ab-2286-415d-952c-c588c5b6f533'
     );
   });
 

@@ -62,7 +62,6 @@ export class ContextService {
     context: IContext,
     contextInput: UpdateContextInput
   ): Promise<IContext> {
-    // Convert the data to json
     if (contextInput.tagline) {
       context.tagline = contextInput.tagline;
     }
@@ -80,8 +79,9 @@ export class ContextService {
     }
 
     if (contextInput.references) {
+      const references = await this.getReferences(context);
       context.references = await this.referenceService.updateReferences(
-        context.references,
+        references,
         contextInput.references
       );
     }
@@ -92,7 +92,7 @@ export class ContextService {
   async removeContext(contextID: string): Promise<IContext> {
     // Note need to load it in with all contained entities so can remove fully
     const context = await this.getContextOrFail(contextID, {
-      relations: ['aspects'],
+      relations: ['aspects', 'references'],
     });
 
     // Remove all references
@@ -117,7 +117,9 @@ export class ContextService {
   async createReference(
     referenceInput: CreateReferenceOnContextInput
   ): Promise<IReference> {
-    const context = await this.getContextOrFail(referenceInput.contextID);
+    const context = await this.getContextOrFail(referenceInput.contextID, {
+      relations: ['references'],
+    });
 
     if (!context.references)
       throw new EntityNotInitializedException(
@@ -127,7 +129,10 @@ export class ContextService {
     // check there is not already a reference with the same name
     for (const reference of context.references) {
       if (reference.name === referenceInput.name) {
-        return reference;
+        throw new ValidationException(
+          `Reference with the provided name already exists: ${referenceInput.name}`,
+          LogContext.CONTEXT
+        );
       }
     }
 
@@ -180,6 +185,19 @@ export class ContextService {
       );
 
     return contextLoaded.aspects;
+  }
+
+  async getReferences(context: IContext): Promise<IReference[]> {
+    const contextLoaded = await this.getContextOrFail(context.id, {
+      relations: ['references'],
+    });
+    if (!contextLoaded.references)
+      throw new EntityNotFoundException(
+        `Context not initialised: ${context.id}`,
+        LogContext.CONTEXT
+      );
+
+    return contextLoaded.references;
   }
 
   async getEcosystemModel(context: IContext): Promise<IEcosystemModel> {

@@ -207,4 +207,8 @@ export class OrganisationService {
 
     return agent;
   }
+
+  async getOrganisationCount(): Promise<number> {
+    return await this.organisationRepository.count();
+  }
 }

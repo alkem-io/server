@@ -1,14 +1,11 @@
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 import { createOrganisationMutation } from '../organisation/organisation.request.params';
 import { searchMutation } from '../search/search.request.params';
-import { TestDataServiceInitResult } from '@src/services/domain/data-management/test-data.service';
+import { getUser } from '@test/functional/e2e/user-management/user.request.params';
 
-let data: TestDataServiceInitResult;
-
+const userNameID = 'Qa_User';
 const userName = 'Qa User';
-let userId: string;
 let organisationName = '';
 let organisationId = '';
 let uniqueTextId = '';
@@ -31,12 +28,15 @@ const termTooLong = [
   'User',
   'QA',
 ];
+const userId = async (): Promise<string> => {
+  const getUserId = await getUser(userNameID);
+  const response = getUserId.body.data.user.id;
+  return response;
+};
 const termAllScored = ['QA', 'QA', 'user', 'mm'];
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
-  data = appSingleton.Instance.getData();
-  userId = data.userId;
 });
 
 afterAll(async () => {
@@ -67,7 +67,7 @@ describe('Query Challenge data', () => {
       score: 10,
       result: {
         __typename: 'User',
-        id: `${userId}`,
+        id: `${await userId()}`,
         displayName: `${userName}`,
       },
     });
@@ -102,7 +102,7 @@ describe('Query Challenge data', () => {
       score: 10,
       result: {
         __typename: 'User',
-        id: `${userId}`,
+        id: `${await userId()}`,
         displayName: `${userName}`,
       },
     });
@@ -131,7 +131,7 @@ describe('Query Challenge data', () => {
       score: 30,
       result: {
         __typename: 'User',
-        id: `${userId}`,
+        id: `${await userId()}`,
         displayName: `${userName}`,
       },
     });
@@ -160,7 +160,7 @@ describe('Query Challenge data', () => {
       score: 10,
       result: {
         __typename: 'User',
-        id: `${userId}`,
+        id: `${await userId()}`,
         displayName: `${userName}`,
       },
     });

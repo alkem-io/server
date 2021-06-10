@@ -23,7 +23,7 @@ export class Context extends AuthorizableEntity implements IContext {
   @OneToMany(
     () => Reference,
     reference => reference.context,
-    { eager: true, cascade: true }
+    { eager: false, cascade: true }
   )
   references?: Reference[];
 

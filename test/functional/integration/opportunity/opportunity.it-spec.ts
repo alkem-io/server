@@ -100,7 +100,6 @@ describe('Opportunities', () => {
       opportunityTextId,
       contextTagline
     );
-    console.log(responseCreateOpportunityOnChallenge.body);
     opportunityId =
       responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
     let contextId =
@@ -120,7 +119,6 @@ describe('Opportunities', () => {
       aspectFrame,
       aspectExplanation
     );
-    console.log(x.body);
 
     // Create Actor group
     let y = await createActorGroupMutation(
@@ -128,7 +126,6 @@ describe('Opportunities', () => {
       actorGroupName,
       actorGroupDescription
     );
-    console.log(y.body);
 
     // Create Relation
     // let z = await createRelationMutation(
@@ -143,7 +140,6 @@ describe('Opportunities', () => {
 
     // Add group to an opportunity
     let w = await createGroupOnCommunityMutation(communityId, groupName);
-    console.log(w.body);
     ///  Create Project - enable this, when the implementation is in place ////
 
     // const responseCreateProject = await createProjectMutation(
@@ -155,12 +151,10 @@ describe('Opportunities', () => {
     // projectId = responseCreateProject.body.data.createProject.id;
 
     let re = await removeOpportunityMutation(opportunityId);
-    console.log(re.body);
 
     // Act
     // Get all opportunities
     const responseOpSubEntities = await getChallengeData(challengeId);
-    console.log(responseOpSubEntities.body.data.ecoverse.challenge);
     const baseResponse = responseOpSubEntities.body.data.ecoverse.challenge;
 
     expect(baseResponse.context.aspects).toBe(undefined);
@@ -538,7 +532,9 @@ describe('Opportunity sub entities', () => {
     expect(baseResponse.projects[0].nameID).toContain(responseProjectData);
 
     expect(baseResponse.context.ecosystemModel.actorGroups).toHaveLength(1);
-    expect(baseResponse.context.ecosystemModel.actorGroups[0].name).toContain(responseActorGroup);
+    expect(baseResponse.context.ecosystemModel.actorGroups[0].name).toContain(
+      responseActorGroup
+    );
 
     expect(baseResponse.relations).toHaveLength(1);
     expect(baseResponse.relations[0].actorName).toEqual(responseCreateRelation);

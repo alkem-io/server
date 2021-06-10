@@ -33,7 +33,6 @@ export class AuthorizationEngineService {
   ) {
     if (this.isAuthenticationDisabled()) return true;
 
-    // Authorization is enabled...
     const auth = this.validateAuthorization(authorization);
     if (this.isUserAccessGranted(agentInfo, auth, privilegeRequired))
       return true;

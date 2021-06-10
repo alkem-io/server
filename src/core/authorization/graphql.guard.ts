@@ -45,17 +45,13 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     const graphqlInfo = gqlContext.getInfo();
     const fieldName = graphqlInfo.fieldName;
 
-    if (fieldName === 'me') {
-      this.logAuthorizationToken(req);
-    }
-
-    // There should always be an AgentInfo returned, even if it is empty
+    // Ensure there is always an AgentInfo
     let resultAgentInfo = agentInfo;
     if (!agentInfo) {
       this.logger.verbose?.('AgentInfo NOT present', LogContext.AUTH);
       if (this.agentInfo) {
-        this.logger.verbose?.('...using cached AgentInfo', LogContext.AUTH);
-        resultAgentInfo = this.agentInfo;
+        this.logger.verbose?.('...using empty AgentInfo', LogContext.AUTH);
+        resultAgentInfo = new AgentInfo();
       } else {
         this.logger.verbose?.('...using an empty AgentInfo', LogContext.AUTH);
         resultAgentInfo = new AgentInfo();
@@ -65,6 +61,9 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
         `AgentInfo present with info: ${info}`,
         agentInfo
       );
+      if (fieldName === 'me' && agentInfo.email.length > 0) {
+        this.logAuthorizationToken(req);
+      }
       this.agentInfo = agentInfo;
     }
 
