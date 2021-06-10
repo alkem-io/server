@@ -24,7 +24,10 @@ export class ChallengeLifecycleOptionsProvider {
   ): Promise<IChallenge> {
     const challengeID = eventData.ID;
     const challenge = await this.challengeService.getChallengeOrFail(
-      challengeID
+      challengeID,
+      {
+        relations: ['agent'],
+      }
     );
 
     const lifecycle = await this.challengeService.getLifecycle(challengeID);
@@ -63,15 +66,11 @@ export class ChallengeLifecycleOptionsProvider {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationDefinition: AuthorizationDefinition =
           event.authorization;
-        const simpleAuthorization = this.authorizationEngineService.isUserAccessGranted(
+        return this.authorizationEngineService.isAccessGranted(
           agentInfo,
           authorizationDefinition,
           AuthorizationPrivilege.UPDATE
         );
-        if (!simpleAuthorization) {
-          // check the VC is issued!
-        }
-        return simpleAuthorization;
       },
     },
   };

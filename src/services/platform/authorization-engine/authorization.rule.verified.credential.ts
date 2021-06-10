@@ -1,7 +1,7 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
-export type AuthorizationCredentialRule = {
+export type AuthorizationRuleVerifiedCredential = {
   type: string;
-  resourceID: string;
+  resourceID: string; // a DID representing the entity to be operated on
   grantedPrivileges: AuthorizationPrivilege[];
 };

@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CredentialsSearchInput, ICredential } from '@domain/agent';
-import { AuthorizationCredentialRule } from './authorization.credential.rule';
+import { CredentialsSearchInput } from '@domain/agent';
+import { AuthorizationRuleCredential } from './authorization.rule.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
 import {
@@ -16,6 +16,7 @@ import {
 } from '@domain/common/authorization-definition';
 import { AgentInfo } from '@core/authentication';
 import { ConfigService } from '@nestjs/config';
+import { AuthorizationRuleVerifiedCredential } from './authorization.rule.verified.credential';
 
 @Injectable()
 export class AuthorizationEngineService {
@@ -34,8 +35,7 @@ export class AuthorizationEngineService {
     if (this.isAuthenticationDisabled()) return true;
 
     const auth = this.validateAuthorization(authorization);
-    if (this.isUserAccessGranted(agentInfo, auth, privilegeRequired))
-      return true;
+    if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
     const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
     this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
@@ -54,33 +54,6 @@ export class AuthorizationEngineService {
       authorization,
       AuthorizationPrivilege.READ,
       msg
-    );
-  }
-
-  logCredentialCheckFailDetails(
-    errorMsg: string,
-    agentInfo: AgentInfo,
-    authorization: IAuthorizationDefinition
-  ) {
-    const msg = `${errorMsg}; agentInfo: ${
-      agentInfo.email
-    } has credentials '${JSON.stringify(
-      agentInfo.credentials,
-      this.replacer
-    )}'; authorization definition: anonymousAccess=${
-      authorization?.anonymousReadAccess
-    } & rules: ${authorization?.credentialRules}`;
-    //console.log(msg);
-    this.logger.verbose?.(msg, LogContext.AUTH);
-  }
-
-  logAgentInfo(msg: string, agentInfo: AgentInfo) {
-    this.logger.verbose?.(
-      `${msg}; agentInfo: ${agentInfo.email} has credentials '${JSON.stringify(
-        agentInfo.credentials,
-        this.replacer
-      )}'`,
-      LogContext.AUTH
     );
   }
 
@@ -104,20 +77,6 @@ export class AuthorizationEngineService {
     return authorization;
   }
 
-  isUserAccessGranted(
-    agentInfo: AgentInfo,
-    authorization: IAuthorizationDefinition,
-    privilegeRequired: AuthorizationPrivilege
-  ) {
-    if (this.isAuthenticationDisabled()) return true;
-
-    return this.isAccessGranted(
-      agentInfo.credentials,
-      authorization,
-      privilegeRequired
-    );
-  }
-
   isAuthenticationDisabled(): boolean {
     const authEnabled = this.configService.get(ConfigurationTypes.Identity)
       ?.authentication?.enabled;
@@ -126,10 +85,10 @@ export class AuthorizationEngineService {
   }
 
   isAccessGranted(
-    credentials: ICredential[],
+    agentInfo: AgentInfo,
     authorization: IAuthorizationDefinition,
     privilegeRequired: AuthorizationPrivilege
-  ) {
+  ): boolean {
     if (this.isAuthenticationDisabled()) return true;
     if (
       authorization.anonymousReadAccess &&
@@ -137,14 +96,29 @@ export class AuthorizationEngineService {
     )
       return true;
 
-    const credentialRules: AuthorizationCredentialRule[] = this.convertCredentialRulesStr(
+    const credentialRules: AuthorizationRuleCredential[] = this.convertCredentialRulesStr(
       authorization.credentialRules
     );
     for (const rule of credentialRules) {
-      for (const credential of credentials) {
+      for (const credential of agentInfo.credentials) {
         if (
           credential.type === rule.type &&
           credential.resourceID === rule.resourceID
+        ) {
+          for (const privilege of rule.grantedPrivileges) {
+            if (privilege === privilegeRequired) return true;
+          }
+        }
+      }
+    }
+    const verifiedCredentialRules: AuthorizationRuleVerifiedCredential[] = this.convertVerifiedCredentialRulesStr(
+      authorization.verifiedCredentialRules
+    );
+    for (const rule of verifiedCredentialRules) {
+      for (const verifiedCredential of agentInfo.verifiedCredentials) {
+        if (
+          verifiedCredential.type === rule.type &&
+          verifiedCredential.issuer === rule.resourceID
         ) {
           for (const privilege of rule.grantedPrivileges) {
             if (privilege === privilegeRequired) return true;
@@ -162,7 +136,7 @@ export class AuthorizationEngineService {
   ): IAuthorizationDefinition {
     const auth = this.validateAuthorization(authorization);
     const rules = this.convertCredentialRulesStr(auth.credentialRules);
-    const newRule: AuthorizationCredentialRule = {
+    const newRule: AuthorizationRuleCredential = {
       type: credentialCriteria.type,
       resourceID: credentialCriteria.type,
       grantedPrivileges: privileges,
@@ -195,7 +169,7 @@ export class AuthorizationEngineService {
 
   appendCredentialAuthorizationRules(
     authorization: IAuthorizationDefinition | undefined,
-    additionalRules: AuthorizationCredentialRule[]
+    additionalRules: AuthorizationRuleCredential[]
   ): IAuthorizationDefinition {
     const auth = this.validateAuthorization(authorization);
 
@@ -208,10 +182,24 @@ export class AuthorizationEngineService {
     return auth;
   }
 
-  convertCredentialRulesStr(rulesStr: string): AuthorizationCredentialRule[] {
+  convertCredentialRulesStr(rulesStr: string): AuthorizationRuleCredential[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
-      const rules: AuthorizationCredentialRule[] = JSON.parse(rulesStr);
+      const rules: AuthorizationRuleCredential[] = JSON.parse(rulesStr);
+      return rules;
+    } catch (error) {
+      const msg = `Unable to convert rules to json: ${error}`;
+      this.logger.error(msg);
+      throw new ForbiddenException(msg, LogContext.AUTH);
+    }
+  }
+
+  convertVerifiedCredentialRulesStr(
+    rulesStr: string
+  ): AuthorizationRuleVerifiedCredential[] {
+    if (!rulesStr || rulesStr.length == 0) return [];
+    try {
+      const rules: AuthorizationRuleVerifiedCredential[] = JSON.parse(rulesStr);
       return rules;
     } catch (error) {
       const msg = `Unable to convert rules to json: ${error}`;
@@ -225,7 +213,7 @@ export class AuthorizationEngineService {
     privileges: AuthorizationPrivilege[]
   ): IAuthorizationDefinition {
     const authorization = new AuthorizationDefinition();
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
 
     for (const globalRole of globalRoles) {
       let credType: AuthorizationCredential;
@@ -251,5 +239,32 @@ export class AuthorizationEngineService {
     this.appendCredentialAuthorizationRules(authorization, newRules);
 
     return authorization;
+  }
+
+  logCredentialCheckFailDetails(
+    errorMsg: string,
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationDefinition
+  ) {
+    const msg = `${errorMsg}; agentInfo: ${
+      agentInfo.email
+    } has credentials '${JSON.stringify(
+      agentInfo.credentials,
+      this.replacer
+    )}'; authorization definition: anonymousAccess=${
+      authorization?.anonymousReadAccess
+    } & rules: ${authorization?.credentialRules}`;
+    //console.log(msg);
+    this.logger.verbose?.(msg, LogContext.AUTH);
+  }
+
+  logAgentInfo(msg: string, agentInfo: AgentInfo) {
+    this.logger.verbose?.(
+      `${msg}; agentInfo: ${agentInfo.email} has credentials '${JSON.stringify(
+        agentInfo.credentials,
+        this.replacer
+      )}'`,
+      LogContext.AUTH
+    );
   }
 }

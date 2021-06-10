@@ -7,11 +7,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AadBearerStrategy } from './aad.bearer.strategy';
 import { OryStrategy } from './ory.strategy';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
+import { SsiAgentModule } from '@src/services/platform/ssi/agent/ssi.agent.module';
 @Module({
   imports: [
     PassportModule.register({ session: false, defaultStrategy: 'azure-ad' }),
     UserModule,
     CredentialModule,
+    SsiAgentModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -15,7 +15,7 @@ import {
   AuthorizationDefinition,
   IAuthorizationDefinition,
 } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
+import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 import { EntityNotInitializedException } from '@common/exceptions';
 
 @Injectable()
@@ -80,7 +80,7 @@ export class UserAuthorizationService {
         `Authorization definition not found for: ${userID}`,
         LogContext.COMMUNITY
       );
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GlobalAdmin,
@@ -129,7 +129,7 @@ export class UserAuthorizationService {
     userEmail: string
   ): IAuthorizationDefinition {
     const authorization = new AuthorizationDefinition();
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GlobalAdmin,

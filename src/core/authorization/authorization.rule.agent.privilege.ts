@@ -30,7 +30,7 @@ export class AuthorizationRuleAgentPrivilege {
 
   execute(agentInfo: AgentInfo): boolean {
     const accessGranted = this.authorizationEngine.isAccessGranted(
-      agentInfo.credentials,
+      agentInfo,
       this.fieldParent.authorization,
       this.privilege
     );

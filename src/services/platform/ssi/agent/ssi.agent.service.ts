@@ -21,15 +21,14 @@ export class SsiAgentService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // Create an account for the specified user and update the user to store the UPN
-  async createIdentity(password: string): Promise<string> {
+  async createAgent(password: string): Promise<string> {
     const storage = new JolocomTypeormStorage(this.typeormConnection);
     const sdk = new JolocomSDK({ storage });
     const agent = await sdk.createAgent(password, 'jun');
     return agent.identityWallet.did;
   }
 
-  // Create an account for the specified user and update the user to store the UPN
+  // Load did doc for agent
   async loadDidDoc(did: string, password: string): Promise<string> {
     const storage = new JolocomTypeormStorage(this.typeormConnection);
     const sdk = new JolocomSDK({ storage });
@@ -54,10 +53,10 @@ export class SsiAgentService {
       const claim = credential.claim;
       if (claim.id === did) {
         const verifiedCredential = new VerifiedCredential();
-        const claimID = claim.id;
-        if (claimID) verifiedCredential.claimID = claimID.toString();
-        verifiedCredential.issuedBy = claim.challengeID.toString();
-        verifiedCredential.issuedTo = claim.userID.toString();
+        verifiedCredential.claim = JSON.stringify(claim);
+        verifiedCredential.issuer = credential.issuer;
+        verifiedCredential.type = credential.type[1];
+        verifiedCredential.issued = credential.issued;
         credentialsResult.push(verifiedCredential);
         this.logger.verbose?.(`${credential.claim}`);
       }

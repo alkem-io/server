@@ -10,4 +10,7 @@ export abstract class IAuthorizationDefinition {
 
   @Field(() => String)
   credentialRules!: string;
+
+  @Field(() => String)
+  verifiedCredentialRules!: string;
 }

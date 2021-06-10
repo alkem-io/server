@@ -1,25 +1,31 @@
 import { Field, ObjectType } from '@nestjs/graphql';
+import JSON from 'graphql-type-json';
 
 @ObjectType()
 export class VerifiedCredential {
   @Field(() => String, {
-    description: 'The stringified representation of the VC',
+    description: 'The type of VC',
   })
-  claimID: string;
+  type: string;
 
   @Field(() => String, {
     description: 'The challenge issuing the VC',
   })
-  issuedBy: string;
+  issuer: string;
 
-  @Field(() => String, {
-    description: 'The user receiving VC',
+  @Field(() => Date, {
+    description: 'The time at which the credential was issued',
   })
-  issuedTo: string;
+  issued?: Date;
+
+  @Field(() => JSON, {
+    description: 'JSON for the claim in the credential',
+  })
+  claim: string;
 
   constructor() {
-    this.claimID = '';
-    this.issuedBy = '';
-    this.issuedTo = '';
+    this.type = '';
+    this.issuer = '';
+    this.claim = '';
   }
 }

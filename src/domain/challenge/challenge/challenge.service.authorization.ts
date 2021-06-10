@@ -3,20 +3,26 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
+  AuthorizationVerifiedCredential,
   LogContext,
 } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { Challenge, IChallenge } from '@domain/challenge/challenge';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
+import {
+  AuthorizationRuleCredential,
+  AuthorizationRuleVerifiedCredential,
+} from '@src/services/platform/authorization-engine';
+import { ChallengeService } from './challenge.service';
 
 @Injectable()
 export class ChallengeAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
+    private challengeService: ChallengeService,
     private authorizationEngine: AuthorizationEngineService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
@@ -32,6 +38,10 @@ export class ChallengeAuthorizationService {
     );
     challenge.authorization = this.updateAuthorizationDefinition(
       challenge.authorization,
+      challenge.id
+    );
+    // Also update the verified credential rules
+    challenge.authorization.verifiedCredentialRules = await this.createVerifiedCredentialRules(
       challenge.id
     );
 
@@ -69,7 +79,19 @@ export class ChallengeAuthorizationService {
         `Authorization definition not found for: ${challengeID}`,
         LogContext.CHALLENGES
       );
-    const newRules: AuthorizationCredentialRule[] = [];
+
+    this.authorizationEngine.appendCredentialAuthorizationRules(
+      authorization,
+      this.createCredentialRules(challengeID)
+    );
+
+    return authorization;
+  }
+
+  private createCredentialRules(
+    challengeID: string
+  ): AuthorizationRuleCredential[] {
+    const rules: AuthorizationRuleCredential[] = [];
 
     const challengeAdmin = {
       type: AuthorizationCredential.ChallengeAdmin,
@@ -80,20 +102,29 @@ export class ChallengeAuthorizationService {
         AuthorizationPrivilege.UPDATE,
       ],
     };
-    newRules.push(challengeAdmin);
+    rules.push(challengeAdmin);
 
     const challengeMember = {
       type: AuthorizationCredential.ChallengeMember,
       resourceID: challengeID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
-    newRules.push(challengeMember);
+    rules.push(challengeMember);
 
-    this.authorizationEngine.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
+    return rules;
+  }
 
-    return authorization;
+  async createVerifiedCredentialRules(challengeID: string): Promise<string> {
+    const rules: AuthorizationRuleVerifiedCredential[] = [];
+    const agent = await this.challengeService.getAgent(challengeID);
+
+    const stateChange = {
+      type: AuthorizationVerifiedCredential.StateModificationCredential,
+      resourceID: agent.did,
+      grantedPrivileges: [AuthorizationPrivilege.UPDATE],
+    };
+    rules.push(stateChange);
+
+    return JSON.stringify(rules);
   }
 }

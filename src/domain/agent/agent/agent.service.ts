@@ -174,7 +174,7 @@ export class AgentService {
       .toString(36)
       .substr(2, 10);
 
-    agent.did = await this.ssiAgentService.createIdentity(agent.password);
+    agent.did = await this.ssiAgentService.createAgent(agent.password);
     return await this.saveAgent(agent);
   }
 

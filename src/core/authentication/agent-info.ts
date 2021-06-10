@@ -1,7 +1,8 @@
-import { IAgent, ICredential } from '@domain/agent';
+import { ICredential } from '@domain/agent';
+import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 
 export class AgentInfo {
   email = '';
   credentials: ICredential[] = [];
-  agent?: IAgent;
+  verifiedCredentials: VerifiedCredential[] = [];
 }
