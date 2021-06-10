@@ -8,7 +8,7 @@ import { SearchResultEntry } from './search-result-entry.dto';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationEngineService } from '../authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 @Resolver()
 export class SearchResolverQueries {

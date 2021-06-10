@@ -14,7 +14,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/community/profile';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAgent } from '@domain/agent/agent';
 @Resolver(() => IOrganisation)
 export class OrganisationResolverFields {

@@ -1,11 +1,11 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ApplicationTemplate } from '@src/services/configuration/config/template/application.template.entity';
+import { ApplicationTemplate } from '@src/services/platform/configuration/config/template/application.template.entity';
 
 @ObjectType()
-export class ChallengeTemplate {
+export class EcoverseTemplate {
   @Field(() => String, {
     nullable: false,
-    description: 'Challenge template name.',
+    description: 'Ecoverse template name.',
   })
   name: string;
 
