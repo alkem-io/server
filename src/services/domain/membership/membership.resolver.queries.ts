@@ -5,7 +5,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { Membership, MembershipInput } from './index';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
-import { AuthorizationEngineService } from '../authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { AgentInfo } from '@core/authentication';
 

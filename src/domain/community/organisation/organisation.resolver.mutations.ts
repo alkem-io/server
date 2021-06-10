@@ -12,7 +12,7 @@ import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { OrganisationAuthorizationService } from './organisation.service.authorization';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 
 @Resolver(() => IOrganisation)

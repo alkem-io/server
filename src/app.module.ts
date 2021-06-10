@@ -8,22 +8,22 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ConfigModule } from '@nestjs/config/dist/config.module';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
-import { DataManagementModule } from '@src/services/data-management/data-management.module';
+import { DataManagementModule } from '@src/services/domain/data-management/data-management.module';
 import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
 import { WinstonModule } from 'nest-winston';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
-import { MetadataModule } from '@src/services/metadata/metadata.module';
-import { KonfigModule } from '@src/services/configuration/config/config.module';
+import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
+import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
-import { IpfsModule } from './services/ipfs/ipfs.module';
+import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { SearchModule } from './services/search/search.module';
+import { SearchModule } from '@src/services/domain/search/search.module';
 import { ConfigurationTypes } from '@common/enums';
-import { MembershipModule } from './services/membership/membership.module';
+import { MembershipModule } from '@src/services/domain/membership/membership.module';
 
 @Module({
   imports: [

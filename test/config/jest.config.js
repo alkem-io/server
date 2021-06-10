@@ -5,7 +5,7 @@ module.exports = {
     '@common/(.*)': ['<rootDir>/src/common/$1'],
     '@core/(.*)': ['<rootDir>/src/core/$1'],
     '@config/(.*)': ['<rootDir>/src/config/$1'],
-    '@templates/(.*)': ['<rootDir>/src/services/configuration/templates/$1'],
+    '@templates/(.*)': ['<rootDir>/src/services/platform/configuration/templates/$1'],
     '@src/(.*)': ['<rootDir>/src/$1'],
     '@test/(.*)': ['<rootDir>/test/$1'],
     '@constants': ['<rootDir>/src/common/constants'],

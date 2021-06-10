@@ -8,7 +8,7 @@ import {
   IActorGroup,
 } from '@domain/context/actor-group';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 import { ActorGroupAuthorizationService } from '../actor-group/actor-group.service.authorization';
 @Resolver()

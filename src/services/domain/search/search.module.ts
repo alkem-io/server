@@ -8,7 +8,7 @@ import { SearchResolverQueries } from './search.resolver.queries';
 import { SearchService } from './search.service';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
-import { AuthorizationEngineModule } from '../authorization-engine/authorization-engine.module';
+import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 
 @Module({
   imports: [

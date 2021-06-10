@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ChallengeTemplate } from '@src/services/configuration/config/template/challenge.template.entity';
-import { EcoverseTemplate } from '@src/services/configuration/config/template/ecoverse.template.entity';
+import { ChallengeTemplate } from '@src/services/platform/configuration/config/template/challenge.template.entity';
+import { EcoverseTemplate } from '@src/services/platform/configuration/config/template/ecoverse.template.entity';
 import { OpportunityTemplate } from './opportunity.template.entity';
 import { IOpportunityTemplate } from './opportunity.template.interface';
 import { ITemplate } from './template.interface';

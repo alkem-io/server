@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { CommunityService } from './community.service';
 import { Community, ICommunity } from '@domain/community/community';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';

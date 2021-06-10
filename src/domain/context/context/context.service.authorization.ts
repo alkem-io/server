@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ContextService } from './context.service';
 import { Context, IContext } from '@domain/context/context';
 import { EcosystemModelAuthorizationService } from '../ecosystem-model/ecosystem-model.service.authorization';

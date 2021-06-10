@@ -11,7 +11,7 @@ import { IUser } from '@domain/community/user';
 import { GraphqlGuard } from './graphql.guard';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Resolver()

@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { Connection } from 'typeorm';
-import { BootstrapService } from '../../core/bootstrap/bootstrap.service';
+import { BootstrapService } from '@src/core/bootstrap/bootstrap.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { exec } from 'child_process';

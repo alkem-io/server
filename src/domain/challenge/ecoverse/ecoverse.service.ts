@@ -27,7 +27,7 @@ import { IContext } from '@domain/context';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
-import { NamingService } from '@src/services/naming/naming.service';
+import { NamingService } from '@src/services/domain/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
