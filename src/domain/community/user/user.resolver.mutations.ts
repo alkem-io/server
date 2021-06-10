@@ -13,8 +13,8 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
-import { CommunicationService } from '@src/services/communication/communication.service';
-import { CommunicationSendMessageInput } from '@src/services/communication/communication.dto.send.msg';
+import { CommunicationService } from '@src/services/domain/communication/communication.service';
+import { CommunicationSendMessageInput } from '@src/services/domain/communication/communication.dto.send.msg';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {

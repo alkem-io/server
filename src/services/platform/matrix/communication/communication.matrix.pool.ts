@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MatrixUserService } from '@src/services/matrix/user/user.matrix.service';
+import { MatrixUserService } from '@src/services/platform/matrix/user/user.matrix.service';
 import { MatrixCommunicationClient } from './communication.matrix.pool.client';
 
 @Injectable()

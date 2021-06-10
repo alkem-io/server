@@ -1,6 +1,6 @@
 import { UserModule } from '@domain/community/user/user.module';
 import { forwardRef, Module } from '@nestjs/common';
-import { MatrixCommunicationModule } from '@src/services/matrix/communication/communication.matrix.module';
+import { MatrixCommunicationModule } from '@src/services/platform/matrix/communication/communication.matrix.module';
 import { CommunicationService } from './communication.service';
 
 @Module({

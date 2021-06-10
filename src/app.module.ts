@@ -25,8 +25,8 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
 import { ConfigurationTypes } from '@common/enums';
 import { MembershipModule } from '@src/services/domain/membership/membership.module';
-import { MatrixCommunicationPool } from './services/matrix/communication/communication.matrix.pool';
-import { MatrixCommunicationModule } from './services/matrix/communication/communication.matrix.module';
+import { MatrixCommunicationPool } from './services/platform/matrix/communication/communication.matrix.pool';
+import { MatrixCommunicationModule } from './services/platform/matrix/communication/communication.matrix.module';
 import { decode } from 'jsonwebtoken';
 @Module({
   imports: [

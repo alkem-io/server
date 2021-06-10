@@ -2,7 +2,7 @@ import { ConfigurationTypes } from '@common/enums';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IOperationalMatrixUser } from '@src/services/matrix/user/user.matrix.interface';
+import { IOperationalMatrixUser } from '@src/services/platform/matrix/user/user.matrix.interface';
 import { createClient } from 'matrix-js-sdk';
 import { MatrixTransforms } from '../user/user.matrix.service';
 import {
