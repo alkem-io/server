@@ -13,8 +13,13 @@ import { AuthenticationException } from '@common/exceptions';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
+
 @Injectable()
-export class GraphqlGuard extends AuthGuard(['oathkeeper-jwt']) {
+export class GraphqlGuard extends AuthGuard([
+  'oathkeeper-jwt',
+  'oathkeeper-api-token',
+]) {
+
   agentInfo?: AgentInfo;
 
   constructor(

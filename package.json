@@ -1,6 +1,6 @@
 {
   "name": "cherrytwist-server",
-  "version": "0.11.3",
+  "version": "0.11.4",
   "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -52,6 +52,7 @@
     "@nestjs/passport": "^7.1.5",
     "@nestjs/platform-express": "^7.6.15",
     "@nestjs/typeorm": "^7.1.5",
+    "@ory/kratos-client": "^0.6.3-alpha.1",
     "@types/express-session": "^1.17.3",
     "apollo-server-express": "^2.22.2",
     "axios": "^0.21.1",
@@ -77,6 +78,7 @@
     "normalizer": "^1.2.7",
     "passport": "^0.4.1",
     "passport-azure-ad": "^4.3.0",
+    "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.0",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",

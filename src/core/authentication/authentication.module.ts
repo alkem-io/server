@@ -7,6 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OryStrategy } from './ory.strategy';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { SsiAgentModule } from '@src/services/platform/ssi/agent/ssi.agent.module';
+import { OryApiStrategy } from './ory.api.strategy';
 @Module({
   imports: [
     PassportModule.register({
@@ -25,6 +26,12 @@ import { SsiAgentModule } from '@src/services/platform/ssi/agent/ssi.agent.modul
     }),
   ],
   providers: [AuthenticationService, OryStrategy],
+  providers: [
+    AadBearerStrategy,
+    AuthenticationService,
+    OryStrategy,
+    OryApiStrategy,
+  ],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}
