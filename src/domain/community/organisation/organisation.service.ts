@@ -191,7 +191,6 @@ export class OrganisationService {
     await this.organisationRepository.save(organisation);
   }
 
-
   async getAgent(organisation: IOrganisation): Promise<IAgent> {
     const organisationWithAgent = await this.getOrganisationOrFail(
       organisation.id,
@@ -207,6 +206,7 @@ export class OrganisationService {
       );
 
     return agent;
+  }
 
   async getOrganisationCount(): Promise<number> {
     return await this.organisationRepository.count();
