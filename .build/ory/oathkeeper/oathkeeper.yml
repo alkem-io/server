@@ -82,6 +82,7 @@ mutators:
     config:
       issuer_url: http://localhost:4455/
       jwks_url: file:///etc/config/oathkeeper/id_token.jwks.json
+      ttl: 3600s
       claims: |
         {
           "session": {{ .Extra | toJson }}

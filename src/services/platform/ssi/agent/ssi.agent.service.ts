@@ -6,33 +6,33 @@ import { JolocomSDK } from '@jolocom/sdk';
 import { JolocomTypeormStorage } from '@jolocom/sdk-storage-typeorm';
 
 import { LogContext } from '@common/enums/logging.context';
-import { ValidationException } from '@common/exceptions/validation.exception';
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 
 import stateModificationMetadata from '../credentials/StateModificationCredentialMetaData';
 import { CredentialOfferRequestAttrs } from 'jolocom-lib/js/interactionTokens/types';
 import { CredentialQuery } from '@jolocom/sdk/js/storage';
+import { CredentialOfferFlowState } from '@jolocom/sdk/js/interactionManager/types';
 
 @Injectable()
 export class SsiAgentService {
+  private jolocomSDK: JolocomSDK;
+
   constructor(
     @InjectConnection('jolocom')
     private typeormConnection: Connection,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+  ) {
+    const storage = new JolocomTypeormStorage(this.typeormConnection);
+    this.jolocomSDK = new JolocomSDK({ storage });
+  }
 
   async createAgent(password: string): Promise<string> {
-    const storage = new JolocomTypeormStorage(this.typeormConnection);
-    const sdk = new JolocomSDK({ storage });
-    const agent = await sdk.createAgent(password, 'jun');
+    const agent = await this.jolocomSDK.createAgent(password, 'jun');
     return agent.identityWallet.did;
   }
 
-  // Load did doc for agent
   async loadDidDoc(did: string, password: string): Promise<string> {
-    const storage = new JolocomTypeormStorage(this.typeormConnection);
-    const sdk = new JolocomSDK({ storage });
-    const agent = await sdk.loadAgent(password, did);
+    const agent = await this.jolocomSDK.loadAgent(password, did);
     const didDocAttrs = agent.identityWallet.didDocument.toJSON();
     const didDocAttrsJson = JSON.stringify(didDocAttrs, null, 2);
     return didDocAttrsJson;
@@ -44,25 +44,21 @@ export class SsiAgentService {
   ): Promise<VerifiedCredential[]> {
     const credentialsResult: VerifiedCredential[] = [];
 
-    const storage = new JolocomTypeormStorage(this.typeormConnection);
-    const sdk = new JolocomSDK({ storage });
-    const agent = await sdk.loadAgent(password, did);
+    const agent = await this.jolocomSDK.loadAgent(password, did);
     const query: CredentialQuery = {};
-    const credentials = await agent.storage.get.verifiableCredential(query);
+    const credentials = await agent.credentials.query(query);
     for (const credential of credentials) {
       const claim = credential.claim;
-      if (claim.id === did) {
-        const verifiedCredential = new VerifiedCredential();
-        verifiedCredential.claim = JSON.stringify(claim);
-        verifiedCredential.issuer = credential.issuer;
-        verifiedCredential.type = credential.type[1];
-        verifiedCredential.issued = credential.issued;
-        credentialsResult.push(verifiedCredential);
-        this.logger.verbose?.(
-          `${JSON.stringify(credential.claim)}`,
-          LogContext.AUTH
-        );
-      }
+      const verifiedCredential = new VerifiedCredential();
+      verifiedCredential.claim = JSON.stringify(claim);
+      verifiedCredential.issuer = credential.issuer;
+      verifiedCredential.type = credential.type[1];
+      verifiedCredential.issued = credential.issued;
+      credentialsResult.push(verifiedCredential);
+      this.logger.verbose?.(
+        `${JSON.stringify(credential.claim)}`,
+        LogContext.AUTH
+      );
     }
     return credentialsResult;
   }
@@ -75,10 +71,11 @@ export class SsiAgentService {
     challengeID: string,
     userID: string
   ): Promise<boolean> {
-    const storage = new JolocomTypeormStorage(this.typeormConnection);
-    const sdk = new JolocomSDK({ storage });
-    const issuerAgent = await sdk.loadAgent(issuerPW, issuerDid);
-    const receiverAgent = await sdk.loadAgent(receiverPw, receiverDid);
+    const issuerAgent = await this.jolocomSDK.loadAgent(issuerPW, issuerDid);
+    const receiverAgent = await this.jolocomSDK.loadAgent(
+      receiverPw,
+      receiverDid
+    );
 
     this.logger.verbose?.('About to issue a credential...', LogContext.SSI);
 
@@ -129,69 +126,17 @@ export class SsiAgentService {
     await issuerAgent.processJWT(aliceCredIssuance.encode());
 
     // Token with signed VC is sent and received by Bob
-    // Note: should be same as interaction above....check!
     const receiverCredExchangeInteraction2 = await receiverAgent.processJWT(
       aliceCredIssuance.encode()
     );
+    const state = receiverCredExchangeInteraction2.getSummary()
+      .state as CredentialOfferFlowState;
 
-    const state = receiverCredExchangeInteraction2.getSummary().state;
-
-    if ((state as any).credentialsAllValid) {
+    if (state.credentialsAllValid) {
       this.logger.verbose?.('Issued credential interaction is valid!');
-      for (const issuedCred of (state as any).issued) {
-        await receiverAgent.storage.store.verifiableCredential(issuedCred);
-        this.logger.verbose?.(
-          `Saving verfied credential with claim: ${JSON.stringify(
-            issuedCred.claim
-          )}`
-        );
-      }
+      await receiverCredExchangeInteraction2.storeSelectedCredentials();
     }
-    return true;
-  }
 
-  // Create an account for the specified user and update the user to store the UPN
-  async signMsg(did: string, password: string, msg: string): Promise<string> {
-    const storage = new JolocomTypeormStorage(this.typeormConnection);
-    const sdk = new JolocomSDK({ storage });
-    const agent = await sdk.loadAgent(password, did);
-    if (!agent) {
-      throw new ValidationException(
-        `Not able to load did: ${did}`,
-        LogContext.COMMUNITY
-      );
-    }
-    const signedMsg = await agent.identityWallet.sign(
-      Buffer.from(msg),
-      password
-    );
-    return signedMsg.toString('hex');
-  }
-
-  // Create an account for the specified user and update the user to store the UPN
-  async authoriseStateModification(
-    userID: string,
-    challengeID: string
-  ): Promise<boolean> {
-    const storage = new JolocomTypeormStorage(this.typeormConnection);
-
-    this.logger.verbose?.('about to create SDK instance', LogContext.AUTH);
-    const sdk = new JolocomSDK({ storage });
-
-    const password = 'password';
-    const agent = await sdk.createAgent(password, 'jun');
-    const pubKeyMetaData = agent.identityWallet.publicKeyMetadata;
-    this.logger.verbose?.('Agent identity:', agent.identityWallet.identity.did);
-    this.logger.verbose?.('Pubkey meta data: ');
-    this.logger.verbose?.(`...signing key: ${pubKeyMetaData.signingKeyId}`);
-    this.logger.verbose?.(
-      `...encryption key: ${pubKeyMetaData.encryptionKeyId}`
-    );
-    if (userID.length > 100)
-      throw new ValidationException(
-        `Not implemented ${userID} + ${challengeID}`,
-        LogContext.COMMUNITY
-      );
     return true;
   }
 }
