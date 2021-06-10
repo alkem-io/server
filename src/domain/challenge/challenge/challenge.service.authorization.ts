@@ -67,6 +67,12 @@ export class ChallengeAuthorizationService {
       }
     }
 
+    const agent = await this.challengeService.getAgent(challenge.id);
+    agent.authorization = this.authorizationEngine.inheritParentAuthorization(
+      agent.authorization,
+      challenge.authorization
+    );
+
     return await this.challengeRepository.save(challenge);
   }
 

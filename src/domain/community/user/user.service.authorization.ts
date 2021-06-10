@@ -37,11 +37,11 @@ export class UserAuthorizationService {
 
     // cascade
     const profile = this.userService.getProfile(user);
-    profile.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    profile.authorization = this.authorizationEngine.inheritParentAuthorization(
       profile.authorization,
       user.authorization
     );
-    profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
+    profile.authorization = this.authorizationEngine.appendCredentialAuthorizationRule(
       user.authorization,
       {
         type: AuthorizationCredential.GlobalAdminCommunity,
@@ -51,6 +51,11 @@ export class UserAuthorizationService {
     );
     user.profile = await this.profileAuthorizationService.applyAuthorizationRules(
       profile
+    );
+    user.agent = await this.userService.getAgent(user.id);
+    user.agent.authorization = this.authorizationEngine.inheritParentAuthorization(
+      user.agent.authorization,
+      user.authorization
     );
 
     return await this.userRepository.save(user);

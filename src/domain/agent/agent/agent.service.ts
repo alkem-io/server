@@ -18,6 +18,7 @@ import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class AgentService {
@@ -31,6 +32,7 @@ export class AgentService {
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
+    agent.authorization = new AuthorizationDefinition();
 
     return await this.createDidOnAgent(agent);
   }

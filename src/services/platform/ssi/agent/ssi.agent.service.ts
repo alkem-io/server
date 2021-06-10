@@ -58,7 +58,10 @@ export class SsiAgentService {
         verifiedCredential.type = credential.type[1];
         verifiedCredential.issued = credential.issued;
         credentialsResult.push(verifiedCredential);
-        this.logger.verbose?.(`${credential.claim}`);
+        this.logger.verbose?.(
+          `${JSON.stringify(credential.claim)}`,
+          LogContext.AUTH
+        );
       }
     }
     return credentialsResult;

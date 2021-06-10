@@ -1,11 +1,11 @@
 import { ICredential } from '@domain/agent/credential';
+import { IAuthorizable } from '@domain/common/authorizable-entity';
 
-import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { DID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Agent')
-export abstract class IAgent extends IBaseCherrytwist {
+export abstract class IAgent extends IAuthorizable {
   @Field(() => DID, {
     nullable: true,
     description: 'The Decentralized Identifier (DID) for this Agent.',

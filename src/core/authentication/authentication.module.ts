@@ -4,13 +4,15 @@ import { UserModule } from '@domain/community/user/user.module';
 import { AuthenticationService } from './authentication.service';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AadBearerStrategy } from './aad.bearer.strategy';
 import { OryStrategy } from './ory.strategy';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { SsiAgentModule } from '@src/services/platform/ssi/agent/ssi.agent.module';
 @Module({
   imports: [
-    PassportModule.register({ session: false, defaultStrategy: 'azure-ad' }),
+    PassportModule.register({
+      session: false,
+      defaultStrategy: 'oathkeeper-jwt',
+    }),
     UserModule,
     CredentialModule,
     SsiAgentModule,
@@ -22,7 +24,7 @@ import { SsiAgentModule } from '@src/services/platform/ssi/agent/ssi.agent.modul
       }),
     }),
   ],
-  providers: [AadBearerStrategy, AuthenticationService, OryStrategy],
+  providers: [AuthenticationService, OryStrategy],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}

@@ -35,7 +35,10 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   }
 
   async validate(payload: any) {
-    this.logger.verbose?.(`Ory Kratos payload: ${payload}`, LogContext.AUTH);
+    this.logger.verbose?.(
+      `Ory Kratos payload: ${JSON.stringify(payload)}`,
+      LogContext.AUTH
+    );
 
     if (this.checkIfTokenHasExpired(payload.exp))
       throw new TokenException(

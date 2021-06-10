@@ -121,7 +121,13 @@ export class AuthorizationEngineService {
           verifiedCredential.issuer === rule.resourceID
         ) {
           for (const privilege of rule.grantedPrivileges) {
-            if (privilege === privilegeRequired) return true;
+            if (privilege === privilegeRequired) {
+              this.logger.warn?.(
+                `Authorization engine: granting access for '${verifiedCredential.type}'`,
+                LogContext.AUTH
+              );
+              return true;
+            }
           }
         }
       }
