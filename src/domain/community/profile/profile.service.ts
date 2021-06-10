@@ -24,7 +24,7 @@ import {
 import { ReadStream } from 'fs';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { streamToBuffer, validateImageDimensions } from '@common/utils';
-import { IpfsService } from '@src/services/ipfs/ipfs.service';
+import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
 import { UploadProfileAvatarInput } from './profile.dto.upload.avatar';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 

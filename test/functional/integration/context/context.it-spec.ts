@@ -127,7 +127,7 @@ describe('Context', () => {
     expect(queryAfterUpdate.references).toHaveLength(1);
   });
 
-  test('should not create reference using same name on context', async () => {
+  test.skip('should not create reference using same name on context', async () => {
     // Act
     // Update challenge context and references
     const responseCreateContextReference = await createReferenceOnContextMutation(

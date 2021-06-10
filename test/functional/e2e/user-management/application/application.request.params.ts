@@ -66,7 +66,7 @@ export const getApplication = async (appId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{ecoverse {
+    query: `query{ecoverse(ID: "TestEcoverse" ) {
       application(ID: "${appId}")${appData}}}`,
   };
 

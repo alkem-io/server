@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IChallenge } from '@domain/challenge/challenge';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
@@ -27,7 +27,7 @@ export class OpportunityAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
       opportunity,
       this.opportunityRepository
     );

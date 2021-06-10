@@ -6,10 +6,10 @@ import {
   LogContext,
 } from '@common/enums';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { Challenge, IChallenge } from '@domain/challenge/challenge';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/authorization-engine/authorization.credential.rule';
+import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 
@@ -36,7 +36,7 @@ export class ChallengeAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
       challenge,
       this.challengeRepository
     );

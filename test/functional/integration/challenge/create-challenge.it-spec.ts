@@ -6,9 +6,6 @@ import {
 } from './challenge.request.params';
 import '../../../utils/array.matcher';
 import { appSingleton } from '../../../utils/app.singleton';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
-
-let data: TestDataServiceInitResult;
 
 let challengeName = '';
 let uniqueTextId = '';
@@ -16,15 +13,15 @@ let challengeId = '';
 let challengeDataCreate = '';
 let ecoverseId = '';
 
-let challangeData = async (challengeId: string): Promise<String> => {
+const challangeData = async (challengeId: string): Promise<string> => {
   const responseQuery = await getChallengeData(challengeId);
-  let response = responseQuery.body.data.ecoverse.challenge;
+  const response = responseQuery.body.data.ecoverse.challenge;
   return response;
 };
 
-let challengesList = async (): Promise<String> => {
+const challengesList = async (): Promise<string> => {
   const responseQuery = await getChallengesData();
-  let response = responseQuery.body.data.ecoverse.challenges;
+  const response = responseQuery.body.data.ecoverse.challenges;
   return response;
 };
 beforeEach(async () => {
@@ -33,15 +30,12 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   const response = await createChallangeMutation(challengeName, uniqueTextId);
-
   challengeDataCreate = response.body.data.createChallenge;
   challengeId = response.body.data.createChallenge.id;
 });
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
-  data = appSingleton.Instance.getData();
-  ecoverseId = data.ecoverseId;
 });
 
 afterAll(async () => {
@@ -59,9 +53,8 @@ describe('Create Challenge', () => {
       'challengeName',
       'chal-texti'
     );
-
-    let challengeDataCreate = response.body.data.createChallenge;
-    let challengeIdTest = response.body.data.createChallenge.id;
+    const challengeDataCreate = response.body.data.createChallenge;
+    const challengeIdTest = response.body.data.createChallenge.id;
 
     // Assert
     expect(response.status).toBe(200);
@@ -71,7 +64,7 @@ describe('Create Challenge', () => {
 
   test('should remove a challenge', async () => {
     // Arrange
-    let challangeDataBeforeRemove = await challangeData(challengeId);
+    const challangeDataBeforeRemove = await challangeData(challengeId);
 
     // Act
     const removeChallengeResponse = await removeChallangeMutation(challengeId);
@@ -93,7 +86,7 @@ describe('Create Challenge', () => {
       `${challengeName}change`,
       `${uniqueTextId}c`
     );
-    let responseChallengeTwoId =
+    const responseChallengeTwoId =
       responseChallengeTwo.body.data.createChallenge.id;
 
     // Assert
@@ -112,7 +105,7 @@ describe('Create Challenge', () => {
       `${challengeName}change`,
       `${uniqueTextId}c`
     );
-    let responseSimpleChallengeId =
+    const responseSimpleChallengeId =
       responseSimpleChallenge.body.data.createChallenge.id;
 
     // Assert
@@ -153,7 +146,7 @@ describe('Create Challenge', () => {
     `(
       'should throw error: "$expected" for nameId value: "$nameId"',
       async ({ nameId, expected }) => {
-        let response = await createChallangeMutation(
+        const response = await createChallangeMutation(
           challengeName + 'd',
           nameId + 'd'
         );

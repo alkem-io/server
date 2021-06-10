@@ -15,7 +15,6 @@ export class UpdateReferenceInput extends UpdateBaseCherrytwistInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  //@IsUrl()
   @MaxLength(MID_TEXT_LENGTH)
   uri?: string;
 

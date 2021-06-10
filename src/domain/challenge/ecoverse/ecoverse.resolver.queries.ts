@@ -27,9 +27,8 @@ export class EcoverseResolverQueries {
   })
   @Profiling.api
   async ecoverse(
-    @Args('ID', { type: () => UUID_NAMEID, nullable: true }) ID?: string
+    @Args('ID', { type: () => UUID_NAMEID }) ID: string
   ): Promise<IEcoverse> {
-    if (ID) return await this.ecoverseService.getEcoverseOrFail(ID);
-    return await this.ecoverseService.getDefaultEcoverseOrFail();
+    return await this.ecoverseService.getEcoverseOrFail(ID);
   }
 }

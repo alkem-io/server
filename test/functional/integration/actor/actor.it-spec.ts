@@ -2,7 +2,7 @@ import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';
 
-import { createChildChallengeMutation, createOpportunityMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
+import { createOpportunityMutation } from '@test/functional/integration/opportunity/opportunity.request.params';
 import {
   createActorGroupMutation,
   getActorGroupsPerOpportunity,
@@ -34,15 +34,16 @@ let ecosystemModelId = '';
 let actorData = async (): Promise<string> => {
   const getActor = await getActorData(opportunityId);
   let response =
-    getActor.body.data.ecoverse.opportunity.context.ecosystemModel.actorGroups[0]
-      .actors[0];
+    getActor.body.data.ecoverse.opportunity.context.ecosystemModel
+      .actorGroups[0].actors[0];
   return response;
 };
 
 let actorsCountPerActorGroup = async (): Promise<number> => {
   const responseQuery = await getActorGroupsPerOpportunity(opportunityId);
   let response =
-    responseQuery.body.data.ecoverse.opportunity.context.ecosystemModel.actorGroups[0].actors;
+    responseQuery.body.data.ecoverse.opportunity.context.ecosystemModel
+      .actorGroups[0].actors;
   return response;
 };
 beforeEach(async () => {

@@ -8,20 +8,22 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import {
-  AuthorizationCredentialPrivilege,
-  GraphqlGuard,
-} from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 import { IOrganisation } from '@domain/community/organisation';
 import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/community/profile';
-import { Profiling } from '@common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { IAgent } from '@domain/agent/agent';
 @Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
-  constructor(private organisationService: OrganisationService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private organisationService: OrganisationService
+  ) {}
 
-  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
@@ -45,7 +47,7 @@ export class OrganisationResolverFields {
     return groups;
   }
 
-  @AuthorizationCredentialPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,
@@ -71,5 +73,15 @@ export class OrganisationResolverFields {
     }
 
     return organisation.profile;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('agent', () => IAgent, {
+    nullable: true,
+    description: 'The Agent representing this User.',
+  })
+  @Profiling.api
+  async agent(@Parent() organisation: Organisation): Promise<IAgent> {
+    return await this.organisationService.getAgent(organisation);
   }
 }

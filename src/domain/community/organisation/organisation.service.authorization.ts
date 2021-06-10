@@ -3,14 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationCredential } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IOrganisation, Organisation } from '@domain/community/organisation';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import {
   AuthorizationDefinition,
   IAuthorizationDefinition,
 } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/authorization-engine/authorization.credential.rule';
+import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 
 @Injectable()
 export class OrganisationAuthorizationService {

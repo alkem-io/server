@@ -315,7 +315,7 @@ host {
 }`;
 
 export const ecoverseData = `
-ecoverse{
+ecoverse(ID: "testEcoverse") {
   id
   name
   ${activityData}

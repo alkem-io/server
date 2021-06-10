@@ -6,8 +6,8 @@ import { CreateAspectInput, IAspect } from '@domain/context';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { UserInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
 import { CreateReferenceOnContextInput } from './context.dto.create.reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AspectService } from '../aspect/aspect.service';
@@ -26,14 +26,14 @@ export class ContextResolverMutations {
   })
   @Profiling.api
   async createReferenceOnContext(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('referenceInput') referenceInput: CreateReferenceOnContextInput
   ): Promise<IReference> {
     const context = await this.contextService.getContextOrFail(
       referenceInput.contextID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       context.authorization,
       AuthorizationPrivilege.CREATE,
       `create reference on context: ${context.id}`
@@ -52,14 +52,14 @@ export class ContextResolverMutations {
   })
   @Profiling.api
   async createAspect(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
     const context = await this.contextService.getContextOrFail(
       aspectData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       context.authorization,
       AuthorizationPrivilege.CREATE,
       `create aspect on context: ${context.id}`

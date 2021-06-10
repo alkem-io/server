@@ -16,7 +16,7 @@ query variables:
 {
   "applicationData": {
     "parentID": "uuid",
-    "userId": "uuid",
+    "userID": "uuid",
     "questions": [
       {"name": "Question 1", "value": "No"},
       {"name": "Question 2", "value": "Yes"},

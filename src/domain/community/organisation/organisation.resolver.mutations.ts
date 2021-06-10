@@ -1,11 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { OrganisationService } from './organisation.service';
-import {
-  AuthorizationGlobalRoles,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   CreateOrganisationInput,
   UpdateOrganisationInput,
@@ -16,8 +12,8 @@ import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { OrganisationAuthorizationService } from './organisation.service.authorization';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { UserInfo } from '@core/authentication/user-info';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
@@ -27,18 +23,25 @@ export class OrganisationResolverMutations {
     private authorizationEngine: AuthorizationEngineService
   ) {}
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganisation, {
     description: 'Creates a new Organisation on the platform.',
   })
   @Profiling.api
   async createOrganisation(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('organisationData') organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
+    const authorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
+      [AuthorizationPrivilege.CREATE]
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      authorizationDefinition,
+      AuthorizationPrivilege.CREATE,
+      `create Organisation: ${organisationData.nameID}`
+    );
     const organisation = await this.organisationService.createOrganisation(
       organisationData
     );
@@ -54,14 +57,14 @@ export class OrganisationResolverMutations {
   })
   @Profiling.api
   async createGroupOnOrganisation(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('groupData') groupData: CreateUserGroupInput
   ): Promise<IUserGroup> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       groupData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       organisation.authorization,
       AuthorizationPrivilege.CREATE,
       `orgCreateGroup: ${organisation.nameID}`
@@ -76,14 +79,14 @@ export class OrganisationResolverMutations {
   })
   @Profiling.api
   async updateOrganisation(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('organisationData') organisationData: UpdateOrganisationInput
   ): Promise<IOrganisation> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       organisationData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       organisation.authorization,
       AuthorizationPrivilege.UPDATE,
       `orgUpdate: ${organisation.nameID}`
@@ -97,14 +100,14 @@ export class OrganisationResolverMutations {
     description: 'Deletes the specified Organisation.',
   })
   async deleteOrganisation(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       organisation.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteOrg: ${organisation.nameID}`

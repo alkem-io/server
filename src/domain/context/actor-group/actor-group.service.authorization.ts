@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { IActorGroup, ActorGroup } from '@domain/context/actor-group';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';

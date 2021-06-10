@@ -8,8 +8,8 @@ import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
 import { CommunicationModule } from '@src/services/communication/communication.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { NamingModule } from '@src/services/naming/naming.module';
-import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
+import { NamingModule } from '@src/services/domain/naming/naming.module';
+import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { UserAuthorizationService } from './user.service.authorization';
 
 @Module({

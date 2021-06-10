@@ -15,7 +15,7 @@ exclude:
   - /src/config/.*
   - /.scripts/.*
   - /.build/.*
-  - /src/services/configuration/templates/.*
+  - /src/services/platform/configuration/templates/.*
   - .*/*.resolver.*
   - .*/*.entity.*
   - .*/*.dto.*

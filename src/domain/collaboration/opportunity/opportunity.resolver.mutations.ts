@@ -18,8 +18,8 @@ import {
 } from '@domain/collaboration/opportunity';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
-import { UserInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '../project/project.service';
 
 @Resolver()
@@ -38,14 +38,14 @@ export class OpportunityResolverMutations {
   })
   @Profiling.api
   async updateOpportunity(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('opportunityData') opportunityData: UpdateOpportunityInput
   ): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE,
       `update opportunity: ${opportunity.nameID}`
@@ -58,14 +58,14 @@ export class OpportunityResolverMutations {
     description: 'Deletes the specified Opportunity.',
   })
   async deleteOpportunity(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteOpportunityInput
   ): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.DELETE,
       `delete opportunity: ${opportunity.nameID}`
@@ -79,14 +79,14 @@ export class OpportunityResolverMutations {
   })
   @Profiling.api
   async createProject(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('projectData') projectData: CreateProjectInput
   ): Promise<IProject> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       projectData.opportunityID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE,
       `create project (${projectData.nameID}) on Opportunity: ${opportunity.nameID}`
@@ -105,14 +105,14 @@ export class OpportunityResolverMutations {
   })
   @Profiling.api
   async createRelation(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('relationData') relationData: CreateRelationInput
   ): Promise<IRelation> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       relationData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE,
       `create relation: ${opportunity.nameID}`
@@ -130,7 +130,7 @@ export class OpportunityResolverMutations {
     description: 'Trigger an event on the Opportunity.',
   })
   async eventOnOpportunity(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('opportunityEventData')
     opportunityEventData: OpportunityEventInput
   ): Promise<IOpportunity> {
@@ -138,14 +138,17 @@ export class OpportunityResolverMutations {
       opportunityEventData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on opportunity: ${opportunity.nameID}`
     );
-    return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity({
-      eventName: opportunityEventData.eventName,
-      ID: opportunityEventData.ID,
-    });
+    return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity(
+      {
+        eventName: opportunityEventData.eventName,
+        ID: opportunityEventData.ID,
+      },
+      agentInfo
+    );
   }
 }

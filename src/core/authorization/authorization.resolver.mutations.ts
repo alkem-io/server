@@ -1,11 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import {
-  AuthorizationGlobalRoles,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   GrantAuthorizationCredentialInput,
   RevokeAuthorizationCredentialInput,
@@ -13,17 +9,25 @@ import {
 import { AuthorizationService } from './authorization.service';
 import { IUser } from '@domain/community/user';
 import { GraphqlGuard } from './graphql.guard';
-import { UserInfo } from '@core/authentication';
-import { AuthorizationRoleGlobal } from '@common/enums';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Resolver()
 export class AuthorizationResolverMutations {
-  constructor(private authorizationService: AuthorizationService) {}
+  private authorizationDefinition: IAuthorizationDefinition;
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService
+  ) {
+    this.authorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
+      [AuthorizationPrivilege.GRANT]
+    );
+  }
+
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Grants an authorization credential to a User.',
@@ -32,18 +36,20 @@ export class AuthorizationResolverMutations {
   async grantCredentialToUser(
     @Args('grantCredentialData')
     grantCredentialData: GrantAuthorizationCredentialInput,
-    @CurrentUser() userInfo: UserInfo
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      this.authorizationDefinition,
+      AuthorizationPrivilege.GRANT,
+      `grant credential: ${agentInfo.email}`
+    );
     return await this.authorizationService.grantCredential(
       grantCredentialData,
-      userInfo
+      agentInfo
     );
   }
 
-  @AuthorizationGlobalRoles(
-    AuthorizationRoleGlobal.CommunityAdmin,
-    AuthorizationRoleGlobal.Admin
-  )
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
     description: 'Removes an authorization credential from a User.',
@@ -52,11 +58,17 @@ export class AuthorizationResolverMutations {
   async revokeCredentialFromUser(
     @Args('revokeCredentialData')
     credentialRemoveData: RevokeAuthorizationCredentialInput,
-    @CurrentUser() userInfo: UserInfo
+    @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      this.authorizationDefinition,
+      AuthorizationPrivilege.GRANT,
+      `revoke credential: ${agentInfo.email}`
+    );
     return await this.authorizationService.revokeCredential(
       credentialRemoveData,
-      userInfo
+      agentInfo
     );
   }
 }

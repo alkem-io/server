@@ -124,7 +124,7 @@ export const removeOpportunityMutation = async (opportunityId: string) => {
 export const queryOpportunity = async (opportunityId: string) => {
   const requestParams = {
     operationName: null,
-    query: `query {ecoverse{
+    query: `query {ecoverse(ID: "testEcoverse") {
       opportunity(ID: "${opportunityId}") {
         ${opportunityData}
       }
@@ -138,7 +138,7 @@ export const queryOpportunities = async () => {
   const requestParams = {
     operationName: null,
     query: `query {
-      ecoverse{
+      ecoverse(ID: "testEcoverse") {
       opportunities {
         ${opportunityData}
       }

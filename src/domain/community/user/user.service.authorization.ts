@@ -8,11 +8,14 @@ import {
 } from '@common/enums';
 import { User, IUser } from '@domain/community/user';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/authorization-engine/authorization.credential.rule';
+import {
+  AuthorizationDefinition,
+  IAuthorizationDefinition,
+} from '@domain/common/authorization-definition';
+import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
 
 @Injectable()
@@ -113,6 +116,55 @@ export class UserAuthorizationService {
       ],
     };
     newRules.push(userSelfAdmin);
+
+    this.authorizationEngine.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
+  }
+
+  createUserAuthorizationDefinition(
+    userEmail: string
+  ): IAuthorizationDefinition {
+    const authorization = new AuthorizationDefinition();
+    const newRules: AuthorizationCredentialRule[] = [];
+
+    const globalAdmin = {
+      type: AuthorizationCredential.GlobalAdmin,
+      resourceID: '',
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    newRules.push(globalAdmin);
+
+    const communityAdmin = {
+      type: AuthorizationCredential.GlobalAdminCommunity,
+      resourceID: '',
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    newRules.push(communityAdmin);
+
+    const userSelfCreate = {
+      type: AuthorizationCredential.UserSelfManagement,
+      resourceID: userEmail,
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+      ],
+    };
+    newRules.push(userSelfCreate);
 
     this.authorizationEngine.appendCredentialAuthorizationRules(
       authorization,

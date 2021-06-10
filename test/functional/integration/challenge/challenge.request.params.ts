@@ -18,7 +18,7 @@ export const challengeVariablesData = async (
 ) => {
   const variables = {
     challengeData: {
-      parentID: 'Eco1',//await ecoverseId(),
+      parentID: 'TestEcoverse', //await ecoverseId(),
       displayName: challengeName,
       nameID: uniqueTextId,
       tags: 'testTags',
@@ -112,8 +112,10 @@ export const addChallengeLeadToOrganisationMutation = async (
   const requestParams = {
     operationName: null,
     query: `mutation assignChallengeLead($assignInput: AssignChallengeLeadInput!) {
-      assignChallengeLead(assignInput: $assignInput){id}
-    }`,
+            assignChallengeLead(assignInput: $assignInput) {
+              id
+            }
+          }`,
     variables: {
       assignInput: {
         organisationID: organisationId,
@@ -134,7 +136,9 @@ export const removeChallengeLeadFromOrganisationMutation = async (
     query: `mutation removeChallengeLead($removeData: RemoveChallengeLeadInput!) {
       removeChallengeLead(removeData: $removeData) {
         id
-      }}`,
+      }
+    }
+    `,
     variables: {
       removeData: {
         organisationID: organisationId,
@@ -150,7 +154,7 @@ export const getChallengeData = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{ecoverse {challenge (ID: "${challengeId}") {
+    query: `query{ecoverse (ID: "TestEcoverse") {challenge (ID: "${challengeId}") {
       ${challengeDataTest}
       }
     }
@@ -164,7 +168,7 @@ export const getChallengesData = async () => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{ecoverse{ challenges{
+    query: `query{ecoverse (ID: "TestEcoverse"){ challenges{
         ${challengeDataTest}
         }
       }
@@ -178,11 +182,9 @@ export const getChallengeOpportunity = async (challengeId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query { ecoverse{
+    query: `query { ecoverse (ID: "TestEcoverse"){
       challenge(ID: "${challengeId}") {
-        id
-        name
-        opportunities{id name textID ${lifecycleData}}}}}`,
+         ${challengeDataTest}}}}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

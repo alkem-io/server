@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
+import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { Reference } from './reference.entity';
 import { ReferenceResolverMutations } from './reference.resolver.mutations';
 import { ReferenceService } from './reference.service';

@@ -3,13 +3,15 @@ import { Args, Resolver, Parent, ResolveField } from '@nestjs/graphql';
 import { User, IUser } from '@domain/community/user';
 import { UserService } from './user.service';
 import { IAgent } from '@domain/agent/agent';
-import { Profiling } from '@common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
+import { CommunicationService } from '@src/services/communication/communication.service';
 import {
   CommunicationRoomDetailsResult,
   CommunicationRoomResult,
 } from '@src/services/communication';
-import { CommunicationService } from '@src/services/communication/communication.service';
-import { GraphqlGuard } from '@core/authorization';
+
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
@@ -17,6 +19,8 @@ export class UserResolverFields {
     private communicationService: CommunicationService
   ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this User.',

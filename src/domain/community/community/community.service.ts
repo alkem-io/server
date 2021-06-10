@@ -25,9 +25,9 @@ import {
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { ICredential } from '@domain/agent/credential';
 
 @Injectable()
 export class CommunityService {
@@ -145,9 +145,10 @@ export class CommunityService {
   }
 
   async getMembers(community: ICommunity): Promise<IUser[]> {
+    const membershipCredential = this.getMembershipCredential(community);
     return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: community.id,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
   }
 
@@ -180,12 +181,25 @@ export class CommunityService {
       membershipData.userID
     );
 
+    const membershipCredential = this.getMembershipCredential(community);
+
     user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: membershipData.communityID,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
     return community;
+  }
+
+  getMembershipCredential(community: ICommunity): ICredential {
+    const credential = community.credential;
+    if (!credential) {
+      throw new EntityNotInitializedException(
+        `Unable to locate credential type for community: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return credential;
   }
 
   async removeMember(
@@ -195,10 +209,12 @@ export class CommunityService {
       membershipData.userID
     );
 
+    const community = await this.getCommunityOrFail(membershipData.communityID);
+    const membershipCredential = this.getMembershipCredential(community);
     user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: membershipData.communityID,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
 
     return await this.getCommunityOrFail(membershipData.communityID);
@@ -207,9 +223,12 @@ export class CommunityService {
   async isMember(userID: string, communityID: string): Promise<boolean> {
     const user = await this.userService.getUserWithAgent(userID);
     const agent = await this.userService.getAgent(user);
+    const community = await this.getCommunityOrFail(communityID);
+    const membershipCredential = this.getMembershipCredential(community);
+
     return await this.agentService.hasValidCredential(agent.id, {
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: communityID,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
   }
 
@@ -224,7 +243,7 @@ export class CommunityService {
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
-      relations: ['applications', 'parentCommunity', 'challenge'],
+      relations: ['applications', 'parentCommunity'],
     })) as Community;
 
     const existingApplication = community.applications?.find(
@@ -251,10 +270,10 @@ export class CommunityService {
         );
     }
 
-    const ecoverseID = community.challenge?.ecoverseID;
+    const ecoverseID = community.ecoverseID;
     if (!ecoverseID)
       throw new EntityNotInitializedException(
-        `Unable to locate containing ecoverse: ${community.id}`,
+        `Unable to locate containing ecoverse: ${community.displayName}`,
         LogContext.COMMUNITY
       );
     const application = await this.applicationService.createApplication(
@@ -275,9 +294,11 @@ export class CommunityService {
   }
 
   async getMembersCount(community: ICommunity): Promise<number> {
+    const membershipCredential = this.getMembershipCredential(community);
+
     return await this.agentService.countAgentsWithMatchingCredentials({
-      type: AuthorizationCredential.CommunityMember,
-      resourceID: community.id,
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
     });
   }
 }

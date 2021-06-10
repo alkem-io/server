@@ -39,7 +39,7 @@ export class AadBearerStrategy extends PassportStrategy(
           'Email claim missing from JWT token!'
         );
 
-      const knownUser = await this.authService.createUserInfo(email);
+      const knownUser = await this.authService.createAgentInfo(email);
 
       return done(null, knownUser, token);
     } catch (error) {

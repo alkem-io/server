@@ -49,7 +49,7 @@ export const getProjectData = async (projectId: string) => {
   const requestParams = {
     operationName: null,
     variables: {},
-    query: `query{ecoverse {project (ID: "${projectId}") {${projectData}} }}`,
+    query: `query{ecoverse(ID: "TestEcoverse" ) {project (ID: "${projectId}") {${projectData}} }}`,
   };
 
   return await graphqlRequestAuth(requestParams, TestUser.GLOBAL_ADMIN);

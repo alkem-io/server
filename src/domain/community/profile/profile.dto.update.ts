@@ -17,10 +17,8 @@ export class UpdateProfileInput extends UpdateBaseCherrytwistInput {
   description?: string;
 
   @Field(() => [UpdateReferenceInput], { nullable: true })
-  @IsOptional()
   references?: UpdateReferenceInput[];
 
   @Field(() => [UpdateTagsetInput], { nullable: true })
-  @IsOptional()
   tagsets?: UpdateTagsetInput[];
 }

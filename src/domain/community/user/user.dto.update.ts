@@ -46,6 +46,5 @@ export class UpdateUserInput extends UpdateNameableInput {
   gender?: string;
 
   @Field(() => UpdateProfileInput, { nullable: true })
-  @IsOptional()
   profileData?: UpdateProfileInput;
 }

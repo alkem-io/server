@@ -66,6 +66,14 @@ authenticators:
       only:
         - ory_kratos_session
 
+  bearer_token:
+    enabled: true
+    config:
+      extra_from: '@this'
+      subject_from: 'identity.id'
+      check_session_url: http://kratos:4433/sessions/whoami
+      preserve_path: true
+
   noop:
     enabled: true
 
@@ -82,6 +90,7 @@ mutators:
     config:
       issuer_url: http://localhost:4455/
       jwks_url: file:///etc/config/oathkeeper/id_token.jwks.json
+      ttl: 1h
       claims: |
         {
           "session": {{ .Extra | toJson }}

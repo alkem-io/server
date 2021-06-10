@@ -4,6 +4,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
@@ -21,11 +22,14 @@ import { IUser } from '@domain/community/user';
 import { UserService } from '../user/user.service';
 import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAgent } from '@domain/agent/agent';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class OrganisationService {
   constructor(
     private userService: UserService,
+    private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     @InjectRepository(Organisation)
@@ -44,8 +48,11 @@ export class OrganisationService {
       organisationData.profileData
     );
 
-    // Check that the mandatory groups for a challenge are created
     organisation.groups = [];
+
+    organisation.agent = await this.agentService.createAgent({
+      parentDisplayID: `${organisation.nameID}`,
+    });
 
     const savedOrg = await this.organisationRepository.save(organisation);
     this.logger.verbose?.(
@@ -109,6 +116,10 @@ export class OrganisationService {
           ID: group.id,
         });
       }
+    }
+
+    if (organisation.agent) {
+      await this.agentService.deleteAgent(organisation.agent.id);
     }
 
     const result = await this.organisationRepository.remove(
@@ -178,5 +189,26 @@ export class OrganisationService {
 
   async save(organisation: IOrganisation) {
     await this.organisationRepository.save(organisation);
+  }
+
+  async getAgent(organisation: IOrganisation): Promise<IAgent> {
+    const organisationWithAgent = await this.getOrganisationOrFail(
+      organisation.id,
+      {
+        relations: ['agent'],
+      }
+    );
+    const agent = organisationWithAgent.agent;
+    if (!agent)
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${organisation.id}`,
+        LogContext.AUTH
+      );
+
+    return agent;
+  }
+
+  async getOrganisationCount(): Promise<number> {
+    return await this.organisationRepository.count();
   }
 }

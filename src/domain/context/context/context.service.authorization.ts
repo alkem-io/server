@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ContextService } from './context.service';
 import { Context, IContext } from '@domain/context/context';
 import { EcosystemModelAuthorizationService } from '../ecosystem-model/ecosystem-model.service.authorization';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ContextAuthorizationService {
@@ -27,10 +28,20 @@ export class ContextAuthorizationService {
       ecosystemModel
     );
 
-    const aspects = await this.contextService.getAspects(context);
-    for (const aspect of aspects) {
+    context.aspects = await this.contextService.getAspects(context);
+    for (const aspect of context.aspects) {
       aspect.authorization = await this.authorizationEngine.inheritParentAuthorization(
         aspect.authorization,
+        context.authorization
+      );
+    }
+
+    context.references = await this.contextService.getReferences(context);
+    for (const reference of context.references) {
+      if (!reference.authorization)
+        reference.authorization = new AuthorizationDefinition();
+      reference.authorization = await this.authorizationEngine.inheritParentAuthorization(
+        reference.authorization,
         context.authorization
       );
     }

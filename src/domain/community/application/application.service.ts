@@ -87,7 +87,7 @@ export class ApplicationService {
     return application;
   }
 
-  async save(application: Application): Promise<Application> {
+  async save(application: IApplication): Promise<IApplication> {
     return await this.applicationRepository.save(application);
   }
 }

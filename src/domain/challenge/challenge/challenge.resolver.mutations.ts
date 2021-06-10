@@ -19,8 +19,8 @@ import {
 } from '@domain/collaboration/opportunity';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
-import { UserInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 
@@ -40,14 +40,14 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async createChildChallenge(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('challengeData') challengeData: CreateChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.parentID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.CREATE,
       `challengeCreate: ${challenge.nameID}`
@@ -67,14 +67,14 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async createOpportunity(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('opportunityData') opportunityData: CreateOpportunityInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       opportunityData.challengeID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.CREATE,
       `opportunityCreate: ${challenge.nameID}`
@@ -94,14 +94,14 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async updateChallenge(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('challengeData') challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.UPDATE,
       `challenge update: ${challenge.nameID}`
@@ -114,14 +114,14 @@ export class ChallengeResolverMutations {
     description: 'Deletes the specified Challenge.',
   })
   async deleteChallenge(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.DELETE,
       `challenge delete: ${challenge.nameID}`
@@ -135,14 +135,14 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async assignChallengeLead(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('assignInput') assignData: AssignChallengeLeadInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       assignData.challengeID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.UPDATE,
       `challenge assign lead: ${challenge.nameID}`
@@ -156,14 +156,14 @@ export class ChallengeResolverMutations {
   })
   @Profiling.api
   async removeChallengeLead(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('removeData') removeData: RemoveChallengeLeadInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       removeData.challengeID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.DELETE,
       `remove challenge lead: ${challenge.nameID}`
@@ -176,7 +176,7 @@ export class ChallengeResolverMutations {
     description: 'Trigger an event on the Challenge.',
   })
   async eventOnChallenge(
-    @CurrentUser() userInfo: UserInfo,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('challengeEventData')
     challengeEventData: ChallengeEventInput
   ): Promise<IChallenge> {
@@ -184,14 +184,17 @@ export class ChallengeResolverMutations {
       challengeEventData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
-      userInfo,
+      agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on challenge: ${challenge.nameID}`
     );
-    return await this.challengeLifecycleOptionsProvider.eventOnChallenge({
-      eventName: challengeEventData.eventName,
-      ID: challengeEventData.ID,
-    });
+    return await this.challengeLifecycleOptionsProvider.eventOnChallenge(
+      {
+        eventName: challengeEventData.eventName,
+        ID: challengeEventData.ID,
+      },
+      agentInfo
+    );
   }
 }

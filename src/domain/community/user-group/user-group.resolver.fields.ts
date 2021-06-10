@@ -1,15 +1,20 @@
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { UserGroupService } from './user-group.service';
-import { Profiling } from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
 import { UserGroup, IUserGroup } from '@domain/community/user-group';
 import { IGroupable } from '../../common/interfaces/groupable.interface';
+import { AuthorizationPrivilege } from '@common/enums';
+import { UseGuards } from '@nestjs/common/decorators';
+import { GraphqlGuard } from '@core/authorization';
 
 @Resolver(() => IUserGroup)
 export class UserGroupResolverFields {
   constructor(private userGroupService: UserGroupService) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('parent', () => IGroupable, {
     nullable: true,
     description: 'Containing entity for this UserGroup.',
@@ -19,6 +24,8 @@ export class UserGroupResolverFields {
     return await this.userGroupService.getParent(userGroup);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,
     description: 'The Users that are members of this User Group.',

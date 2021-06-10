@@ -19,7 +19,11 @@ import { NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { ChallengeLifecycleTemplate, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  ChallengeLifecycleTemplate,
+  LogContext,
+} from '@common/enums';
 import { Inject, Injectable } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
@@ -35,6 +39,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAgent } from '@domain/agent/agent';
 
 @Injectable()
 export class ChallengeService {
@@ -80,6 +85,12 @@ export class ChallengeService {
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
       challenge.id,
       machineConfig
+    );
+
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      challenge,
+      AuthorizationCredential.ChallengeMember
     );
 
     return await this.challengeRepository.save(challenge);
@@ -128,7 +139,7 @@ export class ChallengeService {
       );
 
     const baseChallenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['community', 'context', 'lifecycle'],
+      relations: ['community', 'context', 'lifecycle', 'agent'],
     });
     await this.baseChallengeService.deleteEntities(baseChallenge);
 
@@ -212,6 +223,13 @@ export class ChallengeService {
 
   async getContext(challengeId: string): Promise<IContext> {
     return await this.baseChallengeService.getContext(
+      challengeId,
+      this.challengeRepository
+    );
+  }
+
+  async getAgent(challengeId: string): Promise<IAgent> {
+    return await this.baseChallengeService.getAgent(
       challengeId,
       this.challengeRepository
     );
@@ -383,11 +401,15 @@ export class ChallengeService {
     return await this.challengeRepository.save(challenge);
   }
 
-  async getAllChallengesCount(ecoverseID: string): Promise<number> {
+  async getChallengesInEcoverseCount(ecoverseID: string): Promise<number> {
     const count = await this.challengeRepository.count({
       where: { ecoverseID: ecoverseID },
     });
     return count;
+  }
+
+  async getChallengeCount(): Promise<number> {
+    return await this.challengeRepository.count();
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {

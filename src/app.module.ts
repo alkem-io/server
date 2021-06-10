@@ -13,22 +13,21 @@ import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { AuthenticationModule } from '@src/core/authentication/authentication.module';
 import { join } from 'path';
-import { DataManagementModule } from '@src/services/data-management/data-management.module';
+import { DataManagementModule } from '@src/services/domain/data-management/data-management.module';
 import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
 import { WinstonModule } from 'nest-winston';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { MetadataModule } from '@src/services/metadata/metadata.module';
-import { KonfigModule } from '@src/services/configuration/config/config.module';
-import { IpfsModule } from './services/ipfs/ipfs.module';
+import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
+import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
+import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { SearchModule } from './services/search/search.module';
+import { SearchModule } from '@src/services/domain/search/search.module';
 import { ConfigurationTypes } from '@common/enums';
-import { MembershipModule } from './services/membership/membership.module';
-import { MatrixCommunicationModule } from './services/matrix/communication/communication.matrix.module';
+import { MembershipModule } from '@src/services/domain/membership/membership.module';
 import { MatrixCommunicationPool } from './services/matrix/communication/communication.matrix.pool';
+import { MatrixCommunicationModule } from './services/matrix/communication/communication.matrix.module';
 import { decode } from 'jsonwebtoken';
-
 @Module({
   imports: [
     ConfigModule.forRoot({
