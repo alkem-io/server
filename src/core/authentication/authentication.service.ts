@@ -4,6 +4,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from './agent-info';
 import { Credential } from '@domain/agent/credential';
+import { AuthenticationException } from '@common/exceptions';
 
 @Injectable()
 export class AuthenticationService {
@@ -13,6 +14,10 @@ export class AuthenticationService {
   ) {}
 
   async createAgentInfo(email: string): Promise<AgentInfo> {
+    if (!email)
+      throw new AuthenticationException(
+        'Unable to create agent info: no identifier provided'
+      );
     const agentInfo = new AgentInfo();
     agentInfo.email = email;
     const userExists = await this.userService.isRegisteredUser(email);
@@ -36,12 +41,14 @@ export class AuthenticationService {
         `Authentication Info: User not registered: ${email}`,
         LogContext.AUTH
       );
-      // Allow the user to create a credential for themselves for the context of this request
-      const createUserCredential = new Credential(
-        AuthorizationCredential.UserSelfManagement,
-        agentInfo.email
-      );
-      agentInfo.credentials.push(createUserCredential);
+      // Allow the user to create a credential for themselves for the context of this request if a valid email is being used
+      if (email.length > 0) {
+        const createUserCredential = new Credential(
+          AuthorizationCredential.UserSelfManagement,
+          agentInfo.email
+        );
+        agentInfo.credentials.push(createUserCredential);
+      }
     }
     return agentInfo;
   }
