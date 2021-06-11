@@ -6,15 +6,7 @@ Initial version of integration tests is in place. To run them, look at the prere
 - Running `MySQL sql server`
 - Running `Cherrytwist/Server` service.
 - Local .env file must contain the following vairable, to run tests with authentication:
-  - `AUTH_AAD_CLIENT_APP_ID`
-  - `AUTH_AAD_CHERRYTWIST_API_SCOPE`
-  - `AUTH_AAD_TENANT`
-  - `AUTH_AAD_TEST_HARNESS_PASSWORD`
-  - `AUTH_AAD_CHERRYTWIST_API_APP_ID`
-  - `AUTH_AAD_MSGRAPH_API_SCOPE`
-  - `AUTH_AAD_UPN_DOMAIN`
-  - `AUTH_ENABLED` env variable must be set to `true`.
-- `AUTH_AAD_TEST_HARNESS_PASSWORD` and `AUTH_AAD_MSGRAPH_API_SECRET` secrets (also env variables) need to be provided
+- `AUTH_ENABLED` env variable must be set to `true`.
 - `LOGGING_CONSOLE_ENABLED=false` can be used to disable logging the exceptions (exceptions are quite verbose and will pollute the test results log).
 - In order to run the unit, integration and end-to-end, navigate to the `/Server` repository, and execute the following command: `npm run test:[TEST_TYPE]` where TEST_TYPE is `e2e` for end-to-end, `it` for
   integration tests and `ut` for unit tests
@@ -51,7 +43,7 @@ server/
 Test types
 
     - unit tests: `*.spec.ts` testing functions part of a service
-    - functional e2e tests: `*.e2e-spec.ts` testing functionallity and its integration with third part services (i.e. "MS AAD")
+    - functional e2e tests: `*.e2e-spec.ts` testing functionallity and its integration with third part services (i.e. "Ory Kratos")
     - functional integration tests: `*.it-spec.ts` API testing of application services
 
 Run tests:
