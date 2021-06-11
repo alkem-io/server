@@ -27,7 +27,9 @@ export class GraphqlGuard extends AuthGuard([
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
-    this.instanceId = Math.floor(Math.random() * 10000).toString();
+    // Note: instanceID can be useful for debugging purposes, but by default not enabled.
+    this.instanceId = '';
+    //this.instanceId = Math.floor(Math.random() * 10000).toString();
   }
 
   // Need to override base method for graphql requests
