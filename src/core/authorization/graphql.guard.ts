@@ -15,7 +15,6 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
-  'azure-ad',
   'oathkeeper-jwt',
   'oathkeeper-api-token',
 ]) {
