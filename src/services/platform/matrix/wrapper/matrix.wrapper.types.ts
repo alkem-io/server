@@ -1,6 +1,6 @@
 export type eventHandler = (args0?: any, args1?: any, args2?: any) => void;
 
-export type MatrixClient = {
+export type MatrixWrapper = {
   startClient: () => void;
   stopClient: () => void;
   getGroups: () => Promise<any[]>;

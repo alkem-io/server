@@ -6,11 +6,11 @@ import { IAgent } from '@domain/agent/agent';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { CommunicationService } from '@src/services/domain/communication/communication.service';
+import { CommunicationService } from '@src/services/platform/communication/communication.service';
 import {
   CommunicationRoomDetailsResult,
   CommunicationRoomResult,
-} from '@src/services/domain/communication';
+} from '@src/services/platform/communication';
 
 @Resolver(() => IUser)
 export class UserResolverFields {

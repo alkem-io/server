@@ -15,7 +15,7 @@ export interface IResponseMessage {
   body: string;
 }
 
-export interface IMatrixCommunicationClient {
+export interface IMatrixWrapperClient {
   getCommunities(): Promise<any[]>;
   getRooms(): Promise<any[]>;
   getUserMessages(

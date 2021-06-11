@@ -8,27 +8,26 @@ import { MatrixTransforms } from '../user/user.matrix.service';
 import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
-} from './communication.event.dispatcher';
+} from '../events/communication.event.dispatcher';
 import {
   ICommunityMessageRequest,
   IDirectMessageRequest,
-  IMatrixCommunicationClient,
+  IMatrixWrapperClient,
   IMessageRequest,
   IResponseMessage,
-} from './communication.matrix.interface';
-import { AutoAcceptGroupMembershipMonitorFactory } from './events/group.events.communication.matrix';
-import { AutoAcceptRoomMembershipMonitorFactory } from './events/room.events.communication.matrix';
-import { MatrixGroupEntityAdapter } from './group/group.communication.matrix.adapter';
-import { MatrixClient } from './matrix.types';
-import { MatrixRoomEntityAdapter } from './room/room.communication.matrix.adapter';
+} from './matrix.wrapper.pool.client.interface';
+import { AutoAcceptGroupMembershipMonitorFactory } from '../events/group.events.communication.matrix';
+import { AutoAcceptRoomMembershipMonitorFactory } from '../events/room.events.communication.matrix';
+import { MatrixGroupEntityAdapter } from '../adapter/group.communication.matrix.adapter';
+import { MatrixWrapper } from './matrix.wrapper.types';
+import { MatrixRoomEntityAdapter } from '../adapter/room.communication.matrix.adapter';
 
 @Injectable()
-export class MatrixCommunicationClient
-  implements IMatrixCommunicationClient, Disposable {
+export class MatrixWrapperClient implements IMatrixWrapperClient, Disposable {
   idBaseUrl: string;
   baseUrl: string;
 
-  _matrixClient: MatrixClient;
+  _matrixClient: MatrixWrapper;
   protected _roomEntityAdapter: MatrixRoomEntityAdapter;
   protected _groupEntityAdapter: MatrixGroupEntityAdapter;
   protected _eventDispatcher: MatrixEventDispatcher;

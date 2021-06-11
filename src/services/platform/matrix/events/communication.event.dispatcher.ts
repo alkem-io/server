@@ -1,7 +1,7 @@
 import { Disposable } from '@interfaces/disposable.interface';
 import { EventEmitter } from 'events';
 import { fromEvent, Observable, Observer, Subscription } from 'rxjs';
-import { eventHandler, MatrixClient } from './matrix.types';
+import { eventHandler, MatrixWrapper } from '../wrapper/matrix.wrapper.types';
 
 export interface IMatrixEventDispatcher {
   syncMonitor?: Observable<{ syncState: string; oldSyncState: string }>;
@@ -32,7 +32,7 @@ export class MatrixEventDispatcher
   roomMemberMembershipMonitor!: Observable<{ event: any; member: any }>;
   groupMyMembershipMonitor!: Observable<{ group: any }>;
 
-  constructor(private _client: MatrixClient) {
+  constructor(private _client: MatrixWrapper) {
     this.init();
   }
 

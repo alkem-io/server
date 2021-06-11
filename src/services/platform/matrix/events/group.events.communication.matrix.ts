@@ -1,5 +1,5 @@
-import { IMatrixEventHandler } from '../communication.event.dispatcher';
-import { MatrixClient } from '../matrix.types';
+import { IMatrixEventHandler } from './communication.event.dispatcher';
+import { MatrixWrapper } from '../wrapper/matrix.wrapper.types';
 
 const noop = function() {
   // empty
@@ -7,7 +7,7 @@ const noop = function() {
 
 export class AutoAcceptGroupMembershipMonitorFactory {
   static create(
-    client: MatrixClient
+    client: MatrixWrapper
   ): IMatrixEventHandler['groupMyMembershipMonitor'] {
     return {
       complete: noop,

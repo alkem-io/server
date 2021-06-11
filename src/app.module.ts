@@ -25,8 +25,8 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
 import { ConfigurationTypes } from '@common/enums';
 import { MembershipModule } from '@src/services/domain/membership/membership.module';
-import { MatrixCommunicationPool } from './services/platform/matrix/communication/communication.matrix.pool';
-import { MatrixCommunicationModule } from './services/platform/matrix/communication/communication.matrix.module';
+import { MatrixWrapperPool } from './services/platform/matrix/wrapper/matrix.wrapper.pool';
+import { MatrixWrapperModule } from './services/platform/matrix/wrapper/matrix.wrapper.module';
 import { decode } from 'jsonwebtoken';
 @Module({
   imports: [
@@ -61,9 +61,9 @@ import { decode } from 'jsonwebtoken';
       useClass: WinstonConfigService,
     }),
     GraphQLModule.forRootAsync({
-      imports: [MatrixCommunicationModule],
-      inject: [MatrixCommunicationPool],
-      useFactory: async (communicationPool: MatrixCommunicationPool) => ({
+      imports: [MatrixWrapperModule],
+      inject: [MatrixWrapperPool],
+      useFactory: async (communicationPool: MatrixWrapperPool) => ({
         uploads: false,
         autoSchemaFile: true,
         playground: true,

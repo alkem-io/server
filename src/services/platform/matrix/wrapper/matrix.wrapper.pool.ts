@@ -2,11 +2,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixUserService } from '@src/services/platform/matrix/user/user.matrix.service';
-import { MatrixCommunicationClient } from './communication.matrix.pool.client';
+import { MatrixWrapperClient } from './matrix.wrapper.pool.client';
 
 @Injectable()
-export class MatrixCommunicationPool {
-  private _clients: Record<string, MatrixCommunicationClient>;
+export class MatrixWrapperPool {
+  private _wrappers: Record<string, MatrixWrapperClient>;
   private _sessions: Record<string, string>;
 
   constructor(
@@ -18,29 +18,23 @@ export class MatrixCommunicationPool {
       - additionally have a maximum pool size and destroy clients to make space for new ones
       - need to expose mechanism to subscribe (socket) using the event-dispatcher
     */
-    this._clients = {};
+    this._wrappers = {};
     this._sessions = {};
   }
 
-  async acquire(
-    email: string,
-    session?: string
-  ): Promise<MatrixCommunicationClient> {
-    if (!this._clients[email]) {
+  async acquire(email: string, session?: string): Promise<MatrixWrapperClient> {
+    if (!this._wrappers[email]) {
       const operatingUser = await this.acquireUser(email);
-      const client = new MatrixCommunicationClient(
-        this.configService,
-        operatingUser
-      );
+      const client = new MatrixWrapperClient(this.configService, operatingUser);
       await client.start();
 
-      this._clients[email] = client;
+      this._wrappers[email] = client;
       if (session) {
         this._sessions[session] = email;
       }
     }
 
-    return this._clients[email];
+    return this._wrappers[email];
   }
 
   async acquireSession(session: string) {
@@ -64,9 +58,9 @@ export class MatrixCommunicationPool {
   }
 
   release(email: string): void {
-    if (this._clients[email]) {
-      this._clients[email].dispose();
-      delete this._clients[email];
+    if (this._wrappers[email]) {
+      this._wrappers[email].dispose();
+      delete this._wrappers[email];
     }
   }
 }

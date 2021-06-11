@@ -1,4 +1,4 @@
-import { IMatrixUser } from '../../user/user.matrix.interface';
+import { IMatrixUser } from '../user/user.matrix.interface';
 import { IOpts } from './group.communication.matrix.interface';
 
 export class MatrixGroupEntityAdapter {
