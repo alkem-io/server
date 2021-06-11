@@ -19,7 +19,6 @@ export class GraphqlGuard extends AuthGuard([
   'oathkeeper-jwt',
   'oathkeeper-api-token',
 ]) {
-
   agentInfo?: AgentInfo;
 
   constructor(

@@ -13,16 +13,18 @@ import {
   GrantCredentialInput,
   CreateAgentInput,
 } from '@domain/agent/agent';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AgentService {
   constructor(
+    private configService: ConfigService,
     private credentialService: CredentialService,
     private ssiAgentService: SsiAgentService,
     @InjectRepository(Agent)
@@ -34,7 +36,14 @@ export class AgentService {
     agent.credentials = [];
     agent.authorization = new AuthorizationDefinition();
 
-    return await this.createDidOnAgent(agent);
+    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+      .enabled;
+
+    if (ssiEnabled) {
+      return await this.createDidOnAgent(agent);
+    }
+
+    return await this.saveAgent(agent);
   }
 
   async getAgentOrFail(
