@@ -31,15 +31,18 @@ export class OryApiStrategy extends PassportStrategy(
       })
     );
 
-    const bearerToken = payload.headers.authorization.split(' ')[1];
-    const user = await kratos.toSession(bearerToken);
-
-    this.logger.verbose?.('Whoami', LogContext.AUTH);
-    this.logger.verbose?.(user.data.identity, LogContext.AUTH);
-
     let identifier = '';
-    if (user) {
-      identifier = user.data.identity.traits.email;
+    const authorizationHeader = payload.headers.authorization;
+    if (authorizationHeader) {
+      const bearerToken = authorizationHeader.split(' ')[1];
+      const user = await kratos.toSession(bearerToken);
+
+      this.logger.verbose?.('Whoami', LogContext.AUTH);
+      this.logger.verbose?.(user.data.identity, LogContext.AUTH);
+
+      if (user) {
+        identifier = user.data.identity.traits.email;
+      }
     }
     return await this.authService.createAgentInfo(identifier);
   }

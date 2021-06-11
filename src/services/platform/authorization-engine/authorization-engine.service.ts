@@ -74,9 +74,9 @@ export class AuthorizationEngineService {
     this.logger.verbose?.(msg, LogContext.AUTH);
   }
 
-  logAgentInfo(msg: string, agentInfo: AgentInfo) {
+  logAgentInfo(agentInfo: AgentInfo) {
     this.logger.verbose?.(
-      `${msg}; agentInfo: ${agentInfo.email} has credentials '${JSON.stringify(
+      `AgentInfo: '${agentInfo.email}' has credentials '${JSON.stringify(
         agentInfo.credentials,
         this.replacer
       )}'`,
