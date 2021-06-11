@@ -1,4 +1,4 @@
-import { IMatrixEventHandler } from './communication.event.dispatcher';
+import { IMatrixEventHandler } from './matrix.event.dispatcher';
 import { MatrixWrapper } from '../wrapper/matrix.wrapper.types';
 
 const noop = function() {

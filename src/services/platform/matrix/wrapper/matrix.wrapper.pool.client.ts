@@ -8,7 +8,7 @@ import { MatrixTransforms } from '../user/user.matrix.service';
 import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
-} from '../events/communication.event.dispatcher';
+} from '../events/matrix.event.dispatcher';
 import {
   ICommunityMessageRequest,
   IDirectMessageRequest,
@@ -16,8 +16,8 @@ import {
   IMessageRequest,
   IResponseMessage,
 } from './matrix.wrapper.pool.client.interface';
-import { AutoAcceptGroupMembershipMonitorFactory } from '../events/group.events.communication.matrix';
-import { AutoAcceptRoomMembershipMonitorFactory } from '../events/room.events.communication.matrix';
+import { AutoAcceptGroupMembershipMonitorFactory } from '../events/matrix.event.adapter.group';
+import { AutoAcceptRoomMembershipMonitorFactory } from '../events/matrix.event.adpater.room';
 import { MatrixGroupEntityAdapter } from '../adapter/group.communication.matrix.adapter';
 import { MatrixWrapper } from './matrix.wrapper.types';
 import { MatrixRoomEntityAdapter } from '../adapter/room.communication.matrix.adapter';
