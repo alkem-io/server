@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthorizationEngineModule } from '@src/services/authorization-engine/authorization-engine.module';
+import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { Actor } from './actor.entity';
 import { ActorResolverMutations } from './actor.resolver.mutations';
 import { ActorService } from './actor.service';

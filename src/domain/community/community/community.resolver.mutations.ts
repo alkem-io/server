@@ -21,7 +21,7 @@ import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { UserService } from '../user/user.service';
 @Resolver()
 export class CommunityResolverMutations {
@@ -152,14 +152,14 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
-    const community = await this.communityService.getCommunityOrFail(
+    const application = await this.applicationService.getApplicationOrFail(
       deleteData.ID
     );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      application.authorization,
       AuthorizationPrivilege.UPDATE,
-      `delete application community: ${community.displayName}`
+      `delete application community: ${application.id}`
     );
     return await this.applicationService.deleteApplication(deleteData);
   }

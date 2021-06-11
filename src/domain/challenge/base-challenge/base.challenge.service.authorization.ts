@@ -1,7 +1,7 @@
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { Injectable } from '@nestjs/common';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
 import { IBaseChallenge } from './base.challenge.interface';

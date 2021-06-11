@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ApplicationTemplate } from '@src/services/configuration/config/template/application.template.entity';
+import { ApplicationTemplate } from '@src/services/platform/configuration/config/template/application.template.entity';
 import { IOpportunityTemplate } from './opportunity.template.interface';
 
 @ObjectType()

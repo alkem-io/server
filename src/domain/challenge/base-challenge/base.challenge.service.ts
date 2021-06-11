@@ -19,14 +19,17 @@ import { FindConditions, FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
 import { CreateBaseChallengeInput } from './base.challenge.dto.create';
 import { IBaseChallenge } from './base.challenge.interface';
-import { NamingService } from '@src/services/naming/naming.service';
+import { NamingService } from '@src/services/domain/naming/naming.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { CredentialService } from '@domain/agent/credential/credential.service';
+import { IAgent } from '@domain/agent/agent';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class BaseChallengeService {
   constructor(
     private contextService: ContextService,
+    private agentService: AgentService,
     private credentialService: CredentialService,
     private communityService: CommunityService,
     private namingService: NamingService,
@@ -57,6 +60,10 @@ export class BaseChallengeService {
     baseChallenge.authorization = new AuthorizationDefinition();
 
     baseChallenge.tagset = this.tagsetService.createDefaultTagset();
+
+    baseChallenge.agent = await this.agentService.createAgent({
+      parentDisplayID: `${baseChallenge.nameID}`,
+    });
   }
 
   async setMembershipCredential(
@@ -131,6 +138,10 @@ export class BaseChallengeService {
         ID: baseChallenge.tagset.id,
       });
     }
+
+    if (baseChallenge.agent) {
+      await this.agentService.deleteAgent(baseChallenge.agent.id);
+    }
   }
 
   async getBaseChallengeOrFail(
@@ -202,6 +213,26 @@ export class BaseChallengeService {
         LogContext.CONTEXT
       );
     return context;
+  }
+
+  async getAgent(
+    challengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<IAgent> {
+    const challengeWithContext = await this.getBaseChallengeOrFail(
+      challengeId,
+      repository,
+      {
+        relations: ['agent'],
+      }
+    );
+    const agent = challengeWithContext.agent;
+    if (!agent)
+      throw new RelationshipNotFoundException(
+        `Unable to load Agent for challenge ${challengeId}`,
+        LogContext.AGENT
+      );
+    return agent;
   }
 
   async getLifecycle(

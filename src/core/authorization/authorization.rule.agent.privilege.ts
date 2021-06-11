@@ -1,7 +1,7 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 
 export class AuthorizationRuleAgentPrivilege {
   privilege: AuthorizationPrivilege;

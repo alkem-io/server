@@ -1,17 +1,23 @@
-import { CherrytwistErrorStatus, ConfigurationTypes } from '@common/enums';
+import {
+  CherrytwistErrorStatus,
+  ConfigurationTypes,
+  LogContext,
+} from '@common/enums';
 import { TokenException } from '@common/exceptions';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { AuthenticationService } from './authentication.service';
 import { passportJwtSecret } from 'jwks-rsa';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   constructor(
     private readonly configService: ConfigService,
-    private readonly authService: AuthenticationService
+    private readonly authService: AuthenticationService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super({
       secretOrKeyProvider: passportJwtSecret({
@@ -29,6 +35,9 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   }
 
   async validate(payload: any) {
+    this.logger.verbose?.('Ory Kratos payload', LogContext.AUTH);
+    this.logger.verbose?.(payload, LogContext.AUTH);
+
     if (this.checkIfTokenHasExpired(payload.exp))
       throw new TokenException(
         'Access token has expired!',

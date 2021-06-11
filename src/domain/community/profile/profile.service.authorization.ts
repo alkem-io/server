@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IProfile, Profile } from '@domain/community/profile';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 
 @Injectable()
 export class ProfileAuthorizationService {

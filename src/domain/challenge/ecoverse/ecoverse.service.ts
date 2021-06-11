@@ -27,11 +27,12 @@ import { IContext } from '@domain/context';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
-import { NamingService } from '@src/services/naming/naming.service';
+import { NamingService } from '@src/services/domain/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { IAgent } from '@domain/agent/agent';
 
 @Injectable()
 export class EcoverseService {
@@ -122,7 +123,7 @@ export class EcoverseService {
       );
 
     const baseChallenge = await this.getEcoverseOrFail(deleteData.ID, {
-      relations: ['community', 'context', 'lifecycle'],
+      relations: ['community', 'context', 'lifecycle', 'agent'],
     });
     await this.baseChallengeService.deleteEntities(baseChallenge);
 
@@ -291,7 +292,7 @@ export class EcoverseService {
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     activity.push(challengesTopic);
 
-    const allChallengesCount = await this.challengeService.getAllChallengesCount(
+    const allChallengesCount = await this.challengeService.getChallengesInEcoverseCount(
       ecoverse.id
     );
     const opportunitiesTopic = new NVP(
@@ -321,10 +322,21 @@ export class EcoverseService {
     });
   }
 
+  async getAgent(ecoverseID: string): Promise<IAgent> {
+    return await this.baseChallengeService.getAgent(
+      ecoverseID,
+      this.ecoverseRepository
+    );
+  }
+
   async getMembersCount(ecoverse: IEcoverse): Promise<number> {
     return await this.baseChallengeService.getMembersCount(
       ecoverse,
       this.ecoverseRepository
     );
+  }
+
+  async getEcoverseCount(): Promise<number> {
+    return await this.ecoverseRepository.count();
   }
 }

@@ -6,7 +6,7 @@ import { CreateAspectInput, IAspect } from '@domain/context';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 import { CreateReferenceOnContextInput } from './context.dto.create.reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';

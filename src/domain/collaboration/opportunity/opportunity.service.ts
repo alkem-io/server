@@ -164,7 +164,7 @@ export class OpportunityService {
 
     // Note need to load it in with all contained entities so can remove fully
     const baseOpportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['community', 'context', 'lifecycle'],
+      relations: ['community', 'context', 'lifecycle', 'agent'],
     });
 
     await this.baseChallengeService.deleteEntities(baseOpportunity);

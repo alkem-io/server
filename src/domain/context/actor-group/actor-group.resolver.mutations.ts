@@ -10,7 +10,7 @@ import {
 import { IActor, CreateActorInput, ActorService } from '@domain/context/actor';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { CurrentUser } from '@common/decorators';
 
 @Resolver()

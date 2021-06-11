@@ -7,10 +7,10 @@ import {
   LogContext,
 } from '@common/enums';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/authorization-engine/authorization.credential.rule';
+import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IUserGroup, UserGroup } from '@domain/community/user-group';
 import { UserGroupService } from './user-group.service';

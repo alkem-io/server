@@ -10,11 +10,15 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 @Injectable()
-export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
+export class GraphqlGuard extends AuthGuard([
+  'azure-ad',
+  'oathkeeper-jwt',
+  'oathkeeper-api-token',
+]) {
   agentInfo?: AgentInfo;
 
   constructor(
@@ -50,8 +54,8 @@ export class GraphqlGuard extends AuthGuard(['azure-ad', 'oathkeeper-jwt']) {
     if (!agentInfo) {
       this.logger.verbose?.('AgentInfo NOT present', LogContext.AUTH);
       if (this.agentInfo) {
-        this.logger.verbose?.('...using cached AgentInfo', LogContext.AUTH);
-        resultAgentInfo = this.agentInfo;
+        this.logger.verbose?.('...using empty AgentInfo', LogContext.AUTH);
+        resultAgentInfo = new AgentInfo();
       } else {
         this.logger.verbose?.('...using an empty AgentInfo', LogContext.AUTH);
         resultAgentInfo = new AgentInfo();

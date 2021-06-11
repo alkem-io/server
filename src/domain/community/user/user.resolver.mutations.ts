@@ -9,7 +9,7 @@ import {
   DeleteUserInput,
 } from '@domain/community/user';
 import { UserService } from './user.service';
-import { AuthorizationEngineService } from '@src/services/authorization-engine/authorization-engine.service';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';

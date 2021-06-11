@@ -39,6 +39,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAgent } from '@domain/agent/agent';
 
 @Injectable()
 export class ChallengeService {
@@ -138,7 +139,7 @@ export class ChallengeService {
       );
 
     const baseChallenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['community', 'context', 'lifecycle'],
+      relations: ['community', 'context', 'lifecycle', 'agent'],
     });
     await this.baseChallengeService.deleteEntities(baseChallenge);
 
@@ -222,6 +223,13 @@ export class ChallengeService {
 
   async getContext(challengeId: string): Promise<IContext> {
     return await this.baseChallengeService.getContext(
+      challengeId,
+      this.challengeRepository
+    );
+  }
+
+  async getAgent(challengeId: string): Promise<IAgent> {
+    return await this.baseChallengeService.getAgent(
       challengeId,
       this.challengeRepository
     );
@@ -393,11 +401,15 @@ export class ChallengeService {
     return await this.challengeRepository.save(challenge);
   }
 
-  async getAllChallengesCount(ecoverseID: string): Promise<number> {
+  async getChallengesInEcoverseCount(ecoverseID: string): Promise<number> {
     const count = await this.challengeRepository.count({
       where: { ecoverseID: ecoverseID },
     });
     return count;
+  }
+
+  async getChallengeCount(): Promise<number> {
+    return await this.challengeRepository.count();
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {
