@@ -16,7 +16,7 @@ The technology stack is as follows:
 - docker: for containers
 - docker-compose: for container orchestration
 - passportjs for authentication
-- authentication providers: via one or the support authentication providers (e.g. AAD)
+- authentication providers: via one or the support authentication providers (e.g. Ory Kratos)
 - Winston and Nest-Winston for logging
 - Elastic Cloud + Kibana for centralized log management
 
