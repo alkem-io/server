@@ -6,7 +6,7 @@ import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
 import fs from 'fs';
-import * as defaultRoles from '@src/services/platform/configuration/templates/authorisation-bootstrap.json';
+import * as defaultRoles from '@templates/authorisation-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
