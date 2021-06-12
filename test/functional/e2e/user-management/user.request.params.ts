@@ -48,7 +48,6 @@ export const createUserMutationWithParams = async (
         displayName: userName,
         nameID: userName,
         email: `${userEmail}`,
-        //aadPassword: `90!ds${uniqueId}`,
         profileData: {
           description: 'x',
           avatar: 'http://xProf.com',
@@ -91,7 +90,6 @@ export const createUserDetailsMutation = async (
         city: 'testCity',
         country: 'testCountry',
         gender: 'testGender',
-        //aadPassword: `90!ds${uniqueId}`,
       },
     },
   };

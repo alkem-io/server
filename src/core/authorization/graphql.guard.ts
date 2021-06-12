@@ -19,7 +19,7 @@ export class GraphqlGuard extends AuthGuard([
   'oathkeeper-jwt',
   'oathkeeper-api-token',
 ]) {
-  agentInfo?: AgentInfo;
+  instanceId: string;
 
   constructor(
     private reflector: Reflector,
@@ -27,6 +27,9 @@ export class GraphqlGuard extends AuthGuard([
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
+    // Note: instanceID can be useful for debugging purposes, but by default not enabled.
+    this.instanceId = '';
+    //this.instanceId = Math.floor(Math.random() * 10000).toString();
   }
 
   // Need to override base method for graphql requests
@@ -51,21 +54,23 @@ export class GraphqlGuard extends AuthGuard([
 
     // Ensure there is always an AgentInfo
     let resultAgentInfo = agentInfo;
-    if (!agentInfo) {
-      this.logger.verbose?.('AgentInfo NOT present', LogContext.AUTH);
-      if (this.agentInfo) {
-        this.logger.verbose?.('...using cached AgentInfo', LogContext.AUTH);
-        resultAgentInfo = this.agentInfo;
-      } else {
-        this.logger.verbose?.('...using an empty AgentInfo', LogContext.AUTH);
-        resultAgentInfo = new AgentInfo();
-      }
-    } else {
-      this.authorizationEngine.logAgentInfo('AgentInfo present', agentInfo);
+
+    if (agentInfo) {
+      this.logger.verbose?.(
+        `[${this.instanceId}] - AgentInfo present`,
+        LogContext.AUTH
+      );
+      this.authorizationEngine.logAgentInfo(agentInfo);
+      // Utility to help retrieve the bearer token
       if (fieldName === 'me' && agentInfo.email.length > 0) {
         this.logAuthorizationToken(req);
       }
-      this.agentInfo = agentInfo;
+    } else {
+      this.logger.warn?.(
+        `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
+        LogContext.AUTH
+      );
+      resultAgentInfo = new AgentInfo();
     }
 
     // Apply any rules
@@ -84,6 +89,10 @@ export class GraphqlGuard extends AuthGuard([
       rule.execute(resultAgentInfo);
     }
 
+    this.logger.verbose?.(
+      `[${this.instanceId}] - ...returning`,
+      LogContext.AUTH
+    );
     return resultAgentInfo;
   }
 

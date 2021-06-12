@@ -57,6 +57,34 @@ export class AuthorizationEngineService {
     );
   }
 
+
+  logCredentialCheckFailDetails(
+    errorMsg: string,
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationDefinition
+  ) {
+    const msg = `${errorMsg}; agentInfo: ${
+      agentInfo.email
+    } has credentials '${JSON.stringify(
+      agentInfo.credentials,
+      this.replacer
+    )}'; authorization definition: anonymousAccess=${
+      authorization?.anonymousReadAccess
+    } & rules: ${authorization?.credentialRules}`;
+    //console.log(msg);
+    this.logger.verbose?.(msg, LogContext.AUTH);
+  }
+
+  logAgentInfo(agentInfo: AgentInfo) {
+    this.logger.verbose?.(
+      `AgentInfo: '${agentInfo.email}' has credentials '${JSON.stringify(
+        agentInfo.credentials,
+        this.replacer
+      )}'`,
+      LogContext.AUTH
+    );
+  }
+
   // Utility function to avoid having a bunch of fields that are not relevant on log output for credentials logging.
   replacer = (key: any, value: any) => {
     if (key == 'createdDate') return undefined;

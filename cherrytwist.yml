@@ -66,14 +66,14 @@ security:
 #
 # The only functionality used from an Authentication Provider is acquiring an access token (in other words, authentication) and
 # extracting the users email .
-# The email is used for matching the user account (provided from the Identity Server, e.g. AAD) to the user profile in Cherrytwist.
+# The email is used for matching the user account (provided from the Identity Server, e.g. Ory Kratos) to the user profile in Cherrytwist.
 # Traditional Identity Provider functionality like federation, account management etc. are out-of-scope in Cherrytwist.
 #
 # Authorization is Credential-based, validating whether the user has valid credentials for the requested resource.
 identity:
   ## authentication ##
   # Defines both the configuration required for the server to process authentication requests (via passportJS strategies) and the
-  # client-side configuration required to authenticate to the Identity Servers (e.g. AAD) and generate
+  # client-side configuration required to authenticate to the Identity Servers (e.g. Ory Kratos) and generate
   # valid Authorization Header (Bearer access token).
   authentication:
     # A flag setting whether Authentication is enabled on Cherrytwist.
@@ -82,76 +82,6 @@ identity:
     # A list of Identity Providers that can be used for authenticating the user.
     # The claims in the access token that are used in Cherrytwist are the user email and the token expiration time.
     providers:
-      # Azure Active Directory Authentication Provider.
-      # Provides configuration for both Cherrytwist Server and Cherrytwist clients i.e. clients can connect to the server to
-      # retrieve the authentication configuration that they should use.
-      # Multiple flows are supported to cover the needs of the platform, including automated testing.
-      #
-      # All default values are from the Cherrytwist Playground AAD instance.
-      aad:
-        # Azure Active Directory Tenant.
-        tenant: ${AUTH_AAD_TENANT}:524e761c-d162-4fdf-ab43-2855246d986c
-
-        # OpenID Connect metadata document endpoint.
-        identityMetadata: ${AUTH_AAD_IDENTITY_METADATA}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0/.well-known/openid-configuration
-
-        # Cherrytwist Server clientID. The AAD application is called cherrytwist-api in the playground AAD instance.
-        clientID: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
-
-        # Flag checking whether the issuer of the access token needs to be validated.
-        validateIssuer: true
-
-        # Flag checking whether the request should be passed in the passportJS callback.
-        # By default it's passed in the platform - but it's not actively used.
-        # This setting is useful for debugging issues with Authentication Provider
-        # For example in src/core/authentication/aad.bearer.strategy.ts the _req field in validate function can
-        # be used for tracing issues.
-        passReqToCallback: true
-
-        # Issuer of the access token used in Cherrytwist Server
-        issuer: ${AUTH_AAD_ISSUER}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c/v2.0
-
-        # Audience that the ID token issues by AAD is intended for.
-        # The relationship between audiences, scopes, APIs and access tokens is well defined in this article:
-        # https://www.pingidentity.com/en/company/blog/posts/2019/oauth2-access-token-multiple-resources-usage-strategies.html
-        audience: ${AUTH_AAD_CHERRYTWIST_API_APP_ID}:505041fc-fca2-4a74-88ee-6d50a6417e38
-
-        # Logging level.
-        # Valid values are info|warn|error.
-        loggingLevel: ${AUTH_AAD_LOGGING_LEVEL}:Error
-
-        # Flag setting whether Personal Identifiable Information (PII) can be logged by AAD.
-        # Note: there is a bug in the microsoft strategy that makes setting this flag to 'true' returning meaningful exception messages
-        # upon access token validation and thus invalidating all flows checking whether the access token has expired.
-        loggingNoPII: false
-
-        # Cherrytwist Client authentication configuration.
-        # The parameters provided in this section are exposed in the configuration GraphQL query consumed by the Cherrytwist Web Client.
-        client:
-          # Cherrytwist Client clientID. The AAD application is called cherrytwist-web in the playground AAD instance.
-          clientId: ${AUTH_AAD_CLIENT_APP_ID}:feb6d8b1-8cc2-4e7d-a419-ad7b544b0832
-
-          # The OIDC claims authority endpoint.
-          authority: ${AUTH_AAD_AUTHORITY}:https://login.microsoftonline.com/524e761c-d162-4fdf-ab43-2855246d986c
-
-          # The client redirect UI. Defaults to the default Cherrytwist Web Client endpoint.
-
-          redirectUri: ${AUTH_AAD_CLIENT_LOGIN_REDIRECT_URI}:http://localhost:3000
-
-        # Resource Owner Password Credentials (ROPC) flow configuration.
-        # Username and Password are required to authenticate the user against AAD. MFA is not supported.
-        # ClientSecret is not mandatory - it can be used to invoke the Client Credentials Grant flow
-        # for testing purposes in case MFA is mandated.
-        ropc:
-          # Client secret. Not used by default. Used only if ROPC is replaced with Client Credentials Grant Flow.
-          clientSecret: ${AUTH_AAD_CLIENT_APP_SECRET}
-
-          # Username of the user used in ROPC flow.
-          username: ${AUTH_AAD_USER_UPN}:admin@playgroundcherrytwist.onmicrosoft.com
-
-          # Password of the user used in ROPC flow.
-          password: ${AUTH_AAD_USER_PASSWORD}
-
       # Ory Kratos Next Gen Identity Provider (https://github.com/ory/kratos).
       ory:
         # Issuer of the kratos cookie. The cookie can be used as is or mutated by
