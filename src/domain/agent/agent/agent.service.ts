@@ -196,6 +196,13 @@ export class AgentService {
     );
   }
 
+  async ensureDidsCreated() {
+    const agentsWithoutDids = await this.agentRepository.find({ did: '' });
+    for (const agent of agentsWithoutDids) {
+      await this.createDidOnAgent(agent);
+    }
+  }
+
   async countAgentsWithMatchingCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<number> {

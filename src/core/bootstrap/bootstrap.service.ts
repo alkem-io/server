@@ -18,9 +18,11 @@ import {
   DEFAULT_ECOVERSE_DISPLAYNAME,
   DEFAULT_ECOVERSE_NAMEID,
 } from '@common/constants';
+import { AgentService } from '@domain/agent/agent/agent.service';
 @Injectable()
 export class BootstrapService {
   constructor(
+    private agentService: AgentService,
     private ecoverseService: EcoverseService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
@@ -46,6 +48,7 @@ export class BootstrapService {
 
       await this.ensureEcoverseSingleton();
       await this.bootstrapProfiles();
+      await this.ensureSsiPopulated();
     } catch (error) {
       throw new BootstrapException(error.message);
     }
@@ -157,6 +160,14 @@ export class BootstrapService {
       throw new BootstrapException(
         `Unable to create profiles ${error.message}`
       );
+    }
+  }
+
+  async ensureSsiPopulated() {
+    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+      .enabled;
+    if (ssiEnabled) {
+      await this.agentService.ensureDidsCreated();
     }
   }
 

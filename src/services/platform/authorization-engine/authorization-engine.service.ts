@@ -57,7 +57,6 @@ export class AuthorizationEngineService {
     );
   }
 
-
   logCredentialCheckFailDetails(
     errorMsg: string,
     agentInfo: AgentInfo,
@@ -273,32 +272,5 @@ export class AuthorizationEngineService {
     this.appendCredentialAuthorizationRules(authorization, newRules);
 
     return authorization;
-  }
-
-  logCredentialCheckFailDetails(
-    errorMsg: string,
-    agentInfo: AgentInfo,
-    authorization: IAuthorizationDefinition
-  ) {
-    const msg = `${errorMsg}; agentInfo: ${
-      agentInfo.email
-    } has credentials '${JSON.stringify(
-      agentInfo.credentials,
-      this.replacer
-    )}'; authorization definition: anonymousAccess=${
-      authorization?.anonymousReadAccess
-    } & rules: ${authorization?.credentialRules}`;
-    //console.log(msg);
-    this.logger.verbose?.(msg, LogContext.AUTH);
-  }
-
-  logAgentInfo(msg: string, agentInfo: AgentInfo) {
-    this.logger.verbose?.(
-      `${msg}; agentInfo: ${agentInfo.email} has credentials '${JSON.stringify(
-        agentInfo.credentials,
-        this.replacer
-      )}'`,
-      LogContext.AUTH
-    );
   }
 }
