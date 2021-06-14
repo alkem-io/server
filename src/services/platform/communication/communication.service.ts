@@ -1,8 +1,8 @@
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MatrixWrapperPool } from '../matrix/wrapper/matrix.wrapper.pool';
-import { MatrixTransforms } from '../matrix/user/user.matrix.service';
+import { MatrixAgentPool } from '../matrix/agent-pool/matrix.agent.pool';
+import { MatrixTransforms } from '../matrix/management/matrix.management.user.service';
 import { CommunicationMessageResult } from './communication.dto.message.result';
 import {
   CommunicationRoomResult,
@@ -16,7 +16,7 @@ export class CommunicationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private userService: UserService,
-    private readonly communicationPool: MatrixWrapperPool
+    private readonly communicationPool: MatrixAgentPool
   ) {}
 
   async sendMsg(

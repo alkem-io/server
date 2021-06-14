@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 // import { ConfigModule } from '@nestjs/config';
-import { MatrixCryptographyService } from './cryptography.matrix.service';
+import { MatrixCryptographyService } from './matrix.cryptography.service';
 
 @Module({
   providers: [MatrixCryptographyService],

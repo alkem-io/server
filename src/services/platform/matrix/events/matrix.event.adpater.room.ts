@@ -1,6 +1,6 @@
 import { IMatrixEventHandler } from './matrix.event.dispatcher';
-import { MatrixWrapper } from '../wrapper/matrix.wrapper.types';
-import { MatrixRoomEntityAdapter } from '../adapter/room.communication.matrix.adapter';
+import { MatrixClient } from '../agent-pool/matrix.client.types';
+import { MatrixRoomEntityAdapter } from '../adapter/matrix.adapater.room';
 
 const noop = function() {
   // empty
@@ -8,7 +8,7 @@ const noop = function() {
 
 export class AutoAcceptRoomMembershipMonitorFactory {
   static create(
-    client: MatrixWrapper,
+    client: MatrixClient,
     adapter: MatrixRoomEntityAdapter
   ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
     return {

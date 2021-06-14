@@ -1,6 +1,8 @@
+// Brings typing to the objects that are returned from the Matrix JS SDK.
+
 export type eventHandler = (args0?: any, args1?: any, args2?: any) => void;
 
-export type MatrixWrapper = {
+export type MatrixClient = {
   startClient: () => void;
   stopClient: () => void;
   getGroups: () => Promise<any[]>;

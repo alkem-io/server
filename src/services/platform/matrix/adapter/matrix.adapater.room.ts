@@ -1,8 +1,4 @@
-import {
-  IOpts,
-  Preset,
-  Visibility,
-} from './room.communication.matrix.interface';
+import { IOpts, Preset, Visibility } from './matrix.adapter.room.interface';
 
 export class MatrixRoomEntityAdapter {
   constructor(private _client: any) {}

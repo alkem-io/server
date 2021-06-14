@@ -1,12 +1,12 @@
 import { HttpService, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
-import { MatrixCryptographyService } from '@src/services/platform/matrix/cryptography/cryptography.matrix.service';
+import { MatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.service';
 import {
   IMatrixUser,
-  IMatrixUserService,
+  IMatrixUserService as IMatrixManagementUserService,
   IOperationalMatrixUser,
-} from './user.matrix.interface';
+} from './matrix.management.user.interface';
 import { ConfigurationTypes } from '@common/enums';
 
 class SynapseEndpoints {
@@ -39,7 +39,8 @@ export class MatrixTransforms {
 }
 
 @Injectable()
-export class MatrixUserService implements IMatrixUserService {
+export class MatrixManagementUserService
+  implements IMatrixManagementUserService {
   _matrixClient: any;
   idBaseUrl: string;
   baseUrl: string;
@@ -61,6 +62,7 @@ export class MatrixUserService implements IMatrixUserService {
     }
 
     // Create a single instance of the matrix client - non authenticated
+    // Todo: should be handed this client instance externally!
     this._matrixClient = createClient({
       baseUrl: this.baseUrl,
       idBaseUrl: this.idBaseUrl,

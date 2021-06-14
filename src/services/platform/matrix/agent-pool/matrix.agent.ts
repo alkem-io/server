@@ -2,9 +2,9 @@ import { ConfigurationTypes } from '@common/enums';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IOperationalMatrixUser } from '@src/services/platform/matrix/user/user.matrix.interface';
+import { IOperationalMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import { createClient } from 'matrix-js-sdk';
-import { MatrixTransforms } from '../user/user.matrix.service';
+import { MatrixTransforms } from '../management/matrix.management.user.service';
 import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
@@ -12,22 +12,22 @@ import {
 import {
   ICommunityMessageRequest,
   IDirectMessageRequest,
-  IMatrixWrapperClient,
+  IMatrixAgent,
   IMessageRequest,
   IResponseMessage,
-} from './matrix.wrapper.pool.client.interface';
+} from './matrix.agent.interface';
 import { AutoAcceptGroupMembershipMonitorFactory } from '../events/matrix.event.adapter.group';
 import { AutoAcceptRoomMembershipMonitorFactory } from '../events/matrix.event.adpater.room';
-import { MatrixGroupEntityAdapter } from '../adapter/group.communication.matrix.adapter';
-import { MatrixWrapper } from './matrix.wrapper.types';
-import { MatrixRoomEntityAdapter } from '../adapter/room.communication.matrix.adapter';
+import { MatrixGroupEntityAdapter } from '../adapter/matrix.adapter.group';
+import { MatrixClient } from './matrix.client.types';
+import { MatrixRoomEntityAdapter } from '../adapter/matrix.adapater.room';
 
 @Injectable()
-export class MatrixWrapperClient implements IMatrixWrapperClient, Disposable {
+export class MatrixAgent implements IMatrixAgent, Disposable {
   idBaseUrl: string;
   baseUrl: string;
 
-  _matrixClient: MatrixWrapper;
+  _matrixClient: MatrixClient;
   protected _roomEntityAdapter: MatrixRoomEntityAdapter;
   protected _groupEntityAdapter: MatrixGroupEntityAdapter;
   protected _eventDispatcher: MatrixEventDispatcher;

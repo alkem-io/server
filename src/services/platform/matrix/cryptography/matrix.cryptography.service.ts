@@ -1,9 +1,9 @@
 import { ConfigurationTypes } from '@common/enums';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IMatrixUser } from '@src/services/platform/matrix/user/user.matrix.interface';
+import { IMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import * as crypto from 'crypto-js';
-import { IMatrixCryptographyService } from './cryptography.matrix.interface';
+import { IMatrixCryptographyService } from './matrix.cryptography.interface';
 
 @Injectable()
 export class MatrixCryptographyService implements IMatrixCryptographyService {
