@@ -41,12 +41,10 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getCommunity(ecoverse);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the ecoverse.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async context(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getContext(ecoverse);

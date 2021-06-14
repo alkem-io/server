@@ -8,15 +8,20 @@ import {
 import { Repository } from 'typeorm';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { Challenge, IChallenge } from '@domain/challenge/challenge';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import {
+  IAuthorizationDefinition,
+  UpdateAuthorizationDefinitionInput,
+} from '@domain/common/authorization-definition';
 import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
+import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
+    private opportunityAuthorizationService: OpportunityAuthorizationService,
     private authorizationEngine: AuthorizationEngineService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
@@ -30,7 +35,7 @@ export class ChallengeAuthorizationService {
       challenge.authorization,
       parentAuthorization
     );
-    challenge.authorization = this.updateAuthorizationDefinition(
+    challenge.authorization = this.extendAuthorizationDefinition(
       challenge.authorization,
       challenge.id
     );
@@ -54,13 +59,17 @@ export class ChallengeAuthorizationService {
           opportunity.authorization,
           challenge.authorization
         );
+        await this.opportunityAuthorizationService.applyAuthorizationRules(
+          opportunity,
+          challenge.authorization
+        );
       }
     }
 
     return await this.challengeRepository.save(challenge);
   }
 
-  private updateAuthorizationDefinition(
+  private extendAuthorizationDefinition(
     authorization: IAuthorizationDefinition | undefined,
     challengeID: string
   ): IAuthorizationDefinition {
@@ -95,5 +104,32 @@ export class ChallengeAuthorizationService {
     );
 
     return authorization;
+  }
+
+  async updateAuthorization(
+    challenge: IChallenge,
+    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+  ): Promise<IChallenge> {
+    await this.baseChallengeAuthorizationService.updateAuthorization(
+      challenge,
+      this.challengeRepository,
+      authorizationUpdateData
+    );
+
+    // propagate authorization rules for child entities
+    if (challenge.opportunities) {
+      for (const opportunity of challenge.opportunities) {
+        opportunity.authorization = this.authorizationEngine.updateAuthorization(
+          opportunity.authorization,
+          authorizationUpdateData
+        );
+        await this.opportunityAuthorizationService.updateAuthorization(
+          opportunity,
+          opportunity.authorization
+        );
+      }
+    }
+
+    return await this.challengeRepository.save(challenge);
   }
 }

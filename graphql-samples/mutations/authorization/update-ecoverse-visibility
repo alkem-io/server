@@ -1,0 +1,29 @@
+mutation UpdateEcoverse($ecoverseData: UpdateEcoverseInput!) {
+  updateEcoverse(ecoverseData: $ecoverseData) {
+    id
+    authorization {
+      anonymousReadAccess
+    }
+    community {
+      authorization {
+        anonymousReadAccess
+      }
+    }
+    context {
+      authorization {
+        anonymousReadAccess
+      }
+    }
+  }
+}
+
+
+{
+  "ecoverseData":
+		{
+      "ID": "uuid",
+      "authorizationDefinition": {
+        "anonymousReadAccess": false
+      }
+		}
+}

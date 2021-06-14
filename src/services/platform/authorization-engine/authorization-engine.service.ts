@@ -13,6 +13,7 @@ import {
 import {
   AuthorizationDefinition,
   IAuthorizationDefinition,
+  UpdateAuthorizationDefinitionInput,
 } from '@domain/common/authorization-definition';
 import { AgentInfo } from '@core/authentication';
 import { ConfigService } from '@nestjs/config';
@@ -191,6 +192,16 @@ export class AuthorizationEngineService {
     this.appendCredentialAuthorizationRules(child, newRules);
     child.anonymousReadAccess = parent.anonymousReadAccess;
     return child;
+  }
+
+  updateAuthorization(
+    origAuthorization: IAuthorizationDefinition | undefined,
+    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+  ): IAuthorizationDefinition {
+    const authorization = this.validateAuthorization(origAuthorization);
+    authorization.anonymousReadAccess =
+      authorizationUpdateData.anonymousReadAccess;
+    return authorization;
   }
 
   appendCredentialAuthorizationRules(
