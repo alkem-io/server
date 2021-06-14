@@ -40,7 +40,6 @@
     "migration:show": "npm run typeorm migration:show"
   },
   "dependencies": {
-    "@cmdbg/tokenator": "^0.1.1",
     "@nestjs/common": "^7.6.15",
     "@nestjs/config": "^0.5.0",
     "@nestjs/core": "^7.6.15",
