@@ -70,6 +70,9 @@ export class EcoverseResolverMutations {
       `updateEcoverse: ${ecoverse.nameID}`
     );
 
+    // ensure working with UUID
+    ecoverseData.ID = ecoverse.id;
+
     return await this.ecoverseService.update(ecoverseData);
   }
 

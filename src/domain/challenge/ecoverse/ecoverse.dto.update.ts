@@ -11,4 +11,11 @@ export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
   })
   @IsOptional()
   hostID?: string;
+
+  // Does not extend base entity update DTO as need to be able to specify also a NameID as part of the update
+  @Field(() => UUID_NAMEID, {
+    nullable: false,
+    description: 'The ID of the entity to be updated.',
+  })
+  ID!: string;
 }
