@@ -1,17 +1,9 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Column, Entity } from 'typeorm';
+import { INVP } from '@domain/common/nvp';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
-@ObjectType()
-export class NVP extends BaseEntity {
+export class NVP extends BaseCherrytwistEntity implements INVP {
   constructor();
   constructor(name: string);
   constructor(name: string, value: string);
@@ -21,24 +13,9 @@ export class NVP extends BaseEntity {
     this.value = value;
   }
 
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String)
   @Column()
   name!: string;
 
-  @Field(() => String)
   @Column()
   value?: string;
 }

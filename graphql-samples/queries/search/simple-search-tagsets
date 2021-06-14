@@ -4,14 +4,14 @@ query search($searchData: SearchInput!){
     result {
       __typename
       ... on User {
-        name
+        nameID
         email
       }
       ... on UserGroup {
         name
       }
       ... on Organisation {
-        name
+        nameID
       }
     }
   }

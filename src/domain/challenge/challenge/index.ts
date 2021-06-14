@@ -6,5 +6,3 @@ export * from './challenge.dto.delete';
 export * from './challenge.dto.assign.lead';
 export * from './challenge.dto.remove.lead';
 export * from './challenge.dto.event';
-export * from './challenge.lifecycle.config.default';
-export * from './challenge.lifecycle.config.extended';

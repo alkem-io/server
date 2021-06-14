@@ -7,26 +7,27 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
-import { MemberOf } from './memberof.composite';
-import validator from 'validator';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { ICommunityable } from '@interfaces/communityable.interface';
-import { ICommunity } from '../community/community.interface';
 import {
   UpdateUserInput,
   CreateUserInput,
+  DeleteUserInput,
   User,
   IUser,
 } from '@domain/community/user';
-import { DeleteUserInput } from './user.dto.delete';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { Agent, IAgent } from '@domain/agent/agent';
+import { UUID_LENGTH } from '@common/constants';
+import { IProfile } from '@domain/community/profile';
+import { LogContext } from '@common/enums';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class UserService {
   constructor(
     private profileService: ProfileService,
+    private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -36,27 +37,35 @@ export class UserService {
     await this.validateUserProfileCreationRequest(userData);
 
     const user: IUser = User.create(userData);
+    user.authorization = new AuthorizationDefinition();
+
     user.profile = await this.profileService.createProfile(
       userData.profileData
     );
 
-    // Need to save to get the object identifiers assigned
-    const savedUser = await this.userRepository.save(user);
+    user.agent = await this.agentService.createAgent({
+      parentDisplayID: user.email,
+    });
+
     this.logger.verbose?.(
-      `Created a new user with id: ${savedUser.id}`,
+      `Created a new user with nameID: ${user.nameID}`,
       LogContext.COMMUNITY
     );
 
-    return savedUser;
+    return await this.userRepository.save(user);
   }
 
-  async removeUser(deleteData: DeleteUserInput): Promise<IUser> {
+  async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
-    const user = await this.getUserByIdOrFail(userID);
+    const user = await this.getUserOrFail(userID);
     const { id } = user;
 
     if (user.profile) {
       await this.profileService.deleteProfile(user.profile.id);
+    }
+
+    if (user.agent) {
+      await this.agentService.deleteAgent(user.agent.id);
     }
 
     const result = await this.userRepository.remove(user as User);
@@ -69,90 +78,145 @@ export class UserService {
   async validateUserProfileCreationRequest(
     userData: CreateUserInput
   ): Promise<boolean> {
-    if (!userData.email || userData.email.length == 0)
-      throw new ValidationException(
-        `User profile creation (${userData.firstName}) missing required email`,
-        LogContext.COMMUNITY
-      );
-    const userCheck = await this.getUserByEmail(userData.email);
+    await this.isNameIdAvailableOrFail(userData.nameID);
+    const userCheck = await this.isRegisteredUser(userData.email);
     if (userCheck)
       throw new ValidationException(
         `User profile with the specified email (${userData.email}) already exists`,
         LogContext.COMMUNITY
       );
-    // Trim all values to remove space issues
+    // Trim values to remove space issues
     userData.email = userData.email.trim();
     return true;
   }
 
-  async saveUser(user: IUser): Promise<boolean> {
-    await this.userRepository.save(user);
-    return true;
+  async isNameIdAvailableOrFail(nameID: string) {
+    const userCount = await this.userRepository.count({
+      nameID: nameID,
+    });
+    if (userCount != 0)
+      throw new ValidationException(
+        `Unable to create User: the provided nameID is already taken: ${nameID}`,
+        LogContext.COMMUNITY
+      );
   }
 
-  //Find a user either by id or email
-  async getUserOrFail(userID: string): Promise<IUser> {
-    if (validator.isNumeric(userID)) {
-      const idInt: number = parseInt(userID);
-      return await this.getUserByIdOrFail(idInt);
-    }
-
-    return await this.getUserByEmailOrFail(userID);
+  async saveUser(user: IUser): Promise<IUser> {
+    return await this.userRepository.save(user);
   }
 
-  async getUserByIdOrFail(
-    userID: number,
+  async getUserOrFail(
+    userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    const user = await this.userRepository.findOne({ id: userID }, options);
-    if (!user)
+    let user: IUser | undefined;
+
+    if (this.validateEmail(userID)) {
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
+      );
+    } else if (userID.length === UUID_LENGTH) {
+      {
+        user = await this.userRepository.findOne(
+          {
+            id: userID,
+          },
+          options
+        );
+      }
+    } else {
+      user = await this.userRepository.findOne(
+        {
+          nameID: userID,
+        },
+        options
+      );
+    }
+
+    if (!user) {
       throw new EntityNotFoundException(
         `Unable to find user with given ID: ${userID}`,
         LogContext.COMMUNITY
       );
+    }
     return user;
   }
 
   async getUserByEmail(
-    email: string,
+    userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | undefined> {
-    return await this.userRepository.findOne({ email: email }, options);
-  }
+    let user: IUser | undefined;
 
-  async getUserByEmailOrFail(
-    email: string,
-    options?: FindOneOptions<User>
-  ): Promise<IUser> {
-    const user = await this.getUserByEmail(email, options);
-    if (!user)
-      throw new EntityNotFoundException(
-        `Unable to find user with given email: ${email}`,
-        LogContext.COMMUNITY
+    if (this.validateEmail(userID)) {
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
       );
+    }
+
     return user;
   }
 
-  async getUserWithGroups(email: string): Promise<IUser | undefined> {
-    const user = await this.getUserByEmail(email, {
-      relations: ['userGroups'],
+  validateEmail(email: string): boolean {
+    const regex = /\S+@\S+\.\S+/;
+    return regex.test(email);
+  }
+
+  async isRegisteredUser(email: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({ email: email });
+    if (user) return true;
+    return false;
+  }
+
+  async getUserAndCredentials(
+    userID: string
+  ): Promise<{ user: IUser; credentials: ICredential[] }> {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['agent'],
     });
 
-    if (!user) {
-      this.logger.verbose?.(
-        `No user with email ${email} exists!`,
-        LogContext.COMMUNITY
-      );
-      return undefined;
-    }
-
-    if (!user.userGroups) {
-      this.logger.verbose?.(
-        `User with email ${email} doesn't belong to any groups!`,
-        LogContext.COMMUNITY
+    if (!user.agent || !user.agent.credentials) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
       );
     }
+    return { user: user, credentials: user.agent.credentials };
+  }
 
+  async getUserAndAgent(
+    userID: string
+  ): Promise<{ user: IUser; agent: IAgent }> {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['agent'],
+    });
+
+    if (!user.agent) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
+    return { user: user, agent: user.agent };
+  }
+
+  async getUserWithAgent(userID: string): Promise<IUser> {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['agent'],
+    });
+
+    if (!user.agent || !user.agent.credentials) {
+      throw new EntityNotInitializedException(
+        `User Agent not initialized: ${userID}`,
+        LogContext.AUTH
+      );
+    }
     return user;
   }
 
@@ -160,13 +224,18 @@ export class UserService {
     return (await this.userRepository.find()) || [];
   }
 
-  // Note: explicitly do not support updating of email addresses
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID);
 
-    // Convert the data to json
-    if (userInput.name) {
-      user.name = userInput.name;
+    if (userInput.nameID) {
+      if (userInput.nameID !== user.nameID) {
+        // new NameID, check for uniqueness
+        await this.isNameIdAvailableOrFail(userInput.nameID);
+        user.nameID = userInput.nameID;
+      }
+    }
+    if (userInput.displayName) {
+      user.displayName = userInput.displayName;
     }
     if (userInput.firstName) {
       user.firstName = userInput.firstName;
@@ -187,78 +256,84 @@ export class UserService {
       user.gender = userInput.gender;
     }
 
-    await this.userRepository.save(user);
-
-    // Check the tagsets
-    if (userInput.profileData && user.profile) {
-      await this.profileService.updateProfile(userInput.profileData);
+    if (userInput.profileData) {
+      user.profile = await this.profileService.updateProfile(
+        userInput.profileData
+      );
     }
 
-    const populatedUser = await this.getUserByIdOrFail(user.id);
-
-    return populatedUser;
+    return await this.userRepository.save(user);
   }
 
-  getCommunity(entity: ICommunityable): ICommunity {
-    const community = entity.community;
-    if (!community)
+  async getAgent(user: IUser): Promise<IAgent> {
+    const userWithAgent = await this.getUserOrFail(user.id, {
+      relations: ['agent'],
+    });
+    const agent = userWithAgent.agent;
+    if (!agent)
       throw new EntityNotInitializedException(
-        `Community not initialised on entity: ${entity.id}`,
+        `User Agent not initialized: ${user.id}`,
+        LogContext.AUTH
+      );
+
+    return agent;
+  }
+
+  getProfile(user: IUser): IProfile {
+    const profile = user.profile;
+    if (!profile)
+      throw new EntityNotInitializedException(
+        `User Profile not initialized: ${user.id}`,
         LogContext.COMMUNITY
       );
-    return community;
+    return profile;
   }
 
-  // Membership related functionality
+  async usersWithCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<IUser[]> {
+    const matchingAgents = await this.agentService.findAgentsWithMatchingCredentials(
+      credentialCriteria
+    );
 
-  addGroupToEntity(
-    entities: IGroupable[],
-    entity: IGroupable,
-    group: IUserGroup
-  ) {
-    const existingEntity = entities.find(e => e.id === entity.id);
-    if (!existingEntity) {
-      //first time through
-      entities.push(entity);
-      entity.groups = [group];
-    } else {
-      existingEntity.groups?.push(group);
-    }
-  }
-
-  async getMemberOf(user: User): Promise<MemberOf> {
-    const membership = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.userGroups', 'userGroup')
-      .leftJoinAndSelect('userGroup.community', 'community')
-      .leftJoinAndSelect('userGroup.organisation', 'organisation')
-      .where('user.id = :userId')
-      .setParameters({ userId: `${user.id}` })
-      .getOne();
-
-    const memberOf = new MemberOf();
-    memberOf.communities = [];
-    memberOf.organisations = [];
-
-    if (!membership) return memberOf;
-    if (!membership.userGroups) return memberOf;
-
-    // Iterate over the groups
-    for (const group of membership?.userGroups) {
-      // Set flag on the group to block population of the members field
-      group.membersPopulationEnabled = false;
-      const community = group.community;
-      const organisation = group.organisation;
-
-      if (community) {
-        this.addGroupToEntity(memberOf.communities, community, group);
-        group.community = undefined;
-      } else if (organisation) {
-        this.addGroupToEntity(memberOf.organisations, organisation, group);
-        group.organisation = undefined;
+    const users: IUser[] = [];
+    for (const matchedAgent of matchingAgents) {
+      const agent = await this.agentService.getAgentOrFail(matchedAgent.id, {
+        relations: ['user'],
+      });
+      const userID = (agent as Agent).user?.id;
+      if (userID) {
+        const user = await this.getUserOrFail(userID, {
+          relations: ['agent'],
+        });
+        users.push(user);
       }
     }
+    return users;
+  }
 
-    return memberOf;
+  getAgentOrFail(user: IUser): IAgent {
+    const agent = user.agent;
+    if (!agent)
+      throw new EntityNotInitializedException(
+        `Unable to find agent for user: ${user.id}`,
+        LogContext.AUTH
+      );
+    return agent;
+  }
+
+  async hasMatchingCredential(
+    user: IUser,
+    credentialCriteria: CredentialsSearchInput
+  ) {
+    const agent = this.getAgentOrFail(user);
+    return await this.agentService.hasValidCredential(
+      agent.id,
+      credentialCriteria
+    );
+  }
+
+  async getUserCount(): Promise<number> {
+    return await this.userRepository.count();
   }
 }

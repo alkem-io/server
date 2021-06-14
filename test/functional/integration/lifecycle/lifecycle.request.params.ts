@@ -1,14 +1,6 @@
 import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth } from '@test/utils/graphql.request';
-
-export const lifecycleData = `
-lifecycle {
-  id
-  state
-  nextEvents
-  machineDef
-  templateId
-}`;
+import { lifecycleData } from '@test/utils/common-params';
 
 export const eventOnChallengeMutation = async (
   challengeId: string,
@@ -19,12 +11,14 @@ export const eventOnChallengeMutation = async (
     query: `mutation eventOnChallenge($challengeEventData: ChallengeEventInput!) {
       eventOnChallenge(challengeEventData: $challengeEventData) {
         id
-        ${lifecycleData}
+        lifecycle {
+          ${lifecycleData}
+        }
       }
     }`,
     variables: {
       challengeEventData: {
-        ID: parseFloat(challengeId),
+        ID: challengeId,
         eventName: `${eventsName}`,
       },
     },
@@ -42,12 +36,14 @@ export const eventOnOpportunityMutation = async (
     query: `mutation eventOnOpportunity($opportunityEventData: OpportunityEventInput!) {
       eventOnOpportunity(opportunityEventData: $opportunityEventData) {
         id
-        ${lifecycleData}
+        lifecycle {
+          ${lifecycleData}
+        }
       }
     }`,
     variables: {
       opportunityEventData: {
-        ID: parseFloat(opportunityId),
+        ID: opportunityId,
         eventName: `${eventsName}`,
       },
     },
@@ -65,12 +61,14 @@ export const eventOnProjectMutation = async (
     query: `mutation eventOnProject($projectEventData: ProjectEventInput!) {
       eventOnProject(projectEventData: $projectEventData) {
         id
-        ${lifecycleData}
+        lifecycle {
+          ${lifecycleData}
+        }
       }
     }`,
     variables: {
       projectEventData: {
-        ID: parseFloat(projectId),
+        ID: projectId,
         eventName: `${eventsName}`,
       },
     },
@@ -88,12 +86,14 @@ export const eventOnApplicationMutation = async (
     query: `mutation eventOnApplication($applicationEventData: ApplicationEventInput!) {
       eventOnApplication(applicationEventData: $applicationEventData) {
         id
-        ${lifecycleData}
+        lifecycle {
+          ${lifecycleData}
+        }
       }
     }`,
     variables: {
       applicationEventData: {
-        ID: parseFloat(applicationId),
+        ID: applicationId,
         eventName: `${eventsName}`,
       },
     },

@@ -1,64 +1,15 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql';
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToMany,
-  OneToMany,
-  OneToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  VersionColumn,
-} from 'typeorm';
+import { Entity, JoinColumn, ManyToMany, OneToMany, OneToOne } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { DID } from '@domain/agent/did/did.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
-import { Challenge } from '@domain/challenge';
-import { AuthorizationRoles } from '@core/authorization';
+import { Challenge } from '@domain/challenge/challenge';
+import { NameableEntity } from '@domain/common/nameable-entity';
+import { Agent } from '@domain/agent/agent';
 
 @Entity()
-@ObjectType()
-export class Organisation extends BaseEntity
+export class Organisation extends NameableEntity
   implements IOrganisation, IGroupable {
-  @Field(() => ID)
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @CreateDateColumn()
-  createdDate?: Date;
-
-  @UpdateDateColumn()
-  updatedDate?: Date;
-
-  @VersionColumn()
-  version?: number;
-
-  @Field(() => String, { nullable: false, description: '' })
-  @Column()
-  name: string;
-
-  @OneToOne(() => DID)
-  @JoinColumn()
-  DID!: DID;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'A short text identifier for this Organisation',
-  })
-  @Column()
-  textID: string;
-
-  @OneToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.host
-  )
-  hostedEcoverse?: Ecoverse;
-
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
@@ -77,13 +28,11 @@ export class Organisation extends BaseEntity
   )
   challenges!: Challenge[];
 
-  // The restricted group names at the challenge level
-  restrictedGroupNames?: string[];
+  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'CASCADE' })
+  @JoinColumn()
+  agent?: Agent;
 
-  constructor(textID: string) {
+  constructor() {
     super();
-    this.name = '';
-    this.textID = textID;
-    this.restrictedGroupNames = [AuthorizationRoles.Members];
   }
 }

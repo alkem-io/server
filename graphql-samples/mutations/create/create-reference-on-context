@@ -1,4 +1,4 @@
-mutation createReferenceOnContext($referenceInput: CreateReferenceInput!) {
+mutation createReferenceOnContext($referenceInput: CreateReferenceOnContextInput!) {
   createReferenceOnContext(referenceInput: $referenceInput) {
     name,
     uri,
@@ -9,7 +9,7 @@ mutation createReferenceOnContext($referenceInput: CreateReferenceInput!) {
 Variables:
 {
   "referenceInput": {
-      "parentID": 1,
+      "contextID": "uuid",
       "name": "wow",
       "uri": "something",
       "description": "this works"

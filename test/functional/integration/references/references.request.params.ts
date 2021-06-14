@@ -1,5 +1,6 @@
 import { TestUser } from '../../../utils/token.helper';
 import { graphqlRequestAuth } from '../../../utils/graphql.request';
+import { referencesData } from '@test/utils/common-params';
 
 export const createReferenceOnContextMutation = async (
   contextId: any,
@@ -9,18 +10,15 @@ export const createReferenceOnContextMutation = async (
 ) => {
   const requestParams = {
     operationName: null,
-    query: `mutation createReferenceOnContext($referenceInput: CreateReferenceInput!) {
+    query: `mutation createReferenceOnContext($referenceInput: CreateReferenceOnContextInput!) {
       createReferenceOnContext(referenceInput: $referenceInput) {
-        id
-        name,
-        uri,
-        description
+        ${referencesData}
       }
     }`,
     variables: {
       referenceInput: {
-        parentID: parseFloat(contextId),
-        name: `${refName}`,
+        contextID: contextId,
+        name: `${refName}`, 
         uri: `${refUri}`,
         description: `${refDescription}`,
       },

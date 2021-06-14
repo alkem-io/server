@@ -1,5 +1,5 @@
 mutation deleteUserApplication($deleteData: DeleteApplicationInput!) {
-  removeUsdeleteUserApplicationerApplication(deleteData: $deleteData) {
+  deleteUserApplication(deleteData: $deleteData) {
     id
   }
 }
@@ -7,6 +7,6 @@ mutation deleteUserApplication($deleteData: DeleteApplicationInput!) {
 Variables:
 {
   "deleteData": {
-    "ID": 7
+    "ID": "uuid"
   }
 }

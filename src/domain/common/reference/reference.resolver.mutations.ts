@@ -1,41 +1,37 @@
-import { SelfManagement } from '@common/decorators';
-import { Roles } from '@common/decorators/roles.decorator';
-import {
-  DeleteReferenceInput,
-  IReference,
-  Reference,
-} from '@domain/common/reference';
+import { CurrentUser } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AgentInfo } from '@core/authentication';
+import { GraphqlGuard } from '@core/authorization';
+import { DeleteReferenceInput, IReference } from '@domain/common/reference';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { UpdateReferenceInput } from './reference.dto.update';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ReferenceService } from './reference.service';
 
 @Resolver()
 export class ReferenceResolverMutations {
-  constructor(private referenceService: ReferenceService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private referenceService: ReferenceService
+  ) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @SelfManagement()
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Reference, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IReference, {
     description: 'Deletes the specified Reference.',
   })
   async deleteReference(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteReferenceInput
   ): Promise<IReference> {
+    const reference = await this.referenceService.getReferenceOrFail(
+      deleteData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      reference.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete reference: ${reference.id}`
+    );
     return await this.referenceService.deleteReference(deleteData);
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => Reference, {
-    description: 'Update the specified Reference.',
-  })
-  async updateReference(
-    @Args('updateData') updateData: UpdateReferenceInput
-  ): Promise<IReference> {
-    return await this.referenceService.updateReference(updateData);
   }
 }

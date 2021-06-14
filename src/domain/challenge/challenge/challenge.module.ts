@@ -1,5 +1,4 @@
 import { ContextModule } from '@domain/context/context/context.module';
-import { OpportunityModule } from '@domain/challenge/opportunity/opportunity.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,24 +9,33 @@ import { ChallengeService } from './challenge.service';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
+import { NamingModule } from '@src/services/domain/naming/naming.module';
+import { ChallengeAuthorizationService } from './challenge.service.authorization';
+import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 
 @Module({
   imports: [
+    AuthorizationEngineModule,
     ContextModule,
+    BaseChallengeModule,
     CommunityModule,
-    TagsetModule,
     OpportunityModule,
+    TagsetModule,
     OrganisationModule,
+    NamingModule,
     LifecycleModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [
     ChallengeService,
+    ChallengeAuthorizationService,
     ChallengeResolverMutations,
     ChallengeResolverFields,
     ChallengeLifecycleOptionsProvider,
   ],
-  exports: [ChallengeService],
+  exports: [ChallengeService, ChallengeAuthorizationService],
 })
 export class ChallengeModule {}

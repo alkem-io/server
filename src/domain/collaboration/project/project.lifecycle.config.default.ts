@@ -1,7 +1,7 @@
 export const projectLifecycleConfigDefault = {
   id: 'project-lifecycle-default',
   context: {
-    parentID: '-1',
+    parentID: '',
   },
   initial: 'new',
   states: {

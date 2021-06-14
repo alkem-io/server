@@ -1,6 +1,6 @@
 mutation UpdateChallenge($challengeData: UpdateChallengeInput!) {
   updateChallenge(challengeData: $challengeData) {
-    name,
+    displayName,
     id
   }
 }
@@ -9,10 +9,9 @@ variables:
 {
   "challengeData":
 		{
-  	  "ID": "1",
-      "name": "Balance the grid22",
+  	  "ID": "uuid",
+      "displayName": "Balance the grid22",
       "context": {
-        "ID": "2",
         "references": [
               {
                 "ID": 1,

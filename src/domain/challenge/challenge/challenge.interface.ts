@@ -1,17 +1,17 @@
-import { IContext } from '@domain/context/context/context.interface';
-import { IOpportunity } from '@domain/challenge/opportunity/opportunity.interface';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { ICommunity } from '@domain/community/community';
-import { IOrganisation } from '@domain/community';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-export interface IChallenge {
-  id: number;
-  name: string;
-  textID: string;
-  context?: IContext;
-  community?: ICommunity;
-  lifecycle?: ILifecycle;
-  tagset?: ITagset;
+import { IOrganisation } from '@domain/community/organisation';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { IBaseChallenge } from '../base-challenge/base.challenge.interface';
+
+@ObjectType('Challenge')
+export abstract class IChallenge extends IBaseChallenge {
+  childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
+
+  @Field(() => [IOrganisation], {
+    description: 'The Organisations that are leading this Challenge.',
+  })
   leadOrganisations?: IOrganisation[];
+
+  ecoverseID!: string;
 }

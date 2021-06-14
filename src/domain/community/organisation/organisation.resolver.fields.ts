@@ -1,40 +1,38 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { Organisation } from './organisation.entity';
-import { User } from '@domain/community/user/user.entity';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { Profiling } from '@src/common/decorators';
-import { Profile } from '@domain/community/profile/profile.entity';
 import { OrganisationService } from './organisation.service';
 import {
   ValidationException,
-  GroupNotInitializedException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
-
-@Resolver(() => Organisation)
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
+import { IOrganisation } from '@domain/community/organisation';
+import { IUserGroup } from '@domain/community/user-group';
+import { IUser } from '@domain/community/user';
+import { IProfile } from '@domain/community/profile';
+import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { IAgent } from '@domain/agent/agent';
+@Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
   constructor(
-    private organisationService: OrganisationService,
-    private userGroupService: UserGroupService
+    private authorizationEngine: AuthorizationEngineService,
+    private organisationService: OrganisationService
   ) {}
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('groups', () => [UserGroup], {
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
     description: 'Groups defined on this organisation.',
   })
   @Profiling.api
   async groups(@Parent() organisation: Organisation) {
     // get the organisation with the groups loaded
-    const organisationGroups = await this.organisationService.getOrganisationByIdOrFail(
+    const organisationGroups = await this.organisationService.getOrganisationOrFail(
       organisation.id,
       {
         relations: ['groups'],
@@ -43,39 +41,24 @@ export class OrganisationResolverFields {
     const groups = organisationGroups.groups;
     if (!groups)
       throw new ValidationException(
-        `No groups on organisation: ${organisation.name}`,
+        `No groups on organisation: ${organisation.displayName}`,
         LogContext.COMMUNITY
       );
     return groups;
   }
 
-  @Roles(AuthorizationRoles.Members)
-  @UseGuards(GqlAuthGuard)
-  @ResolveField('members', () => [User], {
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('members', () => [IUser], {
     nullable: true,
-    description: 'Users that are contributing to this organisation.',
+    description: 'All users that are members of this Organisation.',
   })
   @Profiling.api
-  async contributors(@Parent() organisation: Organisation) {
-    const group = await this.userGroupService.getGroupByName(
-      organisation,
-      AuthorizationRoles.Members
-    );
-    if (!group)
-      throw new GroupNotInitializedException(
-        `Unable to locate members group on organisation: ${organisation.name}`,
-        LogContext.COMMUNITY
-      );
-    const members = group.members;
-    if (!members)
-      throw new GroupNotInitializedException(
-        `Members group not initialised on organisation: ${organisation.name}`,
-        LogContext.COMMUNITY
-      );
-    return members;
+  async members(@Parent() organisation: Organisation) {
+    return await this.organisationService.getMembers(organisation);
   }
 
-  @ResolveField('profile', () => Profile, {
+  @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this organisation.',
   })
@@ -84,11 +67,21 @@ export class OrganisationResolverFields {
     const profile = organisation.profile;
     if (!profile) {
       throw new EntityNotInitializedException(
-        `Profile not initialised on organisation: ${organisation.name}`,
+        `Profile not initialised on organisation: ${organisation.displayName}`,
         LogContext.COMMUNITY
       );
     }
 
     return organisation.profile;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('agent', () => IAgent, {
+    nullable: true,
+    description: 'The Agent representing this User.',
+  })
+  @Profiling.api
+  async agent(@Parent() organisation: Organisation): Promise<IAgent> {
+    return await this.organisationService.getAgent(organisation);
   }
 }

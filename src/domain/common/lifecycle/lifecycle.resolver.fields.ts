@@ -1,10 +1,8 @@
+import { ILifecycle } from '@domain/common/lifecycle';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-
 import { Profiling } from '@src/common/decorators';
-import { Lifecycle } from './lifecycle.entity';
 import { LifecycleService } from './lifecycle.service';
-
-@Resolver(() => Lifecycle)
+@Resolver(() => ILifecycle)
 export class LifecycleResolverFields {
   constructor(private lifecycleService: LifecycleService) {}
 
@@ -13,7 +11,7 @@ export class LifecycleResolverFields {
     description: 'The current state of this Lifecycle.',
   })
   @Profiling.api
-  async state(@Parent() lifecycle: Lifecycle) {
+  async state(@Parent() lifecycle: ILifecycle) {
     return await this.lifecycleService.getState(lifecycle);
   }
 
@@ -22,16 +20,16 @@ export class LifecycleResolverFields {
     description: 'The next events of this Lifecycle.',
   })
   @Profiling.api
-  async nextEvents(@Parent() lifecycle: Lifecycle) {
+  async nextEvents(@Parent() lifecycle: ILifecycle) {
     return await this.lifecycleService.getNextEvents(lifecycle);
   }
 
-  @ResolveField('templateId', () => String, {
+  @ResolveField('templateName', () => String, {
     nullable: true,
-    description: 'The Lifecycle template identifier.',
+    description: 'The Lifecycle template name.',
   })
   @Profiling.api
-  async templateId(@Parent() lifecycle: Lifecycle) {
+  async templateName(@Parent() lifecycle: ILifecycle) {
     return await this.lifecycleService.getTemplateIdentifier(lifecycle);
   }
 }

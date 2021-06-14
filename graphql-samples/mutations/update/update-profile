@@ -8,7 +8,7 @@ mutation updateProfile($profileData: UpdateProfileInput!) {
 Variables:
 {
   "profileData": {
-    "ID": 1,
+    "ID": "uuid",
     "description": "some description",
     "avatar": "http://someUri"
   }

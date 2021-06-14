@@ -5,19 +5,16 @@ import {
   SMALL_TEXT_LENGTH,
 } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
+import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity';
 
 @InputType()
-export class UpdateReferenceInput {
-  @Field({ nullable: false })
-  ID!: number;
-
+export class UpdateReferenceInput extends UpdateBaseCherrytwistInput {
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
   @Field({ nullable: true })
   @IsOptional()
-  //@IsUrl()
   @MaxLength(MID_TEXT_LENGTH)
   uri?: string;
 

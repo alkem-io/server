@@ -1,24 +1,14 @@
-import { TextID } from '@domain/common/scalars';
+import { CreateNameableInput } from '@domain/common/nameable-entity';
+import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
 import { InputType, Field } from '@nestjs/graphql';
-import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
-import {
-  IsUniqueTextId,
-  TextIdType,
-} from '@src/core/validation/constraints/unique.text.id';
+import { LONG_TEXT_LENGTH } from '@src/common/constants';
+
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class CreateProjectInput {
-  @Field({ nullable: false })
-  parentID!: number;
-
-  @Field({ nullable: false })
-  @MaxLength(SMALL_TEXT_LENGTH)
-  name!: string;
-
-  @Field(() => TextID, { nullable: false })
-  @IsUniqueTextId(TextIdType.project)
-  textID!: string;
+export class CreateProjectInput extends CreateNameableInput {
+  @Field(() => UUID_NAMEID, { nullable: false })
+  opportunityID!: string;
 
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)

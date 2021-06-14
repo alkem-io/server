@@ -1,0 +1,52 @@
+{
+  "users": [
+    {
+      "email": "admin@cherrytwist.org",
+      "firstName": "admin",
+      "lastName": "cherrytwist",
+      "credentials": [
+        {
+          "type": "global-admin"
+        }
+      ]
+    },
+    {
+      "email": "community.admin@cherrytwist.org",
+      "firstName": "community",
+      "lastName": "admin",
+      "credentials": [
+        {
+          "type": "global-admin-community"
+        }
+      ]
+    },
+    {
+      "email": "ecoverse.admin@cherrytwist.org",
+      "firstName": "ecoverse",
+      "lastName": "admin",
+      "credentials": [
+        {
+          "type": "global-admin-challenges"
+        }
+      ]
+    },
+    {
+      "email": "ecoverse.member@cherrytwist.org",
+      "firstName": "ecoverse",
+      "lastName": "member",
+      "credentials": []
+    },
+    {
+      "email": "qa.user@cherrytwist.org",
+      "firstName": "Qa",
+      "lastName": "User",
+      "credentials": []
+    },
+    {
+      "email": "non.ecoverse@cherrytwist.org",
+      "firstName": "non",
+      "lastName": "ecoverse",
+      "credentials": []
+    }
+  ]
+}

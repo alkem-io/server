@@ -4,12 +4,12 @@ import helmet from 'helmet';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
 import './config/aliases';
-import { IServiceConfig } from './common/interfaces/service.config.interface';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { HttpExceptionsFilter } from './core/error-handling/http.exceptions.filter';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
 import { graphqlUploadExpress } from 'graphql-upload';
+import { ConfigurationTypes } from '@common/enums';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -23,10 +23,10 @@ const bootstrap = async () => {
 
   await bootstrapService.bootstrapEcoverse();
   app.enableCors({
-    origin: configService.get<IServiceConfig>('service')?.corsOrigin,
-    allowedHeaders: configService.get<IServiceConfig>('service')
-      ?.corsAllowedHeaders,
-    methods: configService.get<IServiceConfig>('service')?.corsMethods,
+    origin: configService.get(ConfigurationTypes.Security)?.cors?.origin,
+    allowedHeaders: configService.get(ConfigurationTypes.Security)?.cors
+      ?.allowedHeaders,
+    methods: configService.get(ConfigurationTypes.Security)?.cors?.methods,
   });
 
   app.use(faviconMiddleware);
@@ -38,12 +38,13 @@ const bootstrap = async () => {
 
   app.use(
     graphqlUploadExpress({
-      maxFileSize: configService.get('ipfs').maxFileSize,
+      maxFileSize: configService.get(ConfigurationTypes.Storage)?.ipfs
+        ?.maxFileSize,
     })
   );
 
   await app.listen(
-    configService.get<IServiceConfig>('service')?.graphqlEndpointPort as number
+    configService.get(ConfigurationTypes.Hosting)?.port as number
   );
 };
 

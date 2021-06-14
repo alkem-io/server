@@ -1,6 +1,6 @@
 mutation UpdateUser($userData: UpdateUserInput!) {
   updateUser(userData: $userData) {
-    name,
+    displayName,
   	email
   }
 }
@@ -10,8 +10,8 @@ query variables:
 {
   "userData":
   {
-    "ID": 7,
-    "name": "Valentin",
+    "ID": "uuid",
+    "displayName": "Valentin",
     "city": "Sofia"
   }
 }

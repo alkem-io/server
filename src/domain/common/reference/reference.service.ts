@@ -10,6 +10,8 @@ import {
   Reference,
   IReference,
 } from '@domain/common/reference';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+
 @Injectable()
 export class ReferenceService {
   constructor(
@@ -25,6 +27,7 @@ export class ReferenceService {
       referenceInput.uri || '',
       referenceInput.description
     );
+    reference.authorization = new AuthorizationDefinition();
     await this.referenceRepository.save(reference);
     return reference;
   }
@@ -71,7 +74,7 @@ export class ReferenceService {
       for (const referenceData of referencesData) {
         // check the reference being update is part of the current entity
         const reference = references.find(
-          reference => reference.id == referenceData.ID
+          reference => reference.id === referenceData.ID
         );
         if (!reference)
           throw new EntityNotFoundException(
@@ -84,7 +87,7 @@ export class ReferenceService {
     return references;
   }
 
-  async getReferenceOrFail(referenceID: number): Promise<IReference> {
+  async getReferenceOrFail(referenceID: string): Promise<IReference> {
     const reference = await this.referenceRepository.findOne({
       id: referenceID,
     });
@@ -107,5 +110,9 @@ export class ReferenceService {
       ...result,
       id,
     };
+  }
+
+  async saveReference(reference: IReference): Promise<IReference> {
+    return await this.referenceRepository.save(reference);
   }
 }

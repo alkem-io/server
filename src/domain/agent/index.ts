@@ -1,1 +1,2 @@
-export * from './did';
+export * from './agent';
+export * from './credential';

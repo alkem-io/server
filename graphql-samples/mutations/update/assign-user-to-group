@@ -4,7 +4,7 @@ mutation assignUserToGroup($membershipData: AssignUserGroupMemberInput!) {
     id,
     members {
       id,
-      name
+      nameID
     }
   }
 }
@@ -12,7 +12,7 @@ mutation assignUserToGroup($membershipData: AssignUserGroupMemberInput!) {
 Variables:
 {
   "membershipData": {
-    "userID": 7,
-    "groupID": 1
+    "userID": "uuid",
+    "groupID": "uuid"
   }
 }

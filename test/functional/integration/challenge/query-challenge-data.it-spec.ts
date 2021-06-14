@@ -2,44 +2,50 @@ import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import {
   createChallangeMutation,
+  getChallengeData,
   getChallengeOpportunity,
 } from '@test/functional/integration/challenge/challenge.request.params';
 import {
-  createOpportunityOnChallengeMutation,
-  queryOpportunity,
+  createChildChallengeMutation,
+  createOpportunityMutation,
 } from '../opportunity/opportunity.request.params';
 import {
   addChallengeLeadToOrganisationMutation,
-  getChallenge,
-  getChallengeGroups,
   removeChallengeLeadFromOrganisationMutation,
   updateChallangeMutation,
 } from './challenge.request.params';
 import { createOrganisationMutation } from '../organisation/organisation.request.params';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
 
-let data: TestDataServiceInitResult;
+const userNameID = 'Qa_User';
 let opportunityName = '';
 let opportunityTextId = '';
 let opportunityId = '';
 let challengeName = '';
 let challengeId = '';
 let uniqueTextId = '';
+let uniqueId = '';
 let organisationName = '';
 let organisationId = '';
-let organisationIdService = '';
+let organisationIdTwo = '';
 let taglineText = '';
 const refName = 'refName';
 const refUri = 'https://test.com';
 const tagsArray = ['tag1', 'tag2'];
 let groupName = '';
-let userId = '';
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
-  data = appSingleton.Instance.getData();
-  organisationIdService = data.organisationId.toString();
-  userId = data.userId.toString();
+  uniqueId = Math.random()
+    .toString(36)
+    .slice(-6);
+  organisationName = `QA organisationName ${uniqueId}`;
+
+  // Create Organisation
+  const responseCreateOrganisation = await createOrganisationMutation(
+    organisationName,
+    'org' + uniqueId
+  );
+  organisationId = responseCreateOrganisation.body.data.createOrganisation.id;
 });
 
 afterAll(async () => {
@@ -52,10 +58,11 @@ beforeEach(async () => {
     .slice(-6);
   challengeName = `testChallenge ${uniqueTextId}`;
   opportunityName = `opportunityName ${uniqueTextId}`;
-  opportunityTextId = `${uniqueTextId}`;
+  opportunityTextId = `opp${uniqueTextId}`;
   groupName = `groupName ${uniqueTextId}`;
   organisationName = `organisationName ${uniqueTextId}`;
   taglineText = `taglineText ${uniqueTextId}`;
+  // Create Challenge
   const responseCreateChallenge = await createChallangeMutation(
     challengeName,
     uniqueTextId
@@ -64,9 +71,9 @@ beforeEach(async () => {
 });
 
 describe('Query Challenge data', () => {
-  test('should query groups through challenge', async () => {
+  test.skip('should query groups through challenge', async () => {
     // Act
-    const responseQueryData = await getChallengeGroups(challengeId);
+    const responseQueryData = await getChallengeData(challengeId);
 
     // Assert
     expect(
@@ -80,7 +87,7 @@ describe('Query Challenge data', () => {
   test('should query opportunity through challenge', async () => {
     // Act
     // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+    const responseCreateOpportunityOnChallenge = await createOpportunityMutation(
       challengeId,
       opportunityName,
       opportunityTextId
@@ -96,10 +103,11 @@ describe('Query Challenge data', () => {
       responseQueryData.body.data.ecoverse.challenge.opportunities
     ).toHaveLength(1);
     expect(
-      responseQueryData.body.data.ecoverse.challenge.opportunities[0].name
+      responseQueryData.body.data.ecoverse.challenge.opportunities[0]
+        .displayName
     ).toEqual(opportunityName);
     expect(
-      responseQueryData.body.data.ecoverse.challenge.opportunities[0].textID
+      responseQueryData.body.data.ecoverse.challenge.opportunities[0].nameID
     ).toEqual(opportunityTextId);
     expect(
       responseQueryData.body.data.ecoverse.challenge.opportunities[0].id
@@ -109,22 +117,22 @@ describe('Query Challenge data', () => {
   test('should create opportunity and query the data', async () => {
     // Act
     // Create Opportunity
-    const responseCreateOpportunityOnChallenge = await createOpportunityOnChallengeMutation(
+    const responseCreateOpportunityOnChallenge = await createChildChallengeMutation(
       challengeId,
       opportunityName,
       opportunityTextId
     );
 
     const createOpportunityData =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity;
+      responseCreateOpportunityOnChallenge.body.data.createChildChallenge;
 
     opportunityId =
-      responseCreateOpportunityOnChallenge.body.data.createOpportunity.id;
+      responseCreateOpportunityOnChallenge.body.data.createChildChallenge.id;
 
     // Query Opportunity data
-    const requestQueryOpportunity = await queryOpportunity(opportunityId);
+    const requestQueryOpportunity = await getChallengeData(opportunityId);
     const requestOpportunityData =
-      requestQueryOpportunity.body.data.ecoverse.opportunity;
+      requestQueryOpportunity.body.data.ecoverse.challenge;
 
     // Assert
     expect(responseCreateOpportunityOnChallenge.status).toBe(200);
@@ -146,20 +154,20 @@ describe('Query Challenge data', () => {
     const updatedChallenge = response.body.data.updateChallenge;
 
     // Act
-    const getChallengeData = await getChallenge(challengeId);
+    const getChallengeDatas = await getChallengeData(challengeId);
 
     // Assert
     expect(response.status).toBe(200);
-    expect(updatedChallenge.name).toEqual(challengeName + 'change');
+    expect(updatedChallenge.displayName).toEqual(challengeName + 'change');
     expect(updatedChallenge.context.tagline).toEqual(taglineText);
     expect(updatedChallenge.tagset.tags).toEqual(tagsArray);
-    expect(getChallengeData.body.data.ecoverse.challenge.name).toEqual(
+    expect(getChallengeDatas.body.data.ecoverse.challenge.displayName).toEqual(
       challengeName + 'change'
     );
     expect(
-      getChallengeData.body.data.ecoverse.challenge.context.tagline
+      getChallengeDatas.body.data.ecoverse.challenge.context.tagline
     ).toEqual(taglineText);
-    expect(getChallengeData.body.data.ecoverse.challenge.tagset.tags).toEqual(
+    expect(getChallengeDatas.body.data.ecoverse.challenge.tagset.tags).toEqual(
       tagsArray
     );
   });
@@ -167,7 +175,7 @@ describe('Query Challenge data', () => {
   test('should add challange lead to organisation', async () => {
     // Act
     const response = await addChallengeLeadToOrganisationMutation(
-      organisationIdService,
+      organisationId,
       challengeId
     );
     // Assert
@@ -186,12 +194,12 @@ describe('Query Challenge data', () => {
 
     // Act
     const responseFirstChallengeLead = await addChallengeLeadToOrganisationMutation(
-      organisationIdService,
+      organisationId,
       challengeId
     );
 
     const responseSecondhallengeLead = await addChallengeLeadToOrganisationMutation(
-      organisationIdService,
+      organisationId,
       secondChallengeId
     );
 
@@ -212,16 +220,17 @@ describe('Query Challenge data', () => {
       organisationName,
       uniqueTextId + 'k'
     );
-    organisationId = createOrganisationResponse.body.data.createOrganisation.id;
+    organisationIdTwo =
+      createOrganisationResponse.body.data.createOrganisation.id;
 
     // Act
     const responseFirstOrganisation = await addChallengeLeadToOrganisationMutation(
-      organisationIdService,
+      organisationId,
       challengeId
     );
 
     const responseSecondOrganisation = await addChallengeLeadToOrganisationMutation(
-      organisationId,
+      organisationIdTwo,
       challengeId
     );
 
@@ -239,12 +248,12 @@ describe('Query Challenge data', () => {
   test('should throw error, when try to add the same challnge to organisation as a lead ', async () => {
     // Act
     const responseOne = await addChallengeLeadToOrganisationMutation(
-      organisationIdService,
+      organisationId,
       challengeId
     );
 
     const responseTwo = await addChallengeLeadToOrganisationMutation(
-      organisationIdService,
+      organisationId,
       challengeId
     );
 
@@ -253,20 +262,20 @@ describe('Query Challenge data', () => {
     expect(responseOne.body.data.assignChallengeLead.id).toEqual(challengeId);
     expect(responseTwo.status).toBe(200);
     expect(responseTwo.text).toContain(
-      `Community ${challengeId} already has an organisation with the provided organisation ID: ${organisationIdService}`
+      `Challenge ${uniqueTextId} already has an organisation with the provided organisation ID: ${organisationId}`
     );
   });
 
   test('should remove challange lead from organisation', async () => {
     // Act
     const responseAddCL = await addChallengeLeadToOrganisationMutation(
-      organisationIdService,
+      organisationId,
       challengeId
     );
 
     // Act
     const responseRemoveCL = await removeChallengeLeadFromOrganisationMutation(
-      organisationIdService,
+      organisationId,
       challengeId
     );
 

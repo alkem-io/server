@@ -1,7 +1,5 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { DeleteBaseCherrytwistInput } from '@domain/common/base-entity';
+import { InputType } from '@nestjs/graphql';
 
 @InputType()
-export class DeleteTagsetInput {
-  @Field({ nullable: false })
-  ID!: number;
-}
+export class DeleteTagsetInput extends DeleteBaseCherrytwistInput {}

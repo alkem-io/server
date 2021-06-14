@@ -5,6 +5,7 @@ import {
 } from './user.request.params';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
+import { response } from 'express';
 
 let userName = '';
 let userId = '';
@@ -25,7 +26,7 @@ beforeEach(async () => {
   uniqueId = Math.random()
     .toString(12)
     .slice(-6);
-  userName = `testUser${uniqueId}`;
+  userName = `testuser${uniqueId}`;
   userPhone = `userPhone ${uniqueId}`;
   userEmail = `${uniqueId}@test.com`;
 
@@ -40,7 +41,7 @@ describe('Remove user', () => {
 
     // Assert
     expect(responseQuery.status).toBe(200);
-    expect(responseQuery.body.data.deleteUser.name).toEqual(userName);
+    expect(responseQuery.body.data.deleteUser.nameID).toEqual(userName);
   });
 
   test('should receive a message for removing already removed user', async () => {
@@ -59,12 +60,14 @@ describe('Remove user', () => {
 
   test('should receive a message for removing unexisting user', async () => {
     // Act
-    const responseQuery = await removeUserMutation(77777);
+    const responseQuery = await removeUserMutation(
+      '180f55ab-2286-415d-952c-c588c5b6f533'
+    );
 
     // Assert
     expect(responseQuery.status).toBe(200);
     expect(responseQuery.text).toContain(
-      'Unable to find user with given ID: 77777'
+      'Unable to find user with given ID: 180f55ab-2286-415d-952c-c588c5b6f533'
     );
   });
 

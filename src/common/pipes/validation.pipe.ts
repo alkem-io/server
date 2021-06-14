@@ -11,10 +11,7 @@ export class ValidationPipe implements PipeTransform<any> {
       return value;
     }
     const object = plainToClass(metatype, value);
-    // const opportunityHandler = new OpportunityHandler();
-    // const actorHandler = new ActorHandler();
     const baseHandler = new BaseHandler();
-    // opportunityHandler.setNext(actorHandler).setNext(baseHandler);
     await this.validate(baseHandler, object, metatype);
 
     return value;

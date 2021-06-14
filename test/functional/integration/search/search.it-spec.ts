@@ -1,36 +1,15 @@
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
-import {
-  createChallangeMutation,
-  removeChallangeMutation,
-} from '@test/functional/integration/challenge/challenge.request.params';
 import { createOrganisationMutation } from '../organisation/organisation.request.params';
-import {
-  createGroupMutation,
-  removeUserGroupMutation,
-} from '../group/group.request.params';
 import { searchMutation } from '../search/search.request.params';
-import {
-  createUserMutation,
-  removeUserMutation,
-} from '@test/functional/e2e/user-management/user.request.params';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
-import { createGroupOnCommunityMutation } from '../community/community.request.params';
+import { getUser } from '@test/functional/e2e/user-management/user.request.params';
 
-let data: TestDataServiceInitResult;
-//let userId: null
-
+const userNameID = 'Qa_User';
 const userName = 'Qa User';
-let userId: number;
-let groupName = '';
-let ecoverseGroupId = '';
 let organisationName = '';
 let organisationId = '';
-let communityGroupId = '';
-let challengeName = '';
-let challengeCommunityId = '';
 let uniqueTextId = '';
-const filterAll = ['user', 'group', 'organisation'];
+const typeFilterAll = ['user', 'organisation'];
 const filterOnlyUser = ['user'];
 const filterNo: never[] = [];
 const termUserOnly = ['User'];
@@ -49,12 +28,15 @@ const termTooLong = [
   'User',
   'QA',
 ];
+let userId = async (): Promise<string> => {
+  const getUserId = await getUser(userNameID);
+  let response = getUserId.body.data.user.id;
+  return response;
+};
 const termAllScored = ['QA', 'QA', 'user', 'mm'];
 
 beforeAll(async () => {
   if (!appSingleton.Instance.app) await appSingleton.Instance.initServer();
-  data = appSingleton.Instance.getData();
-  userId = data.userId;
 });
 
 afterAll(async () => {
@@ -65,9 +47,7 @@ beforeEach(async () => {
   uniqueTextId = Math.random()
     .toString(36)
     .slice(-6);
-  groupName = `QA groupName ${uniqueTextId}`;
   organisationName = `QA organisationName ${uniqueTextId}`;
-  challengeName = `testChallenge ${uniqueTextId}`;
 
   // Create organisation
   const responseCreateOrganisation = await createOrganisationMutation(
@@ -75,90 +55,41 @@ beforeEach(async () => {
     'org' + uniqueTextId
   );
   organisationId = responseCreateOrganisation.body.data.createOrganisation.id;
-
-  // Create Challenge
-  const responseCreateChallenge = await createChallangeMutation(
-    challengeName,
-    uniqueTextId
-  );
-  const challengeId = responseCreateChallenge.body.data.createChallenge.id;
-  challengeCommunityId =
-    responseCreateChallenge.body.data.createChallenge.community.id;
-
-  // Create challenge community group
-  const responseCreateGroupOnCommunnity = await createGroupOnCommunityMutation(
-    challengeCommunityId,
-    groupName
-  );
-  communityGroupId =
-    responseCreateGroupOnCommunnity.body.data.createGroupOnCommunity.id;
 });
 
 describe('Query Challenge data', () => {
-  afterEach(async () => {
-    //await removeUserMutation(userId);
-    await removeUserGroupMutation(communityGroupId);
-  });
   test('should search with all filters applied', async () => {
     // Act
-    const responseSearchData = await searchMutation(termAll, filterAll);
-
+    const responseSearchData = await searchMutation(termAll, typeFilterAll);
     // Assert
     expect(responseSearchData.body.data.search).toContainObject({
       terms: termAll,
       score: 10,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
-    });
-
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: termAll,
-      score: 10,
       result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
+        __typename: 'User',
+        id: `${await userId()}`,
+        displayName: `${userName}`,
       },
     });
+
     expect(responseSearchData.body.data.search).toContainObject({
       terms: termAll,
       score: 10,
       result: {
         __typename: 'Organisation',
-        name: `${organisationName}`,
         id: `${organisationId}`,
+        displayName: `${organisationName}`,
       },
     });
   });
 
   test('should search without filters', async () => {
     // Act
-    const responseSearchData = await searchMutation(termAll, filterNo);
+    const responseSearchData = await searchMutation(filterNo, typeFilterAll);
 
     // Assert
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: termAll,
-      score: 10,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
-    });
 
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: termAll,
-      score: 10,
-      result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: termAll,
-      score: 10,
-      result: {
-        __typename: 'Organisation',
-        name: `${organisationName}`,
-        id: `${organisationId}`,
-      },
-    });
+    expect(responseSearchData.body.data.search).toEqual([]);
   });
 
   test('should search only for filtered users', async () => {
@@ -169,94 +100,85 @@ describe('Query Challenge data', () => {
     expect(responseSearchData.body.data.search).toContainObject({
       terms: termAll,
       score: 10,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
+      result: {
+        __typename: 'User',
+        id: `${await userId()}`,
+        displayName: `${userName}`,
+      },
     });
 
     expect(responseSearchData.body.data.search).not.toContainObject({
       terms: termAll,
       score: 10,
       result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
-    expect(responseSearchData.body.data.search).not.toContainObject({
-      terms: termAll,
-      score: 10,
-      result: {
         __typename: 'Organisation',
-        name: `${organisationName}`,
         id: `${organisationId}`,
+        displayName: `${organisationName}`,
       },
     });
   });
 
   test('should search users triple score', async () => {
     // Act
-    const responseSearchData = await searchMutation(termAllScored, filterAll);
+    const responseSearchData = await searchMutation(
+      termAllScored,
+      typeFilterAll
+    );
 
     // Assert
     expect(responseSearchData.body.data.search).toContainObject({
       terms: ['QA', 'user'],
       score: 30,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
+      result: {
+        __typename: 'User',
+        id: `${await userId()}`,
+        displayName: `${userName}`,
+      },
     });
 
     expect(responseSearchData.body.data.search).toContainObject({
       terms: ['QA'],
       score: 20,
       result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
-    expect(responseSearchData.body.data.search).toContainObject({
-      terms: ['QA'],
-      score: 20,
-      result: {
         __typename: 'Organisation',
-        name: `${organisationName}`,
         id: `${organisationId}`,
+        displayName: `${organisationName}`,
       },
     });
   });
 
   test('should search term users only', async () => {
     // Act
-    const responseSearchData = await searchMutation(termUserOnly, filterAll);
+    const responseSearchData = await searchMutation(
+      termUserOnly,
+      typeFilterAll
+    );
 
     // Assert
     expect(responseSearchData.body.data.search).toContainObject({
       terms: termUserOnly,
       score: 10,
-      result: { __typename: 'User', name: `${userName}`, id: `${userId}` },
+      result: {
+        __typename: 'User',
+        id: `${await userId()}`,
+        displayName: `${userName}`,
+      },
     });
 
     expect(responseSearchData.body.data.search).not.toContainObject({
       terms: termUserOnly,
       score: 10,
       result: {
-        __typename: 'UserGroup',
-        name: `${groupName}`,
-        id: `${communityGroupId}`,
-      },
-    });
-    expect(responseSearchData.body.data.search).not.toContainObject({
-      terms: termUserOnly,
-      score: 10,
-      result: {
         __typename: 'Organisation',
-        name: `${organisationName}`,
         id: `${organisationId}`,
+        displayName: `${organisationName}`,
       },
     });
   });
 
   test('should throw limit error for too many terms', async () => {
     // Act
-    const responseSearchData = await searchMutation(termTooLong, filterAll);
+    const responseSearchData = await searchMutation(termTooLong, typeFilterAll);
 
     // Assert
     expect(responseSearchData.text).toContain(
@@ -276,7 +198,7 @@ describe('Query Challenge data', () => {
 
   test('should throw error for empty string search', async () => {
     // Act
-    const responseSearchData = await searchMutation(' ', filterAll);
+    const responseSearchData = await searchMutation(' ', typeFilterAll);
 
     // Assert
 
@@ -287,7 +209,10 @@ describe('Query Challenge data', () => {
 
   test('should not return any results for invalid term', async () => {
     // Act
-    const responseSearchData = await searchMutation(termNotExisting, filterAll);
+    const responseSearchData = await searchMutation(
+      termNotExisting,
+      typeFilterAll
+    );
 
     // Assert
     expect(responseSearchData.body.data.search).toEqual([]);

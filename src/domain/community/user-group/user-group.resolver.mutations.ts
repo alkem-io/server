@@ -1,97 +1,101 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Roles } from '@common/decorators/roles.decorator';
-import { GqlAuthGuard } from '@src/core/authorization/graphql.guard';
-import { UserGroup } from './user-group.entity';
 import { IUserGroup } from './user-group.interface';
 import { UserGroupService } from './user-group.service';
-import { Profiling } from '@src/common/decorators';
-import { AuthorizationRoles } from '@src/core/authorization/authorization.roles';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   AssignUserGroupMemberInput,
-  AssignUserGroupFocalPointInput,
   DeleteUserGroupInput,
-  RemoveUserGroupFocalPoint,
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group';
-
-@Resolver(() => UserGroup)
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication';
+@Resolver()
 export class UserGroupResolverMutations {
-  constructor(private groupService: UserGroupService) {}
+  constructor(
+    private authorizationEngine: AuthorizationEngineService,
+    private groupService: UserGroupService
+  ) {}
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUserGroup, {
     description: 'Deletes the specified User Group.',
   })
   async deleteUserGroup(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteUserGroupInput
   ): Promise<IUserGroup> {
-    return await this.groupService.removeUserGroup(deleteData, true);
+    const group = await this.groupService.getUserGroupOrFail(deleteData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      group.authorization,
+      AuthorizationPrivilege.DELETE,
+      `user group delete: ${group.name}`
+    );
+    return await this.groupService.removeUserGroup(deleteData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUserGroup, {
     description: 'Updates the specified User Group.',
   })
   @Profiling.api
   async updateUserGroup(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('userGroupData') userGroupData: UpdateUserGroupInput
   ): Promise<IUserGroup> {
+    const group = await this.groupService.getUserGroupOrFail(userGroupData.ID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      group.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `user group update: ${group.name}`
+    );
     return await this.groupService.updateUserGroup(userGroupData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUserGroup, {
     description: 'Assigns a User as a member of the specified User Group.',
   })
   @Profiling.api
   async assignUserToGroup(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: AssignUserGroupMemberInput
   ): Promise<IUserGroup> {
+    const group = await this.groupService.getUserGroupOrFail(
+      membershipData.groupID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      group.authorization,
+      AuthorizationPrivilege.DELETE,
+      `user group assign user: ${group.name}`
+    );
     return await this.groupService.assignUser(membershipData);
   }
 
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUserGroup, {
     description: 'Removes the specified User from specified user group',
   })
   @Profiling.api
   async removeUserFromGroup(
+    @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
+    const group = await this.groupService.getUserGroupOrFail(
+      membershipData.groupID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      group.authorization,
+      AuthorizationPrivilege.DELETE,
+      `user group remove user: ${group.name}`
+    );
     return await this.groupService.removeUser(membershipData);
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
-    nullable: true,
-    description:
-      'Assigns a User as the focal point of the specified User Group.',
-  })
-  @Profiling.api
-  async assignGroupFocalPoint(
-    @Args('membershipData') membershipData: AssignUserGroupFocalPointInput
-  ): Promise<IUserGroup> {
-    return await this.groupService.assignFocalPoint(membershipData);
-  }
-
-  @Roles(AuthorizationRoles.CommunityAdmins, AuthorizationRoles.EcoverseAdmins)
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => UserGroup, {
-    nullable: true,
-    description: 'Removes the focal point for the specified User Group.',
-  })
-  @Profiling.api
-  async removeGroupFocalPoint(
-    @Args('removeData') removeData: RemoveUserGroupFocalPoint
-  ): Promise<IUserGroup> {
-    const group = await this.groupService.removeFocalPoint(removeData);
-    return group;
   }
 }

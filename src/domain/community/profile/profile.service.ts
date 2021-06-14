@@ -13,22 +13,20 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { CreateReferenceInput } from '@domain/common/reference';
 import {
   UpdateProfileInput,
   Profile,
   IProfile,
+  CreateReferenceOnProfileInput,
+  CreateProfileInput,
+  CreateTagsetOnProfileInput,
 } from '@domain/community/profile';
-
-import validator from 'validator';
-import { CreateTagsetInput } from '@domain/common/tagset';
-import { CreateProfileInput } from './profile.dto.create';
-
 import { ReadStream } from 'fs';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { streamToBuffer, validateImageDimensions } from '@common/utils';
-import { IpfsService } from '@src/services/ipfs/ipfs.service';
+import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
 import { UploadProfileAvatarInput } from './profile.dto.upload.avatar';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class ProfileService {
@@ -48,6 +46,7 @@ export class ProfileService {
     let data = profileData;
     if (!data) data = {};
     const profile: IProfile = Profile.create(data);
+    profile.authorization = new AuthorizationDefinition();
     if (!profile.references) {
       profile.references = [];
     }
@@ -98,9 +97,9 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  async deleteProfile(profileID: number): Promise<IProfile> {
+  async deleteProfile(profileID: string): Promise<IProfile> {
     // Note need to load it in with all contained entities so can remove fully
-    const profile = await this.getProfileByIdOrFail(profileID);
+    const profile = await this.getProfileOrFail(profileID);
 
     if (profile.tagsets) {
       for (const tagset of profile.tagsets) {
@@ -110,41 +109,33 @@ export class ProfileService {
 
     if (profile.references) {
       for (const reference of profile.references) {
-        await this.referenceService.deleteReference({ ID: reference.id });
+        await this.referenceService.deleteReference({
+          ID: reference.id,
+        });
       }
     }
 
     return await this.profileRepository.remove(profile as Profile);
   }
 
-  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
-    const profileID = tagsetData.parentID;
-    if (!profileID)
-      throw new ValidationException(
-        'No parendId specified for tagset creation',
-        LogContext.COMMUNITY
-      );
-    const profile = await this.getProfileByIdOrFail(profileID);
+  async createTagset(tagsetData: CreateTagsetOnProfileInput): Promise<ITagset> {
+    const profile = await this.getProfileOrFail(tagsetData.profileID);
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
-      tagsetData.name
+      tagsetData
     );
+    tagset.authorization = profile.authorization;
+
     await this.profileRepository.save(profile);
 
     return tagset;
   }
 
   async createReference(
-    referenceInput: CreateReferenceInput
+    referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
-    const profileID = referenceInput.parentID;
-    if (!profileID)
-      throw new ValidationException(
-        'No parendId specified for reference creation',
-        LogContext.COMMUNITY
-      );
-    const profile = await this.getProfileByIdOrFail(profileID);
+    const profile = await this.getProfileOrFail(referenceInput.profileID);
 
     if (!profile.references)
       throw new EntityNotInitializedException(
@@ -161,6 +152,7 @@ export class ProfileService {
     const newReference = await this.referenceService.createReference(
       referenceInput
     );
+    newReference.authorization = profile.authorization;
 
     await profile.references.push(newReference as Reference);
     await this.profileRepository.save(profile);
@@ -169,17 +161,6 @@ export class ProfileService {
   }
 
   async getProfileOrFail(profileID: string): Promise<IProfile> {
-    if (validator.isNumeric(profileID)) {
-      const idInt: number = parseInt(profileID);
-      return await this.getProfileByIdOrFail(idInt);
-    }
-    throw new EntityNotFoundException(
-      `Profile with id(${profileID}) not found!`,
-      LogContext.COMMUNITY
-    );
-  }
-
-  async getProfileByIdOrFail(profileID: number): Promise<IProfile> {
     const profile = await Profile.findOne({ id: profileID });
     if (!profile)
       throw new EntityNotFoundException(
@@ -234,11 +215,11 @@ export class ProfileService {
     try {
       const uri = await this.ipfsService.uploadFileFromBuffer(buffer);
       const profileData: UpdateProfileInput = {
-        ID: profileID.toString(),
+        ID: profileID,
         avatar: uri,
       };
       await this.updateProfile(profileData);
-      return await this.getProfileOrFail(profileID.toString());
+      return await this.getProfileOrFail(profileID);
     } catch (error) {
       throw new IpfsUploadFailedException(
         `Ipfs upload of ${fileName} failed! Error: ${error.message}`

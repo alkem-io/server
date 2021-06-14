@@ -11,6 +11,8 @@ import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
 import { LifecycleEventInput } from './lifecycle.dto.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AgentInfo } from '@core/authentication';
+import { IAuthorizationDefinition } from '../authorization-definition';
 
 @Injectable()
 export class LifecycleService {
@@ -32,16 +34,18 @@ export class LifecycleService {
     return await this.lifecycleRepository.save(lifecycle);
   }
 
-  async deleteLifecycle(lifecycleID: number): Promise<ILifecycle> {
-    const lifecycle = await this.getLifecycleByIdOrFail(lifecycleID);
+  async deleteLifecycle(lifecycleID: string): Promise<ILifecycle> {
+    const lifecycle = await this.getLifecycleOrFail(lifecycleID);
     return await this.lifecycleRepository.remove(lifecycle as Lifecycle);
   }
 
   async event(
     lifecycleEventData: LifecycleEventInput,
-    options: Partial<MachineOptions<any, any>>
+    options: Partial<MachineOptions<any, any>>,
+    agentInfo: AgentInfo,
+    authorization?: IAuthorizationDefinition
   ): Promise<ILifecycle> {
-    const lifecycle = await this.getLifecycleByIdOrFail(lifecycleEventData.ID);
+    const lifecycle = await this.getLifecycleOrFail(lifecycleEventData.ID);
     const eventName = lifecycleEventData.eventName;
     const machineDef = JSON.parse(lifecycle.machineDef);
 
@@ -72,6 +76,8 @@ export class LifecycleService {
     machineService.send({
       type: eventName,
       parentID: parentID,
+      agentInfo: agentInfo,
+      authorization: authorization,
     });
     this.logger.verbose?.(
       `Lifecycle (id: ${
@@ -87,8 +93,8 @@ export class LifecycleService {
     return await this.lifecycleRepository.save(lifecycle);
   }
 
-  async getLifecycleByIdOrFail(
-    lifecycleID: number,
+  async getLifecycleOrFail(
+    lifecycleID: string,
     options?: FindOneOptions<Lifecycle>
   ): Promise<ILifecycle> {
     const lifecycle = await this.lifecycleRepository.findOne(
