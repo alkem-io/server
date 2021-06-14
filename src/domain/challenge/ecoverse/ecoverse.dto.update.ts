@@ -12,10 +12,10 @@ export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
   @IsOptional()
   hostID?: string;
 
-  // Does not extend base entity update DTO as need to be able to specify also a NameID as part of the update
+  // Override the type of entry accepted
   @Field(() => UUID_NAMEID, {
     nullable: false,
-    description: 'The ID of the entity to be updated.',
+    description: 'The ID or NameID of the Ecoverse.',
   })
   ID!: string;
 }
