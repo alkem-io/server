@@ -7,7 +7,10 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse, Ecoverse } from '@domain/challenge/ecoverse';
 import { ChallengeAuthorizationService } from '../challenge/challenge.service.authorization';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import {
+  IAuthorizationDefinition,
+  UpdateAuthorizationDefinitionInput,
+} from '@domain/common/authorization-definition';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
@@ -24,7 +27,7 @@ export class EcoverseAuthorizationService {
   ) {}
 
   async applyAuthorizationRules(ecoverse: IEcoverse): Promise<IEcoverse> {
-    ecoverse.authorization = this.updateAuthorizationDefinition(
+    ecoverse.authorization = this.extendAuthorizationDefinition(
       ecoverse.authorization,
       ecoverse.id
     );
@@ -53,7 +56,33 @@ export class EcoverseAuthorizationService {
     return await this.ecoverseRepository.save(ecoverse);
   }
 
-  private updateAuthorizationDefinition(
+  async updateAuthorizationDefinition(
+    ecoverse: IEcoverse,
+    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+  ): Promise<IEcoverse> {
+    await this.baseChallengeAuthorizationService.updateAuthorization(
+      ecoverse,
+      this.ecoverseRepository,
+      authorizationUpdateData
+    );
+
+    // propagate authorization rules for child entities
+    const challenges = await this.ecoverseService.getChallenges(ecoverse);
+    for (const challenge of challenges) {
+      await this.challengeAuthorizationService.updateAuthorization(
+        challenge,
+        authorizationUpdateData
+      );
+      challenge.authorization = this.authorizationEngine.updateAuthorization(
+        challenge.authorization,
+        authorizationUpdateData
+      );
+    }
+
+    return await this.ecoverseRepository.save(ecoverse);
+  }
+
+  private extendAuthorizationDefinition(
     authorization: IAuthorizationDefinition | undefined,
     ecoverseID: string
   ): IAuthorizationDefinition {
