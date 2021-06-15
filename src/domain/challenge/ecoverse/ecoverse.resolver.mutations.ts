@@ -70,6 +70,13 @@ export class EcoverseResolverMutations {
       `updateEcoverse: ${ecoverse.nameID}`
     );
 
+    if (ecoverseData.authorizationDefinition) {
+      await this.ecoverseAuthorizationService.updateAuthorizationDefinition(
+        ecoverse,
+        ecoverseData.authorizationDefinition
+      );
+    }
+
     return await this.ecoverseService.update(ecoverseData);
   }
 

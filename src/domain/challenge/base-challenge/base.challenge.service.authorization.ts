@@ -1,3 +1,4 @@
+import { UpdateAuthorizationDefinitionInput } from '@domain/common/authorization-definition';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { Injectable } from '@nestjs/common';
@@ -48,6 +49,29 @@ export class BaseChallengeAuthorizationService {
     );
     baseChallenge.context = await this.contextAuthorizationService.applyAuthorizationRules(
       context
+    );
+
+    return baseChallenge;
+  }
+
+  async updateAuthorization(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>,
+    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+  ): Promise<IBaseChallenge> {
+    baseChallenge.authorization = this.authorizationEngine.updateAuthorization(
+      baseChallenge.authorization,
+      authorizationUpdateData
+    );
+
+    // propagate authorization rules for child entities
+    baseChallenge.context = await this.baseChallengeService.getContext(
+      baseChallenge.id,
+      repository
+    );
+    baseChallenge.context.authorization = this.authorizationEngine.updateAuthorization(
+      baseChallenge.context.authorization,
+      authorizationUpdateData
     );
 
     return baseChallenge;
