@@ -82,7 +82,7 @@
     "rimraf": "^3.0.2",
     "rxjs": "^6.6.7",
     "sqlite3": "^5.0.2",
-    "typeorm": "^0.2.31",
+    "typeorm": "0.2.31",
     "winston": "^3.3.3",
     "winston-elasticsearch": "^0.12.3",
     "xstate": "^4.17.1",

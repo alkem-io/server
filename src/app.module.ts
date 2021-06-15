@@ -67,6 +67,7 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
         entities: [
           'node_modules/@jolocom/sdk-storage-typeorm/js/src/entities/*.js',
         ],
+        // NOTE: these are in until jolocom fixes the name issue on typeorm-mysql.
         // host: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
         //   ?.host,
         // port: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
