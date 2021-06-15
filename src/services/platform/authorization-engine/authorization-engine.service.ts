@@ -165,7 +165,7 @@ export class AuthorizationEngineService {
     const rules = this.convertCredentialRulesStr(auth.credentialRules);
     const newRule: AuthorizationCredentialRule = {
       type: credentialCriteria.type,
-      resourceID: credentialCriteria.type,
+      resourceID: credentialCriteria.resourceID || '',
       grantedPrivileges: privileges,
     };
     rules.push(newRule);

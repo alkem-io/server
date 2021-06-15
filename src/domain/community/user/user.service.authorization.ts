@@ -42,10 +42,10 @@ export class UserAuthorizationService {
       user.authorization
     );
     profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
-      user.authorization,
+      profile.authorization,
       {
         type: AuthorizationCredential.GlobalAdminCommunity,
-        resourceID: user.id,
+        resourceID: '',
       },
       [AuthorizationPrivilege.DELETE]
     );
