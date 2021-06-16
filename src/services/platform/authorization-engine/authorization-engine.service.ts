@@ -156,6 +156,39 @@ export class AuthorizationEngineService {
     return false;
   }
 
+  getGrantedPrivileges(
+    credentials: ICredential[],
+    authorization: IAuthorizationDefinition
+  ) {
+    const grantedPrivileges: AuthorizationPrivilege[] = [];
+
+    if (authorization.anonymousReadAccess) {
+      grantedPrivileges.push(AuthorizationPrivilege.READ);
+    }
+
+    const credentialRules: AuthorizationCredentialRule[] = this.convertCredentialRulesStr(
+      authorization.credentialRules
+    );
+    for (const rule of credentialRules) {
+      for (const credential of credentials) {
+        if (
+          credential.type === rule.type &&
+          credential.resourceID === rule.resourceID
+        ) {
+          for (const privilege of rule.grantedPrivileges) {
+            grantedPrivileges.push(privilege);
+          }
+        }
+      }
+    }
+
+    const uniquePrivileges = grantedPrivileges.filter(
+      (item, i, ar) => ar.indexOf(item) === i
+    );
+
+    return uniquePrivileges;
+  }
+
   appendCredentialAuthorizationRule(
     authorization: IAuthorizationDefinition | undefined,
     credentialCriteria: CredentialsSearchInput,

@@ -13,10 +13,18 @@ export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
   @IsOptional()
   hostID?: string;
 
+  // Override the type of entry accepted
+  @Field(() => UUID_NAMEID, {
+    nullable: false,
+    description: 'The ID or NameID of the Ecoverse.',
+  })
+  ID!: string;
+
   @Field(() => UpdateAuthorizationDefinitionInput, {
     nullable: true,
     description: 'Update anonymous visibility for the Ecoverse.',
   })
   @IsOptional()
   authorizationDefinition?: UpdateAuthorizationDefinitionInput;
+
 }

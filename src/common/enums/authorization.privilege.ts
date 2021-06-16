@@ -1,3 +1,5 @@
+import { registerEnumType } from '@nestjs/graphql';
+
 export enum AuthorizationPrivilege {
   CREATE = 'create',
   READ = 'read',
@@ -5,3 +7,7 @@ export enum AuthorizationPrivilege {
   DELETE = 'delete',
   GRANT = 'grant', // allow the issuing / revoking of credentials of the same type within a given scope
 }
+
+registerEnumType(AuthorizationPrivilege, {
+  name: 'AuthorizationPrivilege',
+});
