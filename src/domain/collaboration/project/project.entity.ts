@@ -22,7 +22,11 @@ export class Project extends NameableEntity implements IProject {
   @Column('text', { nullable: true })
   description?: string;
 
-  @OneToOne(() => Lifecycle, { eager: false, cascade: true })
+  @OneToOne(() => Lifecycle, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn()
   lifecycle!: Lifecycle;
 
