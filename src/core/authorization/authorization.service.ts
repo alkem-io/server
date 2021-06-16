@@ -11,22 +11,42 @@ import {
   LogContext,
   AuthorizationCredentialGlobal,
   AuthorizationCredential,
+  AuthorizationPrivilege,
 } from '@common/enums';
-import { ForbiddenException, ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ForbiddenException,
+  ValidationException,
+} from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@core/authentication';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+
 import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { GrantStateModificationVCInput } from './dto';
+
+import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
+import {
+  AuthorizationDefinition,
+  IAuthorizationDefinition,
+} from '@domain/common/authorization-definition';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 
 @Injectable()
 export class AuthorizationService {
   constructor(
     private readonly ssiAgentService: SsiAgentService,
+    private authorizationEngine: AuthorizationEngineService,
     private readonly agentService: AgentService,
     private readonly challengeService: ChallengeService,
     private readonly userService: UserService,
+    @InjectRepository(AuthorizationDefinition)
+    private authoriationDefinitionRepository: Repository<
+      AuthorizationDefinition
+    >,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -162,6 +182,41 @@ export class AuthorizationService {
       type: credentialCriteria.type.toString(),
       resourceID: credentialCriteria.resourceID,
     });
+  }
+
+  async userAuthorizationPrivileges(
+    userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput
+  ): Promise<AuthorizationPrivilege[]> {
+    // get the user
+    const { credentials } = await this.userService.getUserAndCredentials(
+      userAuthorizationPrivilegesData.userID
+    );
+
+    const authorizationDefinition = await this.getAuthorizationDefinitionOrFail(
+      userAuthorizationPrivilegesData.authorizationID
+    );
+
+    const privileges = await this.authorizationEngine.getGrantedPrivileges(
+      credentials,
+      authorizationDefinition
+    );
+    return privileges;
+  }
+
+  async getAuthorizationDefinitionOrFail(
+    authorizationID: string
+  ): Promise<IAuthorizationDefinition> {
+    const authorizationDefinition = await this.authoriationDefinitionRepository.findOne(
+      {
+        id: authorizationID,
+      }
+    );
+    if (!authorizationDefinition)
+      throw new EntityNotFoundException(
+        `Not able to locate AuthorizationDefinition with the specified ID: ${authorizationID}`,
+        LogContext.CHALLENGES
+      );
+    return authorizationDefinition;
   }
 
   isGlobalAuthorizationCredential(credentialType: string): boolean {

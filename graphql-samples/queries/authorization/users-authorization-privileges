@@ -1,0 +1,11 @@
+query userAuthorizationPrivileges($userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput!) {
+  userAuthorizationPrivileges(userAuthorizationPrivilegesData: $userAuthorizationPrivilegesData)
+}
+
+Variables:
+{
+  "userAuthorizationPrivilegesData" {
+    "userID": "uuid_nameid_email",
+    "authorizationID": "uuid"
+  }
+}
