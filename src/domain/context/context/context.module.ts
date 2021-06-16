@@ -9,6 +9,7 @@ import { AspectModule } from '../aspect/aspect.module';
 import { ContextResolverFields } from './context.resolver.fields';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { ContextAuthorizationService } from './context.service.authorization';
+import { VisualModule } from '../visual/visual.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ContextAuthorizationService } from './context.service.authorization';
     AspectModule,
     ReferenceModule,
     EcosystemModelModule,
+    VisualModule,
     TypeOrmModule.forFeature([Context]),
   ],
   providers: [

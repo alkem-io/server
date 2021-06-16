@@ -8,6 +8,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { IReference } from '@domain/common/reference';
+import { IVisual } from '@domain/context/visual';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -22,6 +23,17 @@ export class ContextResolverFields {
   @Profiling.api
   async ecosystemModel(@Parent() context: Context) {
     return await this.contextService.getEcosystemModel(context);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('visual', () => IVisual, {
+    nullable: true,
+    description: 'The Visual assets for this Context.',
+  })
+  @Profiling.api
+  async visual(@Parent() context: Context) {
+    return await this.contextService.getVisual(context);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
