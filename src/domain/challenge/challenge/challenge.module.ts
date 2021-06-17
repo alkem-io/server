@@ -10,10 +10,10 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
-import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
-import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
+import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
+import { ChallengeLifecycleOptionsProvider } from '@domain/challenge/challenge/challenge.lifecycle.options.provider';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
-import { ChallengeAuthorizationService } from './challenge.service.authorization';
+import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 
 @Module({

@@ -4,23 +4,23 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IOperationalMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import { createClient } from 'matrix-js-sdk';
-import { MatrixTransforms } from '../management/matrix.management.user.service';
+import { MatrixTransforms } from '@src/services/platform/matrix/management/matrix.management.user.service';
 import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
-} from '../events/matrix.event.dispatcher';
+} from '@src/services/platform/matrix/events/matrix.event.dispatcher';
+import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
+import { AutoAcceptRoomMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adpater.room';
+import { MatrixGroupEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.group';
+import { MatrixClient } from '@src/services/platform/matrix/agent-pool/matrix.client.types';
+import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.room';
 import {
   ICommunityMessageRequest,
   IDirectMessageRequest,
   IMatrixAgent,
   IMessageRequest,
   IResponseMessage,
-} from './matrix.agent.interface';
-import { AutoAcceptGroupMembershipMonitorFactory } from '../events/matrix.event.adapter.group';
-import { AutoAcceptRoomMembershipMonitorFactory } from '../events/matrix.event.adpater.room';
-import { MatrixGroupEntityAdapter } from '../adapter/matrix.adapter.group';
-import { MatrixClient } from './matrix.client.types';
-import { MatrixRoomEntityAdapter } from '../adapter/matrix.adapater.room';
+} from '@src/services/platform/matrix/agent-pool';
 
 @Injectable()
 export class MatrixAgent implements IMatrixAgent, Disposable {

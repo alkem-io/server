@@ -1,6 +1,6 @@
-import { IMatrixEventHandler } from './matrix.event.dispatcher';
-import { MatrixClient } from '../agent-pool/matrix.client.types';
-import { MatrixRoomEntityAdapter } from '../adapter/matrix.adapater.room';
+import { IMatrixEventHandler } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
+import { MatrixClient } from '@src/services/platform/matrix/agent-pool/matrix.client.types';
+import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.room';
 
 const noop = function() {
   // empty

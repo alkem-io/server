@@ -5,7 +5,7 @@ import {
   updateChallangeMutation,
 } from '@test/functional/integration/challenge/challenge.request.params';
 import { getContextQuery } from './context.request.params';
-import { createReferenceOnContextMutation } from '../references/references.request.params';
+import { createReferenceOnContextMutation } from '@domain/collaboration/references/references.request.params';
 import { response } from 'express';
 
 let challengeName = '';

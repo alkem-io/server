@@ -19,7 +19,7 @@ import {
 } from '@domain/community/organisation';
 import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
-import { UserService } from '../user/user.service';
+import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { IAgent } from '@domain/agent/agent';

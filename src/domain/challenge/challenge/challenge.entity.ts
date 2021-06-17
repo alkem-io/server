@@ -8,10 +8,10 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Ecoverse } from '@domain/challenge/ecoverse';
-import { IChallenge } from './challenge.interface';
-import { Organisation } from '@domain/community';
+import { IChallenge } from '@domain/challenge/challenge';
+import { Organisation } from '@domain/community/organisation';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { BaseChallenge } from '../base-challenge/base.challenge.entity';
+import { BaseChallenge } from '@domain/challenge/base-challenge';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {

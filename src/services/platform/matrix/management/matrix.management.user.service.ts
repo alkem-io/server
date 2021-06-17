@@ -6,7 +6,7 @@ import {
   IMatrixUser,
   IMatrixUserService as IMatrixManagementUserService,
   IOperationalMatrixUser,
-} from './matrix.management.user.interface';
+} from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import { ConfigurationTypes } from '@common/enums';
 
 class SynapseEndpoints {

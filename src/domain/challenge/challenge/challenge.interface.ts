@@ -1,7 +1,7 @@
 import { IOrganisation } from '@domain/community/organisation';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IBaseChallenge } from '../base-challenge/base.challenge.interface';
+import { IBaseChallenge } from '@domain/challenge/base-challenge';
 
 @ObjectType('Challenge')
 export abstract class IChallenge extends IBaseChallenge {

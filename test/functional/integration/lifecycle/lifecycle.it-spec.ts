@@ -8,7 +8,7 @@ import {
 import {
   createProjectMutation,
   getProjectData,
-} from '../project/project.request.params';
+} from '@domain/collaboration/project/project.request.params';
 import {
   createOpportunityMutation,
   queryOpportunity,
@@ -24,7 +24,7 @@ import {
   createApplicationMutation,
   getApplication,
 } from '@test/functional/e2e/user-management/application/application.request.params';
-import { getCommunityData } from '../community/community.request.params';
+import { getCommunityData } from '@domain/community/community/community.request.params';
 
 let opportunityName = '';
 let opportunityTextId = '';

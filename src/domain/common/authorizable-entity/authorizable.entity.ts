@@ -1,6 +1,6 @@
 import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 import { JoinColumn, OneToOne } from 'typeorm';
-import { AuthorizationDefinition } from '../authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { IAuthorizable } from './authorizable.interface';
 
 export abstract class AuthorizableEntity extends BaseCherrytwistEntity

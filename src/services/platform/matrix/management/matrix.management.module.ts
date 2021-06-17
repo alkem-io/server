@@ -1,6 +1,6 @@
 import { HttpModule, Module } from '@nestjs/common';
-import { MatrixCryptographyModule } from '../cryptography/matrix.cryptography.module';
-import { MatrixManagementUserService } from './matrix.management.user.service';
+import { MatrixCryptographyModule } from '@src/services/platform/matrix/cryptography/matrix.cryptography.module';
+import { MatrixManagementUserService } from '@src/services/platform/matrix/management/matrix.management.user.service';
 
 @Module({
   imports: [MatrixCryptographyModule, HttpModule],

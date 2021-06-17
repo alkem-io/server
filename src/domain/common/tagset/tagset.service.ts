@@ -19,7 +19,7 @@ import {
   DeleteTagsetInput,
 } from '@domain/common/tagset';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { AuthorizationDefinition } from '../authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class TagsetService {

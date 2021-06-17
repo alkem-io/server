@@ -1,5 +1,5 @@
-import { IMatrixEventHandler } from './matrix.event.dispatcher';
-import { MatrixClient } from '../agent-pool/matrix.client.types';
+import { IMatrixEventHandler } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
+import { MatrixClient } from '@src/services/platform/matrix/agent-pool/matrix.client.types';
 
 const noop = function() {
   // empty

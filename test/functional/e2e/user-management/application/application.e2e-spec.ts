@@ -1,7 +1,7 @@
 import {
   createUserDetailsMutation,
   removeUserMutation,
-} from '../user.request.params';
+} from '@domain/community/user.request.params';
 import '@test/utils/array.matcher';
 import { appSingleton } from '@test/utils/app.singleton';
 import { createChallangeMutation } from '@test/functional/integration/challenge/challenge.request.params';

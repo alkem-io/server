@@ -1,6 +1,5 @@
-import { LogContext } from '@common/enums';
-import { CherrytwistErrorStatus } from '../enums/cherrytwist.error.status';
-import { BaseException } from './base.exception';
+import { LogContext, CherrytwistErrorStatus } from '@common/enums';
+import { BaseException } from '@common/exceptions';
 
 export class AccountException extends BaseException {
   constructor(

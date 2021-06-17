@@ -13,8 +13,8 @@ import {
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { ProjectService } from '../project/project.service';
-import { RelationService } from '../relation/relation.service';
+import { ProjectService } from '@domain/collaboration/project/project.service';
+import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';

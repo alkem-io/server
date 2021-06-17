@@ -17,10 +17,10 @@ import {
   CreateReferenceOnContextInput,
 } from '@domain/context/context';
 import { CreateAspectInput, IAspect } from '@domain/context/aspect';
-import { AspectService } from '../aspect/aspect.service';
+import { AspectService } from '@domain/context/aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
-import { EcosystemModelService } from '../ecosystem-model/ecosystem-model.service';
+import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
 
 @Injectable()
 export class ContextService {

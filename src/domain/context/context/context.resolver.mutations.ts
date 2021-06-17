@@ -8,7 +8,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
-import { CreateReferenceOnContextInput } from './context.dto.create.reference';
+import { CreateReferenceOnContextInput } from '@domain/context/context';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 @Resolver()

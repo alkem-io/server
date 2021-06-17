@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ITagset } from '@domain/common/tagset';
 import { Profile } from '@domain/community/profile';
-import { AuthorizableEntity } from '../authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 export enum RestrictedTagsetNames {
   Default = 'default',

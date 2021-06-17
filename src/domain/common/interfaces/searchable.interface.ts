@@ -2,7 +2,7 @@ import { IOrganisation } from '@domain/community/organisation';
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { IUser } from '@domain/community/user';
 import { IUserGroup } from '@domain/community/user-group';
-import { UUID } from '../scalars';
+import { UUID } from '@domain/common/scalars';
 
 @InterfaceType('Searchable', {
   resolveType(searchable) {

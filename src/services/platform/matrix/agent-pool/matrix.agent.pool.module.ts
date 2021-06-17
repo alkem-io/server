@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { MatrixManagementModule } from '../management/matrix.management.module';
-import { MatrixAgentPool } from './matrix.agent.pool';
+import { MatrixManagementModule } from '@src/services/platform/matrix/management/matrix.management.module';
+import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
 
 @Module({
   imports: [MatrixManagementModule],

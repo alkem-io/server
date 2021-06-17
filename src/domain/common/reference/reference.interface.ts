@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '../authorizable-entity';
+import { IAuthorizable } from '@domain/common/authorizable-entity';
 
 @ObjectType('Reference')
 export abstract class IReference extends IAuthorizable {

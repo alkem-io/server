@@ -1,9 +1,9 @@
-import { IMatrixUser } from './matrix.management.user.interface';
-import { MatrixAgent } from '../agent-pool/matrix.agent';
-import { MatrixGroupEntityAdapter } from '../adapter/matrix.adapter.group';
-import { IOpts as GroupOpts } from '../adapter/matrix.adapter.group.interface';
-import { MatrixRoomEntityAdapter } from '../adapter/matrix.adapater.room';
-import { IOpts as RoomOpts } from '../adapter/matrix.adapter.room.interface';
+import { IMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
+import { MatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent';
+import { MatrixGroupEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.group';
+import { IOpts as GroupOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.group.interface';
+import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter';
+import { IOpts as RoomOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.room.interface';
 
 interface IMatrixAgentElevated {
   createRoom: MatrixRoomEntityAdapter['createRoom'];
