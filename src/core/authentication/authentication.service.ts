@@ -4,10 +4,12 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from './agent-info';
 import { Credential } from '@domain/agent/credential';
+import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 
 @Injectable()
 export class AuthenticationService {
   constructor(
+    private ssiAgentService: SsiAgentService,
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -17,20 +19,25 @@ export class AuthenticationService {
     agentInfo.email = email;
     const userExists = await this.userService.isRegisteredUser(email);
     if (userExists) {
-      const user = await this.userService.getUserWithAgent(email);
+      const agent = await this.userService.getAgent(email);
       this.logger.verbose?.(
-        `Authentication Info: User registered: ${email}, with id: ${user.id}`,
+        `Authentication Info: User registered: ${email}.`,
         LogContext.AUTH
       );
-      const credentials = user?.agent?.credentials;
-      if (!credentials) {
+      if (!agent.credentials) {
         this.logger.warn?.(
           `Authentication Info: Unable to retrieve credentials for registered user: ${email}`,
           LogContext.AUTH
         );
       } else {
-        agentInfo.credentials = credentials;
+        agentInfo.credentials = agent.credentials;
       }
+
+      // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
+      agentInfo.verifiedCredentials = await this.ssiAgentService.getVerifiedCredentials(
+        agent.did,
+        agent.password
+      );
     } else {
       this.logger.verbose?.(
         `Authentication Info: User not registered: ${email}`,
