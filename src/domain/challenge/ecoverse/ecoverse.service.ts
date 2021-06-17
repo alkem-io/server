@@ -66,16 +66,9 @@ export class EcoverseService {
       AuthorizationCredential.EcoverseMember
     );
 
-    if (ecoverseData.hostID) {
-      ecoverse.host = await this.organisationService.getOrganisationOrFail(
-        ecoverseData.hostID
-      );
-    } else {
-      ecoverse.host = await this.organisationService.createOrganisation({
-        displayName: `host-org-${ecoverseData.displayName}`,
-        nameID: `host-${ecoverseData.nameID}`,
-      });
-    }
+    ecoverse.host = await this.organisationService.getOrganisationOrFail(
+      ecoverseData.hostID
+    );
 
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;

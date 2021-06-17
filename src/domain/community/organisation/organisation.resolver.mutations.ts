@@ -14,10 +14,12 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { OrganisationAuthorizationService } from './organisation.service.authorization';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { UserGroupService } from '../user-group/user-group.service';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
   constructor(
+    private userGroupService: UserGroupService,
     private organisationAuthorizationService: OrganisationAuthorizationService,
     private organisationService: OrganisationService,
     private authorizationEngine: AuthorizationEngineService
@@ -70,7 +72,12 @@ export class OrganisationResolverMutations {
       `orgCreateGroup: ${organisation.nameID}`
     );
 
-    return await this.organisationService.createGroup(groupData);
+    const group = await this.organisationService.createGroup(groupData);
+    group.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      group.authorization,
+      organisation.authorization
+    );
+    return await this.userGroupService.saveUserGroup(group);
   }
 
   @UseGuards(GraphqlGuard)

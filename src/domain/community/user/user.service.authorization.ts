@@ -41,11 +41,13 @@ export class UserAuthorizationService {
       profile.authorization,
       user.authorization
     );
-    profile.authorization = this.authorizationEngine.appendCredentialAuthorizationRule(
-      user.authorization,
+
+    profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
+      profile.authorization,
+
       {
         type: AuthorizationCredential.GlobalAdminCommunity,
-        resourceID: user.id,
+        resourceID: '',
       },
       [AuthorizationPrivilege.DELETE]
     );

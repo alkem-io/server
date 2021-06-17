@@ -11,6 +11,7 @@ import {
   EntityNotFoundException,
   NotSupportedException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import {
   UpdateUserGroupInput,
@@ -42,6 +43,7 @@ export class UserGroupService {
     userGroupData: CreateUserGroupInput,
     ecoverseID = ''
   ): Promise<IUserGroup> {
+    this.validateName(userGroupData.name);
     const group = UserGroup.create(userGroupData);
     group.ecoverseID = ecoverseID;
     group.authorization = new AuthorizationDefinition();
@@ -55,6 +57,15 @@ export class UserGroupService {
       LogContext.COMMUNITY
     );
     return savedUserGroup;
+  }
+
+  validateName(name: string) {
+    if (name.length < 2) {
+      throw new ValidationException(
+        `UserGroup name has a minimum length of 2: ${name}`,
+        LogContext.COMMUNITY
+      );
+    }
   }
 
   async removeUserGroup(deleteData: DeleteUserGroupInput): Promise<IUserGroup> {
@@ -81,6 +92,7 @@ export class UserGroupService {
 
     const newName = userGroupInput.name;
     if (newName && newName.length > 0 && newName !== group.name) {
+      this.validateName(newName);
       group.name = newName;
     }
 
@@ -90,6 +102,10 @@ export class UserGroupService {
       );
     }
 
+    return await this.userGroupRepository.save(group);
+  }
+
+  async saveUserGroup(group: IUserGroup): Promise<IUserGroup> {
     return await this.userGroupRepository.save(group);
   }
 

@@ -17,8 +17,13 @@ import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecovers
 import {
   DEFAULT_ECOVERSE_DISPLAYNAME,
   DEFAULT_ECOVERSE_NAMEID,
+  DEFAULT_HOST_ORG_DISPLAY_NAME,
+  DEFAULT_HOST_ORG_NAMEID,
 } from '@common/constants';
+import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { OrganisationAuthorizationService } from '@domain/community/organisation/organisation.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
+
 @Injectable()
 export class BootstrapService {
   constructor(
@@ -29,6 +34,8 @@ export class BootstrapService {
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private authorizationService: AuthorizationService,
     private configService: ConfigService,
+    private organisationService: OrganisationService,
+    private organisationAuthorizationService: OrganisationAuthorizationService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -180,9 +187,19 @@ export class BootstrapService {
     if (ecoverseCount == 0) {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
+      // create a default host org
+      const hostOrg = await this.organisationService.createOrganisation({
+        nameID: DEFAULT_HOST_ORG_NAMEID,
+        displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
+      });
+      await this.organisationAuthorizationService.applyAuthorizationRules(
+        hostOrg
+      );
+
       const ecoverse = await this.ecoverseService.createEcoverse({
         nameID: DEFAULT_ECOVERSE_NAMEID,
         displayName: DEFAULT_ECOVERSE_DISPLAYNAME,
+        hostID: DEFAULT_HOST_ORG_NAMEID,
         context: {
           tagline: 'An empty ecoverse to be populated',
         },
