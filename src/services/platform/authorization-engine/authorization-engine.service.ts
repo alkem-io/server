@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CredentialsSearchInput } from '@domain/agent';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationRuleCredential } from './authorization.rule.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
@@ -173,7 +173,7 @@ export class AuthorizationEngineService {
       grantedPrivileges.push(AuthorizationPrivilege.READ);
     }
 
-    const credentialRules: AuthorizationCredentialRule[] = this.convertCredentialRulesStr(
+    const credentialRules: AuthorizationRuleCredential[] = this.convertCredentialRulesStr(
       authorization.credentialRules
     );
     for (const rule of credentialRules) {
