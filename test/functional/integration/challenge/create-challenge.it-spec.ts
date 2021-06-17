@@ -11,7 +11,7 @@ let challengeName = '';
 let uniqueTextId = '';
 let challengeId = '';
 let challengeDataCreate = '';
-let ecoverseId = '';
+const ecoverseId = '';
 
 const challangeData = async (challengeId: string): Promise<string> => {
   const responseQuery = await getChallengeData(challengeId);

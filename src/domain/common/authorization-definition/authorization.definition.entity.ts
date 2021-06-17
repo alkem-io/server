@@ -8,6 +8,9 @@ export class AuthorizationDefinition extends BaseCherrytwistEntity
   @Column('text')
   credentialRules: string;
 
+  @Column('text')
+  verifiedCredentialRules: string;
+
   @Column()
   anonymousReadAccess: boolean;
 
@@ -15,5 +18,6 @@ export class AuthorizationDefinition extends BaseCherrytwistEntity
     super();
     this.anonymousReadAccess = false;
     this.credentialRules = '';
+    this.verifiedCredentialRules = '';
   }
 }

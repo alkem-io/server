@@ -6,7 +6,7 @@ import {
   SMALL_TEXT_LENGTH,
   MID_TEXT_LENGTH,
 } from '@src/common/constants';
-import { CreateNameableInput } from '@domain/common';
+import { CreateNameableInput } from '@domain/common/nameable-entity';
 
 @InputType()
 export class CreateUserInput extends CreateNameableInput {

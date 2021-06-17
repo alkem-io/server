@@ -17,7 +17,7 @@ import {
   getRemoveMutation,
   getRemoveVariables,
 } from '@test/non-functional/auth/remove-mutations';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/domain/data-management/test-data.service';
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 const forbiddenCode = '"code":"FORBIDDEN"';
@@ -103,7 +103,7 @@ describe.skip('DDT global admin user - queries - authorized', () => {
     ${'projectsTagset'}                     | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'projectsAspects'}                    | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
   `(
-    "should NOT expect: '$expected' for query: '$query'",
+    'should NOT expect: \'$expected\' for query: \'$query\'',
     async ({ query, idName, expectedAuth, expectedForb }) => {
       // Act
       const requestParamsQueryData = {
@@ -148,7 +148,7 @@ describe.skip('DDT global admin user - Create mutations - authorized', () => {
     ${'createReferenceOnContextMutation'}  | ${'createReferenceOnContextVariables'}  | ${'contextId'}     | ${notAuthorizedCode}
     ${'createTagsetOnProfileMutation'}     | ${'createTagsetOnProfileVariables'}     | ${'userProfileId'} | ${notAuthorizedCode}
   `(
-    "should NOT expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should NOT expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -189,7 +189,7 @@ describe.skip('DDT global admin user - Update mutations - authorized', () => {
     ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'} | ${notAuthorizedCode}
     ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}     | ${notAuthorizedCode}
   `(
-    "should NOT expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should NOT expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -226,7 +226,7 @@ describe.skip('DDT global admin user - Remove mutations - authorized', () => {
     ${'removeChallengeMutation'}   | ${'removeChallengeVariables'}   | ${'removeChallangeId'}   | ${notAuthorizedCode}
     ${'removeUserMutation'}        | ${'removeUserVariables'}        | ${'userId'}              | ${notAuthorizedCode}
   `(
-    "should NOT expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    'should NOT expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {

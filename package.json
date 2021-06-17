@@ -40,6 +40,9 @@
     "migration:show": "npm run typeorm migration:show"
   },
   "dependencies": {
+    "@jolocom/sdk": "^1.2.0",
+    "@jolocom/sdk-storage-typeorm": "^4.2.0",
+    "@jolocom/vaulted-key-provider": "^0.8.0",
     "@nestjs/common": "^7.6.15",
     "@nestjs/config": "^0.5.0",
     "@nestjs/core": "^7.6.15",
@@ -64,6 +67,7 @@
     "helmet": "^4.4.1",
     "image-size": "^0.9.7",
     "ipfs-http-client": "^49.0.4",
+    "jolocom-lib": "^5.1.0",
     "js-yaml": "^4.1.0",
     "jwks-rsa": "^2.0.3",
     "module-alias": "^2.2.2",
@@ -77,7 +81,8 @@
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^6.6.7",
-    "typeorm": "^0.2.31",
+    "sqlite3": "^5.0.2",
+    "typeorm": "0.2.32",
     "winston": "^3.3.3",
     "winston-elasticsearch": "^0.12.3",
     "xstate": "^4.17.1",

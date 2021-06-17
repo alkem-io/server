@@ -21,6 +21,6 @@ export class UserResolverFields {
   })
   @Profiling.api
   async agent(@Parent() user: User): Promise<IAgent> {
-    return await this.userService.getAgent(user);
+    return await this.userService.getAgent(user.id);
   }
 }
