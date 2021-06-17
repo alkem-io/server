@@ -3,7 +3,7 @@ import { Profiling } from '@src/common/decorators';
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse } from './ecoverse.interface';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
+import { UUID_NAMEID } from '@domain/common/scalars';
 
 @Resolver()
 export class EcoverseResolverQueries {

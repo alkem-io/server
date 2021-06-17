@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { IQuestion } from '@domain/community/application';
 import { Community } from '@domain/community/community';
-import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
+import { Lifecycle } from '@domain/common/lifecycle';
 import { IApplication } from './application.interface';
 import { NVP } from '@domain/common/nvp';
 import { User } from '@domain/community/user';

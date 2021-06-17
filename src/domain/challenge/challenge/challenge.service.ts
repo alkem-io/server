@@ -17,7 +17,10 @@ import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
 import { NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { CreateOpportunityInput, IOpportunity } from '@domain/collaboration';
+import {
+  CreateOpportunityInput,
+  IOpportunity,
+} from '@domain/collaboration/opportunity';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import {
   AuthorizationCredential,

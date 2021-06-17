@@ -5,7 +5,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { UpdateBaseChallengeInput } from '@domain/challenge';
+import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';

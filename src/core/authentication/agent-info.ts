@@ -1,4 +1,4 @@
-import { ICredential } from '@domain/agent';
+import { ICredential } from '@domain/agent/credential';
 
 export class AgentInfo {
   email = '';

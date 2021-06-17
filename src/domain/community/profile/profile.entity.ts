@@ -1,9 +1,6 @@
 import { Column, Entity, OneToMany } from 'typeorm';
-import { Reference } from '@domain/common/reference/reference.entity';
-import {
-  RestrictedTagsetNames,
-  Tagset,
-} from '@domain/common/tagset/tagset.entity';
+import { Reference } from '@domain/common/reference';
+import { RestrictedTagsetNames, Tagset } from '@domain/common/tagset';
 import { IProfile } from './profile.interface';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 

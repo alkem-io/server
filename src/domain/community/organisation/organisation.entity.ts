@@ -1,7 +1,7 @@
 import { Entity, JoinColumn, ManyToMany, OneToMany, OneToOne } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { Profile } from '@domain/community/profile/profile.entity';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
+import { Profile } from '@domain/community/profile';
+import { UserGroup } from '@domain/community/user-group';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge/challenge';
 import { NameableEntity } from '@domain/common/nameable-entity';

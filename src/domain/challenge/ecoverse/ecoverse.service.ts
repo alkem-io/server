@@ -23,7 +23,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { INVP, NVP } from '@domain/common/nvp';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
-import { IContext } from '@domain/context';
+import { IContext } from '@domain/context/context';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';

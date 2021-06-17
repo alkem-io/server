@@ -18,7 +18,6 @@ import {
   UpdateTagsetInput,
   DeleteTagsetInput,
 } from '@domain/common/tagset';
-import {} from './tagset.dto.delete';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { AuthorizationDefinition } from '../authorization-definition';
 

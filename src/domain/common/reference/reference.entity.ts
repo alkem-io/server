@@ -1,8 +1,8 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IReference } from './reference.interface';
-import { Context } from '@domain/context/context/context.entity';
-import { Profile } from '@domain/community/profile/profile.entity';
-import { AuthorizableEntity } from '../authorizable-entity';
+import { Context } from '@domain/context/context';
+import { Profile } from '@domain/community/profile/';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
 export class Reference extends AuthorizableEntity implements IReference {

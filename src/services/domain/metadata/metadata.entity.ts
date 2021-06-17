@@ -1,4 +1,4 @@
-import { INVP } from '@domain/common';
+import { INVP } from '@domain/common/nvp';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { IMetadata } from './metadata.interface';
 import { ServiceMetadata } from './service/service.metadata.entity';

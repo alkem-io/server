@@ -1,5 +1,5 @@
 import { IAuthorizable } from '@domain/common/authorizable-entity';
-import { IActor } from '@domain/context/actor/actor.interface';
+import { IActor } from '@domain/context/actor';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('ActorGroup')
