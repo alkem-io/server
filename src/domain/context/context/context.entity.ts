@@ -3,6 +3,7 @@ import { Aspect, IContext } from '@domain/context';
 import { EcosystemModel } from '../ecosystem-model';
 import { Reference } from '@domain/common/reference';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { Visual } from '../visual';
 @Entity()
 export class Context extends AuthorizableEntity implements IContext {
   @Column('varchar', { length: 255, nullable: true })
@@ -30,6 +31,10 @@ export class Context extends AuthorizableEntity implements IContext {
   @OneToOne(() => EcosystemModel, { eager: false, cascade: true })
   @JoinColumn()
   ecosystemModel?: EcosystemModel;
+
+  @OneToOne(() => Visual, { eager: false, cascade: true })
+  @JoinColumn()
+  visual?: Visual;
 
   @OneToMany(
     () => Aspect,
