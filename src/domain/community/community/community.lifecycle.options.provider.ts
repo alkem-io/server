@@ -87,7 +87,7 @@ export class CommunityLifecycleOptionsProvider {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationDefinition: AuthorizationDefinition =
           event.authorization;
-        return this.authorizationEngineService.isUserAccessGranted(
+        return this.authorizationEngineService.isAccessGranted(
           agentInfo,
           authorizationDefinition,
           AuthorizationPrivilege.UPDATE

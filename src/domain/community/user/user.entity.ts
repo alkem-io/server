@@ -1,7 +1,7 @@
 import { Profile } from '@domain/community/profile';
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import { Column, Entity, JoinColumn, OneToOne, OneToMany } from 'typeorm';
-import { IUser } from './user.interface';
+import { IUser } from '@domain/community/user';
 import { Application } from '@domain/community/application/application.entity';
 import { Agent } from '@domain/agent/agent';
 import { NameableEntity } from '@domain/common/nameable-entity';

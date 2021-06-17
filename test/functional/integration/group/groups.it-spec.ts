@@ -11,7 +11,7 @@ import {
   updateGroupMutation,
 } from '../group/group.request.params';
 import { createChildChallengeMutation } from '../opportunity/opportunity.request.params';
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/domain/data-management/test-data.service';
 import { createGroupOnCommunityMutation } from '../community/community.request.params';
 
 let data: TestDataServiceInitResult;

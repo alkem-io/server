@@ -159,8 +159,13 @@ export class EcoverseService {
     const challengeCount = await this.ecoverseRepository.count({
       nameID: nameID,
     });
-    if (challengeCount == 0) return true;
-    return false;
+    if (challengeCount != 0) return false;
+
+    // check restricted ecoverse names
+    const restrictedEcoverseNames = ['user', 'organisation'];
+    if (restrictedEcoverseNames.includes(nameID.toLowerCase())) return false;
+
+    return true;
   }
 
   async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {

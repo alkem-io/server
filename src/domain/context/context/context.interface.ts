@@ -1,4 +1,4 @@
-import { IAspect, IEcosystemModel } from '@domain/context';
+import { IAspect, IEcosystemModel, IVisual } from '@domain/context';
 import { IReference } from '@domain/common/reference';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/authorizable-entity';
@@ -42,6 +42,8 @@ export abstract class IContext extends IAuthorizable {
   references?: IReference[];
 
   ecosystemModel?: IEcosystemModel;
+
+  visual?: IVisual;
 
   aspects?: IAspect[];
 }

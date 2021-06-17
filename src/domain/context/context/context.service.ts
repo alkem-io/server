@@ -21,10 +21,13 @@ import { AspectService } from '../aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { EcosystemModelService } from '../ecosystem-model/ecosystem-model.service';
+import { IVisual, Visual } from '../visual';
+import { VisualService } from '../visual/visual.service';
 
 @Injectable()
 export class ContextService {
   constructor(
+    private visualService: VisualService,
     private aspectService: AspectService,
     private ecosystemModelService: EcosystemModelService,
     private referenceService: ReferenceService,
@@ -39,6 +42,7 @@ export class ContextService {
     );
     context.authorization = new AuthorizationDefinition();
     if (!context.references) context.references = [];
+    if (!context.visual) context.visual = new Visual();
     return context;
   }
 
@@ -83,6 +87,14 @@ export class ContextService {
       context.references = await this.referenceService.updateReferences(
         references,
         contextInput.references
+      );
+    }
+
+    if (contextInput.visual) {
+      const visual = await this.getVisual(context);
+      context.visual = await this.visualService.updateVisualValues(
+        visual,
+        contextInput.visual
       );
     }
 
@@ -211,5 +223,18 @@ export class ContextService {
       );
 
     return contextLoaded.ecosystemModel;
+  }
+
+  async getVisual(context: IContext): Promise<IVisual> {
+    const contextLoaded = await this.getContextOrFail(context.id, {
+      relations: ['visual'],
+    });
+    if (!contextLoaded.visual)
+      throw new EntityNotFoundException(
+        `Context not initialised: ${context.id}`,
+        LogContext.CONTEXT
+      );
+
+    return contextLoaded.visual;
   }
 }

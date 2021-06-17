@@ -21,13 +21,13 @@ import {
   getRemoveVariables,
 } from '@test/non-functional/auth/remove-mutations';
 
-import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
+import { TestDataServiceInitResult } from '@src/services/domain/data-management/test-data.service';
 import { TestUser } from '@test/utils/token.helper';
 
 const notAuthorizedCode = '"code":"UNAUTHENTICATED"';
 const forbiddenCode = '"code":"FORBIDDEN"';
 const userNotRegistered = 'USER_NOT_REGISTERED';
-let nonEcoverseEmail = 'non-ecoverse@cherrytwist.com';
+const nonEcoverseEmail = 'non-ecoverse@cherrytwist.com';
 let data: TestDataServiceInitResult;
 
 beforeAll(async () => {
@@ -76,7 +76,7 @@ describe.skip('DDT non-ecoverse user - queries - Not authorized', () => {
     ${'projectsTagset'}                  | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'projectsAspects'}                 | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
   `(
-    "should expect: '$expected' for query: '$query'",
+    'should expect: \'$expected\' for query: \'$query\'',
     async ({ query, idName, expectedAuth, expectedForb }) => {
       // Act
       const requestParamsQueryData = {
@@ -140,7 +140,7 @@ describe.skip('DDT non-ecoverse user - queries - authorized', () => {
     ${'opportunitiesAspects'}               | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
     ${'opportunitiesRelationsName'}         | ${''}            | ${notAuthorizedCode} | ${forbiddenCode}
   `(
-    "should NOT expect: '$expected' for query: '$query'",
+    'should NOT expect: \'$expected\' for query: \'$query\'',
     async ({ query, idName, expectedAuth, expectedForb }) => {
       // Act
       const requestParamsQueryData = {
@@ -182,7 +182,7 @@ describe.skip('DDT non-ecoverse user - Create mutations - Not authorized', () =>
     ${'createReferenceOnContextMutation'}  | ${'createReferenceOnContextVariables'}  | ${'contextId'}     | ${forbiddenCode}
     ${'createTagsetOnProfileMutation'}     | ${'createTagsetOnProfileVariables'}     | ${'userProfileId'} | ${forbiddenCode}
   `(
-    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -212,7 +212,7 @@ describe.skip('DDT non-ecoverse user - Create mutations - authorized', () => {
     mutation                       | variables                       | idName             | expected
     ${'createApplicationMutation'} | ${'createApplicationVariables'} | ${'nonEcoverseId'} | ${forbiddenCode}
   `(
-    "should expect: '$expected' for create mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for create mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsCreateMutations = {
@@ -252,7 +252,7 @@ describe.skip('DDT non-ecoverse user - Update mutations - NOT authorized', () =>
     ${'addUserToGroupMutation'}                 | ${'addUserToGroupVariables'}                 | ${'groupIdEcoverse'} | ${forbiddenCode}
     ${'addChallengeLeadToOrganisationMutation'} | ${'addChallengeLeadToOrganisationVariables'} | ${'challengeId'}     | ${forbiddenCode}
   `(
-    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -283,7 +283,7 @@ describe.skip('DDT non-ecoverse user - Update mutations - authorized', () => {
     mutation                       | variables                       | idName             | expected
     ${'updateNonEcoverseMutation'} | ${'updateNonEcoverseVariables'} | ${'nonEcoverseId'} | ${forbiddenCode}
   `(
-    "should expect: '$expected' for update mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for update mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsUpdateMutations = {
@@ -320,7 +320,7 @@ describe.skip('DDT non-ecoverse user - Remove mutations - NOT authorized', () =>
     ${'removeChallengeMutation'}   | ${'removeChallengeVariables'}   | ${'removeChallangeId'}   | ${forbiddenCode}
     ${'removeUserMutation'}        | ${'removeUserVariables'}        | ${'userId'}              | ${forbiddenCode}
   `(
-    "should expect: '$expected' for remove mutation: '$mutation' and variables: '$variables'",
+    'should expect: \'$expected\' for remove mutation: \'$mutation\' and variables: \'$variables\'',
     async ({ mutation, variables, idName, expected }) => {
       // Act
       const requestParamsRemoveMutations = {

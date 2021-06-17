@@ -1,5 +1,5 @@
 export const challengeLifecycleConfigDefault = {
-  id: 'challenge-lifecycle-default',
+  id: 'challenge-lifecycle-default-2',
   context: {
     parentID: '',
   },
@@ -7,21 +7,39 @@ export const challengeLifecycleConfigDefault = {
   states: {
     new: {
       on: {
-        REFINE: 'beingRefined',
-        ABANDONED: 'abandoned',
+        REFINE: {
+          target: 'beingRefined',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'abandoned',
+          cond: 'challengeStateUpdateAuthorized',
+        },
       },
     },
     beingRefined: {
       on: {
-        ACTIVE: 'inProgress',
-        ABANDONED: 'abandoned',
+        ACTIVE: {
+          target: 'inProgress',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'abandoned',
+          cond: 'challengeStateUpdateAuthorized',
+        },
       },
     },
     inProgress: {
       entry: ['sampleEvent'],
       on: {
-        COMPLETED: 'complete',
-        ABANDONED: 'abandoned',
+        COMPLETED: {
+          target: 'inProgress',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'complete',
+          cond: 'challengeStateUpdateAuthorized',
+        },
       },
     },
     complete: {

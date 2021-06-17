@@ -11,9 +11,9 @@ import {
   IAuthorizationDefinition,
   UpdateAuthorizationDefinitionInput,
 } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
+import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 
 @Injectable()
 export class EcoverseAuthorizationService {
@@ -91,7 +91,7 @@ export class EcoverseAuthorizationService {
         `Authorization definition not found for: ${ecoverseID}`,
         LogContext.CHALLENGES
       );
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
     // By default it is world visible
     authorization.anonymousReadAccess = true;
 
