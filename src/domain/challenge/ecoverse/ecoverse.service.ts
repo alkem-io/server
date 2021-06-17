@@ -339,10 +339,15 @@ export class EcoverseService {
     return await this.ecoverseRepository.count();
   }
 
-  async getHost(ecoverseID: string): Promise<IOrganisation | undefined> {
+  async getHost(ecoverseID: string): Promise<IOrganisation> {
     const ecoverse = await this.getEcoverseOrFail(ecoverseID, {
       relations: ['host'],
     });
+    if (!ecoverse.host)
+      throw new RelationshipNotFoundException(
+        `Unable to load host for Ecoverse ${ecoverse.id} `,
+        LogContext.CHALLENGES
+      );
     return ecoverse.host;
   }
 }

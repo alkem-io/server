@@ -227,7 +227,7 @@ export class EcoverseResolverFields {
     description: 'The Ecoverse host.',
   })
   @Profiling.api
-  async host(@Parent() ecoverse: Ecoverse) {
+  async host(@Parent() ecoverse: Ecoverse): Promise<IOrganisation> {
     return await this.ecoverseService.getHost(ecoverse.id);
   }
 }
