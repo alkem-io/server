@@ -57,3 +57,6 @@ web_modules/
 
 # GraphQL
 *.gql
+
+# Jolocom tmp db
+*.sqlite[3]
