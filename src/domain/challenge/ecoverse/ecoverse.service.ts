@@ -1,38 +1,39 @@
-import { IChallenge, CreateChallengeInput } from '@domain/challenge/challenge';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { UUID_LENGTH } from '@common/constants';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { AuthorizationCredential, LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { IAgent } from '@domain/agent/agent';
+import { CreateChallengeInput, IChallenge } from '@domain/challenge/challenge';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import {
+  CreateEcoverseInput,
+  DeleteEcoverseInput,
   Ecoverse,
   IEcoverse,
-  CreateEcoverseInput,
   UpdateEcoverseInput,
-  DeleteEcoverseInput,
 } from '@domain/challenge/ecoverse';
-import { ICommunity } from '@domain/community/community';
-import { IUserGroup } from '@domain/community/user-group';
-import { INVP, NVP } from '@domain/common/nvp';
-import { ProjectService } from '@domain/collaboration/project/project.service';
-import { IProject } from '@domain/collaboration/project';
-import { IContext } from '@domain/context';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { BaseChallengeService } from '../base-challenge/base.challenge.service';
-import { NamingService } from '@src/services/domain/naming/naming.service';
-import { UUID_LENGTH } from '@common/constants';
+import { IProject } from '@domain/collaboration/project';
+import { ProjectService } from '@domain/collaboration/project/project.service';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { IAgent } from '@domain/agent/agent';
+import { INVP, NVP } from '@domain/common/nvp';
+import { IOrganisation } from '@domain/community';
+import { ICommunity } from '@domain/community/community';
+import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { IUserGroup } from '@domain/community/user-group';
+import { IContext } from '@domain/context';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { NamingService } from '@src/services/domain/naming/naming.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
+import { BaseChallengeService } from '../base-challenge/base.challenge.service';
+import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
 
 @Injectable()
 export class EcoverseService {
@@ -336,5 +337,12 @@ export class EcoverseService {
 
   async getEcoverseCount(): Promise<number> {
     return await this.ecoverseRepository.count();
+  }
+
+  async getHost(ecoverseID: string): Promise<IOrganisation | undefined> {
+    const ecoverse = await this.getEcoverseOrFail(ecoverseID, {
+      relations: ['host'],
+    });
+    return ecoverse.host;
   }
 }
