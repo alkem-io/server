@@ -28,9 +28,9 @@ const termTooLong = [
   'User',
   'QA',
 ];
-let userId = async (): Promise<string> => {
+const userId = async (): Promise<string> => {
   const getUserId = await getUser(userNameID);
-  let response = getUserId.body.data.user.id;
+  const response = getUserId.body.data.user.id;
   return response;
 };
 const termAllScored = ['QA', 'QA', 'user', 'mm'];
@@ -203,7 +203,7 @@ describe('Query Challenge data', () => {
     // Assert
 
     expect(responseSearchData.text).toContain(
-      `Search: Skipping term below minimum length: `
+      'Search: Skipping term below minimum length: '
     );
   });
 

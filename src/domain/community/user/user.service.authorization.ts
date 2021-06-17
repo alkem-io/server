@@ -15,8 +15,8 @@ import {
   AuthorizationDefinition,
   IAuthorizationDefinition,
 } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -37,11 +37,11 @@ export class UserAuthorizationService {
 
     // cascade
     const profile = this.userService.getProfile(user);
-    profile.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    profile.authorization = this.authorizationEngine.inheritParentAuthorization(
       profile.authorization,
       user.authorization
     );
-    profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
+    profile.authorization = this.authorizationEngine.appendCredentialAuthorizationRule(
       user.authorization,
       {
         type: AuthorizationCredential.GlobalAdminCommunity,
@@ -52,12 +52,17 @@ export class UserAuthorizationService {
     user.profile = await this.profileAuthorizationService.applyAuthorizationRules(
       profile
     );
+    user.agent = await this.userService.getAgent(user.id);
+    user.agent.authorization = this.authorizationEngine.inheritParentAuthorization(
+      user.agent.authorization,
+      user.authorization
+    );
 
     return await this.userRepository.save(user);
   }
 
   async grantCredentials(user: IUser): Promise<IUser> {
-    const agent = await this.userService.getAgent(user);
+    const agent = await this.userService.getAgent(user.id);
 
     user.agent = await this.agentService.grantCredential({
       type: AuthorizationCredential.GlobalRegistered,
@@ -80,7 +85,7 @@ export class UserAuthorizationService {
         `Authorization definition not found for: ${userID}`,
         LogContext.COMMUNITY
       );
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GlobalAdmin,
@@ -129,7 +134,7 @@ export class UserAuthorizationService {
     userEmail: string
   ): IAuthorizationDefinition {
     const authorization = new AuthorizationDefinition();
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GlobalAdmin,

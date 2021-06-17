@@ -8,4 +8,7 @@ export abstract class IAuthorizationDefinition extends IBaseCherrytwist {
 
   @Field(() => String)
   credentialRules!: string;
+
+  @Field(() => String)
+  verifiedCredentialRules!: string;
 }
