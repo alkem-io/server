@@ -6,6 +6,7 @@ import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge/challenge';
 import { NameableEntity } from '@domain/common/nameable-entity';
 import { Agent } from '@domain/agent/agent';
+import { Ecoverse } from '@domain/challenge/ecoverse';
 
 @Entity()
 export class Organisation extends NameableEntity
@@ -13,6 +14,13 @@ export class Organisation extends NameableEntity
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
+
+  @OneToMany(
+    () => Ecoverse,
+    ecoverse => ecoverse.host,
+    { eager: false, cascade: true }
+  )
+  ecoverses?: Ecoverse[];
 
   @OneToMany(
     () => UserGroup,

@@ -5,6 +5,7 @@ import { ObjectType } from '@nestjs/graphql';
 import { IGroupable, ISearchable } from '@domain/common/interfaces';
 import { INameable } from '@domain/common/nameable-entity';
 import { IAgent } from '@domain/agent/agent';
+import { IEcoverse } from '@domain/challenge';
 @ObjectType('Organisation', {
   implements: () => [IGroupable, ISearchable],
 })
@@ -13,4 +14,5 @@ export abstract class IOrganisation extends INameable {
   challenges?: IChallenge[];
   groups?: IUserGroup[];
   agent?: IAgent;
+  ecoverses?: IEcoverse[];
 }
