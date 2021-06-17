@@ -60,7 +60,7 @@ export class UserGroupService {
   }
 
   validateName(name: string) {
-    if (name.length < 2) {
+    if (name.trim().length < 2) {
       throw new ValidationException(
         `UserGroup name has a minimum length of 2: ${name}`,
         LogContext.COMMUNITY
