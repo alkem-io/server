@@ -1,15 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MetadataModule } from './metadata.module';
+import { AppModule } from '@src/app.module';
 import { MetadataResolverQueries } from './metadata.resolver.queries';
-import { MetadataService } from './metadata.service';
 
 describe('MetadataResolver', () => {
   let resolver: MetadataResolverQueries;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [MetadataModule],
-      providers: [MetadataResolverQueries, MetadataService],
+      imports: [AppModule],
     }).compile();
 
     resolver = module.get<MetadataResolverQueries>(MetadataResolverQueries);
