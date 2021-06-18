@@ -1,7 +1,7 @@
 import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { ICredential, Credential } from '@domain/agent/credential';
-import { User } from '@domain/community/user';
+import { Credential } from '@domain/agent/credential/credential.entity';
+import { User } from '@domain/community/user/user.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()
@@ -24,7 +24,7 @@ export class Agent extends AuthorizableEntity implements IAgent {
       cascade: true,
     }
   )
-  credentials?: ICredential[];
+  credentials?: Credential[];
 
   @OneToOne(
     () => User,

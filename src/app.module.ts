@@ -1,33 +1,33 @@
-import { ValidationPipe } from '@common/pipes/validation.pipe';
-import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
-import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
-import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { MessageModule } from '@domain/community/message/message.module';
 import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { ConfigModule } from '@nestjs/config/dist/config.module';
+import { ConfigService, ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
+import { WinstonModule } from 'nest-winston';
+import { decode } from 'jsonwebtoken';
+import { ValidationPipe } from '@common/pipes/validation.pipe';
+import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { AuthenticationModule } from '@core/authentication/authentication.module';
+import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
+import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import { MessageModule } from '@domain/community/message/message.module';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
-import { AuthenticationModule } from '@src/core/authentication/authentication.module';
-import { join } from 'path';
 import { DataManagementModule } from '@src/services/domain/data-management/data-management.module';
-import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
-import { WinstonModule } from 'nest-winston';
+import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
 import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
 import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import configuration from '@config/configuration';
-import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
 import { ConfigurationTypes } from '@common/enums';
 import { MembershipModule } from '@src/services/domain/membership/membership.module';
 import { MatrixAgentPool } from './services/platform/matrix/agent-pool/matrix.agent.pool';
 import { MatrixAgentPoolModule } from './services/platform/matrix/agent-pool/matrix.agent.pool.module';
-import { decode } from 'jsonwebtoken';
+
 import { SsiAgentModule } from '@services/platform/ssi/agent/ssi.agent.module';
 
 @Module({
