@@ -1,24 +1,25 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Ecoverse } from '@domain/challenge/ecoverse';
 import { IProject } from '@domain/collaboration/project';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { IUserGroup } from '@domain/community/user-group';
+import { INVP } from '@domain/common/nvp';
+import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { ITagset } from '@domain/common/tagset';
+import { IOrganisation } from '@domain/community';
+import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
+import { ICommunity } from '@domain/community/community';
+import { IUserGroup } from '@domain/community/user-group';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IChallenge } from '@domain/challenge/challenge';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { IEcoverse } from '@domain/challenge/ecoverse';
-import { ICommunity } from '@domain/community/community';
-import { IContext } from '@domain/context/context';
-import { ITagset } from '@domain/common/tagset';
 import { IOpportunity } from '@domain/collaboration/opportunity';
-import { IApplication } from '@domain/community/application';
-import { INVP } from '@domain/common/nvp';
-import { UUID, UUID_NAMEID } from '@domain/common/scalars';
-import { AuthorizationPrivilege } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
 
 @Resolver(() => IEcoverse)
@@ -41,12 +42,10 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getCommunity(ecoverse);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the ecoverse.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async context(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getContext(ecoverse);
@@ -221,5 +220,14 @@ export class EcoverseResolverFields {
   @Profiling.api
   async activity(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getActivity(ecoverse);
+  }
+
+  @ResolveField('host', () => IOrganisation, {
+    nullable: true,
+    description: 'The Ecoverse host.',
+  })
+  @Profiling.api
+  async host(@Parent() ecoverse: Ecoverse): Promise<IOrganisation> {
+    return await this.ecoverseService.getHost(ecoverse.id);
   }
 }

@@ -8,7 +8,8 @@ import { EcosystemModelModule } from '@domain/context/ecosystem-model/ecosystem-
 import { AspectModule } from '@domain/context/aspect/aspect.module';
 import { ContextResolverFields } from '@domain/context/context/context.resolver.fields';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
-import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
+import { ContextAuthorizationService } from './context.service.authorization';
+import { VisualModule } from '../visual/visual.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ContextAuthorizationService } from '@domain/context/context/context.ser
     AspectModule,
     ReferenceModule,
     EcosystemModelModule,
+    VisualModule,
     TypeOrmModule.forFeature([Context]),
   ],
   providers: [

@@ -221,8 +221,7 @@ export class CommunityService {
   }
 
   async isMember(userID: string, communityID: string): Promise<boolean> {
-    const user = await this.userService.getUserWithAgent(userID);
-    const agent = await this.userService.getAgent(user);
+    const agent = await this.userService.getAgent(userID);
     const community = await this.getCommunityOrFail(communityID);
     const membershipCredential = this.getMembershipCredential(community);
 

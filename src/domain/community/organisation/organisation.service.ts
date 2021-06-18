@@ -5,6 +5,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
@@ -104,7 +105,17 @@ export class OrganisationService {
     deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
     const orgID = deleteData.ID;
-    const organisation = await this.getOrganisationOrFail(orgID);
+    const organisation = await this.getOrganisationOrFail(orgID, {
+      relations: ['ecoverses'],
+    });
+
+    const hostedEcoverses = (organisation as Organisation).ecoverses;
+    if (hostedEcoverses && hostedEcoverses.length > 0) {
+      throw new ForbiddenException(
+        `Unable to delete Organisation: host of ${hostedEcoverses.length} ecoverses`,
+        LogContext.CHALLENGES
+      );
+    }
 
     if (organisation.profile) {
       await this.profileService.deleteProfile(organisation.profile.id);

@@ -10,7 +10,7 @@ import {
   AuthorizationDefinition,
   IAuthorizationDefinition,
 } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
+import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 
 @Injectable()
 export class OrganisationAuthorizationService {
@@ -31,7 +31,7 @@ export class OrganisationAuthorizationService {
     const profile = organisation.profile;
     if (profile) {
       profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
-        organisation.authorization,
+        profile.authorization,
         {
           type: AuthorizationCredential.GlobalAdminCommunity,
           resourceID: '',
@@ -50,13 +50,14 @@ export class OrganisationAuthorizationService {
     organisationID: string
   ): IAuthorizationDefinition {
     const authorization = new AuthorizationDefinition();
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GlobalAdmin,
       resourceID: '',
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
@@ -68,6 +69,7 @@ export class OrganisationAuthorizationService {
       type: AuthorizationCredential.GlobalAdminCommunity,
       resourceID: '',
       grantedPrivileges: [
+        AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
@@ -80,6 +82,7 @@ export class OrganisationAuthorizationService {
       type: AuthorizationCredential.OrganisationAdmin,
       resourceID: organisationID,
       grantedPrivileges: [
+        AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,

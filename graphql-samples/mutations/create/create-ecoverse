@@ -10,6 +10,7 @@ query variables:
   "ecoverseData":
   {
     "displayName": "Test ecoverse2",
-    "nameID": "eco2"
+    "nameID": "eco2",
+    "hostID": "Eco1Host"
   }
 }

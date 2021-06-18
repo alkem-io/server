@@ -1,4 +1,5 @@
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { AuthorizationCredential } from '@common/enums';
 import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
@@ -9,6 +10,6 @@ export abstract class ICredential extends IBaseCherrytwist {
   @Field(() => String)
   resourceID!: string;
 
-  @Field(() => String)
+  @Field(() => AuthorizationCredential)
   type!: string;
 }

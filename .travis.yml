@@ -1,9 +1,19 @@
 language: node_js
 node_js:
   - v12.18.3
+env:
+  matrix:
+  - DATABASE_HOST=localhost MYSQL_DATABASE=cherrytwist MYSQL_ROOT_PASSWORD=toor
 cache:
   directories:
     - node_modules
 install:
   - npm install
+services:
+  - mysql
+before_install:
+  - mysql -e 'CREATE DATABASE IF NOT EXISTS cherrytwist;'
+before_script:
+  - echo "USE mysql;ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password
+    BY 'toor';;\nFLUSH PRIVILEGES;\n" | mysql -u root
 script: '.scripts/run-tests.sh'
