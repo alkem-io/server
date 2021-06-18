@@ -27,8 +27,7 @@ import { ConfigurationTypes } from '@common/enums';
 import { MembershipModule } from '@src/services/domain/membership/membership.module';
 import { MatrixAgentPool } from './services/platform/matrix/agent-pool/matrix.agent.pool';
 import { MatrixAgentPoolModule } from './services/platform/matrix/agent-pool/matrix.agent.pool.module';
-
-import { SsiAgentModule } from '@services/platform/ssi/agent/ssi.agent.module';
+import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
 
 @Module({
   imports: [
