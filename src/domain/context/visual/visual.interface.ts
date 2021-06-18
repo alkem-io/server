@@ -1,4 +1,4 @@
-import { IBaseCherrytwist } from '@domain/common';
+import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Visual')

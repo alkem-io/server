@@ -1,6 +1,6 @@
 import { Column, Entity } from 'typeorm';
-import { BaseCherrytwistEntity } from '@domain/common';
-import { IVisual } from '@domain/context/visual';
+import { BaseCherrytwistEntity } from '@domain/common/base-entity/base.cherrytwist.entity';
+import { IVisual } from '@domain/context/visual/visual.interface';
 
 @Entity()
 export class Visual extends BaseCherrytwistEntity implements IVisual {
