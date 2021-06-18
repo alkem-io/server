@@ -55,35 +55,35 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
           ?.logging,
       }),
     }),
-    TypeOrmModule.forRootAsync({
-      name: 'jolocom',
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        type: 'sqlite', //todo: switch to mysql when issue is addressed.
-        insecureAuth: true,
-        synchronize: true /* note: only for demo */,
-        cache: true,
-        entities: [
-          'node_modules/@jolocom/sdk-storage-typeorm/js/src/entities/*.js',
-        ],
-        // NOTE: these are in until jolocom fixes the name issue on typeorm-mysql.
-        // host: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
-        //   ?.host,
-        // port: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
-        //   ?.port,
-        // username: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
-        //   .database?.username,
-        // password: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
-        //   .database?.password,
-        // database: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
-        //   ?.schema,
+    // TypeOrmModule.forRootAsync({
+    //   name: 'jolocom',
+    //   imports: [ConfigModule],
+    //   inject: [ConfigService],
+    //   useFactory: async (configService: ConfigService) => ({
+    //     type: 'sqlite', //todo: switch to mysql when issue is addressed.
+    //     insecureAuth: true,
+    //     synchronize: true /* note: only for demo */,
+    //     cache: true,
+    //     entities: [
+    //       'node_modules/@jolocom/sdk-storage-typeorm/js/src/entities/*.js',
+    //     ],
+    //     // NOTE: these are in until jolocom fixes the name issue on typeorm-mysql.
+    //     // host: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
+    //     //   ?.host,
+    //     // port: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
+    //     //   ?.port,
+    //     // username: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
+    //     //   .database?.username,
+    //     // password: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
+    //     //   .database?.password,
+    //     // database: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
+    //     //   ?.schema,
 
-        logging: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
-          .database?.logging,
-        database: './jolocom.sqlite3',
-      }),
-    }),
+    //     logging: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
+    //       .database?.logging,
+    //     database: './jolocom.sqlite3',
+    //   }),
+    // }),
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
