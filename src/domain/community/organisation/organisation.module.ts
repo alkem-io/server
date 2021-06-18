@@ -8,7 +8,7 @@ import { Organisation } from '@domain/community/organisation';
 import { OrganisationResolverFields } from './organisation.resolver.fields';
 import { ProfileModule } from '@domain/community/profile/profile.module';
 import { OrganisationResolverQueries } from './organisation.resolver.queries';
-import { UserModule } from '../user/user.module';
+import { UserModule } from '@domain/community/user/user.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { OrganisationAuthorizationService } from './organisation.service.authorization';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';

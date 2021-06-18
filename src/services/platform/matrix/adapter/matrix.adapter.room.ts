@@ -1,4 +1,8 @@
-import { IOpts, Preset, Visibility } from './matrix.adapter.room.interface';
+import {
+  IOpts,
+  Preset,
+  Visibility,
+} from '@src/services/platform/matrix/adapter/matrix.adapter.room.interface';
 
 export class MatrixRoomEntityAdapter {
   constructor(private _client: any) {}

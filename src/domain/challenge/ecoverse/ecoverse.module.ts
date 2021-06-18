@@ -4,20 +4,20 @@ import { OrganisationModule } from '@domain/community/organisation/organisation.
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Ecoverse } from './ecoverse.entity';
-import { EcoverseResolverMutations } from './ecoverse.resolver.mutations';
-import { EcoverseResolverQueries } from './ecoverse.resolver.queries';
-import { EcoverseService } from './ecoverse.service';
+import { Ecoverse } from '@domain/challenge/ecoverse';
+import { EcoverseResolverMutations } from '@domain/challenge/ecoverse/ecoverse.resolver.mutations';
+import { EcoverseResolverQueries } from '@domain/challenge/ecoverse/ecoverse.resolver.queries';
+import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
+import { EcoverseResolverFields } from '@domain/challenge/ecoverse/ecoverse.resolver.fields';
 import { CommunityModule } from '@domain/community/community/community.module';
-import { EcoverseResolverFields } from './ecoverse.resolver.fields';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
-import { BaseChallengeModule } from '../base-challenge/base.challenge.module';
+import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
-import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
+import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 
 @Module({

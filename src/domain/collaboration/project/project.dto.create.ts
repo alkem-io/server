@@ -1,5 +1,5 @@
 import { CreateNameableInput } from '@domain/common/nameable-entity';
-import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 

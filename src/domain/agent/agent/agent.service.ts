@@ -14,7 +14,7 @@ import {
   CreateAgentInput,
 } from '@domain/agent/agent';
 import { LogContext } from '@common/enums';
-import { CredentialService } from '../credential/credential.service';
+import { CredentialService } from '@domain/agent/credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 
 @Injectable()

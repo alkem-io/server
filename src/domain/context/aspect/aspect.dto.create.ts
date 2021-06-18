@@ -1,4 +1,4 @@
-import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UUID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';

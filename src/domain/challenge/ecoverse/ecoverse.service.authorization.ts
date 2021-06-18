@@ -6,11 +6,11 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { EcoverseService } from './ecoverse.service';
 import { IEcoverse, Ecoverse } from '@domain/challenge/ecoverse';
-import { ChallengeAuthorizationService } from '../challenge/challenge.service.authorization';
+import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
+import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 
 @Injectable()
 export class EcoverseAuthorizationService {

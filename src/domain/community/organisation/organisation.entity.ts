@@ -3,9 +3,9 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
-import { Challenge } from '@domain/challenge/challenge';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { NameableEntity } from '@domain/common/nameable-entity';
-import { Agent } from '@domain/agent/agent';
+import { Agent } from '@domain/agent/agent/agent.entity';
 
 @Entity()
 export class Organisation extends NameableEntity

@@ -14,14 +14,14 @@ import {
 import {
   createAspectOnOpportunityMutation,
   getAspectPerOpportunity,
-} from '../aspect/aspect.request.params';
-import { createActorGroupMutation } from '../actor-groups/actor-groups.request.params';
-import { createRelationMutation } from '../relations/relations.request.params';
+} from '@domain/context/aspect/aspect.request.params';
+import { createActorGroupMutation } from '@domain/context/actor-groups/actor-groups.request.params';
+import { createRelationMutation } from '@domain/collaboration/relations/relations.request.params';
 import {
   createProjectMutation,
   removeProjectMutation,
-} from '../project/project.request.params';
-import { createGroupOnCommunityMutation } from '../community/community.request.params';
+} from '@domain/collaboration/project/project.request.params';
+import { createGroupOnCommunityMutation } from '@domain/community/community/community.request.params';
 
 const userId = '6';
 let groupName = '';

@@ -1,9 +1,9 @@
-import { IApplication } from '@domain/community/application';
-import { IUserGroup } from '@domain/community/user-group';
+import { IApplication } from '@domain/community/application/application.interface';
+import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IGroupable } from '@domain/common/interfaces';
+import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IAuthorizable } from '@domain/common/authorizable-entity';
-import { ICredential } from '@domain/agent/credential';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 
 @ObjectType('Community', {
   implements: () => [IGroupable],

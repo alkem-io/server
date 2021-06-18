@@ -23,14 +23,14 @@ import { IUserGroup } from '@domain/community/user-group';
 import { INVP, NVP } from '@domain/common/nvp';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
-import { IContext } from '@domain/context';
+import { IContext } from '@domain/context/context';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { BaseChallengeService } from '../base-challenge/base.challenge.service';
+import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { NamingService } from '@src/services/domain/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
+import { challengeLifecycleConfigDefault } from '@domain/challenge/challenge/challenge.lifecycle.config.default';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { IAgent } from '@domain/agent/agent';
 

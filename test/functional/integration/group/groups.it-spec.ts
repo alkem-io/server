@@ -12,7 +12,7 @@ import {
 } from '../group/group.request.params';
 import { createChildChallengeMutation } from '../opportunity/opportunity.request.params';
 import { TestDataServiceInitResult } from '@src/services/data-management/test-data.service';
-import { createGroupOnCommunityMutation } from '../community/community.request.params';
+import { createGroupOnCommunityMutation } from '@domain/community/community/community.request.params';
 
 let data: TestDataServiceInitResult;
 let userId: string;

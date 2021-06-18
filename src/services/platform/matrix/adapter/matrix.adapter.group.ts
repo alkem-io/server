@@ -1,5 +1,5 @@
-import { IMatrixUser } from '../management/matrix.management.user.interface';
-import { IOpts } from './matrix.adapter.group.interface';
+import { IMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
+import { IOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.group.interface';
 
 export class MatrixGroupEntityAdapter {
   constructor(private _client: any) {}

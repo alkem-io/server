@@ -11,7 +11,7 @@ import { Challenge, IChallenge } from '@domain/challenge/challenge';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
+import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {

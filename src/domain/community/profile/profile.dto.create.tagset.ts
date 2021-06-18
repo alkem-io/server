@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UUID } from '../../common/scalars/scalar.uuid';
-import { CreateTagsetInput } from '../../common/tagset/tagset.dto.create';
+import { UUID } from '@domain/common/scalars';
+import { CreateTagsetInput } from '@domain/common/tagset';
 
 @InputType()
 export class CreateTagsetOnProfileInput extends CreateTagsetInput {

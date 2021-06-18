@@ -5,24 +5,24 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { UpdateBaseChallengeInput } from '@domain/challenge';
-import { ILifecycle } from '@domain/common/lifecycle';
+import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { ICommunity } from '@domain/community/community';
+import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityService } from '@domain/community/community/community.service';
-import { IContext } from '@domain/context/context';
+import { IContext } from '@domain/context/context/context.interface';
 import { ContextService } from '@domain/context/context/context.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindConditions, FindOneOptions, Repository } from 'typeorm';
-import { BaseChallenge } from './base.challenge.entity';
-import { CreateBaseChallengeInput } from './base.challenge.dto.create';
-import { IBaseChallenge } from './base.challenge.interface';
+import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
+import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
+import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { NamingService } from '@src/services/domain/naming/naming.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { CredentialService } from '@domain/agent/credential/credential.service';
-import { IAgent } from '@domain/agent/agent';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()

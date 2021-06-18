@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '../authorizable-entity';
-import { NameID } from '../scalars';
+import { IAuthorizable } from '@domain/common/authorizable-entity';
+import { NameID } from '@domain/common/scalars';
 
 @ObjectType('IBaseCherrytwist')
 export abstract class INameable extends IAuthorizable {

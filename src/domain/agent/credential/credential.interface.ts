@@ -1,4 +1,4 @@
-import { IAgent } from '@domain/agent/agent';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 

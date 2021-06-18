@@ -1,5 +1,4 @@
-import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
+import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()

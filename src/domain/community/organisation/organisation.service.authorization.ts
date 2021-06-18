@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IOrganisation, Organisation } from '@domain/community/organisation';
-import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
+import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import {
   AuthorizationDefinition,
   IAuthorizationDefinition,

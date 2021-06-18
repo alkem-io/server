@@ -1,16 +1,16 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IReference } from '@domain/common/reference';
-import { ContextService } from './context.service';
-import { CreateAspectInput, IAspect } from '@domain/context';
+import { ContextService } from '@domain/context/context/context.service';
+import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
-import { CreateReferenceOnContextInput } from './context.dto.create.reference';
+import { CreateReferenceOnContextInput } from '@domain/context/context';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { AspectService } from '../aspect/aspect.service';
+import { AspectService } from '@domain/context/aspect/aspect.service';
 @Resolver()
 export class ContextResolverMutations {
   constructor(

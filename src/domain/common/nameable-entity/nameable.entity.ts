@@ -1,5 +1,5 @@
 import { Column } from 'typeorm';
-import { AuthorizableEntity } from '../authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 export abstract class NameableEntity extends AuthorizableEntity {
   @Column()

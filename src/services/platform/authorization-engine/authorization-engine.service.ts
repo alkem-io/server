@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CredentialsSearchInput, ICredential } from '@domain/agent';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationCredentialRule } from './authorization.credential.rule';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';

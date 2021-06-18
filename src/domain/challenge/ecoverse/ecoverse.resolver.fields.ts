@@ -1,5 +1,5 @@
 import { GraphqlGuard } from '@core/authorization';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Ecoverse } from '@domain/challenge/ecoverse';
 import { IProject } from '@domain/collaboration/project';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IUserGroup } from '@domain/community/user-group';
@@ -8,8 +8,8 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IChallenge } from '../challenge';
-import { EcoverseService } from './ecoverse.service';
+import { IChallenge } from '@domain/challenge/challenge';
+import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { IEcoverse } from '@domain/challenge/ecoverse';
 import { ICommunity } from '@domain/community/community';
 import { IContext } from '@domain/context/context';

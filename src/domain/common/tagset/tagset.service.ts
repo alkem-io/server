@@ -18,9 +18,8 @@ import {
   UpdateTagsetInput,
   DeleteTagsetInput,
 } from '@domain/common/tagset';
-import {} from './tagset.dto.delete';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { AuthorizationDefinition } from '../authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class TagsetService {

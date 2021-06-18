@@ -1,6 +1,6 @@
 import '../../../utils/array.matcher';
 import { appSingleton } from '../../../utils/app.singleton';
-import { createChallangeMutation } from '../challenge/challenge.request.params';
+import { createChallangeMutation } from '@domain/challenge/challenge/challenge.request.params';
 import {
   createRelationMutation,
   getRelationsPerOpportunity,

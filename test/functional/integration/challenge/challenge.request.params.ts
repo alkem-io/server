@@ -2,7 +2,7 @@ import { TestUser } from '@test/utils/token.helper';
 import { graphqlRequestAuth, mutation } from '@test/utils/graphql.request';
 import { challengeDataTest, lifecycleData } from '@test/utils/common-params';
 import { createChallengMut } from '@test/utils/mutations/create-mutation';
-import { getEcoverseId } from '../ecoverse/ecoverse.request.params';
+import { getEcoverseId } from '@domain/challenge/ecoverse/ecoverse.request.params';
 
 const uniqueId = (Date.now() + Math.random()).toString();
 

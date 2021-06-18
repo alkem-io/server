@@ -1,4 +1,4 @@
-import { challengeDataTest } from '../common-params';
+import { challengeDataTest } from '@domain/community/common-params';
 
 export const createChallengMut = `
 mutation createChallenge($challengeData: CreateChallengeInput!) {

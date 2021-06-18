@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ContextService } from './context.service';
 import { Context, IContext } from '@domain/context/context';
-import { EcosystemModelAuthorizationService } from '../ecosystem-model/ecosystem-model.service.authorization';
+import { EcosystemModelAuthorizationService } from '@domain/context/ecosystem-model/ecosystem-model.service.authorization';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
