@@ -1,7 +1,7 @@
-import { IProfile } from '@domain/community/profile';
-import { IAgent } from '@domain/agent/agent';
+import { IProfile } from '@domain/community/profile/profile.interface';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISearchable } from '@domain/common/interfaces';
+import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { INameable } from '@domain/common/nameable-entity';
 
 @ObjectType('User', {

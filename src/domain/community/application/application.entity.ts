@@ -7,12 +7,12 @@ import {
   ManyToOne,
   OneToOne,
 } from 'typeorm';
-import { IQuestion } from '@domain/community/application';
-import { Community } from '@domain/community/community';
-import { Lifecycle } from '@domain/common/lifecycle';
+import { IQuestion } from '@domain/community/application/application.dto.create';
+import { Community } from '@domain/community/community/community.entity';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { IApplication } from './application.interface';
-import { NVP } from '@domain/common/nvp';
-import { User } from '@domain/community/user';
+import { NVP } from '@domain/common/nvp/nvp.entity';
+import { User } from '@domain/community/user/user.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 @Entity()
 export class Application extends AuthorizableEntity implements IApplication {

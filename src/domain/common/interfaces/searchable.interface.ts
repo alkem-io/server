@@ -1,7 +1,7 @@
-import { IOrganisation } from '@domain/community/organisation';
+import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { Field, InterfaceType } from '@nestjs/graphql';
-import { IUser } from '@domain/community/user';
-import { IUserGroup } from '@domain/community/user-group';
+import { IUser } from '@domain/community/user/user.interface';
+import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UUID } from '@domain/common/scalars';
 
 @InterfaceType('Searchable', {

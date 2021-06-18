@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { ICredential } from '@domain/agent/credential';
-import { Agent, IAgent } from '@domain/agent/agent';
+import { ICredential } from '@domain/agent/credential/credential.interface';
+import { Agent } from '@domain/agent/agent/agent.entity';
 import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()
@@ -16,7 +16,7 @@ export class Credential extends BaseCherrytwistEntity implements ICredential {
     agent => agent.credentials,
     { eager: false, cascade: false, onDelete: 'SET NULL' }
   )
-  agent?: IAgent;
+  agent?: Agent;
 
   constructor(type: string, resourceID: string) {
     super();

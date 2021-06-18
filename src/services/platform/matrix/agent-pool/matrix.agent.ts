@@ -1,7 +1,7 @@
-import { ConfigurationTypes } from '@common/enums';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ConfigurationTypes } from '@common/enums';
 import { IOperationalMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import { createClient } from 'matrix-js-sdk';
 import { MatrixTransforms } from '@src/services/platform/matrix/management/matrix.management.user.service';
@@ -17,11 +17,10 @@ import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter/m
 import {
   ICommunityMessageRequest,
   IDirectMessageRequest,
-  IMatrixAgent,
   IMessageRequest,
   IResponseMessage,
 } from '@src/services/platform/matrix/agent-pool';
-
+import { IMatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent.interface';
 @Injectable()
 export class MatrixAgent implements IMatrixAgent, Disposable {
   idBaseUrl: string;

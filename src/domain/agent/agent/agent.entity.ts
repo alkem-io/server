@@ -1,8 +1,9 @@
 import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
-import { IAgent } from '@domain/agent/agent';
-import { ICredential, Credential } from '@domain/agent/credential';
-import { User } from '@domain/community/user';
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { Credential } from '@domain/agent/credential/credential.entity';
+import { User } from '@domain/community/user/user.entity';
 import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 
 @Entity()
 export class Agent extends BaseCherrytwistEntity implements IAgent {

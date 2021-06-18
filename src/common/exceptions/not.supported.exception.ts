@@ -1,5 +1,5 @@
 import { LogContext, CherrytwistErrorStatus } from '@common/enums';
-import { BaseException } from '@common/exceptions';
+import { BaseException } from './base.exception';
 
 export class NotSupportedException extends BaseException {
   constructor(error: string, context: LogContext) {

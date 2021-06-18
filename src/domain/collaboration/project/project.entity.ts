@@ -6,12 +6,12 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { Agreement } from '@domain/collaboration/agreement';
+import { Agreement } from '@domain/collaboration/agreement/agreement.entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
-import { Lifecycle } from '@domain/common/lifecycle';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { NameableEntity } from '@domain/common/nameable-entity';
 
 @Entity()

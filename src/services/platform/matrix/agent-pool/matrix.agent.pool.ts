@@ -2,7 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixManagementUserService } from '@src/services/platform/matrix/management/matrix.management.user.service';
-import { MatrixAgent } from '@src/services/platform/matrix/agent-pool';
+import { MatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent';
 
 @Injectable()
 export class MatrixAgentPool {

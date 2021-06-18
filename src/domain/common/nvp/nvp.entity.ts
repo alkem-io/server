@@ -1,5 +1,5 @@
 import { Column, Entity } from 'typeorm';
-import { INVP } from '@domain/common/nvp';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 import { BaseCherrytwistEntity } from '@domain/common/base-entity';
 
 @Entity()

@@ -1,4 +1,4 @@
-import { ICredential } from '@domain/agent/credential';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 

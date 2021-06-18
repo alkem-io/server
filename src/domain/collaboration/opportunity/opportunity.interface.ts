@@ -1,5 +1,5 @@
-import { IRelation } from '@domain/collaboration/relation';
-import { IProject } from '@domain/collaboration/project';
+import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { IProject } from '@domain/collaboration/project/project.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 
