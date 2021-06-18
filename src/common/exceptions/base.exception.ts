@@ -1,6 +1,5 @@
 import { ApolloError } from 'apollo-server-express';
-import { LogContext } from '@common/enums';
-import { CherrytwistErrorStatus } from '../enums/cherrytwist.error.status';
+import { LogContext, CherrytwistErrorStatus } from '@common/enums';
 
 export class BaseException extends ApolloError {
   private context: LogContext;

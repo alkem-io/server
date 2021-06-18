@@ -1,7 +1,7 @@
-import { IAgreement } from '@domain/collaboration/agreement';
-import { IAspect } from '@domain/context/aspect';
-import { ITagset } from '@domain/common/tagset';
-import { ILifecycle } from '@domain/common/lifecycle';
+import { IAgreement } from '@domain/collaboration/agreement/agreement.interface';
+import { IAspect } from '@domain/context/aspect/aspect.interface';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '@domain/common/nameable-entity';
 

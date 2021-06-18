@@ -12,7 +12,7 @@ import { ILifecycle } from './lifecycle.interface';
 import { LifecycleEventInput } from './lifecycle.dto.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication';
-import { IAuthorizationDefinition } from '../authorization-definition';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class LifecycleService {

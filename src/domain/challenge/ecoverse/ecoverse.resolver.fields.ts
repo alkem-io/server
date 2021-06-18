@@ -1,9 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { IAgent } from '@domain/agent/agent';
-import { IEcoverse } from '@domain/challenge/ecoverse';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { Ecoverse } from '@domain/challenge/ecoverse';
 import { IProject } from '@domain/collaboration/project';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { INVP } from '@domain/common/nvp';
@@ -19,8 +16,11 @@ import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IChallenge } from '../challenge';
-import { EcoverseService } from './ecoverse.service';
+import { IChallenge } from '@domain/challenge/challenge';
+import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
+import { IEcoverse } from '@domain/challenge/ecoverse';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IAgent } from '@domain/agent/agent';
 
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {

@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { UUID } from '../scalars/scalar.uuid';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @InputType()
 export class UpdateBaseCherrytwistInput {

@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
-import { IAgent } from '@domain/agent/agent';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICredential, Credential } from '@domain/agent/credential';
 import { User } from '@domain/community/user';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';

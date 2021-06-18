@@ -1,30 +1,34 @@
+import { ValidationPipe } from '@common/pipes/validation.pipe';
+import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
+import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
+import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import { MessageModule } from '@domain/community/message/message.module';
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config/dist/config.module';
+import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { GraphQLModule } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthenticationModule } from '@src/core/authentication/authentication.module';
-import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
-import { GraphQLModule } from '@nestjs/graphql';
-import { ConfigModule } from '@nestjs/config/dist/config.module';
 import { join } from 'path';
-import { ConfigService } from '@nestjs/config';
 import { DataManagementModule } from '@src/services/domain/data-management/data-management.module';
 import { BootstrapModule } from '@src/core/bootstrap/bootstrap.module';
 import { WinstonModule } from 'nest-winston';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { APP_FILTER, APP_PIPE } from '@nestjs/core';
-import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
 import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
-import { ValidationPipe } from '@common/pipes/validation.pipe';
 import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
-import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import configuration from '@config/configuration';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
 import { ConfigurationTypes } from '@common/enums';
 import { MembershipModule } from '@src/services/domain/membership/membership.module';
-import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
+import { MatrixAgentPool } from './services/platform/matrix/agent-pool/matrix.agent.pool';
+import { MatrixAgentPoolModule } from './services/platform/matrix/agent-pool/matrix.agent.pool.module';
+import { decode } from 'jsonwebtoken';
+import { SsiAgentModule } from '@services/platform/ssi/agent/ssi.agent.module';
 
 @Module({
   imports: [
@@ -87,13 +91,61 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
-    GraphQLModule.forRoot({
-      uploads: false,
-      autoSchemaFile: true,
-      playground: true,
-      fieldResolverEnhancers: ['guards'],
-      sortSchema: true,
-      context: ({ req }) => ({ req }),
+    GraphQLModule.forRootAsync({
+      imports: [MatrixAgentPoolModule],
+      inject: [MatrixAgentPool],
+      useFactory: async (communicationPool: MatrixAgentPool) => ({
+        uploads: false,
+        autoSchemaFile: true,
+        playground: true,
+        fieldResolverEnhancers: ['guards'],
+        sortSchema: true,
+        context: ({ req }) => ({ req }),
+        installSubscriptionHandlers: true,
+        subscriptions: {
+          keepAlive: 5000,
+          onConnect: async (connectionParams, websocket, context) => {
+            // TODO Kolec
+            const jwtToken = (connectionParams as any).authToken;
+            if (jwtToken) {
+              const { email } = decode(jwtToken) as any;
+              const session = context.request.headers['sec-websocket-key'];
+              const sessionKey = Array.isArray(session) ? session[0] : session;
+              const client = await communicationPool.acquire(email, sessionKey);
+
+              if (sessionKey) {
+                client.attach({
+                  id: sessionKey,
+                });
+                console.log(
+                  'Connecting: ',
+                  email,
+                  context.request.headers['sec-websocket-key'],
+                  ' : ',
+                  (connectionParams as any)['authToken']
+                );
+              }
+            }
+          },
+          onDisconnect: async (websocket, context) => {
+            const session = context.request.headers['sec-websocket-key'];
+            const sessionKey = Array.isArray(session) ? session[0] : session;
+
+            if (!sessionKey) {
+              return;
+            }
+
+            const client = await communicationPool.acquireSession(sessionKey);
+            if (client) {
+              client.detach(sessionKey);
+              console.log(
+                'Disconnecting: ',
+                context.request.headers['sec-websocket-key']
+              );
+            }
+          },
+        },
+      }),
     }),
     ScalarsModule,
     AuthenticationModule,
@@ -106,6 +158,7 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     MembershipModule,
     KonfigModule,
     IpfsModule,
+    MessageModule,
     SsiAgentModule,
   ],
   controllers: [AppController],

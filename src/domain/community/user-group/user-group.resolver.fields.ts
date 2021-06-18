@@ -1,10 +1,10 @@
 import { Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { UserGroupService } from './user-group.service';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
 import { UserGroup, IUserGroup } from '@domain/community/user-group';
-import { IGroupable } from '../../common/interfaces/groupable.interface';
+import { IGroupable } from '@domain/common/interfaces';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';

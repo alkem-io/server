@@ -8,7 +8,7 @@ import {
 } from '@common/enums';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
+import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IUserGroup, UserGroup } from '@domain/community/user-group';

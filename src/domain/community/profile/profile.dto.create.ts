@@ -2,7 +2,7 @@ import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { MID_TEXT_LENGTH, LONG_TEXT_LENGTH } from '@src/common/constants';
-import { CreateReferenceInput } from '@domain/common/reference/reference.dto.create';
+import { CreateReferenceInput } from '@domain/common/reference';
 
 @InputType()
 export class CreateProfileInput {

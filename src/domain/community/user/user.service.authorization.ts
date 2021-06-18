@@ -10,7 +10,7 @@ import { User, IUser } from '@domain/community/user';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { UserService } from './user.service';
-import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
+import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import {
   AuthorizationDefinition,
   IAuthorizationDefinition,

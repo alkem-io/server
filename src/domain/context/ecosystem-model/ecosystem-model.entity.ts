@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany } from 'typeorm';
-import { IEcosystemModel } from '@domain/context/ecosystem-model';
-import { ActorGroup } from '@domain/context/actor-group';
+import { IEcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.interface';
+import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 @Entity()
 export class EcosystemModel extends AuthorizableEntity

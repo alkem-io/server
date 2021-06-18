@@ -14,7 +14,7 @@ import {
   UpdateAuthorizationDefinitionInput,
 } from '@domain/common/authorization-definition';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
+import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 import { ChallengeService } from './challenge.service';
 import {

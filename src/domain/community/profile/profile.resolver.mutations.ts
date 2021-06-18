@@ -8,7 +8,8 @@ import {
   UploadProfileAvatarInput,
 } from '@domain/community/profile';
 import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PubSub } from 'apollo-server-express';
+import { Args, Mutation, Resolver, Subscription } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
@@ -21,6 +22,7 @@ import { ReferenceService } from '@domain/common/reference/reference.service';
 
 @Resolver()
 export class ProfileResolverMutations {
+  pubSub = new PubSub();
   constructor(
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
@@ -119,11 +121,18 @@ export class ProfileResolverMutations {
       `profile: ${profile.id}`
     );
     const readStream = createReadStream();
-    return await this.profileService.uploadAvatar(
+    const updatedProfile = await this.profileService.uploadAvatar(
       readStream,
       filename,
       mimetype,
       uploadData
     );
+    this.pubSub.publish('avatarUploaded', { avatarUploaded: updatedProfile });
+    return updatedProfile;
+  }
+
+  @Subscription(() => IProfile)
+  avatarUploaded() {
+    return this.pubSub.asyncIterator('avatarUploaded');
   }
 }

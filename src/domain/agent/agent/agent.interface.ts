@@ -1,6 +1,5 @@
-import { ICredential } from '@domain/agent/credential';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IAuthorizable } from '@domain/common/authorizable-entity';
-
 import { DID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 

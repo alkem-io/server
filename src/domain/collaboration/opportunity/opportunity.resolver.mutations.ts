@@ -20,7 +20,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
-import { ProjectService } from '../project/project.service';
+import { ProjectService } from '@domain/collaboration/project/project.service';
 
 @Resolver()
 export class OpportunityResolverMutations {

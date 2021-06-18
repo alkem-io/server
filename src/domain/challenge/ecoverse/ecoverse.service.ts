@@ -26,14 +26,14 @@ import { IOrganisation } from '@domain/community';
 import { ICommunity } from '@domain/community/community';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { IUserGroup } from '@domain/community/user-group';
-import { IContext } from '@domain/context';
+import { IContext } from '@domain/context/context';
+import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
+import { NamingService } from '@src/services/domain/naming/naming.service';
+import { challengeLifecycleConfigDefault } from '@domain/challenge/challenge/challenge.lifecycle.config.default';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { NamingService } from '@src/services/domain/naming/naming.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { BaseChallengeService } from '../base-challenge/base.challenge.service';
-import { challengeLifecycleConfigDefault } from '../challenge/challenge.lifecycle.config.default';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class EcoverseService {

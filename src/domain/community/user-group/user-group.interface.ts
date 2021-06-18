@@ -1,5 +1,5 @@
 import { IAuthorizable } from '@domain/common/authorizable-entity';
-import { ISearchable } from '@domain/common/interfaces';
+import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { IProfile } from '@domain/community/profile/profile.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('UserGroup', {

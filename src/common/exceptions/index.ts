@@ -1,7 +1,6 @@
 export * from './account.exception';
 export * from './invalid.state.tranistion.exception';
 export * from './authentication.exception';
-export * from './base.exception';
 export * from './entity.not.found.exception';
 export * from './entity.not.initialized.exception';
 export * from './forbidden.exception';

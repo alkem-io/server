@@ -16,7 +16,7 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
-import { ChallengeAuthorizationService } from '../challenge/challenge.service.authorization';
+import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 @Resolver()
 export class EcoverseResolverMutations {
   constructor(
@@ -70,7 +70,6 @@ export class EcoverseResolverMutations {
       `updateEcoverse: ${ecoverse.nameID}`
     );
 
-
     // ensure working with UUID
     ecoverseData.ID = ecoverse.id;
 
@@ -80,7 +79,6 @@ export class EcoverseResolverMutations {
         ecoverseData.authorizationDefinition
       );
     }
-
 
     return await this.ecoverseService.update(ecoverseData);
   }
