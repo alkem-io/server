@@ -7,11 +7,13 @@ import {
   IActorGroup,
   DeleteActorGroupInput,
 } from '@domain/context/actor-group';
-import { IActor, CreateActorInput, ActorService } from '@domain/context/actor';
+import { IActor } from '@domain/context/actor/actor.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { CurrentUser } from '@common/decorators';
+import { ActorService } from '../actor/actor.service';
+import { CreateActorInput } from '@domain/context/actor/actor.dto.create';
 
 @Resolver()
 export class ActorGroupResolverMutations {

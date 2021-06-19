@@ -1,17 +1,23 @@
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { User } from '@domain/community/user/user.entity';
+import { UseGuards } from '@nestjs/common';
+import { Args, Resolver, Parent, ResolveField } from '@nestjs/graphql';
+import { User, IUser } from '@domain/community/user';
 import { UserService } from './user.service';
 import { IAgent } from '@domain/agent/agent';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
-import { IUser } from '@domain/community/user';
 import { AuthorizationPrivilege } from '@common/enums';
-import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
+import { CommunicationService } from '@src/services/platform/communication/communication.service';
+import {
+  CommunicationRoomDetailsResult,
+  CommunicationRoomResult,
+} from '@src/services/platform/communication';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private communicationService: CommunicationService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -21,6 +27,29 @@ export class UserResolverFields {
   })
   @Profiling.api
   async agent(@Parent() user: User): Promise<IAgent> {
-    return await this.userService.getAgent(user);
+    return await this.userService.getAgent(user.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('rooms', () => [CommunicationRoomResult], {
+    nullable: true,
+    description: 'An overview of the rooms this user is a member of',
+  })
+  @Profiling.api
+  async rooms(@Parent() user: User): Promise<CommunicationRoomResult[]> {
+    return await this.communicationService.getRooms(user.email);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('room', () => CommunicationRoomDetailsResult, {
+    nullable: true,
+    description: 'An overview of the rooms this user is a member of',
+  })
+  @Profiling.api
+  async room(
+    @Parent() user: User,
+    @Args('roomID') roomID: string
+  ): Promise<CommunicationRoomDetailsResult> {
+    return await this.communicationService.getRoom(roomID, user.email);
   }
 }

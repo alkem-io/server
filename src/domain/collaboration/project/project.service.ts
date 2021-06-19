@@ -8,8 +8,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateAspectInput } from '@domain/context/aspect';
-import { IAspect } from '@domain/context/aspect/aspect.interface';
+import { IAspect, CreateAspectInput } from '@domain/context/aspect';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import {
   UpdateProjectInput,

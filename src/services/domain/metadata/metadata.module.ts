@@ -9,5 +9,6 @@ import { MetadataService } from './metadata.service';
 @Module({
   imports: [UserModule, ChallengeModule, EcoverseModule, OrganisationModule],
   providers: [MetadataResolverQueries, MetadataService],
+  exports: [MetadataService],
 })
 export class MetadataModule {}

@@ -3,9 +3,10 @@ import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
-import { Challenge } from '@domain/challenge/challenge';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { NameableEntity } from '@domain/common/nameable-entity';
-import { Agent } from '@domain/agent/agent';
+import { Agent } from '@domain/agent/agent/agent.entity';
+import { Ecoverse } from '@domain/challenge/ecoverse';
 
 @Entity()
 export class Organisation extends NameableEntity
@@ -13,6 +14,13 @@ export class Organisation extends NameableEntity
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
   @JoinColumn()
   profile?: Profile;
+
+  @OneToMany(
+    () => Ecoverse,
+    ecoverse => ecoverse.host,
+    { eager: false, cascade: true }
+  )
+  ecoverses?: Ecoverse[];
 
   @OneToMany(
     () => UserGroup,

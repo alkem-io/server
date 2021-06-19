@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { IRelation } from '@domain/collaboration/relation';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()

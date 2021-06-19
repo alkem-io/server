@@ -5,6 +5,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
@@ -19,7 +20,7 @@ import {
 } from '@domain/community/organisation';
 import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
-import { UserService } from '../user/user.service';
+import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { IAgent } from '@domain/agent/agent';
@@ -104,7 +105,17 @@ export class OrganisationService {
     deleteData: DeleteOrganisationInput
   ): Promise<IOrganisation> {
     const orgID = deleteData.ID;
-    const organisation = await this.getOrganisationOrFail(orgID);
+    const organisation = await this.getOrganisationOrFail(orgID, {
+      relations: ['ecoverses'],
+    });
+
+    const hostedEcoverses = (organisation as Organisation).ecoverses;
+    if (hostedEcoverses && hostedEcoverses.length > 0) {
+      throw new ForbiddenException(
+        `Unable to delete Organisation: host of ${hostedEcoverses.length} ecoverses`,
+        LogContext.CHALLENGES
+      );
+    }
 
     if (organisation.profile) {
       await this.profileService.deleteProfile(organisation.profile.id);

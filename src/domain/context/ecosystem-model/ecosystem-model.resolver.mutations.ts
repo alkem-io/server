@@ -10,7 +10,7 @@ import {
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
-import { ActorGroupAuthorizationService } from '../actor-group/actor-group.service.authorization';
+import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
 @Resolver()
 export class EcosystemModelResolverMutations {
   constructor(

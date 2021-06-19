@@ -1,13 +1,12 @@
 import { Query, Resolver } from '@nestjs/graphql';
-import { Metadata } from './metadata.entity';
 import { IMetadata } from './metadata.interface';
 import { MetadataService } from './metadata.service';
 
-@Resolver()
+@Resolver(() => IMetadata)
 export class MetadataResolverQueries {
   constructor(private metadataService: MetadataService) {}
 
-  @Query(() => Metadata, {
+  @Query(() => IMetadata, {
     nullable: false,
     description: 'Cherrytwist Services Metadata',
   })

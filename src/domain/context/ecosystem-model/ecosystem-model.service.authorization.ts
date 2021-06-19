@@ -7,7 +7,7 @@ import {
   EcosystemModel,
   IEcosystemModel,
 } from '@domain/context/ecosystem-model';
-import { ActorGroupAuthorizationService } from '../actor-group/actor-group.service.authorization';
+import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
 
 @Injectable()
 export class EcosystemModelAuthorizationService {

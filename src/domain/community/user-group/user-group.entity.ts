@@ -1,8 +1,8 @@
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
-import { IUserGroup } from '@domain/community/user-group';
+import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { Community } from '../community';
+import { Community } from '@domain/community/community/community.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()

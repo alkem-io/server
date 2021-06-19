@@ -9,7 +9,10 @@ export class CreateUserGroupInput {
   @Field(() => UUID, { nullable: false })
   parentID!: string;
 
-  @Field({ nullable: false })
+  @Field({
+    nullable: false,
+    description: 'The name of the UserGroup. Minimum length 2.',
+  })
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 

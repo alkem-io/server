@@ -13,15 +13,15 @@ import {
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { ProjectService } from '../project/project.service';
-import { RelationService } from '../relation/relation.service';
+import { ProjectService } from '@domain/collaboration/project/project.service';
+import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { ICommunity } from '@domain/community/community';
+import { ICommunity } from '@domain/community/community/community.interface';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { IContext } from '@domain/context/context';
+import { IContext } from '@domain/context/context/context.interface';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { opportunityLifecycleConfigDefault } from './opportunity.lifecycle.config.default';
 import { ChallengeLifecycleTemplate } from '@common/enums';

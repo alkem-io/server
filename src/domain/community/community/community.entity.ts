@@ -8,12 +8,13 @@ import {
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { ICommunity } from '@domain/community/community';
-import { Challenge } from '@domain/challenge/challenge';
-import { Application, IApplication } from '@domain/community/application';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { ICommunity } from '@domain/community/community/community.interface';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { IApplication } from '@domain/community/application/application.interface';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
-import { Credential } from '@domain/agent/credential';
+import { Credential } from '@domain/agent/credential/credential.entity';
+import { Application } from '@domain/community/application/application.entity';
 
 @Entity()
 export class Community extends AuthorizableEntity

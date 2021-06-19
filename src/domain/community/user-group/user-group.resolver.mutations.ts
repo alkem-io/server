@@ -72,8 +72,8 @@ export class UserGroupResolverMutations {
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
       group.authorization,
-      AuthorizationPrivilege.DELETE,
-      `user group assign user: ${group.name}`
+      AuthorizationPrivilege.GRANT,
+      `Assign user to group: ${group.name}`
     );
     return await this.groupService.assignUser(membershipData);
   }

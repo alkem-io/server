@@ -3,20 +3,31 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
+  AuthorizationVerifiedCredential,
   LogContext,
 } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { Challenge, IChallenge } from '@domain/challenge/challenge';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
+import {
+  IAuthorizationDefinition,
+  UpdateAuthorizationDefinitionInput,
+} from '@domain/common/authorization-definition';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
+import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
+import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
+import { ChallengeService } from './challenge.service';
+import {
+  AuthorizationRuleCredential,
+  AuthorizationRuleVerifiedCredential,
+} from '@src/services/platform/authorization-engine';
 
 @Injectable()
 export class ChallengeAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
+    private challengeService: ChallengeService,
+    private opportunityAuthorizationService: OpportunityAuthorizationService,
     private authorizationEngine: AuthorizationEngineService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
@@ -30,8 +41,12 @@ export class ChallengeAuthorizationService {
       challenge.authorization,
       parentAuthorization
     );
-    challenge.authorization = this.updateAuthorizationDefinition(
+    challenge.authorization = this.extendAuthorizationDefinition(
       challenge.authorization,
+      challenge.id
+    );
+    // Also update the verified credential rules
+    challenge.authorization.verifiedCredentialRules = await this.createVerifiedCredentialRules(
       challenge.id
     );
 
@@ -54,13 +69,23 @@ export class ChallengeAuthorizationService {
           opportunity.authorization,
           challenge.authorization
         );
+        await this.opportunityAuthorizationService.applyAuthorizationRules(
+          opportunity,
+          challenge.authorization
+        );
       }
     }
+
+    const agent = await this.challengeService.getAgent(challenge.id);
+    agent.authorization = this.authorizationEngine.inheritParentAuthorization(
+      agent.authorization,
+      challenge.authorization
+    );
 
     return await this.challengeRepository.save(challenge);
   }
 
-  private updateAuthorizationDefinition(
+  private extendAuthorizationDefinition(
     authorization: IAuthorizationDefinition | undefined,
     challengeID: string
   ): IAuthorizationDefinition {
@@ -69,7 +94,19 @@ export class ChallengeAuthorizationService {
         `Authorization definition not found for: ${challengeID}`,
         LogContext.CHALLENGES
       );
-    const newRules: AuthorizationCredentialRule[] = [];
+
+    this.authorizationEngine.appendCredentialAuthorizationRules(
+      authorization,
+      this.createCredentialRules(challengeID)
+    );
+
+    return authorization;
+  }
+
+  private createCredentialRules(
+    challengeID: string
+  ): AuthorizationRuleCredential[] {
+    const rules: AuthorizationRuleCredential[] = [];
 
     const challengeAdmin = {
       type: AuthorizationCredential.ChallengeAdmin,
@@ -80,20 +117,56 @@ export class ChallengeAuthorizationService {
         AuthorizationPrivilege.UPDATE,
       ],
     };
-    newRules.push(challengeAdmin);
+    rules.push(challengeAdmin);
 
     const challengeMember = {
       type: AuthorizationCredential.ChallengeMember,
       resourceID: challengeID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
-    newRules.push(challengeMember);
+    rules.push(challengeMember);
 
-    this.authorizationEngine.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
+    return rules;
+  }
+
+  async createVerifiedCredentialRules(challengeID: string): Promise<string> {
+    const rules: AuthorizationRuleVerifiedCredential[] = [];
+    const agent = await this.challengeService.getAgent(challengeID);
+
+    const stateChange = {
+      type: AuthorizationVerifiedCredential.StateModificationCredential,
+      resourceID: agent.did,
+      grantedPrivileges: [AuthorizationPrivilege.UPDATE],
+    };
+    rules.push(stateChange);
+
+    return JSON.stringify(rules);
+  }
+
+  async updateAuthorization(
+    challenge: IChallenge,
+    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+  ): Promise<IChallenge> {
+    await this.baseChallengeAuthorizationService.updateAuthorization(
+      challenge,
+      this.challengeRepository,
+      authorizationUpdateData
     );
 
-    return authorization;
+    // propagate authorization rules for child entities
+    if (challenge.opportunities) {
+      for (const opportunity of challenge.opportunities) {
+        opportunity.authorization = this.authorizationEngine.updateAuthorization(
+          opportunity.authorization,
+          authorizationUpdateData
+        );
+        await this.opportunityAuthorizationService.updateAuthorization(
+          opportunity,
+          opportunity.authorization
+        );
+      }
+    }
+
+    return await this.challengeRepository.save(challenge);
   }
 }

@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { IChallenge } from '@domain/challenge/challenge';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import {
+  IAuthorizationDefinition,
+  UpdateAuthorizationDefinitionInput,
+} from '@domain/common/authorization-definition';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { IOpportunity } from '..';
@@ -20,7 +22,7 @@ export class OpportunityAuthorizationService {
   async applyAuthorizationRules(
     opportunity: IOpportunity,
     parentAuthorization: IAuthorizationDefinition | undefined
-  ): Promise<IChallenge> {
+  ): Promise<IOpportunity> {
     opportunity.authorization = this.authorizationEngine.inheritParentAuthorization(
       opportunity.authorization,
       parentAuthorization
@@ -41,6 +43,37 @@ export class OpportunityAuthorizationService {
         relation.authorization = this.authorizationEngine.inheritParentAuthorization(
           relation.authorization,
           opportunity.authorization
+        );
+      }
+    }
+
+    return await this.opportunityRepository.save(opportunity);
+  }
+
+  async updateAuthorization(
+    opportunity: IOpportunity,
+    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+  ): Promise<IOpportunity> {
+    await this.baseChallengeAuthorizationService.updateAuthorization(
+      opportunity,
+      this.opportunityRepository,
+      authorizationUpdateData
+    );
+
+    // propagate authorization rules for child entities
+    if (opportunity.projects) {
+      for (const project of opportunity.projects) {
+        project.authorization = this.authorizationEngine.updateAuthorization(
+          project.authorization,
+          authorizationUpdateData
+        );
+      }
+    }
+    if (opportunity.relations) {
+      for (const relation of opportunity.relations) {
+        relation.authorization = this.authorizationEngine.updateAuthorization(
+          relation.authorization,
+          authorizationUpdateData
         );
       }
     }

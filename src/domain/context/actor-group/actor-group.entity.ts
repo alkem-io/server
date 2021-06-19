@@ -1,6 +1,8 @@
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
-import { EcosystemModel, IActorGroup, Actor } from '@domain/context';
+import { Actor } from '@domain/context/actor/actor.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.entity';
+import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 
 export enum RestrictedActorGroupNames {
   Collaborators = 'collaborators',

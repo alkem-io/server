@@ -13,14 +13,20 @@ import {
   GrantCredentialInput,
   CreateAgentInput,
 } from '@domain/agent/agent';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
+import { VerifiedCredential } from '@src/services/platform/ssi/agent';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AgentService {
   constructor(
+    private configService: ConfigService,
     private credentialService: CredentialService,
+    private ssiAgentService: SsiAgentService,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>
   ) {}
@@ -28,6 +34,14 @@ export class AgentService {
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
+    agent.authorization = new AuthorizationDefinition();
+
+    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+      .enabled;
+
+    if (ssiEnabled) {
+      return await this.createDidOnAgent(agent);
+    }
 
     return await this.saveAgent(agent);
   }
@@ -164,6 +178,29 @@ export class AgentService {
     }
 
     return false;
+  }
+
+  async createDidOnAgent(agent: IAgent): Promise<IAgent> {
+    agent.password = Math.random()
+      .toString(36)
+      .substr(2, 10);
+
+    agent.did = await this.ssiAgentService.createAgent(agent.password);
+    return await this.saveAgent(agent);
+  }
+
+  async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
+    return await this.ssiAgentService.getVerifiedCredentials(
+      agent.did,
+      agent.password
+    );
+  }
+
+  async ensureDidsCreated() {
+    const agentsWithoutDids = await this.agentRepository.find({ did: '' });
+    for (const agent of agentsWithoutDids) {
+      await this.createDidOnAgent(agent);
+    }
   }
 
   async countAgentsWithMatchingCredentials(

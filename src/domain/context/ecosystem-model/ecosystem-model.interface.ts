@@ -1,5 +1,5 @@
 import { IAuthorizable } from '@domain/common/authorizable-entity';
-import { IActorGroup } from '@domain/context';
+import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('EcosystemModel')

@@ -25,6 +25,7 @@
   match:
     url: 'http://localhost:4455/graphql'
     methods:
+      - GET
       - POST
   authenticators:
     - handler: cookie_session

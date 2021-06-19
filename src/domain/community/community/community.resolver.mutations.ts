@@ -11,7 +11,7 @@ import {
   ApplicationEventInput,
 } from '@domain/community/application';
 import { CreateUserGroupInput } from '@domain/community/user-group';
-import { ApplicationService } from '../application/application.service';
+import { ApplicationService } from '@domain/community/application/application.service';
 import {
   AssignCommunityMemberInput,
   ICommunity,
@@ -22,12 +22,14 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { UserService } from '../user/user.service';
+import { UserService } from '@domain/community/user/user.service';
+import { UserGroupService } from '../user-group/user-group.service';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private userService: UserService,
+    private userGroupService: UserGroupService,
     private communityService: CommunityService,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
@@ -57,7 +59,7 @@ export class CommunityResolverMutations {
       group.authorization,
       community.authorization
     );
-    return group;
+    return await this.userGroupService.saveUserGroup(group);
   }
 
   @UseGuards(GraphqlGuard)

@@ -10,13 +10,13 @@ import { User, IUser } from '@domain/community/user';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { UserService } from './user.service';
-import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
+import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import {
   AuthorizationDefinition,
   IAuthorizationDefinition,
 } from '@domain/common/authorization-definition';
-import { AuthorizationCredentialRule } from '@src/services/platform/authorization-engine/authorization.credential.rule';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -37,27 +37,34 @@ export class UserAuthorizationService {
 
     // cascade
     const profile = this.userService.getProfile(user);
-    profile.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    profile.authorization = this.authorizationEngine.inheritParentAuthorization(
       profile.authorization,
       user.authorization
     );
+
     profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
-      user.authorization,
+      profile.authorization,
+
       {
         type: AuthorizationCredential.GlobalAdminCommunity,
-        resourceID: user.id,
+        resourceID: '',
       },
       [AuthorizationPrivilege.DELETE]
     );
     user.profile = await this.profileAuthorizationService.applyAuthorizationRules(
       profile
     );
+    user.agent = await this.userService.getAgent(user.id);
+    user.agent.authorization = this.authorizationEngine.inheritParentAuthorization(
+      user.agent.authorization,
+      user.authorization
+    );
 
     return await this.userRepository.save(user);
   }
 
   async grantCredentials(user: IUser): Promise<IUser> {
-    const agent = await this.userService.getAgent(user);
+    const agent = await this.userService.getAgent(user.id);
 
     user.agent = await this.agentService.grantCredential({
       type: AuthorizationCredential.GlobalRegistered,
@@ -80,7 +87,7 @@ export class UserAuthorizationService {
         `Authorization definition not found for: ${userID}`,
         LogContext.COMMUNITY
       );
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GlobalAdmin,
@@ -129,7 +136,7 @@ export class UserAuthorizationService {
     userEmail: string
   ): IAuthorizationDefinition {
     const authorization = new AuthorizationDefinition();
-    const newRules: AuthorizationCredentialRule[] = [];
+    const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GlobalAdmin,

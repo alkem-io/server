@@ -8,10 +8,9 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { Reference } from '@domain/common/reference/reference.entity';
-import { IReference } from '@domain/common/reference/reference.interface';
+import { Reference, IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { ITagset } from '@domain/common/tagset';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import {
   UpdateProfileInput,
@@ -25,7 +24,7 @@ import { ReadStream } from 'fs';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { streamToBuffer, validateImageDimensions } from '@common/utils';
 import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
-import { UploadProfileAvatarInput } from './profile.dto.upload.avatar';
+import { UploadProfileAvatarInput } from '@domain/community/profile';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()

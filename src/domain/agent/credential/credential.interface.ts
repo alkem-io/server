@@ -1,5 +1,5 @@
+import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AuthorizationCredential } from '@common/enums';
-import { IAgent } from '@domain/agent/agent';
 import { IBaseCherrytwist } from '@domain/common/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 

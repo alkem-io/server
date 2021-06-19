@@ -17,7 +17,7 @@ import {
   IActorGroup,
 } from '@domain/context/actor-group';
 import { LogContext } from '@common/enums';
-import { ActorGroupService } from '../actor-group/actor-group.service';
+import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()

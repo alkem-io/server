@@ -1,8 +1,10 @@
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
-import { Aspect, IContext } from '@domain/context';
-import { EcosystemModel } from '../ecosystem-model';
-import { Reference } from '@domain/common/reference';
+import { IContext } from '@domain/context/context/context.interface';
+import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.entity';
+import { Reference } from '@domain/common/reference/reference.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { Aspect } from '@domain/context/aspect/aspect.entity';
+import { Visual } from '../visual/visual.entity';
 @Entity()
 export class Context extends AuthorizableEntity implements IContext {
   @Column('varchar', { length: 255, nullable: true })
@@ -30,6 +32,10 @@ export class Context extends AuthorizableEntity implements IContext {
   @OneToOne(() => EcosystemModel, { eager: false, cascade: true })
   @JoinColumn()
   ecosystemModel?: EcosystemModel;
+
+  @OneToOne(() => Visual, { eager: false, cascade: true })
+  @JoinColumn()
+  visual?: Visual;
 
   @OneToMany(
     () => Aspect,

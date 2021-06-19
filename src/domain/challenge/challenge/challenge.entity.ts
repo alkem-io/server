@@ -7,11 +7,11 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
-import { Ecoverse } from '@domain/challenge/ecoverse';
-import { IChallenge } from './challenge.interface';
-import { Organisation } from '@domain/community';
-import { Opportunity } from '@domain/collaboration/opportunity';
-import { BaseChallenge } from '../base-challenge/base.challenge.entity';
+import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { Organisation } from '@domain/community/organisation/organisation.entity';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {

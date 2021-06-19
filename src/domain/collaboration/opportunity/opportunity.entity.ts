@@ -1,8 +1,8 @@
-import { Relation } from '@domain/collaboration/relation';
-import { Project } from '@domain/collaboration/project';
+import { Relation } from '@domain/collaboration/relation/relation.entity';
+import { Project } from '@domain/collaboration/project/project.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
-import { IOpportunity } from '@domain/collaboration';
-import { Challenge } from '@domain/challenge/challenge';
+import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 
 @Entity()

@@ -13,10 +13,13 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
+import { CommunicationService } from '@src/services/platform/communication/communication.service';
+import { CommunicationSendMessageInput } from '@src/services/platform/communication/communication.dto.send.msg';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
+    private readonly communicationService: CommunicationService,
     private authorizationEngine: AuthorizationEngineService,
     private readonly userService: UserService,
     private readonly userAuthorizationService: UserAuthorizationService
@@ -81,5 +84,23 @@ export class UserResolverMutations {
       `user delete: ${user.nameID}`
     );
     return await this.userService.deleteUser(deleteData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description:
+      'Sends a message on the specified User`s behalf and returns the room id',
+  })
+  @Profiling.api
+  async message(
+    @Args('msgData') msgData: CommunicationSendMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<string> {
+    const receiver = await this.userService.getUserOrFail(msgData.receiverID);
+
+    return await this.communicationService.sendMsg(agentInfo.email, {
+      ...msgData,
+      receiverID: receiver.email,
+    });
   }
 }

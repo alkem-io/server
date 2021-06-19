@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Project } from '@domain/collaboration/project/project.entity';
-import { Context } from '@domain/context';
+import { Context } from '@domain/context/context/context.entity';
 import { AuthorizableEntity } from '@domain/common/authorizable-entity';
 
 @Entity()

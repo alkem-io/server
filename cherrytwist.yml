@@ -147,6 +147,38 @@ identity:
         # You can check the currently logged in user at http://localhost:4433/sessions/whoami.
         kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:4433/
 
+  ssi:
+    # Jolocom SDK is used for providing SSI capabilities on the platform.
+    # Note: NOT FOR PRODUCTION USAGE, experimental functionality,
+    # In particular, the migrations of the Jolocom database are still not setup, so any DID's created are not
+    # guaranteed to be migrated properly.
+    enabled: ${SSI_ENABLED}:false
+    jolocom:
+      # MySQL database configuration for usage by the Jolocom SDK.
+      # The authentication method used is MySQL Native Password.
+      # Note: both schema / database name are used for configuration and they need to have the same value.
+      database:
+        # Database host.
+        host: ${DATABASE_HOST}:localhost
+
+        # MySQL daemon port.
+        port: 3306
+
+        # MySQL username.
+        username: 'root'
+
+        # MySQL password.
+        password: ${MYSQL_ROOT_PASSWORD}:toor
+
+        # MySQL schema / database name.
+        schema: ${JOLOCOM_MYSQL_DATABASE}:jolocom
+
+        # MySQL schema / database name.
+        database: ${JOLOCOM_MYSQL_DATABASE}:jolocom
+
+        # Flag setting whether MySQL operations should be logged to the console.
+        logging: false
+
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:
@@ -160,7 +192,7 @@ monitoring:
 
     # Logging level for outputs to console.
     # Valid values are log|error|warn|debug|verbose.
-    level: ${LOGGING_LEVEL_CONSOLE}:Error
+    level: ${LOGGING_LEVEL_CONSOLE}:warn
 
     # A flag enabling / disabling performance logging.
     profilingEnabled: ${LOGGING_PROFILING_ENABLED}:true
@@ -191,6 +223,7 @@ monitoring:
 ## communications ##
 # Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Cherrytwist.
 communications:
+  enabled: ${COMMUNICATIONS_ENABLED}:false
   # matrix configuration #
   matrix:
     # Synapse server (https://github.com/matrix-org/synapse) configuration.
@@ -239,3 +272,4 @@ storage:
 
     # Max file size of files that will be uploaded to IPFS (in bytes).
     maxFileSize: 1048576
+
