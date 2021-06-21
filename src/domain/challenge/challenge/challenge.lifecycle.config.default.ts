@@ -33,11 +33,11 @@ export const challengeLifecycleConfigDefault = {
       entry: ['sampleEvent'],
       on: {
         COMPLETED: {
-          target: 'inProgress',
+          target: 'complete',
           cond: 'challengeStateUpdateAuthorized',
         },
         ABANDONED: {
-          target: 'complete',
+          target: 'abandoned',
           cond: 'challengeStateUpdateAuthorized',
         },
       },
@@ -45,7 +45,7 @@ export const challengeLifecycleConfigDefault = {
     complete: {
       on: {
         ARCHIVE: 'archived',
-        ABANDONED: 'archived',
+        ABANDONED: 'abandoned',
       },
     },
     abandoned: {
