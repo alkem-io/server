@@ -4,11 +4,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { IAspect, CreateAspectInput } from '@domain/context/aspect';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import {
   UpdateProjectInput,
@@ -166,32 +164,6 @@ export class ProjectService {
     }
 
     return project.lifecycle;
-  }
-
-  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
-    const projectId = aspectData.parentID;
-    const project = await this.getProjectOrFail(projectId);
-
-    // Check that do not already have an aspect with the same title
-    const title = aspectData.title;
-    const existingAspect = project.aspects?.find(
-      aspect => aspect.title === title
-    );
-    if (existingAspect)
-      throw new ValidationException(
-        `Already have an aspect with the provided title: ${title}`,
-        LogContext.CHALLENGES
-      );
-
-    const aspect = await this.aspectService.createAspect(aspectData);
-    if (!project.aspects)
-      throw new EntityNotInitializedException(
-        `Project (${projectId}) not initialised`,
-        LogContext.CHALLENGES
-      );
-    project.aspects.push(aspect);
-    await this.projectRepository.save(project);
-    return aspect;
   }
 
   async getProjectsCount(ecoverseID: string): Promise<number> {

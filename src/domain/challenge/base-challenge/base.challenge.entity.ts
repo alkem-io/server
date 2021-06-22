@@ -18,11 +18,11 @@ export abstract class BaseChallenge extends NameableEntity
   @JoinColumn()
   context?: Context;
 
-  @OneToOne(
-    () => Community,
-    community => community.challenge,
-    { eager: false, cascade: true, onDelete: 'SET NULL' }
-  )
+  @OneToOne(() => Community, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn()
   community?: Community;
 

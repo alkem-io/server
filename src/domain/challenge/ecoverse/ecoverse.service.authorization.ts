@@ -5,7 +5,6 @@ import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { EcoverseService } from './ecoverse.service';
-import { IEcoverse, Ecoverse } from '@domain/challenge/ecoverse';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import {
   AuthorizationRuleCredential,
@@ -15,6 +14,8 @@ import {
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { IEcoverse } from './ecoverse.interface';
+import { Ecoverse } from './ecoverse.entity';
 
 @Injectable()
 export class EcoverseAuthorizationService {

@@ -1,7 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { CreateAspectInput, IAspect } from '@domain/context/aspect';
+import { CurrentUser } from '@src/common/decorators';
 import { ProjectService } from './project.service';
 import {
   UpdateProjectInput,
@@ -60,33 +59,6 @@ export class ProjectResolverMutations {
       `update project: ${project.nameID}`
     );
     return await this.projectService.updateProject(projectData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IAspect, {
-    description: 'Create a new Aspect on the Project.',
-  })
-  @Profiling.api
-  async createAspectOnProject(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('aspectData') aspectData: CreateAspectInput
-  ): Promise<IAspect> {
-    const project = await this.projectService.getProjectOrFail(
-      aspectData.parentID
-    );
-    await this.authorizationEngine.grantAccessOrFail(
-      agentInfo,
-      project.authorization,
-      AuthorizationPrivilege.CREATE,
-      `create aspect: ${project.nameID}`
-    );
-
-    const aspect = await this.projectService.createAspect(aspectData);
-    aspect.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
-      aspect.authorization,
-      project.authorization
-    );
-    return await this.aspectService.saveAspect(aspect);
   }
 
   @UseGuards(GraphqlGuard)

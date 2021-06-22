@@ -2,8 +2,8 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Challenge } from '@domain/challenge/challenge';
-import { Opportunity } from '@domain/collaboration/opportunity';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 

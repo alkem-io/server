@@ -1,5 +1,4 @@
 import { IAgreement } from '@domain/collaboration/agreement/agreement.interface';
-import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
@@ -19,12 +18,6 @@ export abstract class IProject extends INameable {
   tagset?: ITagset;
 
   agreements?: IAgreement[];
-
-  @Field(() => [IAspect], {
-    nullable: true,
-    description: 'The set of aspects for this Project. Note: likley to change.',
-  })
-  aspects?: IAspect[];
 
   ecoverseID!: string;
 }

@@ -8,7 +8,6 @@ import {
 } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { Challenge, IChallenge } from '@domain/challenge/challenge';
 import {
   IAuthorizationDefinition,
   UpdateAuthorizationDefinitionInput,
@@ -22,6 +21,8 @@ import {
   AuthorizationRuleVerifiedCredential,
 } from '@domain/common/authorization-definition';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { Challenge } from './challenge.entity';
+import { IChallenge } from './challenge.interface';
 
 @Injectable()
 export class ChallengeAuthorizationService {

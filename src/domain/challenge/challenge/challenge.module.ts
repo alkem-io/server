@@ -16,9 +16,11 @@ import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
   imports: [
+    AgentModule,
     AuthorizationDefinitionModule,
     AuthorizationEngineModule,
     ContextModule,

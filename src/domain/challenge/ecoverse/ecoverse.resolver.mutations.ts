@@ -7,7 +7,6 @@ import { EcoverseService } from './ecoverse.service';
 import {
   CreateEcoverseInput,
   DeleteEcoverseInput,
-  IEcoverse,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { GraphqlGuard } from '@core/authorization';
@@ -17,6 +16,7 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
+import { IEcoverse } from './ecoverse.interface';
 @Resolver()
 export class EcoverseResolverMutations {
   constructor(

@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { Ecoverse } from '@domain/challenge/ecoverse';
+import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { IProject } from '@domain/collaboration/project';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { INVP } from '@domain/common/nvp';
@@ -16,9 +16,9 @@ import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IChallenge } from '@domain/challenge/challenge';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { IEcoverse } from '@domain/challenge/ecoverse';
+import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IAgent } from '@domain/agent/agent';
 
@@ -227,7 +227,7 @@ export class EcoverseResolverFields {
     description: 'The Ecoverse host.',
   })
   @Profiling.api
-  async host(@Parent() ecoverse: Ecoverse): Promise<IOrganisation> {
+  async host(@Parent() ecoverse: Ecoverse): Promise<IOrganisation | undefined> {
     return await this.ecoverseService.getHost(ecoverse.id);
   }
 }

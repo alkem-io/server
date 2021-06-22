@@ -2,24 +2,21 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
-import { ICommunity } from '@domain/community/community';
-import { IContext } from '@domain/context/context';
-import { IOpportunity } from '@domain/collaboration/opportunity';
-import { ILifecycle } from '@domain/common/lifecycle';
-import { IChallenge } from '@domain/challenge/challenge';
-import { INVP } from '@domain/common/nvp';
+import { ICommunity } from '@domain/community/community/community.interface';
+import { IContext } from '@domain/context/context/context.interface';
+import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
+import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
-  constructor(
-    private authorizationEngine: AuthorizationEngineService,
-    private challengeService: ChallengeService
-  ) {}
+  constructor(private challengeService: ChallengeService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -93,5 +90,13 @@ export class ChallengeResolverFields {
   @Profiling.api
   async activity(@Parent() challenge: Challenge) {
     return await this.challengeService.getActivity(challenge);
+  }
+
+  @ResolveField('leadOrganisations', () => [IOrganisation], {
+    description: 'The Organisations that are leading this Challenge.',
+  })
+  @Profiling.api
+  async leadOrganisations(@Parent() challenge: Challenge) {
+    return await this.challengeService.getLeadOrganisations(challenge.id);
   }
 }
