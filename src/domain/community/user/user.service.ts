@@ -17,7 +17,7 @@ import {
 } from '@domain/community/user';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { Agent, IAgent } from '@domain/agent/agent';
+import { IAgent } from '@domain/agent/agent';
 import { UUID_LENGTH } from '@common/constants';
 import { IProfile } from '@domain/community/profile';
 import { LogContext } from '@common/enums';
@@ -300,24 +300,20 @@ export class UserService {
   async usersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<IUser[]> {
-    const matchingAgents = await this.agentService.findAgentsWithMatchingCredentials(
-      credentialCriteria
-    );
+    const credResourceID = credentialCriteria.resourceID || '';
+    const userMatches = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: `${credentialCriteria.type}`,
+        resourceID: credResourceID,
+      })
+      .getMany();
 
-    const users: IUser[] = [];
-    for (const matchedAgent of matchingAgents) {
-      const agent = await this.agentService.getAgentOrFail(matchedAgent.id, {
-        relations: ['user'],
-      });
-      const userID = (agent as Agent).user?.id;
-      if (userID) {
-        const user = await this.getUserOrFail(userID, {
-          relations: ['agent'],
-        });
-        users.push(user);
-      }
-    }
-    return users;
+    return userMatches;
   }
 
   getAgentOrFail(user: IUser): IAgent {
