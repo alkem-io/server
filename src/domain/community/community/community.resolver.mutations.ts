@@ -24,9 +24,11 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { UserService } from '@domain/community/user/user.service';
 import { UserGroupService } from '../user-group/user-group.service';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private userService: UserService,
     private userGroupService: UserGroupService,
@@ -55,7 +57,7 @@ export class CommunityResolverMutations {
       `create group community: ${community.displayName}`
     );
     const group = await this.communityService.createGroup(groupData);
-    group.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    group.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
       group.authorization,
       community.authorization
     );
@@ -119,7 +121,7 @@ export class CommunityResolverMutations {
     // Check that the application creation is authorized, after first updating the rules for the community entity
     // so that the current user can also update their details (by creating an application)
     const user = await this.userService.getUserOrFail(applicationData.userID);
-    const authorization = this.authorizationEngine.appendCredentialAuthorizationRule(
+    const authorization = this.authorizationDefinitionService.appendCredentialAuthorizationRule(
       community.authorization,
       {
         type: AuthorizationCredential.UserSelfManagement,
@@ -139,7 +141,7 @@ export class CommunityResolverMutations {
     const application = await this.communityService.createApplication(
       applicationData
     );
-    application.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    application.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
       application.authorization,
       community.authorization
     );

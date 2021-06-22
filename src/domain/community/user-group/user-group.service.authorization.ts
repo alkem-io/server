@@ -6,21 +6,21 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IUserGroup, UserGroup } from '@domain/community/user-group';
 import { UserGroupService } from './user-group.service';
-import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationRuleCredential } from '@domain/common/authorization-definition/authorization.rule.credential';
 
 @Injectable()
 export class UserGroupAuthorizationService {
   constructor(
+    private authorizationDefinition: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private agentService: AgentService,
     private userGroupService: UserGroupService,
     @InjectRepository(UserGroup)
     private userGroupRepository: Repository<UserGroup>
@@ -34,7 +34,7 @@ export class UserGroupAuthorizationService {
 
     // cascade
     const profile = this.userGroupService.getProfile(userGroup);
-    profile.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    profile.authorization = await this.authorizationDefinition.inheritParentAuthorization(
       profile.authorization,
       userGroup.authorization
     );
@@ -63,7 +63,7 @@ export class UserGroupAuthorizationService {
     };
     newRules.push(userGroupMember);
 
-    this.authorizationEngine.appendCredentialAuthorizationRules(
+    this.authorizationDefinition.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );

@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { AuthorizationRuleCredential } from './authorization.rule.credential';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
 import {
@@ -10,21 +9,21 @@ import {
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
-import {
-  AuthorizationDefinition,
-  IAuthorizationDefinition,
-  UpdateAuthorizationDefinitionInput,
-} from '@domain/common/authorization-definition';
 import { AgentInfo } from '@core/authentication';
 import { ConfigService } from '@nestjs/config';
-import { AuthorizationRuleVerifiedCredential } from './authorization.rule.verified.credential';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationRuleCredential } from '@domain/common/authorization-definition/authorization.rule.credential';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition/authorization.definition.interface';
+import { AuthorizationRuleVerifiedCredential } from '@domain/common/authorization-definition/authorization.rule.verified.credential';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 
 @Injectable()
 export class AuthorizationEngineService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private authorizationDefinitionService: AuthorizationDefinitionService
   ) {}
 
   grantAccessOrFail(
@@ -35,7 +34,9 @@ export class AuthorizationEngineService {
   ) {
     if (this.isAuthenticationDisabled()) return true;
 
-    const auth = this.validateAuthorization(authorization);
+    const auth = this.authorizationDefinitionService.validateAuthorization(
+      authorization
+    );
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
     const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
@@ -94,17 +95,6 @@ export class AuthorizationEngineService {
     else return value;
   };
 
-  validateAuthorization(
-    authorization: IAuthorizationDefinition | undefined
-  ): IAuthorizationDefinition {
-    if (!authorization)
-      throw new ForbiddenException(
-        'Authorization: no definition provided',
-        LogContext.AUTH
-      );
-    return authorization;
-  }
-
   isAuthenticationDisabled(): boolean {
     const authEnabled = this.configService.get(ConfigurationTypes.Identity)
       ?.authentication?.enabled;
@@ -124,7 +114,7 @@ export class AuthorizationEngineService {
     )
       return true;
 
-    const credentialRules: AuthorizationRuleCredential[] = this.convertCredentialRulesStr(
+    const credentialRules: AuthorizationRuleCredential[] = this.authorizationDefinitionService.convertCredentialRulesStr(
       authorization.credentialRules
     );
     for (const rule of credentialRules) {
@@ -139,7 +129,7 @@ export class AuthorizationEngineService {
         }
       }
     }
-    const verifiedCredentialRules: AuthorizationRuleVerifiedCredential[] = this.convertVerifiedCredentialRulesStr(
+    const verifiedCredentialRules: AuthorizationRuleVerifiedCredential[] = this.authorizationDefinitionService.convertVerifiedCredentialRulesStr(
       authorization.verifiedCredentialRules
     );
     for (const rule of verifiedCredentialRules) {
@@ -173,7 +163,7 @@ export class AuthorizationEngineService {
       grantedPrivileges.push(AuthorizationPrivilege.READ);
     }
 
-    const credentialRules: AuthorizationRuleCredential[] = this.convertCredentialRulesStr(
+    const credentialRules: AuthorizationRuleCredential[] = this.authorizationDefinitionService.convertCredentialRulesStr(
       authorization.credentialRules
     );
     for (const rule of credentialRules) {
@@ -194,95 +184,6 @@ export class AuthorizationEngineService {
     );
 
     return uniquePrivileges;
-  }
-
-  appendCredentialAuthorizationRule(
-    authorization: IAuthorizationDefinition | undefined,
-    credentialCriteria: CredentialsSearchInput,
-    privileges: AuthorizationPrivilege[]
-  ): IAuthorizationDefinition {
-    const auth = this.validateAuthorization(authorization);
-    const rules = this.convertCredentialRulesStr(auth.credentialRules);
-    const newRule: AuthorizationRuleCredential = {
-      type: credentialCriteria.type,
-      resourceID: credentialCriteria.resourceID || '',
-      grantedPrivileges: privileges,
-    };
-    rules.push(newRule);
-    auth.credentialRules = JSON.stringify(rules);
-    return auth;
-  }
-
-  setAnonymousAccess(
-    authorization: IAuthorizationDefinition | undefined,
-    newValue: boolean
-  ): IAuthorizationDefinition {
-    const auth = this.validateAuthorization(authorization);
-    auth.anonymousReadAccess = newValue;
-    return auth;
-  }
-
-  inheritParentAuthorization(
-    childAuthorization: IAuthorizationDefinition | undefined,
-    parentAuthorization: IAuthorizationDefinition | undefined
-  ): IAuthorizationDefinition {
-    const child = this.validateAuthorization(childAuthorization);
-    const parent = this.validateAuthorization(parentAuthorization);
-    const newRules = this.convertCredentialRulesStr(parent.credentialRules);
-    this.appendCredentialAuthorizationRules(child, newRules);
-    child.anonymousReadAccess = parent.anonymousReadAccess;
-    return child;
-  }
-
-  updateAuthorization(
-    origAuthorization: IAuthorizationDefinition | undefined,
-    authorizationUpdateData: UpdateAuthorizationDefinitionInput
-  ): IAuthorizationDefinition {
-    const authorization = this.validateAuthorization(origAuthorization);
-    authorization.anonymousReadAccess =
-      authorizationUpdateData.anonymousReadAccess;
-    return authorization;
-  }
-
-  appendCredentialAuthorizationRules(
-    authorization: IAuthorizationDefinition | undefined,
-    additionalRules: AuthorizationRuleCredential[]
-  ): IAuthorizationDefinition {
-    const auth = this.validateAuthorization(authorization);
-
-    const existingRules = this.convertCredentialRulesStr(auth.credentialRules);
-    for (const additionalRule of additionalRules) {
-      existingRules.push(additionalRule);
-    }
-
-    auth.credentialRules = JSON.stringify(existingRules);
-    return auth;
-  }
-
-  convertCredentialRulesStr(rulesStr: string): AuthorizationRuleCredential[] {
-    if (!rulesStr || rulesStr.length == 0) return [];
-    try {
-      const rules: AuthorizationRuleCredential[] = JSON.parse(rulesStr);
-      return rules;
-    } catch (error) {
-      const msg = `Unable to convert rules to json: ${error}`;
-      this.logger.error(msg);
-      throw new ForbiddenException(msg, LogContext.AUTH);
-    }
-  }
-
-  convertVerifiedCredentialRulesStr(
-    rulesStr: string
-  ): AuthorizationRuleVerifiedCredential[] {
-    if (!rulesStr || rulesStr.length == 0) return [];
-    try {
-      const rules: AuthorizationRuleVerifiedCredential[] = JSON.parse(rulesStr);
-      return rules;
-    } catch (error) {
-      const msg = `Unable to convert rules to json: ${error}`;
-      this.logger.error(msg);
-      throw new ForbiddenException(msg, LogContext.AUTH);
-    }
   }
 
   createGlobalRolesAuthorizationDefinition(
@@ -313,7 +214,10 @@ export class AuthorizationEngineService {
       };
       newRules.push(roleCred);
     }
-    this.appendCredentialAuthorizationRules(authorization, newRules);
+    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
 
     return authorization;
   }

@@ -11,10 +11,12 @@ import {
   IReference,
 } from '@domain/common/reference';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '../authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class ReferenceService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     @InjectRepository(Reference)
     private referenceRepository: Repository<Reference>
   ) {}
@@ -102,6 +104,10 @@ export class ReferenceService {
   async deleteReference(deleteData: DeleteReferenceInput): Promise<IReference> {
     const referenceID = deleteData.ID;
     const reference = await this.getReferenceOrFail(referenceID);
+
+    if (reference.authorization)
+      await this.authorizationDefinitionService.delete(reference.authorization);
+
     const { id } = reference;
     const result = await this.referenceRepository.remove(
       reference as Reference

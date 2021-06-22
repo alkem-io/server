@@ -5,7 +5,7 @@ import {
   RestrictedTagsetNames,
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { BaseCherrytwistEntity } from '@domain/common/entity/base-entity';
 
 @Entity()
 export class Agreement extends BaseCherrytwistEntity implements IAgreement {
@@ -17,11 +17,12 @@ export class Agreement extends BaseCherrytwistEntity implements IAgreement {
 
   @ManyToOne(
     () => Project,
-    project => project.agreements
+    project => project.agreements,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   project?: Project;
 
-  @OneToOne(() => Tagset, { eager: true, cascade: true })
+  @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
   tagset: Tagset;
 

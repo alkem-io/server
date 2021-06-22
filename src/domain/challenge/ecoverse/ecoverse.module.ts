@@ -19,9 +19,11 @@ import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
+import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
 
 @Module({
   imports: [
+    AuthorizationDefinitionModule,
     AuthorizationEngineModule,
     ContextModule,
     CommunityModule,

@@ -3,7 +3,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 import { MID_TEXT_LENGTH, LONG_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference';
 import { UpdateTagsetInput } from '@domain/common/tagset';
-import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity';
+import { UpdateBaseCherrytwistInput } from '@domain/common/entity/base-entity';
 @InputType()
 export class UpdateProfileInput extends UpdateBaseCherrytwistInput {
   @Field({ nullable: true })

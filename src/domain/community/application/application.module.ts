@@ -5,9 +5,11 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from '@domain/community/user/user.module';
+import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
 
 @Module({
   imports: [
+    AuthorizationDefinitionModule,
     NVPModule,
     LifecycleModule,
     UserModule,

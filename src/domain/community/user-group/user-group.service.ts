@@ -26,10 +26,12 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { IProfile } from '@domain/community/profile';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class UserGroupService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private userService: UserService,
     private profileService: ProfileService,
     private tagsetService: TagsetService,
@@ -76,6 +78,9 @@ export class UserGroupService {
     if (group.profile) {
       await this.profileService.deleteProfile(group.profile.id);
     }
+
+    if (group.authorization)
+      await this.authorizationDefinitionService.delete(group.authorization);
 
     const { id } = group;
     const result = await this.userGroupRepository.remove(group);

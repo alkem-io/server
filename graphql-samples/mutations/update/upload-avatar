@@ -1,0 +1,17 @@
+mutation uploadAvatar($file: Upload!, $input: UploadProfileAvatarInput!) {
+  uploadAvatar(file: $file, uploadData: $input) {
+    id
+    avatar
+  }
+}
+
+query variables: NOTE: not working as below
+{
+  "input":
+  {
+    "profileID": "uuid",
+    "file": "something"
+  },
+  "file": "File"
+}
+

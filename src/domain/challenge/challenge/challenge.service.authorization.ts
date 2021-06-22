@@ -20,11 +20,13 @@ import { ChallengeService } from './challenge.service';
 import {
   AuthorizationRuleCredential,
   AuthorizationRuleVerifiedCredential,
-} from '@src/services/platform/authorization-engine';
+} from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class ChallengeAuthorizationService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private challengeService: ChallengeService,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
@@ -37,7 +39,7 @@ export class ChallengeAuthorizationService {
     challenge: IChallenge,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): Promise<IChallenge> {
-    challenge.authorization = this.authorizationEngine.inheritParentAuthorization(
+    challenge.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       challenge.authorization,
       parentAuthorization
     );
@@ -65,7 +67,7 @@ export class ChallengeAuthorizationService {
     }
     if (challenge.opportunities) {
       for (const opportunity of challenge.opportunities) {
-        opportunity.authorization = this.authorizationEngine.inheritParentAuthorization(
+        opportunity.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
           opportunity.authorization,
           challenge.authorization
         );
@@ -77,7 +79,7 @@ export class ChallengeAuthorizationService {
     }
 
     const agent = await this.challengeService.getAgent(challenge.id);
-    agent.authorization = this.authorizationEngine.inheritParentAuthorization(
+    agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       agent.authorization,
       challenge.authorization
     );
@@ -95,7 +97,7 @@ export class ChallengeAuthorizationService {
         LogContext.CHALLENGES
       );
 
-    this.authorizationEngine.appendCredentialAuthorizationRules(
+    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
       authorization,
       this.createCredentialRules(challengeID)
     );
@@ -156,7 +158,7 @@ export class ChallengeAuthorizationService {
     // propagate authorization rules for child entities
     if (challenge.opportunities) {
       for (const opportunity of challenge.opportunities) {
-        opportunity.authorization = this.authorizationEngine.updateAuthorization(
+        opportunity.authorization = this.authorizationDefinitionService.updateAuthorization(
           opportunity.authorization,
           authorizationUpdateData
         );

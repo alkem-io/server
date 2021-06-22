@@ -25,10 +25,12 @@ import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class OrganisationService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private userService: UserService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
@@ -127,6 +129,12 @@ export class OrganisationService {
           ID: group.id,
         });
       }
+    }
+
+    if (organisation.authorization) {
+      await this.authorizationDefinitionService.delete(
+        organisation.authorization
+      );
     }
 
     if (organisation.agent) {

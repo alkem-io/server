@@ -10,11 +10,13 @@ import {
   AuthorizationDefinition,
   IAuthorizationDefinition,
 } from '@domain/common/authorization-definition';
-import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationRuleCredential } from '@domain/common/authorization-definition/authorization.rule.credential';
 
 @Injectable()
 export class OrganisationAuthorizationService {
   constructor(
+    private authorizationDefinition: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Organisation)
@@ -30,7 +32,11 @@ export class OrganisationAuthorizationService {
 
     const profile = organisation.profile;
     if (profile) {
-      profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
+      profile.authorization = this.authorizationDefinition.inheritParentAuthorization(
+        profile.authorization,
+        organisation.authorization
+      );
+      profile.authorization = await this.authorizationDefinition.appendCredentialAuthorizationRule(
         profile.authorization,
         {
           type: AuthorizationCredential.GlobalAdminCommunity,
@@ -98,7 +104,7 @@ export class OrganisationAuthorizationService {
     };
     newRules.push(organisationMember);
 
-    this.authorizationEngine.appendCredentialAuthorizationRules(
+    this.authorizationDefinition.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );

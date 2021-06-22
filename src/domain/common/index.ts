@@ -2,6 +2,6 @@ export * from './nvp';
 export * from './reference';
 export * from './tagset';
 export * from './lifecycle';
-export * from './base-entity';
+export * from './entity/base-entity';
 export * from './interfaces';
-export * from './nameable-entity';
+export * from './entity/nameable-entity';

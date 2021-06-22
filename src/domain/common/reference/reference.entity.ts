@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IReference } from './reference.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 export class Reference extends AuthorizableEntity implements IReference {

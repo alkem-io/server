@@ -24,10 +24,12 @@ import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem
 import { IVisual } from '@domain/context/visual/visual.interface';
 import { VisualService } from '../visual/visual.service';
 import { Visual } from '@domain/context/visual/visual.entity';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class ContextService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private visualService: VisualService,
     private aspectService: AspectService,
     private ecosystemModelService: EcosystemModelService,
@@ -105,7 +107,7 @@ export class ContextService {
   async removeContext(contextID: string): Promise<IContext> {
     // Note need to load it in with all contained entities so can remove fully
     const context = await this.getContextOrFail(contextID, {
-      relations: ['aspects', 'references'],
+      relations: ['aspects', 'references', 'ecosystemModel'],
     });
 
     // Remove all references
@@ -117,7 +119,16 @@ export class ContextService {
       }
     }
 
-    // First remove all groups
+    if (context.ecosystemModel) {
+      await this.ecosystemModelService.deleteEcosystemModel(
+        context.ecosystemModel.id
+      );
+    }
+
+    if (context.authorization)
+      await this.authorizationDefinitionService.delete(context.authorization);
+
+    // Remove all groups
     if (context.aspects) {
       for (const aspect of context.aspects) {
         await this.aspectService.removeAspect({ ID: aspect.id });

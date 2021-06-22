@@ -12,10 +12,12 @@ import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
+import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
 
 @Module({
   imports: [
     AuthorizationEngineModule,
+    AuthorizationDefinitionModule,
     AgentModule,
     UserGroupModule,
     UserModule,

@@ -26,10 +26,12 @@ import { streamToBuffer, validateImageDimensions } from '@common/utils';
 import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
 import { UploadProfileAvatarInput } from '@domain/community/profile';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class ProfileService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
     private ipfsService: IpfsService,
@@ -113,6 +115,9 @@ export class ProfileService {
         });
       }
     }
+
+    if (profile.authorization)
+      await this.authorizationDefinitionService.delete(profile.authorization);
 
     return await this.profileRepository.remove(profile as Profile);
   }

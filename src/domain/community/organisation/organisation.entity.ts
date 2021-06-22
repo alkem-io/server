@@ -4,14 +4,14 @@ import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { NameableEntity } from '@domain/common/nameable-entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse';
 
 @Entity()
 export class Organisation extends NameableEntity
   implements IOrganisation, IGroupable {
-  @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
   profile?: Profile;
 
@@ -36,7 +36,7 @@ export class Organisation extends NameableEntity
   )
   challenges!: Challenge[];
 
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
   agent?: Agent;
 

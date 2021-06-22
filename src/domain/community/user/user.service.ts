@@ -22,11 +22,13 @@ import { UUID_LENGTH } from '@common/constants';
 import { IProfile } from '@domain/community/profile';
 import { LogContext } from '@common/enums';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class UserService {
   constructor(
     private profileService: ProfileService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -57,7 +59,9 @@ export class UserService {
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
-    const user = await this.getUserOrFail(userID);
+    const user = await this.getUserOrFail(userID, {
+      relations: ['profile', 'agent'],
+    });
     const { id } = user;
 
     if (user.profile) {
@@ -66,6 +70,10 @@ export class UserService {
 
     if (user.agent) {
       await this.agentService.deleteAgent(user.agent.id);
+    }
+
+    if (user.authorization) {
+      await this.authorizationDefinitionService.delete(user.authorization);
     }
 
     const result = await this.userRepository.remove(user as User);

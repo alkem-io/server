@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { Context } from '@domain/context/context/context.entity';
-import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 export class Aspect extends AuthorizableEntity implements IAspect {
@@ -17,13 +17,15 @@ export class Aspect extends AuthorizableEntity implements IAspect {
 
   @ManyToOne(
     () => Context,
-    context => context.aspects
+    context => context.aspects,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   context?: Context;
 
   @ManyToOne(
     () => Project,
-    project => project.aspects
+    project => project.aspects,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   project?: Project;
 

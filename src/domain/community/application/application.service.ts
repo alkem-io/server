@@ -16,10 +16,12 @@ import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class ApplicationService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
     private lifecycleService: LifecycleService,
@@ -60,6 +62,11 @@ export class ApplicationService {
         await this.nvpService.removeNVP(question.id);
       }
     }
+    if (application.authorization)
+      await this.authorizationDefinitionService.delete(
+        application.authorization
+      );
+
     const result = await this.applicationRepository.remove(
       application as Application
     );

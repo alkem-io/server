@@ -2,7 +2,7 @@ import { IApplication } from '@domain/community/application/application.interfac
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
-import { IAuthorizable } from '@domain/common/authorizable-entity';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 
 @ObjectType('Community', {

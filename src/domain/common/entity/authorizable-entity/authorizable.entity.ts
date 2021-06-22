@@ -1,4 +1,4 @@
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { BaseCherrytwistEntity } from '@domain/common/entity/base-entity';
 import { JoinColumn, OneToOne } from 'typeorm';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { IAuthorizable } from './authorizable.interface';

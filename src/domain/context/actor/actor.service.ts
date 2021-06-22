@@ -12,10 +12,12 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { DeleteActorInput } from './actor.dto.delete';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class ActorService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     @InjectRepository(Actor)
     private actorRepository: Repository<Actor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -42,6 +44,8 @@ export class ActorService {
   async deleteActor(deleteData: DeleteActorInput): Promise<IActor> {
     const actorID = deleteData.ID;
     const actor = await this.getActorOrFail(actorID);
+    if (actor.authorization)
+      await this.authorizationDefinitionService.delete(actor.authorization);
     const result = await this.actorRepository.remove(actor as Actor);
     result.id = deleteData.ID;
     return result;

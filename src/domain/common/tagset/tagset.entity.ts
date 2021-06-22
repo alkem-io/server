@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 export enum RestrictedTagsetNames {
   Default = 'default',
@@ -18,7 +18,8 @@ export class Tagset extends AuthorizableEntity implements ITagset {
 
   @ManyToOne(
     () => Profile,
-    profile => profile.tagsets
+    profile => profile.tagsets,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   profile?: Profile;
 

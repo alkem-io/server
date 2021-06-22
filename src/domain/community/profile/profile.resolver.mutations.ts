@@ -19,6 +19,7 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Resolver()
 export class ProfileResolverMutations {
@@ -26,6 +27,7 @@ export class ProfileResolverMutations {
   constructor(
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private profileService: ProfileService
   ) {}
@@ -50,7 +52,7 @@ export class ProfileResolverMutations {
     );
 
     const tagset = await this.profileService.createTagset(tagsetData);
-    tagset.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    tagset.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
       tagset.authorization,
       profile.authorization
     );
@@ -76,7 +78,7 @@ export class ProfileResolverMutations {
       `profile: ${profile.id}`
     );
     const reference = await this.profileService.createReference(referenceInput);
-    reference.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    reference.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
       reference.authorization,
       profile.authorization
     );

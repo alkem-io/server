@@ -3,7 +3,7 @@ import { IAspect } from '@domain/context/aspect/aspect.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { INameable } from '@domain/common/nameable-entity';
+import { INameable } from '@domain/common/entity/nameable-entity';
 
 @ObjectType('Project')
 export abstract class IProject extends INameable {

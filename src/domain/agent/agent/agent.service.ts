@@ -18,12 +18,13 @@ import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { ConfigService } from '@nestjs/config';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class AgentService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private configService: ConfigService,
     private credentialService: CredentialService,
     private ssiAgentService: SsiAgentService,
@@ -34,7 +35,7 @@ export class AgentService {
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
-    agent.authorization = new AuthorizationDefinition();
+    agent.authorization = await this.authorizationDefinitionService.createAuthorizationDefinition();
 
     const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
       .enabled;
@@ -62,13 +63,14 @@ export class AgentService {
   async deleteAgent(agentID: string): Promise<IAgent> {
     // Note need to load it in with all contained entities so can remove fully
     const agent = await this.getAgentOrFail(agentID);
-
     // Remove all credentials
     if (agent.credentials) {
       for (const credential of agent.credentials) {
         await this.credentialService.deleteCredential(credential.id);
       }
     }
+    if (agent.authorization)
+      await this.authorizationDefinitionService.delete(agent.authorization);
 
     return await this.agentRepository.remove(agent as Agent);
   }

@@ -15,9 +15,11 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 import { AspectService } from '@domain/context/aspect/aspect.service';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private aspectService: AspectService,
     private projectService: ProjectService,
@@ -80,7 +82,7 @@ export class ProjectResolverMutations {
     );
 
     const aspect = await this.projectService.createAspect(aspectData);
-    aspect.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    aspect.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
       aspect.authorization,
       project.authorization
     );
