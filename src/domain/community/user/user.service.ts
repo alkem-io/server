@@ -313,7 +313,13 @@ export class UserService {
       })
       .getMany();
 
-    return userMatches;
+    // reload to go through the normal loading path
+    const results: IUser[] = [];
+    for (const user of userMatches) {
+      const loadedOrganisation = await this.getUserOrFail(user.id);
+      results.push(loadedOrganisation);
+    }
+    return results;
   }
 
   getAgentOrFail(user: IUser): IAgent {

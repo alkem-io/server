@@ -260,6 +260,14 @@ export class OrganisationService {
       })
       .getMany();
 
-    return organisationMatches;
+    // reload to go through the normal loading path
+    const results: IOrganisation[] = [];
+    for (const organisation of organisationMatches) {
+      const loadedOrganisation = await this.getOrganisationOrFail(
+        organisation.id
+      );
+      results.push(loadedOrganisation);
+    }
+    return results;
   }
 }
