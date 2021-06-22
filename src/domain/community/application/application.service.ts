@@ -7,7 +7,10 @@ import {
 
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -17,6 +20,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class ApplicationService {
@@ -96,5 +100,18 @@ export class ApplicationService {
 
   async save(application: IApplication): Promise<IApplication> {
     return await this.applicationRepository.save(application);
+  }
+
+  async getUser(applicationID: string): Promise<IUser> {
+    const application = await this.getApplicationOrFail(applicationID, {
+      relations: ['user'],
+    });
+    const user = application.user;
+    if (!user)
+      throw new RelationshipNotFoundException(
+        `Unable to load User for Application ${applicationID} `,
+        LogContext.COMMUNITY
+      );
+    return user;
   }
 }
