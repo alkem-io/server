@@ -1,15 +1,12 @@
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import {
   AssignChallengeLeadInput,
-  Challenge,
   CreateChallengeInput,
   DeleteChallengeInput,
-  IChallenge,
   RemoveChallengeLeadInput,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
@@ -43,10 +40,14 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { IAgent } from '@domain/agent/agent';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { IChallenge } from './challenge.interface';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class ChallengeService {
   constructor(
+    private agentService: AgentService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
@@ -351,59 +352,6 @@ export class ChallengeService {
     const challenges = await this.challengeRepository.find();
     return challenges || [];
   }
-
-  async assignChallengeLead(
-    assignData: AssignChallengeLeadInput
-  ): Promise<IChallenge> {
-    const organisationID = assignData.organisationID;
-    const challengeID = assignData.challengeID;
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      organisationID,
-      { relations: ['groups'] }
-    );
-
-    const challenge = await this.getChallengeOrFail(challengeID);
-
-    const existingOrg = challenge.leadOrganisations?.find(
-      existingOrg => existingOrg.id === organisation.id
-    );
-    if (existingOrg)
-      throw new ValidationException(
-        `Challenge ${challenge.nameID} already has an organisation with the provided organisation ID: ${organisationID}`,
-        LogContext.COMMUNITY
-      );
-    // ok to add the org
-    challenge.leadOrganisations?.push(organisation);
-    return await this.challengeRepository.save(challenge);
-  }
-
-  async removeChallengeLead(
-    removeData: RemoveChallengeLeadInput
-  ): Promise<IChallenge> {
-    const challenge = await this.getChallengeOrFail(removeData.challengeID);
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      removeData.organisationID
-    );
-
-    const existingOrg = challenge.leadOrganisations?.find(
-      existingOrg => existingOrg.id === organisation.id
-    );
-    if (!existingOrg)
-      throw new EntityNotInitializedException(
-        `Community ${removeData.challengeID} does not have a lead with the provided organisation ID: ${removeData.organisationID}`,
-        LogContext.COMMUNITY
-      );
-    // ok to add the org
-    const updatedLeads = [];
-    for (const existingOrg of challenge.leadOrganisations as IOrganisation[]) {
-      if (existingOrg.id != organisation.id) {
-        updatedLeads.push(existingOrg);
-      }
-    }
-    challenge.leadOrganisations = updatedLeads;
-    return await this.challengeRepository.save(challenge);
-  }
-
   async getChallengesInEcoverseCount(ecoverseID: string): Promise<number> {
     const count = await this.challengeRepository.count({
       where: { ecoverseID: ecoverseID },
@@ -439,5 +387,79 @@ export class ChallengeService {
     activity.push(challengesTopic);
 
     return activity;
+  }
+
+  async getLeadOrganisations(challengeID: string): Promise<IOrganisation[]> {
+    const organisations = await this.organisationService.organisationsWithCredentials(
+      {
+        type: AuthorizationCredential.ChallengeLead,
+        resourceID: challengeID,
+      }
+    );
+    return organisations;
+  }
+
+  async assignChallengeLead(
+    assignData: AssignChallengeLeadInput
+  ): Promise<IChallenge> {
+    const organisationID = assignData.organisationID;
+    const challengeID = assignData.challengeID;
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      organisationID,
+      { relations: ['groups', 'agent'] }
+    );
+
+    const existingLeads = await this.getLeadOrganisations(challengeID);
+
+    const existingOrg = existingLeads.find(
+      existingOrg => existingOrg.id === organisation.id
+    );
+    if (existingOrg)
+      throw new ValidationException(
+        `Challenge ${challengeID} already has an organisation with the provided organisation ID: ${organisationID}`,
+        LogContext.COMMUNITY
+      );
+    // assign the credential
+    const agent = await this.organisationService.getAgent(organisation);
+    organisation.agent = await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.ChallengeLead,
+      resourceID: challengeID,
+    });
+
+    await this.organisationService.save(organisation);
+    return await this.getChallengeOrFail(challengeID);
+  }
+
+  async removeChallengeLead(
+    removeData: RemoveChallengeLeadInput
+  ): Promise<IChallenge> {
+    const challengeID = removeData.challengeID;
+    const challenge = await this.getChallengeOrFail(challengeID);
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      removeData.organisationID
+    );
+
+    const existingLeads = await this.getLeadOrganisations(challengeID);
+
+    const existingOrg = existingLeads.find(
+      existingOrg => existingOrg.id === organisation.id
+    );
+
+    if (!existingOrg)
+      throw new ValidationException(
+        `Community ${removeData.challengeID} does not have a lead with the provided organisation ID: ${removeData.organisationID}`,
+        LogContext.COMMUNITY
+      );
+    // ok to remove the org
+    const agent = await this.organisationService.getAgent(organisation);
+    organisation.agent = await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.ChallengeLead,
+      resourceID: challengeID,
+    });
+
+    await this.organisationService.save(organisation);
+    return challenge;
   }
 }

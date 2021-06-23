@@ -14,11 +14,13 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { CurrentUser } from '@common/decorators';
 import { ActorService } from '../actor/actor.service';
 import { CreateActorInput } from '@domain/context/actor/actor.dto.create';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Resolver()
 export class ActorGroupResolverMutations {
   constructor(
     private actorService: ActorService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private actorGroupService: ActorGroupService
   ) {}
@@ -41,7 +43,7 @@ export class ActorGroupResolverMutations {
       `create actor on actor group: ${actorGroup.name}`
     );
     const actor = await this.actorGroupService.createActor(actorData);
-    actor.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    actor.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
       actor.authorization,
       actorGroup.authorization
     );

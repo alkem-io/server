@@ -9,10 +9,12 @@ import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.pro
 import { ProjectResolverFields } from './project.resolver.fields';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
 
 @Module({
   imports: [
     AuthorizationEngineModule,
+    AuthorizationDefinitionModule,
     AspectModule,
     NamingModule,
     LifecycleModule,

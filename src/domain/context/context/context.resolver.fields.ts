@@ -25,8 +25,6 @@ export class ContextResolverFields {
     return await this.contextService.getEcosystemModel(context);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('visual', () => IVisual, {
     nullable: true,
     description: 'The Visual assets for this Context.',

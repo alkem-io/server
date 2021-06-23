@@ -1,4 +1,4 @@
-import { IBaseCherrytwist } from '@domain/common/base-entity';
+import { IBaseCherrytwist } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Authorization')

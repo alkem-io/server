@@ -1,4 +1,4 @@
-import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity';
+import { UpdateBaseCherrytwistInput } from '@domain/common/entity/base-entity';
 import { InputType, Field } from '@nestjs/graphql';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';

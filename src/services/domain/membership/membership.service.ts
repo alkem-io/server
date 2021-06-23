@@ -12,7 +12,7 @@ import { AuthorizationCredential } from '@common/enums';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IOrganisation } from '@domain/community/organisation';
 import { MembershipResultEntryOrganisation } from './membership.dto.result.entry.organisation';
-import { IChallenge } from '@domain/challenge/challenge';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IUserGroup } from '@domain/community/user-group';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 import { ICommunity } from '@domain/community/community';

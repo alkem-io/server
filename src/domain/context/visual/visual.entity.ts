@@ -1,5 +1,5 @@
 import { Column, Entity } from 'typeorm';
-import { BaseCherrytwistEntity } from '@domain/common/base-entity/base.cherrytwist.entity';
+import { BaseCherrytwistEntity } from '@domain/common/entity/base-entity/base.cherrytwist.entity';
 import { IVisual } from '@domain/context/visual/visual.interface';
 
 @Entity()

@@ -10,7 +10,7 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
   @ManyToOne(
     () => Challenge,
     challenge => challenge.opportunities,
-    { eager: false, cascade: false }
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   challenge?: Challenge;
 

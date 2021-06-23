@@ -1,4 +1,4 @@
-import { IAuthorizable } from '@domain/common/authorizable-entity';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Field, ObjectType } from '@nestjs/graphql';

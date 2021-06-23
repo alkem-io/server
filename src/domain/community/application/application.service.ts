@@ -7,7 +7,10 @@ import {
 
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -16,10 +19,13 @@ import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class ApplicationService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
     private lifecycleService: LifecycleService,
@@ -60,6 +66,11 @@ export class ApplicationService {
         await this.nvpService.removeNVP(question.id);
       }
     }
+    if (application.authorization)
+      await this.authorizationDefinitionService.delete(
+        application.authorization
+      );
+
     const result = await this.applicationRepository.remove(
       application as Application
     );
@@ -89,5 +100,37 @@ export class ApplicationService {
 
   async save(application: IApplication): Promise<IApplication> {
     return await this.applicationRepository.save(application);
+  }
+
+  async getUser(applicationID: string): Promise<IUser> {
+    const application = await this.getApplicationOrFail(applicationID, {
+      relations: ['user'],
+    });
+    const user = application.user;
+    if (!user)
+      throw new RelationshipNotFoundException(
+        `Unable to load User for Application ${applicationID} `,
+        LogContext.COMMUNITY
+      );
+    return user;
+  }
+
+  async findExistingApplication(
+    userID: string,
+    communityID: string
+  ): Promise<IApplication | undefined> {
+    const existingApplication = await this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoinAndSelect('application.user', 'user')
+      .leftJoinAndSelect('application.community', 'community')
+      .where('user.id = :userID')
+      .andWhere('community.id = :communityID')
+      .setParameters({
+        userID: `${userID}`,
+        communityID: communityID,
+      })
+      .getMany();
+    if (existingApplication.length > 0) return existingApplication[0];
+    return undefined;
   }
 }

@@ -15,10 +15,12 @@ import { OrganisationAuthorizationService } from './organisation.service.authori
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { UserGroupService } from '../user-group/user-group.service';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private userGroupService: UserGroupService,
     private organisationAuthorizationService: OrganisationAuthorizationService,
     private organisationService: OrganisationService,
@@ -73,7 +75,7 @@ export class OrganisationResolverMutations {
     );
 
     const group = await this.organisationService.createGroup(groupData);
-    group.authorization = await this.authorizationEngine.inheritParentAuthorization(
+    group.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
       group.authorization,
       organisation.authorization
     );

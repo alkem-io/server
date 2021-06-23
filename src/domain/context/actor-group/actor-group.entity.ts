@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { Actor } from '@domain/context/actor/actor.entity';
-import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.entity';
 import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 
@@ -18,7 +18,8 @@ export class ActorGroup extends AuthorizableEntity implements IActorGroup {
 
   @ManyToOne(
     () => EcosystemModel,
-    ecosystemModel => ecosystemModel.actorGroups
+    ecosystemModel => ecosystemModel.actorGroups,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   ecosystemModel?: EcosystemModel;
 

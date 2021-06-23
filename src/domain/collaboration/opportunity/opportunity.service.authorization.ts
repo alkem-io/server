@@ -9,11 +9,13 @@ import {
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { IOpportunity } from '..';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class OpportunityAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>
@@ -23,7 +25,7 @@ export class OpportunityAuthorizationService {
     opportunity: IOpportunity,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): Promise<IOpportunity> {
-    opportunity.authorization = this.authorizationEngine.inheritParentAuthorization(
+    opportunity.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       opportunity.authorization,
       parentAuthorization
     );
@@ -40,7 +42,7 @@ export class OpportunityAuthorizationService {
     }
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        relation.authorization = this.authorizationEngine.inheritParentAuthorization(
+        relation.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
           relation.authorization,
           opportunity.authorization
         );
@@ -63,7 +65,7 @@ export class OpportunityAuthorizationService {
     // propagate authorization rules for child entities
     if (opportunity.projects) {
       for (const project of opportunity.projects) {
-        project.authorization = this.authorizationEngine.updateAuthorization(
+        project.authorization = this.authorizationDefinitionService.updateAuthorization(
           project.authorization,
           authorizationUpdateData
         );
@@ -71,7 +73,7 @@ export class OpportunityAuthorizationService {
     }
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        relation.authorization = this.authorizationEngine.updateAuthorization(
+        relation.authorization = this.authorizationDefinitionService.updateAuthorization(
           relation.authorization,
           authorizationUpdateData
         );

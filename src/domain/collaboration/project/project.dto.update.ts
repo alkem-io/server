@@ -1,4 +1,4 @@
-import { UpdateNameableInput } from '@domain/common/nameable-entity';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
 import { InputType, Field } from '@nestjs/graphql';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 

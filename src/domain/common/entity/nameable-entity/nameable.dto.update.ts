@@ -2,7 +2,7 @@ import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { NameID } from '@domain/common/scalars';
-import { UpdateBaseCherrytwistInput } from '@domain/common/base-entity';
+import { UpdateBaseCherrytwistInput } from '@domain/common/entity/base-entity';
 
 @InputType()
 export class UpdateNameableInput extends UpdateBaseCherrytwistInput {

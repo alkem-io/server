@@ -4,7 +4,7 @@ import { OrganisationModule } from '@domain/community/organisation/organisation.
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Ecoverse } from '@domain/challenge/ecoverse';
+import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { EcoverseResolverMutations } from '@domain/challenge/ecoverse/ecoverse.resolver.mutations';
 import { EcoverseResolverQueries } from '@domain/challenge/ecoverse/ecoverse.resolver.queries';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
@@ -19,9 +19,13 @@ import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
+import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
   imports: [
+    AgentModule,
+    AuthorizationDefinitionModule,
     AuthorizationEngineModule,
     ContextModule,
     CommunityModule,

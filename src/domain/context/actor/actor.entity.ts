@@ -1,7 +1,7 @@
 import { ActorGroup } from '@domain/context/actor-group/actor-group.entity';
 import { IActor } from '@domain/context/actor/actor.interface';
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 export class Actor extends AuthorizableEntity implements IActor {
@@ -19,7 +19,8 @@ export class Actor extends AuthorizableEntity implements IActor {
 
   @ManyToOne(
     () => ActorGroup,
-    actorGroup => actorGroup.actors
+    actorGroup => actorGroup.actors,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   actorGroup?: ActorGroup;
 

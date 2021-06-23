@@ -17,16 +17,18 @@ import {
 } from '@domain/community/user';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { Agent, IAgent } from '@domain/agent/agent';
+import { IAgent } from '@domain/agent/agent';
 import { UUID_LENGTH } from '@common/constants';
 import { IProfile } from '@domain/community/profile';
 import { LogContext } from '@common/enums';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class UserService {
   constructor(
     private profileService: ProfileService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -57,7 +59,9 @@ export class UserService {
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
-    const user = await this.getUserOrFail(userID);
+    const user = await this.getUserOrFail(userID, {
+      relations: ['profile', 'agent'],
+    });
     const { id } = user;
 
     if (user.profile) {
@@ -66,6 +70,10 @@ export class UserService {
 
     if (user.agent) {
       await this.agentService.deleteAgent(user.agent.id);
+    }
+
+    if (user.authorization) {
+      await this.authorizationDefinitionService.delete(user.authorization);
     }
 
     const result = await this.userRepository.remove(user as User);
@@ -292,24 +300,26 @@ export class UserService {
   async usersWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<IUser[]> {
-    const matchingAgents = await this.agentService.findAgentsWithMatchingCredentials(
-      credentialCriteria
-    );
+    const credResourceID = credentialCriteria.resourceID || '';
+    const userMatches = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: `${credentialCriteria.type}`,
+        resourceID: credResourceID,
+      })
+      .getMany();
 
-    const users: IUser[] = [];
-    for (const matchedAgent of matchingAgents) {
-      const agent = await this.agentService.getAgentOrFail(matchedAgent.id, {
-        relations: ['user'],
-      });
-      const userID = (agent as Agent).user?.id;
-      if (userID) {
-        const user = await this.getUserOrFail(userID, {
-          relations: ['agent'],
-        });
-        users.push(user);
-      }
+    // reload to go through the normal loading path
+    const results: IUser[] = [];
+    for (const user of userMatches) {
+      const loadedOrganisation = await this.getUserOrFail(user.id);
+      results.push(loadedOrganisation);
     }
-    return users;
+    return results;
   }
 
   getAgentOrFail(user: IUser): IAgent {

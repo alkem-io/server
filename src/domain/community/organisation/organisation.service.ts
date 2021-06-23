@@ -6,6 +6,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ForbiddenException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
@@ -25,10 +26,13 @@ import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
 
 @Injectable()
 export class OrganisationService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private userService: UserService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
@@ -106,13 +110,12 @@ export class OrganisationService {
   ): Promise<IOrganisation> {
     const orgID = deleteData.ID;
     const organisation = await this.getOrganisationOrFail(orgID, {
-      relations: ['ecoverses'],
+      relations: ['profile', 'groups', 'agent'],
     });
-
-    const hostedEcoverses = (organisation as Organisation).ecoverses;
-    if (hostedEcoverses && hostedEcoverses.length > 0) {
+    const isEcoverseHost = await this.isEcoverseHost(organisation);
+    if (isEcoverseHost) {
       throw new ForbiddenException(
-        `Unable to delete Organisation: host of ${hostedEcoverses.length} ecoverses`,
+        'Unable to delete Organisation: host of one or more ecoverses',
         LogContext.CHALLENGES
       );
     }
@@ -129,6 +132,12 @@ export class OrganisationService {
       }
     }
 
+    if (organisation.authorization) {
+      await this.authorizationDefinitionService.delete(
+        organisation.authorization
+      );
+    }
+
     if (organisation.agent) {
       await this.agentService.deleteAgent(organisation.agent.id);
     }
@@ -140,10 +149,22 @@ export class OrganisationService {
     return result;
   }
 
-  async getOrganisationOrFail(
+  async isEcoverseHost(organisation: IOrganisation): Promise<boolean> {
+    if (!organisation.agent)
+      throw new RelationshipNotFoundException(
+        `Unable to load agent for organisation: ${organisation.id}`,
+        LogContext.COMMUNITY
+      );
+
+    return await this.agentService.hasValidCredential(organisation.agent.id, {
+      type: AuthorizationCredential.EcoverseHost,
+    });
+  }
+
+  async getOrganisation(
     organisationID: string,
     options?: FindOneOptions<Organisation>
-  ): Promise<IOrganisation> {
+  ): Promise<IOrganisation | undefined> {
     let organisation: IOrganisation | undefined;
     if (organisationID.length === UUID_LENGTH) {
       organisation = await this.organisationRepository.findOne(
@@ -157,6 +178,14 @@ export class OrganisationService {
         options
       );
     }
+    return organisation;
+  }
+
+  async getOrganisationOrFail(
+    organisationID: string,
+    options?: FindOneOptions<Organisation>
+  ): Promise<IOrganisation> {
+    const organisation = await this.getOrganisation(organisationID, options);
     if (!organisation)
       throw new EntityNotFoundException(
         `Unable to find Organisation with ID: ${organisationID}`,
@@ -198,8 +227,8 @@ export class OrganisationService {
     return group;
   }
 
-  async save(organisation: IOrganisation) {
-    await this.organisationRepository.save(organisation);
+  async save(organisation: IOrganisation): Promise<IOrganisation> {
+    return await this.organisationRepository.save(organisation);
   }
 
   async getAgent(organisation: IOrganisation): Promise<IAgent> {
@@ -221,5 +250,32 @@ export class OrganisationService {
 
   async getOrganisationCount(): Promise<number> {
     return await this.organisationRepository.count();
+  }
+
+  async organisationsWithCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<IOrganisation[]> {
+    const credResourceID = credentialCriteria.resourceID || '';
+    const organisationMatches = await this.organisationRepository
+      .createQueryBuilder('organisation')
+      .leftJoinAndSelect('organisation.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: `${credentialCriteria.type}`,
+        resourceID: credResourceID,
+      })
+      .getMany();
+
+    // reload to go through the normal loading path
+    const results: IOrganisation[] = [];
+    for (const organisation of organisationMatches) {
+      const loadedOrganisation = await this.getOrganisationOrFail(
+        organisation.id
+      );
+      results.push(loadedOrganisation);
+    }
+    return results;
   }
 }

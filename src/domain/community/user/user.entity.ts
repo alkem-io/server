@@ -4,7 +4,7 @@ import { Column, Entity, JoinColumn, OneToOne, OneToMany } from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/community/application/application.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
-import { NameableEntity } from '@domain/common/nameable-entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity';
 
 @Entity()
 export class User extends NameableEntity implements IUser {
@@ -32,11 +32,11 @@ export class User extends NameableEntity implements IUser {
   @Column()
   gender: string = '';
 
-  @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
   profile?: Profile;
 
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
   agent?: Agent;
 

@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateProfileInput } from '@domain/community/profile';
-import { UpdateNameableInput } from '@domain/common/nameable-entity';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 
 @InputType()

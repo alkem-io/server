@@ -9,10 +9,12 @@ import { AuthorizationEngineModule } from '@src/services/platform/authorization-
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { BaseChallengeService } from './base.challenge.service';
 import { BaseChallengeAuthorizationService } from './base.challenge.service.authorization';
+import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
 
 @Module({
   imports: [
     AgentModule,
+    AuthorizationDefinitionModule,
     AuthorizationEngineModule,
     ContextModule,
     CommunityModule,

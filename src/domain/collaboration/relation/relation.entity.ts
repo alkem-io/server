@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
-import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 export class Relation extends AuthorizableEntity implements IRelation {
@@ -22,7 +22,8 @@ export class Relation extends AuthorizableEntity implements IRelation {
 
   @ManyToOne(
     () => Opportunity,
-    opportunity => opportunity.relations
+    opportunity => opportunity.relations,
+    { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
   opportunity?: Opportunity;
 }

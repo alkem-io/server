@@ -1,23 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { CommunityService } from './community.service';
 import { Community, ICommunity } from '@domain/community/community';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class CommunityAuthorizationService {
   constructor(
     private communityService: CommunityService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>
   ) {}
 
   async applyAuthorizationRules(community: ICommunity): Promise<ICommunity> {
     // give the global community admin permissions
-    community.authorization = this.authorizationEngine.appendCredentialAuthorizationRule(
+    community.authorization = this.authorizationDefinitionService.appendCredentialAuthorizationRule(
       community.authorization,
       {
         type: AuthorizationCredential.GlobalAdminCommunity,
@@ -34,7 +34,7 @@ export class CommunityAuthorizationService {
     // cascade
     const groups = await this.communityService.getUserGroups(community);
     for (const group of groups) {
-      group.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      group.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
         group.authorization,
         community.authorization
       );
@@ -42,7 +42,7 @@ export class CommunityAuthorizationService {
 
     const applications = await this.communityService.getApplications(community);
     for (const application of applications) {
-      application.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      application.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
         application.authorization,
         community.authorization
       );

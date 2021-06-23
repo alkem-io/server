@@ -13,14 +13,16 @@ import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import {
   AuthorizationDefinition,
+  AuthorizationRuleCredential,
   IAuthorizationDefinition,
 } from '@domain/common/authorization-definition';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { AuthorizationRuleCredential } from '@src/services/platform/authorization-engine';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class UserAuthorizationService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private agentService: AgentService,
@@ -37,12 +39,12 @@ export class UserAuthorizationService {
 
     // cascade
     const profile = this.userService.getProfile(user);
-    profile.authorization = this.authorizationEngine.inheritParentAuthorization(
+    profile.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       profile.authorization,
       user.authorization
     );
 
-    profile.authorization = await this.authorizationEngine.appendCredentialAuthorizationRule(
+    profile.authorization = await this.authorizationDefinitionService.appendCredentialAuthorizationRule(
       profile.authorization,
 
       {
@@ -55,7 +57,7 @@ export class UserAuthorizationService {
       profile
     );
     user.agent = await this.userService.getAgent(user.id);
-    user.agent.authorization = this.authorizationEngine.inheritParentAuthorization(
+    user.agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       user.agent.authorization,
       user.authorization
     );
@@ -124,7 +126,7 @@ export class UserAuthorizationService {
     };
     newRules.push(userSelfAdmin);
 
-    this.authorizationEngine.appendCredentialAuthorizationRules(
+    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );
@@ -173,7 +175,7 @@ export class UserAuthorizationService {
     };
     newRules.push(userSelfCreate);
 
-    this.authorizationEngine.appendCredentialAuthorizationRules(
+    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );

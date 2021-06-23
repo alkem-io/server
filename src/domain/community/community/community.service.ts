@@ -28,10 +28,12 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { ICredential } from '@domain/agent/credential';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class CommunityService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private agentService: AgentService,
     private userService: UserService,
     private userGroupService: UserGroupService,
@@ -116,6 +118,9 @@ export class CommunityService {
         });
       }
     }
+
+    if (community.authorization)
+      await this.authorizationDefinitionService.delete(community.authorization);
 
     // Remove all applications
     if (community.applications) {
@@ -241,12 +246,14 @@ export class CommunityService {
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
+    const user = await this.userService.getUserOrFail(applicationData.userID);
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
 
-    const existingApplication = community.applications?.find(
-      x => x.user?.id === applicationData.userID
+    const existingApplication = await this.applicationService.findExistingApplication(
+      user.id,
+      community.id
     );
 
     if (existingApplication) {

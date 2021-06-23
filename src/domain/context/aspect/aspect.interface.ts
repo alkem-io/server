@@ -1,4 +1,4 @@
-import { IAuthorizable } from '@domain/common/authorizable-entity';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Aspect')

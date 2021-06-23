@@ -24,10 +24,12 @@ import { AuthorizationDefinition } from '@domain/common/authorization-definition
 import { CredentialService } from '@domain/agent/credential/credential.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class BaseChallengeService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private contextService: ContextService,
     private agentService: AgentService,
     private credentialService: CredentialService,
@@ -141,6 +143,12 @@ export class BaseChallengeService {
 
     if (baseChallenge.agent) {
       await this.agentService.deleteAgent(baseChallenge.agent.id);
+    }
+
+    if (baseChallenge.authorization) {
+      await this.authorizationDefinitionService.delete(
+        baseChallenge.authorization
+      );
     }
   }
 

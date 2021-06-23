@@ -5,7 +5,7 @@ import {
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
 import { IProfile } from './profile.interface';
-import { AuthorizableEntity } from '@domain/common/authorizable-entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {

@@ -11,12 +11,14 @@ import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
 import { DeleteRelationInput } from './relation.dto.delete';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 const allowedRelationTypes = ['incoming', 'outgoing'];
 
 @Injectable()
 export class RelationService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     @InjectRepository(Relation)
     private relationRepository: Repository<Relation>
   ) {}
@@ -69,6 +71,9 @@ export class RelationService {
   async deleteRelation(deleteData: DeleteRelationInput): Promise<IRelation> {
     const relationID = deleteData.ID;
     const relation = await this.getRelationOrFail(relationID);
+
+    if (relation.authorization)
+      await this.authorizationDefinitionService.delete(relation.authorization);
 
     const { id } = relation;
     const result = await this.relationRepository.remove(relation as Relation);
