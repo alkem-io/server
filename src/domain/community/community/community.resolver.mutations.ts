@@ -150,7 +150,7 @@ export class CommunityResolverMutations {
       application.authorization,
       {
         type: AuthorizationCredential.GlobalRegistered,
-        resourceID: user.id,
+        resourceID: '',
       },
       [
         AuthorizationPrivilege.READ,
