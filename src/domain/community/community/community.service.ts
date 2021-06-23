@@ -246,12 +246,14 @@ export class CommunityService {
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
+    const user = await this.userService.getUserOrFail(applicationData.userID);
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
 
-    const existingApplication = community.applications?.find(
-      x => x.user?.id === applicationData.userID
+    const existingApplication = await this.applicationService.findExistingApplication(
+      user.id,
+      community.id
     );
 
     if (existingApplication) {

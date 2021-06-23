@@ -114,4 +114,23 @@ export class ApplicationService {
       );
     return user;
   }
+
+  async findExistingApplication(
+    userID: string,
+    communityID: string
+  ): Promise<IApplication | undefined> {
+    const existingApplication = await this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoinAndSelect('application.user', 'user')
+      .leftJoinAndSelect('application.community', 'community')
+      .where('user.id = :userID')
+      .andWhere('community.id = :communityID')
+      .setParameters({
+        userID: `${userID}`,
+        communityID: communityID,
+      })
+      .getMany();
+    if (existingApplication.length > 0) return existingApplication[0];
+    return undefined;
+  }
 }
