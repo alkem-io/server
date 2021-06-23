@@ -153,14 +153,18 @@ export class AgentService {
 
     if (!revokeCredentialData.resourceID) revokeCredentialData.resourceID = '';
 
+    const newCredentials: ICredential[] = [];
     for (const credential of credentials) {
       if (
         credential.type === revokeCredentialData.type &&
         credential.resourceID === revokeCredentialData.resourceID
       ) {
         await this.credentialService.deleteCredential(credential.id);
+      } else {
+        newCredentials.push(credential);
       }
     }
+    agent.credentials = newCredentials;
 
     return agent;
   }
