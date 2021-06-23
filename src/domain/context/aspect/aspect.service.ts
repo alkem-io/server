@@ -12,10 +12,12 @@ import {
   DeleteAspectInput,
 } from '@domain/context/aspect';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class AspectService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -31,6 +33,9 @@ export class AspectService {
   async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
     const aspect = await this.getAspectOrFail(aspectID);
+    if (aspect.authorization)
+      await this.authorizationDefinitionService.delete(aspect.authorization);
+
     const result = await this.aspectRepository.remove(aspect as Aspect);
     result.id = aspectID;
     return result;

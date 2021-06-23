@@ -12,10 +12,12 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { OpportunityAuthorizationService } from './opportunity.service.authorization';
+import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
 
 @Module({
   imports: [
     AuthorizationEngineModule,
+    AuthorizationDefinitionModule,
     ProjectModule,
     RelationModule,
     BaseChallengeModule,

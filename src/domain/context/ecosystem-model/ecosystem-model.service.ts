@@ -19,10 +19,12 @@ import {
 import { LogContext } from '@common/enums';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class EcosystemModelService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private actorGroupService: ActorGroupService,
     @InjectRepository(EcosystemModel)
     private ecosystemModelRepository: Repository<EcosystemModel>
@@ -75,6 +77,11 @@ export class EcosystemModelService {
         });
       }
     }
+
+    if (ecosystemModel.authorization)
+      await this.authorizationDefinitionService.delete(
+        ecosystemModel.authorization
+      );
 
     return await this.ecosystemModelRepository.remove(
       ecosystemModel as EcosystemModel

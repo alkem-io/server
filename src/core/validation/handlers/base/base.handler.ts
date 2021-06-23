@@ -8,7 +8,7 @@ import {
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
 import { CreateContextInput } from '@domain/context/context';
-import { UpdateEcoverseInput } from '@domain/challenge/ecoverse';
+import { UpdateEcoverseInput } from '@domain/challenge/ecoverse/ecoverse.dto.update';
 import { CreateOrganisationInput } from '@domain/community/organisation';
 import { CreateProfileInput } from '@domain/community/profile';
 import {

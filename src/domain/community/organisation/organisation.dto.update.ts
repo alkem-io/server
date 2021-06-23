@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { UpdateProfileInput } from '@domain/community/profile';
-import { UpdateNameableInput } from '@domain/common/nameable-entity';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
 import { UUID_NAMEID } from '@domain/common/scalars';
 @InputType()
 export class UpdateOrganisationInput extends UpdateNameableInput {

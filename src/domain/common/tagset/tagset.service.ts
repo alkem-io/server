@@ -20,10 +20,12 @@ import {
 } from '@domain/common/tagset';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '../authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class TagsetService {
   constructor(
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     @InjectRepository(Tagset)
     private tagsetRepository: Repository<Tagset>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -56,6 +58,9 @@ export class TagsetService {
   async removeTagset(deleteData: DeleteTagsetInput): Promise<ITagset> {
     const tagsetID = deleteData.ID;
     const tagset = await this.getTagsetOrFail(tagsetID);
+    if (tagset.authorization)
+      await this.authorizationDefinitionService.delete(tagset.authorization);
+
     const result = await this.tagsetRepository.remove(tagset as Tagset);
     result.id = tagsetID;
     return result;

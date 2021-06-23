@@ -1,4 +1,5 @@
 import { UpdateAuthorizationDefinitionInput } from '@domain/common/authorization-definition';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { Injectable } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { BaseChallengeService } from './base.challenge.service';
 export class BaseChallengeAuthorizationService {
   constructor(
     private baseChallengeService: BaseChallengeService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService
@@ -26,7 +28,7 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    community.authorization = this.authorizationEngine.inheritParentAuthorization(
+    community.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       community.authorization,
       baseChallenge.authorization
     );
@@ -43,7 +45,7 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    context.authorization = this.authorizationEngine.inheritParentAuthorization(
+    context.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       context.authorization,
       baseChallenge.authorization
     );
@@ -59,7 +61,7 @@ export class BaseChallengeAuthorizationService {
     repository: Repository<BaseChallenge>,
     authorizationUpdateData: UpdateAuthorizationDefinitionInput
   ): Promise<IBaseChallenge> {
-    baseChallenge.authorization = this.authorizationEngine.updateAuthorization(
+    baseChallenge.authorization = this.authorizationDefinitionService.updateAuthorization(
       baseChallenge.authorization,
       authorizationUpdateData
     );
@@ -69,7 +71,7 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    baseChallenge.context.authorization = this.authorizationEngine.updateAuthorization(
+    baseChallenge.context.authorization = this.authorizationDefinitionService.updateAuthorization(
       baseChallenge.context.authorization,
       authorizationUpdateData
     );

@@ -11,6 +11,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { UserAuthorizationService } from './user.service.authorization';
+import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { UserAuthorizationService } from './user.service.authorization';
     forwardRef(() => CommunicationModule),
     AgentModule,
     NamingModule,
+    AuthorizationDefinitionModule,
     AuthorizationEngineModule,
     TypeOrmModule.forFeature([User]),
   ],

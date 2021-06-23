@@ -7,7 +7,6 @@ import {
   AssignChallengeLeadInput,
   ChallengeEventInput,
   DeleteChallengeInput,
-  IChallenge,
   RemoveChallengeLeadInput,
   CreateChallengeInput,
   UpdateChallengeInput,
@@ -23,6 +22,7 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
+import { IChallenge } from './challenge.interface';
 
 @Resolver()
 export class ChallengeResolverMutations {

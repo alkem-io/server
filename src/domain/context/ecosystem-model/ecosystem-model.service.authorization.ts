@@ -8,11 +8,13 @@ import {
   IEcosystemModel,
 } from '@domain/context/ecosystem-model';
 import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
+import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 
 @Injectable()
 export class EcosystemModelAuthorizationService {
   constructor(
     private ecosystemModelService: EcosystemModelService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private authorizationEngine: AuthorizationEngineService,
     private actorGroupAuthorizationService: ActorGroupAuthorizationService,
     @InjectRepository(EcosystemModel)
@@ -27,7 +29,7 @@ export class EcosystemModelAuthorizationService {
     for (const actorGroup of this.ecosystemModelService.getActorGroups(
       ecosystemModel
     )) {
-      actorGroup.authorization = await this.authorizationEngine.inheritParentAuthorization(
+      actorGroup.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
         actorGroup.authorization,
         ecosystemModel.authorization
       );

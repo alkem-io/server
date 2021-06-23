@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
 import { UpdateContextInput } from '@domain/context/context';
-import { UpdateNameableInput } from '@domain/common/nameable-entity';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
 
 @InputType()
 export class UpdateBaseChallengeInput extends UpdateNameableInput {

@@ -6,13 +6,11 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
-import { CreateChallengeInput, IChallenge } from '@domain/challenge/challenge';
+import { CreateChallengeInput } from '@domain/challenge/challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import {
   CreateEcoverseInput,
   DeleteEcoverseInput,
-  Ecoverse,
-  IEcoverse,
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { IOpportunity } from '@domain/collaboration/opportunity';
@@ -22,7 +20,7 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP, NVP } from '@domain/common/nvp';
-import { IOrganisation } from '@domain/community';
+import { IOrganisation } from '@domain/community/organisation/organisation.interface';
 import { ICommunity } from '@domain/community/community';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
 import { IUserGroup } from '@domain/community/user-group';
@@ -34,10 +32,15 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { Ecoverse } from './ecoverse.entity';
+import { IEcoverse } from './ecoverse.interface';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
 export class EcoverseService {
   constructor(
+    private agentService: AgentService,
     private organisationService: OrganisationService,
     private lifecycleService: LifecycleService,
     private projectService: ProjectService,
@@ -53,6 +56,7 @@ export class EcoverseService {
   async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
     await this.validateEcoverseData(ecoverseData);
     const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
+
     // remove context before saving as want to control that creation
     ecoverse.context = undefined;
     await this.ecoverseRepository.save(ecoverse);
@@ -67,9 +71,7 @@ export class EcoverseService {
       AuthorizationCredential.EcoverseMember
     );
 
-    ecoverse.host = await this.organisationService.getOrganisationOrFail(
-      ecoverseData.hostID
-    );
+    await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
 
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;
@@ -96,9 +98,7 @@ export class EcoverseService {
     );
 
     if (ecoverseData.hostID) {
-      ecoverse.host = await this.organisationService.getOrganisationOrFail(
-        ecoverseData.hostID
-      );
+      await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
     }
 
     return await this.ecoverseRepository.save(ecoverse);
@@ -120,6 +120,18 @@ export class EcoverseService {
       relations: ['community', 'context', 'lifecycle', 'agent'],
     });
     await this.baseChallengeService.deleteEntities(baseChallenge);
+
+    // Remove any host credentials
+    const hostOrg = await this.getHost(ecoverse.id);
+    if (hostOrg) {
+      const agentHostOrg = await this.organisationService.getAgent(hostOrg);
+      hostOrg.agent = await this.agentService.revokeCredential({
+        agentID: agentHostOrg.id,
+        type: AuthorizationCredential.EcoverseHost,
+        resourceID: ecoverse.id,
+      });
+      await this.organisationService.save(hostOrg);
+    }
 
     const result = await this.ecoverseRepository.remove(ecoverse as Ecoverse);
     result.id = deleteData.ID;
@@ -154,6 +166,40 @@ export class EcoverseService {
         LogContext.CHALLENGES
       );
     return ecoverse;
+  }
+
+  async setEcoverseHost(
+    ecoverseID: string,
+    hostOrgID: string
+  ): Promise<IEcoverse> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      hostOrgID,
+      { relations: ['groups', 'agent'] }
+    );
+
+    const existingHost = await this.getHost(ecoverseID);
+
+    if (existingHost) {
+      const agentExisting = await this.organisationService.getAgent(
+        existingHost
+      );
+      organisation.agent = await this.agentService.revokeCredential({
+        agentID: agentExisting.id,
+        type: AuthorizationCredential.EcoverseHost,
+        resourceID: ecoverseID,
+      });
+    }
+
+    // assign the credential
+    const agent = await this.organisationService.getAgent(organisation);
+    organisation.agent = await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.EcoverseHost,
+      resourceID: ecoverseID,
+    });
+
+    await this.organisationService.save(organisation);
+    return await this.getEcoverseOrFail(ecoverseID);
   }
 
   async isNameIdAvailable(nameID: string): Promise<boolean> {
@@ -339,15 +385,22 @@ export class EcoverseService {
     return await this.ecoverseRepository.count();
   }
 
-  async getHost(ecoverseID: string): Promise<IOrganisation> {
-    const ecoverse = await this.getEcoverseOrFail(ecoverseID, {
-      relations: ['host'],
-    });
-    if (!ecoverse.host)
+  async getHost(ecoverseID: string): Promise<IOrganisation | undefined> {
+    const organisations = await this.organisationService.organisationsWithCredentials(
+      {
+        type: AuthorizationCredential.EcoverseHost,
+        resourceID: ecoverseID,
+      }
+    );
+    if (organisations.length == 0) {
+      return undefined;
+    }
+    if (organisations.length > 1) {
       throw new RelationshipNotFoundException(
-        `Unable to load host for Ecoverse ${ecoverse.id} `,
+        `More than one host for Ecoverse ${ecoverseID} `,
         LogContext.CHALLENGES
       );
-    return ecoverse.host;
+    }
+    return organisations[0];
   }
 }

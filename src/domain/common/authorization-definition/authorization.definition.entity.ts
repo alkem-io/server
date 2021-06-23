@@ -1,4 +1,4 @@
-import { BaseCherrytwistEntity } from '@domain/common/base-entity';
+import { BaseCherrytwistEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity } from 'typeorm';
 import { IAuthorizationDefinition } from './authorization.definition.interface';
 
