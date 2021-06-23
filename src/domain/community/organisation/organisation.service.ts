@@ -161,10 +161,10 @@ export class OrganisationService {
     });
   }
 
-  async getOrganisationOrFail(
+  async getOrganisation(
     organisationID: string,
     options?: FindOneOptions<Organisation>
-  ): Promise<IOrganisation> {
+  ): Promise<IOrganisation | undefined> {
     let organisation: IOrganisation | undefined;
     if (organisationID.length === UUID_LENGTH) {
       organisation = await this.organisationRepository.findOne(
@@ -178,6 +178,14 @@ export class OrganisationService {
         options
       );
     }
+    return organisation;
+  }
+
+  async getOrganisationOrFail(
+    organisationID: string,
+    options?: FindOneOptions<Organisation>
+  ): Promise<IOrganisation> {
+    const organisation = await this.getOrganisation(organisationID, options);
     if (!organisation)
       throw new EntityNotFoundException(
         `Unable to find Organisation with ID: ${organisationID}`,

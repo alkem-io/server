@@ -188,13 +188,18 @@ export class BootstrapService {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // create a default host org
-      const hostOrg = await this.organisationService.createOrganisation({
-        nameID: DEFAULT_HOST_ORG_NAMEID,
-        displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
-      });
-      await this.organisationAuthorizationService.applyAuthorizationRules(
-        hostOrg
+      const hostOrganisation = await this.organisationService.getOrganisation(
+        DEFAULT_HOST_ORG_NAMEID
       );
+      if (!hostOrganisation) {
+        const hostOrg = await this.organisationService.createOrganisation({
+          nameID: DEFAULT_HOST_ORG_NAMEID,
+          displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
+        });
+        await this.organisationAuthorizationService.applyAuthorizationRules(
+          hostOrg
+        );
+      }
 
       const ecoverse = await this.ecoverseService.createEcoverse({
         nameID: DEFAULT_ECOVERSE_NAMEID,

@@ -121,6 +121,18 @@ export class EcoverseService {
     });
     await this.baseChallengeService.deleteEntities(baseChallenge);
 
+    // Remove any host credentials
+    const hostOrg = await this.getHost(ecoverse.id);
+    if (hostOrg) {
+      const agentHostOrg = await this.organisationService.getAgent(hostOrg);
+      hostOrg.agent = await this.agentService.revokeCredential({
+        agentID: agentHostOrg.id,
+        type: AuthorizationCredential.EcoverseHost,
+        resourceID: ecoverse.id,
+      });
+      await this.organisationService.save(hostOrg);
+    }
+
     const result = await this.ecoverseRepository.remove(ecoverse as Ecoverse);
     result.id = deleteData.ID;
     return result;
