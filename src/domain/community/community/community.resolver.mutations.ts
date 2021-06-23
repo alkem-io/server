@@ -145,6 +145,19 @@ export class CommunityResolverMutations {
       application.authorization,
       community.authorization
     );
+    // also grant the user privileges to manage their own application
+    application.authorization = await this.authorizationDefinitionService.appendCredentialAuthorizationRule(
+      application.authorization,
+      {
+        type: AuthorizationCredential.GlobalRegistered,
+        resourceID: user.id,
+      },
+      [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ]
+    );
     return await this.applicationService.save(application);
   }
 
