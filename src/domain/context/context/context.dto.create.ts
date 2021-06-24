@@ -3,6 +3,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 import { CreateReferenceInput } from '@domain/common/reference/reference.dto.create';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { CreateVisualInput } from '../visual';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class CreateContextInput {
@@ -11,7 +12,7 @@ export class CreateContextInput {
   @MaxLength(LONG_TEXT_LENGTH)
   background?: string;
 
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   vision?: string;
@@ -26,7 +27,7 @@ export class CreateContextInput {
   @MaxLength(LONG_TEXT_LENGTH)
   who?: string;
 
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   impact?: string;
