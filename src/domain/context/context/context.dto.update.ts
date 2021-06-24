@@ -3,6 +3,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference/reference.dto.update';
 import { UpdateVisualInput } from '@domain/context/visual';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class UpdateContextInput {
@@ -11,7 +12,7 @@ export class UpdateContextInput {
   @MaxLength(LONG_TEXT_LENGTH)
   background?: string;
 
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   vision?: string;
@@ -26,7 +27,7 @@ export class UpdateContextInput {
   @MaxLength(LONG_TEXT_LENGTH)
   who?: string;
 
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   impact?: string;
