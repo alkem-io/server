@@ -9,7 +9,7 @@ export enum Preset {
   PublicChat = 'public_chat',
 }
 
-interface ICreateOpts {
+interface IRoomCreateOpts {
   visibility?: Visibility;
   room_alias_name?: string;
   name?: string;
@@ -22,9 +22,9 @@ interface ICreateOpts {
   preset?: Preset;
 }
 
-export interface IOpts {
+export interface IRoomOpts {
   dmUserId?: string;
-  createOpts?: ICreateOpts;
+  createOpts?: IRoomCreateOpts;
   spinner?: boolean;
   guestAccess?: boolean;
   encryption?: boolean;

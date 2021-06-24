@@ -1,12 +1,12 @@
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class UserSendMessageInput {
+export class CommunitySendMessageInput {
   @Field(() => String, {
     nullable: false,
-    description: 'The user a message is being sent to',
+    description: 'The community the message is being sent to',
   })
-  receivingUserID!: string;
+  communityID!: string;
 
   @Field(() => String, {
     nullable: false,

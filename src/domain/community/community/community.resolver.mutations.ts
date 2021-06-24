@@ -14,6 +14,7 @@ import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '@domain/community/application/application.service';
 import {
   AssignCommunityMemberInput,
+  Community,
   ICommunity,
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
@@ -25,6 +26,8 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { UserService } from '@domain/community/user/user.service';
 import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { CommunitySendMessageInput } from './community.dto.send.msg';
+import { CommunicationService } from '@services/platform/communication/communication.service';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -33,6 +36,7 @@ export class CommunityResolverMutations {
     private userService: UserService,
     private userGroupService: UserGroupService,
     private communityService: CommunityService,
+    private communicationService: CommunicationService,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService
@@ -203,5 +207,31 @@ export class CommunityResolverMutations {
       applicationEventData,
       agentInfo
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description: 'Sends a message on the specified community',
+  })
+  @Profiling.api
+  async messageCommunity(
+    @Args('msgData') msgData: CommunitySendMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<string> {
+    const community = await this.communityService.getCommunityOrFail(
+      msgData.communityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `community send message: ${community.displayName}`
+    );
+
+    return await this.communicationService.sendMsgCommunity({
+      sendingUserEmail: agentInfo.email,
+      message: msgData.message,
+      roomID: (community as Community).communicationRoomID,
+    });
   }
 }

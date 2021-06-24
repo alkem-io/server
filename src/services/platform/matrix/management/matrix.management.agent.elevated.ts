@@ -3,7 +3,7 @@ import { MatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.age
 import { MatrixGroupEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.group';
 import { IOpts as GroupOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.group.interface';
 import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter';
-import { IOpts as RoomOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.room.interface';
+import { IRoomOpts as RoomOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.room.interface';
 
 interface IMatrixAgentElevated {
   createRoom: MatrixRoomEntityAdapter['createRoom'];
@@ -20,5 +20,9 @@ export class MatrixManagementAgentElevated extends MatrixAgent
     await this._groupEntityAdapter.inviteUsersToGroup(groupId, users || []);
 
     return groupId;
+  }
+
+  async addUserToCommunityRooms() {
+    return undefined;
   }
 }

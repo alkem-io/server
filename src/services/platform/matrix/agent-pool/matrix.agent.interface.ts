@@ -6,7 +6,7 @@ export interface ICommunityMessageRequest extends IMessageRequest {
   communityId: string;
 }
 
-export interface IDirectMessageRequest extends IMessageRequest {
+export interface IInitiateDirectMessageRequest {
   email: string;
 }
 
@@ -32,7 +32,9 @@ export interface IMatrixAgent {
     name: string | null;
     timeline: IResponseMessage[];
   }>;
+  initiateMessagingToUser(
+    content: IInitiateDirectMessageRequest
+  ): Promise<string>;
   message(room: string, content: IMessageRequest): Promise<void>;
-  messageUser(content: IDirectMessageRequest): Promise<string>;
   messageCommunity(content: ICommunityMessageRequest): Promise<string>;
 }

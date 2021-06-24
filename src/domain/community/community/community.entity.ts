@@ -54,9 +54,17 @@ export class Community extends AuthorizableEntity
   })
   parentCommunity?: Community;
 
+  @Column()
+  communicationRoomID: string;
+
+  @Column()
+  communicationGroupID: string;
+
   constructor(name: string) {
     super();
     this.displayName = name;
     this.ecoverseID = '';
+    this.communicationRoomID = '';
+    this.communicationGroupID = '';
   }
 }

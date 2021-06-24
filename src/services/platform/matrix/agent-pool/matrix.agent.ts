@@ -16,7 +16,7 @@ import { MatrixClient } from '@src/services/platform/matrix/agent-pool/matrix.cl
 import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.room';
 import {
   ICommunityMessageRequest,
-  IDirectMessageRequest,
+  IInitiateDirectMessageRequest,
   IMessageRequest,
   IResponseMessage,
 } from '@src/services/platform/matrix/agent-pool';
@@ -154,7 +154,9 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     return await this.getMessages(community.roomId);
   }
 
-  async messageUser(content: IDirectMessageRequest): Promise<string> {
+  async initiateMessagingToUser(
+    content: IInitiateDirectMessageRequest
+  ): Promise<string> {
     // there needs to be caching for dmRooms and event to update them
     const dmRooms = this._roomEntityAdapter.dmRooms();
     const matrixId = MatrixTransforms.email2id(content.email);
@@ -170,8 +172,6 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     } else {
       targetRoomId = dmRoom[0];
     }
-
-    await this.message(targetRoomId, { text: content.text });
 
     return targetRoomId;
   }

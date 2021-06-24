@@ -1,5 +1,5 @@
 import {
-  IOpts,
+  IRoomOpts,
   Preset,
   Visibility,
 } from '@src/services/platform/matrix/adapter/matrix.adapter.room.interface';
@@ -32,7 +32,7 @@ export class MatrixRoomEntityAdapter {
     return mDirectEvent;
   }
 
-  public async createRoom(options: IOpts): Promise<string> {
+  public async createRoom(options: IRoomOpts): Promise<string> {
     const { dmUserId, communityId } = options;
     // adjust options
     const createOpts = options.createOpts || {};

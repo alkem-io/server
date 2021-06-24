@@ -29,6 +29,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { ICredential } from '@domain/agent/credential';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { CommunicationService } from '@services/platform/communication/communication.service';
 
 @Injectable()
 export class CommunityService {
@@ -38,6 +39,7 @@ export class CommunityService {
     private userService: UserService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
+    private communicationService: CommunicationService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -48,9 +50,18 @@ export class CommunityService {
     community.authorization = new AuthorizationDefinition();
 
     community.groups = [];
-    await this.communityRepository.save(community);
+    community.communicationGroupID = await this.communicationService.createCommunityGroup(
+      community.displayName,
+      '',
+      ''
+    );
+    community.communicationRoomID = await this.communicationService.createCommunityRoom(
+      community.communicationGroupID,
+      '',
+      ''
+    );
 
-    return community;
+    return await this.communityRepository.save(community);
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {

@@ -8,7 +8,9 @@ import {
   CommunicationRoomResult,
   CommunicationRoomDetailsResult,
 } from './communication.dto.room.result';
-import { CommunicationSendMessageInput } from './communication.dto.send.msg';
+import { CommunicationSendMessageUserInput } from './communication.dto.send.msg.user';
+import { CommunicationSendMessageCommunityInput } from './communication.dto.send.msg.community';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class CommunicationService {
@@ -19,27 +21,107 @@ export class CommunicationService {
     private readonly communicationPool: MatrixAgentPool
   ) {}
 
-  async sendMsg(
-    senderEmail: string,
-    sendMsgData: CommunicationSendMessageInput
+  async sendMsgCommunity(
+    sendMsgData: CommunicationSendMessageCommunityInput
   ): Promise<string> {
-    const { receiverID: receiverEmail, message } = sendMsgData;
-    let { roomID } = sendMsgData;
-
     const communicationService = await this.communicationPool.acquire(
-      senderEmail
+      sendMsgData.sendingUserEmail
+    );
+    await communicationService.message(sendMsgData.roomID, {
+      text: sendMsgData.message,
+    });
+
+    return sendMsgData.roomID;
+  }
+
+  async sendMsgUser(
+    sendMsgUserData: CommunicationSendMessageUserInput
+  ): Promise<string> {
+    const communicationService = await this.communicationPool.acquire(
+      sendMsgUserData.sendingUserEmail
     );
 
-    if (!Boolean(roomID)) {
-      roomID = await communicationService.messageUser({
-        text: message,
-        email: receiverEmail,
-      });
-    } else {
-      await communicationService.message(roomID, { text: message });
-    }
+    // todo: not always reinitiate the room connection
+    const roomID = await communicationService.initiateMessagingToUser({
+      email: sendMsgUserData.receiverID,
+    });
+
+    await communicationService.message(roomID, {
+      text: sendMsgUserData.message,
+    });
 
     return roomID;
+  }
+
+  async getGlobalAdminUser() {
+    this.logger.verbose?.('creating new admin', LogContext.COLLABORATION);
+  }
+
+  async registerNewAdminUser(
+    secret: string,
+    adminUserName: string,
+    adminPassword: string
+  ) {
+    // do some magic + return
+    // python register_new_matrix_user.py -u ct-admin-test -p ct-admin-pass -a -k "T0.VmXT3PF.=4QwzTw~6ZAJ0MDK:DqP6PUQwCVwe:INH~oU#JA" http://localhost:8008
+    this.logger.verbose?.(
+      `creating new admin user using credentials ${adminUserName} + ${adminPassword} + secret: ${secret}`,
+      LogContext.COLLABORATION
+    );
+    return '';
+  }
+
+  async createCommunityGroup(
+    communityName: string,
+    matrixAdminUsername: string,
+    matrixAdminPassword: string
+  ): Promise<string> {
+    // const elevatedMatrixAgent = new MatrixManagementAgentElevated(
+    //   matrixAdminUsername,
+    //   matrixAdminPassword
+    // );
+    // return elevatedMatrixAgent.createGroup({
+    //   groupId: communityName,
+    //   profile: {
+    //     name: communityName,
+    //   },
+    // });
+    this.logger.verbose?.(
+      `creating community ${communityName} using credentials ${matrixAdminPassword} + ${matrixAdminUsername}`,
+      LogContext.COLLABORATION
+    );
+    return '';
+  }
+
+  async createCommunityRoom(
+    groupID: string,
+    matrixAdminUsername: string,
+    matrixAdminPassword: string
+  ): Promise<string> {
+    // const operationalAdminUser: IOperationalMatrixUser = {
+    //   name: '',
+    //   username: matrixAdminUsername,
+    //   password: matrixAdminPassword,
+    //   accessToken: '',
+    // };
+    // const elevatedMatrixAgent = new MatrixManagementAgentElevated(
+    //   matrixAdminUsername,
+    //   matrixAdminPassword
+    // );
+
+    // return elevatedMatrixAgent.createRoom({
+    //   communityId: groupID,
+    // });
+
+    this.logger.verbose?.(
+      `creating community ${groupID} using credentials ${matrixAdminPassword} + ${matrixAdminUsername}`,
+      LogContext.COLLABORATION
+    );
+    return '';
+  }
+
+  async addUserToCommunityRooms() {
+    return undefined;
   }
 
   async getRooms(email: string): Promise<CommunicationRoomResult[]> {
