@@ -4,10 +4,8 @@ import { Args, Mutation } from '@nestjs/graphql';
 import { ChallengeService } from './challenge.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
-  AssignChallengeLeadInput,
   ChallengeEventInput,
   DeleteChallengeInput,
-  RemoveChallengeLeadInput,
   CreateChallengeInput,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
@@ -127,48 +125,6 @@ export class ChallengeResolverMutations {
       `challenge delete: ${challenge.nameID}`
     );
     return await this.challengeService.deleteChallenge(deleteData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IChallenge, {
-    description: 'Assigns an organisation as a lead for the Challenge.',
-  })
-  @Profiling.api
-  async assignChallengeLead(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('assignInput') assignData: AssignChallengeLeadInput
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      assignData.challengeID
-    );
-    await this.authorizationEngine.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `challenge assign lead: ${challenge.nameID}`
-    );
-    return await this.challengeService.assignChallengeLead(assignData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IChallenge, {
-    description: 'Remove an organisation as a lead for the Challenge.',
-  })
-  @Profiling.api
-  async removeChallengeLead(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('removeData') removeData: RemoveChallengeLeadInput
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      removeData.challengeID
-    );
-    await this.authorizationEngine.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.DELETE,
-      `remove challenge lead: ${challenge.nameID}`
-    );
-    return await this.challengeService.removeChallengeLead(removeData);
   }
 
   @UseGuards(GraphqlGuard)
