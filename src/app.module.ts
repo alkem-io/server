@@ -96,7 +96,11 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
       useFactory: async (communicationPool: MatrixAgentPool) => ({
         uploads: false,
         autoSchemaFile: true,
-        playground: true,
+        playground: {
+          settings: {
+            'request.credentials': 'include',
+          },
+        },
         fieldResolverEnhancers: ['guards'],
         sortSchema: true,
         context: ({ req }) => ({ req }),
