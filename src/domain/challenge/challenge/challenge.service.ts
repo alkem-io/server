@@ -91,6 +91,13 @@ export class ChallengeService {
       machineConfig
     );
 
+    if (challengeData.leadOrganisations) {
+      await this.setChallengeLeads(
+        challenge.id,
+        challengeData.leadOrganisations
+      );
+    }
+
     // set the credential type in use by the community
     await this.baseChallengeService.setMembershipCredential(
       challenge,
@@ -119,6 +126,13 @@ export class ChallengeService {
         await this.challengeRepository.save(challenge);
       }
     }
+
+    if (challengeData.leadOrganisations) {
+      await this.setChallengeLeads(
+        challenge.id,
+        challengeData.leadOrganisations
+      );
+    }
     return challenge;
   }
 
@@ -141,6 +155,20 @@ export class ChallengeService {
         `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.opportunities.length} opportunities`,
         LogContext.CHALLENGES
       );
+
+    // Remove any challenge lead credentials
+    const challengeLeads = await this.getLeadOrganisations(challengeID);
+    for (const challengeLead of challengeLeads) {
+      const agentHostOrg = await this.organisationService.getAgent(
+        challengeLead
+      );
+      challengeLead.agent = await this.agentService.revokeCredential({
+        agentID: agentHostOrg.id,
+        type: AuthorizationCredential.ChallengeLead,
+        resourceID: challengeID,
+      });
+      await this.organisationService.save(challengeLead);
+    }
 
     const baseChallenge = await this.getChallengeOrFail(challengeID, {
       relations: ['community', 'context', 'lifecycle', 'agent'],
@@ -209,6 +237,50 @@ export class ChallengeService {
     }
 
     return challenge;
+  }
+
+  async setChallengeLeads(
+    challengeID: string,
+    challengeLeadsIDs: string[]
+  ): Promise<IChallenge> {
+    const existingLeads = await this.getLeadOrganisations(challengeID);
+
+    // first remove any existing leads that are not in the new set
+    for (const existingLeadOrg of existingLeads) {
+      let inNewList = false;
+      for (const challengeLeadID of challengeLeadsIDs) {
+        if (
+          challengeLeadID === existingLeadOrg.id ||
+          challengeLeadID === existingLeadOrg.nameID
+        ) {
+          inNewList = true;
+        }
+      }
+      if (!inNewList) {
+        await this.removeChallengeLead({
+          challengeID: challengeID,
+          organisationID: existingLeadOrg.id,
+        });
+      }
+    }
+
+    // add any new ones
+    for (const challengeLeadID of challengeLeadsIDs) {
+      const organisation = await this.organisationService.getOrganisationOrFail(
+        challengeLeadID
+      );
+      const existingLead = existingLeads.find(
+        leadOrg => leadOrg.id === organisation.id
+      );
+      if (!existingLead) {
+        await this.assignChallengeLead({
+          challengeID: challengeID,
+          organisationID: organisation.id,
+        });
+      }
+    }
+
+    return await this.getChallengeOrFail(challengeID);
   }
 
   async getCommunity(challengeId: string): Promise<ICommunity> {
