@@ -1,0 +1,12 @@
+mutation deleteEcoverse($deleteData: DeleteEcoverseInput!) {
+  deleteEcoverse(deleteData: $deleteData) {
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+    "ID": "uuid"
+  }
+}
