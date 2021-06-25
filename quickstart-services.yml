@@ -1,6 +1,7 @@
 version: '3.7'
 
 networks:
+  ct_dev_server:
   ct_dev_net:
     driver: bridge
     ipam:
@@ -82,6 +83,15 @@ services:
     volumes:
       - ./.build/ory/oathkeeper:/etc/config/oathkeeper
     command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
+
+  mailslurper:
+    container_name: ct_dev_kratos_mailslurper
+    image: oryd/mailslurper:latest-smtps
+    ports:
+      - '4436:4436'
+      - '4437:4437'
+    networks:
+      - ct_dev_net
 
   ipfs:
     container_name: ct_dev_ipfs

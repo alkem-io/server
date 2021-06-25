@@ -5,6 +5,9 @@ services:
     container_name: ct_server_dev
     image: ct_server
     build: .
+    #image: cherrytwist/server:v0.11.5-alpha1
+    depends_on:
+      - mysql_db
     networks:
       - ct_dev_net
     environment:
@@ -22,9 +25,10 @@ services:
       - IPFS_CLIENT_ENDPOINT=http://localhost:8080/ipfs
       - AUTH_ORY_KRATOS_ISSUER=http://oathkeeper:4455
       - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
-    depends_on:
-      - mysql_db
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http:"http://localhost:4433/.ory/kratos/public/schemas/default"
+      - LOGGING_LEVEL_CONSOLE=verbose
+      - LOGGING_CONSOLE_ENABLED=true
     restart: always
     ports:
-      - 4003:4000
+      - 4000:4000
     command: sh -c "/wait && npm run migration:run && npm run start"
