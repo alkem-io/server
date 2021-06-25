@@ -1,7 +1,6 @@
 version: '3.7'
 
 networks:
-  ct_server_dev:
   ct_dev_net:
     driver: bridge
     ipam:
@@ -11,28 +10,81 @@ networks:
           gateway: 192.168.10.1
 
 volumes:
-  ct_server_dev:
-  ct_server_dev_db:
+  ct_dev_mysql_db:
 
 services:
-  db:
-    container_name: ct_server_dev_db
+  mysql_db:
+    container_name: ct_dev_mysql_db
     image: mysql:8.0.11
     networks:
       - ct_dev_net
-    command: --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
-    restart: always
-    ports:
-      - 3306:3306
     environment:
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
+    restart: always
+    ports:
+      - 3306:3306
     volumes:
-      - ct_server_dev_db:/var/lib/mysql
+      - ct_dev_mysql_db:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
+    command: --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
 
-  ct_ipfs_server:
-    container_name: ct_server_dev_ipfs
+  kratos-migrate:
+    container_name: ct_dev_kratos_migrate
+    image: oryd/kratos:v0.6.1-alpha.1
+    depends_on:
+      - mysql_db
+    environment:
+      - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
+    restart: on-failure
+    networks:
+      - ct_dev_net
+    volumes:
+    - type: bind
+      source: ./.build/ory/kratos/email-password
+      target: /etc/config/kratos
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+
+  kratos:
+    container_name: ct_dev_kratos
+    depends_on:
+      - kratos-migrate
+    image: oryd/kratos:v0.6.1-alpha.1
+    ports:
+      - '4433:4433' # public
+      - '4434:4434' # admin
+    restart: unless-stopped
+    environment:
+      - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
+      - LOG_LEVEL=trace
+      - SERVE_PUBLIC_BASE_URL=http://localhost:4433/
+    networks:
+      - ct_dev_net
+    volumes:
+    - type: bind
+      source: ./.build/ory/kratos/email-password
+      target: /etc/config/kratos
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+
+  oathkeeper:
+    container_name: ct_dev_oathkeeper
+    image: oryd/oathkeeper:v0.38
+    depends_on:
+      - kratos
+    ports:
+      - 4455:4455
+      - 4456:4456
+    environment:
+      - LOG_LEVEL=debug
+    restart: on-failure
+    networks:
+      - ct_dev_net
+    volumes:
+      - ./.build/ory/oathkeeper:/etc/config/oathkeeper
+    command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
+
+  ipfs_server:
+    container_name: ct_dev_ipfs
     image: ipfs/go-ipfs
     networks:
       - ct_dev_net
@@ -45,70 +97,9 @@ services:
     volumes:
       - /tmp/ipfs-docker-data:/data/ipfs
 
-  kratos-migrate:
-    container_name: ct_server_dev_kratos_migrate
-    image: oryd/kratos:v0.6.1-alpha.1
-    environment:
-      - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
-    volumes:
-      - type: bind
-        source: ./.build/ory/kratos/email-password
-        target: /etc/config/kratos
-    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
-    restart: on-failure
-    networks:
-      - ct_dev_net
-
-  kratos:
-    container_name: ct_server_dev_kratos
-    depends_on:
-      - kratos-migrate
-    image: oryd/kratos:v0.6.1-alpha.1
-    ports:
-      - '4433:4433' # public
-      - '4434:4434' # admin
-    restart: unless-stopped
-    environment:
-      - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
-      - LOG_LEVEL=trace
-      - SERVE_PUBLIC_BASE_URL=http://localhost:4433/
-    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
-    volumes:
-      - type: bind
-        source: ./.build/ory/kratos/email-password
-        target: /etc/config/kratos
-    networks:
-      - ct_dev_net
-
-  mailslurper:
-    container_name: ct_server_dev_krator_mailslurper
-    image: oryd/mailslurper:latest-smtps
-    ports:
-      - '4436:4436'
-      - '4437:4437'
-    networks:
-      - ct_dev_net
-
-  oathkeeper:
-    container_name: ct_server_dev_oathkeeper
-    image: oryd/oathkeeper:v0.38
-    depends_on:
-      - kratos
-    ports:
-      - 4455:4455
-      - 4456:4456
-    command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
-    environment:
-      - LOG_LEVEL=debug
-    restart: on-failure
-    networks:
-      - ct_dev_net
-    volumes:
-      - ./.build/ory/oathkeeper:/etc/config/oathkeeper
-
-  ct_synapse_server:
-    container_name: ct_synapse_server
-    image: matrixdotorg/synapse
+  synapse:
+    container_name: ct_dev_synapse
+    image: matrixdotorg/synapse:v1.36.0
     restart: always
     environment:
       - SYNAPSE_NO_TLS
@@ -116,7 +107,7 @@ services:
       - SYNAPSE_ENABLE_REGISTRATION
       - SYNAPSE_REGISTRATION_SHARED_SECRET
     networks:
-      - ct_server_dev
+      - ct_dev_net
     ports:
       - 8008:8008
     volumes:
