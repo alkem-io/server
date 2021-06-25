@@ -10,7 +10,6 @@ networks:
           gateway: 192.168.0.1
 
 volumes:
-  ct_server_dev:
   ct_server_dev_db:
 
 services:

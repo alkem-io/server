@@ -23,7 +23,10 @@ export class OryApiStrategy extends PassportStrategy(
   async validate(payload: any) {
     const kratosPublicBaseUrl = this.configService.get(
       ConfigurationTypes.Identity
-    ).authentication.providers.ory.kratos_public_base_url;
+    ).authentication.providers.ory.kratos_public_base_url_server;
+
+    const apiAccessEnabled = this.configService.get(ConfigurationTypes.Identity)
+      .authentication.api_access_enabled;
 
     const kratos = new PublicApi(
       new Configuration({
@@ -33,8 +36,10 @@ export class OryApiStrategy extends PassportStrategy(
 
     let identifier = '';
     const authorizationHeader = payload.headers.authorization;
-    if (authorizationHeader) {
+
+    if (apiAccessEnabled && authorizationHeader) {
       const bearerToken = authorizationHeader.split(' ')[1];
+      // this.logger.verbose?.(`bearer token: ${bearerToken}`, LogContext.AUTH);
       const user = await kratos.toSession(bearerToken);
 
       this.logger.verbose?.('Whoami', LogContext.AUTH);
