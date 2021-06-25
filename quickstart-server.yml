@@ -12,6 +12,7 @@ services:
       - ct_dev_net
     environment:
       - AUTH_ENABLED
+      - AUTH_API_ENABLED=false
       - NODE_ENV
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
@@ -25,7 +26,7 @@ services:
       - IPFS_CLIENT_ENDPOINT=http://localhost:8080/ipfs
       - AUTH_ORY_KRATOS_ISSUER=http://oathkeeper:4455
       - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
-      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http:"http://localhost:4433/.ory/kratos/public/schemas/default"
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL
       - LOGGING_LEVEL_CONSOLE=verbose
       - LOGGING_CONSOLE_ENABLED=true
     restart: always

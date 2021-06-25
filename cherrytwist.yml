@@ -79,6 +79,9 @@ identity:
     # A flag setting whether Authentication is enabled on Cherrytwist.
     enabled: ${AUTH_ENABLED}:true
 
+    # A flag setting whether Authentication based on non-interactive login is enabled.
+    api_access_enabled: ${AUTH_API_ENABLED}:true
+
     # A list of Identity Providers that can be used for authenticating the user.
     # The claims in the access token that are used in Cherrytwist are the user email and the token expiration time.
     providers:

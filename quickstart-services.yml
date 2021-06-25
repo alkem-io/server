@@ -1,7 +1,6 @@
 version: '3.7'
 
 networks:
-  ct_dev_server:
   ct_dev_net:
     driver: bridge
     ipam:
