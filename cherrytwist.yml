@@ -41,6 +41,10 @@ bootstrap:
 security:
   # cors settings for the application
   cors:
+    # Need to be able to disable cors checks on the server when running behind another reverse proxy that is setting
+    # a cors origin header e.g. oathkeeper
+    enabled: ${CORS_ENABLED}:true
+
     # Origin of the graphql requests to the Cherrytwist Server.
     # Defaults to * (insecure, not recommended for production usage).
     # Change to a value that whitelists your request origin.
@@ -78,6 +82,9 @@ identity:
   authentication:
     # A flag setting whether Authentication is enabled on Cherrytwist.
     enabled: ${AUTH_ENABLED}:true
+
+    # A flag setting whether Authentication based on non-interactive login is enabled.
+    api_access_enabled: ${AUTH_API_ENABLED}:true
 
     # A list of Identity Providers that can be used for authenticating the user.
     # The claims in the access token that are used in Cherrytwist are the user email and the token expiration time.
@@ -122,7 +129,7 @@ identity:
         #     ]
         #   }
         # }
-        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://localhost:4455/
+        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://cherrytwist-server-dev/
 
         # JSON Web Key Sets endpoint. Used for validating the JWT token signed
         # by Ory Oathkeeper. A set of keys looks like:
@@ -146,6 +153,9 @@ identity:
         # That is used as there is a reverse proxy in front of the CT Web Client that forwards the calls to the Kratos Public URL.
         # You can check the currently logged in user at http://localhost:4433/sessions/whoami.
         kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:4433/
+
+        # Ory Kratos URL for usage by the CT server when inside a cluster.
+        kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:4433/
 
   ssi:
     # Jolocom SDK is used for providing SSI capabilities on the platform.
