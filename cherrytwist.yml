@@ -129,7 +129,7 @@ identity:
         #     ]
         #   }
         # }
-        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://localhost:4455/
+        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://cherrytwist-server-dev/
 
         # JSON Web Key Sets endpoint. Used for validating the JWT token signed
         # by Ory Oathkeeper. A set of keys looks like:

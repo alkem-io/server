@@ -33,20 +33,13 @@ export class OryApiStrategy extends PassportStrategy(
         basePath: kratosPublicBaseUrl,
       })
     );
-    this.logger.verbose?.(
-      `api access enabled: ${apiAccessEnabled}`,
-      LogContext.AUTH
-    );
 
     let identifier = '';
     const authorizationHeader = payload.headers.authorization;
-    this.logger.verbose?.(
-      `authorization header: ${authorizationHeader}`,
-      LogContext.AUTH
-    );
+
     if (apiAccessEnabled && authorizationHeader) {
       const bearerToken = authorizationHeader.split(' ')[1];
-      this.logger.verbose?.(`bearer token: ${bearerToken}`, LogContext.AUTH);
+      // this.logger.verbose?.(`bearer token: ${bearerToken}`, LogContext.AUTH);
       const user = await kratos.toSession(bearerToken);
 
       this.logger.verbose?.('Whoami', LogContext.AUTH);
