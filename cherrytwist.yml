@@ -41,6 +41,10 @@ bootstrap:
 security:
   # cors settings for the application
   cors:
+    # Need to be able to disable cors checks on the server when running behind another reverse proxy that is setting
+    # a cors origin header e.g. oathkeeper
+    enabled: ${CORS_ENABLED}:true
+
     # Origin of the graphql requests to the Cherrytwist Server.
     # Defaults to * (insecure, not recommended for production usage).
     # Change to a value that whitelists your request origin.

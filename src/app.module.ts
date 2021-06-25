@@ -94,6 +94,7 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
       imports: [MatrixAgentPoolModule],
       inject: [MatrixAgentPool],
       useFactory: async (communicationPool: MatrixAgentPool) => ({
+        cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
         autoSchemaFile: true,
         playground: {

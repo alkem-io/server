@@ -22,12 +22,16 @@ const bootstrap = async () => {
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   await bootstrapService.bootstrapEcoverse();
-  app.enableCors({
-    origin: configService.get(ConfigurationTypes.Security)?.cors?.origin,
-    allowedHeaders: configService.get(ConfigurationTypes.Security)?.cors
-      ?.allowedHeaders,
-    methods: configService.get(ConfigurationTypes.Security)?.cors?.methods,
-  });
+  const corsEnabled = configService.get(ConfigurationTypes.Security).cors
+    .enabled;
+  if (corsEnabled) {
+    app.enableCors({
+      origin: configService.get(ConfigurationTypes.Security)?.cors?.origin,
+      allowedHeaders: configService.get(ConfigurationTypes.Security)?.cors
+        ?.allowedHeaders,
+      methods: configService.get(ConfigurationTypes.Security)?.cors?.methods,
+    });
+  }
 
   app.use(faviconMiddleware);
   app.use(
