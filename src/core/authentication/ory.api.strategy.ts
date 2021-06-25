@@ -25,6 +25,9 @@ export class OryApiStrategy extends PassportStrategy(
       ConfigurationTypes.Identity
     ).authentication.providers.ory.kratos_public_base_url;
 
+    const apiAccessEnabled = this.configService.get(ConfigurationTypes.Identity)
+      .authentication.api_access_enabled;
+
     const kratos = new PublicApi(
       new Configuration({
         basePath: kratosPublicBaseUrl,
@@ -33,7 +36,7 @@ export class OryApiStrategy extends PassportStrategy(
 
     let identifier = '';
     const authorizationHeader = payload.headers.authorization;
-    if (authorizationHeader) {
+    if (apiAccessEnabled && authorizationHeader) {
       const bearerToken = authorizationHeader.split(' ')[1];
       const user = await kratos.toSession(bearerToken);
 
