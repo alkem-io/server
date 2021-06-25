@@ -47,9 +47,9 @@ services:
 
   kratos:
     container_name: ct_dev_kratos
+    image: oryd/kratos:v0.6.1-alpha.1
     depends_on:
       - kratos-migrate
-    image: oryd/kratos:v0.6.1-alpha.1
     ports:
       - '4433:4433' # public
       - '4434:4434' # admin
@@ -83,7 +83,7 @@ services:
       - ./.build/ory/oathkeeper:/etc/config/oathkeeper
     command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
 
-  ipfs_server:
+  ipfs:
     container_name: ct_dev_ipfs
     image: ipfs/go-ipfs
     networks:

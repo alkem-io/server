@@ -13,20 +13,18 @@ services:
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
-      - WAIT_HOSTS=db:3306
+      - WAIT_HOSTS=mysql_db:3306
       - WAIT_HOSTS_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
       - GRAPHQL_ENDPOINT_PORT=4000
-      - IPFS_ENDPOINT=http://ct_ipfs_server:5001
+      - IPFS_ENDPOINT=http://ipfs:5001
       - IPFS_CLIENT_ENDPOINT=http://localhost:8080/ipfs
       - AUTH_ORY_KRATOS_ISSUER=http://oathkeeper:4455
       - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
     depends_on:
-      - db
+      - mysql_db
     restart: always
     ports:
       - 4003:4000
     command: sh -c "/wait && npm run migration:run && npm run start"
-    volumes:
-      - ct_server_dev:/usr/src/app/config
