@@ -27,6 +27,7 @@ services:
       - AUTH_ORY_KRATOS_ISSUER=http://oathkeeper:4455
       - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:4433/
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER=http://kratos:4433/
       - LOGGING_LEVEL_CONSOLE=verbose
       - LOGGING_CONSOLE_ENABLED=true
       - CORS_ENABLED=false

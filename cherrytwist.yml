@@ -154,6 +154,9 @@ identity:
         # You can check the currently logged in user at http://localhost:4433/sessions/whoami.
         kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:4433/
 
+        # Ory Kratos URL for usage by the CT server when inside a cluster.
+        kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:4433/
+
   ssi:
     # Jolocom SDK is used for providing SSI capabilities on the platform.
     # Note: NOT FOR PRODUCTION USAGE, experimental functionality,
