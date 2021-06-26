@@ -19,6 +19,26 @@ export class KonfigService {
         enabled: this.configService.get(ConfigurationTypes.Identity)
           ?.authentication?.enabled,
       },
+      platform: {
+        security: this.configService.get(ConfigurationTypes.Platform)?.security,
+        privacy: this.configService.get(ConfigurationTypes.Platform)?.privacy,
+        about: this.configService.get(ConfigurationTypes.Platform)?.about,
+        feedback: this.configService.get(ConfigurationTypes.Platform)?.feedback,
+        support: this.configService.get(ConfigurationTypes.Platform)?.support,
+        terms: this.configService.get(ConfigurationTypes.Platform)?.terms,
+        featureFlags: [
+          {
+            name: 'ssi',
+            enabled: this.configService.get(ConfigurationTypes.Identity)?.ssi
+              .enabled,
+          },
+          {
+            name: 'communications',
+            enabled: this.configService.get(ConfigurationTypes.Communications)
+              ?.enabled,
+          },
+        ],
+      },
     };
   }
 

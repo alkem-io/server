@@ -163,6 +163,7 @@ identity:
     # In particular, the migrations of the Jolocom database are still not setup, so any DID's created are not
     # guaranteed to be migrated properly.
     enabled: ${SSI_ENABLED}:false
+
     jolocom:
       # MySQL database configuration for usage by the Jolocom SDK.
       # The authentication method used is MySQL Native Password.
@@ -282,4 +283,25 @@ storage:
 
     # Max file size of files that will be uploaded to IPFS (in bytes).
     maxFileSize: 1048576
+
+## Configuration of the legal / usability aspects of the platform
+platform:
+  # Terms of usage that all users comply with
+  terms: ${PLATFORM_TERMS}:https://cherrytwist.org/platform/terms
+
+  # Privacy policy for the platform
+  privacy: ${PLATFORM_PRIVACY}:https://cherrytwist.org/platform/privacy
+
+  # Security policy for the platform
+  security: ${PLATFORM_SECURITY}:https://cherrytwist.org/platform/security
+
+  # Link for support requests
+  support: ${PLATFORM_SUPPORT}:https://cherrytwist.org/platform/support
+
+  # Feedback form for the platform
+  feedback: ${PLATFORM_FEEDBACK}:https://cherrytwist.org/platform/feedback
+
+  # About the platform
+  about: ${PLATFORM_ABOUT}:https://cherrytwist.org/platform/about
+
 
