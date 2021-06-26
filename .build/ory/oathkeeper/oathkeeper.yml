@@ -8,7 +8,7 @@ serve:
     cors:
       enabled: true
       allowed_origins:
-        - '*'
+        - 'http://localhost:3000'
       allowed_methods:
         - POST
         - GET
@@ -88,7 +88,7 @@ mutators:
   id_token:
     enabled: true
     config:
-      issuer_url: http://localhost:4455/
+      issuer_url: http://cherrytwist-server-dev/
       jwks_url: file:///etc/config/oathkeeper/id_token.jwks.json
       ttl: 1h
       claims: |
