@@ -41,6 +41,14 @@ export class BaseChallengeAuthorizationService {
       community
     );
 
+    const tagset = baseChallenge.tagset;
+    if (tagset) {
+      tagset.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
+        tagset.authorization,
+        baseChallenge.authorization
+      );
+    }
+
     const context = await this.baseChallengeService.getContext(
       baseChallenge.id,
       repository
@@ -53,7 +61,7 @@ export class BaseChallengeAuthorizationService {
       context
     );
 
-    return baseChallenge;
+    return await repository.save(baseChallenge);
   }
 
   async updateAuthorization(
