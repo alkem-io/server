@@ -25,6 +25,7 @@ import { CredentialService } from '@domain/agent/credential/credential.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class BaseChallengeService {
@@ -61,7 +62,10 @@ export class BaseChallengeService {
     }
     baseChallenge.authorization = new AuthorizationDefinition();
 
-    baseChallenge.tagset = this.tagsetService.createDefaultTagset();
+    baseChallenge.tagset = await this.tagsetService.createTagset({
+      name: RestrictedTagsetNames.Default,
+      tags: [],
+    });
 
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,
@@ -127,8 +131,12 @@ export class BaseChallengeService {
       await this.contextService.removeContext(baseChallenge.context.id);
     }
 
-    if (baseChallenge.community) {
-      await this.communityService.removeCommunity(baseChallenge.community.id);
+    const community = baseChallenge.community;
+    if (community) {
+      if (community.credential) {
+        await this.credentialService.deleteCredential(community.credential.id);
+      }
+      await this.communityService.removeCommunity(community.id);
     }
 
     if (baseChallenge.lifecycle) {

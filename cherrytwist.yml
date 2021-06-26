@@ -275,8 +275,8 @@ storage:
 
   # IPFS (https://ipfs.io/) configuration.
   ipfs:
-    # IPFS API endpoint.
-    endpoint: ${IPFS_ENDPOINT}:http://ct_ipfs_server:5001
+    # IPFS API endpoint. The name that the server uses for access IPFS for uploads.
+    endpoint: ${IPFS_ENDPOINT}:http://ipfs:5001
 
     # IPFS http proxy endpoint. Exposed through traefik (or any ingress / reverse proxy of choice).
     clientEndpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:8080/ipfs

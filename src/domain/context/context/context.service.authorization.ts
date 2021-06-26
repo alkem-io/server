@@ -40,8 +40,9 @@ export class ContextAuthorizationService {
 
     context.references = await this.contextService.getReferences(context);
     for (const reference of context.references) {
-      if (!reference.authorization)
+      if (!reference.authorization) {
         reference.authorization = new AuthorizationDefinition();
+      }
       reference.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
         reference.authorization,
         context.authorization

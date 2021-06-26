@@ -38,13 +38,6 @@ export class TagsetService {
     return await this.tagsetRepository.save(tagset);
   }
 
-  createDefaultTagset() {
-    const tagset = Tagset.create();
-    tagset.name = RestrictedTagsetNames.Default;
-    tagset.tags = [];
-    return tagset;
-  }
-
   async getTagsetOrFail(tagsetID: string): Promise<ITagset> {
     const tagset = await this.tagsetRepository.findOne({ id: tagsetID });
     if (!tagset)

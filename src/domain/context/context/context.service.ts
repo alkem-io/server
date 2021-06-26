@@ -110,7 +110,6 @@ export class ContextService {
       relations: ['aspects', 'references', 'ecosystemModel', 'visual'],
     });
 
-    // Remove all references
     if (context.references) {
       for (const reference of context.references) {
         await this.referenceService.deleteReference({
@@ -134,7 +133,6 @@ export class ContextService {
     if (context.authorization)
       await this.authorizationDefinitionService.delete(context.authorization);
 
-    // Remove all groups
     if (context.aspects) {
       for (const aspect of context.aspects) {
         await this.aspectService.removeAspect({ ID: aspect.id });
