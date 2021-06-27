@@ -6,4 +6,5 @@ export enum ConfigurationTypes {
   Identity = 'identity',
   Communications = 'communications',
   Storage = 'storage',
+  Platform = 'platform',
 }

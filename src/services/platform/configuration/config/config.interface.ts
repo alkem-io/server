@@ -1,7 +1,26 @@
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthenticationConfig } from './authentication/authentication.config.interface';
+import { IPlatformConfig } from './platform';
+import { Template } from './template/template.entity';
 import { ITemplate } from './template/template.interface';
 
-export interface IConfig {
+@ObjectType('Config')
+export abstract class IConfig {
+  @Field(() => IAuthenticationConfig, {
+    nullable: false,
+    description: 'Authentication configuration.',
+  })
   authentication?: IAuthenticationConfig;
+
+  @Field(() => Template, {
+    nullable: false,
+    description: 'Cherrytwist template configuration.',
+  })
   template?: ITemplate;
+
+  @Field(() => IPlatformConfig, {
+    nullable: false,
+    description: 'Platform related resources.',
+  })
+  platform?: IPlatformConfig;
 }
