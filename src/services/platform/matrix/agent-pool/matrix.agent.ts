@@ -2,9 +2,7 @@ import { Disposable } from '@interfaces/disposable.interface';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
-import { IOperationalMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import { createClient } from 'matrix-js-sdk';
-import { MatrixTransforms } from '@src/services/platform/matrix/management/matrix.management.user.service';
 import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
@@ -21,6 +19,8 @@ import {
   IResponseMessage,
 } from '@src/services/platform/matrix/agent-pool';
 import { IMatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent.interface';
+import { MatrixIdentifierAdapter } from '../user/matrix.user.identifier.adapter';
+import { IOperationalMatrixUser } from '../user/matrix.user.interface';
 @Injectable()
 export class MatrixAgent implements IMatrixAgent, Disposable {
   idBaseUrl: string;
@@ -69,7 +69,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     }));
     const dmRoomMap = await this._roomEntityAdapter.dmRooms();
     const dmRooms = Object.keys(dmRoomMap).map(x => ({
-      receiverEmail: MatrixTransforms.id2email(x),
+      receiverEmail: MatrixIdentifierAdapter.id2email(x),
       isDirect: true,
       roomID: dmRoomMap[x][0],
     }));
@@ -88,7 +88,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     return {
       roomID: room.roomId,
       isDirect: Boolean(dmRoom),
-      receiverEmail: dmRoom && MatrixTransforms.id2email(dmRoom),
+      receiverEmail: dmRoom && MatrixIdentifierAdapter.id2email(dmRoom),
       timeline: room.timeline,
     };
   }
@@ -111,7 +111,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     name: string | null;
     timeline: IResponseMessage[];
   }> {
-    const matrixUsername = MatrixTransforms.email2id(email);
+    const matrixUsername = MatrixIdentifierAdapter.email2id(email);
     // Need to implement caching for performance
     const dmRoom = this._roomEntityAdapter.dmRooms()[matrixUsername];
 
@@ -159,7 +159,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   ): Promise<string> {
     // there needs to be caching for dmRooms and event to update them
     const dmRooms = this._roomEntityAdapter.dmRooms();
-    const matrixId = MatrixTransforms.email2id(content.email);
+    const matrixId = MatrixIdentifierAdapter.email2id(content.email);
     const dmRoom = dmRooms[matrixId];
     let targetRoomId = null;
 

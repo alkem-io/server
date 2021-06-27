@@ -1,17 +1,9 @@
-import { IMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import { MatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent';
-import { MatrixGroupEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.group';
 import { IOpts as GroupOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.group.interface';
-import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter';
 import { IRoomOpts as RoomOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.room.interface';
+import { IMatrixUser } from '../user/matrix.user.interface';
 
-interface IMatrixAgentElevated {
-  createRoom: MatrixRoomEntityAdapter['createRoom'];
-  createGroup: MatrixGroupEntityAdapter['createGroup'];
-}
-
-export class MatrixManagementAgentElevated extends MatrixAgent
-  implements IMatrixAgentElevated {
+export class MatrixManagementAgentElevated extends MatrixAgent {
   async createRoom(options: RoomOpts) {
     return await this._roomEntityAdapter.createRoom(options);
   }

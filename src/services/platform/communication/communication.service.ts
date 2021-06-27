@@ -1,8 +1,8 @@
-import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
+import { UserService } from '@domain/community/user/user.service';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
-import { MatrixTransforms } from '@src/services/platform/matrix/management/matrix.management.user.service';
 import { CommunicationMessageResult } from './communication.dto.message.result';
 import {
   CommunicationRoomResult,
@@ -10,7 +10,8 @@ import {
 } from './communication.dto.room.result';
 import { CommunicationSendMessageUserInput } from './communication.dto.send.msg.user';
 import { CommunicationSendMessageCommunityInput } from './communication.dto.send.msg.community';
-import { LogContext } from '@common/enums';
+import { MatrixIdentifierAdapter } from '../matrix/user/matrix.user.identifier.adapter';
+import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
 
 @Injectable()
 export class CommunicationService {
@@ -18,13 +19,14 @@ export class CommunicationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private userService: UserService,
-    private readonly communicationPool: MatrixAgentPool
+    private matrixAgentPool: MatrixAgentPool,
+    private matrixUserManagementService: MatrixUserManagementService
   ) {}
 
   async sendMsgCommunity(
     sendMsgData: CommunicationSendMessageCommunityInput
   ): Promise<string> {
-    const communicationService = await this.communicationPool.acquire(
+    const communicationService = await this.matrixAgentPool.acquire(
       sendMsgData.sendingUserEmail
     );
     await communicationService.message(sendMsgData.roomID, {
@@ -37,7 +39,7 @@ export class CommunicationService {
   async sendMsgUser(
     sendMsgUserData: CommunicationSendMessageUserInput
   ): Promise<string> {
-    const communicationService = await this.communicationPool.acquire(
+    const communicationService = await this.matrixAgentPool.acquire(
       sendMsgUserData.sendingUserEmail
     );
 
@@ -57,18 +59,22 @@ export class CommunicationService {
     this.logger.verbose?.('creating new admin', LogContext.COLLABORATION);
   }
 
-  async registerNewAdminUser(
-    secret: string,
-    adminUserName: string,
-    adminPassword: string
-  ) {
+  async registerNewAdminUser() {
     // do some magic + return
     // python register_new_matrix_user.py -u ct-admin-test -p ct-admin-pass -a -k "T0.VmXT3PF.=4QwzTw~6ZAJ0MDK:DqP6PUQwCVwe:INH~oU#JA" http://localhost:8008
+    const adminUserId = 'matrixadmin@cherrytwist.org';
     this.logger.verbose?.(
-      `creating new admin user using credentials ${adminUserName} + ${adminPassword} + secret: ${secret}`,
-      LogContext.COLLABORATION
+      `creating new admin user using idenfitier: ${adminUserId}`,
+      LogContext.COMMUNICATiON
     );
-    return '';
+    const adminUser = await this.matrixUserManagementService.register(
+      adminUserId,
+      true
+    );
+    this.logger.verbose?.(
+      `...created: ${adminUser.accessToken}`,
+      LogContext.COMMUNICATiON
+    );
   }
 
   async createCommunityGroup(
@@ -125,7 +131,7 @@ export class CommunicationService {
   }
 
   async getRooms(email: string): Promise<CommunicationRoomResult[]> {
-    const communicationService = await this.communicationPool.acquire(email);
+    const communicationService = await this.matrixAgentPool.acquire(email);
     const roomResponse = await communicationService.getRooms();
     return await Promise.all(
       roomResponse.map(rr =>
@@ -138,7 +144,7 @@ export class CommunicationService {
     roomId: string,
     email: string
   ): Promise<CommunicationRoomDetailsResult> {
-    const communicationService = await this.communicationPool.acquire(email);
+    const communicationService = await this.matrixAgentPool.acquire(email);
     const {
       roomID,
       isDirect,
@@ -175,7 +181,9 @@ export class CommunicationService {
     }
 
     const senderEmails = [
-      ...new Set(messages.map(m => MatrixTransforms.id2email(m.sender.name))),
+      ...new Set(
+        messages.map(m => MatrixIdentifierAdapter.id2email(m.sender.name))
+      ),
     ];
     const users = await Promise.all(
       senderEmails.map(e => this.userService.getUserByEmail(e))
@@ -188,7 +196,7 @@ export class CommunicationService {
         continue;
       }
       const user = users.find(
-        u => u && u.email === MatrixTransforms.id2email(sender.name)
+        u => u && u.email === MatrixIdentifierAdapter.id2email(sender.name)
       );
       const roomMessage: CommunicationMessageResult = {
         message: ev.content.body,

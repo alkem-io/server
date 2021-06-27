@@ -2,45 +2,16 @@ import { HttpService, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
 import { MatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.service';
+import { ConfigurationTypes } from '@common/enums';
+import { MatrixIdentifierAdapter } from '../user/matrix.user.identifier.adapter';
+import { CommunicationsSynapseEndpoint } from '@common/enums/communications.synapse.endpoint';
+import { MatrixUserLoggedInResponse } from '../user/matrix.user.dto.logged.in.response';
 import {
   IMatrixUser,
-  IMatrixUserService as IMatrixManagementUserService,
   IOperationalMatrixUser,
-} from '@src/services/platform/matrix/management/matrix.management.user.interface';
-import { ConfigurationTypes } from '@common/enums';
-
-class SynapseEndpoints {
-  static REGISTRATION = '/_synapse/admin/v1/register';
-}
-
-type LoggedInUserResponse = {
-  user_id: string;
-  access_token: string;
-};
-
-export class MatrixTransforms {
-  static mailRegex = /[@]/g;
-  static email2username(email: string) {
-    return email.replace(MatrixTransforms.mailRegex, '=');
-  }
-  // TODO - this needs to be a service that works with env.HOST_NAME
-  static username2id(username: string) {
-    return `@${username}:cherrytwist.matrix.host`;
-  }
-  static email2id(email: string) {
-    return MatrixTransforms.username2id(MatrixTransforms.email2username(email));
-  }
-  static username2email(username: string) {
-    return username.replace(/[=]/g, '@');
-  }
-  static id2email(id: string) {
-    return MatrixTransforms.username2email(id.replace('@', '').split(':')[0]);
-  }
-}
-
+} from '../user/matrix.user.interface';
 @Injectable()
-export class MatrixManagementUserService
-  implements IMatrixManagementUserService {
+export class MatrixUserManagementService {
   _matrixClient: any;
   idBaseUrl: string;
   baseUrl: string;
@@ -53,6 +24,7 @@ export class MatrixManagementUserService
     this.idBaseUrl = this.configService.get(
       ConfigurationTypes.Communications
     )?.matrix?.server?.name;
+    //todo-ns: who duplicate URLs?
     this.baseUrl = this.configService.get(
       ConfigurationTypes.Communications
     )?.matrix?.server?.name;
@@ -69,9 +41,15 @@ export class MatrixManagementUserService
     });
   }
 
-  async register(email: string): Promise<IOperationalMatrixUser> {
-    const url = new URL(SynapseEndpoints.REGISTRATION, this.baseUrl);
-    const user = this.resolveUser(email);
+  async register(
+    email: string,
+    isAdmin = false
+  ): Promise<IOperationalMatrixUser> {
+    const url = new URL(
+      CommunicationsSynapseEndpoint.REGISTRATION,
+      this.baseUrl
+    );
+    const user = this.convertIdToMatrixUser(email);
 
     const nonceResponse = await this.httpService
       .get<{ nonce: string }>(url.href)
@@ -85,6 +63,7 @@ export class MatrixManagementUserService
         username: user.name,
         password: user.password,
         bind_emails: [email],
+        admin: isAdmin,
         mac: hmac,
       })
       .toPromise();
@@ -105,13 +84,13 @@ export class MatrixManagementUserService
   }
 
   async login(email: string): Promise<IOperationalMatrixUser> {
-    const user = this.resolveUser(email);
-    const operationalUser = await new Promise<LoggedInUserResponse>(
+    const matrixUser = this.convertIdToMatrixUser(email);
+    const operationalUser = await new Promise<MatrixUserLoggedInResponse>(
       (resolve, reject) =>
         this._matrixClient.loginWithPassword(
-          user.username,
-          user.password,
-          (error: Error, response: LoggedInUserResponse) => {
+          matrixUser.username,
+          matrixUser.password,
+          (error: Error, response: MatrixUserLoggedInResponse) => {
             if (error) {
               reject(error);
             }
@@ -121,15 +100,15 @@ export class MatrixManagementUserService
     );
 
     return {
-      name: user.name,
-      password: user.password,
+      name: matrixUser.name,
+      password: matrixUser.password,
       username: operationalUser.user_id,
       accessToken: operationalUser.access_token,
     };
   }
 
   async isRegistered(email: string): Promise<boolean> {
-    const username = MatrixTransforms.email2username(email);
+    const username = MatrixIdentifierAdapter.email2username(email);
 
     try {
       await this._matrixClient.isUsernameAvailable(username);
@@ -140,10 +119,10 @@ export class MatrixManagementUserService
     }
   }
 
-  private resolveUser(email: string): IMatrixUser {
+  private convertIdToMatrixUser(email: string): IMatrixUser {
     return {
-      name: MatrixTransforms.email2username(email),
-      username: MatrixTransforms.email2id(email),
+      name: MatrixIdentifierAdapter.email2username(email),
+      username: MatrixIdentifierAdapter.email2id(email),
       password: 'generated_password',
     };
   }

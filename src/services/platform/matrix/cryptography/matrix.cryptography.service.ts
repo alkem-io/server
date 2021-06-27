@@ -1,12 +1,10 @@
 import { ConfigurationTypes } from '@common/enums';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import * as crypto from 'crypto-js';
-import { IMatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.interface';
-
+import { IMatrixUser } from '../user/matrix.user.interface';
 @Injectable()
-export class MatrixCryptographyService implements IMatrixCryptographyService {
+export class MatrixCryptographyService {
   constructor(private configService: ConfigService) {}
 
   generateHmac(user: IMatrixUser, nonce: string, isAdmin?: boolean): string {

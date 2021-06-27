@@ -1,4 +1,4 @@
-import { IMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
+import { IMatrixUser } from '@src/services/platform/matrix/user/matrix.user.interface';
 import { IOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.group.interface';
 
 export class MatrixGroupEntityAdapter {
