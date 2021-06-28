@@ -424,6 +424,7 @@ export class ChallengeService {
     const challenges = await this.challengeRepository.find();
     return challenges || [];
   }
+
   async getChallengesInEcoverseCount(ecoverseID: string): Promise<number> {
     const count = await this.challengeRepository.count({
       where: { ecoverseID: ecoverseID },

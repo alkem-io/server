@@ -305,4 +305,11 @@ export class OpportunityService {
 
     return activity;
   }
+
+  async getOpportunitiesInEcoverseCount(ecoverseID: string): Promise<number> {
+    const count = await this.opportunityRepository.count({
+      where: { ecoverseID: ecoverseID },
+    });
+    return count;
+  }
 }

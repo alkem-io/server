@@ -333,16 +333,18 @@ export class EcoverseService {
     const activity: INVP[] = [];
 
     // Challenges
-    const challengesCount = await this.getChallengesCount(ecoverse.id);
+    const challengesCount = await this.challengeService.getChallengesInEcoverseCount(
+      ecoverse.id
+    );
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     activity.push(challengesTopic);
 
-    const allChallengesCount = await this.challengeService.getChallengesInEcoverseCount(
+    const opportunitiesCount = await this.opportunityService.getOpportunitiesInEcoverseCount(
       ecoverse.id
     );
     const opportunitiesTopic = new NVP(
       'opportunities',
-      (allChallengesCount - challengesCount - 1).toString()
+      opportunitiesCount.toString()
     );
     activity.push(opportunitiesTopic);
 
@@ -362,9 +364,7 @@ export class EcoverseService {
   }
 
   async getChallengesCount(ecoverseID: string): Promise<number> {
-    return await this.ecoverseRepository.count({
-      where: { ecoverse: ecoverseID },
-    });
+    return await this.challengeService.getChallengesInEcoverseCount(ecoverseID);
   }
 
   async getAgent(ecoverseID: string): Promise<IAgent> {
