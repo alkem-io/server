@@ -30,6 +30,7 @@ import { AuthorizationDefinition } from '@domain/common/authorization-definition
 import { ICredential } from '@domain/agent/credential';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class CommunityService {
@@ -51,7 +52,9 @@ export class CommunityService {
 
     community.groups = [];
     community.communicationGroupID = await this.communicationService.createCommunityGroup(
-      community.id
+      // generate a unique identifier for the community because the community does not have an id (not persisted yet)
+      uuidv4(),
+      community.displayName
     );
     community.communicationRoomID = await this.communicationService.createCommunityRoom(
       community.communicationGroupID

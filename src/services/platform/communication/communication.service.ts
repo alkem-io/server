@@ -18,7 +18,9 @@ import { MatrixManagementAgentElevated } from '../matrix/management/matrix.manag
 
 @Injectable()
 export class CommunicationService {
-  private adminUserId = 'matrixadmin@cherrytwist.org';
+  // the matrixadminn@cherrytwist.org might already be registered with unknown password
+  // reseting it is not an option as far as I know
+  private adminUserId = 'matrixadmin@alkemio.org';
   private adminUser!: IOperationalMatrixUser;
   private matrixElevatedAgent!: MatrixManagementAgentElevated;
 
@@ -111,10 +113,13 @@ export class CommunicationService {
     return adminUser;
   }
 
-  async createCommunityGroup(communityName: string): Promise<string> {
+  async createCommunityGroup(
+    communityId: string,
+    communityName: string
+  ): Promise<string> {
     const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
     const group = await elevatedMatrixAgent.createGroup({
-      groupId: communityName,
+      groupId: communityId,
       profile: {
         name: communityName,
       },

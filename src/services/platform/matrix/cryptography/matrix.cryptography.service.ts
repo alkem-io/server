@@ -27,7 +27,7 @@ export class MatrixCryptographyService {
     hmac.update(toUft8('\x00'));
     hmac.update(toUft8(user.password));
     hmac.update(toUft8('\x00'));
-    hmac.update(isAdmin ? 'admin' : 'notadmin');
+    hmac.update(toUft8(isAdmin ? 'admin' : 'notadmin'));
 
     return crypto.enc.Hex.stringify(hmac.finalize());
   }
