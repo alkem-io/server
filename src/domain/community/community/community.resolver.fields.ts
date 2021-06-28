@@ -50,12 +50,14 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('room', () => [CommunicationRoomDetailsResult], {
+  @ResolveField('room', () => CommunicationRoomDetailsResult, {
     nullable: false,
     description: 'Room with messages for this community.',
   })
   @Profiling.api
-  async room(@Parent() community: Community) {
+  async room(
+    @Parent() community: Community
+  ): Promise<CommunicationRoomDetailsResult> {
     return await this.communityService.getCommunicationsRoom(community);
   }
 }
