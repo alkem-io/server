@@ -12,14 +12,22 @@ import { CommunicationSendMessageUserInput } from './communication.dto.send.msg.
 import { CommunicationSendMessageCommunityInput } from './communication.dto.send.msg.community';
 import { MatrixIdentifierAdapter } from '../matrix/user/matrix.user.identifier.adapter';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
+import { IOperationalMatrixUser } from '../matrix/user/matrix.user.interface';
+import { ConfigService } from '@nestjs/config';
+import { MatrixManagementAgentElevated } from '../matrix/management/matrix.management.agent.elevated';
 
 @Injectable()
 export class CommunicationService {
+  private adminUserId = 'matrixadmin@cherrytwist.org';
+  private adminUser!: IOperationalMatrixUser;
+  private matrixElevatedAgent!: MatrixManagementAgentElevated;
+
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private userService: UserService,
     private matrixAgentPool: MatrixAgentPool,
+    private configService: ConfigService,
     private matrixUserManagementService: MatrixUserManagementService
   ) {}
 
@@ -56,74 +64,79 @@ export class CommunicationService {
   }
 
   async getGlobalAdminUser() {
-    this.logger.verbose?.('creating new admin', LogContext.COLLABORATION);
+    if (this.adminUser) {
+      return this.adminUser;
+    }
+
+    const adminExists = await this.matrixUserManagementService.isRegistered(
+      this.adminUserId
+    );
+    if (adminExists) {
+      const adminUser = await this.matrixUserManagementService.login(
+        this.adminUserId
+      );
+      this.adminUser = adminUser;
+      return adminUser;
+    }
+
+    this.adminUser = await this.registerNewAdminUser();
+    return this.adminUser;
   }
 
-  async registerNewAdminUser() {
-    // do some magic + return
-    // python register_new_matrix_user.py -u ct-admin-test -p ct-admin-pass -a -k "T0.VmXT3PF.=4QwzTw~6ZAJ0MDK:DqP6PUQwCVwe:INH~oU#JA" http://localhost:8008
-    const adminUserId = 'matrixadmin@cherrytwist.org';
+  async getMatrixManagementAgentElevated() {
+    if (this.matrixElevatedAgent) {
+      return this.matrixElevatedAgent;
+    }
+
+    this.matrixElevatedAgent = new MatrixManagementAgentElevated(
+      this.configService,
+      await this.getGlobalAdminUser()
+    );
+    return this.matrixElevatedAgent;
+  }
+
+  async registerNewAdminUser(): Promise<IOperationalMatrixUser> {
     this.logger.verbose?.(
-      `creating new admin user using idenfitier: ${adminUserId}`,
+      `creating new admin user using idenfitier: ${this.adminUserId}`,
       LogContext.COMMUNICATiON
     );
     const adminUser = await this.matrixUserManagementService.register(
-      adminUserId,
+      this.adminUserId,
       true
     );
     this.logger.verbose?.(
       `...created: ${adminUser.accessToken}`,
       LogContext.COMMUNICATiON
     );
+    return adminUser;
   }
 
-  async createCommunityGroup(
-    communityName: string,
-    matrixAdminUsername: string,
-    matrixAdminPassword: string
-  ): Promise<string> {
-    // const elevatedMatrixAgent = new MatrixManagementAgentElevated(
-    //   matrixAdminUsername,
-    //   matrixAdminPassword
-    // );
-    // return elevatedMatrixAgent.createGroup({
-    //   groupId: communityName,
-    //   profile: {
-    //     name: communityName,
-    //   },
-    // });
+  async createCommunityGroup(communityName: string): Promise<string> {
+    const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
+    const group = await elevatedMatrixAgent.createGroup({
+      groupId: communityName,
+      profile: {
+        name: communityName,
+      },
+    });
     this.logger.verbose?.(
-      `creating community ${communityName} using credentials ${matrixAdminPassword} + ${matrixAdminUsername}`,
-      LogContext.COLLABORATION
+      `creating community group with name: ${communityName}`,
+      LogContext.COMMUNICATiON
     );
-    return '';
+    return group;
   }
 
-  async createCommunityRoom(
-    groupID: string,
-    matrixAdminUsername: string,
-    matrixAdminPassword: string
-  ): Promise<string> {
-    // const operationalAdminUser: IOperationalMatrixUser = {
-    //   name: '',
-    //   username: matrixAdminUsername,
-    //   password: matrixAdminPassword,
-    //   accessToken: '',
-    // };
-    // const elevatedMatrixAgent = new MatrixManagementAgentElevated(
-    //   matrixAdminUsername,
-    //   matrixAdminPassword
-    // );
-
-    // return elevatedMatrixAgent.createRoom({
-    //   communityId: groupID,
-    // });
+  async createCommunityRoom(groupID: string): Promise<string> {
+    const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
+    const room = await elevatedMatrixAgent.createRoom({
+      communityId: groupID,
+    });
 
     this.logger.verbose?.(
-      `creating community ${groupID} using credentials ${matrixAdminPassword} + ${matrixAdminUsername}`,
-      LogContext.COLLABORATION
+      `creating community $room with on group: ${groupID}`,
+      LogContext.COMMUNICATiON
     );
-    return '';
+    return room;
   }
 
   async addUserToCommunityRooms() {

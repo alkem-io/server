@@ -37,10 +37,10 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   ) {
     this.idBaseUrl = this.configService.get(
       ConfigurationTypes.Communications
-    )?.matrix?.server?.name;
+    )?.matrix?.server?.url;
     this.baseUrl = this.configService.get(
       ConfigurationTypes.Communications
-    )?.matrix?.server?.name;
+    )?.matrix?.server?.url;
 
     if (!this.idBaseUrl || !this.baseUrl) {
       throw new Error('Matrix configuration is not provided');
@@ -111,7 +111,10 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     name: string | null;
     timeline: IResponseMessage[];
   }> {
-    const matrixUsername = MatrixIdentifierAdapter.email2id(email);
+    const hostName = this.configService.get(ConfigurationTypes.Communications)
+      ?.matrix?.server?.hostname;
+
+    const matrixUsername = MatrixIdentifierAdapter.email2id(email, hostName);
     // Need to implement caching for performance
     const dmRoom = this._roomEntityAdapter.dmRooms()[matrixUsername];
 
@@ -157,9 +160,12 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   async initiateMessagingToUser(
     content: IInitiateDirectMessageRequest
   ): Promise<string> {
+    const hostName = this.configService.get(ConfigurationTypes.Communications)
+      ?.matrix?.server?.hostname;
+
     // there needs to be caching for dmRooms and event to update them
     const dmRooms = this._roomEntityAdapter.dmRooms();
-    const matrixId = MatrixIdentifierAdapter.email2id(content.email);
+    const matrixId = MatrixIdentifierAdapter.email2id(content.email, hostName);
     const dmRoom = dmRooms[matrixId];
     let targetRoomId = null;
 

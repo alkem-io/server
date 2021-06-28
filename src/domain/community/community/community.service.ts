@@ -51,14 +51,10 @@ export class CommunityService {
 
     community.groups = [];
     community.communicationGroupID = await this.communicationService.createCommunityGroup(
-      community.displayName,
-      '',
-      ''
+      community.id
     );
     community.communicationRoomID = await this.communicationService.createCommunityRoom(
-      community.communicationGroupID,
-      '',
-      ''
+      community.communicationGroupID
     );
 
     return await this.communityRepository.save(community);

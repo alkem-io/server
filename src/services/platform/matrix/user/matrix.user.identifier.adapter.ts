@@ -4,12 +4,13 @@ export class MatrixIdentifierAdapter {
     return email.replace(MatrixIdentifierAdapter.mailRegex, '=');
   }
   // TODO - this needs to be a service that works with env.HOST_NAME
-  static username2id(username: string) {
-    return `@${username}:cherrytwist.matrix.host`;
+  static username2id(username: string, matrixHostName: string) {
+    return `@${username}:${matrixHostName}`;
   }
-  static email2id(email: string) {
+  static email2id(email: string, matrixHostName: string) {
     return MatrixIdentifierAdapter.username2id(
-      MatrixIdentifierAdapter.email2username(email)
+      MatrixIdentifierAdapter.email2username(email),
+      matrixHostName
     );
   }
   static username2email(username: string) {

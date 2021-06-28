@@ -23,18 +23,17 @@ export class MatrixUserManagementService {
   ) {
     this.idBaseUrl = this.configService.get(
       ConfigurationTypes.Communications
-    )?.matrix?.server?.name;
-    //todo-ns: who duplicate URLs?
+    )?.matrix?.server?.url;
     this.baseUrl = this.configService.get(
       ConfigurationTypes.Communications
-    )?.matrix?.server?.name;
+    )?.matrix?.server?.url;
 
     if (!this.idBaseUrl || !this.baseUrl) {
       throw new Error('Matrix configuration is not provided');
     }
 
     // Create a single instance of the matrix client - non authenticated
-    // Todo: should be handed this client instance externally!
+    // Todo: should be handed (injected) to this client instance externally!
     this._matrixClient = createClient({
       baseUrl: this.baseUrl,
       idBaseUrl: this.idBaseUrl,
@@ -55,7 +54,7 @@ export class MatrixUserManagementService {
       .get<{ nonce: string }>(url.href)
       .toPromise();
     const nonce = nonceResponse.data['nonce'];
-    const hmac = this.cryptographyServive.generateHmac(user, nonce);
+    const hmac = this.cryptographyServive.generateHmac(user, nonce, isAdmin);
 
     const registrationResponse = await this.httpService
       .post<{ user_id: string; access_token: string }>(url.href, {
@@ -120,9 +119,11 @@ export class MatrixUserManagementService {
   }
 
   private convertIdToMatrixUser(email: string): IMatrixUser {
+    const hostName = this.configService.get(ConfigurationTypes.Communications)
+      ?.matrix?.server?.hostname;
     return {
       name: MatrixIdentifierAdapter.email2username(email),
-      username: MatrixIdentifierAdapter.email2id(email),
+      username: MatrixIdentifierAdapter.email2id(email, hostName),
       password: 'generated_password',
     };
   }
