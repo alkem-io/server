@@ -30,7 +30,7 @@ import { AuthorizationDefinition } from '@domain/common/authorization-definition
 import { ICredential } from '@domain/agent/credential';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
-import { v4 as uuidv4 } from 'uuid';
+import { CommunicationRoomDetailsResult } from '@services/platform/communication/communication.dto.room.result';
 
 @Injectable()
 export class CommunityService {
@@ -51,16 +51,10 @@ export class CommunityService {
     community.authorization = new AuthorizationDefinition();
 
     community.groups = [];
-    community.communicationGroupID = await this.communicationService.createCommunityGroup(
-      // generate a unique identifier for the community because the community does not have an id (not persisted yet)
-      uuidv4(),
-      community.displayName
-    );
-    community.communicationRoomID = await this.communicationService.createCommunityRoom(
-      community.communicationGroupID
-    );
+    // save to get an id assigned
+    await this.communityRepository.save(community);
 
-    return await this.communityRepository.save(community);
+    return await this.initializeCommunicationsRoom(community);
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
@@ -316,5 +310,32 @@ export class CommunityService {
       type: membershipCredential.type,
       resourceID: membershipCredential.resourceID,
     });
+  }
+
+  async initializeCommunicationsRoom(
+    community: ICommunity
+  ): Promise<ICommunity> {
+    community.communicationGroupID = await this.communicationService.createCommunityGroup(
+      // generate a unique identifier for the community because the community does not have an id (not persisted yet)
+      community.id,
+      community.displayName
+    );
+    community.communicationRoomID = await this.communicationService.createCommunityRoom(
+      community.communicationGroupID
+    );
+    return await this.communityRepository.save(community);
+  }
+
+  async getCommunicationsRoom(
+    community: ICommunity
+  ): Promise<CommunicationRoomDetailsResult> {
+    let communityWithRoom = community;
+    if (community.communicationRoomID === '') {
+      communityWithRoom = await this.initializeCommunicationsRoom(community);
+    }
+    const result = await this.communicationService.getCommunityRoom(
+      communityWithRoom.communicationRoomID
+    );
+    return result;
   }
 }

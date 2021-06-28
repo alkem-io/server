@@ -50,7 +50,6 @@
     "@ory/kratos-client": "^0.6.3-alpha.1",
     "@types/crypto-js": "^4.0.1",
     "@types/express-session": "^1.17.3",
-    "@types/uuid": "^8.3.0",
     "apollo-server-express": "^2.22.2",
     "axios": "^0.21.1",
     "cd": "^0.3.3",

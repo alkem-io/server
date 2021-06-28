@@ -12,6 +12,12 @@ export type MatrixClient = {
   getGroup: (groupId: string) => Promise<any>;
   acceptGroupInvite: (groupId: string) => Promise<void>;
   getGroupRooms: (groupId: string) => Promise<any[]>;
+  isUsernameAvailable: (username: string) => Promise<boolean>;
+  loginWithPassword: (
+    user: string,
+    password: string,
+    callback?: any
+  ) => Promise<any>;
   sendEvent: (
     roomId: string,
     type: string,

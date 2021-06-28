@@ -8,6 +8,7 @@ import { IUser } from '@domain/community/user';
 import { IUserGroup } from '@domain/community/user-group';
 import { IApplication } from '@domain/community/application';
 import { AuthorizationPrivilege } from '@common/enums';
+import { CommunicationRoomDetailsResult } from '@services/platform/communication/communication.dto.room.result';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -45,5 +46,16 @@ export class CommunityResolverFields {
   async applications(@Parent() community: Community) {
     const apps = await this.communityService.getApplications(community);
     return apps || [];
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('room', () => [CommunicationRoomDetailsResult], {
+    nullable: false,
+    description: 'Room with messages for this community.',
+  })
+  @Profiling.api
+  async room(@Parent() community: Community) {
+    return await this.communityService.getCommunicationsRoom(community);
   }
 }

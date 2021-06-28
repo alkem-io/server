@@ -74,6 +74,10 @@ export class CommunicationService {
       this.adminUserId
     );
     if (adminExists) {
+      this.logger.verbose?.(
+        `Admin user is registered: ${this.adminUserId}, logging in...`,
+        LogContext.COMMUNICATION
+      );
       const adminUser = await this.matrixUserManagementService.login(
         this.adminUserId
       );
@@ -100,15 +104,15 @@ export class CommunicationService {
   async registerNewAdminUser(): Promise<IOperationalMatrixUser> {
     this.logger.verbose?.(
       `creating new admin user using idenfitier: ${this.adminUserId}`,
-      LogContext.COMMUNICATiON
+      LogContext.COMMUNICATION
     );
     const adminUser = await this.matrixUserManagementService.register(
       this.adminUserId,
       true
     );
     this.logger.verbose?.(
-      `...created: ${adminUser.accessToken}`,
-      LogContext.COMMUNICATiON
+      `...created, accessToken: ${adminUser.accessToken}`,
+      LogContext.COMMUNICATION
     );
     return adminUser;
   }
@@ -117,6 +121,10 @@ export class CommunicationService {
     communityId: string,
     communityName: string
   ): Promise<string> {
+    this.logger.verbose?.(
+      `creating community group with id: '${communityId}' & name: ${communityName}`,
+      LogContext.COMMUNICATION
+    );
     const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
     const group = await elevatedMatrixAgent.createGroup({
       groupId: communityId,
@@ -124,23 +132,25 @@ export class CommunicationService {
         name: communityName,
       },
     });
-    this.logger.verbose?.(
-      `creating community group with name: ${communityName}`,
-      LogContext.COMMUNICATiON
-    );
+    this.logger.verbose?.(`...created: '${group}'`, LogContext.COMMUNICATION);
+
     return group;
   }
 
   async createCommunityRoom(groupID: string): Promise<string> {
+    this.logger.verbose?.(
+      `creating community room on group: ${groupID}`,
+      LogContext.COMMUNICATION
+    );
     const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
     const room = await elevatedMatrixAgent.createRoom({
       communityId: groupID,
     });
-
     this.logger.verbose?.(
-      `creating community $room with on group: ${groupID}`,
-      LogContext.COMMUNICATiON
+      `...community room on group: ${room}`,
+      LogContext.COMMUNICATION
     );
+
     return room;
   }
 
@@ -178,6 +188,12 @@ export class CommunicationService {
     );
 
     return room;
+  }
+
+  async getCommunityRoom(
+    roomId: string
+  ): Promise<CommunicationRoomDetailsResult> {
+    return await this.getRoom(roomId, this.adminUserId);
   }
 
   private async bootstrapRoom(
