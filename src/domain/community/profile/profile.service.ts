@@ -129,7 +129,6 @@ export class ProfileService {
       profile,
       tagsetData
     );
-    tagset.authorization = profile.authorization;
 
     await this.profileRepository.save(profile);
 
@@ -149,14 +148,16 @@ export class ProfileService {
     // check there is not already a reference with the same name
     for (const reference of profile.references) {
       if (reference.name === referenceInput.name) {
-        return reference;
+        throw new ValidationException(
+          `Reference with the provided name already exists: ${referenceInput.name}`,
+          LogContext.CONTEXT
+        );
       }
     }
     // If get here then no ref with the same name
     const newReference = await this.referenceService.createReference(
       referenceInput
     );
-    newReference.authorization = profile.authorization;
 
     await profile.references.push(newReference as Reference);
     await this.profileRepository.save(profile);
