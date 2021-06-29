@@ -104,6 +104,7 @@ export class ProfileResolverMutations {
     return await this.profileService.updateProfile(profileData);
   }
 
+  @UseGuards(GraphqlGuard)
   @Mutation(() => IProfile, {
     description: 'Uploads and sets an avatar image for the specified Profile.',
   })
