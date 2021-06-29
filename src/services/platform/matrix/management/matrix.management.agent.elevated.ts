@@ -21,6 +21,6 @@ export class MatrixAgentElevated extends MatrixAgent {
   }
 
   async addUserToCommunityRoom(roomID: string, matrixUsername: string) {
-    this.roomEntityAdapter.inviteUsersToRoom(roomID, matrixUsername);
+    this.roomEntityAdapter.inviteUsersToRoom(roomID, [matrixUsername]);
   }
 }

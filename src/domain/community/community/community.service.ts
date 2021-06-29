@@ -197,6 +197,14 @@ export class CommunityService {
       type: membershipCredential.type,
       resourceID: membershipCredential.resourceID,
     });
+
+    // register the user for the community room(s)
+    await this.communicationService.addUserToCommunityMessaging(
+      community.communicationGroupID,
+      community.communicationRoomID,
+      user.email
+    );
+
     return community;
   }
 
