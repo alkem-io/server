@@ -327,14 +327,16 @@ export class CommunityService {
   }
 
   async getCommunicationsRoom(
-    community: ICommunity
+    community: ICommunity,
+    email: string
   ): Promise<CommunicationRoomDetailsResult> {
     let communityWithRoom = community;
     if (community.communicationRoomID === '') {
       communityWithRoom = await this.initializeCommunicationsRoom(community);
     }
-    const result = await this.communicationService.getCommunityRoom(
-      communityWithRoom.communicationRoomID
+    const result = await this.communicationService.getRoom(
+      communityWithRoom.communicationRoomID,
+      email
     );
     return result;
   }

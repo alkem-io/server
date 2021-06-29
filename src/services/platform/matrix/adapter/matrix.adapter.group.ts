@@ -1,4 +1,3 @@
-import { IMatrixUser } from '@src/services/platform/matrix/user/matrix.user.interface';
 import { IOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.group.interface';
 
 export class MatrixGroupEntityAdapter {
@@ -42,9 +41,9 @@ export class MatrixGroupEntityAdapter {
     return group.group_id;
   }
 
-  public async inviteUsersToGroup(groupId: string, users: IMatrixUser[]) {
-    for (const user of users) {
-      await this._client.inviteUserToGroup(groupId, user.username);
+  public async inviteUsersToGroup(groupId: string, matrixUsernames: string[]) {
+    for (const matrixUsername of matrixUsernames) {
+      await this._client.inviteUserToGroup(groupId, matrixUsername);
     }
   }
 }

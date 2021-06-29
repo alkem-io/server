@@ -152,8 +152,14 @@ export class CommunicationService {
     return room;
   }
 
-  async addUserToCommunityRooms() {
-    return undefined;
+  async addUserToCommunityMessaging(
+    groupID: string,
+    roomID: string,
+    email: string
+  ) {
+    const elevatedAgent = await this.getMatrixManagementAgentElevated();
+    elevatedAgent.addUserToCommunityGroup(groupID, email);
+    elevatedAgent.addUserToCommunityRoom(roomID, email);
   }
 
   async getRooms(email: string): Promise<CommunicationRoomResult[]> {
@@ -186,12 +192,6 @@ export class CommunicationService {
     );
 
     return room;
-  }
-
-  async getCommunityRoom(
-    roomId: string
-  ): Promise<CommunicationRoomDetailsResult> {
-    return await this.getRoom(roomId, this.adminUserName);
   }
 
   private async bootstrapRoom(

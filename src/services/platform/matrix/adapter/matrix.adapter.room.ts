@@ -55,4 +55,11 @@ export class MatrixRoomEntityAdapter {
 
     return room.room_id;
   }
+
+  public async inviteUsersToRoom(roomID: string, matrixUsernames: string[]) {
+    for (const matrixUsername of matrixUsernames) {
+      await this._client.invite(roomID, matrixUsername);
+      console.log(`${matrixUsername} - ${roomID}`);
+    }
+  }
 }

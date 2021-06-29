@@ -128,27 +128,6 @@ export class MatrixUserManagementService {
         LogContext.COMMUNICATION
       );
     }
-
-    // const operationalUser = await new Promise<MatrixUserLoggedInResponse>(
-    //   (resolve, reject) =>
-    //     this._matrixClient.loginWithPassword(
-    //       matrixUser.username,
-    //       matrixUser.password,
-    //       (error: Error, response: MatrixUserLoggedInResponse) => {
-    //         if (error) {
-    //           reject(error);
-    //         }
-    //         resolve(response);
-    //       }
-    //     )
-    // );
-
-    // return {
-    //   name: matrixUser.name,
-    //   password: matrixUser.password,
-    //   username: operationalUser.user_id,
-    //   accessToken: operationalUser.access_token,
-    // };
   }
 
   async isRegistered(email: string): Promise<boolean> {

@@ -23,6 +23,8 @@ export class MatrixAgentPool {
   }
 
   async acquire(email: string, session?: string): Promise<MatrixAgent> {
+    if (!email || email.length === 0)
+      throw new Error('No valid email provided');
     if (!this._wrappers[email]) {
       const operatingUser = await this.acquireUser(email);
       const client = await this.matrixAgentService.createMatrixAgent(
