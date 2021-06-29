@@ -284,13 +284,6 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
     return relation;
   }
-
-  async getProjectsCount(opportunityID: string): Promise<number> {
-    return await this.opportunityRepository.count({
-      where: { id: opportunityID },
-    });
-  }
-
   async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
     const activity: INVP[] = [];
     const community = await this.getCommunity(opportunity.id);
@@ -299,10 +292,30 @@ export class OpportunityService {
     const membersTopic = new NVP('members', membersCount.toString());
     activity.push(membersTopic);
 
-    const projectsCount = await this.getProjectsCount(opportunity.id);
+    const projectsCount = await this.projectService.getProjectsInOpportunityCount(
+      opportunity.id
+    );
     const projectsTopic = new NVP('projects', projectsCount.toString());
     activity.push(projectsTopic);
 
+    const relationsCount = await this.relationService.getRelationsInOpportunityCount(
+      opportunity.id
+    );
+    const relationsTopic = new NVP('relations', relationsCount.toString());
+    activity.push(relationsTopic);
+
     return activity;
+  }
+
+  async getOpportunitiesInEcoverseCount(ecoverseID: string): Promise<number> {
+    return await this.opportunityRepository.count({
+      where: { ecoverseID: ecoverseID },
+    });
+  }
+
+  async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {
+    return await this.opportunityRepository.count({
+      where: { challenge: challengeID },
+    });
   }
 }

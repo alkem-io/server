@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { EcosystemModelService } from './ecosystem-model.service';
 import {
   EcosystemModel,
@@ -15,7 +14,6 @@ export class EcosystemModelAuthorizationService {
   constructor(
     private ecosystemModelService: EcosystemModelService,
     private authorizationDefinitionService: AuthorizationDefinitionService,
-    private authorizationEngine: AuthorizationEngineService,
     private actorGroupAuthorizationService: ActorGroupAuthorizationService,
     @InjectRepository(EcosystemModel)
     private ecosystemModelRepository: Repository<EcosystemModel>
@@ -24,8 +22,6 @@ export class EcosystemModelAuthorizationService {
   async applyAuthorizationRules(
     ecosystemModel: IEcosystemModel
   ): Promise<IEcosystemModel> {
-    // cascade
-
     for (const actorGroup of this.ecosystemModelService.getActorGroups(
       ecosystemModel
     )) {

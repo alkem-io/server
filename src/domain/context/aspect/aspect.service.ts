@@ -26,8 +26,7 @@ export class AspectService {
   async createAspect(aspectInput: CreateAspectInput): Promise<IAspect> {
     const aspect = Aspect.create(aspectInput);
     aspect.authorization = new AuthorizationDefinition();
-    await this.aspectRepository.save(aspect);
-    return aspect;
+    return await this.aspectRepository.save(aspect);
   }
 
   async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {

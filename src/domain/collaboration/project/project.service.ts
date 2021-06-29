@@ -166,11 +166,29 @@ export class ProjectService {
     return project.lifecycle;
   }
 
-  async getProjectsCount(ecoverseID: string): Promise<number> {
+  async getProjectsInEcoverseCount(ecoverseID: string): Promise<number> {
     const count = await this.projectRepository.count({
       where: { ecoverseID: ecoverseID },
     });
     return count;
+  }
+
+  async getProjectsInOpportunityCount(opportunityID: string): Promise<number> {
+    return await this.projectRepository.count({
+      where: { opportunity: opportunityID },
+    });
+  }
+
+  async getProjectsInChallengeCount(challengeID: string): Promise<number> {
+    return await this.projectRepository
+      .createQueryBuilder('project')
+      .leftJoinAndSelect('project.opportunity', 'opportunity')
+      .leftJoinAndSelect('opportunity.challenge', 'challenge')
+      .where('challenge.id = :challengeID')
+      .setParameters({
+        challengeID: challengeID,
+      })
+      .getCount();
   }
 
   async saveProject(project: IProject): Promise<IProject> {
