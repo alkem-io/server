@@ -8,7 +8,6 @@ import {
 } from '@common/enums';
 import { User, IUser } from '@domain/community/user';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import {
@@ -23,7 +22,6 @@ import { AuthorizationDefinitionService } from '@domain/common/authorization-def
 export class UserAuthorizationService {
   constructor(
     private authorizationDefinitionService: AuthorizationDefinitionService,
-    private authorizationEngine: AuthorizationEngineService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private agentService: AgentService,
     private userService: UserService,

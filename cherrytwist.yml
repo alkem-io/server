@@ -188,7 +188,7 @@ identity:
         database: ${JOLOCOM_MYSQL_DATABASE}:jolocom
 
         # Flag setting whether MySQL operations should be logged to the console.
-        logging: false
+        logging: ${JOLOCOM_ENABLE_ORM_LOGGING}:false
 
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
@@ -277,7 +277,7 @@ storage:
     database: ${MYSQL_DATABASE}:cherrytwist
 
     # Flag setting whether MySQL operations should be logged to the console.
-    logging: false
+    logging: ${ENABLE_ORM_LOGGING}:false
 
   # IPFS (https://ipfs.io/) configuration.
   ipfs:

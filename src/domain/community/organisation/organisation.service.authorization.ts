@@ -1,23 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IOrganisation, Organisation } from '@domain/community/organisation';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
-import {
-  AuthorizationDefinition,
-  IAuthorizationDefinition,
-} from '@domain/common/authorization-definition';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { AuthorizationRuleCredential } from '@domain/common/authorization-definition/authorization.rule.credential';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Injectable()
 export class OrganisationAuthorizationService {
   constructor(
     private authorizationDefinition: AuthorizationDefinitionService,
-    private authorizationEngine: AuthorizationEngineService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>
@@ -26,7 +22,8 @@ export class OrganisationAuthorizationService {
   async applyAuthorizationRules(
     organisation: IOrganisation
   ): Promise<IOrganisation> {
-    organisation.authorization = this.createAuthorizationDefinition(
+    organisation.authorization = this.updateAuthorizationDefinition(
+      organisation.authorization,
       organisation.id
     );
 
@@ -52,10 +49,16 @@ export class OrganisationAuthorizationService {
     return await this.organisationRepository.save(organisation);
   }
 
-  private createAuthorizationDefinition(
+  private updateAuthorizationDefinition(
+    authorization: IAuthorizationDefinition | undefined,
     organisationID: string
   ): IAuthorizationDefinition {
-    const authorization = new AuthorizationDefinition();
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for organisation: ${organisationID}`,
+        LogContext.COMMUNITY
+      );
+
     const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
@@ -104,11 +107,11 @@ export class OrganisationAuthorizationService {
     };
     newRules.push(organisationMember);
 
-    this.authorizationDefinition.appendCredentialAuthorizationRules(
+    const updatedAuthorization = this.authorizationDefinition.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );
 
-    return authorization;
+    return updatedAuthorization;
   }
 }
