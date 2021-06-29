@@ -13,13 +13,14 @@ import { CommunicationSendMessageCommunityInput } from './communication.dto.send
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
 import { IOperationalMatrixUser } from '../matrix/user/matrix.user.interface';
 import { ConfigService } from '@nestjs/config';
-import { MatrixManagementAgentElevated } from '../matrix/management/matrix.management.agent.elevated';
+import { MatrixAgentElevated } from '../matrix/management/matrix.management.agent.elevated';
 import { MatrixUserAdapterService } from '../matrix/user/matrix.user.adapter.service';
+import { MatrixAgentService } from '../matrix/agent-pool/matrix.agent.service';
 
 @Injectable()
 export class CommunicationService {
   private adminUser!: IOperationalMatrixUser;
-  private matrixElevatedAgent!: MatrixManagementAgentElevated;
+  private matrixElevatedAgent!: MatrixAgentElevated;
   private adminUserName!: string;
   private adminPassword!: string;
 
@@ -27,6 +28,7 @@ export class CommunicationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private userService: UserService,
+    private matrixAgentService: MatrixAgentService,
     private matrixAgentPool: MatrixAgentPool,
     private configService: ConfigService,
     private matrixUserManagementService: MatrixUserManagementService,
@@ -43,10 +45,10 @@ export class CommunicationService {
   async sendMsgCommunity(
     sendMsgData: CommunicationSendMessageCommunityInput
   ): Promise<string> {
-    const communicationService = await this.matrixAgentPool.acquire(
+    const matrixAgent = await this.matrixAgentPool.acquire(
       sendMsgData.sendingUserEmail
     );
-    await communicationService.message(sendMsgData.roomID, {
+    await this.matrixAgentService.message(matrixAgent, sendMsgData.roomID, {
       text: sendMsgData.message,
     });
 
@@ -56,16 +58,19 @@ export class CommunicationService {
   async sendMsgUser(
     sendMsgUserData: CommunicationSendMessageUserInput
   ): Promise<string> {
-    const communicationService = await this.matrixAgentPool.acquire(
+    const matrixAgent = await this.matrixAgentPool.acquire(
       sendMsgUserData.sendingUserEmail
     );
 
     // todo: not always reinitiate the room connection
-    const roomID = await communicationService.initiateMessagingToUser({
-      email: sendMsgUserData.receiverID,
-    });
+    const roomID = await this.matrixAgentService.initiateMessagingToUser(
+      matrixAgent,
+      {
+        email: sendMsgUserData.receiverID,
+      }
+    );
 
-    await communicationService.message(roomID, {
+    await this.matrixAgentService.message(matrixAgent, roomID, {
       text: sendMsgUserData.message,
     });
 
@@ -102,10 +107,9 @@ export class CommunicationService {
       return this.matrixElevatedAgent;
     }
 
-    this.matrixElevatedAgent = new MatrixManagementAgentElevated(
-      this.configService,
-      this.matrixUserAdapterService,
-      await this.getGlobalAdminUser()
+    const adminUser = await this.getGlobalAdminUser();
+    this.matrixElevatedAgent = await this.matrixAgentService.createMatrixAgentElevated(
+      adminUser
     );
     return this.matrixElevatedAgent;
   }
@@ -153,8 +157,8 @@ export class CommunicationService {
   }
 
   async getRooms(email: string): Promise<CommunicationRoomResult[]> {
-    const communicationService = await this.matrixAgentPool.acquire(email);
-    const roomResponse = await communicationService.getRooms();
+    const matrixAgent = await this.matrixAgentPool.acquire(email);
+    const roomResponse = await this.matrixAgentService.getRooms(matrixAgent);
     return await Promise.all(
       roomResponse.map(rr =>
         this.bootstrapRoom(rr.roomID, rr.isDirect, rr.receiverEmail, [])
@@ -166,13 +170,13 @@ export class CommunicationService {
     roomId: string,
     email: string
   ): Promise<CommunicationRoomDetailsResult> {
-    const communicationService = await this.matrixAgentPool.acquire(email);
+    const matrixAgent = await this.matrixAgentPool.acquire(email);
     const {
       roomID,
       isDirect,
       receiverEmail,
       timeline,
-    } = await communicationService.getRoom(roomId);
+    } = await this.matrixAgentService.getRoom(matrixAgent, roomId);
 
     const room = await this.bootstrapRoom(
       roomID,

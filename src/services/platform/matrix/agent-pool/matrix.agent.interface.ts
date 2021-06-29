@@ -1,3 +1,7 @@
+import { MatrixGroupEntityAdapter, MatrixRoomEntityAdapter } from '../adapter';
+import { MatrixEventDispatcher } from '../events/matrix.event.dispatcher';
+import { MatrixClient } from './matrix.client.types';
+
 export interface IMessageRequest {
   text: string;
 }
@@ -16,25 +20,8 @@ export interface IResponseMessage {
 }
 
 export interface IMatrixAgent {
-  getCommunities(): Promise<any[]>;
-  getRooms(): Promise<any[]>;
-  getUserMessages(
-    email: string
-  ): Promise<{
-    roomId: string | null;
-    name: string | null;
-    timeline: IResponseMessage[];
-  }>;
-  getCommunityMessages(
-    communityId: string
-  ): Promise<{
-    roomId: string | null;
-    name: string | null;
-    timeline: IResponseMessage[];
-  }>;
-  initiateMessagingToUser(
-    content: IInitiateDirectMessageRequest
-  ): Promise<string>;
-  message(room: string, content: IMessageRequest): Promise<void>;
-  messageCommunity(content: ICommunityMessageRequest): Promise<string>;
+  matrixClient: MatrixClient;
+  roomEntityAdapter: MatrixRoomEntityAdapter;
+  groupEntityAdapter: MatrixGroupEntityAdapter;
+  eventDispatcher: MatrixEventDispatcher;
 }

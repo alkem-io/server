@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
-import { MatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent';
-import { MatrixUserAdapterService } from '../user/matrix.user.adapter.service';
+import { MatrixAgent } from './matrix.agent';
+import { MatrixAgentService } from './matrix.agent.service';
 
 @Injectable()
 export class MatrixAgentPool {
@@ -11,9 +10,8 @@ export class MatrixAgentPool {
   private _sessions: Record<string, string>;
 
   constructor(
-    private configService: ConfigService,
-    private matrixUserService: MatrixUserManagementService,
-    private matrixUserAdapterService: MatrixUserAdapterService
+    private matrixAgentService: MatrixAgentService,
+    private matrixUserService: MatrixUserManagementService
   ) {
     /* TODO
       - need to create sliding expiration mechanism
@@ -27,9 +25,7 @@ export class MatrixAgentPool {
   async acquire(email: string, session?: string): Promise<MatrixAgent> {
     if (!this._wrappers[email]) {
       const operatingUser = await this.acquireUser(email);
-      const client = new MatrixAgent(
-        this.configService,
-        this.matrixUserAdapterService,
+      const client = await this.matrixAgentService.createMatrixAgent(
         operatingUser
       );
       await client.start();
