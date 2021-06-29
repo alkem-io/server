@@ -43,6 +43,7 @@ import { IAgent } from '@domain/agent/agent';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { ProjectService } from '@domain/collaboration/project/project.service';
 
 @Injectable()
 export class ChallengeService {
@@ -50,6 +51,7 @@ export class ChallengeService {
     private agentService: AgentService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
+    private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
@@ -441,7 +443,6 @@ export class ChallengeService {
       where: { parentChallenge: challengeID },
     });
   }
-
   async getMembersCount(challenge: IChallenge): Promise<number> {
     const community = await this.getCommunity(challenge.id);
     return await this.communityService.getMembersCount(community);
@@ -449,11 +450,26 @@ export class ChallengeService {
 
   async getActivity(challenge: IChallenge): Promise<INVP[]> {
     const activity: INVP[] = [];
-    const community = await this.getCommunity(challenge.id);
 
+    const community = await this.getCommunity(challenge.id);
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     activity.push(membersTopic);
+
+    const opportunitiesCount = await this.opportunityService.getOpportunitiesInChallengeCount(
+      challenge.id
+    );
+    const opportunitiesTopic = new NVP(
+      'opportunities',
+      opportunitiesCount.toString()
+    );
+    activity.push(opportunitiesTopic);
+
+    const projectsCount = await this.projectService.getProjectsInChallengeCount(
+      challenge.id
+    );
+    const projectsTopic = new NVP('projects', projectsCount.toString());
+    activity.push(projectsTopic);
 
     const challengesCount = await this.getChildChallengesCount(challenge.id);
     const challengesTopic = new NVP('challenges', challengesCount.toString());

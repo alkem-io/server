@@ -17,6 +17,7 @@ import { ChallengeAuthorizationService } from '@domain/challenge/challenge/chall
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ProjectModule } from '@domain/collaboration/project/project.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     OrganisationModule,
     NamingModule,
     LifecycleModule,
+    ProjectModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [

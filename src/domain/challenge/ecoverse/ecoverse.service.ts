@@ -349,7 +349,7 @@ export class EcoverseService {
     activity.push(opportunitiesTopic);
 
     // Projects
-    const projectsCount = await this.projectService.getProjectsCount(
+    const projectsCount = await this.projectService.getProjectsInEcoverseCount(
       ecoverse.id
     );
     const projectsTopic = new NVP('projects', projectsCount.toString());

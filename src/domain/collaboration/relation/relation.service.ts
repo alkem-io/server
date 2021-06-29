@@ -86,4 +86,10 @@ export class RelationService {
   async saveRelation(relation: IRelation): Promise<IRelation> {
     return await this.relationRepository.save(relation);
   }
+
+  async getRelationsInOpportunityCount(opportunityID: string): Promise<number> {
+    return await this.relationRepository.count({
+      where: { opportunity: opportunityID },
+    });
+  }
 }
