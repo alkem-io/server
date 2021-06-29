@@ -129,7 +129,6 @@ export class ProfileService {
       profile,
       tagsetData
     );
-    tagset.authorization = profile.authorization;
 
     await this.profileRepository.save(profile);
 
@@ -156,7 +155,6 @@ export class ProfileService {
     const newReference = await this.referenceService.createReference(
       referenceInput
     );
-    newReference.authorization = profile.authorization;
 
     await profile.references.push(newReference as Reference);
     await this.profileRepository.save(profile);
