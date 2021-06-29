@@ -80,7 +80,7 @@ export class MatrixAgentService {
       userID => dmRoomMap[userID].indexOf(roomId) !== -1
     );
 
-    const room = await this.getRoom(matrixAgent, roomId);
+    const room = await matrixAgent.matrixClient.getRoom(roomId);
 
     return {
       roomID: room.roomId,
