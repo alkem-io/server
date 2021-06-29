@@ -129,7 +129,6 @@ export class ProfileService {
       profile,
       tagsetData
     );
-    tagset.authorization = profile.authorization;
 
     await this.profileRepository.save(profile);
 
