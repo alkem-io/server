@@ -246,6 +246,10 @@ communications:
     shared:
       # Synapse shared secret, defined in homeserver.yaml on the Synapse instance.
       secret: ${SYNAPSE_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+    admin:
+      # The admin account that is created / used to administer the regular users on the Synapse server
+      username: ${SYNAPSE_ADMIN_USERNAME}:matrixadmin@cherrytwist.org
+      password: ${SYNAPSE_ADMIN_PASSWORD}:change_me_now
 
 ## storage ##
 # Cherrytwist uses multiple types of persistent storage, including SQL database and IPFS.

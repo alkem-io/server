@@ -3,12 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
 import { MatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.service';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { MatrixIdentifierAdapter } from '../user/matrix.user.identifier.adapter';
+import { MatrixUserAdapterService } from '../user/matrix.user.adapter.service';
 import { CommunicationsSynapseEndpoint } from '@common/enums/communications.synapse.endpoint';
-import {
-  IMatrixUser,
-  IOperationalMatrixUser,
-} from '../user/matrix.user.interface';
+import { IOperationalMatrixUser } from '../user/matrix.user.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixClient } from '../agent-pool/matrix.client.types';
 import { MatrixUserLoginException } from '@common/exceptions/matrix.login.exception';
@@ -24,6 +21,7 @@ export class MatrixUserManagementService {
     private readonly logger: LoggerService,
     private configService: ConfigService,
     private cryptographyServive: MatrixCryptographyService,
+    private matrixUserAdapterService: MatrixUserAdapterService,
     private httpService: HttpService
   ) {
     this.idBaseUrl = this.configService.get(
@@ -47,20 +45,24 @@ export class MatrixUserManagementService {
 
   async register(
     email: string,
+    password?: string,
     isAdmin = false
   ): Promise<IOperationalMatrixUser> {
     const url = new URL(
       CommunicationsSynapseEndpoint.REGISTRATION,
       this.baseUrl
     );
-    const user = this.convertIdToMatrixUser(email);
+    const user = this.matrixUserAdapterService.convertEmailToMatrixUser(
+      email,
+      password
+    );
 
     const nonceResponse = await this.httpService
       .get<{ nonce: string }>(url.href)
       .toPromise();
     const nonce = nonceResponse.data['nonce'];
     this.logger.verbose?.(
-      `registering user for email '${email}' with nonce: ${nonce}`,
+      `Registering user for email '${email}' with nonce: ${nonce}`,
       LogContext.COMMUNICATION
     );
 
@@ -93,15 +95,20 @@ export class MatrixUserManagementService {
       username: registrationResponse.data.user_id,
       accessToken: registrationResponse.data.access_token,
     };
-    this.logger.verbose?.(
-      `registered user: '${JSON.stringify(operationalUser)}'`,
-      LogContext.COMMUNICATION
-    );
+    let msg = 'User registration';
+    if (isAdmin) msg = 'Admin registration';
+    this.matrixUserAdapterService.logMatrixUser(operationalUser, msg);
     return operationalUser;
   }
 
-  async login(email: string): Promise<IOperationalMatrixUser> {
-    const matrixUser = this.convertIdToMatrixUser(email);
+  async login(
+    email: string,
+    password?: string
+  ): Promise<IOperationalMatrixUser> {
+    const matrixUser = this.matrixUserAdapterService.convertEmailToMatrixUser(
+      email,
+      password
+    );
 
     try {
       const operationalUser = await this._matrixClient.loginWithPassword(
@@ -115,8 +122,9 @@ export class MatrixUserManagementService {
         accessToken: operationalUser.access_token,
       };
     } catch (error) {
+      this.matrixUserAdapterService.logMatrixUser(matrixUser, 'login failed');
       throw new MatrixUserLoginException(
-        `login for user for email '${email}' failed: ${error}`,
+        `Error: ${error}`,
         LogContext.COMMUNICATION
       );
     }
@@ -144,7 +152,7 @@ export class MatrixUserManagementService {
   }
 
   async isRegistered(email: string): Promise<boolean> {
-    const username = MatrixIdentifierAdapter.email2username(email);
+    const username = this.matrixUserAdapterService.email2username(email);
 
     try {
       await this._matrixClient.isUsernameAvailable(username);
@@ -153,15 +161,5 @@ export class MatrixUserManagementService {
       // unfortunately instead of returning false the method throws exception
       return true;
     }
-  }
-
-  private convertIdToMatrixUser(email: string): IMatrixUser {
-    const hostName = this.configService.get(ConfigurationTypes.Communications)
-      ?.matrix?.server?.hostname;
-    return {
-      name: MatrixIdentifierAdapter.email2username(email),
-      username: MatrixIdentifierAdapter.email2id(email, hostName),
-      password: 'generated_password',
-    };
   }
 }

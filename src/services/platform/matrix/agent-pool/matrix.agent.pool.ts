@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
 import { MatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent';
+import { MatrixUserAdapterService } from '../user/matrix.user.adapter.service';
 
 @Injectable()
 export class MatrixAgentPool {
@@ -11,7 +12,8 @@ export class MatrixAgentPool {
 
   constructor(
     private configService: ConfigService,
-    private matrixUserService: MatrixUserManagementService
+    private matrixUserService: MatrixUserManagementService,
+    private matrixUserAdapterService: MatrixUserAdapterService
   ) {
     /* TODO
       - need to create sliding expiration mechanism
@@ -25,7 +27,11 @@ export class MatrixAgentPool {
   async acquire(email: string, session?: string): Promise<MatrixAgent> {
     if (!this._wrappers[email]) {
       const operatingUser = await this.acquireUser(email);
-      const client = new MatrixAgent(this.configService, operatingUser);
+      const client = new MatrixAgent(
+        this.configService,
+        this.matrixUserAdapterService,
+        operatingUser
+      );
       await client.start();
 
       this._wrappers[email] = client;
