@@ -31,6 +31,7 @@ import { ICredential } from '@domain/agent/credential';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
 import { CommunicationRoomDetailsResult } from '@services/platform/communication/communication.dto.room.result';
+import { CommunitySendMessageInput } from './community.dto.send.msg';
 
 @Injectable()
 export class CommunityService {
@@ -342,10 +343,33 @@ export class CommunityService {
     if (community.communicationRoomID === '') {
       communityWithRoom = await this.initializeCommunicationsRoom(community);
     }
+    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
+      community.communicationGroupID,
+      community.communicationRoomID,
+      email
+    );
+
     const result = await this.communicationService.getRoom(
       communityWithRoom.communicationRoomID,
       email
     );
     return result;
+  }
+
+  async sendMessageToCommunity(
+    community: ICommunity,
+    email: string,
+    msgData: CommunitySendMessageInput
+  ): Promise<string> {
+    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
+      community.communicationGroupID,
+      community.communicationRoomID,
+      email
+    );
+    return await this.communicationService.sendMsgCommunity({
+      sendingUserEmail: email,
+      message: msgData.message,
+      roomID: (community as Community).communicationRoomID,
+    });
   }
 }

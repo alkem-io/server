@@ -152,14 +152,31 @@ export class CommunicationService {
     return room;
   }
 
+  async ensureUserHasAccesToCommunityMessaging(
+    groupID: string,
+    roomID: string,
+    email: string
+  ) {
+    // todo: check that the user has access properly
+    try {
+      await this.addUserToCommunityMessaging(groupID, roomID, email);
+    } catch (error) {
+      this.logger.verbose?.(
+        `Unable to add user ${email}: already added?: ${error}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
   async addUserToCommunityMessaging(
     groupID: string,
     roomID: string,
     email: string
   ) {
+    const matrixUsername = this.matrixUserAdapterService.email2id(email);
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    elevatedAgent.addUserToCommunityGroup(groupID, email);
-    elevatedAgent.addUserToCommunityRoom(roomID, email);
+    elevatedAgent.addUserToCommunityGroup(groupID, matrixUsername);
+    elevatedAgent.addUserToCommunityRoom(roomID, matrixUsername);
   }
 
   async getRooms(email: string): Promise<CommunicationRoomResult[]> {

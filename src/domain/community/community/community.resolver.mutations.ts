@@ -14,7 +14,6 @@ import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '@domain/community/application/application.service';
 import {
   AssignCommunityMemberInput,
-  Community,
   ICommunity,
   RemoveCommunityMemberInput,
 } from '@domain/community/community';
@@ -27,7 +26,6 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { CommunitySendMessageInput } from './community.dto.send.msg';
-import { CommunicationService } from '@services/platform/communication/communication.service';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -36,7 +34,6 @@ export class CommunityResolverMutations {
     private userService: UserService,
     private userGroupService: UserGroupService,
     private communityService: CommunityService,
-    private communicationService: CommunicationService,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService
@@ -227,11 +224,10 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `community send message: ${community.displayName}`
     );
-
-    return await this.communicationService.sendMsgCommunity({
-      sendingUserEmail: agentInfo.email,
-      message: msgData.message,
-      roomID: (community as Community).communicationRoomID,
-    });
+    return await this.communityService.sendMessageToCommunity(
+      community,
+      agentInfo.email,
+      msgData
+    );
   }
 }
