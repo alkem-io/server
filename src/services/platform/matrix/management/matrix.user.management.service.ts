@@ -7,7 +7,7 @@ import { MatrixUserAdapterService } from '../user/matrix.user.adapter.service';
 import { CommunicationsSynapseEndpoint } from '@common/enums/communications.synapse.endpoint';
 import { IOperationalMatrixUser } from '../user/matrix.user.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MatrixClient } from '../agent-pool/matrix.client.types';
+import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixUserLoginException } from '@common/exceptions/matrix.login.exception';
 import { MatrixUserRegistrationException } from '@common/exceptions/matrix.registration.exception';
 @Injectable()

@@ -1,6 +1,4 @@
-// Brings typing to the objects that are returned from the Matrix JS SDK.
-
-export type eventHandler = (args0?: any, args1?: any, args2?: any) => void;
+import { MatrixEventHandler } from './matrix.event.handler.type';
 
 export type MatrixClient = {
   startClient: () => void;
@@ -25,8 +23,8 @@ export type MatrixClient = {
     _: string
   ) => void;
 
-  on: (type: string, handler: eventHandler) => void;
-  off: (type: string, handler: eventHandler) => void;
+  on: (type: string, handler: MatrixEventHandler) => void;
+  off: (type: string, handler: MatrixEventHandler) => void;
 
   credentials: any;
 };

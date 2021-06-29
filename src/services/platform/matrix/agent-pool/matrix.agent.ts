@@ -6,9 +6,9 @@ import {
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import { AutoAcceptRoomMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adpater.room';
 import { MatrixGroupEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.group';
-import { MatrixClient } from '@src/services/platform/matrix/agent-pool/matrix.client.types';
 import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.room';
 import { IMatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent.interface';
+import { MatrixClient } from '../types/matrix.client.type';
 
 export class MatrixAgent implements IMatrixAgent, Disposable {
   matrixClient: MatrixClient;

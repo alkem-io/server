@@ -6,14 +6,15 @@ import {
   ICommunityMessageRequest,
   IInitiateDirectMessageRequest,
   IMessageRequest,
-  IResponseMessage,
 } from '@src/services/platform/matrix/agent-pool';
 import { IMatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent.interface';
 import { IOperationalMatrixUser } from '../user/matrix.user.interface';
 import { MatrixUserAdapterService } from '../user/matrix.user.adapter.service';
 import { MatrixAgent } from './matrix.agent';
-import { MatrixClient } from './matrix.client.types';
+import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixAgentElevated } from '../management/matrix.management.agent.elevated';
+import { MatrixResponseMessage } from '../types/matrix.response.message.type';
+import { MatrixRoom } from '../types/matrix.room.type';
 @Injectable()
 export class MatrixAgentService {
   constructor(
@@ -93,13 +94,8 @@ export class MatrixAgentService {
   async getMessages(
     matrixAgent: IMatrixAgent,
     roomId: string
-  ): Promise<{ roomId: string; name: string; timeline: IResponseMessage[] }> {
-    const room = await this.getRoom(matrixAgent, roomId);
-    return {
-      roomId: room.roomId,
-      name: room.name,
-      timeline: room.timeline,
-    };
+  ): Promise<MatrixRoom> {
+    return await this.getRoom(matrixAgent, roomId);
   }
 
   async getUserMessages(
@@ -108,7 +104,7 @@ export class MatrixAgentService {
   ): Promise<{
     roomId: string | null;
     name: string | null;
-    timeline: IResponseMessage[];
+    timeline: MatrixResponseMessage[];
   }> {
     const matrixUsername = this.matrixUserAdapterService.email2id(email);
     // Need to implement caching for performance
@@ -135,7 +131,7 @@ export class MatrixAgentService {
   ): Promise<{
     roomId: string | null;
     name: string | null;
-    timeline: IResponseMessage[];
+    timeline: MatrixResponseMessage[];
   }> {
     const communityRoomIds = matrixAgent.groupEntityAdapter.communityRooms()[
       communityId

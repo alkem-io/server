@@ -1,6 +1,6 @@
 import { IOpts as GroupOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.group.interface';
 import { IRoomOpts as RoomOpts } from '@src/services/platform/matrix/adapter/matrix.adapter.room.interface';
-import { MatrixClient } from '../agent-pool/matrix.client.types';
+import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixAgent } from '../agent-pool/matrix.agent';
 
 export class MatrixAgentElevated extends MatrixAgent {

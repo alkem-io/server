@@ -1,11 +1,8 @@
 import { Disposable } from '@interfaces/disposable.interface';
 import { EventEmitter } from 'events';
 import { fromEvent, Observable, Observer, Subscription } from 'rxjs';
-import {
-  eventHandler,
-  MatrixClient,
-} from '@src/services/platform/matrix/agent-pool/matrix.client.types';
-
+import { MatrixClient } from '../types/matrix.client.type';
+import { MatrixEventHandler } from '../types/matrix.event.handler.type';
 export interface IMatrixEventDispatcher {
   syncMonitor?: Observable<{ syncState: string; oldSyncState: string }>;
   roomMonitor?: Observable<any>;
@@ -66,7 +63,7 @@ export class MatrixEventDispatcher
   private initMonitor<T>(
     event: string,
     handler: keyof IMatrixEventDispatcher,
-    monitor: eventHandler
+    monitor: MatrixEventHandler
   ) {
     monitor = monitor.bind(this);
     this._client.on(event, monitor);
