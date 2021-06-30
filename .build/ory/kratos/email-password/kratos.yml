@@ -16,6 +16,9 @@ selfservice:
     - http://localhost:3000
 
   methods:
+    link:
+      enabled: true
+
     password:
       enabled: true
     oidc:
@@ -62,9 +65,11 @@ selfservice:
       lifespan: 10m
       ui_url: http://localhost:3000/auth/registration
       after:
-        password:
-          hooks:
-            - hook: session
+        default_browser_return_url: https://localhost:3000/check-email
+      # Remove auto log in after registration - wait for verification
+      #   password:
+      #     hooks:
+      #       - hook: session
 
 log:
   level: debug
@@ -89,3 +94,5 @@ identity:
 courier:
   smtp:
     connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true
+    from_name: Bob
+    from_address: info@alkem.io
