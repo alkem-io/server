@@ -1,7 +1,7 @@
 version: '3.7'
 
 networks:
-  ct_dev_net:
+  alkemio_dev_net:
     driver: bridge
     ipam:
       driver: default
@@ -10,14 +10,14 @@ networks:
           gateway: 192.168.10.1
 
 volumes:
-  ct_dev_mysql_db:
+  alkemio_dev_mysql_db:
 
 services:
   mysql_db:
-    container_name: ct_dev_mysql_db
+    container_name: alkemio_dev_mysql_db
     image: mysql:8.0.11
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
     environment:
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
@@ -25,12 +25,12 @@ services:
     ports:
       - 3306:3306
     volumes:
-      - ct_dev_mysql_db:/var/lib/mysql
+      - alkemio_dev_mysql_db:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
     command: --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
-    container_name: ct_dev_kratos_migrate
+    container_name: alkemio_dev_kratos_migrate
     image: oryd/kratos:v0.6.1-alpha.1
     depends_on:
       - mysql_db
@@ -38,7 +38,7 @@ services:
       - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
     restart: on-failure
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
     volumes:
     - type: bind
       source: ./.build/ory/kratos/email-password
@@ -46,7 +46,7 @@ services:
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
 
   kratos:
-    container_name: ct_dev_kratos
+    container_name: alkemio_dev_kratos
     image: oryd/kratos:v0.6.1-alpha.1
     depends_on:
       - kratos-migrate
@@ -59,7 +59,7 @@ services:
       - LOG_LEVEL=trace
       - SERVE_PUBLIC_BASE_URL=http://localhost:4433/
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
     volumes:
     - type: bind
       source: ./.build/ory/kratos/email-password
@@ -67,7 +67,7 @@ services:
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
 
   oathkeeper:
-    container_name: ct_dev_oathkeeper
+    container_name: alkemio_dev_oathkeeper
     image: oryd/oathkeeper:v0.38
     depends_on:
       - kratos
@@ -78,25 +78,25 @@ services:
       - LOG_LEVEL=debug
     restart: on-failure
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
     volumes:
       - ./.build/ory/oathkeeper:/etc/config/oathkeeper
     command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
 
   mailslurper:
-    container_name: ct_dev_kratos_mailslurper
+    container_name: alkemio_dev_kratos_mailslurper
     image: oryd/mailslurper:latest-smtps
     ports:
       - '4436:4436'
       - '4437:4437'
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
 
   ipfs:
-    container_name: ct_dev_ipfs
+    container_name: alkemio_dev_ipfs
     image: ipfs/go-ipfs
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
     restart: always
     ports:
       - 4001:4001/tcp
@@ -107,7 +107,7 @@ services:
       - /tmp/ipfs-docker-data:/data/ipfs
 
   synapse:
-    container_name: ct_dev_synapse
+    container_name: alkemio_dev_synapse
     image: matrixdotorg/synapse:v1.36.0
     restart: always
     environment:
@@ -116,7 +116,7 @@ services:
       - SYNAPSE_ENABLE_REGISTRATION
       - SYNAPSE_REGISTRATION_SHARED_SECRET
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
     ports:
       - 8008:8008
     volumes:

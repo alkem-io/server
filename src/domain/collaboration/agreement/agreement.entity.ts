@@ -5,10 +5,10 @@ import {
   RestrictedTagsetNames,
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
-import { BaseCherrytwistEntity } from '@domain/common/entity/base-entity';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 
 @Entity()
-export class Agreement extends BaseCherrytwistEntity implements IAgreement {
+export class Agreement extends BaseAlkemioEntity implements IAgreement {
   @Column()
   name: string;
 

@@ -14,7 +14,7 @@ export abstract class IConfig {
 
   @Field(() => Template, {
     nullable: false,
-    description: 'Cherrytwist template configuration.',
+    description: 'Alkemio template configuration.',
   })
   template?: ITemplate;
 

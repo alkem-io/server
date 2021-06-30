@@ -1,6 +1,6 @@
-# Cherrytwist Server Configuration
+# Alkemio Server Configuration
 
-This document provides an overview of data management within the Cherrytwist Server.
+This document provides an overview of data management within the Alkemio Server.
 
 ## Migrations
 
@@ -36,7 +36,7 @@ npm run migration:show
 
 ## MySQL Server
 
-The server used by Cherrytwist is MySql.
+The server used by Alkemio is MySql.
 
 There is specific configuration for version 8 which needs to be specified if not using the pre-supplied docker setup.
 
@@ -66,7 +66,7 @@ docker run --name some-mysql \
 
 ### Data Management
 
-For evaluation / development with the Cherrytwist server, there is also a simple Data Management panel, available at the following URL: <http://localhost:4000/data-management>.
+For evaluation / development with the Alkemio server, there is also a simple Data Management panel, available at the following URL: <http://localhost:4000/data-management>.
 
 The Data Management panel provides the following capabilities:
 

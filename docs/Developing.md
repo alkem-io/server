@@ -1,6 +1,6 @@
 # Developing with the server
 
-The easiest way to get going with custom development of the Cherrytwist Server is to leverage the Docker Compose script as detailed in the [Running the server](Running.md) document.
+The easiest way to get going with custom development of the Alkemio Server is to leverage the Docker Compose script as detailed in the [Running the server](Running.md) document.
 
 In this setup you are then using the docker composed stack for:
 
@@ -25,7 +25,7 @@ npm install
 npm start
 ```
 
-There should now be a [running Cherrytwist server](http://localhost:4000/graphql)!
+There should now be a [running Alkemio server](http://localhost:4000/graphql)!
 
 ## MySQL Database
 
@@ -57,7 +57,7 @@ Login with demo auth provider and extract the access token:
 token=$( curl \
   --header "Content-Type: application/json" \
   --request POST \
-  --data  '{"username":"admin@cherrytwist.org", "password":"cherrytwist"}' \
+  --data  '{"username":"admin@alkem.io", "password":"alkemio"}' \
   http://localhost:3003/auth/login \
   | jq -r .access_token )
 ```
@@ -69,9 +69,9 @@ curl localhost:4000/graphql \
  -H "Authorization: Bearer $token" \
  -F operations='{"query":"mutation UploadFile($file:Upload!) {uploadFile(file:$file)}", "variables": { "file": null }}' \
  -F map='{ "0": ["variables.file"] }' \
- -F 0=@"./uploads/hello-cherrytwist.txt"
+ -F 0=@"./uploads/hello-alkemio.txt"
 ```
 
 You should get a response: {"data":{"uploadFile":"https://ipfs.io/ipfs/QmYt9ypyGsR1BKdaCGPdwdBgAiuXK5AYN2bGSNZov7YXuk"}}.
 This file should be accessible (assuming default IPFS installation) on http://localhost:8080/ipfs/QmYt9ypyGsR1BKdaCGPdwdBgAiuXK5AYN2bGSNZov7YXuk or on a public IPFS on https://ipfs.io/ipfs/QmYt9ypyGsR1BKdaCGPdwdBgAiuXK5AYN2bGSNZov7YXuk.
-If the upload worked, you should see 'Hello Cherrytwist!' in the browser :)
+If the upload worked, you should see 'Hello Alkemio!' in the browser :)

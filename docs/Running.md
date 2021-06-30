@@ -1,6 +1,6 @@
 # Running the server using containers (docker-compose and docker)
 
-The Cherrytwist platform is a micro-services architecture, which implies that typically multiple dependencies are needed to run the Server.
+The Alkemio platform is a micro-services architecture, which implies that typically multiple dependencies are needed to run the Server.
 
 To simplify setting up the Server development environment, a pre-configured docker compose script is provided.
 
@@ -21,7 +21,7 @@ To simplify setting up the Server development environment, a pre-configured dock
    up --build --force-recreate
    ```
 
-   if you'd like to debug cherrytwist server and only need the dependent services, run:
+   if you'd like to debug alkemio server and only need the dependent services, run:
 
    ```bash
     docker-compose \
@@ -35,7 +35,7 @@ To simplify setting up the Server development environment, a pre-configured dock
 ## Notes
 
 - The docker compose script puts the server listening on port 4001 - to avoid conflict with the default port that is used by local development.
-- The server will be empty after initially being created. To populate the Server with some sample data please use the [Cherrytwist Populator](http://github.com/cherrytwist/Populator) tool which allows easy population from a local file. Please remember to specify the correct port to connect to!
+- The server will be empty after initially being created. To populate the Server with some sample data please use the [Alkemio Populator](http://github.com/alkem-io/Populator) tool which allows easy population from a local file. Please remember to specify the correct port to connect to!
 - In order to use matrix synapse server, run from the root folder:
 
 ```bash

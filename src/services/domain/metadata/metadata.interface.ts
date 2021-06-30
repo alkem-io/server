@@ -6,7 +6,7 @@ import { IServiceMetadata } from './service';
 export abstract class IMetadata {
   @Field(() => [IServiceMetadata], {
     nullable: false,
-    description: 'Collection of metadata about Cherrytwist services.',
+    description: 'Collection of metadata about Alkemio services.',
   })
   services?: IServiceMetadata[];
 

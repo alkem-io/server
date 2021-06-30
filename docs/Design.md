@@ -1,6 +1,6 @@
 # Design
 
-Cherrytwist Server uses [NestJS](https://nestjs.com/) as framework and complies to its principles. The code is split into Data Layer (entities), Data Access Layer, Service Layer and an API Layer (GraphQL).
+Alkemio Server uses [NestJS](https://nestjs.com/) as framework and complies to its principles. The code is split into Data Layer (entities), Data Access Layer, Service Layer and an API Layer (GraphQL).
 Interactions between different layers is depicted in the Layer Diagram below:
 
 ![Layer Diagram](images/ct-server-layer-diagram.png)
