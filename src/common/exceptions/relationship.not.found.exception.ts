@@ -1,8 +1,8 @@
-import { LogContext, CherrytwistErrorStatus } from '@common/enums';
+import { LogContext, AlkemioErrorStatus } from '@common/enums';
 import { BaseException } from './base.exception';
 
 export class RelationshipNotFoundException extends BaseException {
   constructor(error: string, context: LogContext) {
-    super(error, context, CherrytwistErrorStatus.RELATION_NOT_LOADED);
+    super(error, context, AlkemioErrorStatus.RELATION_NOT_LOADED);
   }
 }

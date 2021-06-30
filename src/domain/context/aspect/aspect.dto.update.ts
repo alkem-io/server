@@ -1,10 +1,10 @@
-import { UpdateBaseCherrytwistInput } from '@domain/common/entity/base-entity';
+import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 import { InputType, Field } from '@nestjs/graphql';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class UpdateAspectInput extends UpdateBaseCherrytwistInput {
+export class UpdateAspectInput extends UpdateBaseAlkemioInput {
   @Field({ nullable: true })
   @MaxLength(MID_TEXT_LENGTH)
   title?: string;

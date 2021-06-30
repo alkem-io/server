@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
+import { Args, Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { Organisation } from './organisation.entity';
 import { OrganisationService } from './organisation.service';
@@ -16,11 +16,14 @@ import { IProfile } from '@domain/community/profile';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAgent } from '@domain/agent/agent';
+import { UUID } from '@domain/common/scalars';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
 @Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
   constructor(
     private authorizationEngine: AuthorizationEngineService,
-    private organisationService: OrganisationService
+    private organisationService: OrganisationService,
+    private groupService: UserGroupService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -45,6 +48,22 @@ export class OrganisationResolverFields {
         LogContext.COMMUNITY
       );
     return groups;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('group', () => IUserGroup, {
+    nullable: true,
+    description: 'Group defined on this organisation.',
+  })
+  @Profiling.api
+  async group(
+    @Parent() organisation: Organisation,
+    @Args('ID', { type: () => UUID }) groupID: string
+  ): Promise<IUserGroup> {
+    return await this.groupService.getUserGroupOrFail(groupID, {
+      where: { organisation: organisation },
+    });
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

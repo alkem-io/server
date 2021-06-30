@@ -15,7 +15,7 @@ query variables:
 {
   "organisationData":
   {
-    "nameID": "CherrytwistOrg",
-    "displayName": "Stichting Cherrytwist"
+    "nameID": "AlkemioOrg",
+    "displayName": "Stichting Alkemio"
   }
 }

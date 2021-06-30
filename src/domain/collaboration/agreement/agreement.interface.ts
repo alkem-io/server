@@ -1,9 +1,9 @@
-import { IBaseCherrytwist } from '@domain/common/entity/base-entity';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { ITagset } from '@domain/common/tagset';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Agreement')
-export abstract class IAgreement extends IBaseCherrytwist {
+export abstract class IAgreement extends IBaseAlkemio {
   @Field(() => String)
   name?: string;
 

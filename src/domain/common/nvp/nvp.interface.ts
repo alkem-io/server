@@ -1,8 +1,8 @@
-import { IBaseCherrytwist } from '@domain/common/entity/base-entity';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('NVP')
-export abstract class INVP extends IBaseCherrytwist {
+export abstract class INVP extends IBaseAlkemio {
   @Field(() => String)
   name!: string;
 

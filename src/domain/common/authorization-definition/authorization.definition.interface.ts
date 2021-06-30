@@ -1,8 +1,8 @@
-import { IBaseCherrytwist } from '@domain/common/entity/base-entity';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Authorization')
-export abstract class IAuthorizationDefinition extends IBaseCherrytwist {
+export abstract class IAuthorizationDefinition extends IBaseAlkemio {
   @Field(() => Boolean)
   anonymousReadAccess!: boolean;
 

@@ -1,9 +1,9 @@
 import { Column, Entity } from 'typeorm';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { BaseCherrytwistEntity } from '@domain/common/entity/base-entity';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 
 @Entity()
-export class NVP extends BaseCherrytwistEntity implements INVP {
+export class NVP extends BaseAlkemioEntity implements INVP {
   constructor();
   constructor(name: string);
   constructor(name: string, value: string);

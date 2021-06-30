@@ -8,7 +8,7 @@ export class ConfigResolver {
   @Query(() => IConfig, {
     nullable: false,
     description:
-      'Cherrytwist configuration. Provides configuration to external services in the Cherrytwist ecosystem.',
+      'Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.',
   })
   async configuration(): Promise<IConfig> {
     const config = await this.configService.getConfig();

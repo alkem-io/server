@@ -1,9 +1,9 @@
-import { IBaseCherrytwist } from '@domain/common/entity/base-entity';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import JSON from 'graphql-type-json';
 
 @ObjectType('Lifecycle')
-export abstract class ILifecycle extends IBaseCherrytwist {
+export abstract class ILifecycle extends IBaseAlkemio {
   machineState?: string;
 
   @Field(() => JSON, {
