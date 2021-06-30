@@ -10,3 +10,6 @@ export * from './relationship.not.found.exception';
 export * from './token.exception';
 export * from './validation.exception';
 export * from './registration.exception';
+export * from './matrix.agent.pool.exception';
+export * from './matrix.login.exception';
+export * from './matrix.registration.exception';

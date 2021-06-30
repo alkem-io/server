@@ -8,3 +8,4 @@ export * from './authorization.credential.global';
 export * from './challenge.lifecycle.template';
 export * from './authorization.privilege';
 export * from './authorization.verified.credential';
+export * from './communications.synapse.endpoint';

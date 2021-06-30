@@ -60,3 +60,6 @@ web_modules/
 
 # Jolocom tmp db
 *.sqlite[3]
+
+# Ignores homeserver.db file
+**/*.db

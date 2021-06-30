@@ -120,4 +120,6 @@ services:
     ports:
       - 8008:8008
     volumes:
-      - /var/docker_data/matrix:/data
+      - type: bind
+        source: ./.build/synapse
+        target: /data

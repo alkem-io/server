@@ -13,6 +13,7 @@ import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { CommunicationModule } from '@services/platform/communication/communication.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AuthorizationDefinitionModule } from '@domain/common/authorization-defi
     UserModule,
     ApplicationModule,
     LifecycleModule,
+    CommunicationModule,
     TypeOrmModule.forFeature([Community]),
   ],
   providers: [

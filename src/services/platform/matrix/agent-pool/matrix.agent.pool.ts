@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { MatrixManagementUserService } from '@src/services/platform/matrix/management/matrix.management.user.service';
-import { MatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent';
+import { LogContext } from '@common/enums';
+import { MatrixAgentPoolException } from '@common/exceptions';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MatrixAgent } from './matrix.agent';
+import { MatrixAgentService } from './matrix.agent.service';
 
 @Injectable()
 export class MatrixAgentPool {
@@ -10,8 +13,10 @@ export class MatrixAgentPool {
   private _sessions: Record<string, string>;
 
   constructor(
-    private configService: ConfigService,
-    private userService: MatrixManagementUserService
+    private matrixAgentService: MatrixAgentService,
+    private matrixUserService: MatrixUserManagementService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {
     /* TODO
       - need to create sliding expiration mechanism
@@ -23,9 +28,21 @@ export class MatrixAgentPool {
   }
 
   async acquire(email: string, session?: string): Promise<MatrixAgent> {
+    this.logger.verbose?.(
+      `[AgentPool] obtaining user for email: ${email}`,
+      LogContext.COMMUNICATION
+    );
+    if (!email || email.length === 0) {
+      throw new MatrixAgentPoolException(
+        `Invalid email address provided: ${email}`,
+        LogContext.COMMUNICATION
+      );
+    }
     if (!this._wrappers[email]) {
       const operatingUser = await this.acquireUser(email);
-      const client = new MatrixAgent(this.configService, operatingUser);
+      const client = await this.matrixAgentService.createMatrixAgent(
+        operatingUser
+      );
       await client.start();
 
       this._wrappers[email] = client;
@@ -48,16 +65,20 @@ export class MatrixAgentPool {
   }
 
   private async acquireUser(email: string) {
-    const isRegistered = await this.userService.isRegistered(email);
+    const isRegistered = await this.matrixUserService.isRegistered(email);
 
     if (isRegistered) {
-      return await this.userService.login(email);
+      return await this.matrixUserService.login(email);
     }
 
-    return await this.userService.register(email);
+    return await this.matrixUserService.register(email);
   }
 
   release(email: string): void {
+    this.logger.verbose?.(
+      `[AgentPool] releasing session for email: ${email}`,
+      LogContext.COMMUNICATION
+    );
     if (this._wrappers[email]) {
       this._wrappers[email].dispose();
       delete this._wrappers[email];

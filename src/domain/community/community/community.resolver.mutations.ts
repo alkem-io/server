@@ -25,6 +25,7 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { UserService } from '@domain/community/user/user.service';
 import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { CommunitySendMessageInput } from './community.dto.send.msg';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -202,6 +203,31 @@ export class CommunityResolverMutations {
     return await this.communityLifecycleOptionsProvider.eventOnApplication(
       applicationEventData,
       agentInfo
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description: 'Sends a message on the specified community',
+  })
+  @Profiling.api
+  async messageCommunity(
+    @Args('msgData') msgData: CommunitySendMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<string> {
+    const community = await this.communityService.getCommunityOrFail(
+      msgData.communityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `community send message: ${community.displayName}`
+    );
+    return await this.communityService.sendMessageToCommunity(
+      community,
+      agentInfo.email,
+      msgData
     );
   }
 }
