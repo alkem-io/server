@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { Injectable } from '@nestjs/common';
+import { LogContext } from '@common/enums';
+import { MatrixAgentPoolException } from '@common/exceptions';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixAgent } from './matrix.agent';
 import { MatrixAgentService } from './matrix.agent.service';
 
@@ -11,7 +14,9 @@ export class MatrixAgentPool {
 
   constructor(
     private matrixAgentService: MatrixAgentService,
-    private matrixUserService: MatrixUserManagementService
+    private matrixUserService: MatrixUserManagementService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {
     /* TODO
       - need to create sliding expiration mechanism
@@ -23,8 +28,16 @@ export class MatrixAgentPool {
   }
 
   async acquire(email: string, session?: string): Promise<MatrixAgent> {
-    if (!email || email.length === 0)
-      throw new Error('No valid email provided');
+    this.logger.verbose?.(
+      `[AgentPool] obtaining user for email: ${email}`,
+      LogContext.COMMUNICATION
+    );
+    if (!email || email.length === 0) {
+      throw new MatrixAgentPoolException(
+        `Invalid email address provided: ${email}`,
+        LogContext.COMMUNICATION
+      );
+    }
     if (!this._wrappers[email]) {
       const operatingUser = await this.acquireUser(email);
       const client = await this.matrixAgentService.createMatrixAgent(
@@ -62,6 +75,10 @@ export class MatrixAgentPool {
   }
 
   release(email: string): void {
+    this.logger.verbose?.(
+      `[AgentPool] releasing session for email: ${email}`,
+      LogContext.COMMUNICATION
+    );
     if (this._wrappers[email]) {
       this._wrappers[email].dispose();
       delete this._wrappers[email];

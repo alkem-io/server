@@ -185,12 +185,12 @@ export class CommunicationService {
   ) {
     const matrixUsername = this.matrixUserAdapterService.email2id(email);
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    this.matrixGroupAdapterService.inviteUsersToGroup(
+    await this.matrixGroupAdapterService.inviteUsersToGroup(
       elevatedAgent.matrixClient,
       groupID,
       [matrixUsername]
     );
-    this.matrixRoomAdapterService.inviteUsersToRoom(
+    await this.matrixRoomAdapterService.inviteUsersToRoom(
       elevatedAgent.matrixClient,
       roomID,
       [matrixUsername]
