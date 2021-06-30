@@ -1,15 +1,15 @@
 version: '3.7'
 
 services:
-  ct_server:
-    container_name: ct_server_dev
-    image: ct_server
+  alkemio_server:
+    container_name: alkemio_server_dev
+    image: alkemio_server
     build: .
     #image: cherrytwist/server:v0.11.5-alpha1
     depends_on:
       - mysql_db
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
     environment:
       - AUTH_ENABLED
       - AUTH_API_ENABLED
@@ -24,7 +24,7 @@ services:
       - GRAPHQL_ENDPOINT_PORT=4000
       - IPFS_ENDPOINT=http://ipfs:5001
       - IPFS_CLIENT_ENDPOINT=http://localhost:8080/ipfs
-      - AUTH_ORY_KRATOS_ISSUER=http://cherrytwist-server-dev/
+      - AUTH_ORY_KRATOS_ISSUER=http://alkemio-server-dev/
       - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:4433/
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER=http://kratos:4433/

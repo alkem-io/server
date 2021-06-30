@@ -1,4 +1,4 @@
-# Configuration file for Cherrytwist.
+# Configuration file for Alkemio.
 #
 # This is a YAML file: see [1] for a quick introduction. Note in particular
 # that *indentation is important*: all the elements of a list or dictionary
@@ -10,11 +10,11 @@
 # To overwrite the default value, set environment variable with the name as is shown before the ":".
 
 ## hosting ##
-# The hosting configuration for the Cherrytwist Server
+# The hosting configuration for the Alkemio Server
 hosting:
   # The port that the CT server will be listening on.
   # For clusters (e.g. docker-compose, kubernetes) this should also be the port that is used  in the ingress configuration (e.g. traefik).
-  # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.cherrytwist.org/graphql)
+  # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/graphql)
   # to the ct-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
   # The graphql port is also used for internal communication between the services inside the e.g. kubernetes cluster.
   #
@@ -28,16 +28,16 @@ hosting:
   environment: ${ENVIRONMENT}:Dev
 
 ## bootstrap ##
-# Used to determine the the information that is used to to initialize a functional Cherrytwist instance.
+# Used to determine the the information that is used to to initialize a functional Alkemio instance.
 bootstrap:
   # The bootstrap authorisation file specifies the minimum set of users and their associated credentials that are always available
-  # in the Cherrytwist instance.
+  # in the Alkemio instance.
   #
   # Default: the default file that is picked up is: src/services/configuraiton/templates/authorisation-bootstrap.json.
   authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
 
 ## security ##
-# The various means by which the security of the Cherrytwist platform can be configured.
+# The various means by which the security of the Alkemio platform can be configured.
 security:
   # cors settings for the application
   cors:
@@ -45,12 +45,12 @@ security:
     # a cors origin header e.g. oathkeeper
     enabled: ${CORS_ENABLED}:true
 
-    # Origin of the graphql requests to the Cherrytwist Server.
+    # Origin of the graphql requests to the Alkemio Server.
     # Defaults to * (insecure, not recommended for production usage).
     # Change to a value that whitelists your request origin.
     origin: ${CORS_ORIGIN}:*
 
-    # Cors methods allowed in the Cherrytwist Server.
+    # Cors methods allowed in the Alkemio Server.
     # Defaults to GET,HEAD,PUT,PATCH,POST,DELETE.
     # Graphql uses mostly POST - the rest of the methods are left for utility REST endpoints.
     # If no REST endpoints are used (they are kept for ease of development) the list of allowed methods can be reduced.
@@ -66,12 +66,12 @@ security:
 # Authorisation is handled within the platfor.
 #
 # Note: the term Authentication Provider is based on the more widely understood concept of Identity Providers (Servers, Services),
-# but it is in Cherrytwist restricted to Authentication. Configuration is unique per provider.
+# but it is in Alkemio restricted to Authentication. Configuration is unique per provider.
 #
 # The only functionality used from an Authentication Provider is acquiring an access token (in other words, authentication) and
 # extracting the users email .
-# The email is used for matching the user account (provided from the Identity Server, e.g. Ory Kratos) to the user profile in Cherrytwist.
-# Traditional Identity Provider functionality like federation, account management etc. are out-of-scope in Cherrytwist.
+# The email is used for matching the user account (provided from the Identity Server, e.g. Ory Kratos) to the user profile in Alkemio.
+# Traditional Identity Provider functionality like federation, account management etc. are out-of-scope in Alkemio.
 #
 # Authorization is Credential-based, validating whether the user has valid credentials for the requested resource.
 identity:
@@ -80,14 +80,14 @@ identity:
   # client-side configuration required to authenticate to the Identity Servers (e.g. Ory Kratos) and generate
   # valid Authorization Header (Bearer access token).
   authentication:
-    # A flag setting whether Authentication is enabled on Cherrytwist.
+    # A flag setting whether Authentication is enabled on Alkemio.
     enabled: ${AUTH_ENABLED}:true
 
     # A flag setting whether Authentication based on non-interactive login is enabled.
     api_access_enabled: ${AUTH_API_ENABLED}:true
 
     # A list of Identity Providers that can be used for authenticating the user.
-    # The claims in the access token that are used in Cherrytwist are the user email and the token expiration time.
+    # The claims in the access token that are used in Alkemio are the user email and the token expiration time.
     providers:
       # Ory Kratos Next Gen Identity Provider (https://github.com/ory/kratos).
       ory:
@@ -108,12 +108,12 @@ identity:
         #     "schema_url": "http://localhost:4455/.ory/kratos/public/schemas/default",
         #     "traits": {
         #       "name": { "last": "Admin", "first": "Admin" },
-        #       "email": "admin@cherrytwist.org"
+        #       "email": "admin@alkem.io"
         #     },
         #     "verifiable_addresses": [
         #       {
         #         "id": "f271a114-ef14-4f07-9899-5c1dbfeebee1",
-        #         "value": "admin@cherrytwist.org",
+        #         "value": "admin@alkem.io",
         #         "verified": false,
         #         "via": "email",
         #         "status": "sent",
@@ -123,13 +123,13 @@ identity:
         #     "recovery_addresses": [
         #       {
         #         "id": "796b183e-49b0-493f-acbc-c821dd4eb177",
-        #         "value": "admin@cherrytwist.org",
+        #         "value": "admin@alkem.io",
         #         "via": "email"
         #       }
         #     ]
         #   }
         # }
-        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://cherrytwist-server-dev/
+        issuer: ${AUTH_ORY_KRATOS_ISSUER}:http://alkemio-server-dev/
 
         # JSON Web Key Sets endpoint. Used for validating the JWT token signed
         # by Ory Oathkeeper. A set of keys looks like:
@@ -232,7 +232,7 @@ monitoring:
       password: ${ELASTIC_CLOUD_PASSWORD}
 
 ## communications ##
-# Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Cherrytwist.
+# Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Alkemio.
 communications:
   enabled: ${COMMUNICATIONS_ENABLED}:false
   # matrix configuration #
@@ -240,7 +240,7 @@ communications:
     # Synapse server (https://github.com/matrix-org/synapse) configuration.
     server:
       # Synapse server name, defined in homeserver.yaml on the Synapse instance.
-      hostname: ${SYNAPSE_SERVER_NAME}:cherrytwist.matrix.host
+      hostname: ${SYNAPSE_SERVER_NAME}:alkemio.matrix.host
       # Synapse server URL, where it can be accessed by the CT server
       url: ${SYNAPSE_SERVER_URL}:http://localhost:8008
     shared:
@@ -252,10 +252,10 @@ communications:
       password: ${SYNAPSE_ADMIN_PASSWORD}:change_me_now
 
 ## storage ##
-# Cherrytwist uses multiple types of persistent storage, including SQL database and IPFS.
+# Alkemio uses multiple types of persistent storage, including SQL database and IPFS.
 storage:
-  # MySQL database configuration for usage by the Cherrytwist Server.
-  # The authentication method used by Cherrytwist Server is MySQL Native Password.
+  # MySQL database configuration for usage by the Alkemio Server.
+  # The authentication method used by Alkemio Server is MySQL Native Password.
   # Note: both schema / database name are used for configuration and they need to have the same value.
   database:
     # Database host.
@@ -271,10 +271,10 @@ storage:
     password: ${MYSQL_ROOT_PASSWORD}:toor
 
     # MySQL schema / database name.
-    schema: ${MYSQL_DATABASE}:cherrytwist
+    schema: ${MYSQL_DATABASE}:alkemio
 
     # MySQL schema / database name.
-    database: ${MYSQL_DATABASE}:cherrytwist
+    database: ${MYSQL_DATABASE}:alkemio
 
     # Flag setting whether MySQL operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false
@@ -293,21 +293,21 @@ storage:
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
-  terms: ${PLATFORM_TERMS}:https://cherrytwist.org/platform/terms
+  terms: ${PLATFORM_TERMS}:https://alkem.io/platform/terms
 
   # Privacy policy for the platform
-  privacy: ${PLATFORM_PRIVACY}:https://cherrytwist.org/platform/privacy
+  privacy: ${PLATFORM_PRIVACY}:https://alkem.io/platform/privacy
 
   # Security policy for the platform
-  security: ${PLATFORM_SECURITY}:https://cherrytwist.org/platform/security
+  security: ${PLATFORM_SECURITY}:https://alkem.io/platform/security
 
   # Link for support requests
-  support: ${PLATFORM_SUPPORT}:https://cherrytwist.org/platform/support
+  support: ${PLATFORM_SUPPORT}:https://alkem.io/platform/support
 
   # Feedback form for the platform
-  feedback: ${PLATFORM_FEEDBACK}:https://cherrytwist.org/platform/feedback
+  feedback: ${PLATFORM_FEEDBACK}:https://alkem.io/platform/feedback
 
   # About the platform
-  about: ${PLATFORM_ABOUT}:https://cherrytwist.org/platform/about
+  about: ${PLATFORM_ABOUT}:https://alkem.io/platform/about
 
 

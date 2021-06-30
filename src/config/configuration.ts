@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import YAML from 'yaml';
 
-const YAML_CONFIG_FILENAME = 'cherrytwist.yml';
+const YAML_CONFIG_FILENAME = 'alkemio.yml';
 
 export default () => {
   const rawYaml = readFileSync(

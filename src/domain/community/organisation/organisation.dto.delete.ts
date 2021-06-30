@@ -1,9 +1,9 @@
-import { DeleteBaseCherrytwistInput } from '@domain/common/entity/base-entity';
+import { DeleteBaseAlkemioInput } from '@domain/common/entity/base-entity';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class DeleteOrganisationInput extends DeleteBaseCherrytwistInput {
+export class DeleteOrganisationInput extends DeleteBaseAlkemioInput {
   @Field(() => UUID_NAMEID, { nullable: false })
   ID!: string;
 }

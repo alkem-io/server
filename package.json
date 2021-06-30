@@ -1,14 +1,14 @@
 {
-  "name": "cherrytwist-server",
+  "name": "alkemio-server",
   "version": "0.11.5",
-  "description": "Cherrytwist server, responsible for managing the shared representation of the ecoverse",
+  "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Cherrytwist Foundation",
   "private": false,
   "license": "EUPL-1.2",
   "main": "src/main.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cherrytwist/Server.git"
+    "url": "git+https://github.com/alkem-io/server.git"
   },
   "scripts": {
     "prebuild": "rimraf dist",

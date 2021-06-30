@@ -6,7 +6,7 @@ import {
   VersionColumn,
 } from 'typeorm';
 
-export abstract class BaseCherrytwistEntity extends BaseEntity {
+export abstract class BaseAlkemioEntity extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 

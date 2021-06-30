@@ -188,7 +188,7 @@ export class ProfileService {
         mimetype === 'image/jpeg' ||
         mimetype === 'image/jpg' ||
         mimetype === 'image/svg+xml' ||
-        fileName === 'hello-cherrytwist.txt'
+        fileName === 'hello-alkemio.txt'
       )
     ) {
       throw new ValidationException(
