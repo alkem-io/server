@@ -8,7 +8,7 @@ export class Markdown implements CustomScalar<string, string> {
   description = 'A decentralized identifier (DID) as per the W3C standard.';
 
   parseValue(value: string): string {
-    return this.validate(value).toLowerCase();
+    return this.validate(value);
   }
 
   serialize(value: any): string {
@@ -17,7 +17,7 @@ export class Markdown implements CustomScalar<string, string> {
 
   parseLiteral(ast: ValueNode): string {
     if (ast.kind === Kind.STRING) {
-      return this.validate(ast.value).toLowerCase();
+      return this.validate(ast.value);
     }
     return '';
   }
