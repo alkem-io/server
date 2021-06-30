@@ -1,15 +1,15 @@
 version: '3.7'
 
 services:
-  ct_server:
-    container_name: ct_server_dev
-    image: ct_server
+  alkemio_server:
+    container_name: alkemio_server_dev
+    image: alkemio_server
     build: .
-    #image: alkemio/server:v0.11.5-alpha1
+    #image: cherrytwist/server:v0.11.5-alpha1
     depends_on:
       - mysql_db
     networks:
-      - ct_dev_net
+      - alkemio_dev_net
     environment:
       - AUTH_ENABLED
       - AUTH_API_ENABLED
