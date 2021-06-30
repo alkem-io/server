@@ -72,7 +72,6 @@ export class AuthorizationEngineService {
     )}'; authorization definition: anonymousAccess=${
       authorization?.anonymousReadAccess
     } & rules: ${authorization?.credentialRules}`;
-    //console.log(msg);
     this.logger.verbose?.(msg, LogContext.AUTH);
   }
 

@@ -5,22 +5,22 @@ import {
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import { AutoAcceptRoomMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adpater.room';
-import { MatrixGroupEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.group';
-import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.room';
 import { IMatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent.interface';
 import { MatrixClient } from '../types/matrix.client.type';
+import { MatrixRoomAdapterService } from '../adapter/matrix.room.adapter.service';
 
 export class MatrixAgent implements IMatrixAgent, Disposable {
   matrixClient: MatrixClient;
-  roomEntityAdapter: MatrixRoomEntityAdapter;
-  groupEntityAdapter: MatrixGroupEntityAdapter;
   eventDispatcher: MatrixEventDispatcher;
+  roomAdapterService: MatrixRoomAdapterService;
 
-  constructor(matrixClient: MatrixClient) {
+  constructor(
+    matrixClient: MatrixClient,
+    roomAdapterService: MatrixRoomAdapterService
+  ) {
     this.matrixClient = matrixClient;
-    this.roomEntityAdapter = new MatrixRoomEntityAdapter(this.matrixClient);
-    this.groupEntityAdapter = new MatrixGroupEntityAdapter(this.matrixClient);
     this.eventDispatcher = new MatrixEventDispatcher(this.matrixClient);
+    this.roomAdapterService = roomAdapterService;
   }
 
   attach(handler: IMatrixEventHandler) {
@@ -49,7 +49,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       id: 'root',
       roomMemberMembershipMonitor: AutoAcceptRoomMembershipMonitorFactory.create(
         this.matrixClient,
-        this.roomEntityAdapter
+        this.roomAdapterService
       ),
       groupMyMembershipMonitor: AutoAcceptGroupMembershipMonitorFactory.create(
         this.matrixClient

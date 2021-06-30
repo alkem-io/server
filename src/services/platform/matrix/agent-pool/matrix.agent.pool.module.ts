@@ -3,9 +3,14 @@ import { MatrixUserManagementModule } from '@src/services/platform/matrix/manage
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
 import { MatrixUserAdapterModule } from '../user/matrix.user.adapter.module';
 import { MatrixAgentService } from './matrix.agent.service';
+import { MatrixAdaptersModule } from '../adapter/matrix.adapters.module';
 
 @Module({
-  imports: [MatrixUserManagementModule, MatrixUserAdapterModule],
+  imports: [
+    MatrixUserManagementModule,
+    MatrixUserAdapterModule,
+    MatrixAdaptersModule,
+  ],
   providers: [MatrixAgentPool, MatrixAgentService],
   exports: [MatrixAgentPool, MatrixAgentService],
 })

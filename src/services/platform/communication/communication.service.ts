@@ -13,14 +13,16 @@ import { CommunicationSendMessageCommunityInput } from './communication.dto.send
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
 import { IOperationalMatrixUser } from '../matrix/user/matrix.user.interface';
 import { ConfigService } from '@nestjs/config';
-import { MatrixAgentElevated } from '../matrix/management/matrix.management.agent.elevated';
-import { MatrixUserAdapterService } from '../matrix/user/matrix.user.adapter.service';
 import { MatrixAgentService } from '../matrix/agent-pool/matrix.agent.service';
+import { MatrixUserAdapterService } from '../matrix/user/matrix.user.adapter.service';
+import { MatrixRoomAdapterService } from '../matrix/adapter/matrix.room.adapter.service';
+import { MatrixGroupAdapterService } from '../matrix/adapter/matrix.group.adapter.service';
+import { MatrixAgent } from '../matrix/agent-pool/matrix.agent';
 
 @Injectable()
 export class CommunicationService {
   private adminUser!: IOperationalMatrixUser;
-  private matrixElevatedAgent!: MatrixAgentElevated;
+  private matrixElevatedAgent!: MatrixAgent; // elevated as created with an admin account
   private adminUserName!: string;
   private adminPassword!: string;
 
@@ -32,7 +34,9 @@ export class CommunicationService {
     private matrixAgentPool: MatrixAgentPool,
     private configService: ConfigService,
     private matrixUserManagementService: MatrixUserManagementService,
-    private matrixUserAdapterService: MatrixUserAdapterService
+    private matrixUserAdapterService: MatrixUserAdapterService,
+    private matrixRoomAdapterService: MatrixRoomAdapterService,
+    private matrixGroupAdapterService: MatrixGroupAdapterService
   ) {
     this.adminUserName = this.configService.get(
       ConfigurationTypes.Communications
@@ -108,7 +112,7 @@ export class CommunicationService {
     }
 
     const adminUser = await this.getGlobalAdminUser();
-    this.matrixElevatedAgent = await this.matrixAgentService.createMatrixAgentElevated(
+    this.matrixElevatedAgent = await this.matrixAgentService.createMatrixAgent(
       adminUser
     );
     return this.matrixElevatedAgent;
@@ -127,12 +131,15 @@ export class CommunicationService {
     communityName: string
   ): Promise<string> {
     const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
-    const group = await elevatedMatrixAgent.createGroup({
-      groupId: communityId,
-      profile: {
-        name: communityName,
-      },
-    });
+    const group = await this.matrixGroupAdapterService.createGroup(
+      elevatedMatrixAgent.matrixClient,
+      {
+        groupId: communityId,
+        profile: {
+          name: communityName,
+        },
+      }
+    );
     this.logger.verbose?.(
       `Created group using communityID '${communityId}', communityName '${communityName}': ${group}`,
       LogContext.COMMUNICATION
@@ -142,9 +149,12 @@ export class CommunicationService {
 
   async createCommunityRoom(groupID: string): Promise<string> {
     const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
-    const room = await elevatedMatrixAgent.createRoom({
-      communityId: groupID,
-    });
+    const room = await this.matrixRoomAdapterService.createRoom(
+      elevatedMatrixAgent.matrixClient,
+      {
+        communityId: groupID,
+      }
+    );
     this.logger.verbose?.(
       `Created community room on group '${groupID}': ${room}`,
       LogContext.COMMUNICATION
@@ -175,8 +185,16 @@ export class CommunicationService {
   ) {
     const matrixUsername = this.matrixUserAdapterService.email2id(email);
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    elevatedAgent.addUserToCommunityGroup(groupID, matrixUsername);
-    elevatedAgent.addUserToCommunityRoom(roomID, matrixUsername);
+    this.matrixGroupAdapterService.inviteUsersToGroup(
+      elevatedAgent.matrixClient,
+      groupID,
+      [matrixUsername]
+    );
+    this.matrixRoomAdapterService.inviteUsersToRoom(
+      elevatedAgent.matrixClient,
+      roomID,
+      [matrixUsername]
+    );
   }
 
   async getRooms(email: string): Promise<CommunicationRoomResult[]> {

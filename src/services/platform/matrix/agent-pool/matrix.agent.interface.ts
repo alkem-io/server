@@ -1,4 +1,3 @@
-import { MatrixGroupEntityAdapter, MatrixRoomEntityAdapter } from '../adapter';
 import { MatrixEventDispatcher } from '../events/matrix.event.dispatcher';
 import { MatrixClient } from '../types/matrix.client.type';
 
@@ -16,7 +15,5 @@ export interface IInitiateDirectMessageRequest {
 
 export interface IMatrixAgent {
   matrixClient: MatrixClient;
-  roomEntityAdapter: MatrixRoomEntityAdapter;
-  groupEntityAdapter: MatrixGroupEntityAdapter;
   eventDispatcher: MatrixEventDispatcher;
 }
