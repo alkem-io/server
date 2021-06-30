@@ -59,10 +59,10 @@ export class MatrixGroupAdapterService {
   ) {
     for (const matrixUsername of matrixUsernames) {
       await matrixClient.inviteUserToGroup(groupId, matrixUsername);
+      this.logger.verbose?.(
+        `Invited users to group: ${matrixUsername} - ${groupId}`,
+        LogContext.COMMUNICATION
+      );
     }
-    this.logger.verbose?.(
-      `Invited users to group: ${groupId}`,
-      LogContext.COMMUNICATION
-    );
   }
 }

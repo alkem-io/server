@@ -72,7 +72,7 @@ export class MatrixRoomAdapterService {
     for (const matrixUsername of matrixUsernames) {
       await matrixClient.invite(roomID, matrixUsername);
       this.logger.verbose?.(
-        `invited user to group: ${matrixUsername} - ${roomID}`,
+        `invited user to room: ${matrixUsername} - ${roomID}`,
         LogContext.COMMUNICATION
       );
     }
