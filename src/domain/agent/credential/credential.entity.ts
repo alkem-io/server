@@ -1,10 +1,10 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
-import { BaseCherrytwistEntity } from '@domain/common/entity/base-entity';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 
 @Entity()
-export class Credential extends BaseCherrytwistEntity implements ICredential {
+export class Credential extends BaseAlkemioEntity implements ICredential {
   @Column()
   resourceID: string;
 

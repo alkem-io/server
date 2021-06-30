@@ -1,9 +1,9 @@
 {
   "users": [
     {
-      "email": "admin@cherrytwist.org",
+      "email": "admin@alkem.io",
       "firstName": "admin",
-      "lastName": "cherrytwist",
+      "lastName": "alkemio",
       "credentials": [
         {
           "type": "global-admin"
@@ -11,7 +11,7 @@
       ]
     },
     {
-      "email": "community.admin@cherrytwist.org",
+      "email": "community.admin@alkem.io",
       "firstName": "community",
       "lastName": "admin",
       "credentials": [
@@ -21,7 +21,7 @@
       ]
     },
     {
-      "email": "ecoverse.admin@cherrytwist.org",
+      "email": "ecoverse.admin@alkem.io",
       "firstName": "ecoverse",
       "lastName": "admin",
       "credentials": [
@@ -31,19 +31,19 @@
       ]
     },
     {
-      "email": "ecoverse.member@cherrytwist.org",
+      "email": "ecoverse.member@alkem.io",
       "firstName": "ecoverse",
       "lastName": "member",
       "credentials": []
     },
     {
-      "email": "qa.user@cherrytwist.org",
+      "email": "qa.user@alkem.io",
       "firstName": "Qa",
       "lastName": "User",
       "credentials": []
     },
     {
-      "email": "non.ecoverse@cherrytwist.org",
+      "email": "non.ecoverse@alkem.io",
       "firstName": "non",
       "lastName": "ecoverse",
       "credentials": []

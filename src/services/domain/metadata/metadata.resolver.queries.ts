@@ -8,7 +8,7 @@ export class MetadataResolverQueries {
 
   @Query(() => IMetadata, {
     nullable: false,
-    description: 'Cherrytwist Services Metadata',
+    description: 'Alkemio Services Metadata',
   })
   async metadata(): Promise<IMetadata> {
     return await this.metadataService.getMetadata();

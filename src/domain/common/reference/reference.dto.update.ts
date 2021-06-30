@@ -5,10 +5,10 @@ import {
   SMALL_TEXT_LENGTH,
 } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
-import { UpdateBaseCherrytwistInput } from '@domain/common/entity/base-entity';
+import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 
 @InputType()
-export class UpdateReferenceInput extends UpdateBaseCherrytwistInput {
+export class UpdateReferenceInput extends UpdateBaseAlkemioInput {
   @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;

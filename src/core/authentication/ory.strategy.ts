@@ -1,5 +1,5 @@
 import {
-  CherrytwistErrorStatus,
+  AlkemioErrorStatus,
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
@@ -41,7 +41,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     if (this.checkIfTokenHasExpired(payload.exp))
       throw new TokenException(
         'Access token has expired!',
-        CherrytwistErrorStatus.TOKEN_EXPIRED
+        AlkemioErrorStatus.TOKEN_EXPIRED
       );
 
     // Todo: not sure this is correct, but am hitting a case whereby session is null

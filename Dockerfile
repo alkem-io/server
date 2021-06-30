@@ -25,7 +25,7 @@ RUN npm install
 COPY ./src ./src
 COPY ./tsconfig.json .
 COPY ./tsconfig.build.json .
-COPY ./cherrytwist.yml .
+COPY ./alkemio.yml .
 
 RUN npm run build
 

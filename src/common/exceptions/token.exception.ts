@@ -1,12 +1,12 @@
-import { LogContext, CherrytwistErrorStatus } from '@common/enums';
+import { LogContext, AlkemioErrorStatus } from '@common/enums';
 import { BaseException } from './base.exception';
 
 export class TokenException extends BaseException {
-  constructor(error: string, code?: CherrytwistErrorStatus) {
+  constructor(error: string, code?: AlkemioErrorStatus) {
     super(
       error,
       LogContext.AUTH_TOKEN,
-      code ?? CherrytwistErrorStatus.INVALID_TOKEN
+      code ?? AlkemioErrorStatus.INVALID_TOKEN
     );
   }
 }

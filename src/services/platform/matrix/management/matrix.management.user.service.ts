@@ -25,7 +25,7 @@ export class MatrixTransforms {
   }
   // TODO - this needs to be a service that works with env.HOST_NAME
   static username2id(username: string) {
-    return `@${username}:cherrytwist.matrix.host`;
+    return `@${username}:alkemio.matrix.host`;
   }
   static email2id(email: string) {
     return MatrixTransforms.username2id(MatrixTransforms.email2username(email));

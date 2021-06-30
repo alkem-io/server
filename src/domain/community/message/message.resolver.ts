@@ -18,7 +18,7 @@ const closure = (date: Date, offset: number) => {
 
 const messages = [
   {
-    content: 'Hey! It is us! The cherrytwist developers!',
+    content: 'Hey! It is us! The alkemio developers!',
     left: false,
     delay: 1000,
     date: closure(date, 1000),

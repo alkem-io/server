@@ -12,7 +12,7 @@ export abstract class IAuthenticationConfig {
 
   @Field(() => [AuthenticationProviderConfig], {
     nullable: false,
-    description: 'Cherrytwist Authentication Providers Config.',
+    description: 'Alkemio Authentication Providers Config.',
   })
   providers?: IAuthenticationProviderConfig[];
 }

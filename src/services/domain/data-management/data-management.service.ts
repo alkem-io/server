@@ -50,7 +50,7 @@ export class DataManagementService {
       const seedScriptPath = join(
         __dirname,
         '../../../test/data',
-        'test-cherrytwist-seed-db.sql'
+        'test-alkemio-seed-db.sql'
       );
 
       await this.seedData(msgs, seedScriptPath);
@@ -180,7 +180,7 @@ export class DataManagementService {
     const content = `<!DOCTYPE html>
     <html>
     <body>
-    <h1>Cherrytwist Data Management Utility</h1>
+    <h1>Alkemio Data Management Utility</h1>
     <h2>Ecoverse: <i>${ecoverseName}</i></H2>
     <p>
     <b>Messages:</b>${message}</p>

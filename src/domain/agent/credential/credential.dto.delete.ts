@@ -1,5 +1,5 @@
-import { DeleteBaseCherrytwistInput } from '@domain/common/entity/base-entity/base.cherrytwist.dto.delete';
+import { DeleteBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.delete';
 import { InputType } from '@nestjs/graphql';
 
 @InputType()
-export class DeleteCredentialInput extends DeleteBaseCherrytwistInput {}
+export class DeleteCredentialInput extends DeleteBaseAlkemioInput {}

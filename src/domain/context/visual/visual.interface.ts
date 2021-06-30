@@ -1,8 +1,8 @@
-import { IBaseCherrytwist } from '@domain/common/entity/base-entity';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Visual')
-export abstract class IVisual extends IBaseCherrytwist {
+export abstract class IVisual extends IBaseAlkemio {
   @Field(() => String, {
     nullable: false,
     description: 'The avatar (logo) to be used.',
