@@ -19,7 +19,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const reqLogging: boolean = this.configService.get(
       ConfigurationTypes.Monitoring
-    )?.logging?.requestLoggingEnables;
+    )?.logging?.requests?.fullLoggingEnabled;
 
     reqLogging &&
       this.logger.verbose &&
@@ -27,7 +27,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
 
     const reqHeadersLogging: boolean = this.configService.get(
       ConfigurationTypes.Monitoring
-    )?.logging?.requestHeadersLoggingEnables;
+    )?.logging?.requests?.headerLoggingEnabled;
 
     !reqLogging &&
       reqHeadersLogging &&
