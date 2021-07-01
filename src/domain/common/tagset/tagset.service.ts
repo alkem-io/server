@@ -111,25 +111,6 @@ export class TagsetService {
     return entity;
   }
 
-  async createRestrictedTagsets(
-    tagsetable: ITagsetable,
-    names: string[]
-  ): Promise<boolean> {
-    if (!tagsetable.restrictedTagsetNames) {
-      throw new EntityNotInitializedException(
-        'Non-initialised tagsetable submitted',
-        LogContext.COMMUNITY
-      );
-    }
-    for (const name of names) {
-      const tagset = await this.createTagset({
-        name: name,
-      });
-      tagsetable.tagsets?.push(tagset);
-    }
-    return true;
-  }
-
   // Get the default tagset
   defaultTagset(tagsetable: ITagsetable): ITagset | undefined {
     if (!tagsetable.tagsets)
