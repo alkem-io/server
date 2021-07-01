@@ -5,7 +5,10 @@ The easiest way to get going with custom development of the Alkemio Server is to
 In this setup you are then using the docker composed stack for:
 
 - Database container
-- Demo auth provider
+- Ory Kratos stack for development:
+  - ory/kratos
+  - ory/oathkeeper
+  - ory/mailslurper (not used on production)
 
 Note that the CT Server from the docker composed stack is listening on port 4001 instead of port 4000, so it will not collide with running a second server locally - but do keep in mind those two server instances are sharing the same data / authentication provider.
 
@@ -33,13 +36,16 @@ It is of course also possible to use a separate MySQL database server.
 
 If installing MySQL locally, please refer to [the data management document](DataManagement.md#MySQL-Server-specific-configuration-for-version-8) if using **MySQL 8**.
 
-## Authentication Provider
+## Authentication
 
-Similarly the server is designed to allow it to work with multiple Authentication Providers.
+The authentication is handled by `Ory Kratos` and `Ory Oathkeepr`.
 
-The default Authentication Provider for development / demonstration purposes is Demo Auth Provider - which is what is created by the Docker Composition.
+Best way to run the ory stack is to the use provided docker scripts. See [Running the server](Running.md) document.
 
-Please refer to the [configuration](docs/Configuation.md) for updating the Server to use an alternative instance of Demo Auth Provider or a an alternative Authentication Provider
+The configuration for the Ory can be found in `./build/ory`.
+The verification and recovery flows templates can be edited in `./build/ory/kratos/courier-templates`. More information how to customize them [here](https://www.ory.sh/kratos/docs/concepts/email-sms/#sender-address-and-template-customization). They are using [golang templates](https://golang.org/pkg/text/template/) format.
+
+The registration and the recovery flows include sending emails to the registered users. For development purposes the fake smtp server `Mailslurper` is used. Can be accessed on http://localhost:4436/ (if the docker compose method has been used to setup the development environment).
 
 ## File uploads
 
