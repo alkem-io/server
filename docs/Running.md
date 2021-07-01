@@ -30,7 +30,7 @@ To simplify setting up the Server development environment, a pre-configured dock
    up --build --force-recreate
    ```
 
-2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4001/graphql).
+2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4455/graphql).
 
 ## Notes
 

@@ -43,6 +43,9 @@ services:
       - type: bind
         source: ./.build/ory/kratos/email-password
         target: /etc/config/kratos
+      - type: bind
+        source: ./.build/ory/kratos/courier-templates
+        target: /etc/config/kratos/courier-templates
     networks:
       - ct_dev_net
 
