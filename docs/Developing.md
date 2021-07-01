@@ -33,13 +33,10 @@ It is of course also possible to use a separate MySQL database server.
 
 If installing MySQL locally, please refer to [the data management document](DataManagement.md#MySQL-Server-specific-configuration-for-version-8) if using **MySQL 8**.
 
-## Authentication Provider
+## Authentication
 
-Similarly the server is designed to allow it to work with multiple Authentication Providers.
-
-The default Authentication Provider for development / demonstration purposes is Demo Auth Provider - which is what is created by the Docker Composition.
-
-Please refer to the [configuration](docs/Configuation.md) for updating the Server to use an alternative instance of Demo Auth Provider or a an alternative Authentication Provider
+The authentication is handled by Ory Kratos + Ory Oathkeepr proxy which is guarding the /graphql endpoint. The configuration for the Ory can be found in `./build/ory`.
+The verification and recovery flows templates can be edited in `./build/ory/kratos/courier-templates`. More information how to customize them [here](https://www.ory.sh/kratos/docs/concepts/email-sms/#sender-address-and-template-customization). They are using [golang templates](https://golang.org/pkg/text/template/) format.
 
 ## File uploads
 
