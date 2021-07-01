@@ -11,27 +11,30 @@ import { ConfigurationTypes } from '@common/enums';
 
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {
+  private fullRequestLogging = false;
+  private headerRequestLogging = false;
   constructor(
     private readonly configService: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
-
-  use(req: Request, res: Response, next: NextFunction) {
-    const reqLogging: boolean = this.configService.get(
+  ) {
+    this.fullRequestLogging = this.configService.get(
       ConfigurationTypes.Monitoring
     )?.logging?.requests?.fullLoggingEnabled;
 
-    reqLogging &&
-      this.logger.verbose &&
-      this.logger.verbose(JSON.stringify(req, undefined, ' '));
-
-    const reqHeadersLogging: boolean = this.configService.get(
+    this.headerRequestLogging = this.configService.get(
       ConfigurationTypes.Monitoring
     )?.logging?.requests?.headerLoggingEnabled;
+  }
 
-    !reqLogging &&
-      reqHeadersLogging &&
-      this.logger.verbose &&
+  use(req: Request, res: Response, next: NextFunction) {
+    if (this.fullRequestLogging && this.logger.verbose)
+      this.logger.verbose(JSON.stringify(req, undefined, ' '));
+
+    if (
+      !this.fullRequestLogging &&
+      this.headerRequestLogging &&
+      this.logger.verbose
+    )
       this.logger.verbose(JSON.stringify(req.headers, undefined, ' '));
 
     next();

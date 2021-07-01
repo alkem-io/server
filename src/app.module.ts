@@ -28,7 +28,7 @@ import { MembershipModule } from '@src/services/domain/membership/membership.mod
 import { MatrixAgentPool } from './services/platform/matrix/agent-pool/matrix.agent.pool';
 import { MatrixAgentPoolModule } from './services/platform/matrix/agent-pool/matrix.agent.pool.module';
 import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
-import { RequestLoggerMiddleware } from '@src/requestLogger';
+import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 
 @Module({
   imports: [
