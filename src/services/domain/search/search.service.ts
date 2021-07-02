@@ -10,17 +10,20 @@ import { ISearchResultEntry } from './search-result-entry.interface';
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 enum SearchEntityTypes {
   User = 'user',
   Group = 'group',
   Organisation = 'organisation',
+  Challenge = 'challenge',
 }
 
 const SEARCH_ENTITIES: string[] = [
   SearchEntityTypes.User,
   SearchEntityTypes.Group,
   SearchEntityTypes.Organisation,
+  SearchEntityTypes.Challenge,
 ];
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
@@ -31,7 +34,7 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity: User | UserGroup | Organisation | undefined;
+  entity: User | UserGroup | Organisation | Challenge | undefined;
 }
 
 export class SearchService {
@@ -42,6 +45,8 @@ export class SearchService {
     private groupRepository: Repository<UserGroup>,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>,
+    @InjectRepository(Challenge)
+    private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -52,6 +57,7 @@ export class SearchService {
     const userResults: Map<number, Match> = new Map();
     const groupResults: Map<number, Match> = new Map();
     const organisationResults: Map<number, Match> = new Map();
+    const challengeResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
@@ -59,10 +65,14 @@ export class SearchService {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganisations = true;
+    let searchChallenges = true;
     const entityTypesFilter = searchData.typesFilter;
-    [searchUsers, searchGroups, searchOrganisations] = await this.searchBy(
-      entityTypesFilter
-    );
+    [
+      searchUsers,
+      searchGroups,
+      searchOrganisations,
+      searchChallenges,
+    ] = await this.searchBy(entityTypesFilter);
 
     // Only support certain features for now
     if (searchData.challengesFilter)
@@ -85,9 +95,11 @@ export class SearchService {
       await this.searchGroupsByTerms(filteredTerms, groupResults);
     if (searchOrganisations)
       await this.searchOrganisationsByTerms(filteredTerms, organisationResults);
+    if (searchChallenges)
+      await this.searchChallengesByTerms(filteredTerms, challengeResults);
 
     this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results ; ${organisationResults.size} organisation results found`,
+      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organisationResults.size} organisation results found; ${challengeResults.size} challenge results found`,
       LogContext.API
     );
 
@@ -95,6 +107,7 @@ export class SearchService {
     results = await this.buildSearchResults(userResults);
     results.push(...(await this.buildSearchResults(groupResults)));
     results.push(...(await this.buildSearchResults(organisationResults)));
+    results.push(...(await this.buildSearchResults(challengeResults)));
     this.ensureUniqueTermsPerResult(results);
     return results;
   }
@@ -123,10 +136,11 @@ export class SearchService {
 
   async searchBy(
     entityTypesFilter?: string[]
-  ): Promise<[boolean, boolean, boolean]> {
+  ): Promise<[boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganisations = true;
+    let searchChallenges = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.User))
@@ -135,9 +149,11 @@ export class SearchService {
         searchGroups = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.Organisation))
         searchOrganisations = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.Challenge))
+        searchChallenges = false;
     }
 
-    return [searchUsers, searchGroups, searchOrganisations];
+    return [searchUsers, searchGroups, searchOrganisations, searchChallenges];
   }
 
   async searchUsersByTerms(terms: string[], userResults: Map<number, Match>) {
@@ -184,7 +200,7 @@ export class SearchService {
         .leftJoinAndSelect('organisation.profile', 'profile')
         .leftJoinAndSelect('organisation.groups', 'groups')
         .where('organisation.nameID like :term')
-        .where('organisation.displayName like :term')
+        .orWhere('organisation.displayName like :term')
         .orWhere('profile.description like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();
@@ -194,6 +210,27 @@ export class SearchService {
         organisationResults,
         term
       );
+    }
+  }
+
+  async searchChallengesByTerms(
+    terms: string[],
+    challengeResults: Map<number, Match>
+  ) {
+    for (const term of terms) {
+      const challengeMatches = await this.challengeRepository
+        .createQueryBuilder('challenge')
+        .leftJoinAndSelect('challenge.tagset', 'tagset')
+        .leftJoinAndSelect('challenge.context', 'context')
+        .leftJoinAndSelect('challenge.opportunities', 'opportunity')
+        .where('challenge.nameID like :term')
+        .orWhere('challenge.displayName like :term')
+        .orWhere('tagset.tags like :term')
+        .orWhere('context.tagline like :term')
+        .setParameters({ term: `%${term}%` })
+        .getMany();
+      // Create results for each match
+      await this.buildMatchingResults(challengeMatches, challengeResults, term);
     }
   }
 

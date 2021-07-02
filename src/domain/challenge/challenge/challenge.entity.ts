@@ -33,7 +33,7 @@ export class Challenge extends BaseChallenge implements IChallenge {
     ecoverse => ecoverse.challenges,
     { eager: false, cascade: false, onDelete: 'CASCADE' }
   )
-  parentEcoverse?: Challenge;
+  parentEcoverse?: Ecoverse;
 
   @Column()
   ecoverseID!: string;

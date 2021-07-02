@@ -9,6 +9,8 @@ import { SearchService } from './search.service';
 import { OrganisationModule } from '@domain/community/organisation/organisation.module';
 import { Organisation } from '@domain/community/organisation';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Module({
   imports: [
@@ -16,9 +18,11 @@ import { AuthorizationEngineModule } from '@src/services/platform/authorization-
     UserModule,
     UserGroupModule,
     OrganisationModule,
+    ChallengeModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organisation]),
+    TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [SearchService, SearchResolverQueries],
   exports: [SearchService],
