@@ -1,0 +1,30 @@
+query create($searchData: SearchInput!){
+  search(searchData: $searchData) {
+    score
+    result {
+      __typename
+      ... on User {
+        nameID
+      }
+      ... on UserGroup {
+        name
+      }
+      ... on Organisation {
+        nameID
+      }
+      ... on Challenge {
+        nameID
+        context {
+          tagline
+        }
+      }
+    }
+  }
+}
+
+{
+  "searchData":
+  {
+    "terms": ["end", "poverty", "water"]
+  }
+}

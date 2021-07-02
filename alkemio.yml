@@ -176,7 +176,7 @@ identity:
         port: 3306
 
         # MySQL username.
-        username: 'root'
+        username: "root"
 
         # MySQL password.
         password: ${MYSQL_ROOT_PASSWORD}:toor
@@ -207,6 +207,14 @@ monitoring:
 
     # A flag enabling / disabling performance logging.
     profilingEnabled: ${LOGGING_PROFILING_ENABLED}:true
+
+    # Logging of the incoming requests to the server
+    requests:
+      # Log the full request object. NOT Recommended, because the object is huge.
+      fullLoggingEnabled: ${LOGGING_REQ_FULL_ENABLED}:false
+
+      # Log request headers. Requires Logging Level at least verbose.
+      headersLoggingEnabled: ${LOGGING_REQ_HEADERS_ENABLED}:false
 
   # Elastic logging configuration
   elastic:
@@ -265,7 +273,7 @@ storage:
     port: 3306
 
     # MySQL username.
-    username: 'root'
+    username: "root"
 
     # MySQL password.
     password: ${MYSQL_ROOT_PASSWORD}:toor
@@ -309,5 +317,3 @@ platform:
 
   # About the platform
   about: ${PLATFORM_ABOUT}:https://alkem.io/platform/about
-
-
