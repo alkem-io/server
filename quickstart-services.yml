@@ -57,7 +57,6 @@ services:
     environment:
       - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
       - LOG_LEVEL=trace
-      - SERVE_PUBLIC_BASE_URL=http://localhost:4433/
     networks:
       - alkemio_dev_net
     volumes:
