@@ -3,11 +3,15 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { IUser } from '@domain/community/user/user.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { UUID } from '@domain/common/scalars';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 
 @InterfaceType('Searchable', {
   resolveType(searchable) {
     if (searchable.groups) {
       return IOrganisation;
+    }
+    if (searchable.opportunities) {
+      return IChallenge;
     }
     if (searchable.email) {
       return IUser;
