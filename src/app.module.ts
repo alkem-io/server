@@ -1,4 +1,4 @@
-import { LoggerService, Module } from '@nestjs/common';
+import { LoggerService, Module, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigService, ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -28,6 +28,7 @@ import { MembershipModule } from '@src/services/domain/membership/membership.mod
 import { MatrixAgentPool } from './services/platform/matrix/agent-pool/matrix.agent.pool';
 import { MatrixAgentPoolModule } from './services/platform/matrix/agent-pool/matrix.agent.pool.module';
 import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
+import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 
 @Module({
   imports: [
@@ -180,4 +181,8 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consummer: MiddlewareConsumer) {
+    consummer.apply(RequestLoggerMiddleware).forRoutes('/');
+  }
+}
