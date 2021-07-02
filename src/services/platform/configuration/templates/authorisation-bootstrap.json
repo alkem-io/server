@@ -24,11 +24,7 @@
       "email": "ecoverse.admin@alkem.io",
       "firstName": "ecoverse",
       "lastName": "admin",
-      "credentials": [
-        {
-          "type": "global-admin-challenges"
-        }
-      ]
+      "credentials": []
     },
     {
       "email": "ecoverse.member@alkem.io",
