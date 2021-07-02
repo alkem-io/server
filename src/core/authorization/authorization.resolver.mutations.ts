@@ -4,32 +4,21 @@ import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   GrantAuthorizationCredentialInput,
-  GrantStateModificationVCInput,
   RevokeAuthorizationCredentialInput,
 } from '@core/authorization';
 import { AuthorizationService } from './authorization.service';
 import { IUser } from '@domain/community/user';
 import { GraphqlGuard } from './graphql.guard';
 import { AgentInfo } from '@core/authentication';
-import {
-  AuthorizationPrivilege,
-  AuthorizationRoleGlobal,
-  ConfigurationTypes,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { ConfigService } from '@nestjs/config';
-import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 
 @Resolver()
 export class AuthorizationResolverMutations {
   private authorizationDefinition: IAuthorizationDefinition;
 
   constructor(
-    private configService: ConfigService,
-    private challengeService: ChallengeService,
     private authorizationEngine: AuthorizationEngineService,
     private authorizationService: AuthorizationService
   ) {
@@ -80,38 +69,6 @@ export class AuthorizationResolverMutations {
     return await this.authorizationService.revokeCredential(
       credentialRemoveData,
       agentInfo
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description:
-      'Assigns the StateModification credential to a particular user for a particular challenge',
-  })
-  @Profiling.api
-  async grantStateModificationVC(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('grantStateModificationVC')
-    grantStateModificationVC: GrantStateModificationVCInput
-  ): Promise<IUser> {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
-      .enabled;
-    if (!ssiEnabled) {
-      throw new NotEnabledException('SSI is not enabled', LogContext.SSI);
-    }
-
-    const challenge = await this.challengeService.getChallengeOrFail(
-      grantStateModificationVC.challengeID
-    );
-    await this.authorizationEngine.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.CREATE,
-      `create VC on challenge (${challenge.nameID}) for user ${grantStateModificationVC.userID}`
-    );
-
-    return await this.authorizationService.authorizeChallengeStateModification(
-      grantStateModificationVC
     );
   }
 }

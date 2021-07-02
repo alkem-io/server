@@ -9,7 +9,10 @@ import {
   CreateChallengeInput,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
-import { GraphqlGuard } from '@core/authorization';
+import {
+  ChallengeAuthorizeStateModificationInput,
+  GraphqlGuard,
+} from '@core/authorization';
 import {
   CreateOpportunityInput,
   IOpportunity,
@@ -21,6 +24,7 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -151,6 +155,32 @@ export class ChallengeResolverMutations {
         ID: challengeEventData.ID,
       },
       agentInfo
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description:
+      'Authorizes a User to be able to modify the state on the specified Challenge.',
+  })
+  @Profiling.api
+  async authorizeStateModificationOnChallenge(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('grantStateModificationVC')
+    grantStateModificationVC: ChallengeAuthorizeStateModificationInput
+  ): Promise<IUser> {
+    const challenge = await this.challengeService.getChallengeOrFail(
+      grantStateModificationVC.challengeID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      challenge.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create VC on challenge (${challenge.nameID}) for user ${grantStateModificationVC.userID}`
+    );
+
+    return await this.challengeService.authorizeStateModification(
+      grantStateModificationVC
     );
   }
 }

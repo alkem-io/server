@@ -1,4 +1,4 @@
-import { CreateChallengeInput } from '@domain/challenge/challenge/challenge.dto.create';
+import { CreateChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
@@ -17,14 +17,23 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { IEcoverse } from './ecoverse.interface';
+import { EcoverseAuthorizationResetInput } from './ecoverse.dto.reset.authorization';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 @Resolver()
 export class EcoverseResolverMutations {
+  private globalAdminAuthorization: IAuthorizationDefinition;
+
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private ecoverseService: EcoverseService,
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService
-  ) {}
+  ) {
+    this.globalAdminAuthorization = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      [AuthorizationRoleGlobal.Admin],
+      [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
+    );
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IEcoverse, {
@@ -35,13 +44,9 @@ export class EcoverseResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ecoverseData') ecoverseData: CreateEcoverseInput
   ): Promise<IEcoverse> {
-    const authorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
-      [AuthorizationRoleGlobal.Admin],
-      [AuthorizationPrivilege.CREATE]
-    );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      authorizationDefinition,
+      this.globalAdminAuthorization,
       AuthorizationPrivilege.CREATE,
       `updateEcoverse: ${ecoverseData.nameID}`
     );
@@ -125,6 +130,29 @@ export class EcoverseResolverMutations {
     return await this.challengeAuthorizationService.applyAuthorizationRules(
       challenge,
       ecoverse.authorization
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IEcoverse, {
+    description: 'Reset the AuthorizationDefinition on the specified Ecoverse.',
+  })
+  @Profiling.api
+  async authorizationDefinitionResetOnEcoverse(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('authorizationResetData')
+    authorizationResetData: EcoverseAuthorizationResetInput
+  ): Promise<IEcoverse> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      authorizationResetData.ecoverseID
+    );
+    await this.authorizationEngine.grantReadAccessOrFail(
+      agentInfo,
+      ecoverse.authorization,
+      `reset authorization definition: ${agentInfo.email}`
+    );
+    return await this.ecoverseAuthorizationService.applyAuthorizationRules(
+      ecoverse
     );
   }
 }

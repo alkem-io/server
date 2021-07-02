@@ -5,6 +5,7 @@ import { CommunityService } from './community.service';
 import { Community, ICommunity } from '@domain/community/community';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { IAuthorizationDefinition } from '@domain/common/authorization-definition/authorization.definition.interface';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -15,22 +16,18 @@ export class CommunityAuthorizationService {
     private communityRepository: Repository<Community>
   ) {}
 
-  async applyAuthorizationRules(community: ICommunity): Promise<ICommunity> {
-    // give the global community admin permissions
-    community.authorization = this.authorizationDefinitionService.appendCredentialAuthorizationRule(
+  async applyAuthorizationRules(
+    community: ICommunity,
+    parentAuthorization: IAuthorizationDefinition | undefined
+  ): Promise<ICommunity> {
+    community.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       community.authorization,
-      {
-        type: AuthorizationCredential.GlobalAdminCommunity,
-        resourceID: '',
-      },
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-      ]
+      parentAuthorization
     );
+    community.authorization = this.extendAuthorizationDefinition(
+      community.authorization
+    );
+
     // cascade
     const groups = await this.communityService.getUserGroups(community);
     for (const group of groups) {
@@ -49,5 +46,24 @@ export class CommunityAuthorizationService {
     }
 
     return await this.communityRepository.save(community);
+  }
+
+  private extendAuthorizationDefinition(
+    authorization: IAuthorizationDefinition | undefined
+  ): IAuthorizationDefinition {
+    return this.authorizationDefinitionService.appendCredentialAuthorizationRule(
+      authorization,
+      {
+        type: AuthorizationCredential.GlobalAdminCommunity,
+        resourceID: '',
+      },
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.GRANT,
+      ]
+    );
   }
 }

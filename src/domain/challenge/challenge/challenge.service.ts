@@ -44,6 +44,10 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
+import { ChallengeAuthorizeStateModificationInput } from './dto/challenge.dto.authorize.state.modification';
+import { SsiAgentService } from '@services/platform/ssi/agent/ssi.agent.service';
+import { UserService } from '@domain/community/user/user.service';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -55,6 +59,8 @@ export class ChallengeService {
     private baseChallengeService: BaseChallengeService,
     private lifecycleService: LifecycleService,
     private organisationService: OrganisationService,
+    private ssiAgentService: SsiAgentService,
+    private userService: UserService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -550,5 +556,26 @@ export class ChallengeService {
 
     await this.organisationService.save(organisation);
     return challenge;
+  }
+
+  async authorizeStateModification(
+    grantStateModificationVC: ChallengeAuthorizeStateModificationInput
+  ): Promise<IUser> {
+    const challengeAgent = await this.getAgent(
+      grantStateModificationVC.challengeID
+    );
+    const userAgent = await this.userService.getAgent(
+      grantStateModificationVC.userID
+    );
+
+    await this.ssiAgentService.authorizeStateModification(
+      challengeAgent,
+      grantStateModificationVC.challengeID,
+      userAgent,
+      grantStateModificationVC.userID
+    );
+    return await this.userService.getUserOrFail(
+      grantStateModificationVC.userID
+    );
   }
 }
