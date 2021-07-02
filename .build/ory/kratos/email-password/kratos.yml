@@ -4,11 +4,11 @@ dsn: memory
 
 serve:
   public:
-    base_url: http://localhost:4433/
+    base_url: http://localhost:3000/
     cors:
       enabled: true
   admin:
-    base_url: http://kratos:4434/
+    base_url: http://localhost:4434/
 
 selfservice:
   default_browser_return_url: http://localhost:3000/
@@ -55,7 +55,7 @@ selfservice:
 
     logout:
       after:
-        default_browser_return_url: http://localhost:3000/auth/login
+        default_browser_return_url: http://localhost:3000/
 
     login:
       ui_url: http://localhost:3000/auth/login
@@ -65,7 +65,7 @@ selfservice:
       lifespan: 10m
       ui_url: http://localhost:3000/auth/registration
       after:
-        default_browser_return_url: https://localhost:3000/check-email
+        default_browser_return_url: http://localhost:3000/auth/registration/success
       # Remove auto log in after registration - wait for verification
       #   password:
       #     hooks:
