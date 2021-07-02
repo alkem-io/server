@@ -56,13 +56,6 @@ export class ProfileService {
       profile.tagsets = [];
     }
 
-    if (profile.restrictedTagsetNames) {
-      await this.tagsetService.createRestrictedTagsets(
-        profile,
-        profile.restrictedTagsetNames
-      );
-    }
-
     await this.profileRepository.save(profile);
     this.logger.verbose?.(
       `Created new profile with id: ${profile.id}`,
