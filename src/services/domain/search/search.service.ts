@@ -221,7 +221,9 @@ export class SearchService {
       const challengeMatches = await this.challengeRepository
         .createQueryBuilder('challenge')
         .leftJoinAndSelect('challenge.tagset', 'tagset')
+        .leftJoinAndSelect('challenge.authorization', 'authorization')
         .leftJoinAndSelect('challenge.context', 'context')
+        .leftJoinAndSelect('context.visual', 'visual')
         .leftJoinAndSelect('challenge.opportunities', 'opportunity')
         .where('challenge.nameID like :term')
         .orWhere('challenge.displayName like :term')
