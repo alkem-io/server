@@ -10,6 +10,10 @@ import { LogContext } from '@common/enums/logging.context';
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 
 import stateModificationMetadata from '../credentials/StateModificationCredentialMetaData';
+import { IAgent } from '@domain/agent';
+import { ConfigService } from '@nestjs/config';
+import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
+import { ConfigurationTypes } from '@common/enums';
 // import { CredentialOfferRequestAttrs } from 'jolocom-lib/js/interactionTokens/types';
 // import { CredentialQuery } from '@jolocom/sdk/js/storage';
 // import { CredentialOfferFlowState } from '@jolocom/sdk/js/interactionManager/types';
@@ -22,7 +26,8 @@ export class SsiAgentService {
     // @InjectConnection('jolocom')
     // private typeormConnection: Connection,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private configService: ConfigService
   ) {
     // const storage = new JolocomTypeormStorage(this.typeormConnection);
     // this.jolocomSDK = new JolocomSDK({ storage });
@@ -141,6 +146,29 @@ export class SsiAgentService {
     //   await receiverCredExchangeInteraction2.storeSelectedCredentials();
     // }
 
+    return true;
+  }
+
+  async authorizeStateModification(
+    issuingAgent: IAgent,
+    issuingResourceID: string,
+    receivingAgent: IAgent,
+    receivingResourceID: string
+  ): Promise<boolean> {
+    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+      .enabled;
+    if (!ssiEnabled) {
+      throw new NotEnabledException('SSI is not enabled', LogContext.SSI);
+    }
+
+    await this.grantStateTransitionVC(
+      issuingAgent.did,
+      issuingAgent.password,
+      receivingAgent.did,
+      receivingAgent.password,
+      issuingResourceID,
+      receivingResourceID
+    );
     return true;
   }
 }

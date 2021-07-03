@@ -7,7 +7,6 @@ import {
   LogContext,
 } from '@common/enums';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import {
   IAuthorizationDefinition,
   UpdateAuthorizationDefinitionInput,
@@ -31,7 +30,6 @@ export class ChallengeAuthorizationService {
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private challengeService: ChallengeService,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
-    private authorizationEngine: AuthorizationEngineService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
   ) {}
@@ -68,10 +66,6 @@ export class ChallengeAuthorizationService {
     }
     if (challenge.opportunities) {
       for (const opportunity of challenge.opportunities) {
-        opportunity.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-          opportunity.authorization,
-          challenge.authorization
-        );
         await this.opportunityAuthorizationService.applyAuthorizationRules(
           opportunity,
           challenge.authorization
@@ -80,6 +74,10 @@ export class ChallengeAuthorizationService {
     }
 
     const agent = await this.challengeService.getAgent(challenge.id);
+    agent.authorization = await this.authorizationDefinitionService.reset(
+      agent.authorization
+    );
+
     agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       agent.authorization,
       challenge.authorization

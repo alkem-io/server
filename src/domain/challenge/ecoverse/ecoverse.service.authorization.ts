@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { EcoverseService } from './ecoverse.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import {
@@ -22,7 +21,6 @@ export class EcoverseAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationDefinitionService: AuthorizationDefinitionService,
-    private authorizationEngine: AuthorizationEngineService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private ecoverseService: EcoverseService,
     @InjectRepository(Ecoverse)
@@ -30,6 +28,10 @@ export class EcoverseAuthorizationService {
   ) {}
 
   async applyAuthorizationRules(ecoverse: IEcoverse): Promise<IEcoverse> {
+    // Ensure always applying from a clean state
+    ecoverse.authorization = await this.authorizationDefinitionService.reset(
+      ecoverse.authorization
+    );
     ecoverse.authorization = this.extendAuthorizationDefinition(
       ecoverse.authorization,
       ecoverse.id

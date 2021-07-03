@@ -19,13 +19,6 @@ export abstract class IUser extends INameable {
 
   @Field(() => String)
   lastName!: string;
-
-  @Field(() => String)
-  email!: string;
-
-  @Field(() => String)
-  phone!: string;
-
   @Field(() => String)
   city!: string;
 
@@ -41,9 +34,9 @@ export abstract class IUser extends INameable {
   })
   profile?: IProfile;
 
-  @Field(() => IAgent, {
-    nullable: true,
-    description: 'The agent for this User',
-  })
   agent?: IAgent;
+
+  // Protected via field access for gdpr reasons
+  email!: string;
+  phone!: string;
 }

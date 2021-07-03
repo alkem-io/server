@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ForbiddenException,
+  RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition/authorization.definition.entity';
@@ -28,6 +29,19 @@ export class AuthorizationDefinitionService {
   async createAuthorizationDefinition(): Promise<IAuthorizationDefinition> {
     const authorization = new AuthorizationDefinition();
     return await this.authorizationDefinitionRepository.save(authorization);
+  }
+
+  reset(
+    authorizationDefinition: IAuthorizationDefinition | undefined
+  ): IAuthorizationDefinition {
+    if (!authorizationDefinition) {
+      throw new RelationshipNotFoundException(
+        'Undefined AuthorizationDefinition supplied',
+        LogContext.AUTH
+      );
+    }
+    authorizationDefinition.credentialRules = '';
+    return authorizationDefinition;
   }
 
   async getAuthorizationDefinitionOrFail(
@@ -97,6 +111,8 @@ export class AuthorizationDefinitionService {
   ): IAuthorizationDefinition {
     const child = this.validateAuthorization(childAuthorization);
     const parent = this.validateAuthorization(parentAuthorization);
+    // Reset the child to a base state for authorization definition
+    this.reset(child);
     const newRules = this.convertCredentialRulesStr(parent.credentialRules);
     this.appendCredentialAuthorizationRules(child, newRules);
     child.anonymousReadAccess = parent.anonymousReadAccess;
