@@ -4,11 +4,11 @@ dsn: memory
 
 serve:
   public:
-    base_url: http://localhost:4433/
+    base_url: http://localhost:3000/
     cors:
       enabled: true
   admin:
-    base_url: http://kratos:4434/
+    base_url: http://localhost:4434/
 
 selfservice:
   default_browser_return_url: http://localhost:3000/
@@ -16,6 +16,9 @@ selfservice:
     - http://localhost:3000
 
   methods:
+    link:
+      enabled: true
+
     password:
       enabled: true
     oidc:
@@ -52,7 +55,7 @@ selfservice:
 
     logout:
       after:
-        default_browser_return_url: http://localhost:3000/auth/login
+        default_browser_return_url: http://localhost:3000/
 
     login:
       ui_url: http://localhost:3000/auth/login
@@ -62,9 +65,11 @@ selfservice:
       lifespan: 10m
       ui_url: http://localhost:3000/auth/registration
       after:
-        password:
-          hooks:
-            - hook: session
+        default_browser_return_url: http://localhost:3000/auth/registration/success
+      # Remove auto log in after registration - wait for verification
+      #   password:
+      #     hooks:
+      #       - hook: session
 
 log:
   level: debug
@@ -89,3 +94,6 @@ identity:
 courier:
   smtp:
     connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true
+    from_name: Bob
+    from_address: info@alkem.io
+  template_override_path: /etc/config/kratos/courier-templates

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import {
   IAuthorizationDefinition,
   UpdateAuthorizationDefinitionInput,
@@ -16,18 +15,17 @@ export class OpportunityAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationDefinitionService: AuthorizationDefinitionService,
-    private authorizationEngine: AuthorizationEngineService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>
   ) {}
 
   async applyAuthorizationRules(
     opportunity: IOpportunity,
-    parentAuthorization: IAuthorizationDefinition | undefined
+    challengeAuthorization: IAuthorizationDefinition | undefined
   ): Promise<IOpportunity> {
     opportunity.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       opportunity.authorization,
-      parentAuthorization
+      challengeAuthorization
     );
 
     // propagate authorization rules for child entities
@@ -37,7 +35,10 @@ export class OpportunityAuthorizationService {
     );
     if (opportunity.projects) {
       for (const project of opportunity.projects) {
-        await this.applyAuthorizationRules(project, opportunity.authorization);
+        project.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
+          project.authorization,
+          opportunity.authorization
+        );
       }
     }
     if (opportunity.relations) {

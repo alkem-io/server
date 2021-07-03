@@ -1,6 +1,6 @@
 import { IMatrixEventHandler } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { MatrixClient } from '@src/services/platform/matrix/agent-pool/matrix.client.types';
-import { MatrixRoomEntityAdapter } from '@src/services/platform/matrix/adapter/matrix.adapter.room';
+import { MatrixRoomAdapterService } from '../adapter/matrix.room.adapter.service';
+import { MatrixClient } from '../types/matrix.client.type';
 
 const noop = function() {
   // empty
@@ -9,7 +9,7 @@ const noop = function() {
 export class AutoAcceptRoomMembershipMonitorFactory {
   static create(
     client: MatrixClient,
-    adapter: MatrixRoomEntityAdapter
+    adapter: MatrixRoomAdapterService
   ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
     return {
       complete: noop,
@@ -25,7 +25,7 @@ export class AutoAcceptRoomMembershipMonitorFactory {
 
           await client.joinRoom(roomId);
           if (content.is_direct) {
-            await adapter.setDmRoom(roomId, senderId);
+            await adapter.setDmRoom(client, roomId, senderId);
           }
         }
       },

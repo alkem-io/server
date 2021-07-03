@@ -21,11 +21,6 @@ import {
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AgentInfo } from '@core/authentication';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-
-import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
-import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { GrantStateModificationVCInput } from './dto';
-
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import {
   AuthorizationDefinition,
@@ -38,10 +33,8 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 @Injectable()
 export class AuthorizationService {
   constructor(
-    private readonly ssiAgentService: SsiAgentService,
     private authorizationEngine: AuthorizationEngineService,
     private readonly agentService: AgentService,
-    private readonly challengeService: ChallengeService,
     private readonly userService: UserService,
     @InjectRepository(AuthorizationDefinition)
     private authoriationDefinitionRepository: Repository<
@@ -231,28 +224,5 @@ export class AuthorizationService {
     const match = values.find(value => value.toString() === credentialType);
     if (match) return true;
     return false;
-  }
-
-  async authorizeChallengeStateModification(
-    grantStateModificationVC: GrantStateModificationVCInput
-  ): Promise<IUser> {
-    const challengeAgent = await this.challengeService.getAgent(
-      grantStateModificationVC.challengeID
-    );
-    const userAgent = await this.userService.getAgent(
-      grantStateModificationVC.userID
-    );
-
-    await this.ssiAgentService.grantStateTransitionVC(
-      challengeAgent.did,
-      challengeAgent.password,
-      userAgent.did,
-      userAgent.password,
-      grantStateModificationVC.challengeID,
-      grantStateModificationVC.userID
-    );
-    return await this.userService.getUserOrFail(
-      grantStateModificationVC.userID
-    );
   }
 }

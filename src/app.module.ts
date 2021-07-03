@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { LoggerService, Module, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigService, ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -23,11 +23,12 @@ import { KonfigModule } from '@src/services/platform/configuration/config/config
 import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import configuration from '@config/configuration';
 import { SearchModule } from '@src/services/domain/search/search.module';
-import { ConfigurationTypes } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MembershipModule } from '@src/services/domain/membership/membership.module';
 import { MatrixAgentPool } from './services/platform/matrix/agent-pool/matrix.agent.pool';
 import { MatrixAgentPoolModule } from './services/platform/matrix/agent-pool/matrix.agent.pool.module';
 import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
+import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 
 @Module({
   imports: [
@@ -93,7 +94,10 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     GraphQLModule.forRootAsync({
       imports: [MatrixAgentPoolModule],
       inject: [MatrixAgentPool],
-      useFactory: async (communicationPool: MatrixAgentPool) => ({
+      useFactory: async (
+        communicationPool: MatrixAgentPool,
+        logger: LoggerService
+      ) => ({
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
         autoSchemaFile: true,
@@ -121,12 +125,11 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
                 client.attach({
                   id: sessionKey,
                 });
-                console.log(
-                  'Connecting: ',
-                  email,
-                  context.request.headers['sec-websocket-key'],
-                  ' : ',
-                  (connectionParams as any)['authToken']
+                logger.verbose?.(
+                  `Connecting: ${email} - ${
+                    context.request.headers['sec-websocket-key']
+                  }: ${(connectionParams as any)['authToken']}`,
+                  LogContext.COMMUNICATION
                 );
               }
             }
@@ -142,9 +145,9 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
             const client = await communicationPool.acquireSession(sessionKey);
             if (client) {
               client.detach(sessionKey);
-              console.log(
-                'Disconnecting: ',
-                context.request.headers['sec-websocket-key']
+              logger.verbose?.(
+                `Disconnecting: ${context.request.headers['sec-websocket-key']}`,
+                LogContext.COMMUNICATION
               );
             }
           },
@@ -178,4 +181,8 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consummer: MiddlewareConsumer) {
+    consummer.apply(RequestLoggerMiddleware).forRoutes('/');
+  }
+}

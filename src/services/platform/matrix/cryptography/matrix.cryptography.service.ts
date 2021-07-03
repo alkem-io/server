@@ -1,12 +1,10 @@
 import { ConfigurationTypes } from '@common/enums';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IMatrixUser } from '@src/services/platform/matrix/management/matrix.management.user.interface';
 import * as crypto from 'crypto-js';
-import { IMatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.interface';
-
+import { IMatrixUser } from '../user/matrix.user.interface';
 @Injectable()
-export class MatrixCryptographyService implements IMatrixCryptographyService {
+export class MatrixCryptographyService {
   constructor(private configService: ConfigService) {}
 
   generateHmac(user: IMatrixUser, nonce: string, isAdmin?: boolean): string {
@@ -29,7 +27,7 @@ export class MatrixCryptographyService implements IMatrixCryptographyService {
     hmac.update(toUft8('\x00'));
     hmac.update(toUft8(user.password));
     hmac.update(toUft8('\x00'));
-    hmac.update(isAdmin ? 'admin' : 'notadmin');
+    hmac.update(toUft8(isAdmin ? 'admin' : 'notadmin'));
 
     return crypto.enc.Hex.stringify(hmac.finalize());
   }

@@ -1,3 +1,6 @@
+import { MatrixEventDispatcher } from '../events/matrix.event.dispatcher';
+import { MatrixClient } from '../types/matrix.client.type';
+
 export interface IMessageRequest {
   text: string;
 }
@@ -6,33 +9,11 @@ export interface ICommunityMessageRequest extends IMessageRequest {
   communityId: string;
 }
 
-export interface IDirectMessageRequest extends IMessageRequest {
+export interface IInitiateDirectMessageRequest {
   email: string;
 }
 
-export interface IResponseMessage {
-  originServerTimestamp: number;
-  body: string;
-}
-
 export interface IMatrixAgent {
-  getCommunities(): Promise<any[]>;
-  getRooms(): Promise<any[]>;
-  getUserMessages(
-    email: string
-  ): Promise<{
-    roomId: string | null;
-    name: string | null;
-    timeline: IResponseMessage[];
-  }>;
-  getCommunityMessages(
-    communityId: string
-  ): Promise<{
-    roomId: string | null;
-    name: string | null;
-    timeline: IResponseMessage[];
-  }>;
-  message(room: string, content: IMessageRequest): Promise<void>;
-  messageUser(content: IDirectMessageRequest): Promise<string>;
-  messageCommunity(content: ICommunityMessageRequest): Promise<string>;
+  matrixClient: MatrixClient;
+  eventDispatcher: MatrixEventDispatcher;
 }

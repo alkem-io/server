@@ -7,7 +7,10 @@
 
 Welcome to the Alkemio Server! This server is the heart of the Alkemio Platform, and manages the representation of the ecoverse and all the entities stored wthin it.
 
-[![Build Status](https://travis-ci.com/cherrytwist/Server.svg?branch=develop)](https://travis-ci.com/cherrytwist/Server) [![Coverage Status](https://coveralls.io/repos/github/alkem-io/Server/badge.svg?branch=develop)](https://coveralls.io/github/alkem-io/Server?branch=develop) [![BCH compliance](https://bettercodehub.com/edge/badge/cherrytwist/Server?branch=develop)](https://bettercodehub.com/) ![Docker Image CI](https://github.com/alkem-io/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
+[![Build Status](https://api.travis-ci.com/alkem-io/server.svg?branch=develop)](https://travis-ci.com/github/alkem-io/server)
+[![Coverage Status](https://coveralls.io/repos/github/alkem-io/server/badge.svg?branch=develop)](https://coveralls.io/github/alkem-io/server?branch=develop)
+[![BCH compliance](https://bettercodehub.com/edge/badge/alkem-io/server?branch=develop)](https://bettercodehub.com/)
+![Docker Image CI](https://github.com/alkem-io/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
 
 A high level overview of the Design of the Alkemio Server is shown below.
 

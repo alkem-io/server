@@ -3,7 +3,6 @@ import { AuthorizationDefinitionService } from '@domain/common/authorization-def
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { Injectable } from '@nestjs/common';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { Repository } from 'typeorm';
 import { BaseChallenge } from './base.challenge.entity';
 import { IBaseChallenge } from './base.challenge.interface';
@@ -14,7 +13,6 @@ export class BaseChallengeAuthorizationService {
   constructor(
     private baseChallengeService: BaseChallengeService,
     private authorizationDefinitionService: AuthorizationDefinitionService,
-    private authorizationEngine: AuthorizationEngineService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService
   ) {}
@@ -28,21 +26,21 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    community.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      community.authorization,
-      baseChallenge.authorization
-    );
     // disable anonymous access for community
-    community.authorization.anonymousReadAccess = false;
-    baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
-      community
-    );
-    baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
-      community
-    );
+    if (community.authorization) {
+      community.authorization.anonymousReadAccess = false;
+      baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
+        community,
+        baseChallenge.authorization
+      );
+    }
 
     const tagset = baseChallenge.tagset;
     if (tagset) {
+      // Ensure always applying from a clean state
+      tagset.authorization = await this.authorizationDefinitionService.reset(
+        tagset.authorization
+      );
       tagset.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
         tagset.authorization,
         baseChallenge.authorization
@@ -52,6 +50,9 @@ export class BaseChallengeAuthorizationService {
     const context = await this.baseChallengeService.getContext(
       baseChallenge.id,
       repository
+    );
+    context.authorization = await this.authorizationDefinitionService.reset(
+      context.authorization
     );
     context.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       context.authorization,

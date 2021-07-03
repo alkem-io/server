@@ -4,7 +4,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ChallengeService } from './challenge.service';
-import { ChallengeEventInput } from '@domain/challenge/challenge/challenge.dto.event';
+import { ChallengeEventInput } from '@domain/challenge/challenge/dto/challenge.dto.event';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';

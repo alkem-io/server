@@ -176,7 +176,7 @@ identity:
         port: 3306
 
         # MySQL username.
-        username: 'root'
+        username: "root"
 
         # MySQL password.
         password: ${MYSQL_ROOT_PASSWORD}:toor
@@ -199,14 +199,22 @@ monitoring:
     # If the flag is set to true logs of the appropriate level (see below) will be outputted to the console
     # after the application has been bootstrapped.
     # The NestJS bootstrap process is handled by the internal NestJS logging.
-    consoleLoggingEnabled: ${LOGGING_CONSOLE_ENABLED}:false
+    consoleLoggingEnabled: ${LOGGING_CONSOLE_ENABLED}:true
 
     # Logging level for outputs to console.
     # Valid values are log|error|warn|debug|verbose.
-    level: ${LOGGING_LEVEL_CONSOLE}:warn
+    level: ${LOGGING_LEVEL_CONSOLE}:verbose
 
     # A flag enabling / disabling performance logging.
     profilingEnabled: ${LOGGING_PROFILING_ENABLED}:true
+
+    # Logging of the incoming requests to the server
+    requests:
+      # Log the full request object. NOT Recommended, because the object is huge.
+      fullLoggingEnabled: ${LOGGING_REQ_FULL_ENABLED}:false
+
+      # Log request headers. Requires Logging Level at least verbose.
+      headersLoggingEnabled: ${LOGGING_REQ_HEADERS_ENABLED}:false
 
   # Elastic logging configuration
   elastic:
@@ -240,10 +248,16 @@ communications:
     # Synapse server (https://github.com/matrix-org/synapse) configuration.
     server:
       # Synapse server name, defined in homeserver.yaml on the Synapse instance.
-      name: ${SYNAPSE_SERVER_NAME}:alkemio.matrix.host
+      hostname: ${SYNAPSE_SERVER_NAME}:alkemio.matrix.host
+      # Synapse server URL, where it can be accessed by the CT server
+      url: ${SYNAPSE_SERVER_URL}:http://localhost:8008
     shared:
       # Synapse shared secret, defined in homeserver.yaml on the Synapse instance.
       secret: ${SYNAPSE_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+    admin:
+      # The admin account that is created / used to administer the regular users on the Synapse server
+      username: ${SYNAPSE_ADMIN_USERNAME}:matrixadmin@cherrytwist.org
+      password: ${SYNAPSE_ADMIN_PASSWORD}:change_me_now
 
 ## storage ##
 # Alkemio uses multiple types of persistent storage, including SQL database and IPFS.
@@ -259,7 +273,7 @@ storage:
     port: 3306
 
     # MySQL username.
-    username: 'root'
+    username: "root"
 
     # MySQL password.
     password: ${MYSQL_ROOT_PASSWORD}:toor
@@ -303,5 +317,3 @@ platform:
 
   # About the platform
   about: ${PLATFORM_ABOUT}:https://alkem.io/platform/about
-
-
