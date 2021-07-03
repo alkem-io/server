@@ -103,9 +103,10 @@ export class AuthorizationEngineService {
 
   isAccessGranted(
     agentInfo: AgentInfo,
-    authorization: IAuthorizationDefinition,
+    authorization: IAuthorizationDefinition | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
+    if (!authorization) throw new Error();
     if (this.isAuthenticationDisabled()) return true;
     if (
       authorization.anonymousReadAccess &&

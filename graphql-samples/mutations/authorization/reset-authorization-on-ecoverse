@@ -1,0 +1,11 @@
+mutation authorizationDefinitionResetOnEcoverse($authorizationResetData: EcoverseAuthorizationResetInput!) {
+  authorizationDefinitionResetOnEcoverse(authorizationResetData: $authorizationResetData) {
+    nameID
+  }
+}
+
+{
+  "authorizationResetData": {
+    "ecoverseID": "Eco1"
+  }
+}
