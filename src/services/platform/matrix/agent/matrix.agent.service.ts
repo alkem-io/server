@@ -2,20 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
 import { createClient } from 'matrix-js-sdk';
-import {
-  ICommunityMessageRequest,
-  IInitiateDirectMessageRequest,
-  IMessageRequest,
-} from '@src/services/platform/matrix/agent-pool';
-import { IMatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent.interface';
-import { IOperationalMatrixUser } from '../user/matrix.user.interface';
-import { MatrixUserAdapterService } from '../user/matrix.user.adapter.service';
+import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
+import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
 import { MatrixAgent } from './matrix.agent';
 import { MatrixClient } from '../types/matrix.client.type';
-import { MatrixResponseMessage } from '../types/matrix.response.message.type';
-import { MatrixRoom } from '../types/matrix.room.type';
-import { MatrixRoomAdapterService } from '../adapter/matrix.room.adapter.service';
-import { MatrixGroupAdapterService } from '../adapter/matrix.group.adapter.service';
+import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
+import { MatrixGroupAdapterService } from '../adapter-group/matrix.group.adapter.service';
+import { IMatrixAgent } from './matrix.agent.interface';
+import { MatrixAgentMessageRequestCommunity } from './matrix.agent.dto.message.request.community';
+import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
+import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
+import { MatrixRoom } from '../adapter-room/matrix.room.dto.result';
+
 @Injectable()
 export class MatrixAgentService {
   constructor(
@@ -56,25 +54,38 @@ export class MatrixAgentService {
     return matrixAgent.matrixClient.getGroups() || [];
   }
 
-  async getRooms(matrixAgent: IMatrixAgent): Promise<any[]> {
+  async getRooms(matrixAgent: IMatrixAgent): Promise<MatrixRoom[]> {
     const matrixClient = matrixAgent.matrixClient;
     const communityMap = await this.matrixGroupAdapterService.communityRooms(
       matrixClient
     );
-    const communityRooms = Object.keys(communityMap).map(x => ({
+    const communityRooms: MatrixRoom[] = Object.keys(communityMap).map(x => ({
       roomID: communityMap[x][0],
+      isDirect: false,
     }));
     const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(matrixClient);
-    const dmRooms = Object.keys(dmRoomMap).map(x => ({
-      receiverEmail: this.matrixUserAdapterService.id2email(x),
-      isDirect: true,
+    const dmRoomMapKeys = Object.keys(dmRoomMap);
+    const dmRooms: MatrixRoom[] = dmRoomMapKeys.map(x => ({
       roomID: dmRoomMap[x][0],
+      isDirect: true,
+      receiverEmail: this.matrixUserAdapterService.id2email(x),
     }));
 
     return communityRooms.concat(dmRooms);
   }
 
-  async getRoom(matrixAgent: IMatrixAgent, roomId: string): Promise<any> {
+  // async getCommunityRoom((
+  //   matrixAgent: IMatrixAgent,
+  //   roomId: string
+  // ): Promise<MatrixRoom> {
+
+  //   return {}
+  // }
+
+  async getRoom(
+    matrixAgent: IMatrixAgent,
+    roomId: string
+  ): Promise<MatrixRoom> {
     const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(
       matrixAgent.matrixClient
     );
@@ -86,7 +97,7 @@ export class MatrixAgentService {
     const room: MatrixRoom = await matrixAgent.matrixClient.getRoom(roomId);
 
     return {
-      roomID: room.roomId,
+      roomID: room.roomID,
       isDirect: Boolean(dmRoom),
       receiverEmail: dmRoom && this.matrixUserAdapterService.id2email(dmRoom),
       timeline: room.timeline,
@@ -103,11 +114,7 @@ export class MatrixAgentService {
   async getUserMessages(
     matrixAgent: IMatrixAgent,
     email: string
-  ): Promise<{
-    roomId: string | null;
-    name: string | null;
-    timeline: MatrixResponseMessage[];
-  }> {
+  ): Promise<MatrixRoom> {
     const matrixUsername = this.matrixUserAdapterService.email2id(email);
     // Need to implement caching for performance
     const dmRoom = this.matrixRoomAdapterService.dmRooms(
@@ -118,9 +125,7 @@ export class MatrixAgentService {
     // avoid retrieving data - if we cannot retrieve dms for a room that is supposed to be dm then we might have reached an erroneous state
     if (!dmRoom || !Boolean(dmRoom[0])) {
       return {
-        roomId: null,
-        name: null,
-        timeline: [],
+        roomID: '',
       };
     }
 
@@ -132,19 +137,13 @@ export class MatrixAgentService {
   async getCommunityMessages(
     matrixAgent: IMatrixAgent,
     communityId: string
-  ): Promise<{
-    roomId: string | null;
-    name: string | null;
-    timeline: MatrixResponseMessage[];
-  }> {
+  ): Promise<MatrixRoom> {
     const communityRoomIds = this.matrixGroupAdapterService.communityRooms(
       matrixAgent.matrixClient
     )[communityId];
     if (!communityRoomIds) {
       return {
-        roomId: null,
-        name: null,
-        timeline: [],
+        roomID: '',
       };
     }
     const communityRoomId = communityRoomIds[0];
@@ -156,12 +155,12 @@ export class MatrixAgentService {
 
   async initiateMessagingToUser(
     matrixAgent: IMatrixAgent,
-    content: IInitiateDirectMessageRequest
+    msgRequest: MatrixAgentMessageRequestDirect
   ): Promise<string> {
     const client = matrixAgent.matrixClient;
     // there needs to be caching for dmRooms and event to update them
     const dmRooms = this.matrixRoomAdapterService.dmRooms(client);
-    const matrixId = this.matrixUserAdapterService.email2id(content.email);
+    const matrixId = this.matrixUserAdapterService.email2id(msgRequest.email);
     const dmRoom = dmRooms[matrixId];
     let targetRoomId = null;
 
@@ -184,10 +183,10 @@ export class MatrixAgentService {
 
   async messageCommunity(
     matrixAgent: IMatrixAgent,
-    content: ICommunityMessageRequest
+    msgRequest: MatrixAgentMessageRequestCommunity
   ): Promise<string> {
     const groupRooms = await matrixAgent.matrixClient.getGroupRooms(
-      content.communityId
+      msgRequest.communityId
     );
     const room = groupRooms[0];
 
@@ -195,7 +194,7 @@ export class MatrixAgentService {
       throw new Error('The community does not have a default room set');
     }
 
-    await this.message(matrixAgent, room.roomId, { text: content.text });
+    await this.message(matrixAgent, room.roomId, { text: msgRequest.text });
 
     return room.roomId;
   }
@@ -203,12 +202,12 @@ export class MatrixAgentService {
   async message(
     matrixAgent: IMatrixAgent,
     roomId: string,
-    content: IMessageRequest
+    msgRequest: MatrixAgentMessageRequest
   ) {
     await matrixAgent.matrixClient.sendEvent(
       roomId,
       'm.room.message',
-      { body: content.text, msgtype: 'm.text' },
+      { body: msgRequest.text, msgtype: 'm.text' },
       ''
     );
   }

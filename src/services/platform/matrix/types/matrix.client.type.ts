@@ -1,8 +1,8 @@
+import { IProfileOpts } from '../adapter-group/matrix.group.dto.profile.options';
+import { MatrixGroup } from '../adapter-group/matrix.group.dto.result';
+import { IRoomCreateOpts } from '../adapter-room/matrix.room.dto.create.options';
+import { MatrixRoom } from '../adapter-room/matrix.room.dto.result';
 import { MatrixEventHandler } from './matrix.event.handler.type';
-import { IProfileOpts } from './matrix.group.profile.options.type';
-import { MatrixGroup } from './matrix.group.type';
-import { IRoomCreateOpts } from './matrix.room.create.options.type';
-import { MatrixRoom } from './matrix.room.type';
 
 export type MatrixClient = {
   startClient: () => void;

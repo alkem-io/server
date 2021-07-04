@@ -11,14 +11,15 @@ import {
 import { CommunicationSendMessageUserInput } from './communication.dto.send.msg.user';
 import { CommunicationSendMessageCommunityInput } from './communication.dto.send.msg.community';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
-import { IOperationalMatrixUser } from '../matrix/user/matrix.user.interface';
+import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.interface';
 import { ConfigService } from '@nestjs/config';
-import { MatrixAgentService } from '../matrix/agent-pool/matrix.agent.service';
-import { MatrixUserAdapterService } from '../matrix/user/matrix.user.adapter.service';
-import { MatrixRoomAdapterService } from '../matrix/adapter/matrix.room.adapter.service';
-import { MatrixGroupAdapterService } from '../matrix/adapter/matrix.group.adapter.service';
-import { MatrixAgent } from '../matrix/agent-pool/matrix.agent';
+import { MatrixUserAdapterService } from '../matrix/adapter-user/matrix.user.adapter.service';
+import { MatrixRoomAdapterService } from '../matrix/adapter-room/matrix.room.adapter.service';
+import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.adapter.service';
+import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
+import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
+import { MatrixRoomResponseMessage } from '../matrix/adapter-room/matrix.room.dto.response.message';
 
 @Injectable()
 export class CommunicationService {
@@ -87,6 +88,7 @@ export class CommunicationService {
     const roomID = await this.matrixAgentService.initiateMessagingToUser(
       matrixAgent,
       {
+        text: '',
         email: sendMsgUserData.receiverID,
       }
     );
@@ -239,7 +241,12 @@ export class CommunicationService {
     const roomResponse = await this.matrixAgentService.getRooms(matrixAgent);
     return await Promise.all(
       roomResponse.map(rr =>
-        this.bootstrapRoom(rr.roomID, rr.isDirect, rr.receiverEmail, [])
+        this.bootstrapRoom(
+          rr.roomID,
+          rr.isDirect || false,
+          rr.receiverEmail || '',
+          []
+        )
       )
     );
   }
@@ -257,28 +264,24 @@ export class CommunicationService {
       };
     }
     const matrixAgent = await this.matrixAgentPool.acquire(email);
-    const {
-      roomID,
-      isDirect,
-      receiverEmail,
-      timeline,
-    } = await this.matrixAgentService.getRoom(matrixAgent, roomId);
-
-    const room = await this.bootstrapRoom(
-      roomID,
-      isDirect,
-      receiverEmail,
-      timeline
+    const roomResult = await this.matrixAgentService.getRoom(
+      matrixAgent,
+      roomId
     );
 
-    return room;
+    return await this.bootstrapRoom(
+      roomResult.roomID,
+      roomResult.isDirect || false,
+      roomResult.receiverEmail || '',
+      roomResult.timeline || []
+    );
   }
 
   private async bootstrapRoom(
     roomId: string,
     isDirect: boolean,
     receiverEmail: string,
-    messages: Array<{ event: any; sender: any }>
+    messages: MatrixRoomResponseMessage[]
   ): Promise<CommunicationRoomDetailsResult> {
     const room = new CommunicationRoomDetailsResult();
     room.id = roomId;
@@ -294,7 +297,9 @@ export class CommunicationService {
 
     const senderEmails = [
       ...new Set(
-        messages.map(m => this.matrixUserAdapterService.id2email(m.sender.name))
+        messages.map(msg =>
+          this.matrixUserAdapterService.id2email(msg.sender.name)
+        )
       ),
     ];
     const users = await Promise.all(

@@ -1,5 +1,5 @@
 import { IMatrixEventHandler } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { MatrixRoomAdapterService } from '../adapter/matrix.room.adapter.service';
+import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
 import { MatrixClient } from '../types/matrix.client.type';
 
 const noop = function() {
