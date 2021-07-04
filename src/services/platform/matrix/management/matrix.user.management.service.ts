@@ -61,11 +61,6 @@ export class MatrixUserManagementService {
       .get<{ nonce: string }>(url.href)
       .toPromise();
     const nonce = nonceResponse.data['nonce'];
-    this.logger.verbose?.(
-      `Registering user for email '${email}' with nonce: ${nonce}`,
-      LogContext.COMMUNICATION
-    );
-
     const hmac = this.cryptographyServive.generateHmac(user, nonce, isAdmin);
 
     const registrationResponse = await this.httpService

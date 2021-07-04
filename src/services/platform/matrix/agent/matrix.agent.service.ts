@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { createClient } from 'matrix-js-sdk';
 import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
 import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
@@ -13,6 +13,7 @@ import { MatrixAgentMessageRequestCommunity } from './matrix.agent.dto.message.r
 import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
 import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
 import { MatrixRoom } from '../adapter-room/matrix.room.dto.result';
+import { MatrixEntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class MatrixAgentService {
@@ -95,6 +96,12 @@ export class MatrixAgentService {
     );
 
     const room: MatrixRoom = await matrixAgent.matrixClient.getRoom(roomId);
+    if (!room) {
+      throw new MatrixEntityNotFoundException(
+        `Room not found: ${roomId}, agent id: ${matrixAgent.matrixClient.getUserId()}`,
+        LogContext.COMMUNICATION
+      );
+    }
 
     return {
       roomID: room.roomID,
@@ -148,9 +155,17 @@ export class MatrixAgentService {
     }
     const communityRoomId = communityRoomIds[0];
 
-    const community = await matrixAgent.matrixClient.getGroup(communityRoomId);
+    const communityGroup = await matrixAgent.matrixClient.getGroup(
+      communityRoomId
+    );
+    if (!communityGroup) {
+      throw new MatrixEntityNotFoundException(
+        `Group not found: ${communityRoomId}`,
+        LogContext.COMMUNICATION
+      );
+    }
 
-    return await this.getMessages(matrixAgent, community.roomId);
+    return await this.getMessages(matrixAgent, communityGroup.roomId);
   }
 
   async initiateMessagingToUser(
