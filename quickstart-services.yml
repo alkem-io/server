@@ -114,9 +114,10 @@ services:
     restart: always
     environment:
       - SYNAPSE_NO_TLS=true
-      - SYNAPSE_SERVER_NAME
       - SYNAPSE_ENABLE_REGISTRATION=true
-      - SYNAPSE_REGISTRATION_SHARED_SECRET
+      - SYNAPSE_HOMESERVER_NAME
+      - SYNAPSE_SERVER_URL
+      - SYNAPSE_SERVER_SHARED_SECRET
     networks:
       - alkemio_dev_net
     ports:

@@ -84,6 +84,14 @@ export class MatrixUserManagementService {
       );
     }
 
+    // Check to ensure that the response home server matches the request
+    if (registrationResponse.data.user_id !== user.username) {
+      throw new MatrixUserRegistrationException(
+        `Registration response user_id '${registrationResponse.data.user_id}' is not equal to the supplied username: ${user.username} - please check configuraiton`,
+        LogContext.COMMUNICATION
+      );
+    }
+
     const operationalUser = {
       name: user.name,
       password: user.password,

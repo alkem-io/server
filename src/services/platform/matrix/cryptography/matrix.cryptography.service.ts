@@ -10,7 +10,7 @@ export class MatrixCryptographyService {
   generateHmac(user: IMatrixUser, nonce: string, isAdmin?: boolean): string {
     const sharedSecret = this.configService.get(
       ConfigurationTypes.Communications
-    )?.matrix?.shared?.secret;
+    )?.matrix?.server?.shared_secret;
 
     if (!sharedSecret) {
       throw new Error('Matrix configuration is not provided');
