@@ -4,8 +4,8 @@ import { MatrixAgentPoolException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MatrixAgent } from './matrix.agent';
-import { MatrixAgentService } from './matrix.agent.service';
+import { MatrixAgent } from '../agent/matrix.agent';
+import { MatrixAgentService } from '../agent/matrix.agent.service';
 
 @Injectable()
 export class MatrixAgentPool {
@@ -14,7 +14,7 @@ export class MatrixAgentPool {
 
   constructor(
     private matrixAgentService: MatrixAgentService,
-    private matrixUserService: MatrixUserManagementService,
+    private matrixUserManagementService: MatrixUserManagementService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
@@ -65,13 +65,15 @@ export class MatrixAgentPool {
   }
 
   private async acquireUser(email: string) {
-    const isRegistered = await this.matrixUserService.isRegistered(email);
+    const isRegistered = await this.matrixUserManagementService.isRegistered(
+      email
+    );
 
     if (isRegistered) {
-      return await this.matrixUserService.login(email);
+      return await this.matrixUserManagementService.login(email);
     }
 
-    return await this.matrixUserService.register(email);
+    return await this.matrixUserManagementService.register(email);
   }
 
   release(email: string): void {

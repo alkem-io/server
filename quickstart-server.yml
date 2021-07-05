@@ -5,7 +5,7 @@ services:
     container_name: alkemio_server_dev
     image: alkemio_server
     build: .
-    #image: cherrytwist/server:v0.11.5-alpha1
+    #image: alkemio/server:v0.11.5-alpha3
     depends_on:
       - mysql_db
     networks:

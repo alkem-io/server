@@ -13,3 +13,4 @@ export * from './registration.exception';
 export * from './matrix.agent.pool.exception';
 export * from './matrix.login.exception';
 export * from './matrix.registration.exception';
+export * from './matrix.entity.not.found.exception';

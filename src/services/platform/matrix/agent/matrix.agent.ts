@@ -5,10 +5,11 @@ import {
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import { AutoAcceptRoomMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adpater.room';
-import { IMatrixAgent } from '@src/services/platform/matrix/agent-pool/matrix.agent.interface';
 import { MatrixClient } from '../types/matrix.client.type';
-import { MatrixRoomAdapterService } from '../adapter/matrix.room.adapter.service';
+import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
+import { IMatrixAgent } from './matrix.agent.interface';
 
+// Wraps an instance of the client sdk
 export class MatrixAgent implements IMatrixAgent, Disposable {
   matrixClient: MatrixClient;
   eventDispatcher: MatrixEventDispatcher;

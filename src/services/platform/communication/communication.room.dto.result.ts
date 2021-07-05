@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { CommunicationMessageResult } from './communication.dto.message.result';
 
-@ObjectType()
+@ObjectType('Room')
 export class CommunicationRoomResult {
   @Field(() => String, {
     nullable: false,
@@ -9,9 +9,15 @@ export class CommunicationRoomResult {
   })
   id!: string;
 
+  @Field(() => [CommunicationMessageResult], {
+    nullable: false,
+    description: 'The messages that have been sent to the Room.',
+  })
+  messages!: CommunicationMessageResult[];
+
   @Field(() => Boolean, {
     nullable: false,
-    description: 'Indicates whether this is a DM room',
+    description: 'Whether the Room is for direct messages to another user.',
   })
   isDirect!: boolean;
 
@@ -20,13 +26,4 @@ export class CommunicationRoomResult {
     description: 'The recepient userID',
   })
   receiverID?: string;
-}
-
-@ObjectType()
-export class CommunicationRoomDetailsResult extends CommunicationRoomResult {
-  @Field(() => [CommunicationMessageResult], {
-    nullable: false,
-    description: 'The message being sent',
-  })
-  messages!: CommunicationMessageResult[];
 }

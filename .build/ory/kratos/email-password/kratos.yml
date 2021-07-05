@@ -51,7 +51,7 @@ selfservice:
       enabled: true
       ui_url: http://localhost:3000/auth/verify
       after:
-        default_browser_return_url: http://localhost:3000/registration/verified
+        default_browser_return_url: http://localhost:3000/auth/verify/success
 
     logout:
       after:

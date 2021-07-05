@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixClient } from '../types/matrix.client.type';
-import { IOpts } from '../types/matrix.group.options.type';
+import { IOpts } from './matrix.group.dto.options';
 
 @Injectable()
 export class MatrixGroupAdapterService {
@@ -20,8 +20,8 @@ export class MatrixGroupAdapterService {
       roomMap[community.groupId] = roomMap[community.groupId] || [];
 
       for (const room of communityRooms) {
-        if (room.groupId === community.groupId) {
-          roomMap[community.groupId].push(room.roomId);
+        if (room.groupID === community.groupId) {
+          roomMap[community.groupId].push(room.roomID);
         }
       }
     }

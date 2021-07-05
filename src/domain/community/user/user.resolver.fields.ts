@@ -11,13 +11,9 @@ import {
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { CommunicationService } from '@src/services/platform/communication/communication.service';
-import {
-  CommunicationRoomDetailsResult,
-  CommunicationRoomResult,
-} from '@src/services/platform/communication';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
-
+import { CommunicationRoomResult } from '@services/platform/communication';
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
@@ -48,7 +44,7 @@ export class UserResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('room', () => CommunicationRoomDetailsResult, {
+  @ResolveField('room', () => CommunicationRoomResult, {
     nullable: true,
     description: 'An overview of the rooms this user is a member of',
   })
@@ -56,13 +52,13 @@ export class UserResolverFields {
   async room(
     @Parent() user: User,
     @Args('roomID') roomID: string
-  ): Promise<CommunicationRoomDetailsResult> {
+  ): Promise<CommunicationRoomResult> {
     return await this.communicationService.getRoom(roomID, user.email);
   }
 
   @UseGuards(GraphqlGuard)
   @ResolveField('email', () => String, {
-    nullable: true,
+    nullable: false,
     description: 'The email address for this User.',
   })
   @Profiling.api
@@ -83,7 +79,7 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('phone', () => String, {
-    nullable: true,
+    nullable: false,
     description: 'The phone number for this User.',
   })
   @Profiling.api

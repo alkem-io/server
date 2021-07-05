@@ -30,11 +30,11 @@ export class MatrixUserAdapterService {
   }
 
   username2id(username: string) {
-    const matrixHostName = this.configService.get(
+    const homeserverName = this.configService.get(
       ConfigurationTypes.Communications
-    )?.matrix?.server?.hostname;
+    )?.matrix?.homeserver_name;
 
-    return `@${username}:${matrixHostName}`;
+    return `@${username}:${homeserverName}`;
   }
 
   email2id(email: string) {

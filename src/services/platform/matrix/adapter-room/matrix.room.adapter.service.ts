@@ -2,8 +2,8 @@ import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixClient } from '../types/matrix.client.type';
-import { Preset, Visibility } from '../types/matrix.room.create.options.type';
-import { IRoomOpts } from '../types/matrix.room.options.type';
+import { Preset, Visibility } from './matrix.room.dto.create.options';
+import { IRoomOpts } from './matrix.room.dto.options';
 
 @Injectable()
 export class MatrixRoomAdapterService {
