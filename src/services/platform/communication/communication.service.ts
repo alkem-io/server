@@ -4,10 +4,7 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { UserService } from '@domain/community/user/user.service';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
 import { CommunicationMessageResult } from './communication.dto.message.result';
-import {
-  CommunicationRoomResult,
-  CommunicationRoomDetailsResult,
-} from './communication.dto.room.result';
+
 import { CommunicationSendMessageUserInput } from './communication.dto.send.msg.user';
 import { CommunicationSendMessageCommunityInput } from './communication.dto.send.msg.community';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
@@ -19,6 +16,8 @@ import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.
 import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
+import { MatrixRoom } from '../matrix/adapter-room/matrix.room.dto.result';
+import { CommunicationRoomResult } from './communication.room.dto.result';
 import { MatrixRoomResponseMessage } from '../matrix/adapter-room/matrix.room.dto.response.message';
 
 @Injectable()
@@ -238,77 +237,77 @@ export class CommunicationService {
       return [];
     }
     const matrixAgent = await this.matrixAgentPool.acquire(email);
-    const roomResponse = await this.matrixAgentService.getRooms(matrixAgent);
-    return await Promise.all(
-      roomResponse.map(rr =>
-        this.bootstrapRoom(
-          rr.roomID,
-          rr.isDirect || false,
-          rr.receiverEmail || '',
-          []
-        )
-      )
-    );
+    const matrixRooms = await this.matrixAgentService.getRooms(matrixAgent);
+    const rooms: CommunicationRoomResult[] = [];
+    for (const matrixRoom of matrixRooms) {
+      const room = await this.convertToRoomResult(matrixRoom);
+      rooms.push(room);
+    }
+    return rooms;
   }
 
   async getRoom(
     roomId: string,
     email: string
-  ): Promise<CommunicationRoomDetailsResult> {
+  ): Promise<CommunicationRoomResult> {
     // If not enabled just return an empty room
     if (!this.enabled) {
       return {
         id: 'communications-not-enabled',
-        isDirect: false,
         messages: [],
+        isDirect: false,
       };
     }
     const matrixAgent = await this.matrixAgentPool.acquire(email);
-    const roomResult = await this.matrixAgentService.getRoom(
+    const matrixRoom = await this.matrixAgentService.getRoom(
       matrixAgent,
       roomId
     );
 
-    return await this.bootstrapRoom(
-      roomResult.roomID,
-      roomResult.isDirect || false,
-      roomResult.receiverEmail || '',
-      roomResult.timeline || []
-    );
+    return await this.convertToRoomResult(matrixRoom);
   }
 
-  private async bootstrapRoom(
-    roomId: string,
-    isDirect: boolean,
-    receiverEmail: string,
-    messages: MatrixRoomResponseMessage[]
-  ): Promise<CommunicationRoomDetailsResult> {
-    const room = new CommunicationRoomDetailsResult();
-    room.id = roomId;
-    room.isDirect = isDirect;
+  private async convertToRoomResult(
+    matrixRoom: MatrixRoom
+  ): Promise<CommunicationRoomResult> {
+    const roomResult: CommunicationRoomResult = new CommunicationRoomResult();
+    roomResult.id = matrixRoom.roomID;
+    roomResult.isDirect = matrixRoom.isDirect || false;
 
-    const receiver = await this.userService.getUserByEmail(receiverEmail);
-
-    if (!receiver) {
-      delete room.receiverID;
-    } else {
-      room.receiverID = `${receiver.id}`;
+    if (matrixRoom.receiverEmail) {
+      const receiver = await this.userService.getUserByEmail(
+        matrixRoom.receiverEmail
+      );
+      if (receiver) roomResult.receiverID = receiver?.id;
     }
 
+    if (matrixRoom.timeline) {
+      roomResult.messages = await this.convertTimelineToMessages(
+        matrixRoom.timeline
+      );
+    }
+
+    return roomResult;
+  }
+
+  async convertTimelineToMessages(
+    timeline: MatrixRoomResponseMessage[]
+  ): Promise<CommunicationMessageResult[]> {
+    const messages: CommunicationMessageResult[] = [];
     const senderEmails = [
       ...new Set(
-        messages.map(msg =>
+        timeline.map(msg =>
           this.matrixUserAdapterService.id2email(msg.sender.name)
         )
       ),
     ];
     const users = await Promise.all(
-      senderEmails.map(e => this.userService.getUserByEmail(e))
+      senderEmails.map(senderEmail =>
+        this.userService.getUserByEmail(senderEmail)
+      )
     );
 
-    room.messages = [];
-
-    for (const { event: ev, sender } of messages) {
+    for (const { event: ev, sender } of timeline) {
       if (!ev.content?.body) {
         continue;
       }
@@ -322,9 +321,8 @@ export class CommunicationService {
         timestamp: ev.origin_server_ts,
       };
 
-      room.messages.push(roomMessage);
+      messages.push(roomMessage);
     }
-
-    return room;
+    return messages;
   }
 }
