@@ -72,12 +72,10 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getChallenges(ecoverse);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('tagset', () => ITagset, {
     nullable: true,
     description: 'The set of tags for the  ecoverse.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async tagset(@Parent() ecoverse: Ecoverse) {
     return ecoverse.tagset;
