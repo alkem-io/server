@@ -1,4 +1,4 @@
-import { IRoomCreateOpts } from './matrix.room.create.options.type';
+import { IRoomCreateOpts } from './matrix.room.dto.create.options';
 
 export type IRoomOpts = {
   dmUserId?: string;

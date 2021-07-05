@@ -245,18 +245,19 @@ communications:
   enabled: ${COMMUNICATIONS_ENABLED}:false
   # matrix configuration #
   matrix:
+    # Synapse home server name, defined in homeserver.yaml on the Synapse instance.
+    homeserver_name: ${SYNAPSE_HOMESERVER_NAME}:alkemio.matrix.host
+
     # Synapse server (https://github.com/matrix-org/synapse) configuration.
     server:
-      # Synapse server name, defined in homeserver.yaml on the Synapse instance.
-      hostname: ${SYNAPSE_SERVER_NAME}:alkemio.matrix.host
       # Synapse server URL, where it can be accessed by the CT server
       url: ${SYNAPSE_SERVER_URL}:http://localhost:8008
-    shared:
       # Synapse shared secret, defined in homeserver.yaml on the Synapse instance.
-      secret: ${SYNAPSE_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+      shared_secret: ${SYNAPSE_SERVER_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
+
     admin:
       # The admin account that is created / used to administer the regular users on the Synapse server
-      username: ${SYNAPSE_ADMIN_USERNAME}:matrixadmin@cherrytwist.org
+      username: ${SYNAPSE_ADMIN_USERNAME}:matrixadmin@alkem.io
       password: ${SYNAPSE_ADMIN_PASSWORD}:change_me_now
 
 ## storage ##

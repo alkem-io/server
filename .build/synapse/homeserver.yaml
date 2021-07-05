@@ -26,7 +26,7 @@
 # lowercase and may contain an explicit port.
 # Examples: matrix.org, localhost:8080
 #
-server_name: "cherrytwist.matrix.host"
+server_name: "alkemio.matrix.host"
 
 # When running as a daemon, the file to store the pid in
 #
@@ -524,11 +524,11 @@ retention:
 # instance, if using certbot, use `fullchain.pem` as your certificate,
 # not `cert.pem`).
 #
-#tls_certificate_path: "/data/cherrytwist.matrix.host.tls.crt"
+#tls_certificate_path: "/data/alkemio.matrix.host.tls.crt"
 
 # PEM-encoded private key for TLS
 #
-#tls_private_key_path: "/data/cherrytwist.matrix.host.tls.key"
+#tls_private_key_path: "/data/alkemio.matrix.host.tls.key"
 
 # Whether to verify TLS server certificates for outbound federation requests.
 #
@@ -800,7 +800,7 @@ database:
 # A yaml python logging config file as described by
 # https://docs.python.org/3.7/library/logging.config.html#configuration-dictionary-schema
 #
-log_config: "/data/cherrytwist.matrix.host.log.config"
+log_config: "/data/alkemio.matrix.host.log.config"
 
 
 ## Ratelimiting ##
@@ -1499,7 +1499,7 @@ form_secret: "^mN_eRHO,lGLp29CoF*YU0#Pktx:@BveG:I-CP1u=wp;lIGKCW"
 
 # Path to the signing key to sign messages with
 #
-signing_key_path: "/data/cherrytwist.matrix.host.signing.key"
+signing_key_path: "/data/alkemio.matrix.host.signing.key"
 
 # The keys that the server used to sign messages with but won't use
 # to sign new messages.

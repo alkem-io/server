@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
 import { MatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.service';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { MatrixUserAdapterService } from '../user/matrix.user.adapter.service';
+import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
 import { CommunicationsSynapseEndpoint } from '@common/enums/communications.synapse.endpoint';
-import { IOperationalMatrixUser } from '../user/matrix.user.interface';
+import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixUserLoginException } from '@common/exceptions/matrix.login.exception';
@@ -61,11 +61,6 @@ export class MatrixUserManagementService {
       .get<{ nonce: string }>(url.href)
       .toPromise();
     const nonce = nonceResponse.data['nonce'];
-    this.logger.verbose?.(
-      `Registering user for email '${email}' with nonce: ${nonce}`,
-      LogContext.COMMUNICATION
-    );
-
     const hmac = this.cryptographyServive.generateHmac(user, nonce, isAdmin);
 
     const registrationResponse = await this.httpService
@@ -85,6 +80,14 @@ export class MatrixUserManagementService {
     ) {
       throw new MatrixUserRegistrationException(
         `Unsuccessful registration for ${JSON.stringify(user)}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    // Check to ensure that the response home server matches the request
+    if (registrationResponse.data.user_id !== user.username) {
+      throw new MatrixUserRegistrationException(
+        `Registration response user_id '${registrationResponse.data.user_id}' is not equal to the supplied username: ${user.username} - please check configuraiton`,
         LogContext.COMMUNICATION
       );
     }
