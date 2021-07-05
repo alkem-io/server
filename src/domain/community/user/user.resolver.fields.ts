@@ -62,7 +62,7 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('email', () => String, {
-    nullable: true,
+    nullable: false,
     description: 'The email address for this User.',
   })
   @Profiling.api
@@ -83,7 +83,7 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('phone', () => String, {
-    nullable: true,
+    nullable: false,
     description: 'The phone number for this User.',
   })
   @Profiling.api
