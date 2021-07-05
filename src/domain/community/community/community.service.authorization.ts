@@ -25,7 +25,8 @@ export class CommunityAuthorizationService {
       parentAuthorization
     );
     community.authorization = this.extendAuthorizationDefinition(
-      community.authorization
+      community.authorization,
+      community
     );
 
     // cascade
@@ -49,9 +50,10 @@ export class CommunityAuthorizationService {
   }
 
   private extendAuthorizationDefinition(
-    authorization: IAuthorizationDefinition | undefined
+    authorization: IAuthorizationDefinition | undefined,
+    community: ICommunity
   ): IAuthorizationDefinition {
-    return this.authorizationDefinitionService.appendCredentialAuthorizationRule(
+    const authorization2 = this.authorizationDefinitionService.appendCredentialAuthorizationRule(
       authorization,
       {
         type: AuthorizationCredential.GlobalAdminCommunity,
@@ -65,5 +67,23 @@ export class CommunityAuthorizationService {
         AuthorizationPrivilege.GRANT,
       ]
     );
+
+    if (community.credential) {
+      return this.authorizationDefinitionService.appendCredentialAuthorizationRule(
+        authorization2,
+        {
+          type: community.credential?.type,
+          resourceID: community.credential.resourceID,
+        },
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
+        ]
+      );
+    }
+    return authorization2;
   }
 }
