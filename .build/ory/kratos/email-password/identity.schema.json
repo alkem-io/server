@@ -40,7 +40,7 @@
           }
         },
         "accepted_terms": {
-          "title": "I accept terms of service",
+          "title": "TERMS_MESSAGE",
           "type": "boolean"
         }
       },
