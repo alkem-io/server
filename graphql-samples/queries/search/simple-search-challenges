@@ -1,7 +1,8 @@
-query create($searchData: SearchInput!){
+query search($searchData: SearchInput!){
   search(searchData: $searchData) {
     score
     result {
+      id
       __typename
       ... on User {
         nameID
@@ -14,6 +15,7 @@ query create($searchData: SearchInput!){
       }
       ... on Challenge {
         nameID
+        ecoverseID
         context {
           tagline
         }
@@ -21,6 +23,8 @@ query create($searchData: SearchInput!){
     }
   }
 }
+
+
 
 {
   "searchData":

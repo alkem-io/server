@@ -14,6 +14,7 @@ import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto
 import { AuthorizationRuleCredential } from './authorization.rule.credential';
 import { UpdateAuthorizationDefinitionInput } from './authorization.definition.dto.update';
 import { AuthorizationRuleVerifiedCredential } from './authorization.rule.verified.credential';
+import { IAuthorizationRuleCredential } from './authorization.rule.credential.interface';
 
 @Injectable()
 export class AuthorizationDefinitionService {
@@ -142,6 +143,20 @@ export class AuthorizationDefinitionService {
 
     auth.credentialRules = JSON.stringify(existingRules);
     return auth;
+  }
+
+  getCredentialRules(
+    authorization: IAuthorizationDefinition
+  ): IAuthorizationRuleCredential[] {
+    return this.convertCredentialRulesStr(authorization.credentialRules);
+  }
+
+  getVerifiedCredentialRules(
+    authorization: IAuthorizationDefinition
+  ): IAuthorizationRuleCredential[] {
+    return this.convertVerifiedCredentialRulesStr(
+      authorization.verifiedCredentialRules
+    );
   }
 
   convertCredentialRulesStr(rulesStr: string): AuthorizationRuleCredential[] {

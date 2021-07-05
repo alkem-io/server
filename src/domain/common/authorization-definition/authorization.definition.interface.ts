@@ -6,9 +6,7 @@ export abstract class IAuthorizationDefinition extends IBaseAlkemio {
   @Field(() => Boolean)
   anonymousReadAccess!: boolean;
 
-  @Field(() => String)
+  // exposed via field resolver
   credentialRules!: string;
-
-  @Field(() => String)
   verifiedCredentialRules!: string;
 }

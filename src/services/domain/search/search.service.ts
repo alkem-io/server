@@ -7,10 +7,12 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 
 enum SearchEntityTypes {
   User = 'user',
@@ -47,10 +49,14 @@ export class SearchService {
     private organisationRepository: Repository<Organisation>,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
+    private authorizationEngine: AuthorizationEngineService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async search(searchData: SearchInput): Promise<ISearchResultEntry[]> {
+  async search(
+    searchData: SearchInput,
+    agentInfo: AgentInfo
+  ): Promise<ISearchResultEntry[]> {
     this.validateSearchParameters(searchData);
 
     // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
@@ -96,7 +102,11 @@ export class SearchService {
     if (searchOrganisations)
       await this.searchOrganisationsByTerms(filteredTerms, organisationResults);
     if (searchChallenges)
-      await this.searchChallengesByTerms(filteredTerms, challengeResults);
+      await this.searchChallengesByTerms(
+        filteredTerms,
+        challengeResults,
+        agentInfo
+      );
 
     this.logger.verbose?.(
       `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organisationResults.size} organisation results found; ${challengeResults.size} challenge results found`,
@@ -215,22 +225,41 @@ export class SearchService {
 
   async searchChallengesByTerms(
     terms: string[],
-    challengeResults: Map<number, Match>
+    challengeResults: Map<number, Match>,
+    agentInfo: AgentInfo
   ) {
     for (const term of terms) {
+      const readableChallengeMatches: Challenge[] = [];
       const challengeMatches = await this.challengeRepository
         .createQueryBuilder('challenge')
         .leftJoinAndSelect('challenge.tagset', 'tagset')
+        .leftJoinAndSelect('challenge.opportunities', 'opportunities')
+        .leftJoinAndSelect('challenge.authorization', 'authorization')
         .leftJoinAndSelect('challenge.context', 'context')
-        .leftJoinAndSelect('challenge.opportunities', 'opportunity')
         .where('challenge.nameID like :term')
         .orWhere('challenge.displayName like :term')
         .orWhere('tagset.tags like :term')
         .orWhere('context.tagline like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();
+      // Only show challenges that the current user has read access to
+      for (const challenge of challengeMatches) {
+        if (
+          this.authorizationEngine.isAccessGranted(
+            agentInfo,
+            challenge.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          readableChallengeMatches.push(challenge);
+        }
+      }
       // Create results for each match
-      await this.buildMatchingResults(challengeMatches, challengeResults, term);
+      await this.buildMatchingResults(
+        readableChallengeMatches,
+        challengeResults,
+        term
+      );
     }
   }
 
