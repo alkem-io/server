@@ -39,6 +39,6 @@ export class SearchResolverQueries {
       this.searchAuthorizationDefinition,
       `search query: ${agentInfo.email}`
     );
-    return await this.searchService.search(searchData);
+    return await this.searchService.search(searchData, agentInfo);
   }
 }
