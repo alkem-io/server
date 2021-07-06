@@ -64,7 +64,7 @@ export class BaseChallengeService {
 
     baseChallenge.tagset = await this.tagsetService.createTagset({
       name: RestrictedTagsetNames.Default,
-      tags: [],
+      tags: baseChallengeData.tags || [],
     });
 
     baseChallenge.agent = await this.agentService.createAgent({
