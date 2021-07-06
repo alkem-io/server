@@ -11,17 +11,22 @@ export class MatrixGroupAdapterService {
     private readonly logger: LoggerService
   ) {}
 
-  public communityRooms(matrixClient: MatrixClient): Record<string, string[]> {
+  // Maps from a groupID to an array of roomIDs
+  // Todo: needs to be optimized!
+  public communityRoomsMap(
+    matrixClient: MatrixClient
+  ): Record<string, string[]> {
     const communities = matrixClient.getGroups();
     const communityRooms = matrixClient.getRooms();
 
     const roomMap: Record<string, string[]> = {};
     for (const community of communities) {
+      //const result = await matrixClient.getGroupRooms(community.groupId);
       roomMap[community.groupId] = roomMap[community.groupId] || [];
 
       for (const room of communityRooms) {
         if (room.groupID === community.groupId) {
-          roomMap[community.groupId].push(room.roomID);
+          roomMap[community.groupId].push(room.roomId);
         }
       }
     }

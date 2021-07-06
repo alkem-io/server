@@ -56,12 +56,17 @@ export class MatrixRoomAdapterService {
       createOpts.is_direct = true;
     }
 
-    const room = await matrixClient.createRoom(createOpts);
+    const roomResult = await matrixClient.createRoom(createOpts);
+    const roomID = roomResult.room_id;
+    this.logger.verbose?.(
+      `[MatrixRoom] Created new room with id: ${roomID}`,
+      LogContext.COMMUNICATION
+    );
     if (communityId) {
-      await matrixClient.addRoomToGroup(communityId, room.room_id, false);
+      await matrixClient.addRoomToGroup(communityId, roomResult.room_id, false);
     }
 
-    return room.room_id;
+    return roomID;
   }
 
   async inviteUsersToRoom(

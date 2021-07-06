@@ -1,2 +1,2 @@
-export * from './communication.room.dto.result';
+export * from './communication.room.dto.community';
 export * from './communication.dto.message.result';

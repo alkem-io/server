@@ -27,7 +27,8 @@ export abstract class ICommunity extends IAuthorizable {
   ecoverseID!: string;
 
   // Communications related information
-  communicationRoomID!: string;
+  updatesRoomID!: string;
+  discussionRoomID!: string;
   communicationGroupID!: string;
 
   constructor() {

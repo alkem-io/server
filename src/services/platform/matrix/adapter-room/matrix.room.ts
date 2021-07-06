@@ -3,7 +3,7 @@
 import { MatrixRoomResponseMessage } from './matrix.room.dto.response.message';
 
 export class MatrixRoom {
-  roomID!: string; //	The ID of this room.
+  roomId!: string; //	The ID of this room.
   name? = ''; //	The human-readable display name for this room.
   receiverEmail? = '';
   isDirect? = false;

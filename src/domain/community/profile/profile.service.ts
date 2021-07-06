@@ -224,4 +224,9 @@ export class ProfileService {
       );
     }
   }
+
+  generateRandomAvatar(firstName: string, lastName: string): string {
+    const randomColor = Math.floor(Math.random() * 16777215).toString(16);
+    return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff`;
+  }
 }
