@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Resolver, Parent, ResolveField } from '@nestjs/graphql';
+import { Resolver, Parent, ResolveField } from '@nestjs/graphql';
 import { User, IUser } from '@domain/community/user';
 import { UserService } from './user.service';
 import { IAgent } from '@domain/agent/agent';
@@ -13,7 +13,8 @@ import { GraphqlGuard } from '@core/authorization';
 import { CommunicationService } from '@src/services/platform/communication/communication.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
-import { CommunicationRoomResult } from '@services/platform/communication';
+import { CommunityRoom } from '@services/platform/communication';
+import { DirectRoom } from '@services/platform/communication/communication.room.dto.direct';
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
@@ -34,26 +35,23 @@ export class UserResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('rooms', () => [CommunicationRoomResult], {
+  @ResolveField('communityRooms', () => [CommunityRoom], {
     nullable: true,
-    description: 'The rooms this user is a member of',
+    description: 'The Community rooms this user is a member of',
   })
   @Profiling.api
-  async rooms(@Parent() user: User): Promise<CommunicationRoomResult[]> {
-    return await this.communicationService.getRooms(user.email);
+  async communityRooms(@Parent() user: User): Promise<CommunityRoom[]> {
+    return await this.communicationService.getCommunityRooms(user.email);
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('room', () => CommunicationRoomResult, {
+  @ResolveField('directRooms', () => [DirectRoom], {
     nullable: true,
-    description: 'An overview of the rooms this user is a member of',
+    description: 'The direct rooms this user is a member of',
   })
   @Profiling.api
-  async room(
-    @Parent() user: User,
-    @Args('roomID') roomID: string
-  ): Promise<CommunicationRoomResult> {
-    return await this.communicationService.getRoom(roomID, user.email);
+  async directRooms(@Parent() user: User): Promise<DirectRoom[]> {
+    return await this.communicationService.getDirectRooms(user.email);
   }
 
   @UseGuards(GraphqlGuard)

@@ -13,7 +13,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IApplication } from '@domain/community/application';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { CommunicationRoomResult } from '@services/platform/communication/communication.room.dto.result';
+import { CommunityRoom } from '@services/platform/communication';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
@@ -54,7 +54,7 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('room', () => CommunicationRoomResult, {
+  @ResolveField('room', () => CommunityRoom, {
     nullable: false,
     description: 'Room with messages for this community.',
   })
@@ -62,7 +62,7 @@ export class CommunityResolverFields {
   async room(
     @Parent() community: Community,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CommunicationRoomResult> {
+  ): Promise<CommunityRoom> {
     return await this.communityService.getCommunicationsRoom(
       community,
       agentInfo.email

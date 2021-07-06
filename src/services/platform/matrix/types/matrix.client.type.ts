@@ -1,7 +1,7 @@
 import { IProfileOpts } from '../adapter-group/matrix.group.dto.profile.options';
 import { MatrixGroup } from '../adapter-group/matrix.group.dto.result';
 import { IRoomCreateOpts } from '../adapter-room/matrix.room.dto.create.options';
-import { MatrixRoom } from '../adapter-room/matrix.room.dto.result';
+import { MatrixRoom } from '../adapter-room/matrix.room';
 import { MatrixEventHandler } from './matrix.event.handler.type';
 
 export type MatrixClient = {
@@ -13,7 +13,7 @@ export type MatrixClient = {
   joinRoom: (roomId: string) => Promise<void>;
   getGroup: (groupId: string) => Promise<any>;
   acceptGroupInvite: (groupId: string) => Promise<void>;
-  getGroupRooms: (groupId: string) => Promise<any[]>;
+  getGroupRooms: (groupId: string) => Promise<MatrixRoom[]>;
   isUsernameAvailable: (username: string) => Promise<boolean>;
   loginWithPassword: (
     user: string,

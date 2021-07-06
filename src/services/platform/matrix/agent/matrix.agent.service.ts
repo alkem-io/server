@@ -12,7 +12,7 @@ import { IMatrixAgent } from './matrix.agent.interface';
 import { MatrixAgentMessageRequestCommunity } from './matrix.agent.dto.message.request.community';
 import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
 import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
-import { MatrixRoom } from '../adapter-room/matrix.room.dto.result';
+import { MatrixRoom } from '../adapter-room/matrix.room';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
@@ -51,161 +51,130 @@ export class MatrixAgentService {
     });
   }
 
-  async getCommunities(matrixAgent: IMatrixAgent): Promise<any[]> {
-    return matrixAgent.matrixClient.getGroups() || [];
-  }
-
-  async getRooms(matrixAgent: IMatrixAgent): Promise<MatrixRoom[]> {
+  async getCommunityRooms(matrixAgent: IMatrixAgent): Promise<MatrixRoom[]> {
     const matrixClient = matrixAgent.matrixClient;
-    const communityMap = await this.matrixGroupAdapterService.communityRooms(
+    const rooms: MatrixRoom[] = [];
+
+    // Community rooms
+    const communityMap = await this.matrixGroupAdapterService.communityRoomsMap(
       matrixClient
     );
-    const communityRooms: MatrixRoom[] = Object.keys(communityMap).map(x => ({
-      roomID: communityMap[x][0],
-      isDirect: false,
-    }));
-    const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(matrixClient);
-    const dmRoomMapKeys = Object.keys(dmRoomMap);
-    const dmRooms: MatrixRoom[] = dmRoomMapKeys.map(x => ({
-      roomID: dmRoomMap[x][0],
-      isDirect: true,
-      receiverEmail: this.matrixUserAdapterService.id2email(x),
-    }));
-
-    return communityRooms.concat(dmRooms);
+    for (const groupID of Object.keys(communityMap)) {
+      const communityRoom = new MatrixRoom();
+      communityRoom.roomId = communityMap[groupID][0];
+      communityRoom.isDirect = false;
+      rooms.push(communityRoom);
+    }
+    return rooms;
   }
 
-  // async getCommunityRoom((
-  //   matrixAgent: IMatrixAgent,
-  //   roomId: string
-  // ): Promise<MatrixRoom> {
+  async getDirectRooms(matrixAgent: IMatrixAgent): Promise<MatrixRoom[]> {
+    const matrixClient = matrixAgent.matrixClient;
+    const rooms: MatrixRoom[] = [];
 
-  //   return {}
-  // }
+    // Direct rooms
+    const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(matrixClient);
+    for (const userID of Object.keys(dmRoomMap)) {
+      const directRoom = new MatrixRoom();
+      directRoom.roomId = dmRoomMap[userID][0];
+      directRoom.isDirect = true;
+      directRoom.receiverEmail = this.matrixUserAdapterService.id2email(userID);
+      rooms.push(directRoom);
+    }
+    return rooms;
+  }
 
   async getRoom(
     matrixAgent: IMatrixAgent,
     roomId: string
   ): Promise<MatrixRoom> {
-    const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(
-      matrixAgent.matrixClient
+    const matrixRoom: MatrixRoom = await matrixAgent.matrixClient.getRoom(
+      roomId
     );
-    const dmRoomMapKeys = Object.keys(dmRoomMap);
-    const dmRoom = dmRoomMapKeys.find(
-      userID => dmRoomMap[userID].indexOf(roomId) !== -1
-    );
-
-    const room: MatrixRoom = await matrixAgent.matrixClient.getRoom(roomId);
-    if (!room) {
+    if (!matrixRoom) {
       throw new MatrixEntityNotFoundException(
         `Room not found: ${roomId}, agent id: ${matrixAgent.matrixClient.getUserId()}`,
         LogContext.COMMUNICATION
       );
     }
-
-    return {
-      roomID: room.roomID,
-      isDirect: Boolean(dmRoom),
-      receiverEmail: dmRoom && this.matrixUserAdapterService.id2email(dmRoom),
-      timeline: room.timeline,
-    };
-  }
-
-  async getMessages(
-    matrixAgent: IMatrixAgent,
-    roomId: string
-  ): Promise<MatrixRoom> {
-    return await this.getRoom(matrixAgent, roomId);
-  }
-
-  async getUserMessages(
-    matrixAgent: IMatrixAgent,
-    email: string
-  ): Promise<MatrixRoom> {
-    const matrixUsername = this.matrixUserAdapterService.email2id(email);
-    // Need to implement caching for performance
-    const dmRoom = this.matrixRoomAdapterService.dmRooms(
-      matrixAgent.matrixClient
-    )[matrixUsername];
-
-    // Check DMRoomMap implementation for details in react-sdk
-    // avoid retrieving data - if we cannot retrieve dms for a room that is supposed to be dm then we might have reached an erroneous state
-    if (!dmRoom || !Boolean(dmRoom[0])) {
-      return {
-        roomID: '',
-      };
-    }
-
-    const targetRoomId = dmRoom[0];
-
-    return await this.getMessages(matrixAgent, targetRoomId);
-  }
-
-  async getCommunityMessages(
-    matrixAgent: IMatrixAgent,
-    communityId: string
-  ): Promise<MatrixRoom> {
-    const communityRoomIds = this.matrixGroupAdapterService.communityRooms(
-      matrixAgent.matrixClient
-    )[communityId];
-    if (!communityRoomIds) {
-      return {
-        roomID: '',
-      };
-    }
-    const communityRoomId = communityRoomIds[0];
-
-    const communityGroup = await matrixAgent.matrixClient.getGroup(
-      communityRoomId
-    );
-    if (!communityGroup) {
-      throw new MatrixEntityNotFoundException(
-        `Group not found: ${communityRoomId}`,
-        LogContext.COMMUNICATION
-      );
-    }
-
-    return await this.getMessages(matrixAgent, communityGroup.roomId);
+    return matrixRoom;
   }
 
   async initiateMessagingToUser(
     matrixAgent: IMatrixAgent,
     msgRequest: MatrixAgentMessageRequestDirect
   ): Promise<string> {
-    const client = matrixAgent.matrixClient;
-    // there needs to be caching for dmRooms and event to update them
-    const dmRooms = this.matrixRoomAdapterService.dmRooms(client);
-    const matrixId = this.matrixUserAdapterService.email2id(msgRequest.email);
-    const dmRoom = dmRooms[matrixId];
-    let targetRoomId = null;
+    const directRoom = await this.getDirectRoomForUserEmail(
+      matrixAgent,
+      msgRequest.email
+    );
+    if (directRoom) return directRoom.roomId;
 
-    if (!dmRoom || !Boolean(dmRoom[0])) {
-      targetRoomId = await this.matrixRoomAdapterService.createRoom(client, {
-        dmUserId: matrixId,
-      });
+    // Room does not exist, create...
+    const matrixUsername = this.matrixUserAdapterService.email2id(
+      msgRequest.email
+    );
 
-      await this.matrixRoomAdapterService.setDmRoom(
-        client,
-        targetRoomId,
-        matrixId
-      );
-    } else {
-      targetRoomId = dmRoom[0];
-    }
+    const targetRoomId = await this.matrixRoomAdapterService.createRoom(
+      matrixAgent.matrixClient,
+      {
+        dmUserId: matrixUsername,
+      }
+    );
+
+    await this.matrixRoomAdapterService.setDmRoom(
+      matrixAgent.matrixClient,
+      targetRoomId,
+      matrixUsername
+    );
 
     return targetRoomId;
+  }
+
+  async getDirectRoomIdForRoomID(
+    matrixAgent: MatrixAgent,
+    matrixRoomId: string
+  ): Promise<string | undefined> {
+    // Need to implement caching for performance
+    const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(
+      matrixAgent.matrixClient
+    );
+    const dmRoomMapKeys = Object.keys(dmRoomMap);
+    const dmRoom = dmRoomMapKeys.find(
+      userID => dmRoomMap[userID].indexOf(matrixRoomId) !== -1
+    );
+    return dmRoom;
+  }
+
+  async getDirectRoomForUserEmail(
+    matrixAgent: IMatrixAgent,
+    userEmail: string
+  ): Promise<MatrixRoom | undefined> {
+    const matrixUsername = this.matrixUserAdapterService.email2id(userEmail);
+    // Need to implement caching for performance
+    const dmRoomIds = this.matrixRoomAdapterService.dmRooms(
+      matrixAgent.matrixClient
+    )[matrixUsername];
+
+    if (!dmRoomIds || !Boolean(dmRoomIds[0])) {
+      return undefined;
+    }
+
+    // Have a result
+    const targetRoomId = dmRoomIds[0];
+    return await this.getRoom(matrixAgent, targetRoomId);
   }
 
   async messageCommunity(
     matrixAgent: IMatrixAgent,
     msgRequest: MatrixAgentMessageRequestCommunity
   ): Promise<string> {
-    const groupRooms = await matrixAgent.matrixClient.getGroupRooms(
+    const rooms = await matrixAgent.matrixClient.getGroupRooms(
       msgRequest.communityId
     );
-    const room = groupRooms[0];
+    const room = rooms[0];
 
-    if (room) {
+    if (!room) {
       throw new Error('The community does not have a default room set');
     }
 

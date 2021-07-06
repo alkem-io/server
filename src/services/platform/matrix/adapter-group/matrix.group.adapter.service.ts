@@ -11,7 +11,19 @@ export class MatrixGroupAdapterService {
     private readonly logger: LoggerService
   ) {}
 
-  public communityRooms(matrixClient: MatrixClient): Record<string, string[]> {
+  async getRoomIdsForGroup(
+    matrixClient: MatrixClient,
+    groupID: string
+  ): Promise<string[]> {
+    const groupsToRoomsMap = this.communityRoomsMap(matrixClient);
+    return groupsToRoomsMap[groupID];
+  }
+
+  // Maps from a groupID to an array of roomIDs
+  // Todo: needs to be optimized!
+  public communityRoomsMap(
+    matrixClient: MatrixClient
+  ): Record<string, string[]> {
     const communities = matrixClient.getGroups();
     const communityRooms = matrixClient.getRooms();
 
@@ -21,7 +33,7 @@ export class MatrixGroupAdapterService {
 
       for (const room of communityRooms) {
         if (room.groupID === community.groupId) {
-          roomMap[community.groupId].push(room.roomID);
+          roomMap[community.groupId].push(room.roomId);
         }
       }
     }

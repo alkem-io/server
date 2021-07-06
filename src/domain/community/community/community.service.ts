@@ -31,7 +31,7 @@ import { ICredential } from '@domain/agent/credential';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
 import { CommunitySendMessageInput } from './community.dto.send.msg';
-import { CommunicationRoomResult } from '@services/platform/communication/communication.room.dto.result';
+import { CommunityRoom } from '@services/platform/communication/communication.room.dto.community';
 
 @Injectable()
 export class CommunityService {
@@ -338,7 +338,7 @@ export class CommunityService {
   async getCommunicationsRoom(
     community: ICommunity,
     email: string
-  ): Promise<CommunicationRoomResult> {
+  ): Promise<CommunityRoom> {
     let communityWithRoom = community;
     if (community.communicationRoomID === '') {
       communityWithRoom = await this.initializeCommunicationsRoom(community);
@@ -349,7 +349,7 @@ export class CommunityService {
       email
     );
 
-    const result = await this.communicationService.getRoom(
+    const result = await this.communicationService.getCommunityRoom(
       communityWithRoom.communicationRoomID,
       email
     );
