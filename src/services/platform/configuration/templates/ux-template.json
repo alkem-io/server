@@ -53,8 +53,20 @@
           "name": "default",
           "questions": [
             {
-              "question": "Why do you want to join?",
+              "question": "What makes you want to join?",
               "required": true
+            },
+            {
+              "question": "Anything role / contribution that you have in mind?",
+              "required": false
+            },
+            {
+              "question": "Are you already in contact with anyone in this community?",
+              "required": false
+            },
+            {
+              "question": "Anything fun you want to tell us about yourself?!",
+              "required": false
             }
           ]
         }
