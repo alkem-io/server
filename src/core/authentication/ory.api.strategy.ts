@@ -25,7 +25,8 @@ export class OryApiStrategy extends PassportStrategy(
       ConfigurationTypes.Identity
     ).authentication.providers.ory.kratos_public_base_url_server;
 
-    const apiAccessEnabled = true; //this.configService.get(ConfigurationTypes.Identity).authentication.api_access_enabled;
+    const apiAccessEnabled = this.configService.get(ConfigurationTypes.Identity)
+      .authentication.api_access_enabled;
 
     const kratos = new PublicApi(
       new Configuration({
@@ -33,21 +34,19 @@ export class OryApiStrategy extends PassportStrategy(
       })
     );
 
-    let identifier = '';
+    let oryIdentity = undefined;
     const authorizationHeader = payload.headers.authorization;
 
     if (apiAccessEnabled && authorizationHeader) {
       const bearerToken = authorizationHeader.split(' ')[1];
-      // this.logger.verbose?.(`bearer token: ${bearerToken}`, LogContext.AUTH);
       const user = await kratos.toSession(bearerToken);
 
-      this.logger.verbose?.('Whoami', LogContext.AUTH);
       this.logger.verbose?.(user.data.identity, LogContext.AUTH);
 
       if (user) {
-        identifier = user.data.identity.traits.email;
+        oryIdentity = user.data.identity;
       }
     }
-    return await this.authService.createAgentInfo(identifier);
+    return await this.authService.createAgentInfo(oryIdentity);
   }
 }

@@ -78,6 +78,7 @@
     "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.0",
     "reflect-metadata": "^0.1.13",
+    "replace-special-characters": "^1.2.5",
     "rimraf": "^3.0.2",
     "rxjs": "^6.6.7",
     "sqlite3": "^5.0.2",

@@ -1,4 +1,4 @@
-version: v0.4.6-alpha.1
+version: v0.6.3-alpha.1
 
 dsn: memory
 
@@ -66,10 +66,9 @@ selfservice:
       ui_url: http://localhost:3000/auth/registration
       after:
         default_browser_return_url: http://localhost:3000/auth/registration/success
-        # Remove auto log in after registration - wait for verification
-        #   password:
-        #     hooks:
-        #       - hook: session
+        password:
+          hooks:
+            - hook: session
 
 log:
   level: debug

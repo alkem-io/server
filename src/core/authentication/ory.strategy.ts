@@ -45,11 +45,12 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
       );
 
     // Todo: not sure this is correct, but am hitting a case whereby session is null
-    let identifier = '';
+    let oryIdentity = undefined;
     if (payload.session) {
-      identifier = payload.session.identity.traits.email;
+      oryIdentity = payload.session.identity;
     }
-    return await this.authService.createAgentInfo(identifier);
+
+    return await this.authService.createAgentInfo(oryIdentity);
   }
 
   private checkIfTokenHasExpired(exp: number): boolean {
