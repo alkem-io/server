@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { createClient } from 'matrix-js-sdk';
@@ -14,6 +14,7 @@ import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.requ
 import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
 import { MatrixRoom } from '../adapter-room/matrix.room';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class MatrixAgentService {
@@ -21,7 +22,9 @@ export class MatrixAgentService {
     private configService: ConfigService,
     private matrixUserAdapterService: MatrixUserAdapterService,
     private matrixRoomAdapterService: MatrixRoomAdapterService,
-    private matrixGroupAdapterService: MatrixGroupAdapterService
+    private matrixGroupAdapterService: MatrixGroupAdapterService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async createMatrixAgent(

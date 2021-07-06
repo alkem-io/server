@@ -11,14 +11,6 @@ export class MatrixGroupAdapterService {
     private readonly logger: LoggerService
   ) {}
 
-  async getRoomIdsForGroup(
-    matrixClient: MatrixClient,
-    groupID: string
-  ): Promise<string[]> {
-    const groupsToRoomsMap = this.communityRoomsMap(matrixClient);
-    return groupsToRoomsMap[groupID];
-  }
-
   // Maps from a groupID to an array of roomIDs
   // Todo: needs to be optimized!
   public communityRoomsMap(
@@ -29,6 +21,7 @@ export class MatrixGroupAdapterService {
 
     const roomMap: Record<string, string[]> = {};
     for (const community of communities) {
+      //const result = await matrixClient.getGroupRooms(community.groupId);
       roomMap[community.groupId] = roomMap[community.groupId] || [];
 
       for (const room of communityRooms) {

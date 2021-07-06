@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { UserService } from '@domain/community/user/user.service';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
 import { CommunicationMessageResult } from './communication.dto.message.result';
 
@@ -32,7 +31,6 @@ export class CommunicationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userService: UserService,
     private matrixAgentService: MatrixAgentService,
     private matrixAgentPool: MatrixAgentPool,
     private configService: ConfigService,
@@ -335,8 +333,9 @@ export class CommunicationService {
         matrixRoom.timeline
       );
     }
-    const receiver = await this.userService.getUserByEmail(emailReceiver);
-    if (receiver) roomResult.receiverID = receiver?.id;
+    roomResult.receiverID = this.matrixUserAdapterService.id2email(
+      emailReceiver
+    );
     return roomResult;
   }
 
@@ -357,30 +356,16 @@ export class CommunicationService {
     timeline: MatrixRoomResponseMessage[]
   ): Promise<CommunicationMessageResult[]> {
     const messages: CommunicationMessageResult[] = [];
-    const senderEmails = [
-      ...new Set(
-        timeline.map(msg =>
-          this.matrixUserAdapterService.id2email(msg.sender.name)
-        )
-      ),
-    ];
-    const users = await Promise.all(
-      senderEmails.map(senderEmail =>
-        this.userService.getUserByEmail(senderEmail)
-      )
-    );
 
     for (const { event: ev, sender } of timeline) {
       if (!ev.content?.body) {
         continue;
       }
-      const user = users.find(
-        u =>
-          u && u.email === this.matrixUserAdapterService.id2email(sender.name)
-      );
+
+      const user = this.matrixUserAdapterService.id2email(sender.name);
       const roomMessage: CommunicationMessageResult = {
         message: ev.content.body,
-        sender: user ? `${user.id}` : 'unknown',
+        sender: user ? `${user}` : 'unknown',
         timestamp: ev.origin_server_ts,
       };
 

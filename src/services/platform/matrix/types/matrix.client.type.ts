@@ -30,7 +30,7 @@ export type MatrixClient = {
   getAccountData: (key: string) => any;
   setAccountData: (key: string, object: any) => Promise<void>;
   getUserId: () => string;
-  createRoom: (roomOpt: IRoomCreateOpts) => any;
+  createRoom: (roomOpt: IRoomCreateOpts) => Promise<{ room_id: string }>;
   addRoomToGroup: (
     groupId: string,
     roomId: string,
