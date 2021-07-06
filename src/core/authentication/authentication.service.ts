@@ -8,7 +8,6 @@ import { ConfigService } from '@nestjs/config';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 @Injectable()
 export class AuthenticationService {
-  replaceSpecialCharacters = require('replace-special-characters');
   constructor(
     private configService: ConfigService,
     private ssiAgentService: SsiAgentService,
@@ -83,7 +82,7 @@ export class AuthenticationService {
 
   async createNewUser(email: string, firstName: string, lastName: string) {
     let user = await this.userService.createUser({
-      nameID: this.createUserNameID(firstName, lastName),
+      nameID: this.userService.createUserNameID(firstName, lastName),
       email: email,
       firstName: firstName,
       lastName: lastName,
@@ -93,13 +92,5 @@ export class AuthenticationService {
     // And assign credentials, setup authorization
     user = await this.userAuthorizationService.grantCredentials(user);
     await this.userAuthorizationService.applyAuthorizationRules(user);
-  }
-
-  createUserNameID(firstName: string, lastName: string): string {
-    const randomNumber = Math.floor(Math.random() * 10000).toString();
-    const nameID = `${firstName}-${lastName}-${randomNumber}`
-      .replace(/\s/g, '')
-      .slice(0, 25);
-    return this.replaceSpecialCharacters(nameID);
   }
 }

@@ -26,6 +26,7 @@ import { AuthorizationDefinitionService } from '@domain/common/authorization-def
 
 @Injectable()
 export class UserService {
+  replaceSpecialCharacters = require('replace-special-characters');
   constructor(
     private profileService: ProfileService,
     private authorizationDefinitionService: AuthorizationDefinitionService,
@@ -53,6 +54,14 @@ export class UserService {
       `Created a new user with nameID: ${user.nameID}`,
       LogContext.COMMUNITY
     );
+
+    // ensure have a random avatar. todo: use a package we control
+    if (user.profile.avatar === '') {
+      user.profile.avatar = this.profileService.generateRandomAvatar(
+        user.firstName,
+        user.lastName
+      );
+    }
 
     return await this.userRepository.save(user);
   }
@@ -345,5 +354,13 @@ export class UserService {
 
   async getUserCount(): Promise<number> {
     return await this.userRepository.count();
+  }
+
+  createUserNameID(firstName: string, lastName: string): string {
+    const randomNumber = Math.floor(Math.random() * 10000).toString();
+    const nameID = `${firstName}-${lastName}-${randomNumber}`
+      .replace(/\s/g, '')
+      .slice(0, 25);
+    return this.replaceSpecialCharacters(nameID);
   }
 }
