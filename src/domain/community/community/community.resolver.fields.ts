@@ -13,7 +13,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IApplication } from '@domain/community/application';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { CommunicationRoomResult } from '@services/platform/communication/communication.room.dto.result';
+import { CommunityRoom } from '@services/platform/communication';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
@@ -54,16 +54,33 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('room', () => CommunicationRoomResult, {
+  @ResolveField('updatesRoom', () => CommunityRoom, {
     nullable: false,
     description: 'Room with messages for this community.',
   })
   @Profiling.api
-  async room(
+  async updatesRoom(
     @Parent() community: Community,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CommunicationRoomResult> {
-    return await this.communityService.getCommunicationsRoom(
+  ): Promise<CommunityRoom> {
+    return await this.communityService.getUpdatesCommunicationsRoom(
+      community,
+      agentInfo.email
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('discussionRoom', () => CommunityRoom, {
+    nullable: false,
+    description: 'Room with messages for this community.',
+  })
+  @Profiling.api
+  async discussionRoom(
+    @Parent() community: Community,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunityRoom> {
+    return await this.communityService.getDiscussionCommunicationsRoom(
       community,
       agentInfo.email
     );

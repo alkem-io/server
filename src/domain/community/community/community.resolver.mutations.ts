@@ -208,10 +208,10 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
-    description: 'Sends a message on the specified community',
+    description: 'Sends an update message on the specified community',
   })
   @Profiling.api
-  async messageCommunity(
+  async messageUpdateCommunity(
     @Args('msgData') msgData: CommunitySendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
@@ -224,7 +224,32 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `community send message: ${community.displayName}`
     );
-    return await this.communityService.sendMessageToCommunity(
+    return await this.communityService.sendUpdateMessageToCommunity(
+      community,
+      agentInfo.email,
+      msgData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description: 'Sends an update message on the specified community',
+  })
+  @Profiling.api
+  async messageDiscussionCommunity(
+    @Args('msgData') msgData: CommunitySendMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<string> {
+    const community = await this.communityService.getCommunityOrFail(
+      msgData.communityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.READ,
+      `community send discussion message: ${community.displayName}`
+    );
+    return await this.communityService.sendDiscussionMessageToCommunity(
       community,
       agentInfo.email,
       msgData
