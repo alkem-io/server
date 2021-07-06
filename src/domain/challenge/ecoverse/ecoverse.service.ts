@@ -71,8 +71,6 @@ export class EcoverseService {
       AuthorizationCredential.EcoverseMember
     );
 
-    await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
-
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;
     ecoverse.lifecycle = await this.lifecycleService.createLifecycle(
@@ -80,7 +78,12 @@ export class EcoverseService {
       machineConfig
     );
 
-    return await this.ecoverseRepository.save(ecoverse);
+    // save before assigning host in case that fails
+    const savedEcoverse = await this.ecoverseRepository.save(ecoverse);
+
+    await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
+
+    return savedEcoverse;
   }
 
   async validateEcoverseData(ecoverseData: CreateEcoverseInput) {
