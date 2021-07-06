@@ -2,7 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 
 @ObjectType()
-export class MembershipResultEntryEcoverse extends MembershipResultEntry {
+export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
   @Field(() => [MembershipResultEntry], {
     description: 'Details of the Challenges the user is a member of',
   })

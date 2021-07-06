@@ -2,21 +2,23 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import { Membership } from './membership.dto.result';
 import { UserService } from '@domain/community/user/user.service';
-import { MembershipInput } from './membership.dto.input';
-import { MembershipResultEntryEcoverse } from './membership.dto.result.entry.ecoverse';
+import { MembershipUserInput } from './membership.dto.user.input';
+import { MembershipUserResultEntryEcoverse } from './membership.dto.user.result.entry.ecoverse';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { AuthorizationCredential } from '@common/enums';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IOrganisation } from '@domain/community/organisation';
-import { MembershipResultEntryOrganisation } from './membership.dto.result.entry.organisation';
+import { MembershipUserResultEntryOrganisation } from './membership.dto.user.result.entry.organisation';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IUserGroup } from '@domain/community/user-group';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 import { ICommunity } from '@domain/community/community';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { UserMembership } from './membership.dto.user.result';
+import { MembershipOrganisationInput } from './membership.dto.organisation.input';
+import { OrganisationMembership } from './membership.dto.organisation.result';
 
 export class MembershipService {
   constructor(
@@ -29,8 +31,10 @@ export class MembershipService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async membership(membershipData: MembershipInput): Promise<Membership> {
-    const membership = new Membership();
+  async getUserMemberships(
+    membershipData: MembershipUserInput
+  ): Promise<UserMembership> {
+    const membership = new UserMembership();
 
     const user = await this.userService.getUserWithAgent(membershipData.userID);
     const credentials = user.agent?.credentials;
@@ -46,7 +50,7 @@ export class MembershipService {
         const organisation = await this.organisationService.getOrganisationOrFail(
           credential.resourceID
         );
-        const orgResult = new MembershipResultEntryOrganisation(
+        const orgResult = new MembershipUserResultEntryOrganisation(
           organisation.nameID,
           organisation.id,
           organisation.displayName
@@ -56,7 +60,7 @@ export class MembershipService {
         const ecoverse = await this.ecoverseService.getEcoverseOrFail(
           credential.resourceID
         );
-        const ecoverseResult = new MembershipResultEntryEcoverse(
+        const ecoverseResult = new MembershipUserResultEntryEcoverse(
           ecoverse.nameID,
           ecoverse.id,
           ecoverse.displayName
@@ -142,12 +146,49 @@ export class MembershipService {
 
   async createEcoverseMembershipResult(
     ecoverseID: string
-  ): Promise<MembershipResultEntryEcoverse> {
+  ): Promise<MembershipUserResultEntryEcoverse> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID);
-    return new MembershipResultEntryEcoverse(
+    return new MembershipUserResultEntryEcoverse(
       ecoverse.nameID,
       ecoverse.id,
       ecoverse.displayName
     );
+  }
+
+  async getOrganisationMemberships(
+    membershipData: MembershipOrganisationInput
+  ): Promise<OrganisationMembership> {
+    const membership = new OrganisationMembership();
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      membershipData.organisationID,
+      {
+        relations: ['agent'],
+      }
+    );
+    const agent = organisation?.agent;
+    if (agent?.credentials) {
+      for (const credential of agent.credentials) {
+        if (credential.type === AuthorizationCredential.EcoverseHost) {
+          const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+            credential.resourceID
+          );
+          membership.ecoversesHosting.push({
+            nameID: ecoverse.nameID,
+            id: ecoverse.id,
+            displayName: ecoverse.displayName,
+          });
+        } else if (credential.type === AuthorizationCredential.ChallengeLead) {
+          const challenge = await this.challengeService.getChallengeOrFail(
+            credential.resourceID
+          );
+          membership.challengesLeading.push({
+            nameID: challenge.nameID,
+            id: challenge.id,
+            displayName: challenge.displayName,
+          });
+        }
+      }
+    }
+    return membership;
   }
 }

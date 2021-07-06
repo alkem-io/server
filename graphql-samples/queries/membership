@@ -1,5 +1,5 @@
 query {
-  membership(membershipData: {userID: "luveniakena"}) {
+  membershipUser(membershipData: {userID: "luveniakena"}) {
    	ecoverses {
       nameID
       id
