@@ -54,16 +54,33 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('room', () => CommunityRoom, {
+  @ResolveField('updatesRoom', () => CommunityRoom, {
     nullable: false,
     description: 'Room with messages for this community.',
   })
   @Profiling.api
-  async room(
+  async updatesRoom(
     @Parent() community: Community,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<CommunityRoom> {
-    return await this.communityService.getCommunicationsRoom(
+    return await this.communityService.getUpdatesCommunicationsRoom(
+      community,
+      agentInfo.email
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('discussionRoom', () => CommunityRoom, {
+    nullable: false,
+    description: 'Room with messages for this community.',
+  })
+  @Profiling.api
+  async discussionRoom(
+    @Parent() community: Community,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunityRoom> {
+    return await this.communityService.getDiscussionCommunicationsRoom(
       community,
       agentInfo.email
     );

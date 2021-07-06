@@ -224,7 +224,7 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `community send message: ${community.displayName}`
     );
-    return await this.communityService.sendMessageToCommunity(
+    return await this.communityService.sendUpdateMessageToCommunity(
       community,
       agentInfo.email,
       msgData

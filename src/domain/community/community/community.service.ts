@@ -13,7 +13,7 @@ import {
   InvalidStateTransitionException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IUser } from '@domain/community/user';
@@ -32,12 +32,16 @@ import { AuthorizationDefinitionService } from '@domain/common/authorization-def
 import { CommunicationService } from '@services/platform/communication/communication.service';
 import { CommunitySendMessageInput } from './community.dto.send.msg';
 import { CommunityRoom } from '@services/platform/communication/communication.room.dto.community';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CommunityService {
+  private communicationsEnabled = false;
+
   constructor(
     private authorizationDefinitionService: AuthorizationDefinitionService,
     private agentService: AgentService,
+    private configService: ConfigService,
     private userService: UserService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
@@ -45,7 +49,13 @@ export class CommunityService {
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {}
+  ) {
+    // need both to be true
+    this.communicationsEnabled =
+      this.configService.get(ConfigurationTypes.Communications)?.enabled &&
+      this.configService.get(ConfigurationTypes.Identity)?.authentication
+        ?.enabled;
+  }
 
   async createCommunity(name: string): Promise<ICommunity> {
     const community = new Community(name);
@@ -202,7 +212,12 @@ export class CommunityService {
     // register the user for the community room(s)
     await this.communicationService.addUserToCommunityMessaging(
       community.communicationGroupID,
-      community.communicationRoomID,
+      community.updatesRoomID,
+      user.email
+    );
+    await this.communicationService.addUserToCommunityMessaging(
+      community.communicationGroupID,
+      community.discussionRoomID,
       user.email
     );
 
@@ -329,47 +344,86 @@ export class CommunityService {
       community.id,
       community.displayName
     );
-    community.communicationRoomID = await this.communicationService.createCommunityRoom(
+    community.updatesRoomID = await this.communicationService.createCommunityRoom(
+      community.communicationGroupID
+    );
+    community.discussionRoomID = await this.communicationService.createCommunityRoom(
       community.communicationGroupID
     );
     return await this.communityRepository.save(community);
   }
 
-  async getCommunicationsRoom(
+  async getUpdatesCommunicationsRoom(
     community: ICommunity,
     email: string
   ): Promise<CommunityRoom> {
-    let communityWithRoom = community;
-    if (community.communicationRoomID === '') {
-      communityWithRoom = await this.initializeCommunicationsRoom(community);
+    if (this.communicationsEnabled && community.communicationGroupID === '') {
+      await this.initializeCommunicationsRoom(community);
     }
+
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.communicationRoomID,
+      community.updatesRoomID,
       email
     );
 
-    const result = await this.communicationService.getCommunityRoom(
-      communityWithRoom.communicationRoomID,
+    return await this.communicationService.getCommunityRoom(
+      community.updatesRoomID,
       email
     );
-    return result;
   }
 
-  async sendMessageToCommunity(
+  async getDiscussionCommunicationsRoom(
+    community: ICommunity,
+    email: string
+  ): Promise<CommunityRoom> {
+    if (this.communicationsEnabled && community.communicationGroupID === '') {
+      await this.initializeCommunicationsRoom(community);
+    }
+
+    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
+      community.communicationGroupID,
+      community.discussionRoomID,
+      email
+    );
+
+    return await this.communicationService.getCommunityRoom(
+      community.discussionRoomID,
+      email
+    );
+  }
+
+  async sendUpdateMessageToCommunity(
     community: ICommunity,
     email: string,
     msgData: CommunitySendMessageInput
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.communicationRoomID,
+      community.updatesRoomID,
       email
     );
     return await this.communicationService.sendMsgCommunity({
       sendingUserEmail: email,
       message: msgData.message,
-      roomID: (community as Community).communicationRoomID,
+      roomID: community.updatesRoomID,
+    });
+  }
+
+  async sendDiscussionMessageToCommunity(
+    community: ICommunity,
+    email: string,
+    msgData: CommunitySendMessageInput
+  ): Promise<string> {
+    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
+      community.communicationGroupID,
+      community.discussionRoomID,
+      email
+    );
+    return await this.communicationService.sendMsgCommunity({
+      sendingUserEmail: email,
+      message: msgData.message,
+      roomID: community.discussionRoomID,
     });
   }
 }

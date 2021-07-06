@@ -55,7 +55,10 @@ export class Community extends AuthorizableEntity
   parentCommunity?: Community;
 
   @Column()
-  communicationRoomID: string;
+  updatesRoomID!: string;
+
+  @Column()
+  discussionRoomID!: string;
 
   @Column()
   communicationGroupID: string;
@@ -64,7 +67,8 @@ export class Community extends AuthorizableEntity
     super();
     this.displayName = name;
     this.ecoverseID = '';
-    this.communicationRoomID = '';
+    this.updatesRoomID = '';
+    this.discussionRoomID = '';
     this.communicationGroupID = '';
   }
 }
