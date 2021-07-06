@@ -115,6 +115,15 @@ export class ApplicationService {
     return user;
   }
 
+  async getApplicationState(applicationID: string): Promise<string> {
+    const application = await this.getApplicationOrFail(applicationID);
+    const lifecycle = application.lifecycle;
+    if (lifecycle) {
+      return await this.lifecycleService.getState(lifecycle);
+    }
+    return '';
+  }
+
   async findExistingApplication(
     userID: string,
     communityID: string
@@ -132,5 +141,19 @@ export class ApplicationService {
       .getMany();
     if (existingApplication.length > 0) return existingApplication[0];
     return undefined;
+  }
+
+  async findApplicationsForUser(userID: string): Promise<IApplication[]> {
+    const existingApplications = await this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoinAndSelect('application.user', 'user')
+      .leftJoinAndSelect('application.community', 'community')
+      .where('user.id = :userID')
+      .setParameters({
+        userID: `${userID}`,
+      })
+      .getMany();
+    if (existingApplications.length > 0) return existingApplications;
+    return [];
   }
 }
