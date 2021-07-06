@@ -367,6 +367,7 @@ export class CommunicationService {
         message: ev.content.body,
         sender: user ? `${user}` : 'unknown',
         timestamp: ev.origin_server_ts,
+        id: ev.event_id,
       };
 
       messages.push(roomMessage);

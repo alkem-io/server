@@ -19,4 +19,10 @@ export class CommunicationMessageResult {
     description: 'The server timestamp in UTC',
   })
   timestamp!: number;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The id for the message event (Matrix)',
+  })
+  id!: string;
 }
