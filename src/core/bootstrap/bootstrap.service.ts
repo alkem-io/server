@@ -90,9 +90,20 @@ export class BootstrapService {
   }
 
   async bootstrapProfiles() {
+    const bootstrapAuthorizationEnabled = this.configService.get(
+      ConfigurationTypes.Bootstrap
+    )?.authorization?.enabled;
+    if (!bootstrapAuthorizationEnabled) {
+      this.logger.verbose?.(
+        `Authorization Profile Loading: ${bootstrapAuthorizationEnabled}`,
+        LogContext.BOOTSTRAP
+      );
+      return;
+    }
+
     const bootstrapFilePath = this.configService.get(
       ConfigurationTypes.Bootstrap
-    )?.authorisationBootstrapPath as string;
+    )?.authorization?.file as string;
 
     let bootstrapJson = {
       ...defaultRoles,
