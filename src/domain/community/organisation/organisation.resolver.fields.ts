@@ -14,14 +14,12 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/community/profile';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 @Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
     private organisationService: OrganisationService,
     private groupService: UserGroupService
   ) {}
@@ -94,7 +92,6 @@ export class OrganisationResolverFields {
     return organisation.profile;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this User.',
