@@ -18,6 +18,7 @@ export class UserMembership {
   organisations: MembershipUserResultEntryOrganisation[] = [];
 
   @Field(() => [ApplicationResultEntry], {
+    nullable: true,
     description: 'Open applications for this user.',
   })
   applications: ApplicationResultEntry[] = [];
