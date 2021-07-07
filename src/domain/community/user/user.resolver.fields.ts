@@ -3,11 +3,7 @@ import { Resolver, Parent, ResolveField } from '@nestjs/graphql';
 import { User, IUser } from '@domain/community/user';
 import { UserService } from './user.service';
 import { IAgent } from '@domain/agent/agent';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@common/decorators';
+import { CurrentUser, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { CommunicationService } from '@src/services/platform/communication/communication.service';
@@ -23,8 +19,6 @@ export class UserResolverFields {
     private communicationService: CommunicationService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this User.',
@@ -34,7 +28,6 @@ export class UserResolverFields {
     return await this.userService.getAgent(user.id);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('communityRooms', () => [CommunityRoom], {
     nullable: true,
     description: 'The Community rooms this user is a member of',
@@ -44,7 +37,6 @@ export class UserResolverFields {
     return await this.communicationService.getCommunityRooms(user.email);
   }
 
-  @UseGuards(GraphqlGuard)
   @ResolveField('directRooms', () => [DirectRoom], {
     nullable: true,
     description: 'The direct rooms this user is a member of',
@@ -64,6 +56,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
+    // Need to do inside rather than as decorator so can return a replacement string
     const accessGranted = await this.authorizationEngine.isAccessGranted(
       agentInfo,
       user.authorization,

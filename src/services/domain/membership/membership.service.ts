@@ -19,6 +19,9 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { UserMembership } from './membership.dto.user.result';
 import { MembershipOrganisationInput } from './membership.dto.organisation.input';
 import { OrganisationMembership } from './membership.dto.organisation.result';
+import { ApplicationService } from '@domain/community/application/application.service';
+import { ApplicationResultEntry } from './membership.dto.application.result.entry';
+import { IUser } from '@domain/community/user/user.interface';
 
 export class MembershipService {
   constructor(
@@ -26,6 +29,7 @@ export class MembershipService {
     private userGroupService: UserGroupService,
     private ecoverseService: EcoverseService,
     private challengeService: ChallengeService,
+    private applicationService: ApplicationService,
     private opportunityService: OpportunityService,
     private organisationService: OrganisationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -47,25 +51,13 @@ export class MembershipService {
     const storedOrgUserGroups: IUserGroup[] = [];
     for (const credential of credentials) {
       if (credential.type === AuthorizationCredential.OrganisationMember) {
-        const organisation = await this.organisationService.getOrganisationOrFail(
-          credential.resourceID
+        membership.organisations.push(
+          await this.createOrganisationResult(credential.resourceID)
         );
-        const orgResult = new MembershipUserResultEntryOrganisation(
-          organisation.nameID,
-          organisation.id,
-          organisation.displayName
-        );
-        membership.organisations.push(orgResult);
       } else if (credential.type === AuthorizationCredential.EcoverseMember) {
-        const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-          credential.resourceID
+        membership.ecoverses.push(
+          await this.createEcoverseMembershipResult(credential.resourceID)
         );
-        const ecoverseResult = new MembershipUserResultEntryEcoverse(
-          ecoverse.nameID,
-          ecoverse.id,
-          ecoverse.displayName
-        );
-        membership.ecoverses.push(ecoverseResult);
       } else if (credential.type === AuthorizationCredential.ChallengeMember) {
         const challenge = await this.challengeService.getChallengeOrFail(
           credential.resourceID
@@ -141,7 +133,22 @@ export class MembershipService {
       }
     }
 
+    membership.applications = await this.getApplications(user);
+
     return membership;
+  }
+
+  async createOrganisationResult(
+    organisationID: string
+  ): Promise<MembershipUserResultEntryOrganisation> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      organisationID
+    );
+    return new MembershipUserResultEntryOrganisation(
+      organisation.nameID,
+      organisation.id,
+      organisation.displayName
+    );
   }
 
   async createEcoverseMembershipResult(
@@ -190,5 +197,28 @@ export class MembershipService {
       }
     }
     return membership;
+  }
+
+  async getApplications(user: IUser): Promise<ApplicationResultEntry[]> {
+    const applicationResults: ApplicationResultEntry[] = [];
+    const applications = await this.applicationService.findApplicationsForUser(
+      user.id
+    );
+    for (const application of applications) {
+      const community = application.community;
+      const state = await this.applicationService.getApplicationState(
+        application.id
+      );
+      if (community) {
+        const applicationResult = new ApplicationResultEntry(
+          community.id,
+          community.displayName,
+          state,
+          application.id
+        );
+        applicationResults.push(applicationResult);
+      }
+    }
+    return applicationResults;
   }
 }
