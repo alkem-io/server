@@ -229,7 +229,11 @@ export class EcoverseService {
         LogContext.CHALLENGES
       );
 
-    return challenges;
+    // Sort the challenges base on their display name
+    const sortedChallenges = challenges.sort((a, b) =>
+      a.displayName > b.displayName ? 1 : -1
+    );
+    return sortedChallenges;
   }
 
   async getGroups(ecoverse: IEcoverse): Promise<IUserGroup[]> {
