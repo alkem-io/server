@@ -73,7 +73,6 @@ export class ChallengeResolverFields {
     return await this.challengeService.getChildChallenges(challenge);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this Challenge.',
