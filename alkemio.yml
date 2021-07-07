@@ -34,7 +34,9 @@ bootstrap:
   # in the Alkemio instance.
   #
   # Default: the default file that is picked up is: src/services/configuraiton/templates/authorisation-bootstrap.json.
-  authorisationBootstrapPath: ${AUTH_BOOTSTRAP_PATH}
+  authorization:
+    enabled: ${BOOTSTRAP_AUTHORIZATION_ENABLED}:true
+    file: ${BOOTSTRAP_AUTHORIZATION_FILE}
 
 ## security ##
 # The various means by which the security of the Alkemio platform can be configured.
