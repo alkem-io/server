@@ -99,6 +99,16 @@ export class ChallengeService {
       machineConfig
     );
 
+    // set the credential type in use by the community
+    await this.baseChallengeService.setMembershipCredential(
+      challenge,
+      AuthorizationCredential.ChallengeMember
+    );
+
+    // save the challenge, just in case the lead orgs assignment fails. Note that
+    // assigning lead orgs does not update the challenge entity
+    const savedChallenge = await this.challengeRepository.save(challenge);
+
     if (challengeData.leadOrganisations) {
       await this.setChallengeLeads(
         challenge.id,
@@ -106,13 +116,7 @@ export class ChallengeService {
       );
     }
 
-    // set the credential type in use by the community
-    await this.baseChallengeService.setMembershipCredential(
-      challenge,
-      AuthorizationCredential.ChallengeMember
-    );
-
-    return await this.challengeRepository.save(challenge);
+    return savedChallenge;
   }
 
   async updateChallenge(
