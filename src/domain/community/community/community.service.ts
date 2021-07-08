@@ -64,7 +64,6 @@ export class CommunityService {
     community.groups = [];
     // save to get an id assigned
     await this.communityRepository.save(community);
-
     return await this.initializeCommunicationsRoom(community);
   }
 
@@ -339,18 +338,26 @@ export class CommunityService {
   async initializeCommunicationsRoom(
     community: ICommunity
   ): Promise<ICommunity> {
-    community.communicationGroupID = await this.communicationService.createCommunityGroup(
-      // generate a unique identifier for the community because the community does not have an id (not persisted yet)
-      community.id,
-      community.displayName
-    );
-    community.updatesRoomID = await this.communicationService.createCommunityRoom(
-      community.communicationGroupID
-    );
-    community.discussionRoomID = await this.communicationService.createCommunityRoom(
-      community.communicationGroupID
-    );
-    return await this.communityRepository.save(community);
+    try {
+      community.communicationGroupID = await this.communicationService.createCommunityGroup(
+        // generate a unique identifier for the community because the community does not have an id (not persisted yet)
+        community.id,
+        community.displayName
+      );
+      community.updatesRoomID = await this.communicationService.createCommunityRoom(
+        community.communicationGroupID
+      );
+      community.discussionRoomID = await this.communicationService.createCommunityRoom(
+        community.communicationGroupID
+      );
+      return await this.communityRepository.save(community);
+    } catch (error) {
+      this.logger.error?.(
+        `Unable to initialize communications for community (${community.displayName}): ${error}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return community;
   }
 
   async getUpdatesCommunicationsRoom(
