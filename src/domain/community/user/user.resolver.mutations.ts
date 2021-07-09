@@ -50,6 +50,21 @@ export class UserResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
+    description:
+      'Creates a new User profile on the platform for a user that has a valid Authentication session.',
+  })
+  @Profiling.api
+  async createUserNewRegistration(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IUser> {
+    // If a user has a valid session, and hence email / names etc set, then they can create a User profile
+    let user = await this.userService.createUserFromAgentInfo(agentInfo);
+    user = await this.userAuthorizationService.grantCredentials(user);
+    return await this.userAuthorizationService.applyAuthorizationRules(user);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
     description: 'Updates the User.',
   })
   @Profiling.api

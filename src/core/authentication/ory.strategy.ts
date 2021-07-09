@@ -35,7 +35,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
   }
 
   async validate(payload: any) {
-    this.logger.verbose?.('Ory Kratos payload', LogContext.AUTH);
+    this.logger.verbose?.('Ory Strategy: Kratos payload', LogContext.AUTH);
     this.logger.verbose?.(payload, LogContext.AUTH);
 
     if (this.checkIfTokenHasExpired(payload.exp))
@@ -48,6 +48,8 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     let oryIdentity = undefined;
     if (payload.session) {
       oryIdentity = payload.session.identity;
+    } else {
+      this.logger.verbose?.('No Ory Kratos session', LogContext.AUTH);
     }
 
     return await this.authService.createAgentInfo(oryIdentity);
