@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
+  AuthenticationException,
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
@@ -23,6 +24,7 @@ import { IProfile } from '@domain/community/profile';
 import { LogContext } from '@common/enums';
 import { AuthorizationDefinition } from '@domain/common/authorization-definition';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Injectable()
 export class UserService {
@@ -64,6 +66,24 @@ export class UserService {
     }
 
     return await this.userRepository.save(user);
+  }
+
+  async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
+    // Extra check that there is valid data + no user with the email
+    const email = agentInfo.email;
+    if (!email || email.length === 0 || (await this.isRegisteredUser(email))) {
+      throw new AuthenticationException(
+        `Invalid attempt to create a new User profile for user: ${email}`
+      );
+    }
+    return await this.createUser({
+      nameID: this.createUserNameID(agentInfo.firstName, agentInfo.lastName),
+      email: email,
+      firstName: agentInfo.firstName,
+      lastName: agentInfo.lastName,
+      displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
+      accountUpn: email,
+    });
   }
 
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {

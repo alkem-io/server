@@ -59,10 +59,6 @@ export class GraphqlGuard extends AuthGuard([
     let resultAgentInfo = agentInfo;
 
     if (agentInfo) {
-      this.logger.verbose?.(
-        `[${this.instanceId}] - AgentInfo present`,
-        LogContext.AUTH
-      );
       this.authorizationEngine.logAgentInfo(agentInfo);
       // Utility to help retrieve the bearer token
       if (fieldName === 'me' && agentInfo.email.length > 0) {
@@ -92,10 +88,6 @@ export class GraphqlGuard extends AuthGuard([
       rule.execute(resultAgentInfo);
     }
 
-    this.logger.verbose?.(
-      `[${this.instanceId}] - ...returning`,
-      LogContext.AUTH
-    );
     return resultAgentInfo;
   }
 
