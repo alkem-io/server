@@ -82,6 +82,26 @@ export class UserResolverQueries {
   }
 
   @UseGuards(GraphqlGuard)
+  @Query(() => Boolean, {
+    nullable: false,
+    description: 'Check if the currently logged in user has a User profile',
+  })
+  @Profiling.api
+  async meHasProfile(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
+    const email = agentInfo.email;
+    if (!email || email.length == 0) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated user; no identifier'
+      );
+    }
+    const user = await this.userService.getUserByEmail(email);
+    if (!user) {
+      return false;
+    }
+    return true;
+  }
+
+  @UseGuards(GraphqlGuard)
   @Query(() => IUser, {
     nullable: false,
     description: 'The currently logged in user',
@@ -91,7 +111,7 @@ export class UserResolverQueries {
     const email = agentInfo.email;
     if (!email || email.length == 0) {
       throw new AuthenticationException(
-        'Unable to retrieve authenticated user.'
+        'Unable to retrieve authenticated user; no identifier'
       );
     }
     const user = await this.userService.getUserByEmail(email);

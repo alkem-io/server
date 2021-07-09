@@ -5,92 +5,69 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from './agent-info';
 import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { ConfigService } from '@nestjs/config';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { NotSupportedException } from '@common/exceptions';
 @Injectable()
 export class AuthenticationService {
   constructor(
     private configService: ConfigService,
     private ssiAgentService: SsiAgentService,
     private userService: UserService,
-    private userAuthorizationService: UserAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createAgentInfo(oryIdentity: any): Promise<AgentInfo> {
+    const agentInfo = new AgentInfo();
     if (!oryIdentity) {
-      return new AgentInfo();
+      return agentInfo;
     }
-    // Have a valid identity, get the information from Ory
-    const oryTraits = oryIdentity.traits;
-    const oryEmail = oryTraits.email;
-    const oryFirstName = oryTraits.name.first;
-    const oryLastName = oryTraits.name.last;
 
-    const userExists = await this.userService.isRegisteredUser(oryEmail);
-    let userIdentifier = '';
-    if (userExists) {
-      this.logger.verbose?.(
-        `Authentication Info: User registered: ${oryEmail}`,
+    const oryTraits = oryIdentity.traits;
+    if (!oryTraits.email || oryTraits.email.length === 0) {
+      throw new NotSupportedException(
+        'Session without email encountered',
         LogContext.AUTH
       );
-      userIdentifier = oryEmail;
+    }
+    // Have a valid identity, get the information from Ory
+    agentInfo.email = oryTraits.email;
+    agentInfo.firstName = oryTraits.name.first;
+    agentInfo.lastName = oryTraits.name.last;
+
+    const userExists = await this.userService.isRegisteredUser(agentInfo.email);
+    if (!userExists) {
+      this.logger.verbose?.(
+        `User: no profile: ${agentInfo.email}`,
+        LogContext.AUTH
+      );
+      // No credentials to obtain, pass on what is there
+      return agentInfo;
+    }
+    this.logger.verbose?.(
+      `Use: registered: ${agentInfo.email}`,
+      LogContext.AUTH
+    );
+
+    // Retrieve the credentials for the user
+    const agent = await this.userService.getAgent(agentInfo.email);
+    if (!agent.credentials) {
+      this.logger.warn?.(
+        `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
+        LogContext.AUTH
+      );
     } else {
-      // Create the user if the user does not yet exist
-      if (oryEmail && oryEmail.length > 0) {
-        this.logger.verbose?.(
-          `Authentication Info: User does not have a profile: ${oryEmail}, creating...`,
-          LogContext.AUTH
-        );
-        await this.createNewUser(oryEmail, oryFirstName, oryLastName);
-        userIdentifier = oryEmail;
-      } else {
-        this.logger.verbose?.(
-          `Authentication Info: User does not have a profile: ${oryEmail}, no data to create a profile...`,
-          LogContext.AUTH
-        );
-      }
+      agentInfo.credentials = agent.credentials;
     }
 
-    const agentInfo = new AgentInfo();
-    // User, if logged in, must now exist
-    if (userIdentifier.length > 0) {
-      agentInfo.email = userIdentifier;
-
-      const agent = await this.userService.getAgent(oryEmail);
-      if (!agent.credentials) {
-        this.logger.warn?.(
-          `Authentication Info: Unable to retrieve credentials for registered user: ${oryEmail}`,
-          LogContext.AUTH
-        );
-      } else {
-        agentInfo.credentials = agent.credentials;
-      }
-
-      // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
-      const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
-        .enabled;
-      if (ssiEnabled) {
-        agentInfo.verifiedCredentials = await this.ssiAgentService.getVerifiedCredentials(
-          agent.did,
-          agent.password
-        );
-      }
+    // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
+    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+      .enabled;
+    if (ssiEnabled) {
+      agentInfo.verifiedCredentials = await this.ssiAgentService.getVerifiedCredentials(
+        agent.did,
+        agent.password
+      );
     }
 
     return agentInfo;
-  }
-
-  async createNewUser(email: string, firstName: string, lastName: string) {
-    let user = await this.userService.createUser({
-      nameID: this.userService.createUserNameID(firstName, lastName),
-      email: email,
-      firstName: firstName,
-      lastName: lastName,
-      displayName: `${firstName} ${lastName}`,
-      accountUpn: email,
-    });
-    // And assign credentials, setup authorization
-    user = await this.userAuthorizationService.grantCredentials(user);
-    await this.userAuthorizationService.applyAuthorizationRules(user);
   }
 }
