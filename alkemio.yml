@@ -154,10 +154,10 @@ identity:
         # NB: The default kratos.yml config defines the selfservice endpoints with base address http://localhost:3000/auth.
         # That is used as there is a reverse proxy in front of the CT Web Client that forwards the calls to the Kratos Public URL.
         # You can check the currently logged in user at http://localhost:4433/sessions/whoami.
-        kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:4433/
+        kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:4433
 
         # Ory Kratos URL for usage by the CT server when inside a cluster.
-        kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:4433/
+        kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:4433
 
   ssi:
     # Jolocom SDK is used for providing SSI capabilities on the platform.
