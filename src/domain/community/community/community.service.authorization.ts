@@ -24,6 +24,9 @@ export class CommunityAuthorizationService {
       community.authorization,
       parentAuthorization
     );
+    // always false
+    community.authorization.anonymousReadAccess = false;
+
     community.authorization = this.extendAuthorizationDefinition(
       community.authorization
     );

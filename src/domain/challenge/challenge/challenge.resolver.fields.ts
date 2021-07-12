@@ -18,8 +18,6 @@ import { IOrganisation } from '@domain/community/organisation/organisation.inter
 export class ChallengeResolverFields {
   constructor(private challengeService: ChallengeService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the challenge.',
