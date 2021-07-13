@@ -15,6 +15,7 @@ import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
 import { CommunicationService } from '@src/services/platform/communication/communication.service';
 import { UserSendMessageInput } from './user.dto.send.msg';
+import { UserAuthorizationResetInput } from './user.dto.reset.authorization';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -126,5 +127,27 @@ export class UserResolverMutations {
       message: msgData.message,
       receiverID: receivingUser.email,
     });
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Reset the AuthorizationDefinition on the specified User.',
+  })
+  @Profiling.api
+  async authorizationDefinitionResetOnUser(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('authorizationResetData')
+    authorizationResetData: UserAuthorizationResetInput
+  ): Promise<IUser> {
+    const user = await this.userService.getUserOrFail(
+      authorizationResetData.userID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      user.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `reset authorization definition on user: ${agentInfo.email}`
+    );
+    return await this.userAuthorizationService.applyAuthorizationRules(user);
   }
 }

@@ -146,9 +146,10 @@ export class EcoverseResolverMutations {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       authorizationResetData.ecoverseID
     );
-    await this.authorizationEngine.grantReadAccessOrFail(
+    await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
       ecoverse.authorization,
+      AuthorizationPrivilege.UPDATE,
       `reset authorization definition: ${agentInfo.email}`
     );
     return await this.ecoverseAuthorizationService.applyAuthorizationRules(
