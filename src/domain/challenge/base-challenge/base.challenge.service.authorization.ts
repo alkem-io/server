@@ -28,7 +28,6 @@ export class BaseChallengeAuthorizationService {
     );
     // disable anonymous access for community
     if (community.authorization) {
-      community.authorization.anonymousReadAccess = false;
       baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
         community,
         baseChallenge.authorization
