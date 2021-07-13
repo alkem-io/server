@@ -31,12 +31,10 @@ export class EcoverseResolverFields {
     private ecoverseService: EcoverseService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the ecoverse.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async community(@Parent() ecoverse: Ecoverse) {
     return await this.ecoverseService.getCommunity(ecoverse);
