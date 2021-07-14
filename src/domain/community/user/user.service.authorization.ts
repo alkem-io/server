@@ -42,12 +42,12 @@ export class UserAuthorizationService {
       user.authorization
     );
 
+    // Allow users to also delete entities within the profile
     profile.authorization = await this.authorizationDefinitionService.appendCredentialAuthorizationRule(
       profile.authorization,
-
       {
-        type: AuthorizationCredential.GlobalAdminCommunity,
-        resourceID: '',
+        type: AuthorizationCredential.UserSelfManagement,
+        resourceID: user.id,
       },
       [AuthorizationPrivilege.DELETE]
     );
