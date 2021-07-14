@@ -329,10 +329,14 @@ export class CommunityService {
   async getMembersCount(community: ICommunity): Promise<number> {
     const membershipCredential = this.getMembershipCredential(community);
 
-    return await this.agentService.countAgentsWithMatchingCredentials({
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
+    const credentialMatches = await this.agentService.countAgentsWithMatchingCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+    // Need to reduce by one to take into account that the community itself also holds a credential as reference
+    return credentialMatches - 1;
   }
 
   async initializeCommunicationsRoom(
