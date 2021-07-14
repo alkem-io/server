@@ -1,0 +1,11 @@
+mutation authorizationDefinitionResetOnUser($authorizationResetData: UserAuthorizationResetInput!) {
+  authorizationDefinitionResetOnUser(authorizationResetData: $authorizationResetData) {
+    nameID
+  }
+}
+
+{
+  "authorizationResetData": {
+    "userID": "uuid_nameid_email"
+  }
+}
