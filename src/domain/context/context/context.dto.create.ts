@@ -7,7 +7,7 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class CreateContextInput {
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   background?: string;
@@ -22,7 +22,7 @@ export class CreateContextInput {
   @MaxLength(MID_TEXT_LENGTH)
   tagline?: string;
 
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   who?: string;
