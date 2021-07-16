@@ -1,5 +1,5 @@
 mutation authorizationPolicyResetOnEcoverse($authorizationResetData: EcoverseAuthorizationResetInput!) {
-  authorizationDPolicyResetOnEcoverse(authorizationResetData: $authorizationResetData) {
+  authorizationPolicyResetOnEcoverse(authorizationResetData: $authorizationResetData) {
     nameID
   }
 }

@@ -9,10 +9,12 @@ import { IAuthorizationDefinition } from '@domain/common/authorization-definitio
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { AuthorizationRuleCredential } from '@domain/common/authorization-definition/authorization.rule.credential';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { OrganisationService } from './organisation.service';
 
 @Injectable()
 export class OrganisationAuthorizationService {
   constructor(
+    private organisationService: OrganisationService,
     private authorizationDefinition: AuthorizationDefinitionService,
     private authorizationDefinitionService: AuthorizationDefinitionService,
     private profileAuthorizationService: ProfileAuthorizationService,
@@ -41,6 +43,12 @@ export class OrganisationAuthorizationService {
         profile
       );
     }
+
+    organisation.agent = await this.organisationService.getAgent(organisation);
+    organisation.agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
+      organisation.agent.authorization,
+      organisation.authorization
+    );
 
     return await this.organisationRepository.save(organisation);
   }

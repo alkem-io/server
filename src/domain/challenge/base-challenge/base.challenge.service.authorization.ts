@@ -36,10 +36,6 @@ export class BaseChallengeAuthorizationService {
 
     const tagset = baseChallenge.tagset;
     if (tagset) {
-      // Ensure always applying from a clean state
-      tagset.authorization = await this.authorizationDefinitionService.reset(
-        tagset.authorization
-      );
       tagset.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
         tagset.authorization,
         baseChallenge.authorization
@@ -50,15 +46,21 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    context.authorization = await this.authorizationDefinitionService.reset(
-      context.authorization
-    );
     context.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
       context.authorization,
       baseChallenge.authorization
     );
     baseChallenge.context = await this.contextAuthorizationService.applyAuthorizationPolicy(
       context
+    );
+
+    baseChallenge.agent = await this.baseChallengeService.getAgent(
+      baseChallenge.id,
+      repository
+    );
+    baseChallenge.agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
+      baseChallenge.agent.authorization,
+      baseChallenge.authorization
     );
 
     return await repository.save(baseChallenge);
