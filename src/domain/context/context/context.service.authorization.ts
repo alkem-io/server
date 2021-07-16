@@ -19,14 +19,14 @@ export class ContextAuthorizationService {
     private contextRepository: Repository<Context>
   ) {}
 
-  async applyAuthorizationRules(context: IContext): Promise<IContext> {
+  async applyAuthorizationPolicy(context: IContext): Promise<IContext> {
     // cascade
     const ecosystemModel = await this.contextService.getEcosystemModel(context);
     ecosystemModel.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
       ecosystemModel.authorization,
       context.authorization
     );
-    context.ecosystemModel = await this.ecosysteModelAuthorizationService.applyAuthorizationRules(
+    context.ecosystemModel = await this.ecosysteModelAuthorizationService.applyAuthorizationPolicy(
       ecosystemModel
     );
 

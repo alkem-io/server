@@ -248,6 +248,22 @@ export class OrganisationService {
     return agent;
   }
 
+  async getUserGroups(organisation: IOrganisation): Promise<IUserGroup[]> {
+    const organisationGroups = await this.getOrganisationOrFail(
+      organisation.id,
+      {
+        relations: ['groups'],
+      }
+    );
+    const groups = organisationGroups.groups;
+    if (!groups)
+      throw new ValidationException(
+        `No groups on organisation: ${organisation.displayName}`,
+        LogContext.COMMUNITY
+      );
+    return groups;
+  }
+
   async getOrganisationCount(): Promise<number> {
     return await this.organisationRepository.count();
   }

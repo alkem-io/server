@@ -19,7 +19,7 @@ export class EcosystemModelAuthorizationService {
     private ecosystemModelRepository: Repository<EcosystemModel>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     ecosystemModel: IEcosystemModel
   ): Promise<IEcosystemModel> {
     for (const actorGroup of this.ecosystemModelService.getActorGroups(
@@ -29,7 +29,7 @@ export class EcosystemModelAuthorizationService {
         actorGroup.authorization,
         ecosystemModel.authorization
       );
-      await this.actorGroupAuthorizationService.applyAuthorizationRules(
+      await this.actorGroupAuthorizationService.applyAuthorizationPolicy(
         actorGroup,
         ecosystemModel.authorization
       );

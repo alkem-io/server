@@ -65,7 +65,7 @@ export class CommunityLifecycleOptionsProvider {
         const application = await this.applicationService.getApplicationOrFail(
           event.parentID,
           {
-            relations: ['community'],
+            relations: ['community', 'user'],
           }
         );
         const userID = application.user?.id;
