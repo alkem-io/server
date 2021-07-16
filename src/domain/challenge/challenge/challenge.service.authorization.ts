@@ -42,12 +42,12 @@ export class ChallengeAuthorizationService {
       challenge.authorization,
       parentAuthorization
     );
-    challenge.authorization = this.extendAuthorizationDefinition(
+    challenge.authorization = this.appendCredentialRules(
       challenge.authorization,
       challenge.id
     );
     // Also update the verified credential rules
-    challenge.authorization.verifiedCredentialRules = await this.createVerifiedCredentialRules(
+    challenge.authorization.verifiedCredentialRules = await this.appendVerifiedCredentialRules(
       challenge.id
     );
 
@@ -55,6 +55,9 @@ export class ChallengeAuthorizationService {
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       this.challengeRepository
+    );
+    challenge.childChallenges = await this.challengeService.getChildChallenges(
+      challenge
     );
     if (challenge.childChallenges) {
       for (const childChallenge of challenge.childChallenges) {
@@ -64,6 +67,9 @@ export class ChallengeAuthorizationService {
         );
       }
     }
+    challenge.opportunities = await this.challengeService.getOpportunities(
+      challenge.id
+    );
     if (challenge.opportunities) {
       for (const opportunity of challenge.opportunities) {
         await this.opportunityAuthorizationService.applyAuthorizationPolicy(
@@ -76,7 +82,7 @@ export class ChallengeAuthorizationService {
     return await this.challengeRepository.save(challenge);
   }
 
-  private extendAuthorizationDefinition(
+  private appendCredentialRules(
     authorization: IAuthorizationDefinition | undefined,
     challengeID: string
   ): IAuthorizationDefinition {
@@ -120,7 +126,7 @@ export class ChallengeAuthorizationService {
     return rules;
   }
 
-  async createVerifiedCredentialRules(challengeID: string): Promise<string> {
+  async appendVerifiedCredentialRules(challengeID: string): Promise<string> {
     const rules: AuthorizationRuleVerifiedCredential[] = [];
     const agent = await this.challengeService.getAgent(challengeID);
 
