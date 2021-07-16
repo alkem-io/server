@@ -1,5 +1,5 @@
-mutation authorizationDefinitionResetOnUser($authorizationResetData: UserAuthorizationResetInput!) {
-  authorizationDefinitionResetOnUser(authorizationResetData: $authorizationResetData) {
+mutation authorizationPolicyResetOnUser($authorizationResetData: UserAuthorizationResetInput!) {
+  authorizationPolicyResetOnUser(authorizationResetData: $authorizationResetData) {
     nameID
   }
 }
