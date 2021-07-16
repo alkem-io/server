@@ -15,7 +15,7 @@ export class ActorGroupAuthorizationService {
     private actorGroupRepository: Repository<ActorGroup>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     actorGroup: IActorGroup,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): Promise<IActorGroup> {

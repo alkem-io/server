@@ -169,7 +169,7 @@ export class BootstrapService {
             });
           }
           user = await this.userAuthorizationService.grantCredentials(user);
-          user = await this.userAuthorizationService.applyAuthorizationRules(
+          user = await this.userAuthorizationService.applyAuthorizationPolicy(
             user
           );
         }
@@ -207,7 +207,7 @@ export class BootstrapService {
           nameID: DEFAULT_HOST_ORG_NAMEID,
           displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
         });
-        await this.organisationAuthorizationService.applyAuthorizationRules(
+        await this.organisationAuthorizationService.applyAuthorizationPolicy(
           hostOrg
         );
       }
@@ -220,7 +220,7 @@ export class BootstrapService {
           tagline: 'An empty ecoverse to be populated',
         },
       });
-      return await this.ecoverseAuthorizationService.applyAuthorizationRules(
+      return await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
         ecoverse
       );
     }

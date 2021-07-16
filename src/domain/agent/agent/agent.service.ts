@@ -20,6 +20,7 @@ import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.serv
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 import { ConfigService } from '@nestjs/config';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-definition/authorization.definition.entity';
 
 @Injectable()
 export class AgentService {
@@ -35,7 +36,7 @@ export class AgentService {
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
-    agent.authorization = await this.authorizationDefinitionService.createAuthorizationDefinition();
+    agent.authorization = new AuthorizationDefinition();
 
     const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
       .enabled;

@@ -6,7 +6,6 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -19,33 +18,35 @@ import { AuthorizationRuleCredential } from '@domain/common/authorization-defini
 export class UserGroupAuthorizationService {
   constructor(
     private authorizationDefinition: AuthorizationDefinitionService,
-    private authorizationEngine: AuthorizationEngineService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private userGroupService: UserGroupService,
     @InjectRepository(UserGroup)
     private userGroupRepository: Repository<UserGroup>
   ) {}
 
-  async applyAuthorizationRules(userGroup: IUserGroup): Promise<IUserGroup> {
-    userGroup.authorization = this.updateAuthorizationDefinition(
+  async applyAuthorizationPolicy(userGroup: IUserGroup): Promise<IUserGroup> {
+    userGroup.authorization = this.extendCredentialRules(
       userGroup.authorization,
       userGroup.id
     );
+    const savedGroup: IUserGroup = await this.userGroupRepository.save(
+      userGroup
+    );
 
     // cascade
-    const profile = this.userGroupService.getProfile(userGroup);
-    profile.authorization = await this.authorizationDefinition.inheritParentAuthorization(
-      profile.authorization,
+    savedGroup.profile = this.userGroupService.getProfile(userGroup);
+    savedGroup.profile.authorization = await this.authorizationDefinition.inheritParentAuthorization(
+      savedGroup.profile.authorization,
       userGroup.authorization
     );
-    userGroup.profile = await this.profileAuthorizationService.applyAuthorizationRules(
-      profile
+    userGroup.profile = await this.profileAuthorizationService.applyAuthorizationPolicy(
+      savedGroup.profile
     );
 
     return await this.userGroupRepository.save(userGroup);
   }
 
-  private updateAuthorizationDefinition(
+  private extendCredentialRules(
     authorization: IAuthorizationDefinition | undefined,
     userGroupID: string
   ): IAuthorizationDefinition {

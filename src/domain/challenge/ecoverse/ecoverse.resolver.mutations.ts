@@ -51,7 +51,7 @@ export class EcoverseResolverMutations {
       `updateEcoverse: ${ecoverseData.nameID}`
     );
     const ecoverse = await this.ecoverseService.createEcoverse(ecoverseData);
-    return await this.ecoverseAuthorizationService.applyAuthorizationRules(
+    return await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
       ecoverse
     );
   }
@@ -79,7 +79,7 @@ export class EcoverseResolverMutations {
     ecoverseData.ID = ecoverse.id;
 
     if (ecoverseData.authorizationDefinition) {
-      await this.ecoverseAuthorizationService.updateAuthorizationDefinition(
+      await this.ecoverseAuthorizationService.updateAuthorizationPolicy(
         ecoverse,
         ecoverseData.authorizationDefinition
       );
@@ -127,7 +127,7 @@ export class EcoverseResolverMutations {
       `challengeCreate: ${ecoverse.nameID}`
     );
     const challenge = await this.ecoverseService.createChallenge(challengeData);
-    return await this.challengeAuthorizationService.applyAuthorizationRules(
+    return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       ecoverse.authorization
     );
@@ -135,10 +135,10 @@ export class EcoverseResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IEcoverse, {
-    description: 'Reset the AuthorizationDefinition on the specified Ecoverse.',
+    description: 'Reset the Authorization Policy on the specified Ecoverse.',
   })
   @Profiling.api
-  async authorizationDefinitionResetOnEcoverse(
+  async authorizationPolicyResetOnEcoverse(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('authorizationResetData')
     authorizationResetData: EcoverseAuthorizationResetInput
@@ -152,7 +152,7 @@ export class EcoverseResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `reset authorization definition: ${agentInfo.email}`
     );
-    return await this.ecoverseAuthorizationService.applyAuthorizationRules(
+    return await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
       ecoverse
     );
   }
