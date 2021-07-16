@@ -3,10 +3,7 @@ import { Args, Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { Organisation } from './organisation.entity';
 import { OrganisationService } from './organisation.service';
-import {
-  ValidationException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IOrganisation } from '@domain/community/organisation';
@@ -32,20 +29,7 @@ export class OrganisationResolverFields {
   })
   @Profiling.api
   async groups(@Parent() organisation: Organisation) {
-    // get the organisation with the groups loaded
-    const organisationGroups = await this.organisationService.getOrganisationOrFail(
-      organisation.id,
-      {
-        relations: ['groups'],
-      }
-    );
-    const groups = organisationGroups.groups;
-    if (!groups)
-      throw new ValidationException(
-        `No groups on organisation: ${organisation.displayName}`,
-        LogContext.COMMUNITY
-      );
-    return groups;
+    return await this.organisationService.getUserGroups(organisation);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

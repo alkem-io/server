@@ -33,14 +33,13 @@ export class OrganisationAuthorizationService {
       organisation.id
     );
 
-    const profile = organisation.profile;
-    if (profile) {
-      profile.authorization = this.authorizationDefinition.inheritParentAuthorization(
-        profile.authorization,
+    if (organisation.profile) {
+      organisation.profile.authorization = this.authorizationDefinition.inheritParentAuthorization(
+        organisation.profile.authorization,
         organisation.authorization
       );
       organisation.profile = await this.profileAuthorizationService.applyAuthorizationPolicy(
-        profile
+        organisation.profile
       );
     }
 
@@ -49,6 +48,16 @@ export class OrganisationAuthorizationService {
       organisation.agent.authorization,
       organisation.authorization
     );
+
+    organisation.groups = await this.organisationService.getUserGroups(
+      organisation
+    );
+    for (const group of organisation.groups) {
+      group.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
+        group.authorization,
+        organisation.authorization
+      );
+    }
 
     return await this.organisationRepository.save(organisation);
   }

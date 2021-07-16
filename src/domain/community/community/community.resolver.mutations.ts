@@ -26,6 +26,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { CommunitySendMessageInput } from './community.dto.send.msg';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -33,6 +34,7 @@ export class CommunityResolverMutations {
     private authorizationEngine: AuthorizationEngineService,
     private userService: UserService,
     private userGroupService: UserGroupService,
+    private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
@@ -62,7 +64,9 @@ export class CommunityResolverMutations {
       group.authorization,
       community.authorization
     );
-    return await this.userGroupService.saveUserGroup(group);
+    return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
+      group
+    );
   }
 
   @UseGuards(GraphqlGuard)

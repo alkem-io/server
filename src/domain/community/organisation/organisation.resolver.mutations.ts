@@ -17,12 +17,14 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { OrganisationAuthorizationResetInput } from './organisation.dto.reset.authorization';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
   constructor(
     private authorizationDefinitionService: AuthorizationDefinitionService,
     private userGroupService: UserGroupService,
+    private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organisationAuthorizationService: OrganisationAuthorizationService,
     private organisationService: OrganisationService,
     private authorizationEngine: AuthorizationEngineService
@@ -80,7 +82,9 @@ export class OrganisationResolverMutations {
       group.authorization,
       organisation.authorization
     );
-    return await this.userGroupService.saveUserGroup(group);
+    return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
+      group
+    );
   }
 
   @UseGuards(GraphqlGuard)
