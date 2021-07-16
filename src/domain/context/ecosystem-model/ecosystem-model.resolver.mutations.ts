@@ -40,7 +40,7 @@ export class EcosystemModelResolverMutations {
     const actorGroup = await this.ecosystemModelService.createActorGroup(
       actorGroupData
     );
-    return await this.actorGroupAuthorizationService.applyAuthorizationRules(
+    return await this.actorGroupAuthorizationService.applyAuthorizationPolicy(
       actorGroup,
       ecosystemModel.authorization
     );

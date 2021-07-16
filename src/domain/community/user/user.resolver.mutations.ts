@@ -35,9 +35,7 @@ export class UserResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
-    const authorization = this.userAuthorizationService.createUserAuthorizationDefinition(
-      agentInfo.email
-    );
+    const authorization = this.userAuthorizationService.createUserAuthorizationDefinition();
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
       authorization,
@@ -46,7 +44,7 @@ export class UserResolverMutations {
     );
     let user = await this.userService.createUser(userData);
     user = await this.userAuthorizationService.grantCredentials(user);
-    return await this.userAuthorizationService.applyAuthorizationRules(user);
+    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
   }
 
   @UseGuards(GraphqlGuard)
@@ -61,7 +59,7 @@ export class UserResolverMutations {
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
     let user = await this.userService.createUserFromAgentInfo(agentInfo);
     user = await this.userAuthorizationService.grantCredentials(user);
-    return await this.userAuthorizationService.applyAuthorizationRules(user);
+    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
   }
 
   @UseGuards(GraphqlGuard)
@@ -131,10 +129,10 @@ export class UserResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Reset the AuthorizationDefinition on the specified User.',
+    description: 'Reset the Authorization policy on the specified User.',
   })
   @Profiling.api
-  async authorizationDefinitionResetOnUser(
+  async authorizationPolicyResetOnUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('authorizationResetData')
     authorizationResetData: UserAuthorizationResetInput
@@ -146,8 +144,8 @@ export class UserResolverMutations {
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.UPDATE,
-      `reset authorization definition on user: ${agentInfo.email}`
+      `reset authorization definition on user: ${authorizationResetData.userID}`
     );
-    return await this.userAuthorizationService.applyAuthorizationRules(user);
+    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
   }
 }

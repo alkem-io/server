@@ -29,8 +29,13 @@ export class UserAuthorizationService {
     private userRepository: Repository<User>
   ) {}
 
-  async applyAuthorizationRules(user: IUser): Promise<IUser> {
-    user.authorization = this.updateAuthorizationDefinition(
+  async applyAuthorizationPolicy(user: IUser): Promise<IUser> {
+    // Ensure always applying from a clean state
+    user.authorization = await this.authorizationDefinitionService.reset(
+      user.authorization
+    );
+
+    user.authorization = this.appendCredentialRules(
       user.authorization,
       user.id
     );
@@ -51,7 +56,7 @@ export class UserAuthorizationService {
       },
       [AuthorizationPrivilege.DELETE]
     );
-    user.profile = await this.profileAuthorizationService.applyAuthorizationRules(
+    user.profile = await this.profileAuthorizationService.applyAuthorizationPolicy(
       profile
     );
     user.agent = await this.userService.getAgent(user.id);
@@ -78,9 +83,15 @@ export class UserAuthorizationService {
     return await this.userRepository.save(user);
   }
 
-  private updateAuthorizationDefinition(
+  // Create an instance for usage in a mutation
+  public createUserAuthorizationDefinition(): IAuthorizationDefinition {
+    const authorization = new AuthorizationDefinition();
+    return this.appendCredentialRules(authorization);
+  }
+
+  private appendCredentialRules(
     authorization: IAuthorizationDefinition | undefined,
-    userID: string
+    userID?: string
   ): IAuthorizationDefinition {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -97,6 +108,7 @@ export class UserAuthorizationService {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.GRANT,
       ],
     };
     newRules.push(globalAdmin);
@@ -109,69 +121,23 @@ export class UserAuthorizationService {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.GRANT,
       ],
     };
     newRules.push(communityAdmin);
 
-    const userSelfAdmin = {
-      type: AuthorizationCredential.UserSelfManagement,
-      resourceID: userID,
-      grantedPrivileges: [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-      ],
-    };
-    newRules.push(userSelfAdmin);
-
-    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
-
-    return authorization;
-  }
-
-  createUserAuthorizationDefinition(
-    userEmail: string
-  ): IAuthorizationDefinition {
-    const authorization = new AuthorizationDefinition();
-    const newRules: AuthorizationRuleCredential[] = [];
-
-    const globalAdmin = {
-      type: AuthorizationCredential.GlobalAdmin,
-      resourceID: '',
-      grantedPrivileges: [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-    };
-    newRules.push(globalAdmin);
-
-    const communityAdmin = {
-      type: AuthorizationCredential.GlobalAdminCommunity,
-      resourceID: '',
-      grantedPrivileges: [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-    };
-    newRules.push(communityAdmin);
-
-    const userSelfCreate = {
-      type: AuthorizationCredential.UserSelfManagement,
-      resourceID: userEmail,
-      grantedPrivileges: [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-      ],
-    };
-    newRules.push(userSelfCreate);
+    if (userID) {
+      const userSelfAdmin = {
+        type: AuthorizationCredential.UserSelfManagement,
+        resourceID: userID,
+        grantedPrivileges: [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+        ],
+      };
+      newRules.push(userSelfAdmin);
+    }
 
     this.authorizationDefinitionService.appendCredentialAuthorizationRules(
       authorization,

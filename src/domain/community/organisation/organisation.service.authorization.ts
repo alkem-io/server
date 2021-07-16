@@ -14,15 +14,19 @@ import { EntityNotInitializedException } from '@common/exceptions';
 export class OrganisationAuthorizationService {
   constructor(
     private authorizationDefinition: AuthorizationDefinitionService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     organisation: IOrganisation
   ): Promise<IOrganisation> {
-    organisation.authorization = this.updateAuthorizationDefinition(
+    organisation.authorization = await this.authorizationDefinitionService.reset(
+      organisation.authorization
+    );
+    organisation.authorization = this.appendCredentialRules(
       organisation.authorization,
       organisation.id
     );
@@ -33,15 +37,7 @@ export class OrganisationAuthorizationService {
         profile.authorization,
         organisation.authorization
       );
-      profile.authorization = await this.authorizationDefinition.appendCredentialAuthorizationRule(
-        profile.authorization,
-        {
-          type: AuthorizationCredential.GlobalAdminCommunity,
-          resourceID: '',
-        },
-        [AuthorizationPrivilege.UPDATE]
-      );
-      organisation.profile = await this.profileAuthorizationService.applyAuthorizationRules(
+      organisation.profile = await this.profileAuthorizationService.applyAuthorizationPolicy(
         profile
       );
     }
@@ -49,7 +45,7 @@ export class OrganisationAuthorizationService {
     return await this.organisationRepository.save(organisation);
   }
 
-  private updateAuthorizationDefinition(
+  private appendCredentialRules(
     authorization: IAuthorizationDefinition | undefined,
     organisationID: string
   ): IAuthorizationDefinition {

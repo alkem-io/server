@@ -17,7 +17,7 @@ export class BaseChallengeAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<IBaseChallenge> {
@@ -28,7 +28,7 @@ export class BaseChallengeAuthorizationService {
     );
     // disable anonymous access for community
     if (community.authorization) {
-      baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationRules(
+      baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationPolicy(
         community,
         baseChallenge.authorization
       );
@@ -57,7 +57,7 @@ export class BaseChallengeAuthorizationService {
       context.authorization,
       baseChallenge.authorization
     );
-    baseChallenge.context = await this.contextAuthorizationService.applyAuthorizationRules(
+    baseChallenge.context = await this.contextAuthorizationService.applyAuthorizationPolicy(
       context
     );
 

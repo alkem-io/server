@@ -16,6 +16,7 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { AgentInfo } from '@core/authentication/agent-info';
 import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { OrganisationAuthorizationResetInput } from './organisation.dto.reset.authorization';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
@@ -50,7 +51,7 @@ export class OrganisationResolverMutations {
       organisationData
     );
 
-    return await this.organisationAuthorizationService.applyAuthorizationRules(
+    return await this.organisationAuthorizationService.applyAuthorizationPolicy(
       organisation
     );
   }
@@ -122,5 +123,30 @@ export class OrganisationResolverMutations {
       `deleteOrg: ${organisation.nameID}`
     );
     return await this.organisationService.deleteOrganisation(deleteData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganisation, {
+    description:
+      'Reset the Authorization Policy on the specified Organisation.',
+  })
+  @Profiling.api
+  async authorizationPolicyResetOnOrganisation(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('authorizationResetData')
+    authorizationResetData: OrganisationAuthorizationResetInput
+  ): Promise<IOrganisation> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      authorizationResetData.organisationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `reset authorization definition on organisation: ${authorizationResetData.organisationID}`
+    );
+    return await this.organisationAuthorizationService.applyAuthorizationPolicy(
+      organisation
+    );
   }
 }

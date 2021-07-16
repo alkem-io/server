@@ -12,7 +12,7 @@ export class ProfileAuthorizationService {
     private profileRepository: Repository<Profile>
   ) {}
 
-  async applyAuthorizationRules(profile: IProfile): Promise<IProfile> {
+  async applyAuthorizationPolicy(profile: IProfile): Promise<IProfile> {
     if (profile.references) {
       for (const reference of profile.references) {
         reference.authorization = this.authorizationDefinitionService.inheritParentAuthorization(

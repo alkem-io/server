@@ -19,7 +19,7 @@ export class OpportunityAuthorizationService {
     private opportunityRepository: Repository<Opportunity>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     opportunity: IOpportunity,
     challengeAuthorization: IAuthorizationDefinition | undefined
   ): Promise<IOpportunity> {
@@ -29,7 +29,7 @@ export class OpportunityAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       opportunity,
       this.opportunityRepository
     );

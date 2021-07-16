@@ -34,7 +34,7 @@ export class ChallengeAuthorizationService {
     private challengeRepository: Repository<Challenge>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     challenge: IChallenge,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): Promise<IChallenge> {
@@ -52,13 +52,13 @@ export class ChallengeAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       this.challengeRepository
     );
     if (challenge.childChallenges) {
       for (const childChallenge of challenge.childChallenges) {
-        await this.applyAuthorizationRules(
+        await this.applyAuthorizationPolicy(
           childChallenge,
           challenge.authorization
         );
@@ -66,7 +66,7 @@ export class ChallengeAuthorizationService {
     }
     if (challenge.opportunities) {
       for (const opportunity of challenge.opportunities) {
-        await this.opportunityAuthorizationService.applyAuthorizationRules(
+        await this.opportunityAuthorizationService.applyAuthorizationPolicy(
           opportunity,
           challenge.authorization
         );

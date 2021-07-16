@@ -16,7 +16,7 @@ export class CommunityAuthorizationService {
     private communityRepository: Repository<Community>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     community: ICommunity,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): Promise<ICommunity> {

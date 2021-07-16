@@ -26,8 +26,8 @@ export class UserGroupAuthorizationService {
     private userGroupRepository: Repository<UserGroup>
   ) {}
 
-  async applyAuthorizationRules(userGroup: IUserGroup): Promise<IUserGroup> {
-    userGroup.authorization = this.updateAuthorizationDefinition(
+  async applyAuthorizationPolicy(userGroup: IUserGroup): Promise<IUserGroup> {
+    userGroup.authorization = this.updateAuthorizationPolicy(
       userGroup.authorization,
       userGroup.id
     );
@@ -38,14 +38,14 @@ export class UserGroupAuthorizationService {
       profile.authorization,
       userGroup.authorization
     );
-    userGroup.profile = await this.profileAuthorizationService.applyAuthorizationRules(
+    userGroup.profile = await this.profileAuthorizationService.applyAuthorizationPolicy(
       profile
     );
 
     return await this.userGroupRepository.save(userGroup);
   }
 
-  private updateAuthorizationDefinition(
+  private updateAuthorizationPolicy(
     authorization: IAuthorizationDefinition | undefined,
     userGroupID: string
   ): IAuthorizationDefinition {
