@@ -9,47 +9,63 @@ import { IAuthorizationDefinition } from '@domain/common/authorization-definitio
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { AuthorizationRuleCredential } from '@domain/common/authorization-definition/authorization.rule.credential';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { OrganisationService } from './organisation.service';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 
 @Injectable()
 export class OrganisationAuthorizationService {
   constructor(
+    private organisationService: OrganisationService,
     private authorizationDefinition: AuthorizationDefinitionService,
+    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private userGroupAuthorizationService: UserGroupAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     organisation: IOrganisation
   ): Promise<IOrganisation> {
-    organisation.authorization = this.updateAuthorizationDefinition(
+    organisation.authorization = await this.authorizationDefinitionService.reset(
+      organisation.authorization
+    );
+    organisation.authorization = this.appendCredentialRules(
       organisation.authorization,
       organisation.id
     );
 
-    const profile = organisation.profile;
-    if (profile) {
-      profile.authorization = this.authorizationDefinition.inheritParentAuthorization(
-        profile.authorization,
+    if (organisation.profile) {
+      organisation.profile.authorization = this.authorizationDefinition.inheritParentAuthorization(
+        organisation.profile.authorization,
         organisation.authorization
       );
-      profile.authorization = await this.authorizationDefinition.appendCredentialAuthorizationRule(
-        profile.authorization,
-        {
-          type: AuthorizationCredential.GlobalAdminCommunity,
-          resourceID: '',
-        },
-        [AuthorizationPrivilege.UPDATE]
+      organisation.profile = await this.profileAuthorizationService.applyAuthorizationPolicy(
+        organisation.profile
       );
-      organisation.profile = await this.profileAuthorizationService.applyAuthorizationRules(
-        profile
+    }
+
+    organisation.agent = await this.organisationService.getAgent(organisation);
+    organisation.agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
+      organisation.agent.authorization,
+      organisation.authorization
+    );
+
+    organisation.groups = await this.organisationService.getUserGroups(
+      organisation
+    );
+    for (const group of organisation.groups) {
+      group.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
+        group.authorization,
+        organisation.authorization
       );
+      await this.userGroupAuthorizationService.applyAuthorizationPolicy(group);
     }
 
     return await this.organisationRepository.save(organisation);
   }
 
-  private updateAuthorizationDefinition(
+  private appendCredentialRules(
     authorization: IAuthorizationDefinition | undefined,
     organisationID: string
   ): IAuthorizationDefinition {

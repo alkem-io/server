@@ -27,7 +27,7 @@ export class EcoverseAuthorizationService {
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
 
-  async applyAuthorizationRules(ecoverse: IEcoverse): Promise<IEcoverse> {
+  async applyAuthorizationPolicy(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Ensure always applying from a clean state
     ecoverse.authorization = await this.authorizationDefinitionService.reset(
       ecoverse.authorization
@@ -36,7 +36,7 @@ export class EcoverseAuthorizationService {
       ecoverse.authorization,
       ecoverse.id
     );
-    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       ecoverse,
       this.ecoverseRepository
     );
@@ -44,7 +44,7 @@ export class EcoverseAuthorizationService {
     // propagate authorization rules for child entities
     const challenges = await this.ecoverseService.getChallenges(ecoverse);
     for (const challenge of challenges) {
-      await this.challengeAuthorizationService.applyAuthorizationRules(
+      await this.challengeAuthorizationService.applyAuthorizationPolicy(
         challenge,
         ecoverse.authorization
       );
@@ -61,7 +61,7 @@ export class EcoverseAuthorizationService {
     return await this.ecoverseRepository.save(ecoverse);
   }
 
-  async updateAuthorizationDefinition(
+  async updateAuthorizationPolicy(
     ecoverse: IEcoverse,
     authorizationUpdateData: UpdateAuthorizationDefinitionInput
   ): Promise<IEcoverse> {

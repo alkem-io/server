@@ -6,17 +6,19 @@ import { Community, ICommunity } from '@domain/community/community';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { IAuthorizationDefinition } from '@domain/common/authorization-definition/authorization.definition.interface';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 
 @Injectable()
 export class CommunityAuthorizationService {
   constructor(
     private communityService: CommunityService,
     private authorizationDefinitionService: AuthorizationDefinitionService,
+    private userGroupAuthorizationService: UserGroupAuthorizationService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     community: ICommunity,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): Promise<ICommunity> {
@@ -38,6 +40,7 @@ export class CommunityAuthorizationService {
         group.authorization,
         community.authorization
       );
+      await this.userGroupAuthorizationService.applyAuthorizationPolicy(group);
     }
 
     const applications = await this.communityService.getApplications(community);

@@ -34,7 +34,7 @@ export class ChallengeAuthorizationService {
     private challengeRepository: Repository<Challenge>
   ) {}
 
-  async applyAuthorizationRules(
+  async applyAuthorizationPolicy(
     challenge: IChallenge,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): Promise<IChallenge> {
@@ -42,51 +42,47 @@ export class ChallengeAuthorizationService {
       challenge.authorization,
       parentAuthorization
     );
-    challenge.authorization = this.extendAuthorizationDefinition(
+    challenge.authorization = this.appendCredentialRules(
       challenge.authorization,
       challenge.id
     );
     // Also update the verified credential rules
-    challenge.authorization.verifiedCredentialRules = await this.createVerifiedCredentialRules(
+    challenge.authorization.verifiedCredentialRules = await this.appendVerifiedCredentialRules(
       challenge.id
     );
 
     // propagate authorization rules for child entities
-    await this.baseChallengeAuthorizationService.applyAuthorizationRules(
+    await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       this.challengeRepository
     );
+    challenge.childChallenges = await this.challengeService.getChildChallenges(
+      challenge
+    );
     if (challenge.childChallenges) {
       for (const childChallenge of challenge.childChallenges) {
-        await this.applyAuthorizationRules(
+        await this.applyAuthorizationPolicy(
           childChallenge,
           challenge.authorization
         );
       }
     }
+    challenge.opportunities = await this.challengeService.getOpportunities(
+      challenge.id
+    );
     if (challenge.opportunities) {
       for (const opportunity of challenge.opportunities) {
-        await this.opportunityAuthorizationService.applyAuthorizationRules(
+        await this.opportunityAuthorizationService.applyAuthorizationPolicy(
           opportunity,
           challenge.authorization
         );
       }
     }
 
-    const agent = await this.challengeService.getAgent(challenge.id);
-    agent.authorization = await this.authorizationDefinitionService.reset(
-      agent.authorization
-    );
-
-    agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      agent.authorization,
-      challenge.authorization
-    );
-
     return await this.challengeRepository.save(challenge);
   }
 
-  private extendAuthorizationDefinition(
+  private appendCredentialRules(
     authorization: IAuthorizationDefinition | undefined,
     challengeID: string
   ): IAuthorizationDefinition {
@@ -130,7 +126,7 @@ export class ChallengeAuthorizationService {
     return rules;
   }
 
-  async createVerifiedCredentialRules(challengeID: string): Promise<string> {
+  async appendVerifiedCredentialRules(challengeID: string): Promise<string> {
     const rules: AuthorizationRuleVerifiedCredential[] = [];
     const agent = await this.challengeService.getAgent(challengeID);
 

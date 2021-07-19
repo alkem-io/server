@@ -60,7 +60,6 @@ export class BaseChallengeService {
         baseChallengeData.context
       );
     }
-    baseChallenge.authorization = new AuthorizationDefinition();
 
     baseChallenge.tagset = await this.tagsetService.createTagset({
       name: RestrictedTagsetNames.Default,

@@ -27,11 +27,6 @@ export class AuthorizationDefinitionService {
     private readonly logger: LoggerService
   ) {}
 
-  async createAuthorizationDefinition(): Promise<IAuthorizationDefinition> {
-    const authorization = new AuthorizationDefinition();
-    return await this.authorizationDefinitionRepository.save(authorization);
-  }
-
   reset(
     authorizationDefinition: IAuthorizationDefinition | undefined
   ): IAuthorizationDefinition {
