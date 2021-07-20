@@ -74,7 +74,7 @@ export class BaseChallengeService {
   async setMembershipCredential(
     baseChallenge: IBaseChallenge,
     membershipCredentialType: AuthorizationCredential
-  ) {
+  ): Promise<ICommunity> {
     const membershipCredential = await this.credentialService.createCredential({
       type: membershipCredentialType,
       resourceID: baseChallenge.id,

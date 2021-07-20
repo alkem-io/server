@@ -22,11 +22,13 @@ import {
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
+import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 
 @Injectable()
 export class ChallengeAuthorizationService {
   constructor(
     private authorizationDefinitionService: AuthorizationDefinitionService,
+    private baseChallengeService: BaseChallengeService,
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private challengeService: ChallengeService,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
@@ -77,6 +79,13 @@ export class ChallengeAuthorizationService {
           challenge.authorization
         );
       }
+    }
+
+    if (!challenge.community?.credential) {
+      challenge.community = await this.baseChallengeService.setMembershipCredential(
+        challenge,
+        AuthorizationCredential.ChallengeMember
+      );
     }
 
     return await this.challengeRepository.save(challenge);
