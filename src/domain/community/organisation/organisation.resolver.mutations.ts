@@ -18,6 +18,8 @@ import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { OrganisationAuthorizationResetInput } from './organisation.dto.reset.authorization';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+import { AssignOrganisationMemberInput } from './organisation.dto.assign.member';
+import { RemoveOrganisationMemberInput } from './organisation.dto.remove.member';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
@@ -152,5 +154,47 @@ export class OrganisationResolverMutations {
     return await this.organisationAuthorizationService.applyAuthorizationPolicy(
       organisation
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganisation, {
+    description: 'Assigns a User as a member of the specified Organisation.',
+  })
+  @Profiling.api
+  async assignUserToOrganisation(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignOrganisationMemberInput
+  ): Promise<IOrganisation> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      membershipData.organisationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user organisation: ${organisation.displayName}`
+    );
+    return await this.organisationService.assignMember(membershipData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganisation, {
+    description: 'Removes a User as a member of the specified Organisation.',
+  })
+  @Profiling.api
+  async removeUserFromOrganisation(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveOrganisationMemberInput
+  ): Promise<IOrganisation> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      membershipData.organisationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user organisation: ${organisation.displayName}`
+    );
+    return await this.organisationService.removeMember(membershipData);
   }
 }
