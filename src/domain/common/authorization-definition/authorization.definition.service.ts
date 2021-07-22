@@ -105,7 +105,11 @@ export class AuthorizationDefinitionService {
     childAuthorization: IAuthorizationDefinition | undefined,
     parentAuthorization: IAuthorizationDefinition | undefined
   ): IAuthorizationDefinition {
-    const child = this.validateAuthorization(childAuthorization);
+    // create a new child definition if one is not provided, a temporary fix
+    let child = childAuthorization;
+    if (!child) {
+      child = new AuthorizationDefinition();
+    }
     const parent = this.validateAuthorization(parentAuthorization);
     // Reset the child to a base state for authorization definition
     this.reset(child);
