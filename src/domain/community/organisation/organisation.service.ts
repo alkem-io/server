@@ -28,6 +28,8 @@ import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
 import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
+import { RemoveOrganisationMemberInput } from './organisation.dto.remove.member';
+import { AssignOrganisationMemberInput } from './organisation.dto.assign.member';
 
 @Injectable()
 export class OrganisationService {
@@ -293,5 +295,44 @@ export class OrganisationService {
       results.push(loadedOrganisation);
     }
     return results;
+  }
+
+  async assignMember(
+    membershipData: AssignOrganisationMemberInput
+  ): Promise<IOrganisation> {
+    const organisation = await this.getOrganisationOrFail(
+      membershipData.organisationID
+    );
+
+    // Assign a credential for community membership
+    const { user, agent } = await this.userService.getUserAndAgent(
+      membershipData.userID
+    );
+
+    user.agent = await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OrganisationMember,
+      resourceID: organisation.id,
+    });
+    return organisation;
+  }
+
+  async removeMember(
+    membershipData: RemoveOrganisationMemberInput
+  ): Promise<IOrganisation> {
+    const { user, agent } = await this.userService.getUserAndAgent(
+      membershipData.userID
+    );
+
+    const organisation = await this.getOrganisationOrFail(
+      membershipData.organisationID
+    );
+    user.agent = await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OrganisationMember,
+      resourceID: organisation.id,
+    });
+
+    return organisation;
   }
 }
