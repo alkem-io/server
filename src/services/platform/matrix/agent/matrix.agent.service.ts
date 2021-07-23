@@ -66,6 +66,8 @@ export class MatrixAgentService {
       const communityRoom = new MatrixRoom();
       communityRoom.roomId = communityMap[groupID][0];
       communityRoom.isDirect = false;
+      const room = await this.getRoom(matrixAgent, communityRoom.roomId);
+      communityRoom.timeline = room.timeline;
       rooms.push(communityRoom);
     }
     return rooms;
@@ -82,6 +84,8 @@ export class MatrixAgentService {
       directRoom.roomId = dmRoomMap[userID][0];
       directRoom.isDirect = true;
       directRoom.receiverEmail = this.matrixUserAdapterService.id2email(userID);
+      const room = await this.getRoom(matrixAgent, directRoom.roomId);
+      directRoom.timeline = room.timeline;
       rooms.push(directRoom);
     }
     return rooms;
@@ -175,15 +179,15 @@ export class MatrixAgentService {
     const rooms = await matrixAgent.matrixClient.getGroupRooms(
       msgRequest.communityId
     );
-    const room = rooms[0];
+    const room = rooms.chunk[0];
 
     if (!room) {
       throw new Error('The community does not have a default room set');
     }
 
-    await this.message(matrixAgent, room.roomId, { text: msgRequest.text });
+    await this.message(matrixAgent, room.room_id, { text: msgRequest.text });
 
-    return room.roomId;
+    return room.room_id;
   }
 
   async message(
