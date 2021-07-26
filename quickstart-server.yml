@@ -5,14 +5,12 @@ services:
     container_name: alkemio_server_dev
     image: alkemio_server
     build: .
-    #image: alkemio/server:v0.11.5-alpha3
     depends_on:
       - mysql_db
     networks:
       - alkemio_dev_net
     environment:
       - AUTH_ENABLED
-      - AUTH_API_ENABLED
       - NODE_ENV
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
@@ -23,14 +21,13 @@ services:
       - WAIT_HOST_CONNECT_TIMEOUT=30
       - GRAPHQL_ENDPOINT_PORT=4000
       - IPFS_ENDPOINT=http://ipfs:5001
-      - IPFS_CLIENT_ENDPOINT=http://localhost:8080/ipfs
-      - AUTH_ORY_KRATOS_ISSUER=http://alkemio-server-dev/
+      - IPFS_CLIENT_ENDPOINT=http://localhost:3000/ipfs
       - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
-      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:4433/
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/identity/ory/kratos/public
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER=http://kratos:4433/
+      - CORS_ENABLED=true
       - LOGGING_LEVEL_CONSOLE=verbose
       - LOGGING_CONSOLE_ENABLED=true
-      - CORS_ENABLED=false
     restart: always
     ports:
       - 4000:4000

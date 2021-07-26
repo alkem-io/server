@@ -1,32 +1,12 @@
-- id: 'ory:kratos:public'
-  upstream:
-    preserve_host: true
-    url: 'http://kratos:4433'
-    strip_path: /.ory/kratos/public
-  match:
-    url: 'http://localhost:4455/.ory/kratos/public/<**>'
-    methods:
-      - GET
-      - POST
-      - PUT
-      - DELETE
-      - PATCH
-  authenticators:
-    - handler: noop
-  authorizer:
-    handler: allow
-  mutators:
-    - handler: noop
-
 - id: 'alkemio:graphql:protected'
   upstream:
     preserve_host: true
-    url: 'http://192.168.10.1:4000'
+    url: 'http://host.docker.internal:4000'
   match:
-    url: 'http://localhost:4455/graphql'
+    url: 'http://localhost:3000/graphql'
     methods:
-      - GET
       - POST
+      - GET
   authenticators:
     - handler: cookie_session
     - handler: noop
@@ -37,24 +17,4 @@
   errors:
     - handler: redirect
       config:
-        to: https://localhost:4455/auth/login
-
-- id: 'alkemio:graphql:api:protected'
-  upstream:
-    preserve_host: true
-    url: 'http://192.168.10.1:4000'
-    strip_path: /admin
-  match:
-    url: 'http://localhost:4455/admin/graphql'
-    methods:
-      - POST
-  authenticators:
-    - handler: noop
-  authorizer:
-    handler: allow
-  mutators:
-    - handler: noop
-  errors:
-    - handler: redirect
-      config:
-        to: https://localhost:4455/auth/login
+        to: http://localhost:3000/identity/login
