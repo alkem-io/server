@@ -63,7 +63,8 @@ export class MatrixRoomAdapterService {
       LogContext.COMMUNICATION
     );
     if (communityId) {
-      await matrixClient.addRoomToGroup(communityId, roomResult.room_id, false);
+      await matrixClient.addRoomToGroup(communityId, roomResult.room_id, true);
+      await matrixClient.addRoomToGroupSummary(communityId, roomResult.room_id);
     }
 
     return roomID;

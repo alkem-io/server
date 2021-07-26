@@ -1,7 +1,5 @@
 mutation messageUser($msgData: UserSendMessageInput!) {
-  messageUser(msgData: $msgData) {
-    id
-  }
+  messageUser(msgData: $msgData)
 }
 
 Variables:
