@@ -1,0 +1,11 @@
+mutation msgUpdateCommunity($msgData: CommunitySendMessageInput!) {
+  messageUpdateCommunity(msgData: $msgData)
+}
+
+Variables:
+{
+  "msgData": {
+    "message": "example222",
+    "communityID": "uuid"
+  }
+}
