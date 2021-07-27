@@ -1,0 +1,22 @@
+# API and dashboard configuration
+api:
+  dashboard: true
+  insecure: true
+
+log:
+  level: DEBUG
+
+entryPoints:
+  web:
+    address: ":80"
+  mysql:
+    address: ":3306"
+
+providers:
+  file:
+    filename: /etc/traefik/http.yml
+    watch: true
+
+accessLog:
+  filePath: "/etc/traefik/access.log"
+

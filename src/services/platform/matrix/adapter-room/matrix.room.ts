@@ -10,3 +10,7 @@ export class MatrixRoom {
   timeline?: MatrixRoomResponseMessage[] = [];
   groupID? = '';
 }
+
+export class MatrixRoomChunk {
+  room_id!: string;
+}

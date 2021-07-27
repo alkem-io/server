@@ -13,21 +13,19 @@ export class MatrixGroupAdapterService {
 
   // Maps from a groupID to an array of roomIDs
   // Todo: needs to be optimized!
-  public communityRoomsMap(
+  public async communityRoomsMap(
     matrixClient: MatrixClient
-  ): Record<string, string[]> {
-    const communities = matrixClient.getGroups();
-    const communityRooms = matrixClient.getRooms();
+  ): Promise<Record<string, string[]>> {
+    const communities = await matrixClient.getGroups();
 
     const roomMap: Record<string, string[]> = {};
     for (const community of communities) {
       //const result = await matrixClient.getGroupRooms(community.groupId);
+      const rooms = await matrixClient.getGroupRooms(community.groupId);
       roomMap[community.groupId] = roomMap[community.groupId] || [];
 
-      for (const room of communityRooms) {
-        if (room.groupID === community.groupId) {
-          roomMap[community.groupId].push(room.roomId);
-        }
+      for (const room of rooms.chunk) {
+        roomMap[community.groupId].push(room.room_id);
       }
     }
 

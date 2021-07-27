@@ -171,7 +171,7 @@ export class CommunicationService {
     return group;
   }
 
-  async createCommunityRoom(groupID: string): Promise<string> {
+  async createCommunityRoom(groupID: string, name: string): Promise<string> {
     // If not enabled just return an empty string
     if (!this.enabled) {
       return '';
@@ -181,6 +181,9 @@ export class CommunicationService {
       elevatedMatrixAgent.matrixClient,
       {
         communityId: groupID,
+        createOpts: {
+          name,
+        },
       }
     );
     this.logger.verbose?.(
@@ -221,14 +224,16 @@ export class CommunicationService {
     }
     const matrixUsername = this.matrixUserAdapterService.email2id(email);
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    await this.matrixGroupAdapterService.inviteUsersToGroup(
-      elevatedAgent.matrixClient,
-      groupID,
-      [matrixUsername]
-    );
+    // first send invites to the room - the group invite fails once accepted
+    // for multiple rooms in a group this will cause failure before inviting the user over
     await this.matrixRoomAdapterService.inviteUsersToRoom(
       elevatedAgent.matrixClient,
       roomID,
+      [matrixUsername]
+    );
+    await this.matrixGroupAdapterService.inviteUsersToGroup(
+      elevatedAgent.matrixClient,
+      groupID,
       [matrixUsername]
     );
   }
@@ -259,7 +264,7 @@ export class CommunicationService {
     }
     const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
 
-    const matrixDirectRooms = await this.matrixAgentService.getCommunityRooms(
+    const matrixDirectRooms = await this.matrixAgentService.getDirectRooms(
       matrixAgent
     );
     for (const matrixRoom of matrixDirectRooms) {

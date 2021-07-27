@@ -12,7 +12,7 @@
 ## hosting ##
 # The hosting configuration for the Alkemio Server
 hosting:
-  # The port that the CT server will be listening on.
+  # The port that the Alkemio server will be listening on.
   # For clusters (e.g. docker-compose, kubernetes) this should also be the port that is used  in the ingress configuration (e.g. traefik).
   # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/graphql)
   # to the ct-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
@@ -150,14 +150,14 @@ identity:
         jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://localhost:4456/.well-known/jwks.json
 
         # Ory Kratos Base Public URL. It is used as prefix for all Kratos flows.
-        # Locally, Kratos Public API works on localhost:4433 and by default in k8s it works on https://[HOST]/auth/.ory/kratos/public
-        # NB: The default kratos.yml config defines the selfservice endpoints with base address http://localhost:3000/auth.
-        # That is used as there is a reverse proxy in front of the CT Web Client that forwards the calls to the Kratos Public URL.
-        # You can check the currently logged in user at http://localhost:4433/sessions/whoami.
-        kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:4433
+        # Locally, Kratos Public API works on http://localhost:3000/identity/ory/kratos/public and by default in k8s it works on https://[HOST]/identity/ory/kratos/public
+        # NB: The default kratos.yml config defines the selfservice endpoints with base address http://localhost:3000/identity.
+        # That is used as there is a reverse proxy in front of the Alkemio Web Client that forwards the calls to the Kratos Public URL.
+        # You can check the currently logged in user at http://localhost:3000/identity/ory/kratos/public/sessions/whoami.
+        kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:3000/identity/ory/kratos/public
 
-        # Ory Kratos URL for usage by the CT server when inside a cluster.
-        kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:4433
+        # Ory Kratos URL for usage by the Alkemio server when inside a cluster.
+        kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/identity/ory/kratos/public
 
   ssi:
     # Jolocom SDK is used for providing SSI capabilities on the platform.
@@ -178,7 +178,7 @@ identity:
         port: 3306
 
         # MySQL username.
-        username: "root"
+        username: 'root'
 
         # MySQL password.
         password: ${MYSQL_ROOT_PASSWORD}:toor
@@ -252,8 +252,8 @@ communications:
 
     # Synapse server (https://github.com/matrix-org/synapse) configuration.
     server:
-      # Synapse server URL, where it can be accessed by the CT server
-      url: ${SYNAPSE_SERVER_URL}:http://localhost:8008
+      # Synapse server URL, where it can be accessed by the Alkemio server
+      url: ${SYNAPSE_SERVER_URL}:http://localhost:3000/synapse
       # Synapse shared secret, defined in homeserver.yaml on the Synapse instance.
       shared_secret: ${SYNAPSE_SERVER_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
 
@@ -276,7 +276,7 @@ storage:
     port: 3306
 
     # MySQL username.
-    username: "root"
+    username: 'root'
 
     # MySQL password.
     password: ${MYSQL_ROOT_PASSWORD}:toor
@@ -296,7 +296,7 @@ storage:
     endpoint: ${IPFS_ENDPOINT}:http://ipfs:5001
 
     # IPFS http proxy endpoint. Exposed through traefik (or any ingress / reverse proxy of choice).
-    clientEndpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:8080/ipfs
+    clientEndpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:3000/ipfs
 
     # Max file size of files that will be uploaded to IPFS (in bytes).
     maxFileSize: 1048576

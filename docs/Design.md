@@ -5,10 +5,16 @@ Interactions between different layers is depicted in the Layer Diagram below:
 
 ![Layer Diagram](images/ct-server-layer-diagram.png)
 
-The technology stack is as follows:
+# Network setup
+
+The development stack of Alkemio uses docker-compose to build up the dependent development services. To accelerate development, alkemio server and alkemio client are left inside the host network and are bridged via traefik routes. The networking stack can be seen in the diagram below:
+
+![Services networking](images/alkemio-services-networking.png)
+
+# Technology landscape
 
 - GraphQL: for specifying the interactions with the server, using Apollo server
-- Node: for runtime execution - **NB: LTS Node version (12.8.3) is currently used for development, and is required for deployment.**
+- Node: for runtime execution - **NB: LTS Node version (14.17.3) is currently used for development, and is required for deployment.**
 - NestJS as a framework
 - TypeScript: for all logic
 - TypeORM: for the orbject relational mapping
