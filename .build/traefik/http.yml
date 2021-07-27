@@ -30,6 +30,11 @@ http:
         servers:
           - url: 'http://ipfs:8080/'
 
+    synapse:
+      loadBalancer:
+        servers:
+          - url: 'http://synapse:8008/'
+
   middlewares:
     strip-admin-prefix:
       stripPrefix:
@@ -83,6 +88,12 @@ http:
     ipfs:
       rule: 'PathPrefix(`/ipfs`)'
       service: 'ipfs-http-adapter'
+      entryPoints:
+        - 'web'
+
+    synapse:
+      rule: 'PathPrefix(`/synapse`)'
+      service: 'synapse'
       entryPoints:
         - 'web'
 
