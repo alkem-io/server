@@ -16,6 +16,8 @@ selfservice:
     - http://localhost:3000
 
   methods:
+    link:
+      enabled: true
     password:
       enabled: true
     oidc:
@@ -37,20 +39,23 @@ selfservice:
       enabled: true
       ui_url: http://localhost:3000/identity/verify
       after:
-        default_browser_return_url: http://localhost:3000/
+        default_browser_return_url: http://localhost:3000/identity/verify/success
 
     logout:
       after:
-        default_browser_return_url: http://localhost:3000/identity/login
+        default_browser_return_url: http://localhost:3000
 
     login:
       ui_url: http://localhost:3000/identity/login
       lifespan: 10m
+      after:
+        default_browser_return_url: http://localhost:3000/identity/login/success
 
     registration:
       lifespan: 10m
       ui_url: http://localhost:3000/identity/registration
       after:
+        default_browser_return_url: http://localhost:3000/identity/registration/success
         password:
           hooks:
             - hook: session
