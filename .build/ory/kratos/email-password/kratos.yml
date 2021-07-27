@@ -4,11 +4,11 @@ dsn: memory
 
 serve:
   public:
-    base_url: http://localhost:3000/
+    base_url: http://localhost:3000/identity/ory/kratos/public
     cors:
       enabled: true
   admin:
-    base_url: http://localhost:4434/
+    base_url: http://kratos:4434/
 
 selfservice:
   default_browser_return_url: http://localhost:3000/
@@ -18,56 +18,44 @@ selfservice:
   methods:
     link:
       enabled: true
-
     password:
       enabled: true
     oidc:
-      enabled: true
-      config:
-        providers:
-          - id: microsoft
-            provider: microsoft
-            client_id: feb6d8b1-8cc2-4e7d-a419-ad7b544b0832
-            client_secret: -jC_0s6nvb~IzMExUnt.ka2zx4Y57_H9XO
-            tenant: 524e761c-d162-4fdf-ab43-2855246d986c
-            mapper_url: file:///etc/config/kratos/oidc.microsoft.jsonnet
-            scope:
-              - profile
-              - email
+      enabled: false
 
   flows:
     error:
-      ui_url: http://localhost:3000/auth/error
+      ui_url: http://localhost:3000/identity/error
 
     settings:
-      ui_url: http://localhost:3000/auth/settings
+      ui_url: http://localhost:3000/identity/settings
       privileged_session_max_age: 15m
 
     recovery:
       enabled: true
-      ui_url: http://localhost:3000/auth/recovery
+      ui_url: http://localhost:3000/identity/recovery
 
     verification:
       enabled: true
-      ui_url: http://localhost:3000/auth/verify
+      ui_url: http://localhost:3000/identity/verify
       after:
-        default_browser_return_url: http://localhost:3000/auth/verify/success
+        default_browser_return_url: http://localhost:3000/identity/verify/success
 
     logout:
       after:
-        default_browser_return_url: http://localhost:3000/
+        default_browser_return_url: http://localhost:3000
 
     login:
-      ui_url: http://localhost:3000/auth/login
+      ui_url: http://localhost:3000/identity/login
       lifespan: 10m
       after:
-        default_browser_return_url: http://localhost:3000/auth/login/success
+        default_browser_return_url: http://localhost:3000/identity/login/success
 
     registration:
       lifespan: 10m
-      ui_url: http://localhost:3000/auth/registration
+      ui_url: http://localhost:3000/identity/registration
       after:
-        default_browser_return_url: http://localhost:3000/auth/registration/success
+        default_browser_return_url: http://localhost:3000/identity/registration/success
         password:
           hooks:
             - hook: session

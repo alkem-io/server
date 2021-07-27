@@ -1,0 +1,118 @@
+http:
+  services:
+    alkemio-server:
+      loadBalancer:
+        servers:
+          - url: 'http://host.docker.internal:4000/'
+
+    alkemio-web-service:
+      loadBalancer:
+        servers:
+          - url: 'http://host.docker.internal:3001/'
+
+    kratos-public:
+      loadBalancer:
+        servers:
+          - url: 'http://kratos:4433/'
+
+    kratos-admin:
+      loadBalancer:
+        servers:
+          - url: 'http://kratos:4434/'
+
+    oathkeeper-proxy:
+      loadBalancer:
+        servers:
+          - url: 'http://oathkeeper:4455/'
+
+    ipfs-http-adapter:
+      loadBalancer:
+        servers:
+          - url: 'http://ipfs:8080/'
+
+    synapse:
+      loadBalancer:
+        servers:
+          - url: 'http://synapse:8008/'
+
+  middlewares:
+    strip-admin-prefix:
+      stripPrefix:
+        prefixes:
+          - /admin
+        forceSlash: false
+
+    strip-kratos-admin-prefix:
+      stripPrefix:
+        prefixes:
+          - /identity/ory/kratos/admin
+        forceSlash: false
+
+    strip-kratos-public-prefix:
+      stripPrefix:
+        prefixes:
+          - /identity/ory/kratos/public
+        forceSlash: false
+
+  routers:
+    graphql:
+      rule: 'PathPrefix(`/graphql`)'
+      service: 'oathkeeper-proxy'
+      entryPoints:
+        - 'web'
+
+    graphql-admin:
+      rule: 'PathPrefix(`/admin/graphql`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-admin-prefix
+      entryPoints:
+        - 'web'
+
+    kratos-public:
+      rule: 'PathPrefix(`/identity/ory/kratos/public`)'
+      service: 'kratos-public'
+      middlewares:
+        - strip-kratos-public-prefix
+      entryPoints:
+        - 'web'
+
+    kratos-admin:
+      rule: 'PathPrefix(`/identity/ory/kratos/admin`)'
+      service: 'kratos-admin'
+      middlewares:
+        - strip-kratos-admin-prefix
+      entryPoints:
+        - 'web'
+
+    ipfs:
+      rule: 'PathPrefix(`/ipfs`)'
+      service: 'ipfs-http-adapter'
+      entryPoints:
+        - 'web'
+
+    synapse:
+      rule: 'PathPrefix(`/synapse`)'
+      service: 'synapse'
+      entryPoints:
+        - 'web'
+
+    alkemiowebroute:
+      rule: 'PathPrefix(`/`)'
+      service: 'alkemio-web-service'
+      entryPoints:
+        - 'web'
+
+tcp:
+  services:
+    mysql:
+      loadBalancer:
+        servers:
+          - address: 'mysql_db:3306'
+
+  routers:
+    mysql:
+      rule: 'HostSNI(`*`)'
+      service: 'mysql'
+      entryPoints:
+        - 'mysql'

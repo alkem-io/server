@@ -15,8 +15,8 @@ To simplify setting up the Server development environment, a pre-configured dock
 
    ```bash
    docker-compose \
-   -f quickstart-server.yml \
    -f quickstart-services.yml \
+   -f quickstart-server.yml \
    --env-file .env.docker \
    up --build --force-recreate
    ```
@@ -24,11 +24,14 @@ To simplify setting up the Server development environment, a pre-configured dock
    if you'd like to debug alkemio server and only need the dependent services, run:
 
    ```bash
-    docker-compose \
-   -f quickstart-services.yml \
-   --env-file .env.docker \
-   up --build --force-recreate
+    docker-compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate
    ```
+
+**Note**: If a container (e.g. Synapse) writes to a directory that is mapped locally, you will need to have enough permissions to write there.
+E.g. on Linux you can grant permissions the following way:
+
+- Navigate to the directory, e.g. .build/synapse
+- Change the permissions with `chmod o+w .`
 
 2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4455/graphql).
 
