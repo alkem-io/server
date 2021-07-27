@@ -7,12 +7,17 @@ services:
     build: .
     depends_on:
       - mysql_db
+      - ipfs
+      - mailslurper
+      - oathkeeper
+      - kratos
+      - traefik
     networks:
       - alkemio_dev_net
     environment:
       - AUTH_ENABLED
       - NODE_ENV
-      - DATABASE_HOST
+      - DATABASE_HOST=mysql_db
       - MYSQL_ROOT_PASSWORD
       - MYSQL_DATABASE
       - WAIT_HOSTS=mysql_db:3306
