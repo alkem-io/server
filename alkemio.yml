@@ -147,7 +147,7 @@ identity:
         #     }
         #   ]
         # }
-        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://localhost:4456/.well-known/jwks.json
+        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://localhost:3000/jwks/.well-known/jwks.json
 
         # Ory Kratos Base Public URL. It is used as prefix for all Kratos flows.
         # Locally, Kratos Public API works on http://localhost:3000/identity/ory/kratos/public and by default in k8s it works on https://[HOST]/identity/ory/kratos/public

@@ -25,6 +25,11 @@ http:
         servers:
           - url: 'http://oathkeeper:4455/'
 
+    oathkeeper-admin:
+      loadBalancer:
+        servers:
+          - url: 'http://oathkeeper:4456/'
+
     ipfs-http-adapter:
       loadBalancer:
         servers:
@@ -52,6 +57,12 @@ http:
       stripPrefix:
         prefixes:
           - /identity/ory/kratos/public
+        forceSlash: false
+
+    strip-jwks-prefix:
+      stripPrefix:
+        prefixes:
+          - /jwks
         forceSlash: false
 
   routers:
@@ -103,6 +114,13 @@ http:
       entryPoints:
         - 'web'
 
+    jwks:
+      rule: 'PathPrefix(`/jwks`)'
+      service: 'oathkeeper-admin'
+      middlewares:
+        - strip-jwks-prefix
+      entryPoints:
+        - 'web'
 tcp:
   services:
     mysql:
