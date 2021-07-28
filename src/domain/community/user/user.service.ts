@@ -271,25 +271,25 @@ export class UserService {
         user.nameID = userInput.nameID;
       }
     }
-    if (userInput.displayName) {
+    if (userInput.displayName !== undefined) {
       user.displayName = userInput.displayName;
     }
-    if (userInput.firstName) {
+    if (userInput.firstName !== undefined) {
       user.firstName = userInput.firstName;
     }
-    if (userInput.lastName) {
+    if (userInput.lastName !== undefined) {
       user.lastName = userInput.lastName;
     }
-    if (userInput.phone) {
+    if (userInput.phone !== undefined) {
       user.phone = userInput.phone;
     }
-    if (userInput.city) {
+    if (userInput.city !== undefined) {
       user.city = userInput.city;
     }
-    if (userInput.country) {
+    if (userInput.country !== undefined) {
       user.country = userInput.country;
     }
-    if (userInput.gender) {
+    if (userInput.gender !== undefined) {
       user.gender = userInput.gender;
     }
 
