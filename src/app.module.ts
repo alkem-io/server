@@ -101,6 +101,7 @@ import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middlew
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
         autoSchemaFile: true,
+        introspection: true,
         playground: {
           settings: {
             'request.credentials': 'include',
