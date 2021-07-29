@@ -39,6 +39,7 @@
     "@jolocom/sdk": "^1.2.0",
     "@jolocom/sdk-storage-typeorm": "^4.2.0",
     "@jolocom/vaulted-key-provider": "^0.8.0",
+    "@nestjs/axios": "^0.0.1",
     "@nestjs/common": "^8.0.5",
     "@nestjs/config": "^1.0.1",
     "@nestjs/core": "^8.0.5",
@@ -119,7 +120,7 @@
     "ts-jest": "^27.0.4",
     "ts-loader": "^6.2.1",
     "ts-node": "9.0.0",
-    "tsconfig-paths": "^3.9.0",
+    "tsconfig-paths": "^3.10.1",
     "typescript": "^4.3.5"
   },
   "_moduleAliases": {
