@@ -65,7 +65,7 @@
     "helmet": "^4.4.1",
     "image-size": "^0.9.7",
     "ipfs-http-client": "^49.0.4",
-    "jolocom-lib": "^5.1.0",
+    "jolocom-lib": "^5.2.1",
     "js-yaml": "^4.1.0",
     "jwks-rsa": "^2.0.3",
     "matrix-js-sdk": "^9.11.0",
@@ -85,8 +85,8 @@
     "typeorm": "^0.2.35",
     "uuid": "^8.3.2",
     "winston": "^3.3.3",
-    "winston-elasticsearch": "^0.12.3",
-    "xstate": "^4.17.1",
+    "winston-elasticsearch": "^0.15.8",
+    "xstate": "^4.23.1",
     "yaml": "2.0.0-5"
   },
   "devDependencies": {
@@ -120,7 +120,7 @@
     "ts-loader": "^6.2.1",
     "ts-node": "9.0.0",
     "tsconfig-paths": "^3.9.0",
-    "typescript": "^3.9.9"
+    "typescript": "^4.3.5"
   },
   "_moduleAliases": {
     "@src": "./dist"
