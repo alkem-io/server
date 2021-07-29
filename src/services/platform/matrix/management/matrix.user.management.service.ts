@@ -60,6 +60,13 @@ export class MatrixUserManagementService {
     const nonceResponse = await this.httpService
       .get<{ nonce: string }>(url.href)
       .toPromise();
+
+    if (!nonceResponse)
+      throw new MatrixUserRegistrationException(
+        'Invalid nonce response!',
+        LogContext.COMMUNICATION
+      );
+
     const nonce = nonceResponse.data['nonce'];
     const hmac = this.cryptographyServive.generateHmac(user, nonce, isAdmin);
 
@@ -74,8 +81,14 @@ export class MatrixUserManagementService {
       })
       .toPromise();
 
+    if (!registrationResponse)
+      throw new MatrixUserRegistrationException(
+        'Invalid registration response!',
+        LogContext.COMMUNICATION
+      );
+
     if (
-      registrationResponse.status > 400 &&
+      registrationResponse?.status > 400 &&
       registrationResponse.status < 600
     ) {
       throw new MatrixUserRegistrationException(
