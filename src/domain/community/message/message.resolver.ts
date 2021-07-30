@@ -84,7 +84,7 @@ export class MessageResolver {
   }
 
   sendMessage(m: Message, delay: number) {
-    return new Promise(resolve => {
+    return new Promise<void>(resolve => {
       setTimeout(() => {
         this.pubSub.publish('messageReceived', {
           messageReceived: {

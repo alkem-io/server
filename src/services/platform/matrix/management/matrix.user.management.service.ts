@@ -1,4 +1,5 @@
-import { HttpService, Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
 import { MatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.service';
@@ -60,6 +61,13 @@ export class MatrixUserManagementService {
     const nonceResponse = await this.httpService
       .get<{ nonce: string }>(url.href)
       .toPromise();
+
+    if (!nonceResponse)
+      throw new MatrixUserRegistrationException(
+        'Invalid nonce response!',
+        LogContext.COMMUNICATION
+      );
+
     const nonce = nonceResponse.data['nonce'];
     const hmac = this.cryptographyServive.generateHmac(user, nonce, isAdmin);
 
@@ -74,8 +82,14 @@ export class MatrixUserManagementService {
       })
       .toPromise();
 
+    if (!registrationResponse)
+      throw new MatrixUserRegistrationException(
+        'Invalid registration response!',
+        LogContext.COMMUNICATION
+      );
+
     if (
-      registrationResponse.status > 400 &&
+      registrationResponse?.status > 400 &&
       registrationResponse.status < 600
     ) {
       throw new MatrixUserRegistrationException(
