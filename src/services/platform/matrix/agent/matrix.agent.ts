@@ -57,7 +57,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       ),
     });
 
-    await this.matrixClient.startClient();
+    await this.matrixClient.startClient({});
 
     return await startComplete;
   }

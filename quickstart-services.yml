@@ -125,7 +125,7 @@ services:
 
   synapse:
     container_name: alkemio_dev_synapse
-    image: matrixdotorg/synapse:v1.36.0
+    image: matrixdotorg/synapse:v1.38.1
     restart: always
     environment:
       - SYNAPSE_NO_TLS=true

@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { IContent } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixClient } from '../types/matrix.client.type';
 import { Preset, Visibility } from './matrix.room.dto.create.options';
@@ -22,19 +23,21 @@ export class MatrixRoomAdapterService {
 
   // there could be more than one dm room per user
   dmRooms(matrixClient: MatrixClient): Record<string, string[]> {
-    let mDirectEvent = matrixClient.getAccountData('m.direct');
-    mDirectEvent = mDirectEvent ? mDirectEvent.getContent() : {};
+    const mDirectEvent = matrixClient.getAccountData('m.direct');
+    const eventContent = mDirectEvent
+      ? mDirectEvent.getContent<IContent>()
+      : {};
 
     const userId = matrixClient.getUserId();
 
     // there is a bug in the sdk
-    const selfDMs = mDirectEvent[userId];
+    const selfDMs = eventContent[userId];
     if (selfDMs && selfDMs.length) {
       // it seems that two users can have multiple DM rooms between them and only one needs to be active
       // they have fixed the issue inside the react-sdk instead of the js-sdk...
     }
 
-    return mDirectEvent;
+    return eventContent;
   }
 
   async createRoom(
@@ -64,7 +67,6 @@ export class MatrixRoomAdapterService {
     );
     if (communityId) {
       await matrixClient.addRoomToGroup(communityId, roomResult.room_id, true);
-      await matrixClient.addRoomToGroupSummary(communityId, roomResult.room_id);
     }
 
     return roomID;
