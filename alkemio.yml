@@ -253,7 +253,7 @@ communications:
     # Synapse server (https://github.com/matrix-org/synapse) configuration.
     server:
       # Synapse server URL, where it can be accessed by the Alkemio server
-      url: ${SYNAPSE_SERVER_URL}:http://localhost:3000/synapse
+      url: ${SYNAPSE_SERVER_URL}:http://localhost:8008
       # Synapse shared secret, defined in homeserver.yaml on the Synapse instance.
       shared_secret: ${SYNAPSE_SERVER_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
 

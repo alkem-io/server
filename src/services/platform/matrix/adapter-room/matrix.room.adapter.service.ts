@@ -65,6 +65,7 @@ export class MatrixRoomAdapterService {
       `[MatrixRoom] Created new room with id: ${roomID}`,
       LogContext.COMMUNICATION
     );
+
     if (communityId) {
       await matrixClient.addRoomToGroup(communityId, roomResult.room_id, true);
     }
