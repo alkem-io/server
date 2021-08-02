@@ -17,6 +17,7 @@ services:
       - 8888:8080
       - 3000:80
       - 3306:3306
+      - 8008:8008
     networks:
       - alkemio_dev_net
     environment:
@@ -136,7 +137,7 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      - 8008:8008
+      - 8008
     volumes:
       - type: bind
         source: ./.build/synapse
