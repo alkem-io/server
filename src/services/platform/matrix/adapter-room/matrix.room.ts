@@ -1,14 +1,11 @@
 // Brings typing to the objects that are returned from the Matrix JS SDK.
 
-import { MatrixRoomResponseMessage } from './matrix.room.dto.response.message';
+import { Room } from 'matrix-js-sdk';
+// import { MatrixRoomResponseMessage } from './matrix.room.dto.response.message';
 
-export class MatrixRoom {
-  roomId!: string; //	The ID of this room.
-  name? = ''; //	The human-readable display name for this room.
+export class MatrixRoom extends Room {
   receiverEmail? = '';
   isDirect? = false;
-  timeline?: MatrixRoomResponseMessage[] = [];
-  groupID? = '';
 }
 
 export class MatrixRoomChunk {

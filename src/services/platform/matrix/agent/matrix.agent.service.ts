@@ -63,12 +63,14 @@ export class MatrixAgentService {
       matrixClient
     );
     for (const groupID of Object.keys(communityMap)) {
-      const communityRoom = new MatrixRoom();
-      communityRoom.roomId = communityMap[groupID][0];
-      communityRoom.isDirect = false;
-      const room = await this.getRoom(matrixAgent, communityRoom.roomId);
-      communityRoom.timeline = room.timeline;
-      rooms.push(communityRoom);
+      const room = await this.getRoom(matrixAgent, communityMap[groupID][0]);
+      room.isDirect = true;
+      // const communityRoom = new MatrixRoom();
+      // communityRoom.roomId = communityMap[groupID][0];
+      // communityRoom.isDirect = false;
+      // const room = await this.getRoom(matrixAgent, communityRoom.roomId);
+      // communityRoom.timeline = room.timeline;
+      rooms.push(room);
     }
     return rooms;
   }
@@ -80,13 +82,15 @@ export class MatrixAgentService {
     // Direct rooms
     const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(matrixClient);
     for (const userID of Object.keys(dmRoomMap)) {
-      const directRoom = new MatrixRoom();
-      directRoom.roomId = dmRoomMap[userID][0];
-      directRoom.isDirect = true;
-      directRoom.receiverEmail = this.matrixUserAdapterService.id2email(userID);
-      const room = await this.getRoom(matrixAgent, directRoom.roomId);
-      directRoom.timeline = room.timeline;
-      rooms.push(directRoom);
+      const room = await this.getRoom(matrixAgent, dmRoomMap[userID][0]);
+      room.receiverEmail = this.matrixUserAdapterService.id2email(userID);
+      room.isDirect = true;
+      // directRoom.roomId = dmRoomMap[userID][0];
+      // directRoom.isDirect = true;
+      // directRoom.receiverEmail = this.matrixUserAdapterService.id2email(userID);
+      // const room = await this.getRoom(matrixAgent, directRoom.roomId);
+      // directRoom.timeline = room.timeline;
+      rooms.push(room);
     }
     return rooms;
   }

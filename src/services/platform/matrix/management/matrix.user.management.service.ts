@@ -153,7 +153,11 @@ export class MatrixUserManagementService {
     try {
       await this._matrixClient.isUsernameAvailable(username);
       return false;
-    } catch (_) {
+    } catch (error) {
+      this.matrixUserAdapterService.logMatrixUser(
+        { username },
+        `Registration check failure: ${error}`
+      );
       // unfortunately instead of returning false the method throws exception
       return true;
     }

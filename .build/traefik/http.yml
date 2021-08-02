@@ -103,10 +103,10 @@ http:
         - 'web'
 
     synapse:
-      rule: 'PathPrefix(`/synapse`)'
+      rule: 'PathPrefix(`/`)'
       service: 'synapse'
       entryPoints:
-        - 'web'
+        - 'synapse'
 
     alkemiowebroute:
       rule: 'PathPrefix(`/`)'
