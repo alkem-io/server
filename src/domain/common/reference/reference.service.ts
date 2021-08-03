@@ -10,7 +10,7 @@ import {
   Reference,
   IReference,
 } from '@domain/common/reference';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 @Injectable()
@@ -29,7 +29,7 @@ export class ReferenceService {
       referenceInput.uri || '',
       referenceInput.description
     );
-    reference.authorization = new AuthorizationDefinition();
+    reference.authorization = new AuthorizationPolicy();
     await this.referenceRepository.save(reference);
     return reference;
   }

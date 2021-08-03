@@ -7,7 +7,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
@@ -19,8 +19,8 @@ import { IAuthorizationRuleCredential } from './authorization.rule.credential.in
 @Injectable()
 export class AuthorizationPolicyService {
   constructor(
-    @InjectRepository(AuthorizationDefinition)
-    private authorizationPolicyRepository: Repository<AuthorizationDefinition>,
+    @InjectRepository(AuthorizationPolicy)
+    private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -57,7 +57,7 @@ export class AuthorizationPolicyService {
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
     return await this.authorizationPolicyRepository.remove(
-      authorizationPolicy as AuthorizationDefinition
+      authorizationPolicy as AuthorizationPolicy
     );
   }
 
@@ -105,7 +105,7 @@ export class AuthorizationPolicyService {
     // create a new child definition if one is not provided, a temporary fix
     let child = childAuthorization;
     if (!child) {
-      child = new AuthorizationDefinition();
+      child = new AuthorizationPolicy();
     }
     const parent = this.validateAuthorization(parentAuthorization);
     // Reset the child to a base state for authorization definition

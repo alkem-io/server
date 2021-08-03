@@ -11,7 +11,7 @@ import {
   IAspect,
   DeleteAspectInput,
 } from '@domain/context/aspect';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
@@ -25,7 +25,7 @@ export class AspectService {
 
   async createAspect(aspectInput: CreateAspectInput): Promise<IAspect> {
     const aspect = Aspect.create(aspectInput);
-    aspect.authorization = new AuthorizationDefinition();
+    aspect.authorization = new AuthorizationPolicy();
     return await this.aspectRepository.save(aspect);
   }
 

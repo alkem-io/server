@@ -12,7 +12,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class CommunityLifecycleOptionsProvider {
@@ -85,8 +85,7 @@ export class CommunityLifecycleOptionsProvider {
     guards: {
       communityUpdateAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
-        const authorizationPolicy: AuthorizationDefinition =
-          event.authorization;
+        const authorizationPolicy: AuthorizationPolicy = event.authorization;
         return this.authorizationEngineService.isAccessGranted(
           agentInfo,
           authorizationPolicy,

@@ -16,7 +16,7 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CreateActorInput, IActor } from '@domain/context/actor';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
@@ -33,7 +33,7 @@ export class ActorGroupService {
     actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
     const actorGroup = ActorGroup.create(actorGroupData);
-    actorGroup.authorization = new AuthorizationDefinition();
+    actorGroup.authorization = new AuthorizationPolicy();
     actorGroup.actors = [];
     return await this.actorGroupRepository.save(actorGroup);
   }

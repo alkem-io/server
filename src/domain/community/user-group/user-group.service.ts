@@ -24,7 +24,7 @@ import {
 } from '@domain/community/user-group';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IProfile } from '@domain/community/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
@@ -48,7 +48,7 @@ export class UserGroupService {
     this.validateName(userGroupData.name);
     const group = UserGroup.create(userGroupData);
     group.ecoverseID = ecoverseID;
-    group.authorization = new AuthorizationDefinition();
+    group.authorization = new AuthorizationPolicy();
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
       userGroupData.profileData

@@ -15,7 +15,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationRuleVerifiedCredential } from '@domain/common/authorization-policy/authorization.rule.verified.credential';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class AuthorizationEngineService {
@@ -192,7 +192,7 @@ export class AuthorizationEngineService {
     globalRoles: AuthorizationRoleGlobal[],
     privileges: AuthorizationPrivilege[]
   ): IAuthorizationPolicy {
-    const authorization = new AuthorizationDefinition();
+    const authorization = new AuthorizationPolicy();
     const newRules: AuthorizationRuleCredential[] = [];
 
     for (const globalRole of globalRoles) {

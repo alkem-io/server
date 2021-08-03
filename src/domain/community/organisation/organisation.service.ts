@@ -23,7 +23,7 @@ import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -50,7 +50,7 @@ export class OrganisationService {
     await this.checkNameIdOrFail(organisationData.nameID);
 
     const organisation: IOrganisation = Organisation.create(organisationData);
-    organisation.authorization = new AuthorizationDefinition();
+    organisation.authorization = new AuthorizationPolicy();
     organisation.profile = await this.profileService.createProfile(
       organisationData.profileData
     );

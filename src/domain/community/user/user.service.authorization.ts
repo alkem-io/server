@@ -11,7 +11,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import {
-  AuthorizationDefinition,
+  AuthorizationPolicy,
   AuthorizationRuleCredential,
   IAuthorizationPolicy,
 } from '@domain/common/authorization-policy';
@@ -87,7 +87,7 @@ export class UserAuthorizationService {
 
   // Create an instance for usage in a mutation
   public createUserAuthorizationPolicy(): IAuthorizationPolicy {
-    const authorization = new AuthorizationDefinition();
+    const authorization = new AuthorizationPolicy();
     return this.appendCredentialRules(authorization);
   }
 

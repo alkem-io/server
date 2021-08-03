@@ -23,7 +23,7 @@ import { AgentInfo } from '@core/authentication';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import {
-  AuthorizationDefinition,
+  AuthorizationPolicy,
   IAuthorizationPolicy,
 } from '@domain/common/authorization-policy';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -36,8 +36,8 @@ export class AuthorizationService {
     private authorizationEngine: AuthorizationEngineService,
     private readonly agentService: AgentService,
     private readonly userService: UserService,
-    @InjectRepository(AuthorizationDefinition)
-    private authorizationPolicyRepository: Repository<AuthorizationDefinition>,
+    @InjectRepository(AuthorizationPolicy)
+    private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 

@@ -11,7 +11,7 @@ import {
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { DeleteActorInput } from './actor.dto.delete';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
@@ -25,7 +25,7 @@ export class ActorService {
 
   async createActor(actorData: CreateActorInput): Promise<IActor> {
     const actor = Actor.create(actorData);
-    actor.authorization = new AuthorizationDefinition();
+    actor.authorization = new AuthorizationPolicy();
 
     await this.actorRepository.save(actor);
     return actor;

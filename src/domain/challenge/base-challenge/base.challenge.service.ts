@@ -20,7 +20,7 @@ import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.e
 import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { NamingService } from '@src/services/domain/naming/naming.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CredentialService } from '@domain/agent/credential/credential.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -46,7 +46,7 @@ export class BaseChallengeService {
     baseChallengeData: CreateBaseChallengeInput,
     ecoverseID: string
   ) {
-    baseChallenge.authorization = new AuthorizationDefinition();
+    baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, ecoverseID);
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName

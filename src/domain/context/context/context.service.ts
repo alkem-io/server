@@ -19,7 +19,7 @@ import {
 import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
 import { IVisual } from '@domain/context/visual/visual.interface';
 import { VisualService } from '../visual/visual.service';
@@ -42,7 +42,7 @@ export class ContextService {
     const context: IContext = Context.create(contextData);
     context.ecosystemModel =
       await this.ecosystemModelService.createEcosystemModel({});
-    context.authorization = new AuthorizationDefinition();
+    context.authorization = new AuthorizationPolicy();
     if (!context.references) context.references = [];
     if (!context.visual) context.visual = new Visual();
     return context;

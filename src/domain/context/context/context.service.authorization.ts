@@ -5,7 +5,7 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { ContextService } from './context.service';
 import { Context, IContext } from '@domain/context/context';
 import { EcosystemModelAuthorizationService } from '@domain/context/ecosystem-model/ecosystem-model.service.authorization';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
@@ -44,7 +44,7 @@ export class ContextAuthorizationService {
     context.references = await this.contextService.getReferences(context);
     for (const reference of context.references) {
       if (!reference.authorization) {
-        reference.authorization = new AuthorizationDefinition();
+        reference.authorization = new AuthorizationPolicy();
       }
       reference.authorization =
         await this.authorizationPolicyService.inheritParentAuthorization(

@@ -18,7 +18,7 @@ import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
 
@@ -44,7 +44,7 @@ export class ApplicationService {
       applicationData.userID
     );
 
-    application.authorization = new AuthorizationDefinition();
+    application.authorization = new AuthorizationPolicy();
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 

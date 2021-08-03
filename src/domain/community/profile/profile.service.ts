@@ -25,7 +25,7 @@ import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { streamToBuffer, validateImageDimensions } from '@common/utils';
 import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
 import { UploadProfileAvatarInput } from '@domain/community/profile';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
@@ -47,7 +47,7 @@ export class ProfileService {
     let data = profileData;
     if (!data) data = {};
     const profile: IProfile = Profile.create(data);
-    profile.authorization = new AuthorizationDefinition();
+    profile.authorization = new AuthorizationPolicy();
     if (!profile.references) {
       profile.references = [];
     }

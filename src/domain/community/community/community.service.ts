@@ -26,7 +26,7 @@ import {
 } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
@@ -59,7 +59,7 @@ export class CommunityService {
 
   async createCommunity(name: string): Promise<ICommunity> {
     const community = new Community(name);
-    community.authorization = new AuthorizationDefinition();
+    community.authorization = new AuthorizationPolicy();
 
     community.groups = [];
     // save to get an id assigned
