@@ -22,8 +22,8 @@ import { IAgent } from '@domain/agent/agent';
 import { UUID_LENGTH } from '@common/constants';
 import { IProfile } from '@domain/community/profile';
 import { LogContext } from '@common/enums';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 
 @Injectable()
@@ -31,7 +31,7 @@ export class UserService {
   replaceSpecialCharacters = require('replace-special-characters');
   constructor(
     private profileService: ProfileService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -102,7 +102,7 @@ export class UserService {
     }
 
     if (user.authorization) {
-      await this.authorizationDefinitionService.delete(user.authorization);
+      await this.authorizationPolicyService.delete(user.authorization);
     }
 
     const result = await this.userRepository.remove(user as User);

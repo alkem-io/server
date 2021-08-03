@@ -6,7 +6,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ChallengeService } from './challenge.service';
 import { ChallengeEventInput } from '@domain/challenge/challenge/dto/challenge.dto.event';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IChallenge } from './challenge.interface';
 
@@ -51,31 +51,31 @@ export class ChallengeLifecycleOptionsProvider {
     return await this.challengeService.getChallengeOrFail(challengeID);
   }
 
-  private challengeLifecycleMachineOptions: Partial<
-    MachineOptions<any, any>
-  > = {
-    actions: {
-      sampleEvent: async (_, event: any) => {
-        this.logger.verbose?.(
-          `Command triggered on Opportunity with event: ${event.type}`,
-          LogContext.CHALLENGES
-        );
+  private challengeLifecycleMachineOptions: Partial<MachineOptions<any, any>> =
+    {
+      actions: {
+        sampleEvent: async (_, event: any) => {
+          this.logger.verbose?.(
+            `Command triggered on Opportunity with event: ${event.type}`,
+            LogContext.CHALLENGES
+          );
+        },
       },
-    },
-    guards: {
-      challengeStateUpdateAuthorized: (_, event) => {
-        const agentInfo: AgentInfo = event.agentInfo;
-        const authorizationDefinition: AuthorizationDefinition =
-          event.authorization;
-        const stateChangeAllowed = this.authorizationEngineService.isAccessGranted(
-          agentInfo,
-          authorizationDefinition,
-          AuthorizationPrivilege.UPDATE
-        );
-        // Todo: disabling the logic check for now to always return true
-        if (!stateChangeAllowed) return true;
-        return true;
+      guards: {
+        challengeStateUpdateAuthorized: (_, event) => {
+          const agentInfo: AgentInfo = event.agentInfo;
+          const authorizationDefinition: AuthorizationDefinition =
+            event.authorization;
+          const stateChangeAllowed =
+            this.authorizationEngineService.isAccessGranted(
+              agentInfo,
+              authorizationDefinition,
+              AuthorizationPrivilege.UPDATE
+            );
+          // Todo: disabling the logic check for now to always return true
+          if (!stateChangeAllowed) return true;
+          return true;
+        },
       },
-    },
-  };
+    };
 }

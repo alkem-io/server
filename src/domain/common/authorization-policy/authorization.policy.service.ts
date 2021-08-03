@@ -7,29 +7,27 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition/authorization.definition.entity';
-import { IAuthorizationDefinition } from './authorization.definition.interface';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
 import { AuthorizationRuleCredential } from './authorization.rule.credential';
-import { UpdateAuthorizationDefinitionInput } from './authorization.definition.dto.update';
+import { UpdateAuthorizationPolicyInput } from './authorization.policy.dto.update';
 import { AuthorizationRuleVerifiedCredential } from './authorization.rule.verified.credential';
 import { IAuthorizationRuleCredential } from './authorization.rule.credential.interface';
 
 @Injectable()
-export class AuthorizationDefinitionService {
+export class AuthorizationPolicyService {
   constructor(
     @InjectRepository(AuthorizationDefinition)
-    private authorizationDefinitionRepository: Repository<
-      AuthorizationDefinition
-    >,
+    private authorizationDefinitionRepository: Repository<AuthorizationDefinition>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   reset(
-    authorizationDefinition: IAuthorizationDefinition | undefined
-  ): IAuthorizationDefinition {
+    authorizationDefinition: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
     if (!authorizationDefinition) {
       throw new RelationshipNotFoundException(
         'Undefined AuthorizationDefinition supplied',
@@ -43,11 +41,10 @@ export class AuthorizationDefinitionService {
   async getAuthorizationDefinitionOrFail(
     AuthorizationDefinitionID: string
   ): Promise<AuthorizationDefinition> {
-    const authorizationDefinition = await this.authorizationDefinitionRepository.findOne(
-      {
+    const authorizationDefinition =
+      await this.authorizationDefinitionRepository.findOne({
         id: AuthorizationDefinitionID,
-      }
-    );
+      });
     if (!authorizationDefinition)
       throw new EntityNotFoundException(
         `Not able to locate AuthorizationDefinition with the specified ID: ${AuthorizationDefinitionID}`,
@@ -57,7 +54,7 @@ export class AuthorizationDefinitionService {
   }
 
   async delete(
-    authorizationDefinition: IAuthorizationDefinition
+    authorizationDefinition: IAuthorizationPolicy
   ): Promise<AuthorizationDefinition> {
     return await this.authorizationDefinitionRepository.remove(
       authorizationDefinition as AuthorizationDefinition
@@ -65,8 +62,8 @@ export class AuthorizationDefinitionService {
   }
 
   validateAuthorization(
-    authorization: IAuthorizationDefinition | undefined
-  ): IAuthorizationDefinition {
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
     if (!authorization)
       throw new ForbiddenException(
         'Authorization: no definition provided',
@@ -76,10 +73,10 @@ export class AuthorizationDefinitionService {
   }
 
   appendCredentialAuthorizationRule(
-    authorization: IAuthorizationDefinition | undefined,
+    authorization: IAuthorizationPolicy | undefined,
     credentialCriteria: CredentialsSearchInput,
     privileges: AuthorizationPrivilege[]
-  ): IAuthorizationDefinition {
+  ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
     const rules = this.convertCredentialRulesStr(auth.credentialRules);
     const newRule: AuthorizationRuleCredential = {
@@ -93,18 +90,18 @@ export class AuthorizationDefinitionService {
   }
 
   setAnonymousAccess(
-    authorization: IAuthorizationDefinition | undefined,
+    authorization: IAuthorizationPolicy | undefined,
     newValue: boolean
-  ): IAuthorizationDefinition {
+  ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
     auth.anonymousReadAccess = newValue;
     return auth;
   }
 
   inheritParentAuthorization(
-    childAuthorization: IAuthorizationDefinition | undefined,
-    parentAuthorization: IAuthorizationDefinition | undefined
-  ): IAuthorizationDefinition {
+    childAuthorization: IAuthorizationPolicy | undefined,
+    parentAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
     // create a new child definition if one is not provided, a temporary fix
     let child = childAuthorization;
     if (!child) {
@@ -120,9 +117,9 @@ export class AuthorizationDefinitionService {
   }
 
   updateAuthorization(
-    origAuthorization: IAuthorizationDefinition | undefined,
-    authorizationUpdateData: UpdateAuthorizationDefinitionInput
-  ): IAuthorizationDefinition {
+    origAuthorization: IAuthorizationPolicy | undefined,
+    authorizationUpdateData: UpdateAuthorizationPolicyInput
+  ): IAuthorizationPolicy {
     const authorization = this.validateAuthorization(origAuthorization);
     authorization.anonymousReadAccess =
       authorizationUpdateData.anonymousReadAccess;
@@ -130,9 +127,9 @@ export class AuthorizationDefinitionService {
   }
 
   appendCredentialAuthorizationRules(
-    authorization: IAuthorizationDefinition | undefined,
+    authorization: IAuthorizationPolicy | undefined,
     additionalRules: AuthorizationRuleCredential[]
-  ): IAuthorizationDefinition {
+  ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
     const existingRules = this.convertCredentialRulesStr(auth.credentialRules);
@@ -145,13 +142,13 @@ export class AuthorizationDefinitionService {
   }
 
   getCredentialRules(
-    authorization: IAuthorizationDefinition
+    authorization: IAuthorizationPolicy
   ): IAuthorizationRuleCredential[] {
     return this.convertCredentialRulesStr(authorization.credentialRules);
   }
 
   getVerifiedCredentialRules(
-    authorization: IAuthorizationDefinition
+    authorization: IAuthorizationPolicy
   ): IAuthorizationRuleCredential[] {
     return this.convertVerifiedCredentialRulesStr(
       authorization.verifiedCredentialRules

@@ -20,7 +20,7 @@ import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { UUID_LENGTH } from '@common/constants';
 import { NamingService } from '@src/services/domain/naming/naming.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class ProjectService {

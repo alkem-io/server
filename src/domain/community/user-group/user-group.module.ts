@@ -9,12 +9,12 @@ import { UserGroupResolverFields } from './user-group.resolver.fields';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
-import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserGroupAuthorizationService } from './user-group.service.authorization';
 
 @Module({
   imports: [
-    AuthorizationDefinitionModule,
+    AuthorizationPolicyModule,
     AuthorizationEngineModule,
     ProfileModule,
     UserModule,

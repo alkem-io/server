@@ -12,7 +12,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class CommunityLifecycleOptionsProvider {

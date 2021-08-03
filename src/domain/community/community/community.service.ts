@@ -26,9 +26,9 @@ import {
 } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy';
 import { ICredential } from '@domain/agent/credential';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
 import { CommunitySendMessageInput } from './community.dto.send.msg';
 import { CommunityRoom } from '@services/platform/communication/communication.room.dto.community';
@@ -39,7 +39,7 @@ export class CommunityService {
   private communicationsEnabled = false;
 
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private configService: ConfigService,
     private userService: UserService,
@@ -134,7 +134,7 @@ export class CommunityService {
     }
 
     if (community.authorization)
-      await this.authorizationDefinitionService.delete(community.authorization);
+      await this.authorizationPolicyService.delete(community.authorization);
 
     // Remove all applications
     if (community.applications) {
@@ -278,10 +278,11 @@ export class CommunityService {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
 
-    const existingApplication = await this.applicationService.findExistingApplication(
-      user.id,
-      community.id
-    );
+    const existingApplication =
+      await this.applicationService.findExistingApplication(
+        user.id,
+        community.id
+      );
 
     if (existingApplication) {
       throw new InvalidStateTransitionException(
@@ -329,12 +330,11 @@ export class CommunityService {
   async getMembersCount(community: ICommunity): Promise<number> {
     const membershipCredential = this.getMembershipCredential(community);
 
-    const credentialMatches = await this.agentService.countAgentsWithMatchingCredentials(
-      {
+    const credentialMatches =
+      await this.agentService.countAgentsWithMatchingCredentials({
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
-      }
-    );
+      });
     // Need to reduce by one to take into account that the community itself also holds a credential as reference
     return credentialMatches - 1;
   }
@@ -343,19 +343,22 @@ export class CommunityService {
     community: ICommunity
   ): Promise<ICommunity> {
     try {
-      community.communicationGroupID = await this.communicationService.createCommunityGroup(
-        // generate a unique identifier for the community because the community does not have an id (not persisted yet)
-        community.id,
-        community.displayName
-      );
-      community.updatesRoomID = await this.communicationService.createCommunityRoom(
-        community.communicationGroupID,
-        `${community.displayName} updates`
-      );
-      community.discussionRoomID = await this.communicationService.createCommunityRoom(
-        community.communicationGroupID,
-        `${community.displayName} discussion`
-      );
+      community.communicationGroupID =
+        await this.communicationService.createCommunityGroup(
+          // generate a unique identifier for the community because the community does not have an id (not persisted yet)
+          community.id,
+          community.displayName
+        );
+      community.updatesRoomID =
+        await this.communicationService.createCommunityRoom(
+          community.communicationGroupID,
+          `${community.displayName} updates`
+        );
+      community.discussionRoomID =
+        await this.communicationService.createCommunityRoom(
+          community.communicationGroupID,
+          `${community.displayName} discussion`
+        );
       return await this.communityRepository.save(community);
     } catch (error) {
       this.logger.error?.(

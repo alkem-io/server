@@ -19,17 +19,17 @@ import {
 import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
 import { IVisual } from '@domain/context/visual/visual.interface';
 import { VisualService } from '../visual/visual.service';
 import { Visual } from '@domain/context/visual/visual.entity';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class ContextService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private visualService: VisualService,
     private aspectService: AspectService,
     private ecosystemModelService: EcosystemModelService,
@@ -40,9 +40,8 @@ export class ContextService {
 
   async createContext(contextData: CreateContextInput): Promise<IContext> {
     const context: IContext = Context.create(contextData);
-    context.ecosystemModel = await this.ecosystemModelService.createEcosystemModel(
-      {}
-    );
+    context.ecosystemModel =
+      await this.ecosystemModelService.createEcosystemModel({});
     context.authorization = new AuthorizationDefinition();
     if (!context.references) context.references = [];
     if (!context.visual) context.visual = new Visual();
@@ -131,7 +130,7 @@ export class ContextService {
     }
 
     if (context.authorization)
-      await this.authorizationDefinitionService.delete(context.authorization);
+      await this.authorizationPolicyService.delete(context.authorization);
 
     if (context.aspects) {
       for (const aspect of context.aspects) {

@@ -11,11 +11,11 @@ import {
 } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { ConfigService } from '@nestjs/config';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
-import { AuthorizationRuleCredential } from '@domain/common/authorization-definition/authorization.rule.credential';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition/authorization.definition.interface';
-import { AuthorizationRuleVerifiedCredential } from '@domain/common/authorization-definition/authorization.rule.verified.credential';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationRuleVerifiedCredential } from '@domain/common/authorization-policy/authorization.rule.verified.credential';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class AuthorizationEngineService {
@@ -23,20 +23,19 @@ export class AuthorizationEngineService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService,
-    private authorizationDefinitionService: AuthorizationDefinitionService
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   grantAccessOrFail(
     agentInfo: AgentInfo,
-    authorization: IAuthorizationDefinition | undefined,
+    authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege,
     msg: string
   ) {
     if (this.isAuthenticationDisabled()) return true;
 
-    const auth = this.authorizationDefinitionService.validateAuthorization(
-      authorization
-    );
+    const auth =
+      this.authorizationPolicyService.validateAuthorization(authorization);
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
     const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
@@ -48,7 +47,7 @@ export class AuthorizationEngineService {
 
   grantReadAccessOrFail(
     agentInfo: AgentInfo,
-    authorization: IAuthorizationDefinition | undefined,
+    authorization: IAuthorizationPolicy | undefined,
     msg: string
   ) {
     this.grantAccessOrFail(
@@ -62,7 +61,7 @@ export class AuthorizationEngineService {
   logCredentialCheckFailDetails(
     errorMsg: string,
     agentInfo: AgentInfo,
-    authorization: IAuthorizationDefinition
+    authorization: IAuthorizationPolicy
   ) {
     const msg = `${errorMsg}; agentInfo: ${
       agentInfo.email
@@ -103,7 +102,7 @@ export class AuthorizationEngineService {
 
   isAccessGranted(
     agentInfo: AgentInfo,
-    authorization: IAuthorizationDefinition | undefined,
+    authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
     if (!authorization) throw new Error();
@@ -114,9 +113,10 @@ export class AuthorizationEngineService {
     )
       return true;
 
-    const credentialRules: AuthorizationRuleCredential[] = this.authorizationDefinitionService.convertCredentialRulesStr(
-      authorization.credentialRules
-    );
+    const credentialRules: AuthorizationRuleCredential[] =
+      this.authorizationPolicyService.convertCredentialRulesStr(
+        authorization.credentialRules
+      );
     for (const rule of credentialRules) {
       for (const credential of agentInfo.credentials) {
         if (
@@ -129,9 +129,10 @@ export class AuthorizationEngineService {
         }
       }
     }
-    const verifiedCredentialRules: AuthorizationRuleVerifiedCredential[] = this.authorizationDefinitionService.convertVerifiedCredentialRulesStr(
-      authorization.verifiedCredentialRules
-    );
+    const verifiedCredentialRules: AuthorizationRuleVerifiedCredential[] =
+      this.authorizationPolicyService.convertVerifiedCredentialRulesStr(
+        authorization.verifiedCredentialRules
+      );
     for (const rule of verifiedCredentialRules) {
       for (const verifiedCredential of agentInfo.verifiedCredentials) {
         if (
@@ -155,7 +156,7 @@ export class AuthorizationEngineService {
 
   getGrantedPrivileges(
     credentials: ICredential[],
-    authorization: IAuthorizationDefinition
+    authorization: IAuthorizationPolicy
   ) {
     const grantedPrivileges: AuthorizationPrivilege[] = [];
 
@@ -163,9 +164,10 @@ export class AuthorizationEngineService {
       grantedPrivileges.push(AuthorizationPrivilege.READ);
     }
 
-    const credentialRules: AuthorizationRuleCredential[] = this.authorizationDefinitionService.convertCredentialRulesStr(
-      authorization.credentialRules
-    );
+    const credentialRules: AuthorizationRuleCredential[] =
+      this.authorizationPolicyService.convertCredentialRulesStr(
+        authorization.credentialRules
+      );
     for (const rule of credentialRules) {
       for (const credential of credentials) {
         if (
@@ -189,7 +191,7 @@ export class AuthorizationEngineService {
   createGlobalRolesAuthorizationDefinition(
     globalRoles: AuthorizationRoleGlobal[],
     privileges: AuthorizationPrivilege[]
-  ): IAuthorizationDefinition {
+  ): IAuthorizationPolicy {
     const authorization = new AuthorizationDefinition();
     const newRules: AuthorizationRuleCredential[] = [];
 
@@ -214,7 +216,7 @@ export class AuthorizationEngineService {
       };
       newRules.push(roleCred);
     }
-    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );

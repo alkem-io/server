@@ -18,13 +18,13 @@ import {
 } from '@domain/context/actor-group';
 import { LogContext } from '@common/enums';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationDefinition } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class EcosystemModelService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private actorGroupService: ActorGroupService,
     @InjectRepository(EcosystemModel)
     private ecosystemModelRepository: Repository<EcosystemModel>
@@ -33,9 +33,8 @@ export class EcosystemModelService {
   async createEcosystemModel(
     ecosystemModelData: CreateEcosystemModelInput
   ): Promise<IEcosystemModel> {
-    const ecosystemModel: IEcosystemModel = EcosystemModel.create(
-      ecosystemModelData
-    );
+    const ecosystemModel: IEcosystemModel =
+      EcosystemModel.create(ecosystemModelData);
     ecosystemModel.authorization = new AuthorizationDefinition();
     await this.createRestrictedActorGroups(ecosystemModel);
     ecosystemModel.actorGroups = [];
@@ -79,7 +78,7 @@ export class EcosystemModelService {
     }
 
     if (ecosystemModel.authorization)
-      await this.authorizationDefinitionService.delete(
+      await this.authorizationPolicyService.delete(
         ecosystemModel.authorization
       );
 

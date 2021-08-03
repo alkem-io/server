@@ -11,13 +11,13 @@ import { AgentInfo } from '@core/authentication';
 import { CreateReferenceOnContextInput } from '@domain/context/context';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
     private aspectService: AspectService,
     private referenceService: ReferenceService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationEngine: AuthorizationEngineService,
     private contextService: ContextService
   ) {}
@@ -41,10 +41,11 @@ export class ContextResolverMutations {
       `create reference on context: ${context.id}`
     );
     const reference = await this.contextService.createReference(referenceInput);
-    reference.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
-      reference.authorization,
-      context.authorization
-    );
+    reference.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        reference.authorization,
+        context.authorization
+      );
     return await this.referenceService.saveReference(reference);
   }
 
@@ -67,10 +68,11 @@ export class ContextResolverMutations {
       `create aspect on context: ${context.id}`
     );
     const aspect = await this.contextService.createAspect(aspectData);
-    aspect.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
-      aspect.authorization,
-      context.authorization
-    );
+    aspect.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        aspect.authorization,
+        context.authorization
+      );
     return await this.aspectService.saveAspect(aspect);
   }
 }

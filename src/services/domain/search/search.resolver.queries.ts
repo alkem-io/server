@@ -7,21 +7,22 @@ import { SearchInput } from './search-input.dto';
 import { SearchResultEntry } from './search-result-entry.dto';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 @Resolver()
 export class SearchResolverQueries {
-  private searchAuthorizationDefinition: IAuthorizationDefinition;
+  private searchAuthorizationDefinition: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private searchService: SearchService
   ) {
-    this.searchAuthorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
-      [AuthorizationRoleGlobal.Registered],
-      [AuthorizationPrivilege.READ]
-    );
+    this.searchAuthorizationDefinition =
+      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+        [AuthorizationRoleGlobal.Registered],
+        [AuthorizationPrivilege.READ]
+      );
   }
 
   @UseGuards(GraphqlGuard)

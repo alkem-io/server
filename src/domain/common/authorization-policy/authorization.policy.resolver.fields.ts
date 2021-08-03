@@ -1,14 +1,12 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
-import { IAuthorizationDefinition } from './authorization.definition.interface';
+import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { IAuthorizationRuleCredential } from './authorization.rule.credential.interface';
-import { AuthorizationDefinitionService } from './authorization.definition.service';
+import { AuthorizationPolicyService } from './authorization.policy.service';
 
-@Resolver(() => IAuthorizationDefinition)
-export class AuthorizationDefinitionResolverFields {
-  constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService
-  ) {}
+@Resolver(() => IAuthorizationPolicy)
+export class AuthorizationPolicyResolverFields {
+  constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
   @ResolveField('credentialRules', () => [IAuthorizationRuleCredential], {
     nullable: true,
@@ -17,11 +15,9 @@ export class AuthorizationDefinitionResolverFields {
   })
   @Profiling.api
   credentialRules(
-    @Parent() authorization: IAuthorizationDefinition
+    @Parent() authorization: IAuthorizationPolicy
   ): IAuthorizationRuleCredential[] {
-    return this.authorizationDefinitionService.getCredentialRules(
-      authorization
-    );
+    return this.authorizationPolicyService.getCredentialRules(authorization);
   }
 
   @ResolveField(
@@ -35,9 +31,9 @@ export class AuthorizationDefinitionResolverFields {
   )
   @Profiling.api
   verifiedCredentialRules(
-    @Parent() authorization: IAuthorizationDefinition
+    @Parent() authorization: IAuthorizationPolicy
   ): IAuthorizationRuleCredential[] {
-    return this.authorizationDefinitionService.getVerifiedCredentialRules(
+    return this.authorizationPolicyService.getVerifiedCredentialRules(
       authorization
     );
   }

@@ -11,20 +11,21 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
-  private queryAuthorizationDefinition: IAuthorizationDefinition;
+  private queryAuthorizationDefinition: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private userService: UserService
   ) {
-    this.queryAuthorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
-      [AuthorizationRoleGlobal.Registered],
-      [AuthorizationPrivilege.READ]
-    );
+    this.queryAuthorizationDefinition =
+      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+        [AuthorizationRoleGlobal.Registered],
+        [AuthorizationPrivilege.READ]
+      );
   }
 
   @UseGuards(GraphqlGuard)

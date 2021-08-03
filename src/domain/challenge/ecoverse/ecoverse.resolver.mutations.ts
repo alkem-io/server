@@ -18,10 +18,10 @@ import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { IEcoverse } from './ecoverse.interface';
 import { EcoverseAuthorizationResetInput } from './ecoverse.dto.reset.authorization';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 @Resolver()
 export class EcoverseResolverMutations {
-  private globalAdminAuthorization: IAuthorizationDefinition;
+  private globalAdminAuthorization: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
@@ -29,10 +29,11 @@ export class EcoverseResolverMutations {
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService
   ) {
-    this.globalAdminAuthorization = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
-      [AuthorizationRoleGlobal.Admin],
-      [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
-    );
+    this.globalAdminAuthorization =
+      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+        [AuthorizationRoleGlobal.Admin],
+        [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
+      );
   }
 
   @UseGuards(GraphqlGuard)

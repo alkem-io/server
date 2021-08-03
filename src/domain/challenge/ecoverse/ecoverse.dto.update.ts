@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
 import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { UpdateAuthorizationDefinitionInput } from '@domain/common/authorization-definition';
+import { UpdateAuthorizationPolicyInput } from '@domain/common/authorization-policy';
 
 @InputType()
 export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
@@ -20,10 +20,10 @@ export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
   })
   ID!: string;
 
-  @Field(() => UpdateAuthorizationDefinitionInput, {
+  @Field(() => UpdateAuthorizationPolicyInput, {
     nullable: true,
     description: 'Update anonymous visibility for the Ecoverse.',
   })
   @IsOptional()
-  authorizationDefinition?: UpdateAuthorizationDefinitionInput;
+  authorizationDefinition?: UpdateAuthorizationPolicyInput;
 }
