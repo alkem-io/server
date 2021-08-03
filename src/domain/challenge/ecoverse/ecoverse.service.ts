@@ -11,7 +11,6 @@ import { ChallengeService } from '@domain/challenge/challenge/challenge.service'
 import {
   CreateEcoverseInput,
   DeleteEcoverseInput,
-  UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
@@ -36,6 +35,11 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Ecoverse } from './ecoverse.entity';
 import { IEcoverse } from './ecoverse.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
+import { IUser } from '@domain/community/user/user.interface';
+import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
+import { UserService } from '@domain/community/user/user.service';
+import { UpdateEcoverseInput } from './dto/ecoverse.dto.update';
 
 @Injectable()
 export class EcoverseService {
@@ -47,6 +51,7 @@ export class EcoverseService {
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
     private namingService: NamingService,
+    private userService: UserService,
     private challengeService: ChallengeService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -340,15 +345,15 @@ export class EcoverseService {
     const activity: INVP[] = [];
 
     // Challenges
-    const challengesCount = await this.challengeService.getChallengesInEcoverseCount(
-      ecoverse.id
-    );
+    const challengesCount =
+      await this.challengeService.getChallengesInEcoverseCount(ecoverse.id);
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     activity.push(challengesTopic);
 
-    const opportunitiesCount = await this.opportunityService.getOpportunitiesInEcoverseCount(
-      ecoverse.id
-    );
+    const opportunitiesCount =
+      await this.opportunityService.getOpportunitiesInEcoverseCount(
+        ecoverse.id
+      );
     const opportunitiesTopic = new NVP(
       'opportunities',
       opportunitiesCount.toString()
@@ -393,12 +398,11 @@ export class EcoverseService {
   }
 
   async getHost(ecoverseID: string): Promise<IOrganisation | undefined> {
-    const organisations = await this.organisationService.organisationsWithCredentials(
-      {
+    const organisations =
+      await this.organisationService.organisationsWithCredentials({
         type: AuthorizationCredential.EcoverseHost,
         resourceID: ecoverseID,
-      }
-    );
+      });
     if (organisations.length == 0) {
       return undefined;
     }
@@ -409,5 +413,38 @@ export class EcoverseService {
       );
     }
     return organisations[0];
+  }
+
+  async assignEcoverseAdmin(
+    assignData: AssignEcoverseAdminInput
+  ): Promise<IUser> {
+    const userID = assignData.userID;
+    const agent = await this.userService.getAgent(userID);
+    const ecoverse = await this.getEcoverseOrFail(assignData.ecoverseID);
+
+    // assign the credential
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.EcoverseAdmin,
+      resourceID: ecoverse.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
+  }
+
+  async removeEcoverseAdmin(
+    removeData: RemoveEcoverseAdminInput
+  ): Promise<IUser> {
+    const ecoverseID = removeData.ecoverseID;
+    const ecoverse = await this.getEcoverseOrFail(ecoverseID);
+    const agent = await this.userService.getAgent(removeData.userID);
+
+    await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.EcoverseAdmin,
+      resourceID: ecoverse.id,
+    });
+
+    return await this.userService.getUserWithAgent(removeData.userID);
   }
 }

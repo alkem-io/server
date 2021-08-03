@@ -47,6 +47,8 @@ import { ChallengeAuthorizeStateModificationInput } from './dto/challenge.dto.au
 import { SsiAgentService } from '@services/platform/ssi/agent/ssi.agent.service';
 import { UserService } from '@domain/community/user/user.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
+import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 
 @Injectable()
 export class ChallengeService {
@@ -463,9 +465,10 @@ export class ChallengeService {
     const membersTopic = new NVP('members', membersCount.toString());
     activity.push(membersTopic);
 
-    const opportunitiesCount = await this.opportunityService.getOpportunitiesInChallengeCount(
-      challenge.id
-    );
+    const opportunitiesCount =
+      await this.opportunityService.getOpportunitiesInChallengeCount(
+        challenge.id
+      );
     const opportunitiesTopic = new NVP(
       'opportunities',
       opportunitiesCount.toString()
@@ -486,12 +489,11 @@ export class ChallengeService {
   }
 
   async getLeadOrganisations(challengeID: string): Promise<IOrganisation[]> {
-    const organisations = await this.organisationService.organisationsWithCredentials(
-      {
+    const organisations =
+      await this.organisationService.organisationsWithCredentials({
         type: AuthorizationCredential.ChallengeLead,
         resourceID: challengeID,
-      }
-    );
+      });
     return organisations;
   }
 
@@ -557,6 +559,39 @@ export class ChallengeService {
 
     await this.organisationService.save(organisation);
     return challenge;
+  }
+
+  async assignChallengeAdmin(
+    assignData: AssignChallengeAdminInput
+  ): Promise<IUser> {
+    const userID = assignData.userID;
+    const agent = await this.userService.getAgent(userID);
+    await this.getChallengeOrFail(assignData.challengeID);
+
+    // assign the credential
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.ChallengeAdmin,
+      resourceID: assignData.challengeID,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
+  }
+
+  async removeChallengeAdmin(
+    removeData: RemoveChallengeAdminInput
+  ): Promise<IUser> {
+    const challengeID = removeData.challengeID;
+    await this.getChallengeOrFail(challengeID);
+    const agent = await this.userService.getAgent(removeData.userID);
+
+    await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.ChallengeAdmin,
+      resourceID: challengeID,
+    });
+
+    return await this.userService.getUserWithAgent(removeData.userID);
   }
 
   async authorizeStateModification(
