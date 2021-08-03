@@ -64,12 +64,12 @@ export class ChallengeLifecycleOptionsProvider {
       guards: {
         challengeStateUpdateAuthorized: (_, event) => {
           const agentInfo: AgentInfo = event.agentInfo;
-          const authorizationDefinition: AuthorizationDefinition =
+          const authorizationPolicy: AuthorizationDefinition =
             event.authorization;
           const stateChangeAllowed =
             this.authorizationEngineService.isAccessGranted(
               agentInfo,
-              authorizationDefinition,
+              authorizationPolicy,
               AuthorizationPrivilege.UPDATE
             );
           // Todo: disabling the logic check for now to always return true

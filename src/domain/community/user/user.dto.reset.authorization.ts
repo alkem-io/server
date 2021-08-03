@@ -6,7 +6,7 @@ export class UserAuthorizationResetInput {
   @Field(() => UUID_NAMEID_EMAIL, {
     nullable: false,
     description:
-      'The identifier of the User whose AuthorizationDefinition should be reset.',
+      'The identifier of the User whose Authorization Policy should be reset.',
   })
   userID!: string;
 }

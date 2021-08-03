@@ -11,7 +11,7 @@ export class AuthorizationPolicyResolverFields {
   @ResolveField('credentialRules', () => [IAuthorizationRuleCredential], {
     nullable: true,
     description:
-      'The set of credential rules that are contained by this AuthorizationDefinition.',
+      'The set of credential rules that are contained by this Authorization Policy.',
   })
   @Profiling.api
   credentialRules(
@@ -26,7 +26,7 @@ export class AuthorizationPolicyResolverFields {
     {
       nullable: true,
       description:
-        'The set of verified credential rules that are contained by this AuthorizationDefinition.',
+        'The set of verified credential rules that are contained by this Authorization Policy.',
     }
   )
   @Profiling.api

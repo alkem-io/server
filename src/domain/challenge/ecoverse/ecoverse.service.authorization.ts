@@ -32,7 +32,7 @@ export class EcoverseAuthorizationService {
     ecoverse.authorization = await this.authorizationPolicyService.reset(
       ecoverse.authorization
     );
-    ecoverse.authorization = this.extendAuthorizationDefinition(
+    ecoverse.authorization = this.extendAuthorizationPolicy(
       ecoverse.authorization,
       ecoverse.id
     );
@@ -89,7 +89,7 @@ export class EcoverseAuthorizationService {
     return await this.ecoverseRepository.save(ecoverse);
   }
 
-  private extendAuthorizationDefinition(
+  private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     ecoverseID: string
   ): IAuthorizationPolicy {

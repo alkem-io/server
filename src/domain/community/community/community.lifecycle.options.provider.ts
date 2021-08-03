@@ -85,11 +85,11 @@ export class CommunityLifecycleOptionsProvider {
     guards: {
       communityUpdateAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
-        const authorizationDefinition: AuthorizationDefinition =
+        const authorizationPolicy: AuthorizationDefinition =
           event.authorization;
         return this.authorizationEngineService.isAccessGranted(
           agentInfo,
-          authorizationDefinition,
+          authorizationPolicy,
           AuthorizationPrivilege.UPDATE
         );
       },

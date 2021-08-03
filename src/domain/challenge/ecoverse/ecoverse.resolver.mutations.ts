@@ -30,7 +30,7 @@ export class EcoverseResolverMutations {
     private challengeAuthorizationService: ChallengeAuthorizationService
   ) {
     this.globalAdminAuthorization =
-      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.Admin],
         [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
       );
@@ -79,10 +79,10 @@ export class EcoverseResolverMutations {
     // ensure working with UUID
     ecoverseData.ID = ecoverse.id;
 
-    if (ecoverseData.authorizationDefinition) {
+    if (ecoverseData.authorizationPolicy) {
       await this.ecoverseAuthorizationService.updateAuthorizationPolicy(
         ecoverse,
-        ecoverseData.authorizationDefinition
+        ecoverseData.authorizationPolicy
       );
     }
 

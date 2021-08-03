@@ -13,14 +13,14 @@ import { MembershipOrganisationInput } from './membership.dto.organisation.input
 
 @Resolver()
 export class MembershipResolverQueries {
-  private membershipAuthorizationDefinition: IAuthorizationPolicy;
+  private membershipAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private membershipService: MembershipService
   ) {
-    this.membershipAuthorizationDefinition =
-      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+    this.membershipAuthorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.Registered],
         [AuthorizationPrivilege.READ]
       );
@@ -38,7 +38,7 @@ export class MembershipResolverQueries {
   ): Promise<UserMembership> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.membershipAuthorizationDefinition,
+      this.membershipAuthorizationPolicy,
       `membership query: ${agentInfo.email}`
     );
     return await this.membershipService.getUserMemberships(membershipData);

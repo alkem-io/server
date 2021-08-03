@@ -30,7 +30,7 @@ export class CommunityAuthorizationService {
     // always false
     community.authorization.anonymousReadAccess = false;
 
-    community.authorization = this.extendAuthorizationDefinition(
+    community.authorization = this.extendAuthorizationPolicy(
       community.authorization
     );
 
@@ -57,7 +57,7 @@ export class CommunityAuthorizationService {
     return await this.communityRepository.save(community);
   }
 
-  private extendAuthorizationDefinition(
+  private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     return this.authorizationPolicyService.appendCredentialAuthorizationRule(

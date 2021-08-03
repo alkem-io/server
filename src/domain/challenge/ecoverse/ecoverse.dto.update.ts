@@ -25,5 +25,5 @@ export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
     description: 'Update anonymous visibility for the Ecoverse.',
   })
   @IsOptional()
-  authorizationDefinition?: UpdateAuthorizationPolicyInput;
+  authorizationPolicy?: UpdateAuthorizationPolicyInput;
 }

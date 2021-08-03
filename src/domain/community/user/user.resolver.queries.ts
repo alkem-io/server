@@ -15,14 +15,14 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
-  private queryAuthorizationDefinition: IAuthorizationPolicy;
+  private queryAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private userService: UserService
   ) {
-    this.queryAuthorizationDefinition =
-      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+    this.queryAuthorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.Registered],
         [AuthorizationPrivilege.READ]
       );
@@ -37,7 +37,7 @@ export class UserResolverQueries {
   async users(@CurrentUser() agentInfo: AgentInfo): Promise<IUser[]> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationDefinition,
+      this.queryAuthorizationPolicy,
       `users query: ${agentInfo.email}`
     );
     return await this.userService.getUsers();
@@ -55,7 +55,7 @@ export class UserResolverQueries {
   ): Promise<IUser> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationDefinition,
+      this.queryAuthorizationPolicy,
       `user query: ${agentInfo.email}`
     );
     return await this.userService.getUserOrFail(id);
@@ -73,7 +73,7 @@ export class UserResolverQueries {
   ): Promise<IUser[]> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationDefinition,
+      this.queryAuthorizationPolicy,
       `users query: ${agentInfo.email}`
     );
     const users = await this.userService.getUsers();

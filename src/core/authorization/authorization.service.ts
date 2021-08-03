@@ -37,7 +37,7 @@ export class AuthorizationService {
     private readonly agentService: AgentService,
     private readonly userService: UserService,
     @InjectRepository(AuthorizationDefinition)
-    private authoriationDefinitionRepository: Repository<AuthorizationDefinition>,
+    private authoriationPolicyRepository: Repository<AuthorizationDefinition>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -183,30 +183,31 @@ export class AuthorizationService {
       userAuthorizationPrivilegesData.userID
     );
 
-    const authorizationDefinition = await this.getAuthorizationDefinitionOrFail(
+    const authorizationPolicy = await this.getAuthorizationPolicyOrFail(
       userAuthorizationPrivilegesData.authorizationID
     );
 
     const privileges = await this.authorizationEngine.getGrantedPrivileges(
       credentials,
-      authorizationDefinition
+      authorizationPolicy
     );
     return privileges;
   }
 
-  async getAuthorizationDefinitionOrFail(
+  async getAuthorizationPolicyOrFail(
     authorizationID: string
   ): Promise<IAuthorizationPolicy> {
-    const authorizationDefinition =
-      await this.authoriationDefinitionRepository.findOne({
+    const authorizationPolicy = await this.authoriationPolicyRepository.findOne(
+      {
         id: authorizationID,
-      });
-    if (!authorizationDefinition)
+      }
+    );
+    if (!authorizationPolicy)
       throw new EntityNotFoundException(
-        `Not able to locate AuthorizationDefinition with the specified ID: ${authorizationID}`,
+        `Not able to locate Authorization Policy with the specified ID: ${authorizationID}`,
         LogContext.CHALLENGES
       );
-    return authorizationDefinition;
+    return authorizationPolicy;
   }
 
   isGlobalAuthorizationCredential(credentialType: string): boolean {

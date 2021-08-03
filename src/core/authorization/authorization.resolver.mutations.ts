@@ -16,14 +16,14 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Resolver()
 export class AuthorizationResolverMutations {
-  private authorizationDefinition: IAuthorizationPolicy;
+  private authorizationPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private authorizationService: AuthorizationService
   ) {
-    this.authorizationDefinition =
-      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+    this.authorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
         [AuthorizationPrivilege.GRANT]
       );
@@ -41,7 +41,7 @@ export class AuthorizationResolverMutations {
   ): Promise<IUser> {
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      this.authorizationDefinition,
+      this.authorizationPolicy,
       AuthorizationPrivilege.GRANT,
       `grant credential: ${agentInfo.email}`
     );
@@ -63,7 +63,7 @@ export class AuthorizationResolverMutations {
   ): Promise<IUser> {
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      this.authorizationDefinition,
+      this.authorizationPolicy,
       AuthorizationPrivilege.GRANT,
       `revoke credential: ${agentInfo.email}`
     );

@@ -41,14 +41,14 @@ export class OrganisationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('organisationData') organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
-    const authorizationDefinition =
-      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+    const authorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
         [AuthorizationPrivilege.CREATE]
       );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      authorizationDefinition,
+      authorizationPolicy,
       AuthorizationPrivilege.CREATE,
       `create Organisation: ${organisationData.nameID}`
     );

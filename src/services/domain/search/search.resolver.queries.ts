@@ -12,14 +12,14 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { AgentInfo } from '@core/authentication';
 @Resolver()
 export class SearchResolverQueries {
-  private searchAuthorizationDefinition: IAuthorizationPolicy;
+  private searchAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private searchService: SearchService
   ) {
-    this.searchAuthorizationDefinition =
-      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+    this.searchAuthorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.Registered],
         [AuthorizationPrivilege.READ]
       );
@@ -37,7 +37,7 @@ export class SearchResolverQueries {
   ): Promise<ISearchResultEntry[]> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.searchAuthorizationDefinition,
+      this.searchAuthorizationPolicy,
       `search query: ${agentInfo.email}`
     );
     return await this.searchService.search(searchData, agentInfo);

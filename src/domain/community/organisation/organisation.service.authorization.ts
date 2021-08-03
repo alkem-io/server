@@ -16,7 +16,7 @@ import { UserGroupAuthorizationService } from '../user-group/user-group.service.
 export class OrganisationAuthorizationService {
   constructor(
     private organisationService: OrganisationService,
-    private authorizationDefinition: AuthorizationPolicyService,
+    private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
@@ -37,7 +37,7 @@ export class OrganisationAuthorizationService {
 
     if (organisation.profile) {
       organisation.profile.authorization =
-        this.authorizationDefinition.inheritParentAuthorization(
+        this.authorizationPolicy.inheritParentAuthorization(
           organisation.profile.authorization,
           organisation.authorization
         );
@@ -128,7 +128,7 @@ export class OrganisationAuthorizationService {
     newRules.push(organisationMember);
 
     const updatedAuthorization =
-      this.authorizationDefinition.appendCredentialAuthorizationRules(
+      this.authorizationPolicy.appendCredentialAuthorizationRules(
         authorization,
         newRules
       );

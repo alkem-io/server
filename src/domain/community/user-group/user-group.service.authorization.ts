@@ -17,7 +17,7 @@ import { AuthorizationRuleCredential } from '@domain/common/authorization-policy
 @Injectable()
 export class UserGroupAuthorizationService {
   constructor(
-    private authorizationDefinition: AuthorizationPolicyService,
+    private authorizationPolicy: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private userGroupService: UserGroupService,
     @InjectRepository(UserGroup)
@@ -36,7 +36,7 @@ export class UserGroupAuthorizationService {
     // cascade
     savedGroup.profile = this.userGroupService.getProfile(userGroup);
     savedGroup.profile.authorization =
-      await this.authorizationDefinition.inheritParentAuthorization(
+      await this.authorizationPolicy.inheritParentAuthorization(
         savedGroup.profile.authorization,
         userGroup.authorization
       );
@@ -66,7 +66,7 @@ export class UserGroupAuthorizationService {
     };
     newRules.push(userGroupMember);
 
-    this.authorizationDefinition.appendCredentialAuthorizationRules(
+    this.authorizationPolicy.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );

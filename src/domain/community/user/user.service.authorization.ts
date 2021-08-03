@@ -86,7 +86,7 @@ export class UserAuthorizationService {
   }
 
   // Create an instance for usage in a mutation
-  public createUserAuthorizationDefinition(): IAuthorizationPolicy {
+  public createUserAuthorizationPolicy(): IAuthorizationPolicy {
     const authorization = new AuthorizationDefinition();
     return this.appendCredentialRules(authorization);
   }

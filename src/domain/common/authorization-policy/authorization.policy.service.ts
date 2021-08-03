@@ -20,44 +20,44 @@ import { IAuthorizationRuleCredential } from './authorization.rule.credential.in
 export class AuthorizationPolicyService {
   constructor(
     @InjectRepository(AuthorizationDefinition)
-    private authorizationDefinitionRepository: Repository<AuthorizationDefinition>,
+    private authorizationPolicyRepository: Repository<AuthorizationDefinition>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   reset(
-    authorizationDefinition: IAuthorizationPolicy | undefined
+    authorizationPolicy: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
-    if (!authorizationDefinition) {
+    if (!authorizationPolicy) {
       throw new RelationshipNotFoundException(
-        'Undefined AuthorizationDefinition supplied',
+        'Undefined Authorization Policy supplied',
         LogContext.AUTH
       );
     }
-    authorizationDefinition.credentialRules = '';
-    return authorizationDefinition;
+    authorizationPolicy.credentialRules = '';
+    return authorizationPolicy;
   }
 
-  async getAuthorizationDefinitionOrFail(
-    AuthorizationDefinitionID: string
-  ): Promise<AuthorizationDefinition> {
-    const authorizationDefinition =
-      await this.authorizationDefinitionRepository.findOne({
-        id: AuthorizationDefinitionID,
+  async getAuthorizationPolicyOrFail(
+    authorizationPolicyID: string
+  ): Promise<IAuthorizationPolicy> {
+    const authorizationPolicy =
+      await this.authorizationPolicyRepository.findOne({
+        id: authorizationPolicyID,
       });
-    if (!authorizationDefinition)
+    if (!authorizationPolicy)
       throw new EntityNotFoundException(
-        `Not able to locate AuthorizationDefinition with the specified ID: ${AuthorizationDefinitionID}`,
+        `Not able to locate Authorization Policy with the specified ID: ${authorizationPolicyID}`,
         LogContext.AUTH
       );
-    return authorizationDefinition;
+    return authorizationPolicy;
   }
 
   async delete(
-    authorizationDefinition: IAuthorizationPolicy
-  ): Promise<AuthorizationDefinition> {
-    return await this.authorizationDefinitionRepository.remove(
-      authorizationDefinition as AuthorizationDefinition
+    authorizationPolicy: IAuthorizationPolicy
+  ): Promise<IAuthorizationPolicy> {
+    return await this.authorizationPolicyRepository.remove(
+      authorizationPolicy as AuthorizationDefinition
     );
   }
 

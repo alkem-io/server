@@ -188,7 +188,7 @@ export class AuthorizationEngineService {
     return uniquePrivileges;
   }
 
-  createGlobalRolesAuthorizationDefinition(
+  createGlobalRolesAuthorizationPolicy(
     globalRoles: AuthorizationRoleGlobal[],
     privileges: AuthorizationPrivilege[]
   ): IAuthorizationPolicy {
