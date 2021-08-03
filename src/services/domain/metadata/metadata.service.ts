@@ -26,14 +26,14 @@ export class MetadataService {
   }
 
   async getServicesMetadata(): Promise<IServiceMetadata[]> {
-    const ctServerMetadata = await this.getCtServerMetadata();
+    const ctServerMetadata = await this.getAlkemioServerMetadata();
     const servicesMetadata = [ctServerMetadata];
     return servicesMetadata;
   }
 
-  async getCtServerMetadata(): Promise<IServiceMetadata> {
+  async getAlkemioServerMetadata(): Promise<IServiceMetadata> {
     return {
-      name: 'ct-server',
+      name: 'alkemio-server',
       version: await this.getVersion(),
     };
   }
@@ -60,7 +60,8 @@ export class MetadataService {
     activity.push(usersTopic);
 
     // Organisations
-    const organisationsCount = await this.organisationService.getOrganisationCount();
+    const organisationsCount =
+      await this.organisationService.getOrganisationCount();
     const organisationsTopic = new NVP(
       'organisations',
       organisationsCount.toString()
