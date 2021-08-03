@@ -37,7 +37,7 @@ export class AuthorizationService {
     private readonly agentService: AgentService,
     private readonly userService: UserService,
     @InjectRepository(AuthorizationDefinition)
-    private authoriationPolicyRepository: Repository<AuthorizationDefinition>,
+    private authorizationPolicyRepository: Repository<AuthorizationDefinition>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -197,11 +197,10 @@ export class AuthorizationService {
   async getAuthorizationPolicyOrFail(
     authorizationID: string
   ): Promise<IAuthorizationPolicy> {
-    const authorizationPolicy = await this.authoriationPolicyRepository.findOne(
-      {
+    const authorizationPolicy =
+      await this.authorizationPolicyRepository.findOne({
         id: authorizationID,
-      }
-    );
+      });
     if (!authorizationPolicy)
       throw new EntityNotFoundException(
         `Not able to locate Authorization Policy with the specified ID: ${authorizationID}`,
