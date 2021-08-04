@@ -12,6 +12,7 @@ import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { UserAuthorizationService } from './user.service.authorization';
 import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { SubscriptionModule } from '@services/platform/subscription/subscription.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AuthorizationDefinitionModule } from '@domain/common/authorization-defi
     AuthorizationDefinitionModule,
     AuthorizationEngineModule,
     TypeOrmModule.forFeature([User]),
+    SubscriptionModule,
   ],
   providers: [
     UserService,

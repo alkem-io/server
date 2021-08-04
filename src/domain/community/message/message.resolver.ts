@@ -1,12 +1,4 @@
-import {
-  ObjectType,
-  Field,
-  ID,
-  Resolver,
-  Subscription,
-  Query,
-  Float,
-} from '@nestjs/graphql';
+import { Field, Float, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
 import { PubSub } from 'apollo-server-express';
 
 const date = new Date();
@@ -106,10 +98,10 @@ export class MessageResolver {
     return messsgeList;
   }
 
-  @Subscription(() => Message)
-  messageReceived() {
-    return this.pubSub.asyncIterator('messageReceived');
-  }
+  // @Subscription(() => Message)
+  // messageReceived() {
+  //   return this.pubSub.asyncIterator('messageReceived');
+  // }
 }
 
 const toMessage = (

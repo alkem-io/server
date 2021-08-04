@@ -63,14 +63,25 @@ export class MatrixAgentService {
       matrixClient
     );
     for (const groupID of Object.keys(communityMap)) {
-      const room = await this.getRoom(matrixAgent, communityMap[groupID][0]);
-      room.isDirect = true;
-      // const communityRoom = new MatrixRoom();
-      // communityRoom.roomId = communityMap[groupID][0];
-      // communityRoom.isDirect = false;
-      // const room = await this.getRoom(matrixAgent, communityRoom.roomId);
-      // communityRoom.timeline = room.timeline;
-      rooms.push(room);
+      const roomIds = communityMap[groupID] || [];
+
+      for (const roomId of roomIds) {
+        try {
+          const room = await this.getRoom(matrixAgent, roomId);
+          room.isDirect = false;
+          // const communityRoom = new MatrixRoom();
+          // communityRoom.roomId = communityMap[groupID][0];
+          // communityRoom.isDirect = false;
+          // const room = await this.getRoom(matrixAgent, communityRoom.roomId);
+          // communityRoom.timeline = room.timeline;
+          rooms.push(room);
+        } catch (error) {
+          // We can cause a lot of damage with the exception thrown in getRoom
+          // There are cases where the room exists but the user is not yet invited to it.
+          // Because of one missing room the user might not be able to access none of them.
+          // Need to decide on an approach
+        }
+      }
     }
     return rooms;
   }
