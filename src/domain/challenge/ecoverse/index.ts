@@ -1,3 +1,3 @@
-export * from './ecoverse.dto.update';
-export * from './ecoverse.dto.delete';
-export * from './ecoverse.dto.create';
+export * from './dto/ecoverse.dto.update';
+export * from './dto/ecoverse.dto.delete';
+export * from './dto/ecoverse.dto.create';

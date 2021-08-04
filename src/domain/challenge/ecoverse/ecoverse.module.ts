@@ -21,6 +21,7 @@ import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecovers
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     TagsetModule,
     UserGroupModule,
     ApplicationModule,
+    UserModule,
     NamingModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],

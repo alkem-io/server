@@ -16,10 +16,13 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { AgentInfo } from '@core/authentication/agent-info';
 import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { OrganisationAuthorizationResetInput } from './organisation.dto.reset.authorization';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { AssignOrganisationMemberInput } from './organisation.dto.assign.member';
-import { RemoveOrganisationMemberInput } from './organisation.dto.remove.member';
+import { AssignOrganisationMemberInput } from './dto/organisation.dto.assign.member';
+import { RemoveOrganisationMemberInput } from './dto/organisation.dto.remove.member';
+import { IUser } from '../user/user.interface';
+import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
+import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admin';
+import { OrganisationAuthorizationResetInput } from './dto/organisation.dto.reset.authorization';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
@@ -198,5 +201,51 @@ export class OrganisationResolverMutations {
       `remove user organisation: ${organisation.displayName}`
     );
     return await this.organisationService.removeMember(membershipData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Assigns a User as an Organisation Admin.',
+  })
+  @Profiling.api
+  async assignUserAsOrganisationAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignOrganisationAdminInput
+  ): Promise<IUser> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      membershipData.organisationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user organisation admin: ${organisation.displayName}`
+    );
+    return await this.organisationService.assignOrganisationAdmin(
+      membershipData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Removes a User from being an Organisation Admin.',
+  })
+  @Profiling.api
+  async removeUserAsOrganisationAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveOrganisationAdminInput
+  ): Promise<IUser> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      membershipData.organisationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user organisation admin: ${organisation.displayName}`
+    );
+    return await this.organisationService.removeOrganisationAdmin(
+      membershipData
+    );
   }
 }
