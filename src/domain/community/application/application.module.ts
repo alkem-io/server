@@ -5,13 +5,13 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from '@domain/community/user/user.module';
-import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ApplicationResolverFields } from './application.resolver.fields';
 import { AuthorizationEngineModule } from '@services/platform/authorization-engine/authorization-engine.module';
 
 @Module({
   imports: [
-    AuthorizationDefinitionModule,
+    AuthorizationPolicyModule,
     AuthorizationEngineModule,
     NVPModule,
     LifecycleModule,

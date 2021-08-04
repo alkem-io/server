@@ -6,11 +6,11 @@ import { ActorGroupResolverMutations } from './actor-group.resolver.mutations';
 import { ActorGroupService } from './actor-group.service';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { ActorGroupAuthorizationService } from './actor-group.service.authorization';
-import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
-    AuthorizationDefinitionModule,
+    AuthorizationPolicyModule,
     AuthorizationEngineModule,
     ActorModule,
     TypeOrmModule.forFeature([ActorGroup]),

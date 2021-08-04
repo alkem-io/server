@@ -16,6 +16,7 @@ ARG ENV_ARG=production
 # where available (npm@5+)
 COPY package*.json ./
 
+RUN npm i -g npm@latest
 RUN npm install
 
 # If you are building your code for production

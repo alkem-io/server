@@ -1,4 +1,4 @@
-import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
@@ -8,7 +8,7 @@ import { ActorService } from './actor.service';
 
 @Module({
   imports: [
-    AuthorizationDefinitionModule,
+    AuthorizationPolicyModule,
     AuthorizationEngineModule,
     TypeOrmModule.forFeature([Actor]),
   ],

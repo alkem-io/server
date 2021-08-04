@@ -22,7 +22,7 @@ mutation UpdateEcoverse($ecoverseData: UpdateEcoverseInput!) {
   "ecoverseData":
 		{
       "ID": "uuid",
-      "authorizationDefinition": {
+      "authorizationPolicy": {
         "anonymousReadAccess": false
       }
 		}

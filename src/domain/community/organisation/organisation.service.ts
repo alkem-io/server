@@ -23,18 +23,20 @@ import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
-import { RemoveOrganisationMemberInput } from './organisation.dto.remove.member';
-import { AssignOrganisationMemberInput } from './organisation.dto.assign.member';
+import { RemoveOrganisationMemberInput } from './dto/organisation.dto.remove.member';
+import { AssignOrganisationMemberInput } from './dto/organisation.dto.assign.member';
+import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admin';
+import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
 
 @Injectable()
 export class OrganisationService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
@@ -50,7 +52,7 @@ export class OrganisationService {
     await this.checkNameIdOrFail(organisationData.nameID);
 
     const organisation: IOrganisation = Organisation.create(organisationData);
-    organisation.authorization = new AuthorizationDefinition();
+    organisation.authorization = new AuthorizationPolicy();
     organisation.profile = await this.profileService.createProfile(
       organisationData.profileData
     );
@@ -135,9 +137,7 @@ export class OrganisationService {
     }
 
     if (organisation.authorization) {
-      await this.authorizationDefinitionService.delete(
-        organisation.authorization
-      );
+      await this.authorizationPolicyService.delete(organisation.authorization);
     }
 
     if (organisation.agent) {
@@ -334,5 +334,39 @@ export class OrganisationService {
     });
 
     return organisation;
+  }
+
+  async assignOrganisationAdmin(
+    assignData: AssignOrganisationAdminInput
+  ): Promise<IUser> {
+    const userID = assignData.userID;
+    const agent = await this.userService.getAgent(userID);
+    const organisation = await this.getOrganisationOrFail(
+      assignData.organisationID
+    );
+
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OrganisationAdmin,
+      resourceID: organisation.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
+  }
+
+  async removeOrganisationAdmin(
+    removeData: RemoveOrganisationAdminInput
+  ): Promise<IUser> {
+    const organisationID = removeData.organisationID;
+    const organisation = await this.getOrganisationOrFail(organisationID);
+    const agent = await this.userService.getAgent(removeData.userID);
+
+    await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OrganisationAdmin,
+      resourceID: organisation.id,
+    });
+
+    return await this.userService.getUserWithAgent(removeData.userID);
   }
 }

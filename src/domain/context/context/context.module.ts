@@ -10,11 +10,11 @@ import { ContextResolverFields } from '@domain/context/context/context.resolver.
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { ContextAuthorizationService } from './context.service.authorization';
 import { VisualModule } from '../visual/visual.module';
-import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
-    AuthorizationDefinitionModule,
+    AuthorizationPolicyModule,
     AuthorizationEngineModule,
     AspectModule,
     ReferenceModule,

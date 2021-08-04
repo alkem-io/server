@@ -49,7 +49,7 @@ export class MatrixUserAdapterService {
     return this.username2email(id.replace('@', '').split(':')[0]);
   }
 
-  logMatrixUser(matrixUser: IMatrixUser, msg?: string) {
+  logMatrixUser(matrixUser: Partial<IMatrixUser>, msg?: string) {
     let prefix = '';
     if (msg) prefix = `[${msg}] - `;
     this.logger.verbose?.(

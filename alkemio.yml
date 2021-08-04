@@ -15,7 +15,7 @@ hosting:
   # The port that the Alkemio server will be listening on.
   # For clusters (e.g. docker-compose, kubernetes) this should also be the port that is used  in the ingress configuration (e.g. traefik).
   # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/graphql)
-  # to the ct-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
+  # to the alkemio-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
   # The graphql port is also used for internal communication between the services inside the e.g. kubernetes cluster.
   #
   port: ${GRAPHQL_ENDPOINT}:4000
@@ -147,7 +147,7 @@ identity:
         #     }
         #   ]
         # }
-        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://localhost:4456/.well-known/jwks.json
+        jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://localhost:3000/jwks/.well-known/jwks.json
 
         # Ory Kratos Base Public URL. It is used as prefix for all Kratos flows.
         # Locally, Kratos Public API works on http://localhost:3000/identity/ory/kratos/public and by default in k8s it works on https://[HOST]/identity/ory/kratos/public
@@ -253,7 +253,7 @@ communications:
     # Synapse server (https://github.com/matrix-org/synapse) configuration.
     server:
       # Synapse server URL, where it can be accessed by the Alkemio server
-      url: ${SYNAPSE_SERVER_URL}:http://localhost:3000/synapse
+      url: ${SYNAPSE_SERVER_URL}:http://localhost:8008
       # Synapse shared secret, defined in homeserver.yaml on the Synapse instance.
       shared_secret: ${SYNAPSE_SERVER_SHARED_SECRET}:n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
 

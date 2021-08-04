@@ -22,8 +22,8 @@ import { IAgent } from '@domain/agent/agent';
 import { UUID_LENGTH } from '@common/constants';
 import { IProfile } from '@domain/community/profile';
 import { LogContext } from '@common/enums';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 
 @Injectable()
@@ -31,7 +31,7 @@ export class UserService {
   replaceSpecialCharacters = require('replace-special-characters');
   constructor(
     private profileService: ProfileService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -42,7 +42,7 @@ export class UserService {
     await this.validateUserProfileCreationRequest(userData);
 
     const user: IUser = User.create(userData);
-    user.authorization = new AuthorizationDefinition();
+    user.authorization = new AuthorizationPolicy();
 
     user.profile = await this.profileService.createProfile(
       userData.profileData
@@ -102,7 +102,7 @@ export class UserService {
     }
 
     if (user.authorization) {
-      await this.authorizationDefinitionService.delete(user.authorization);
+      await this.authorizationPolicyService.delete(user.authorization);
     }
 
     const result = await this.userRepository.remove(user as User);
@@ -271,25 +271,25 @@ export class UserService {
         user.nameID = userInput.nameID;
       }
     }
-    if (userInput.displayName) {
+    if (userInput.displayName !== undefined) {
       user.displayName = userInput.displayName;
     }
-    if (userInput.firstName) {
+    if (userInput.firstName !== undefined) {
       user.firstName = userInput.firstName;
     }
-    if (userInput.lastName) {
+    if (userInput.lastName !== undefined) {
       user.lastName = userInput.lastName;
     }
-    if (userInput.phone) {
+    if (userInput.phone !== undefined) {
       user.phone = userInput.phone;
     }
-    if (userInput.city) {
+    if (userInput.city !== undefined) {
       user.city = userInput.city;
     }
-    if (userInput.country) {
+    if (userInput.country !== undefined) {
       user.country = userInput.country;
     }
-    if (userInput.gender) {
+    if (userInput.gender !== undefined) {
       user.gender = userInput.gender;
     }
 

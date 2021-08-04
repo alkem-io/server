@@ -1,10 +1,12 @@
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity } from 'typeorm';
-import { IAuthorizationDefinition } from './authorization.definition.interface';
+import { IAuthorizationPolicy } from './authorization.policy.interface';
 
-@Entity()
-export class AuthorizationDefinition extends BaseAlkemioEntity
-  implements IAuthorizationDefinition {
+@Entity('authorization_definition')
+export class AuthorizationPolicy
+  extends BaseAlkemioEntity
+  implements IAuthorizationPolicy
+{
   @Column('text')
   credentialRules: string;
 

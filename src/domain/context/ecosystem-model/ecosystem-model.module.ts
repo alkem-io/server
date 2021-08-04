@@ -6,12 +6,12 @@ import { EcosystemModel } from './ecosystem-model.entity';
 import { EcosystemModelResolverMutations } from './ecosystem-model.resolver.mutations';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { EcosystemModelAuthorizationService } from './ecosystem-model.service.authorization';
-import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationEngineModule,
-    AuthorizationDefinitionModule,
+    AuthorizationPolicyModule,
     ActorGroupModule,
     TypeOrmModule.forFeature([EcosystemModel]),
   ],

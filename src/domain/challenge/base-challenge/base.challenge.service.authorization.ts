@@ -1,5 +1,5 @@
-import { UpdateAuthorizationDefinitionInput } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { UpdateAuthorizationPolicyInput } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { Injectable } from '@nestjs/common';
@@ -12,7 +12,7 @@ import { BaseChallengeService } from './base.challenge.service';
 export class BaseChallengeAuthorizationService {
   constructor(
     private baseChallengeService: BaseChallengeService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService
   ) {}
@@ -28,40 +28,43 @@ export class BaseChallengeAuthorizationService {
     );
     // disable anonymous access for community
     if (community.authorization) {
-      baseChallenge.community = await this.communityAuthorizationService.applyAuthorizationPolicy(
-        community,
-        baseChallenge.authorization
-      );
+      baseChallenge.community =
+        await this.communityAuthorizationService.applyAuthorizationPolicy(
+          community,
+          baseChallenge.authorization
+        );
     }
 
     const tagset = baseChallenge.tagset;
     if (tagset) {
-      tagset.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-        tagset.authorization,
-        baseChallenge.authorization
-      );
+      tagset.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          tagset.authorization,
+          baseChallenge.authorization
+        );
     }
 
     const context = await this.baseChallengeService.getContext(
       baseChallenge.id,
       repository
     );
-    context.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      context.authorization,
-      baseChallenge.authorization
-    );
-    baseChallenge.context = await this.contextAuthorizationService.applyAuthorizationPolicy(
-      context
-    );
+    context.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        context.authorization,
+        baseChallenge.authorization
+      );
+    baseChallenge.context =
+      await this.contextAuthorizationService.applyAuthorizationPolicy(context);
 
     baseChallenge.agent = await this.baseChallengeService.getAgent(
       baseChallenge.id,
       repository
     );
-    baseChallenge.agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      baseChallenge.agent.authorization,
-      baseChallenge.authorization
-    );
+    baseChallenge.agent.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        baseChallenge.agent.authorization,
+        baseChallenge.authorization
+      );
 
     return await repository.save(baseChallenge);
   }
@@ -69,22 +72,24 @@ export class BaseChallengeAuthorizationService {
   async updateAuthorization(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>,
-    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+    authorizationUpdateData: UpdateAuthorizationPolicyInput
   ): Promise<IBaseChallenge> {
-    baseChallenge.authorization = this.authorizationDefinitionService.updateAuthorization(
-      baseChallenge.authorization,
-      authorizationUpdateData
-    );
+    baseChallenge.authorization =
+      this.authorizationPolicyService.updateAuthorization(
+        baseChallenge.authorization,
+        authorizationUpdateData
+      );
 
     // propagate authorization rules for child entities
     baseChallenge.context = await this.baseChallengeService.getContext(
       baseChallenge.id,
       repository
     );
-    baseChallenge.context.authorization = this.authorizationDefinitionService.updateAuthorization(
-      baseChallenge.context.authorization,
-      authorizationUpdateData
-    );
+    baseChallenge.context.authorization =
+      this.authorizationPolicyService.updateAuthorization(
+        baseChallenge.context.authorization,
+        authorizationUpdateData
+      );
 
     return baseChallenge;
   }

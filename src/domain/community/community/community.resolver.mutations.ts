@@ -24,13 +24,13 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { UserService } from '@domain/community/user/user.service';
 import { UserGroupService } from '../user-group/user-group.service';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunitySendMessageInput } from './community.dto.send.msg';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationEngine: AuthorizationEngineService,
     private userService: UserService,
     private userGroupService: UserGroupService,
@@ -60,10 +60,11 @@ export class CommunityResolverMutations {
       `create group community: ${community.displayName}`
     );
     const group = await this.communityService.createGroup(groupData);
-    group.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
-      group.authorization,
-      community.authorization
-    );
+    group.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        group.authorization,
+        community.authorization
+      );
     return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
       group
     );
@@ -126,14 +127,15 @@ export class CommunityResolverMutations {
     // Check that the application creation is authorized, after first updating the rules for the community entity
     // so that the current user can also update their details (by creating an application)
     const user = await this.userService.getUserOrFail(applicationData.userID);
-    const authorization = this.authorizationDefinitionService.appendCredentialAuthorizationRule(
-      community.authorization,
-      {
-        type: AuthorizationCredential.UserSelfManagement,
-        resourceID: user.id,
-      },
-      [AuthorizationPrivilege.UPDATE]
-    );
+    const authorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRule(
+        community.authorization,
+        {
+          type: AuthorizationCredential.UserSelfManagement,
+          resourceID: user.id,
+        },
+        [AuthorizationPrivilege.UPDATE]
+      );
 
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
@@ -146,23 +148,25 @@ export class CommunityResolverMutations {
     const application = await this.communityService.createApplication(
       applicationData
     );
-    application.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
-      application.authorization,
-      community.authorization
-    );
+    application.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        application.authorization,
+        community.authorization
+      );
     // also grant the user privileges to manage their own application
-    application.authorization = await this.authorizationDefinitionService.appendCredentialAuthorizationRule(
-      application.authorization,
-      {
-        type: AuthorizationCredential.GlobalRegistered,
-        resourceID: '',
-      },
-      [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ]
-    );
+    application.authorization =
+      await this.authorizationPolicyService.appendCredentialAuthorizationRule(
+        application.authorization,
+        {
+          type: AuthorizationCredential.GlobalRegistered,
+          resourceID: '',
+        },
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ]
+      );
     return await this.applicationService.save(application);
   }
 

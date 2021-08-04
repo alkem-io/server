@@ -7,13 +7,13 @@ import {
   IEcosystemModel,
 } from '@domain/context/ecosystem-model';
 import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class EcosystemModelAuthorizationService {
   constructor(
     private ecosystemModelService: EcosystemModelService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private actorGroupAuthorizationService: ActorGroupAuthorizationService,
     @InjectRepository(EcosystemModel)
     private ecosystemModelRepository: Repository<EcosystemModel>
@@ -25,10 +25,11 @@ export class EcosystemModelAuthorizationService {
     for (const actorGroup of this.ecosystemModelService.getActorGroups(
       ecosystemModel
     )) {
-      actorGroup.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
-        actorGroup.authorization,
-        ecosystemModel.authorization
-      );
+      actorGroup.authorization =
+        await this.authorizationPolicyService.inheritParentAuthorization(
+          actorGroup.authorization,
+          ecosystemModel.authorization
+        );
       await this.actorGroupAuthorizationService.applyAuthorizationPolicy(
         actorGroup,
         ecosystemModel.authorization

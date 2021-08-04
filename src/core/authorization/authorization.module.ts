@@ -1,7 +1,7 @@
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -19,7 +19,7 @@ import { AuthorizationService } from './authorization.service';
     ChallengeModule,
     SsiAgentModule,
     CredentialModule,
-    TypeOrmModule.forFeature([AuthorizationDefinition]),
+    TypeOrmModule.forFeature([AuthorizationPolicy]),
   ],
   providers: [
     AuthorizationService,
