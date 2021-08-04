@@ -3,32 +3,34 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { IActorGroup, ActorGroup } from '@domain/context/actor-group';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class ActorGroupAuthorizationService {
   constructor(
     private actorGroupService: ActorGroupService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(ActorGroup)
     private actorGroupRepository: Repository<ActorGroup>
   ) {}
 
   async applyAuthorizationPolicy(
     actorGroup: IActorGroup,
-    parentAuthorization: IAuthorizationDefinition | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IActorGroup> {
-    actorGroup.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      actorGroup.authorization,
-      parentAuthorization
-    );
+    actorGroup.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        actorGroup.authorization,
+        parentAuthorization
+      );
     // cascade
     for (const actor of this.actorGroupService.getActors(actorGroup)) {
-      actor.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
-        actor.authorization,
-        actorGroup.authorization
-      );
+      actor.authorization =
+        await this.authorizationPolicyService.inheritParentAuthorization(
+          actor.authorization,
+          actorGroup.authorization
+        );
     }
 
     return await this.actorGroupRepository.save(actorGroup);

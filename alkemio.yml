@@ -15,7 +15,7 @@ hosting:
   # The port that the Alkemio server will be listening on.
   # For clusters (e.g. docker-compose, kubernetes) this should also be the port that is used  in the ingress configuration (e.g. traefik).
   # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/graphql)
-  # to the ct-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
+  # to the alkemio-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
   # The graphql port is also used for internal communication between the services inside the e.g. kubernetes cluster.
   #
   port: ${GRAPHQL_ENDPOINT}:4000

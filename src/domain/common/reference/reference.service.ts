@@ -10,13 +10,13 @@ import {
   Reference,
   IReference,
 } from '@domain/common/reference';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '../authorization-definition/authorization.definition.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class ReferenceService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Reference)
     private referenceRepository: Repository<Reference>
   ) {}
@@ -29,7 +29,7 @@ export class ReferenceService {
       referenceInput.uri || '',
       referenceInput.description
     );
-    reference.authorization = new AuthorizationDefinition();
+    reference.authorization = new AuthorizationPolicy();
     await this.referenceRepository.save(reference);
     return reference;
   }
@@ -106,7 +106,7 @@ export class ReferenceService {
     const reference = await this.getReferenceOrFail(referenceID);
 
     if (reference.authorization)
-      await this.authorizationDefinitionService.delete(reference.authorization);
+      await this.authorizationPolicyService.delete(reference.authorization);
 
     const { id } = reference;
     const result = await this.referenceRepository.remove(

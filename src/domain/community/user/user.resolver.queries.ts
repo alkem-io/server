@@ -11,20 +11,21 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
-  private queryAuthorizationDefinition: IAuthorizationDefinition;
+  private queryAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private userService: UserService
   ) {
-    this.queryAuthorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
-      [AuthorizationRoleGlobal.Registered],
-      [AuthorizationPrivilege.READ]
-    );
+    this.queryAuthorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+        [AuthorizationRoleGlobal.Registered],
+        [AuthorizationPrivilege.READ]
+      );
   }
 
   @UseGuards(GraphqlGuard)
@@ -36,7 +37,7 @@ export class UserResolverQueries {
   async users(@CurrentUser() agentInfo: AgentInfo): Promise<IUser[]> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationDefinition,
+      this.queryAuthorizationPolicy,
       `users query: ${agentInfo.email}`
     );
     return await this.userService.getUsers();
@@ -54,7 +55,7 @@ export class UserResolverQueries {
   ): Promise<IUser> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationDefinition,
+      this.queryAuthorizationPolicy,
       `user query: ${agentInfo.email}`
     );
     return await this.userService.getUserOrFail(id);
@@ -72,7 +73,7 @@ export class UserResolverQueries {
   ): Promise<IUser[]> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationDefinition,
+      this.queryAuthorizationPolicy,
       `users query: ${agentInfo.email}`
     );
     const users = await this.userService.getUsers();

@@ -14,19 +14,21 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { OrganisationAuthorizationService } from './organisation.service.authorization';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
-import { OrganisationAuthorizationResetInput } from './dto/organisation.dto.reset.authorization';
+import { UserGroupService } from '../user-group/user-group.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { AssignOrganisationMemberInput } from './dto/organisation.dto.assign.member';
 import { RemoveOrganisationMemberInput } from './dto/organisation.dto.remove.member';
 import { IUser } from '../user/user.interface';
 import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
 import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admin';
+import { OrganisationAuthorizationResetInput } from './dto/organisation.dto.reset.authorization';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private userGroupService: UserGroupService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organisationAuthorizationService: OrganisationAuthorizationService,
     private organisationService: OrganisationService,
@@ -42,14 +44,14 @@ export class OrganisationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('organisationData') organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
-    const authorizationDefinition =
-      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+    const authorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
         [AuthorizationPrivilege.CREATE]
       );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      authorizationDefinition,
+      authorizationPolicy,
       AuthorizationPrivilege.CREATE,
       `create Organisation: ${organisationData.nameID}`
     );
@@ -83,7 +85,7 @@ export class OrganisationResolverMutations {
 
     const group = await this.organisationService.createGroup(groupData);
     group.authorization =
-      await this.authorizationDefinitionService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         group.authorization,
         organisation.authorization
       );

@@ -14,11 +14,11 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationEngine: AuthorizationEngineService,
     private aspectService: AspectService,
     private projectService: ProjectService,

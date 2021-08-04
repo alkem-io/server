@@ -17,14 +17,14 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { IEcoverse } from './ecoverse.interface';
-import { EcoverseAuthorizationResetInput } from './dto/ecoverse.dto.reset.authorization';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
 import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
+import { EcoverseAuthorizationResetInput } from './dto/ecoverse.dto.reset.authorization';
 @Resolver()
 export class EcoverseResolverMutations {
-  private globalAdminAuthorization: IAuthorizationDefinition;
+  private globalAdminAuthorization: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
@@ -33,7 +33,7 @@ export class EcoverseResolverMutations {
     private challengeAuthorizationService: ChallengeAuthorizationService
   ) {
     this.globalAdminAuthorization =
-      this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.Admin],
         [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
       );
@@ -82,10 +82,10 @@ export class EcoverseResolverMutations {
     // ensure working with UUID
     ecoverseData.ID = ecoverse.id;
 
-    if (ecoverseData.authorizationDefinition) {
+    if (ecoverseData.authorizationPolicy) {
       await this.ecoverseAuthorizationService.updateAuthorizationPolicy(
         ecoverse,
-        ecoverseData.authorizationDefinition
+        ecoverseData.authorizationPolicy
       );
     }
 

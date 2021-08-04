@@ -11,7 +11,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { UserAuthorizationService } from './user.service.authorization';
-import { AuthorizationDefinitionModule } from '@domain/common/authorization-definition/authorization.definition.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
@@ -19,7 +19,7 @@ import { AuthorizationDefinitionModule } from '@domain/common/authorization-defi
     CommunicationModule,
     AgentModule,
     NamingModule,
-    AuthorizationDefinitionModule,
+    AuthorizationPolicyModule,
     AuthorizationEngineModule,
     TypeOrmModule.forFeature([User]),
   ],

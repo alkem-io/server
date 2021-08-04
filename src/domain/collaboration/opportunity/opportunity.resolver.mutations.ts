@@ -21,14 +21,14 @@ import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.opt
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
     private relationService: RelationService,
     private projectService: ProjectService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationEngine: AuthorizationEngineService,
     private opportunityService: OpportunityService,
     private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
@@ -94,10 +94,11 @@ export class OpportunityResolverMutations {
       `create project (${projectData.nameID}) on Opportunity: ${opportunity.nameID}`
     );
     const project = await this.opportunityService.createProject(projectData);
-    project.authorization = await this.authorizationDefinitionService.inheritParentAuthorization(
-      project.authorization,
-      opportunity.authorization
-    );
+    project.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        project.authorization,
+        opportunity.authorization
+      );
     return await this.projectService.saveProject(project);
   }
 
@@ -120,10 +121,11 @@ export class OpportunityResolverMutations {
       `create relation: ${opportunity.nameID}`
     );
     const relation = await this.opportunityService.createRelation(relationData);
-    relation.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      relation.authorization,
-      opportunity.authorization
-    );
+    relation.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        relation.authorization,
+        opportunity.authorization
+      );
     return await this.relationService.saveRelation(relation);
   }
 
