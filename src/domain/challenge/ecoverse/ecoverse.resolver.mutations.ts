@@ -17,11 +17,14 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { IEcoverse } from './ecoverse.interface';
-import { EcoverseAuthorizationResetInput } from './ecoverse.dto.reset.authorization';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { IUser } from '@domain/community/user/user.interface';
+import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
+import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
+import { EcoverseAuthorizationResetInput } from './dto/ecoverse.dto.reset.authorization';
 @Resolver()
 export class EcoverseResolverMutations {
-  private globalAdminAuthorization: IAuthorizationDefinition;
+  private globalAdminAuthorization: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
@@ -29,10 +32,11 @@ export class EcoverseResolverMutations {
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService
   ) {
-    this.globalAdminAuthorization = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
-      [AuthorizationRoleGlobal.Admin],
-      [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
-    );
+    this.globalAdminAuthorization =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+        [AuthorizationRoleGlobal.Admin],
+        [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
+      );
   }
 
   @UseGuards(GraphqlGuard)
@@ -78,10 +82,10 @@ export class EcoverseResolverMutations {
     // ensure working with UUID
     ecoverseData.ID = ecoverse.id;
 
-    if (ecoverseData.authorizationDefinition) {
+    if (ecoverseData.authorizationPolicy) {
       await this.ecoverseAuthorizationService.updateAuthorizationPolicy(
         ecoverse,
-        ecoverseData.authorizationDefinition
+        ecoverseData.authorizationPolicy
       );
     }
 
@@ -155,5 +159,47 @@ export class EcoverseResolverMutations {
     return await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
       ecoverse
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Assigns a User as an Ecoverse Admin.',
+  })
+  @Profiling.api
+  async assignUserAsEcoverseAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignEcoverseAdminInput
+  ): Promise<IUser> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      membershipData.ecoverseID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      ecoverse.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user ecoverse admin: ${ecoverse.displayName}`
+    );
+    return await this.ecoverseService.assignEcoverseAdmin(membershipData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Removes a User from being an Ecoverse Admin.',
+  })
+  @Profiling.api
+  async removeUserAsChallengeAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveEcoverseAdminInput
+  ): Promise<IUser> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
+      membershipData.ecoverseID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      ecoverse.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user ecoverse admin: ${ecoverse.displayName}`
+    );
+    return await this.ecoverseService.removeEcoverseAdmin(membershipData);
   }
 }

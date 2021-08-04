@@ -20,7 +20,7 @@ import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { UUID_LENGTH } from '@common/constants';
 import { NamingService } from '@src/services/domain/naming/naming.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class ProjectService {
@@ -39,7 +39,7 @@ export class ProjectService {
   ): Promise<IProject> {
     await this.isNameAvailableOrFail(projectData.nameID, ecoverseID);
     const project: IProject = Project.create(projectData);
-    project.authorization = new AuthorizationDefinition();
+    project.authorization = new AuthorizationPolicy();
     project.ecoverseID = ecoverseID;
 
     await this.projectRepository.save(project);

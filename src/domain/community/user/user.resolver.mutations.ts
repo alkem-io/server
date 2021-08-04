@@ -35,7 +35,8 @@ export class UserResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
-    const authorization = this.userAuthorizationService.createUserAuthorizationDefinition();
+    const authorization =
+      this.userAuthorizationService.createUserAuthorizationPolicy();
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
       authorization,

@@ -19,13 +19,13 @@ import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 import { ConfigService } from '@nestjs/config';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition/authorization.definition.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 
 @Injectable()
 export class AgentService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService,
     private credentialService: CredentialService,
     private ssiAgentService: SsiAgentService,
@@ -36,7 +36,7 @@ export class AgentService {
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
     const agent: IAgent = Agent.create(inputData);
     agent.credentials = [];
-    agent.authorization = new AuthorizationDefinition();
+    agent.authorization = new AuthorizationPolicy();
 
     const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
       .enabled;
@@ -71,7 +71,7 @@ export class AgentService {
       }
     }
     if (agent.authorization)
-      await this.authorizationDefinitionService.delete(agent.authorization);
+      await this.authorizationPolicyService.delete(agent.authorization);
 
     return await this.agentRepository.remove(agent as Agent);
   }
@@ -83,9 +83,8 @@ export class AgentService {
   async findAgentsWithMatchingCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<IAgent[]> {
-    const matchingCredentials = await this.credentialService.findMatchingCredentials(
-      credentialCriteria
-    );
+    const matchingCredentials =
+      await this.credentialService.findMatchingCredentials(credentialCriteria);
 
     const agents: IAgent[] = [];
     for (const match of matchingCredentials) {
@@ -188,9 +187,7 @@ export class AgentService {
   }
 
   async createDidOnAgent(agent: IAgent): Promise<IAgent> {
-    agent.password = Math.random()
-      .toString(36)
-      .substr(2, 10);
+    agent.password = Math.random().toString(36).substr(2, 10);
 
     agent.did = await this.ssiAgentService.createAgent(agent.password);
     return await this.saveAgent(agent);

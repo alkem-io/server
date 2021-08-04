@@ -11,17 +11,17 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import {
-  AuthorizationDefinition,
+  AuthorizationPolicy,
   AuthorizationRuleCredential,
-  IAuthorizationDefinition,
-} from '@domain/common/authorization-definition';
+  IAuthorizationPolicy,
+} from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class UserAuthorizationService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private agentService: AgentService,
     private userService: UserService,
@@ -31,7 +31,7 @@ export class UserAuthorizationService {
 
   async applyAuthorizationPolicy(user: IUser): Promise<IUser> {
     // Ensure always applying from a clean state
-    user.authorization = await this.authorizationDefinitionService.reset(
+    user.authorization = await this.authorizationPolicyService.reset(
       user.authorization
     );
 
@@ -42,28 +42,30 @@ export class UserAuthorizationService {
 
     // cascade
     const profile = this.userService.getProfile(user);
-    profile.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      profile.authorization,
-      user.authorization
-    );
+    profile.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        profile.authorization,
+        user.authorization
+      );
 
     // Allow users to also delete entities within the profile
-    profile.authorization = await this.authorizationDefinitionService.appendCredentialAuthorizationRule(
-      profile.authorization,
-      {
-        type: AuthorizationCredential.UserSelfManagement,
-        resourceID: user.id,
-      },
-      [AuthorizationPrivilege.DELETE]
-    );
-    user.profile = await this.profileAuthorizationService.applyAuthorizationPolicy(
-      profile
-    );
+    profile.authorization =
+      await this.authorizationPolicyService.appendCredentialAuthorizationRule(
+        profile.authorization,
+        {
+          type: AuthorizationCredential.UserSelfManagement,
+          resourceID: user.id,
+        },
+        [AuthorizationPrivilege.DELETE]
+      );
+    user.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(profile);
     user.agent = await this.userService.getAgent(user.id);
-    user.agent.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      user.agent.authorization,
-      user.authorization
-    );
+    user.agent.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        user.agent.authorization,
+        user.authorization
+      );
 
     return await this.userRepository.save(user);
   }
@@ -84,15 +86,15 @@ export class UserAuthorizationService {
   }
 
   // Create an instance for usage in a mutation
-  public createUserAuthorizationDefinition(): IAuthorizationDefinition {
-    const authorization = new AuthorizationDefinition();
+  public createUserAuthorizationPolicy(): IAuthorizationPolicy {
+    const authorization = new AuthorizationPolicy();
     return this.appendCredentialRules(authorization);
   }
 
   private appendCredentialRules(
-    authorization: IAuthorizationDefinition | undefined,
+    authorization: IAuthorizationPolicy | undefined,
     userID?: string
-  ): IAuthorizationDefinition {
+  ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${userID}`,
@@ -139,7 +141,7 @@ export class UserAuthorizationService {
       newRules.push(userSelfAdmin);
     }
 
-    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );

@@ -12,7 +12,7 @@ import { ILifecycle } from './lifecycle.interface';
 import { LifecycleEventInput } from './lifecycle.dto.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class LifecycleService {
@@ -43,7 +43,7 @@ export class LifecycleService {
     lifecycleEventData: LifecycleEventInput,
     options: Partial<MachineOptions<any, any>>,
     agentInfo: AgentInfo,
-    authorization?: IAuthorizationDefinition
+    authorization?: IAuthorizationPolicy
   ): Promise<ILifecycle> {
     const lifecycle = await this.getLifecycleOrFail(lifecycleEventData.ID);
     const eventName = lifecycleEventData.eventName;
@@ -56,8 +56,8 @@ export class LifecycleService {
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
     const restoredState = State.create(restoredStateDef);
 
-    const nextStates = machineWithLifecycle.resolveState(restoredStateDef)
-      .nextEvents;
+    const nextStates =
+      machineWithLifecycle.resolveState(restoredStateDef).nextEvents;
     if (
       !nextStates.find(name => {
         return name === eventName;

@@ -8,9 +8,9 @@ import {
 } from '@common/enums';
 import { Repository } from 'typeorm';
 import {
-  IAuthorizationDefinition,
-  UpdateAuthorizationDefinitionInput,
-} from '@domain/common/authorization-definition';
+  IAuthorizationPolicy,
+  UpdateAuthorizationPolicyInput,
+} from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
@@ -18,8 +18,8 @@ import { ChallengeService } from './challenge.service';
 import {
   AuthorizationRuleCredential,
   AuthorizationRuleVerifiedCredential,
-} from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+} from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
@@ -27,7 +27,7 @@ import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 @Injectable()
 export class ChallengeAuthorizationService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private baseChallengeService: BaseChallengeService,
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private challengeService: ChallengeService,
@@ -38,20 +38,20 @@ export class ChallengeAuthorizationService {
 
   async applyAuthorizationPolicy(
     challenge: IChallenge,
-    parentAuthorization: IAuthorizationDefinition | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
-    challenge.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      challenge.authorization,
-      parentAuthorization
-    );
+    challenge.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        challenge.authorization,
+        parentAuthorization
+      );
     challenge.authorization = this.appendCredentialRules(
       challenge.authorization,
       challenge.id
     );
     // Also update the verified credential rules
-    challenge.authorization.verifiedCredentialRules = await this.appendVerifiedCredentialRules(
-      challenge.id
-    );
+    challenge.authorization.verifiedCredentialRules =
+      await this.appendVerifiedCredentialRules(challenge.id);
 
     // propagate authorization rules for child entities
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
@@ -82,26 +82,27 @@ export class ChallengeAuthorizationService {
     }
 
     if (!challenge.community?.credential) {
-      challenge.community = await this.baseChallengeService.setMembershipCredential(
-        challenge,
-        AuthorizationCredential.ChallengeMember
-      );
+      challenge.community =
+        await this.baseChallengeService.setMembershipCredential(
+          challenge,
+          AuthorizationCredential.ChallengeMember
+        );
     }
 
     return await this.challengeRepository.save(challenge);
   }
 
   private appendCredentialRules(
-    authorization: IAuthorizationDefinition | undefined,
+    authorization: IAuthorizationPolicy | undefined,
     challengeID: string
-  ): IAuthorizationDefinition {
+  ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${challengeID}`,
         LogContext.CHALLENGES
       );
 
-    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       this.createCredentialRules(challengeID)
     );
@@ -151,7 +152,7 @@ export class ChallengeAuthorizationService {
 
   async updateAuthorization(
     challenge: IChallenge,
-    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+    authorizationUpdateData: UpdateAuthorizationPolicyInput
   ): Promise<IChallenge> {
     await this.baseChallengeAuthorizationService.updateAuthorization(
       challenge,
@@ -162,10 +163,11 @@ export class ChallengeAuthorizationService {
     // propagate authorization rules for child entities
     if (challenge.opportunities) {
       for (const opportunity of challenge.opportunities) {
-        opportunity.authorization = this.authorizationDefinitionService.updateAuthorization(
-          opportunity.authorization,
-          authorizationUpdateData
-        );
+        opportunity.authorization =
+          this.authorizationPolicyService.updateAuthorization(
+            opportunity.authorization,
+            authorizationUpdateData
+          );
         await this.opportunityAuthorizationService.updateAuthorization(
           opportunity,
           opportunity.authorization
