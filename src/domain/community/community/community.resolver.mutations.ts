@@ -159,7 +159,7 @@ export class CommunityResolverMutations {
         application.authorization,
         {
           type: AuthorizationCredential.UserSelfManagement,
-          resourceID: applicationData.userID,
+          resourceID: user.id,
         },
         [
           AuthorizationPrivilege.READ,
