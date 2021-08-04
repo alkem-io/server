@@ -133,6 +133,12 @@ export class CommunityService {
       }
     }
 
+    // Remove all issued membership credentials
+    const members = await this.getMembers(community);
+    for (const member of members) {
+      await this.removeMember({ userID: member.id, communityID: community.id });
+    }
+
     if (community.authorization)
       await this.authorizationPolicyService.delete(community.authorization);
 

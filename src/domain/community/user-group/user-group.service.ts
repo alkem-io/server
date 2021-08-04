@@ -82,6 +82,12 @@ export class UserGroupService {
     if (group.authorization)
       await this.authorizationPolicyService.delete(group.authorization);
 
+    // Remove all issued membership credentials
+    const members = await this.getMembers(group.id);
+    for (const member of members) {
+      await this.removeUser({ userID: member.id, groupID: group.id });
+    }
+
     const { id } = group;
     const result = await this.userGroupRepository.remove(group);
     return {
