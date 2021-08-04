@@ -7,12 +7,12 @@ import { EcoverseService } from './ecoverse.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import {
   AuthorizationRuleCredential,
-  IAuthorizationDefinition,
-  UpdateAuthorizationDefinitionInput,
-} from '@domain/common/authorization-definition';
+  IAuthorizationPolicy,
+  UpdateAuthorizationPolicyInput,
+} from '@domain/common/authorization-policy';
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IEcoverse } from './ecoverse.interface';
 import { Ecoverse } from './ecoverse.entity';
 
@@ -20,7 +20,7 @@ import { Ecoverse } from './ecoverse.entity';
 export class EcoverseAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private ecoverseService: EcoverseService,
     @InjectRepository(Ecoverse)
@@ -29,10 +29,10 @@ export class EcoverseAuthorizationService {
 
   async applyAuthorizationPolicy(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Ensure always applying from a clean state
-    ecoverse.authorization = await this.authorizationDefinitionService.reset(
+    ecoverse.authorization = await this.authorizationPolicyService.reset(
       ecoverse.authorization
     );
-    ecoverse.authorization = this.extendAuthorizationDefinition(
+    ecoverse.authorization = this.extendAuthorizationPolicy(
       ecoverse.authorization,
       ecoverse.id
     );
@@ -48,14 +48,15 @@ export class EcoverseAuthorizationService {
         challenge,
         ecoverse.authorization
       );
-      challenge.authorization = await this.authorizationDefinitionService.appendCredentialAuthorizationRule(
-        challenge.authorization,
-        {
-          type: AuthorizationCredential.EcoverseAdmin,
-          resourceID: ecoverse.id,
-        },
-        [AuthorizationPrivilege.DELETE]
-      );
+      challenge.authorization =
+        await this.authorizationPolicyService.appendCredentialAuthorizationRule(
+          challenge.authorization,
+          {
+            type: AuthorizationCredential.EcoverseAdmin,
+            resourceID: ecoverse.id,
+          },
+          [AuthorizationPrivilege.DELETE]
+        );
     }
 
     return await this.ecoverseRepository.save(ecoverse);
@@ -63,7 +64,7 @@ export class EcoverseAuthorizationService {
 
   async updateAuthorizationPolicy(
     ecoverse: IEcoverse,
-    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+    authorizationUpdateData: UpdateAuthorizationPolicyInput
   ): Promise<IEcoverse> {
     await this.baseChallengeAuthorizationService.updateAuthorization(
       ecoverse,
@@ -78,19 +79,20 @@ export class EcoverseAuthorizationService {
         challenge,
         authorizationUpdateData
       );
-      challenge.authorization = this.authorizationDefinitionService.updateAuthorization(
-        challenge.authorization,
-        authorizationUpdateData
-      );
+      challenge.authorization =
+        this.authorizationPolicyService.updateAuthorization(
+          challenge.authorization,
+          authorizationUpdateData
+        );
     }
 
     return await this.ecoverseRepository.save(ecoverse);
   }
 
-  private extendAuthorizationDefinition(
-    authorization: IAuthorizationDefinition | undefined,
+  private extendAuthorizationPolicy(
+    authorization: IAuthorizationPolicy | undefined,
     ecoverseID: string
-  ): IAuthorizationDefinition {
+  ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${ecoverseID}`,
@@ -140,7 +142,7 @@ export class EcoverseAuthorizationService {
     };
     newRules.push(ecoverseMember);
 
-    this.authorizationDefinitionService.appendCredentialAuthorizationRules(
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );

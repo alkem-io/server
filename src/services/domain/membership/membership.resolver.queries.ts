@@ -6,23 +6,24 @@ import { GraphqlGuard } from '@core/authorization';
 import { MembershipUserInput, UserMembership } from './index';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { IAuthorizationDefinition } from '@domain/common/authorization-definition';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AgentInfo } from '@core/authentication';
 import { OrganisationMembership } from './membership.dto.organisation.result';
 import { MembershipOrganisationInput } from './membership.dto.organisation.input';
 
 @Resolver()
 export class MembershipResolverQueries {
-  private membershipAuthorizationDefinition: IAuthorizationDefinition;
+  private membershipAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
     private membershipService: MembershipService
   ) {
-    this.membershipAuthorizationDefinition = this.authorizationEngine.createGlobalRolesAuthorizationDefinition(
-      [AuthorizationRoleGlobal.Registered],
-      [AuthorizationPrivilege.READ]
-    );
+    this.membershipAuthorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+        [AuthorizationRoleGlobal.Registered],
+        [AuthorizationPrivilege.READ]
+      );
   }
 
   @UseGuards(GraphqlGuard)
@@ -37,7 +38,7 @@ export class MembershipResolverQueries {
   ): Promise<UserMembership> {
     await this.authorizationEngine.grantReadAccessOrFail(
       agentInfo,
-      this.membershipAuthorizationDefinition,
+      this.membershipAuthorizationPolicy,
       `membership query: ${agentInfo.email}`
     );
     return await this.membershipService.getUserMemberships(membershipData);

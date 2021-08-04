@@ -23,10 +23,10 @@ import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
 import { RemoveOrganisationMemberInput } from './organisation.dto.remove.member';
 import { AssignOrganisationMemberInput } from './organisation.dto.assign.member';
@@ -34,7 +34,7 @@ import { AssignOrganisationMemberInput } from './organisation.dto.assign.member'
 @Injectable()
 export class OrganisationService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
@@ -50,7 +50,7 @@ export class OrganisationService {
     await this.checkNameIdOrFail(organisationData.nameID);
 
     const organisation: IOrganisation = Organisation.create(organisationData);
-    organisation.authorization = new AuthorizationDefinition();
+    organisation.authorization = new AuthorizationPolicy();
     organisation.profile = await this.profileService.createProfile(
       organisationData.profileData
     );
@@ -135,9 +135,7 @@ export class OrganisationService {
     }
 
     if (organisation.authorization) {
-      await this.authorizationDefinitionService.delete(
-        organisation.authorization
-      );
+      await this.authorizationPolicyService.delete(organisation.authorization);
     }
 
     if (organisation.agent) {

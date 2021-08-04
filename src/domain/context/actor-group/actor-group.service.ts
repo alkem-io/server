@@ -16,13 +16,13 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { CreateActorInput, IActor } from '@domain/context/actor';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class ActorGroupService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private actorService: ActorService,
     @InjectRepository(ActorGroup)
     private actorGroupRepository: Repository<ActorGroup>,
@@ -33,7 +33,7 @@ export class ActorGroupService {
     actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
     const actorGroup = ActorGroup.create(actorGroupData);
-    actorGroup.authorization = new AuthorizationDefinition();
+    actorGroup.authorization = new AuthorizationPolicy();
     actorGroup.actors = [];
     return await this.actorGroupRepository.save(actorGroup);
   }
@@ -49,9 +49,7 @@ export class ActorGroupService {
       }
     }
     if (actorGroup.authorization)
-      await this.authorizationDefinitionService.delete(
-        actorGroup.authorization
-      );
+      await this.authorizationPolicyService.delete(actorGroup.authorization);
 
     const result = await this.actorGroupRepository.remove(
       actorGroup as ActorGroup

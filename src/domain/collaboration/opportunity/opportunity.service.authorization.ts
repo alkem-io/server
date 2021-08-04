@@ -2,31 +2,32 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
-  IAuthorizationDefinition,
-  UpdateAuthorizationDefinitionInput,
-} from '@domain/common/authorization-definition';
+  IAuthorizationPolicy,
+  UpdateAuthorizationPolicyInput,
+} from '@domain/common/authorization-policy';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { IOpportunity } from '..';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class OpportunityAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>
   ) {}
 
   async applyAuthorizationPolicy(
     opportunity: IOpportunity,
-    challengeAuthorization: IAuthorizationDefinition | undefined
+    challengeAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IOpportunity> {
-    opportunity.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-      opportunity.authorization,
-      challengeAuthorization
-    );
+    opportunity.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        opportunity.authorization,
+        challengeAuthorization
+      );
 
     // propagate authorization rules for child entities
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
@@ -35,18 +36,20 @@ export class OpportunityAuthorizationService {
     );
     if (opportunity.projects) {
       for (const project of opportunity.projects) {
-        project.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-          project.authorization,
-          opportunity.authorization
-        );
+        project.authorization =
+          this.authorizationPolicyService.inheritParentAuthorization(
+            project.authorization,
+            opportunity.authorization
+          );
       }
     }
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        relation.authorization = this.authorizationDefinitionService.inheritParentAuthorization(
-          relation.authorization,
-          opportunity.authorization
-        );
+        relation.authorization =
+          this.authorizationPolicyService.inheritParentAuthorization(
+            relation.authorization,
+            opportunity.authorization
+          );
       }
     }
 
@@ -55,7 +58,7 @@ export class OpportunityAuthorizationService {
 
   async updateAuthorization(
     opportunity: IOpportunity,
-    authorizationUpdateData: UpdateAuthorizationDefinitionInput
+    authorizationUpdateData: UpdateAuthorizationPolicyInput
   ): Promise<IOpportunity> {
     await this.baseChallengeAuthorizationService.updateAuthorization(
       opportunity,
@@ -66,18 +69,20 @@ export class OpportunityAuthorizationService {
     // propagate authorization rules for child entities
     if (opportunity.projects) {
       for (const project of opportunity.projects) {
-        project.authorization = this.authorizationDefinitionService.updateAuthorization(
-          project.authorization,
-          authorizationUpdateData
-        );
+        project.authorization =
+          this.authorizationPolicyService.updateAuthorization(
+            project.authorization,
+            authorizationUpdateData
+          );
       }
     }
     if (opportunity.relations) {
       for (const relation of opportunity.relations) {
-        relation.authorization = this.authorizationDefinitionService.updateAuthorization(
-          relation.authorization,
-          authorizationUpdateData
-        );
+        relation.authorization =
+          this.authorizationPolicyService.updateAuthorization(
+            relation.authorization,
+            authorizationUpdateData
+          );
       }
     }
 

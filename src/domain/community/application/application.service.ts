@@ -18,14 +18,14 @@ import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { applicationLifecycleConfig } from '@domain/community/application/application.lifecycle.config';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class ApplicationService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
     private lifecycleService: LifecycleService,
@@ -44,7 +44,7 @@ export class ApplicationService {
       applicationData.userID
     );
 
-    application.authorization = new AuthorizationDefinition();
+    application.authorization = new AuthorizationPolicy();
     // save the user to get the id assigned
     await this.applicationRepository.save(application);
 
@@ -67,9 +67,7 @@ export class ApplicationService {
       }
     }
     if (application.authorization)
-      await this.authorizationDefinitionService.delete(
-        application.authorization
-      );
+      await this.authorizationPolicyService.delete(application.authorization);
 
     const result = await this.applicationRepository.remove(
       application as Application

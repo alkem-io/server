@@ -6,7 +6,7 @@ export class EcoverseAuthorizationResetInput {
   @Field(() => UUID_NAMEID, {
     nullable: false,
     description:
-      'The identifier of the Ecoverse whose AuthorizationDefinition should be reset.',
+      'The identifier of the Ecoverse whose Authorization Policy should be reset.',
   })
   ecoverseID!: string;
 }

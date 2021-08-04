@@ -10,15 +10,15 @@ import { CreateRelationInput } from './relation.dto.create';
 import { Relation } from './relation.entity';
 import { IRelation } from './relation.interface';
 import { DeleteRelationInput } from './relation.dto.delete';
-import { AuthorizationDefinition } from '@domain/common/authorization-definition';
-import { AuthorizationDefinitionService } from '@domain/common/authorization-definition/authorization.definition.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 const allowedRelationTypes = ['incoming', 'outgoing'];
 
 @Injectable()
 export class RelationService {
   constructor(
-    private authorizationDefinitionService: AuthorizationDefinitionService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Relation)
     private relationRepository: Repository<Relation>
   ) {}
@@ -31,7 +31,7 @@ export class RelationService {
         LogContext.CHALLENGES
       );
     const relation = Relation.create(relationData);
-    relation.authorization = new AuthorizationDefinition();
+    relation.authorization = new AuthorizationPolicy();
 
     // to do: set the rest of the fields
     await this.relationRepository.save(relation);
@@ -73,7 +73,7 @@ export class RelationService {
     const relation = await this.getRelationOrFail(relationID);
 
     if (relation.authorization)
-      await this.authorizationDefinitionService.delete(relation.authorization);
+      await this.authorizationPolicyService.delete(relation.authorization);
 
     const { id } = relation;
     const result = await this.relationRepository.remove(relation as Relation);
