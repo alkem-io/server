@@ -122,6 +122,8 @@ export class ChallengeAuthorizationService {
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.DELETE,
       ],
     };
     rules.push(challengeAdmin);
