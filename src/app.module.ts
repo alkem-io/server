@@ -1,8 +1,8 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import {
-  isolateEmail,
-  isolateWebSocketKey,
+  extractEmailSubscriptionContext,
+  extractWebSocketKey,
 } from '@common/utils/connectionContext.utils';
 import configuration from '@config/configuration';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
@@ -12,14 +12,13 @@ import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filte
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { MessageModule } from '@domain/community/message/message.module';
 import { LoggerService, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommunicationModule } from '@services/platform/communication/communication.module';
-import { CommunicationService } from '@services/platform/communication/communication.service';
+import { CommunicationServiceEvents } from '@services/platform/communication/communication.service.events';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { WinstonConfigService } from '@src/config/winston.config';
@@ -96,9 +95,9 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     }),
     GraphQLModule.forRootAsync({
       imports: [CommunicationModule],
-      inject: [CommunicationService, WINSTON_MODULE_NEST_PROVIDER],
+      inject: [CommunicationServiceEvents, WINSTON_MODULE_NEST_PROVIDER],
       useFactory: async (
-        communicationService: CommunicationService,
+        communicationServiceEvents: CommunicationServiceEvents,
         loggerService: LoggerService
       ) => ({
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
@@ -117,10 +116,10 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
         subscriptions: {
           keepAlive: 5000,
           onConnect: async (_, __, context) => {
-            const email = isolateEmail(context);
-            const key = isolateWebSocketKey(context);
+            const email = extractEmailSubscriptionContext(context);
+            const key = extractWebSocketKey(context);
             if (email && key) {
-              await communicationService.startSession(email, key);
+              await communicationServiceEvents.startSession(email, key);
             } else {
               loggerService.warn(
                 `Could not initiate session with [Email: ${email}, SocketKey: ${key}]`,
@@ -129,11 +128,11 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
             }
           },
           onDisconnect: async (_, context) => {
-            const email = isolateEmail(context);
-            const key = isolateWebSocketKey(context);
+            const email = extractEmailSubscriptionContext(context);
+            const key = extractWebSocketKey(context);
 
             if (key) {
-              await communicationService.endSession(key);
+              await communicationServiceEvents.endSession(key);
             } else {
               loggerService.warn(
                 `Could not terminate session with [Email: ${email}, SocketKey: ${key}]`,
@@ -155,7 +154,6 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     MembershipModule,
     KonfigModule,
     IpfsModule,
-    MessageModule,
     SsiAgentModule,
   ],
   controllers: [AppController],

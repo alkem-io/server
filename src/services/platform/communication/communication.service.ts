@@ -1,5 +1,4 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { CommunicationSessionUndefinedException } from '@common/exceptions/communication.session.undefined.exception';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -14,15 +13,7 @@ import { MatrixUserAdapterService } from '../matrix/adapter-user/matrix.user.ada
 import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.interface';
 import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
-import {
-  RoomMonitorFactory,
-  RoomTimelineMonitorFactory,
-} from '../matrix/events/matrix.event.adpater.room';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
-import {
-  MESSAGE_RECEIVED_EVENT,
-  ROOM_INVITATION_RECEIVED_EVENT,
-} from '../subscription/subscription.events';
 import { PUB_SUB } from '../subscription/subscription.module';
 import {
   CommunicationMessageResult,
@@ -389,39 +380,5 @@ export class CommunicationService {
       messages.push(message);
     }
     return messages;
-  }
-
-  async startSession(email: string, key: string) {
-    const client = await this.matrixAgentPool.acquire(email, key);
-
-    if (!key) {
-      throw new CommunicationSessionUndefinedException(
-        'Attempted to start a session without providing a session key',
-        LogContext.COMMUNICATION
-      );
-    }
-
-    client.attach({
-      id: key,
-      roomTimelineMonitor: RoomTimelineMonitorFactory.create(
-        this.matrixUserAdapterService,
-        message => {
-          this.subscriptionHandler.publish(MESSAGE_RECEIVED_EVENT, message);
-        }
-      ),
-      roomMonitor: RoomMonitorFactory.create(message => {
-        this.subscriptionHandler.publish(
-          ROOM_INVITATION_RECEIVED_EVENT,
-          message
-        );
-      }),
-    });
-  }
-
-  async endSession(key: string) {
-    const client = await this.matrixAgentPool.acquireSession(key);
-    // the user might have opened connections on multiple clients
-    client.detach(key);
-    this.matrixAgentPool.releaseSession(key);
   }
 }

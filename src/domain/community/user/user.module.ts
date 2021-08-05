@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '@domain/community/user';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
+import { UserResolverSubscriptions } from './user.resolver.subscriptions';
 import { CommunicationModule } from '@src/services/platform/communication/communication.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
@@ -31,6 +32,7 @@ import { SubscriptionModule } from '@services/platform/subscription/subscription
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
+    UserResolverSubscriptions,
   ],
   exports: [UserService, UserAuthorizationService],
 })

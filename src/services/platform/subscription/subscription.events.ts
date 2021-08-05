@@ -1,2 +1,2 @@
-export const MESSAGE_RECEIVED_EVENT = 'messageReceived';
-export const ROOM_INVITATION_RECEIVED_EVENT = 'roomInvitationReceived';
+export const COMMUNICATION_MESSAGE_RECEIVED = 'communicationMessageReceived';
+export const ROOM_INVITATION_RECEIVED = 'roomInvitationReceived';

@@ -75,7 +75,7 @@ export class RoomMonitorFactory {
       error: noop,
       next: async ({ room }: { room: MatrixRoom }) => {
         onMessageReceived({
-          roomId: room.roomId,
+          roomId: room?.roomId,
         });
       },
     };
