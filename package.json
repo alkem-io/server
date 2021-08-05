@@ -74,7 +74,7 @@
     "replace-special-characters": "^1.2.5",
     "rimraf": "^3.0.2",
     "rxjs": "^7.3.0",
-    "sqlite3": "^4.2.0",
+    "sqlite3": "^5.0.2",
     "typeorm": "^0.2.35",
     "winston": "^3.3.3",
     "winston-elasticsearch": "^0.15.8",
