@@ -19,17 +19,17 @@ export class MatrixUserAdapterService {
     password = 'generated_password'
   ): IMatrixUser {
     return {
-      name: this.email2username(email),
-      username: this.email2id(email),
+      name: this.convertEmailToMatrixUsername(email),
+      username: this.convertEmailToMatrixId(email),
       password: password,
     };
   }
 
-  email2username(email: string) {
+  convertEmailToMatrixUsername(email: string) {
     return email.replace(this.mailRegex, '=');
   }
 
-  username2id(username: string) {
+  convertMatrixUsernameToMatrixId(username: string) {
     const homeserverName = this.configService.get(
       ConfigurationTypes.Communications
     )?.matrix?.homeserver_name;
@@ -37,16 +37,18 @@ export class MatrixUserAdapterService {
     return `@${username}:${homeserverName}`;
   }
 
-  email2id(email: string) {
-    return this.username2id(this.email2username(email));
+  convertEmailToMatrixId(email: string) {
+    return this.convertMatrixUsernameToMatrixId(
+      this.convertEmailToMatrixUsername(email)
+    );
   }
 
-  username2email(username: string) {
+  convertMatrixUsernameToEmail(username: string) {
     return username.replace(/[=]/g, '@');
   }
 
-  id2email(id: string) {
-    return this.username2email(id.replace('@', '').split(':')[0]);
+  convertMatrixIdToEmail(id: string) {
+    return this.convertMatrixUsernameToEmail(id.replace('@', '').split(':')[0]);
   }
 
   logMatrixUser(matrixUser: Partial<IMatrixUser>, msg?: string) {

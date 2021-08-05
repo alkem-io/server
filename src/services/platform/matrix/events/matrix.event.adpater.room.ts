@@ -52,7 +52,9 @@ export class RoomTimelineMonitorFactory {
       next: async ({ event, room }: RoomTimelineEvent) => {
         const message = convertFromMatrixMessage(
           event,
-          matrixUserAdapterService.id2email.bind(matrixUserAdapterService)
+          matrixUserAdapterService.convertMatrixIdToEmail.bind(
+            matrixUserAdapterService
+          )
         );
 
         if (message) {

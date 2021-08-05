@@ -148,7 +148,8 @@ export class MatrixUserManagementService {
   }
 
   async isRegistered(email: string): Promise<boolean> {
-    const username = this.matrixUserAdapterService.email2username(email);
+    const username =
+      this.matrixUserAdapterService.convertEmailToMatrixUsername(email);
 
     try {
       await this._matrixClient.isUsernameAvailable(username);

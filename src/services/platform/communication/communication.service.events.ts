@@ -10,7 +10,7 @@ import {
 } from '../matrix/events/matrix.event.adpater.room';
 import {
   COMMUNICATION_MESSAGE_RECEIVED,
-  ROOM_INVITATION_RECEIVED,
+  MATRIX_ROOM_JOINED,
 } from '../subscription/subscription.events';
 import { PUB_SUB } from '../subscription/subscription.module';
 
@@ -45,7 +45,7 @@ export class CommunicationServiceEvents {
         }
       ),
       roomMonitor: RoomMonitorFactory.create(message => {
-        this.subscriptionHandler.publish(ROOM_INVITATION_RECEIVED, message);
+        this.subscriptionHandler.publish(MATRIX_ROOM_JOINED, message);
       }),
     });
   }

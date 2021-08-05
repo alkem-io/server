@@ -228,7 +228,8 @@ export class CommunicationService {
     if (!this.enabled) {
       return '';
     }
-    const matrixUsername = this.matrixUserAdapterService.email2id(email);
+    const matrixUsername =
+      this.matrixUserAdapterService.convertEmailToMatrixId(email);
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     // first send invites to the room - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
@@ -326,7 +327,9 @@ export class CommunicationService {
       );
     if (mappedDirectRoomId) {
       const emailReceiver =
-        this.matrixUserAdapterService.id2email(mappedDirectRoomId);
+        this.matrixUserAdapterService.convertMatrixIdToEmail(
+          mappedDirectRoomId
+        );
       await this.convertMatrixRoomToDirectRoom(matrixRoom, emailReceiver);
     }
     return await this.convertMatrixRoomToCommunityRoom(matrixRoom);
@@ -343,8 +346,7 @@ export class CommunicationService {
         matrixRoom.timeline
       );
     }
-    roomResult.receiverID =
-      this.matrixUserAdapterService.id2email(emailReceiver);
+    roomResult.receiverID = emailReceiver;
     return roomResult;
   }
 
@@ -369,7 +371,7 @@ export class CommunicationService {
     for (const timelineMessage of timeline) {
       const message = convertFromMatrixMessage(
         timelineMessage,
-        this.matrixUserAdapterService.id2email.bind(
+        this.matrixUserAdapterService.convertMatrixIdToEmail.bind(
           this.matrixUserAdapterService
         )
       );

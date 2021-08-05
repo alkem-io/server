@@ -8,8 +8,6 @@ type Subscriptions = Exclude<
 type OnConnect = Exclude<Subscriptions['onConnect'], undefined>;
 type Context = Parameters<OnConnect>[2];
 
-// type JwtPayload = Exclude<ReturnType<typeof decode>, string | null>;
-
 export function extractEmailSubscriptionContext(
   context: Context
 ): string | undefined {

@@ -1,16 +1,15 @@
-import { IUser } from '@domain/community/user';
 import { Inject } from '@nestjs/common';
 import { Resolver, Subscription } from '@nestjs/graphql';
 import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
 import { RoomInvitationReceived } from '@services/platform/communication/communication.dto.room.invitation.received';
 import {
   COMMUNICATION_MESSAGE_RECEIVED,
-  ROOM_INVITATION_RECEIVED,
+  MATRIX_ROOM_JOINED,
 } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'apollo-server-express';
 
-@Resolver(() => IUser)
+@Resolver()
 export class UserResolverSubscriptions {
   constructor(@Inject(PUB_SUB) private pubSub: PubSub) {}
 
@@ -29,6 +28,6 @@ export class UserResolverSubscriptions {
     },
   })
   roomNotificationReceived() {
-    return this.pubSub.asyncIterator(ROOM_INVITATION_RECEIVED);
+    return this.pubSub.asyncIterator(MATRIX_ROOM_JOINED);
   }
 }

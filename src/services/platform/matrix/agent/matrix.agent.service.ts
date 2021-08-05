@@ -31,7 +31,11 @@ export class MatrixAgentService {
     operator: IOperationalMatrixUser
   ): Promise<MatrixAgent> {
     const matrixClient = await this.createMatrixClient(operator);
-    return new MatrixAgent(matrixClient, this.matrixRoomAdapterService);
+    return new MatrixAgent(
+      matrixClient,
+      this.matrixRoomAdapterService,
+      this.logger
+    );
   }
 
   async createMatrixClient(
@@ -93,7 +97,8 @@ export class MatrixAgentService {
     const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(matrixClient);
     for (const userID of Object.keys(dmRoomMap)) {
       const room = await this.getRoom(matrixAgent, dmRoomMap[userID][0]);
-      room.receiverEmail = this.matrixUserAdapterService.id2email(userID);
+      room.receiverEmail =
+        this.matrixUserAdapterService.convertMatrixIdToEmail(userID);
       room.isDirect = true;
       rooms.push(room);
     }
@@ -127,7 +132,7 @@ export class MatrixAgentService {
     if (directRoom) return directRoom.roomId;
 
     // Room does not exist, create...
-    const matrixUsername = this.matrixUserAdapterService.email2id(
+    const matrixUsername = this.matrixUserAdapterService.convertEmailToMatrixId(
       msgRequest.email
     );
 
@@ -166,7 +171,8 @@ export class MatrixAgentService {
     matrixAgent: IMatrixAgent,
     userEmail: string
   ): Promise<MatrixRoom | undefined> {
-    const matrixUsername = this.matrixUserAdapterService.email2id(userEmail);
+    const matrixUsername =
+      this.matrixUserAdapterService.convertEmailToMatrixId(userEmail);
     // Need to implement caching for performance
     const dmRoomIds = this.matrixRoomAdapterService.dmRooms(
       matrixAgent.matrixClient
