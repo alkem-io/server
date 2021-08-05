@@ -1,0 +1,10 @@
+subscription {
+  messageReceived {
+    roomId,
+    message {
+      id,
+      message,
+      sender
+    }
+  }
+}

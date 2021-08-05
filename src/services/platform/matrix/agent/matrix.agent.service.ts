@@ -31,7 +31,11 @@ export class MatrixAgentService {
     operator: IOperationalMatrixUser
   ): Promise<MatrixAgent> {
     const matrixClient = await this.createMatrixClient(operator);
-    return new MatrixAgent(matrixClient, this.matrixRoomAdapterService);
+    return new MatrixAgent(
+      matrixClient,
+      this.matrixRoomAdapterService,
+      this.logger
+    );
   }
 
   async createMatrixClient(
@@ -63,14 +67,24 @@ export class MatrixAgentService {
       matrixClient
     );
     for (const groupID of Object.keys(communityMap)) {
-      const room = await this.getRoom(matrixAgent, communityMap[groupID][0]);
-      room.isDirect = true;
-      // const communityRoom = new MatrixRoom();
-      // communityRoom.roomId = communityMap[groupID][0];
-      // communityRoom.isDirect = false;
-      // const room = await this.getRoom(matrixAgent, communityRoom.roomId);
-      // communityRoom.timeline = room.timeline;
-      rooms.push(room);
+      const roomIds = communityMap[groupID] || [];
+
+      for (const roomId of roomIds) {
+        try {
+          const room = await this.getRoom(matrixAgent, roomId);
+          room.isDirect = false;
+          rooms.push(room);
+        } catch (error) {
+          // We can cause a lot of damage with the exception thrown in getRoom
+          // There are cases where the room exists but the user is not yet invited to it.
+          // Because of one missing room the user might not be able to access none of them.
+          // Need to decide on an approach
+          this.logger.warn(
+            `A room with ID [${roomId}] is not longer present. This might be due to erroneous state.`,
+            LogContext.COMMUNICATION
+          );
+        }
+      }
     }
     return rooms;
   }
@@ -83,13 +97,9 @@ export class MatrixAgentService {
     const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(matrixClient);
     for (const userID of Object.keys(dmRoomMap)) {
       const room = await this.getRoom(matrixAgent, dmRoomMap[userID][0]);
-      room.receiverEmail = this.matrixUserAdapterService.id2email(userID);
+      room.receiverEmail =
+        this.matrixUserAdapterService.convertMatrixIdToEmail(userID);
       room.isDirect = true;
-      // directRoom.roomId = dmRoomMap[userID][0];
-      // directRoom.isDirect = true;
-      // directRoom.receiverEmail = this.matrixUserAdapterService.id2email(userID);
-      // const room = await this.getRoom(matrixAgent, directRoom.roomId);
-      // directRoom.timeline = room.timeline;
       rooms.push(room);
     }
     return rooms;
@@ -122,7 +132,7 @@ export class MatrixAgentService {
     if (directRoom) return directRoom.roomId;
 
     // Room does not exist, create...
-    const matrixUsername = this.matrixUserAdapterService.email2id(
+    const matrixUsername = this.matrixUserAdapterService.convertEmailToMatrixId(
       msgRequest.email
     );
 
@@ -161,7 +171,8 @@ export class MatrixAgentService {
     matrixAgent: IMatrixAgent,
     userEmail: string
   ): Promise<MatrixRoom | undefined> {
-    const matrixUsername = this.matrixUserAdapterService.email2id(userEmail);
+    const matrixUsername =
+      this.matrixUserAdapterService.convertEmailToMatrixId(userEmail);
     // Need to implement caching for performance
     const dmRoomIds = this.matrixRoomAdapterService.dmRooms(
       matrixAgent.matrixClient

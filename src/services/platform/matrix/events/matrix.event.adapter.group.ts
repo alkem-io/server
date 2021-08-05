@@ -1,13 +1,15 @@
+import { LoggerService } from '@nestjs/common';
 import { MatrixClient } from '../types/matrix.client.type';
 import { IMatrixEventHandler } from './matrix.event.dispatcher';
 
-const noop = function() {
+const noop = function () {
   // empty
 };
 
 export class AutoAcceptGroupMembershipMonitorFactory {
   static create(
-    client: MatrixClient
+    client: MatrixClient,
+    logger: LoggerService
   ): IMatrixEventHandler['groupMyMembershipMonitor'] {
     return {
       complete: noop,
@@ -19,10 +21,10 @@ export class AutoAcceptGroupMembershipMonitorFactory {
               group.groupId /* There are additional options, but not documented... saw that some are used in synapse */
             );
           } catch (ex) {
-            console.info(
-              'Suppressing exception when user is invited to a non-public group resulting in failure'
+            logger.error(
+              'Suppressing exception when user is invited to a non-public group resulting in failure',
+              ex
             );
-            console.error(ex);
           }
         }
       },
