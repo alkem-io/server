@@ -136,6 +136,15 @@ export class OrganisationService {
       }
     }
 
+    // Remove all issued membership credentials
+    const members = await this.getMembers(organisation);
+    for (const member of members) {
+      await this.removeMember({
+        userID: member.id,
+        organisationID: organisation.id,
+      });
+    }
+
     if (organisation.authorization) {
       await this.authorizationPolicyService.delete(organisation.authorization);
     }
@@ -196,12 +205,12 @@ export class OrganisationService {
     return organisation;
   }
 
-  async getOrganisations(): Promise<Organisation[]> {
+  async getOrganisations(): Promise<IOrganisation[]> {
     const organisations = await this.organisationRepository.find();
     return organisations || [];
   }
 
-  async getMembers(organisation: Organisation): Promise<IUser[]> {
+  async getMembers(organisation: IOrganisation): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
       type: AuthorizationCredential.OrganisationMember,
       resourceID: organisation.id,
