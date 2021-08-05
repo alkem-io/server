@@ -85,7 +85,7 @@ export class CommunityResolverMutations {
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
       community.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.GRANT,
       `assign user community: ${community.displayName}`
     );
     return await this.communityService.assignMember(membershipData);
@@ -106,7 +106,7 @@ export class CommunityResolverMutations {
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
       community.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.GRANT,
       `remove user community: ${community.displayName}`
     );
     return await this.communityService.removeMember(membershipData);
@@ -158,8 +158,8 @@ export class CommunityResolverMutations {
       await this.authorizationPolicyService.appendCredentialAuthorizationRule(
         application.authorization,
         {
-          type: AuthorizationCredential.GlobalRegistered,
-          resourceID: '',
+          type: AuthorizationCredential.UserSelfManagement,
+          resourceID: user.id,
         },
         [
           AuthorizationPrivilege.READ,
