@@ -20,12 +20,15 @@ import { LogContext } from '@common/enums';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { Canvas } from '@domain/common/canvas';
 
 @Injectable()
 export class EcosystemModelService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private actorGroupService: ActorGroupService,
+    private canvasService: CanvasService,
     @InjectRepository(EcosystemModel)
     private ecosystemModelRepository: Repository<EcosystemModel>
   ) {}
@@ -38,6 +41,7 @@ export class EcosystemModelService {
     ecosystemModel.authorization = new AuthorizationPolicy();
     await this.createRestrictedActorGroups(ecosystemModel);
     ecosystemModel.actorGroups = [];
+    ecosystemModel.canvas = new Canvas();
     return await this.ecosystemModelRepository.save(ecosystemModel);
   }
 
@@ -60,7 +64,13 @@ export class EcosystemModelService {
     ecosystemModelInput: UpdateEcosystemModelInput
   ): Promise<IEcosystemModel> {
     ecosystemModel.description = ecosystemModelInput.description;
-    return await this.ecosystemModelRepository.save(EcosystemModel);
+    if (ecosystemModelInput.canvas) {
+      ecosystemModelInput.canvas = this.canvasService.updateCanvas(
+        ecosystemModel.canvas,
+        ecosystemModelInput.canvas
+      );
+    }
+    return await this.ecosystemModelRepository.save(ecosystemModel);
   }
 
   async deleteEcosystemModel(
@@ -81,6 +91,9 @@ export class EcosystemModelService {
       await this.authorizationPolicyService.delete(
         ecosystemModel.authorization
       );
+
+    if (ecosystemModel.canvas)
+      await this.canvasService.deleteCanvas(ecosystemModel.canvas.id);
 
     return await this.ecosystemModelRepository.remove(
       ecosystemModel as EcosystemModel

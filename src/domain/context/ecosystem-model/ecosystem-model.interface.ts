@@ -1,3 +1,4 @@
+import { ICanvas } from '@domain/common/canvas';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
@@ -15,6 +16,12 @@ export abstract class IEcosystemModel extends IAuthorizable {
     description: 'A list of ActorGroups',
   })
   actorGroups?: IActorGroup[];
+
+  @Field(() => ICanvas, {
+    nullable: true,
+    description: 'The Canvas for visualizing this EcosystemModel.',
+  })
+  canvas?: ICanvas;
 
   restrictedActorGroupNames!: string[];
 }

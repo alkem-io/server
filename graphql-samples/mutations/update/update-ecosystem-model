@@ -1,0 +1,17 @@
+mutation updateEcosystemModel($ecosystemModelData: UpdateEcosystemModelInput!) {
+  updateEcosystemModel(ecosystemModelData: $ecosystemModelData)
+  {
+    id
+  }
+}
+
+Variables:
+{
+  "ecosystemModelData": {
+    "ID": "uuid",
+    "description": "some description",
+    "canvas": {
+      "value": "http://someUri"
+    }
+  }
+}
