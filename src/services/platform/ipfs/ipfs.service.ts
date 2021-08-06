@@ -5,23 +5,26 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import { ReadStream } from 'fs';
-const IpfsHttpClient = require('ipfs-http-client');
+const { create } = require('ipfs-http-client');
 
 @Injectable()
 export class IpfsService {
-  constructor(private configService: ConfigService) {}
+  private ipfsEndpoint = '';
+  private ipfsClientEndpoint = '';
+  constructor(private configService: ConfigService) {
+    this.ipfsEndpoint = this.configService.get(
+      ConfigurationTypes.Storage
+    )?.ipfs?.endpoint;
+    this.ipfsClientEndpoint = this.configService.get(
+      ConfigurationTypes.Storage
+    )?.ipfs?.clientEndpoint;
+  }
 
   public async uploadFile(filePath: string) {
-    const ipfsClient = new IpfsHttpClient(
-      new URL(
-        this.configService.get(ConfigurationTypes.Storage)?.ipfs?.endpoint
-      )
-    );
+    const ipfsClient = create(new URL(this.ipfsEndpoint));
     const image = fs.readFileSync(filePath);
     const res = await ipfsClient.add(image, { pin: true });
-    return `${
-      this.configService.get(ConfigurationTypes.Storage)?.ipfs?.clientEndpoint
-    }/${res.cid.string}`;
+    return `${this.ipfsClientEndpoint}/${res.cid.string}`;
   }
 
   public async uploadFileFromStream(stream: ReadStream): Promise<string> {
@@ -30,15 +33,9 @@ export class IpfsService {
   }
 
   public async uploadFileFromBuffer(buffer: Buffer): Promise<string> {
-    const ipfsClient = new IpfsHttpClient(
-      new URL(
-        this.configService.get(ConfigurationTypes.Storage)?.ipfs?.endpoint
-      )
-    );
+    const ipfsClient = create(new URL(this.ipfsEndpoint));
 
     const res = await ipfsClient.add(buffer, { pin: true });
-    return `${
-      this.configService.get(ConfigurationTypes.Storage)?.ipfs?.clientEndpoint
-    }/${res.cid.string}`;
+    return `${this.ipfsClientEndpoint}/${res.cid.string}`;
   }
 }
