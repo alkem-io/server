@@ -35,9 +35,9 @@ export class UserAuthorizationService {
       user.authorization
     );
 
-    user.authorization = this.appendCredentialRules(
+    user.authorization = await this.appendCredentialRules(
       user.authorization,
-      user.id
+      user
     );
 
     // cascade
@@ -88,18 +88,12 @@ export class UserAuthorizationService {
   // Create an instance for usage in a mutation
   public createUserAuthorizationPolicy(): IAuthorizationPolicy {
     const authorization = new AuthorizationPolicy();
-    return this.appendCredentialRules(authorization);
+    return this.appendGlobalCredentialRules(authorization);
   }
 
-  private appendCredentialRules(
-    authorization: IAuthorizationPolicy | undefined,
-    userID?: string
+  private appendGlobalCredentialRules(
+    authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${userID}`,
-        LogContext.COMMUNITY
-      );
     const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
@@ -128,17 +122,62 @@ export class UserAuthorizationService {
     };
     newRules.push(communityAdmin);
 
-    if (userID) {
-      const userSelfAdmin = {
-        type: AuthorizationCredential.UserSelfManagement,
-        resourceID: userID,
-        grantedPrivileges: [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-        ],
-      };
-      newRules.push(userSelfAdmin);
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
+  }
+
+  private async appendCredentialRules(
+    authorization: IAuthorizationPolicy | undefined,
+    user: IUser
+  ): Promise<IAuthorizationPolicy> {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+
+    // add the global role rules
+    this.appendGlobalCredentialRules(authorization);
+
+    // add the rules dependent on the user
+    const newRules: AuthorizationRuleCredential[] = [];
+
+    const userSelfAdmin = {
+      type: AuthorizationCredential.UserSelfManagement,
+      resourceID: user.id,
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+      ],
+    };
+    newRules.push(userSelfAdmin);
+
+    // Get the agent + credentials + grant access for ecoverse / challenge admins read only
+    const { credentials } = await this.userService.getUserAndCredentials(
+      user.id
+    );
+    for (const credential of credentials) {
+      // Grant read access to Ecoverse Admins for ecoverses the user is a member of
+      if (credential.type === AuthorizationCredential.EcoverseMember) {
+        const ecoverseAdmin = {
+          type: AuthorizationCredential.EcoverseAdmin,
+          resourceID: credential.resourceID,
+          grantedPrivileges: [AuthorizationPrivilege.READ],
+        };
+        newRules.push(ecoverseAdmin);
+      } else if (credential.type === AuthorizationCredential.ChallengeMember) {
+        const challengeAdmin = {
+          type: AuthorizationCredential.ChallengeAdmin,
+          resourceID: credential.resourceID,
+          grantedPrivileges: [AuthorizationPrivilege.READ],
+        };
+        newRules.push(challengeAdmin);
+      }
     }
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
