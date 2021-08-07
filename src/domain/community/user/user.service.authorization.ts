@@ -177,6 +177,15 @@ export class UserAuthorizationService {
           grantedPrivileges: [AuthorizationPrivilege.READ],
         };
         newRules.push(challengeAdmin);
+      } else if (
+        credential.type === AuthorizationCredential.OrganisationMember
+      ) {
+        const challengeAdmin = {
+          type: AuthorizationCredential.OrganisationAdmin,
+          resourceID: credential.resourceID,
+          grantedPrivileges: [AuthorizationPrivilege.READ],
+        };
+        newRules.push(challengeAdmin);
       }
     }
 
