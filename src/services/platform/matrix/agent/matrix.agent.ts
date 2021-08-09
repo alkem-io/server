@@ -8,6 +8,7 @@ import { AutoAcceptRoomMembershipMonitorFactory } from '@src/services/platform/m
 import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
 import { IMatrixAgent } from './matrix.agent.interface';
+import { LoggerService } from '@nestjs/common';
 
 // Wraps an instance of the client sdk
 export class MatrixAgent implements IMatrixAgent, Disposable {
@@ -17,7 +18,8 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
   constructor(
     matrixClient: MatrixClient,
-    roomAdapterService: MatrixRoomAdapterService
+    roomAdapterService: MatrixRoomAdapterService,
+    private loggerService: LoggerService
   ) {
     this.matrixClient = matrixClient;
     this.eventDispatcher = new MatrixEventDispatcher(this.matrixClient);
@@ -48,12 +50,14 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
     this.attach({
       id: 'root',
-      roomMemberMembershipMonitor: AutoAcceptRoomMembershipMonitorFactory.create(
-        this.matrixClient,
-        this.roomAdapterService
-      ),
+      roomMemberMembershipMonitor:
+        AutoAcceptRoomMembershipMonitorFactory.create(
+          this.matrixClient,
+          this.roomAdapterService
+        ),
       groupMyMembershipMonitor: AutoAcceptGroupMembershipMonitorFactory.create(
-        this.matrixClient
+        this.matrixClient,
+        this.loggerService
       ),
     });
 

@@ -6,12 +6,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '@domain/community/user';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
+import { UserResolverSubscriptions } from './user.resolver.subscriptions';
 import { CommunicationModule } from '@src/services/platform/communication/communication.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { UserAuthorizationService } from './user.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { SubscriptionModule } from '@services/platform/subscription/subscription.module';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     AuthorizationPolicyModule,
     AuthorizationEngineModule,
     TypeOrmModule.forFeature([User]),
+    SubscriptionModule,
   ],
   providers: [
     UserService,
@@ -29,6 +32,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
+    UserResolverSubscriptions,
   ],
   exports: [UserService, UserAuthorizationService],
 })

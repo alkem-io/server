@@ -1,34 +1,36 @@
-import { LoggerService, Module, MiddlewareConsumer } from '@nestjs/common';
-import { ConfigService, ConfigModule } from '@nestjs/config';
+import { ConfigurationTypes, LogContext } from '@common/enums';
+import { ValidationPipe } from '@common/pipes/validation.pipe';
+import {
+  extractEmailSubscriptionContext,
+  extractWebSocketKey,
+} from '@common/utils/connectionContext.utils';
+import configuration from '@config/configuration';
+import { AuthenticationModule } from '@core/authentication/authentication.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
+import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
+import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
+import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
+import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import { LoggerService, MiddlewareConsumer, Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { join } from 'path';
-import { WinstonModule } from 'nest-winston';
-import { decode } from 'jsonwebtoken';
-import { ValidationPipe } from '@common/pipes/validation.pipe';
-import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
-import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AuthenticationModule } from '@core/authentication/authentication.module';
-import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
-import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { MessageModule } from '@domain/community/message/message.module';
+import { CommunicationModule } from '@services/platform/communication/communication.module';
+import { CommunicationServiceEvents } from '@services/platform/communication/communication.service.events';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
-import { DataManagementModule } from '@src/services/domain/data-management/data-management.module';
-import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { WinstonConfigService } from '@src/config/winston.config';
+import { DataManagementModule } from '@src/services/domain/data-management/data-management.module';
+import { MembershipModule } from '@src/services/domain/membership/membership.module';
 import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
+import { SearchModule } from '@src/services/domain/search/search.module';
 import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
 import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
-import configuration from '@config/configuration';
-import { SearchModule } from '@src/services/domain/search/search.module';
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { MembershipModule } from '@src/services/domain/membership/membership.module';
-import { MatrixAgentPool } from './services/platform/matrix/agent-pool/matrix.agent.pool';
-import { MatrixAgentPoolModule } from './services/platform/matrix/agent-pool/matrix.agent.pool.module';
+import { WinstonModule, WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { join } from 'path';
 import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
-import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 
 @Module({
   imports: [
@@ -92,11 +94,11 @@ import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middlew
       useClass: WinstonConfigService,
     }),
     GraphQLModule.forRootAsync({
-      imports: [MatrixAgentPoolModule],
-      inject: [MatrixAgentPool],
+      imports: [CommunicationModule],
+      inject: [CommunicationServiceEvents, WINSTON_MODULE_NEST_PROVIDER],
       useFactory: async (
-        communicationPool: MatrixAgentPool,
-        logger: LoggerService
+        communicationServiceEvents: CommunicationServiceEvents,
+        loggerService: LoggerService
       ) => ({
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
@@ -113,41 +115,27 @@ import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middlew
         installSubscriptionHandlers: true,
         subscriptions: {
           keepAlive: 5000,
-          onConnect: async (connectionParams, websocket, context) => {
-            // TODO Kolec
-            const jwtToken = (connectionParams as any).authToken;
-            if (jwtToken) {
-              const { email } = decode(jwtToken) as any;
-              const session = context.request.headers['sec-websocket-key'];
-              const sessionKey = Array.isArray(session) ? session[0] : session;
-              const client = await communicationPool.acquire(email, sessionKey);
-
-              if (sessionKey) {
-                client.attach({
-                  id: sessionKey,
-                });
-                logger.verbose?.(
-                  `Connecting: ${email} - ${
-                    context.request.headers['sec-websocket-key']
-                  }: ${(connectionParams as any)['authToken']}`,
-                  LogContext.COMMUNICATION
-                );
-              }
+          onConnect: async (_, __, context) => {
+            const email = extractEmailSubscriptionContext(context);
+            const key = extractWebSocketKey(context);
+            if (email && key) {
+              await communicationServiceEvents.startSession(email, key);
+            } else {
+              loggerService.warn(
+                `Could not initiate session with [Email: ${email}, SocketKey: ${key}]`,
+                LogContext.COMMUNICATION
+              );
             }
           },
-          onDisconnect: async (websocket, context) => {
-            const session = context.request.headers['sec-websocket-key'];
-            const sessionKey = Array.isArray(session) ? session[0] : session;
+          onDisconnect: async (_, context) => {
+            const email = extractEmailSubscriptionContext(context);
+            const key = extractWebSocketKey(context);
 
-            if (!sessionKey) {
-              return;
-            }
-
-            const client = await communicationPool.acquireSession(sessionKey);
-            if (client) {
-              client.detach(sessionKey);
-              logger.verbose?.(
-                `Disconnecting: ${context.request.headers['sec-websocket-key']}`,
+            if (key) {
+              await communicationServiceEvents.endSession(key);
+            } else {
+              loggerService.warn(
+                `Could not terminate session with [Email: ${email}, SocketKey: ${key}]`,
                 LogContext.COMMUNICATION
               );
             }
@@ -166,7 +154,6 @@ import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middlew
     MembershipModule,
     KonfigModule,
     IpfsModule,
-    MessageModule,
     SsiAgentModule,
   ],
   controllers: [AppController],

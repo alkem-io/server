@@ -7,7 +7,7 @@ import {
   UpdateProfileInput,
   UploadProfileAvatarInput,
 } from '@domain/community/profile';
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { PubSub } from 'apollo-server-express';
 import { Args, Mutation, Resolver, Subscription } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -20,16 +20,19 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { USER_AVATAR_UPLOADED } from '@services/platform/subscription/subscription.events';
 
 @Resolver()
 export class ProfileResolverMutations {
-  pubSub = new PubSub();
   constructor(
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationEngine: AuthorizationEngineService,
-    private profileService: ProfileService
+    private profileService: ProfileService,
+    @Inject(PUB_SUB)
+    private readonly subscriptionHandler: PubSub
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -132,12 +135,14 @@ export class ProfileResolverMutations {
       mimetype,
       uploadData
     );
-    this.pubSub.publish('avatarUploaded', { avatarUploaded: updatedProfile });
+    this.subscriptionHandler.publish(USER_AVATAR_UPLOADED, {
+      avatarUploaded: updatedProfile,
+    });
     return updatedProfile;
   }
 
   @Subscription(() => IProfile)
   avatarUploaded() {
-    return this.pubSub.asyncIterator('avatarUploaded');
+    return this.subscriptionHandler.asyncIterator(USER_AVATAR_UPLOADED);
   }
 }

@@ -9,6 +9,7 @@ import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { ProfileAuthorizationService } from './profile.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { SubscriptionModule } from '@services/platform/subscription/subscription.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     TagsetModule,
     ReferenceModule,
     TypeOrmModule.forFeature([Profile]),
+    SubscriptionModule,
   ],
   providers: [
     ProfileResolverMutations,

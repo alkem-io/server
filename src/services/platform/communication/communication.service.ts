@@ -1,23 +1,27 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
-import { CommunicationMessageResult } from './communication.dto.message.result';
-
-import { CommunicationSendMessageUserInput } from './communication.dto.send.msg.user';
-import { CommunicationSendMessageCommunityInput } from './communication.dto.send.msg.community';
-import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
-import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.interface';
-import { ConfigService } from '@nestjs/config';
-import { MatrixUserAdapterService } from '../matrix/adapter-user/matrix.user.adapter.service';
-import { MatrixRoomAdapterService } from '../matrix/adapter-room/matrix.room.adapter.service';
-import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.adapter.service';
-import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
-import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
+import { PubSub } from 'graphql-subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.adapter.service';
 import { MatrixRoom } from '../matrix/adapter-room/matrix.room';
-import { CommunityRoom } from './communication.room.dto.community';
+import { MatrixRoomAdapterService } from '../matrix/adapter-room/matrix.room.adapter.service';
 import { MatrixRoomResponseMessage } from '../matrix/adapter-room/matrix.room.dto.response.message';
+import { MatrixUserAdapterService } from '../matrix/adapter-user/matrix.user.adapter.service';
+import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.interface';
+import { MatrixAgent } from '../matrix/agent/matrix.agent';
+import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
+import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
+import { PUB_SUB } from '../subscription/subscription.module';
+import {
+  CommunicationMessageResult,
+  convertFromMatrixMessage,
+} from './communication.dto.message.result';
+import { CommunicationSendMessageCommunityInput } from './communication.dto.send.msg.community';
+import { CommunicationSendMessageUserInput } from './communication.dto.send.msg.user';
+import { CommunityRoom } from './communication.room.dto.community';
 import { DirectRoom } from './communication.room.dto.direct';
 
 @Injectable()
@@ -37,7 +41,9 @@ export class CommunicationService {
     private matrixUserManagementService: MatrixUserManagementService,
     private matrixUserAdapterService: MatrixUserAdapterService,
     private matrixRoomAdapterService: MatrixRoomAdapterService,
-    private matrixGroupAdapterService: MatrixGroupAdapterService
+    private matrixGroupAdapterService: MatrixGroupAdapterService,
+    @Inject(PUB_SUB)
+    private readonly subscriptionHandler: PubSub
   ) {
     this.adminUserName = this.configService.get(
       ConfigurationTypes.Communications
@@ -222,7 +228,8 @@ export class CommunicationService {
     if (!this.enabled) {
       return '';
     }
-    const matrixUsername = this.matrixUserAdapterService.email2id(email);
+    const matrixUsername =
+      this.matrixUserAdapterService.convertEmailToMatrixId(email);
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     // first send invites to the room - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
@@ -246,9 +253,8 @@ export class CommunicationService {
     }
     const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
 
-    const matrixCommunityRooms = await this.matrixAgentService.getCommunityRooms(
-      matrixAgent
-    );
+    const matrixCommunityRooms =
+      await this.matrixAgentService.getCommunityRooms(matrixAgent);
     for (const matrixRoom of matrixCommunityRooms) {
       const room = await this.convertMatrixRoomToCommunityRoom(matrixRoom);
       rooms.push(room);
@@ -314,14 +320,16 @@ export class CommunicationService {
       matrixAgent,
       roomId
     );
-    const mappedDirectRoomId = await this.matrixAgentService.getDirectRoomIdForRoomID(
-      matrixAgent,
-      matrixRoom.roomId
-    );
-    if (mappedDirectRoomId) {
-      const emailReceiver = this.matrixUserAdapterService.id2email(
-        mappedDirectRoomId
+    const mappedDirectRoomId =
+      await this.matrixAgentService.getDirectRoomIdForRoomID(
+        matrixAgent,
+        matrixRoom.roomId
       );
+    if (mappedDirectRoomId) {
+      const emailReceiver =
+        this.matrixUserAdapterService.convertMatrixIdToEmail(
+          mappedDirectRoomId
+        );
       await this.convertMatrixRoomToDirectRoom(matrixRoom, emailReceiver);
     }
     return await this.convertMatrixRoomToCommunityRoom(matrixRoom);
@@ -338,9 +346,7 @@ export class CommunicationService {
         matrixRoom.timeline
       );
     }
-    roomResult.receiverID = this.matrixUserAdapterService.id2email(
-      emailReceiver
-    );
+    roomResult.receiverID = emailReceiver;
     return roomResult;
   }
 
@@ -362,20 +368,18 @@ export class CommunicationService {
   ): Promise<CommunicationMessageResult[]> {
     const messages: CommunicationMessageResult[] = [];
 
-    for (const { event: ev, sender } of timeline) {
-      if (!ev.content?.body) {
+    for (const timelineMessage of timeline) {
+      const message = convertFromMatrixMessage(
+        timelineMessage,
+        this.matrixUserAdapterService.convertMatrixIdToEmail.bind(
+          this.matrixUserAdapterService
+        )
+      );
+      if (!message) {
         continue;
       }
 
-      const user = this.matrixUserAdapterService.id2email(sender.name);
-      const roomMessage: CommunicationMessageResult = {
-        message: ev.content.body,
-        sender: user ? `${user}` : 'unknown',
-        timestamp: ev.origin_server_ts || 0,
-        id: ev.event_id || '',
-      };
-
-      messages.push(roomMessage);
+      messages.push(message);
     }
     return messages;
   }
