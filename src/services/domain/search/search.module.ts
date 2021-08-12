@@ -11,6 +11,7 @@ import { Organisation } from '@domain/community/organisation';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organisation]),
     TypeOrmModule.forFeature([Challenge]),
+    TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [SearchService, SearchResolverQueries],
   exports: [SearchService],

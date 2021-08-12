@@ -5,9 +5,6 @@ import { IsOptional } from 'class-validator';
 
 @InputType()
 export class CreateChallengeInput extends CreateBaseChallengeInput {
-  @Field(() => UUID_NAMEID, { nullable: false })
-  parentID!: string;
-
   @Field(() => [UUID_NAMEID], {
     nullable: true,
     description: 'Set lead Organisations for the Challenge.',
