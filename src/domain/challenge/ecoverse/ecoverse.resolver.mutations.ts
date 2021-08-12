@@ -189,7 +189,7 @@ export class EcoverseResolverMutations {
     description: 'Removes a User from being an Ecoverse Admin.',
   })
   @Profiling.api
-  async removeUserAsChallengeAdmin(
+  async removeUserAsEcoverseAdmin(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: RemoveEcoverseAdminInput
   ): Promise<IUser> {
