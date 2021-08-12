@@ -1,5 +1,5 @@
-mutation createChildChallenge($childChallengeData: CreateChallengeInput!) {
-  createChildChallenge(childChallengeData: $childChallengeData) {
+mutation createChildChallenge($childChallengeData: CreateChallengeOnChallengeInput!) {
+  createChildChallenge(challengeData: $childChallengeData) {
     displayName,
     id
   }
@@ -9,7 +9,7 @@ query variables:
 {
   "childChallengeData":
   {
-    "challengeID": "1",
+    "challengeID": "uuid",
     "displayName": "Balance the grid",
     "nameID": "balance-grid",
     "lifecycleTemplate": "EXTENDED",
