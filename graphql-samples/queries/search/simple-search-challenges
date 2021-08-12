@@ -16,9 +16,9 @@ query search($searchData: SearchInput!){
       ... on Challenge {
         nameID
         ecoverseID
-        context {
-          tagline
-        }
+      }
+      ... on Opportunity {
+        nameID
       }
     }
   }

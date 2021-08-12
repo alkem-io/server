@@ -10,15 +10,17 @@ import { ISearchResultEntry } from './search-result-entry.interface';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organisation } from '@domain/community/organisation/organisation.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 enum SearchEntityTypes {
   User = 'user',
   Group = 'group',
   Organisation = 'organisation',
   Challenge = 'challenge',
+  Opportunity = 'opportunity',
 }
 
 const SEARCH_ENTITIES: string[] = [
@@ -26,7 +28,9 @@ const SEARCH_ENTITIES: string[] = [
   SearchEntityTypes.Group,
   SearchEntityTypes.Organisation,
   SearchEntityTypes.Challenge,
+  SearchEntityTypes.Opportunity,
 ];
+
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
 const TERM_MINIMUM_LENGTH = 2;
@@ -36,7 +40,13 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity: User | UserGroup | Organisation | Challenge | undefined;
+  entity:
+    | User
+    | UserGroup
+    | Organisation
+    | Opportunity
+    | Opportunity
+    | undefined;
 }
 
 export class SearchService {
@@ -49,6 +59,8 @@ export class SearchService {
     private organisationRepository: Repository<Organisation>,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
+    @InjectRepository(Opportunity)
+    private opportunityRepository: Repository<Opportunity>,
     private authorizationEngine: AuthorizationEngineService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -64,6 +76,7 @@ export class SearchService {
     const groupResults: Map<number, Match> = new Map();
     const organisationResults: Map<number, Match> = new Map();
     const challengeResults: Map<number, Match> = new Map();
+    const opportunityResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
@@ -72,12 +85,14 @@ export class SearchService {
     let searchGroups = true;
     let searchOrganisations = true;
     let searchChallenges = true;
+    let searchOpportunities = true;
     const entityTypesFilter = searchData.typesFilter;
     [
       searchUsers,
       searchGroups,
       searchOrganisations,
       searchChallenges,
+      searchOpportunities,
     ] = await this.searchBy(entityTypesFilter);
 
     // Only support certain features for now
@@ -107,9 +122,14 @@ export class SearchService {
         challengeResults,
         agentInfo
       );
-
+    if (searchOpportunities)
+      await this.searchOpportunitiesByTerms(
+        filteredTerms,
+        opportunityResults,
+        agentInfo
+      );
     this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organisationResults.size} organisation results found; ${challengeResults.size} challenge results found`,
+      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organisationResults.size} organisation results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found`,
       LogContext.API
     );
 
@@ -118,6 +138,7 @@ export class SearchService {
     results.push(...(await this.buildSearchResults(groupResults)));
     results.push(...(await this.buildSearchResults(organisationResults)));
     results.push(...(await this.buildSearchResults(challengeResults)));
+    results.push(...(await this.buildSearchResults(opportunityResults)));
     this.ensureUniqueTermsPerResult(results);
     return results;
   }
@@ -146,11 +167,12 @@ export class SearchService {
 
   async searchBy(
     entityTypesFilter?: string[]
-  ): Promise<[boolean, boolean, boolean, boolean]> {
+  ): Promise<[boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganisations = true;
     let searchChallenges = true;
+    let searchOpportunities = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.User))
@@ -161,9 +183,17 @@ export class SearchService {
         searchOrganisations = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.Challenge))
         searchChallenges = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.Opportunity))
+        searchOpportunities = false;
     }
 
-    return [searchUsers, searchGroups, searchOrganisations, searchChallenges];
+    return [
+      searchUsers,
+      searchGroups,
+      searchOrganisations,
+      searchChallenges,
+      searchOpportunities,
+    ];
   }
 
   async searchUsersByTerms(terms: string[], userResults: Map<number, Match>) {
@@ -229,7 +259,7 @@ export class SearchService {
     agentInfo: AgentInfo
   ) {
     for (const term of terms) {
-      const readableChallengeMatches: Challenge[] = [];
+      const readableChallengeMatches: Opportunity[] = [];
       const challengeMatches = await this.challengeRepository
         .createQueryBuilder('challenge')
         .leftJoinAndSelect('challenge.tagset', 'tagset')
@@ -240,6 +270,10 @@ export class SearchService {
         .orWhere('challenge.displayName like :term')
         .orWhere('tagset.tags like :term')
         .orWhere('context.tagline like :term')
+        .orWhere('context.background like :term')
+        .orWhere('context.impact like :term')
+        .orWhere('context.vision like :term')
+        .orWhere('context.who like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();
       // Only show challenges that the current user has read access to
@@ -258,6 +292,50 @@ export class SearchService {
       await this.buildMatchingResults(
         readableChallengeMatches,
         challengeResults,
+        term
+      );
+    }
+  }
+
+  async searchOpportunitiesByTerms(
+    terms: string[],
+    opportunityResults: Map<number, Match>,
+    agentInfo: AgentInfo
+  ) {
+    for (const term of terms) {
+      const readableOpportunityMatches: Opportunity[] = [];
+      const opportunityMatches = await this.opportunityRepository
+        .createQueryBuilder('opportunity')
+        .leftJoinAndSelect('opportunity.tagset', 'tagset')
+        .leftJoinAndSelect('opportunity.projects', 'projects')
+        .leftJoinAndSelect('opportunity.authorization', 'authorization')
+        .leftJoinAndSelect('opportunity.context', 'context')
+        .where('opportunity.nameID like :term')
+        .orWhere('opportunity.displayName like :term')
+        .orWhere('tagset.tags like :term')
+        .orWhere('context.tagline like :term')
+        .orWhere('context.background like :term')
+        .orWhere('context.impact like :term')
+        .orWhere('context.vision like :term')
+        .orWhere('context.who like :term')
+        .setParameters({ term: `%${term}%` })
+        .getMany();
+      // Only show challenges that the current user has read access to
+      for (const opportunity of opportunityMatches) {
+        if (
+          this.authorizationEngine.isAccessGranted(
+            agentInfo,
+            opportunity.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          readableOpportunityMatches.push(opportunity);
+        }
+      }
+      // Create results for each match
+      await this.buildMatchingResults(
+        readableOpportunityMatches,
+        opportunityResults,
         term
       );
     }
