@@ -21,7 +21,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
 import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
 import { EcoverseAuthorizationResetInput } from './dto/ecoverse.dto.reset.authorization';
-import { CreateChallengeInEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
+import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
 @Resolver()
 export class EcoverseResolverMutations {
   private globalAdminAuthorization: IAuthorizationPolicy;
@@ -119,7 +119,7 @@ export class EcoverseResolverMutations {
   @Profiling.api
   async createChallenge(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: CreateChallengeInEcoverseInput
+    @Args('challengeData') challengeData: CreateChallengeOnEcoverseInput
   ): Promise<IChallenge> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       challengeData.ecoverseID

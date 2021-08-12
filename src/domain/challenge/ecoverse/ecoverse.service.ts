@@ -39,7 +39,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
 import { UserService } from '@domain/community/user/user.service';
 import { UpdateEcoverseInput } from './dto/ecoverse.dto.update';
-import { CreateChallengeInEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
+import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
 
 @Injectable()
 export class EcoverseService {
@@ -296,7 +296,7 @@ export class EcoverseService {
   }
 
   async createChallengeInEcoverse(
-    challengeData: CreateChallengeInEcoverseInput
+    challengeData: CreateChallengeOnEcoverseInput
   ): Promise<IChallenge> {
     const ecoverse = await this.getEcoverseOrFail(challengeData.ecoverseID, {
       relations: ['challenges'],

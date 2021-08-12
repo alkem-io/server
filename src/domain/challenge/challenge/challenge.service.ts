@@ -49,7 +49,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
-import { CreateChallengeInChallengeInput } from './dto/challenge.dto.create.in.challenge';
+import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 
 @Injectable()
 export class ChallengeService {
@@ -360,7 +360,7 @@ export class ChallengeService {
   }
 
   async createChildChallenge(
-    challengeData: CreateChallengeInChallengeInput
+    challengeData: CreateChallengeOnChallengeInput
   ): Promise<IChallenge> {
     this.logger.verbose?.(
       `Adding child Challenge to Challenge (${challengeData.challengeID})`,

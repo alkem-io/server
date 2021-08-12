@@ -26,7 +26,7 @@ import { IChallenge } from './challenge.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
-import { CreateChallengeInChallengeInput } from './dto/challenge.dto.create.in.challenge';
+import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -45,7 +45,7 @@ export class ChallengeResolverMutations {
   @Profiling.api
   async createChildChallenge(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: CreateChallengeInChallengeInput
+    @Args('challengeData') challengeData: CreateChallengeOnChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.challengeID
