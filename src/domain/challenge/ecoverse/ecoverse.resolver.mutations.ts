@@ -1,4 +1,3 @@
-import { CreateChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
@@ -22,6 +21,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
 import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
 import { EcoverseAuthorizationResetInput } from './dto/ecoverse.dto.reset.authorization';
+import { CreateChallengeInEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
 @Resolver()
 export class EcoverseResolverMutations {
   private globalAdminAuthorization: IAuthorizationPolicy;
@@ -119,10 +119,10 @@ export class EcoverseResolverMutations {
   @Profiling.api
   async createChallenge(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: CreateChallengeInput
+    @Args('challengeData') challengeData: CreateChallengeInEcoverseInput
   ): Promise<IChallenge> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-      challengeData.parentID
+      challengeData.ecoverseID
     );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
@@ -130,7 +130,9 @@ export class EcoverseResolverMutations {
       AuthorizationPrivilege.CREATE,
       `challengeCreate: ${ecoverse.nameID}`
     );
-    const challenge = await this.ecoverseService.createChallenge(challengeData);
+    const challenge = await this.ecoverseService.createChallengeInEcoverse(
+      challengeData
+    );
     return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       ecoverse.authorization
