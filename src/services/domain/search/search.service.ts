@@ -40,13 +40,7 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity:
-    | User
-    | UserGroup
-    | Organisation
-    | Opportunity
-    | Opportunity
-    | undefined;
+  entity: User | UserGroup | Organisation | Challenge | Opportunity | undefined;
 }
 
 export class SearchService {
