@@ -26,7 +26,7 @@ services:
       - WAIT_HOST_CONNECT_TIMEOUT=30
       - GRAPHQL_ENDPOINT_PORT=4000
       - IPFS_ENDPOINT=http://ipfs:5001
-      - IPFS_CLIENT_ENDPOINT=http://localhost:8080/ipfs
+      - IPFS_CLIENT_ENDPOINT=http://localhost:3000/ipfs
       - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/identity/ory/kratos/public
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER=http://kratos:4433/

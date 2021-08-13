@@ -122,10 +122,10 @@ http:
         - 'web'
 
     ipfs:
-      rule: 'PathPrefix(`/ipfs`)'
+      rule: 'PathPrefix(`/ipfs`) || HostRegexp(`{^[a-zA-Z0-9_.-]*$}.ipfs.localhost`)'
       service: 'ipfs-http-adapter'
       entryPoints:
-        - 'ipfs-http-adapter'
+        - 'web'
 
     ipfs-api:
       rule: 'PathPrefix(`/`)'
