@@ -6,7 +6,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
-import { CreateChallengeInput } from '@domain/challenge/challenge';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import {
   CreateEcoverseInput,
@@ -40,6 +39,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
 import { UserService } from '@domain/community/user/user.service';
 import { UpdateEcoverseInput } from './dto/ecoverse.dto.update';
+import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
 
 @Injectable()
 export class EcoverseService {
@@ -295,10 +295,10 @@ export class EcoverseService {
     );
   }
 
-  async createChallenge(
-    challengeData: CreateChallengeInput
+  async createChallengeInEcoverse(
+    challengeData: CreateChallengeOnEcoverseInput
   ): Promise<IChallenge> {
-    const ecoverse = await this.getEcoverseOrFail(challengeData.parentID, {
+    const ecoverse = await this.getEcoverseOrFail(challengeData.ecoverseID, {
       relations: ['challenges'],
     });
     const nameAvailable = await this.namingService.isNameIdAvailableInEcoverse(
@@ -318,7 +318,7 @@ export class EcoverseService {
     );
     if (!ecoverse.challenges)
       throw new ValidationException(
-        `Unable to create Challenge: challenges not initialized: ${challengeData.parentID}`,
+        `Unable to create Challenge: challenges not initialized: ${challengeData.ecoverseID}`,
         LogContext.CHALLENGES
       );
 

@@ -1,6 +1,5 @@
-import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { CreateNVPInput, INVP } from '@domain/common/nvp';
-import { Entity } from 'typeorm';
+import { Field, InputType } from '@nestjs/graphql';
+import { CreateNVPInput } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 
 @InputType()
@@ -14,9 +13,3 @@ export class CreateApplicationInput {
   @Field(() => [CreateNVPInput], { nullable: false })
   questions!: CreateNVPInput[];
 }
-
-@ObjectType('Question')
-export class IQuestion extends INVP {}
-
-@Entity()
-export class Question extends INVP implements IQuestion {}

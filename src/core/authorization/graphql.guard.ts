@@ -51,7 +51,6 @@ export class GraphqlGuard extends AuthGuard([
     }
 
     const gqlContext = GqlExecutionContext.create(_context);
-    const req = gqlContext.getContext().req;
     const graphqlInfo = gqlContext.getInfo();
     const fieldName = graphqlInfo.fieldName;
 
@@ -60,10 +59,6 @@ export class GraphqlGuard extends AuthGuard([
 
     if (agentInfo) {
       this.authorizationEngine.logAgentInfo(agentInfo);
-      // Utility to help retrieve the bearer token
-      if (fieldName === 'me' && agentInfo.email.length > 0) {
-        this.logAuthorizationToken(req);
-      }
     } else {
       this.logger.warn?.(
         `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,

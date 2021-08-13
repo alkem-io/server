@@ -33,7 +33,7 @@ E.g. on Linux you can grant permissions the following way:
 - Navigate to the directory, e.g. .build/synapse
 - Change the permissions with `chmod o+w .`
 
-2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:4455/graphql).
+2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:3000/graphql).
 
 ## Notes
 

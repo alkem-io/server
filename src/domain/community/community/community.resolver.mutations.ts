@@ -23,17 +23,17 @@ import { AgentInfo } from '@core/authentication';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { UserService } from '@domain/community/user/user.service';
-import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunitySendMessageInput } from './community.dto.send.msg';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+import { UserAuthorizationService } from '../user/user.service.authorization';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationEngine: AuthorizationEngineService,
     private userService: UserService,
-    private userGroupService: UserGroupService,
+    private userAuthorizationService: UserAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
     @Inject(CommunityLifecycleOptionsProvider)
@@ -88,7 +88,13 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.GRANT,
       `assign user community: ${community.displayName}`
     );
-    return await this.communityService.assignMember(membershipData);
+    await this.communityService.assignMember(membershipData);
+
+    // reset the user authorization policy so that their profile is visible to other community members
+    const user = await this.userService.getUserOrFail(membershipData.userID);
+    await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+    return community;
   }
 
   @UseGuards(GraphqlGuard)
@@ -109,7 +115,13 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.GRANT,
       `remove user community: ${community.displayName}`
     );
-    return await this.communityService.removeMember(membershipData);
+
+    await this.communityService.removeMember(membershipData);
+    // reset the user authorization policy so that their profile is not visible
+    // to other community members
+    const user = await this.userService.getUserOrFail(membershipData.userID);
+    await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    return community;
   }
 
   @UseGuards(GraphqlGuard)
