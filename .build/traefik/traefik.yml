@@ -13,6 +13,10 @@ entryPoints:
     address: ':3306'
   synapse:
     address: ':8008'
+  ipfs-api:
+    address: ':5001'
+  ipfs-http-adapter:
+    address: ':8079'
 
 providers:
   file:
