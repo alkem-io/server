@@ -132,10 +132,10 @@ export class BaseChallengeService {
 
     const community = baseChallenge.community;
     if (community) {
+      await this.communityService.removeCommunity(community.id);
       if (community.credential) {
         await this.credentialService.deleteCredential(community.credential.id);
       }
-      await this.communityService.removeCommunity(community.id);
     }
 
     if (baseChallenge.lifecycle) {

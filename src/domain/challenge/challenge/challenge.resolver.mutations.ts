@@ -6,7 +6,6 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   ChallengeEventInput,
   DeleteChallengeInput,
-  CreateChallengeInput,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
 import {
@@ -27,6 +26,7 @@ import { IChallenge } from './challenge.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
+import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -45,10 +45,10 @@ export class ChallengeResolverMutations {
   @Profiling.api
   async createChildChallenge(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: CreateChallengeInput
+    @Args('challengeData') challengeData: CreateChallengeOnChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
-      challengeData.parentID
+      challengeData.challengeID
     );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,

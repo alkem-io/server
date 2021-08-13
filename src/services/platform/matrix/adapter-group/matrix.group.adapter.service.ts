@@ -61,11 +61,17 @@ export class MatrixGroupAdapterService {
     matrixUsernames: string[]
   ) {
     for (const matrixUsername of matrixUsernames) {
-      await matrixClient.inviteUserToGroup(groupId, matrixUsername);
-      this.logger.verbose?.(
-        `Invited users to group: ${matrixUsername} - ${groupId}`,
-        LogContext.COMMUNICATION
-      );
+      try {
+        await matrixClient.inviteUserToGroup(groupId, matrixUsername);
+
+        this.logger.verbose?.(
+          `Invited users to group: ${matrixUsername} - ${groupId}`,
+          LogContext.COMMUNICATION
+        );
+      } catch (err) {
+        // TODO: Find a way to handle `User already in group`
+        this.logger.error(err.message);
+      }
     }
   }
 }

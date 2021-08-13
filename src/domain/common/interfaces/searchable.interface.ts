@@ -6,6 +6,7 @@ import { UUID } from '@domain/common/scalars';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 
 @InterfaceType('Searchable', {
   resolveType(searchable) {
@@ -14,6 +15,9 @@ import { LogContext } from '@common/enums';
     }
     if (searchable.opportunities) {
       return IChallenge;
+    }
+    if (searchable.projects) {
+      return IOpportunity;
     }
     if (searchable.email) {
       return IUser;

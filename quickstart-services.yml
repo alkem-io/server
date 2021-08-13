@@ -18,6 +18,7 @@ services:
       - 3000:80
       - 3306:3306
       - 8008:8008
+      - 5001:5001
     networks:
       - alkemio_dev_net
     environment:

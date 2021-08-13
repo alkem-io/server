@@ -1,4 +1,4 @@
-mutation CreateChallenge($challengeData: CreateChallengeInput!) {
+mutation CreateChallenge($challengeData: CreateChallengeOnEcoverseInput!) {
   createChallenge(challengeData: $challengeData) {
     displayName,
     id
@@ -9,7 +9,7 @@ query variables:
 {
   "challengeData":
   {
-    "parentID": "1",
+    "ecoverseID": "1",
     "displayName": "Balance the grid",
     "nameID": "balance-grid",
     "lifecycleTemplate": "EXTENDED",

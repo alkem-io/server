@@ -1,27 +1,38 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { ConfigurationTypes } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { streamToBuffer } from '@common/utils';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import { ReadStream } from 'fs';
-const IpfsHttpClient = require('ipfs-http-client');
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+const { create } = require('ipfs-http-client');
 
 @Injectable()
 export class IpfsService {
-  constructor(private configService: ConfigService) {}
+  private ipfsEndpoint = '';
+  private ipfsClientEndpoint = '';
 
-  public async uploadFile(filePath: string) {
-    const ipfsClient = new IpfsHttpClient(
-      new URL(
-        this.configService.get(ConfigurationTypes.Storage)?.ipfs?.endpoint
-      )
+  constructor(
+    private configService: ConfigService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
+  ) {
+    this.ipfsEndpoint = this.configService.get(
+      ConfigurationTypes.Storage
+    )?.ipfs?.endpoint;
+    this.ipfsClientEndpoint = this.configService.get(
+      ConfigurationTypes.Storage
+    )?.ipfs?.clientEndpoint;
+  }
+
+  public async uploadFile(filePath: string): Promise<string> {
+    this.logger.verbose?.(
+      `Uploading file from path: ${filePath}`,
+      LogContext.IPFS
     );
-    const image = fs.readFileSync(filePath);
-    const res = await ipfsClient.add(image, { pin: true });
-    return `${
-      this.configService.get(ConfigurationTypes.Storage)?.ipfs?.clientEndpoint
-    }/${res.cid.string}`;
+    const imageBuffer = fs.readFileSync(filePath);
+    return this.uploadFileFromBuffer(imageBuffer);
   }
 
   public async uploadFileFromStream(stream: ReadStream): Promise<string> {
@@ -30,15 +41,13 @@ export class IpfsService {
   }
 
   public async uploadFileFromBuffer(buffer: Buffer): Promise<string> {
-    const ipfsClient = new IpfsHttpClient(
-      new URL(
-        this.configService.get(ConfigurationTypes.Storage)?.ipfs?.endpoint
-      )
-    );
+    const ipfsClient = create(new URL(this.ipfsEndpoint));
 
     const res = await ipfsClient.add(buffer, { pin: true });
-    return `${
-      this.configService.get(ConfigurationTypes.Storage)?.ipfs?.clientEndpoint
-    }/${res.cid.string}`;
+    this.logger.verbose?.(
+      `Uploaded filewith CID: ${res.path}`,
+      LogContext.IPFS
+    );
+    return `${this.ipfsClientEndpoint}/${res.path}`;
   }
 }

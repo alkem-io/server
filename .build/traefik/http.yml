@@ -1,5 +1,15 @@
 http:
   services:
+    ipfs-http-adapter:
+      loadBalancer:
+        servers:
+          - url: 'http://ipfs:8080'
+
+    ipfs-api:
+      loadBalancer:
+        servers:
+          - url: 'http://ipfs:5001'
+
     alkemio-server:
       loadBalancer:
         servers:
@@ -29,11 +39,6 @@ http:
       loadBalancer:
         servers:
           - url: 'http://oathkeeper:4456/'
-
-    ipfs-http-adapter:
-      loadBalancer:
-        servers:
-          - url: 'http://ipfs:8080/'
 
     synapse:
       loadBalancer:
@@ -96,12 +101,6 @@ http:
       entryPoints:
         - 'web'
 
-    ipfs:
-      rule: 'PathPrefix(`/ipfs`)'
-      service: 'ipfs-http-adapter'
-      entryPoints:
-        - 'web'
-
     synapse:
       rule: 'PathPrefix(`/`)'
       service: 'synapse'
@@ -121,6 +120,19 @@ http:
         - strip-jwks-prefix
       entryPoints:
         - 'web'
+
+    ipfs:
+      rule: 'PathPrefix(`/ipfs`) || HostRegexp(`{^[a-zA-Z0-9_.-]*$}.ipfs.localhost`)'
+      service: 'ipfs-http-adapter'
+      entryPoints:
+        - 'web'
+
+    ipfs-api:
+      rule: 'PathPrefix(`/`)'
+      service: 'ipfs-api'
+      entryPoints:
+        - 'ipfs-api'
+
 tcp:
   services:
     mysql:
