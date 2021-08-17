@@ -304,6 +304,7 @@ export class SearchService {
         .leftJoinAndSelect('opportunity.projects', 'projects')
         .leftJoinAndSelect('opportunity.authorization', 'authorization')
         .leftJoinAndSelect('opportunity.context', 'context')
+        .leftJoinAndSelect('opportunity.challenge', 'challenge')
         .where('opportunity.nameID like :term')
         .orWhere('opportunity.displayName like :term')
         .orWhere('tagset.tags like :term')
