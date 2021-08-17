@@ -8,13 +8,26 @@ import {
 } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'apollo-server-express';
+import { UserService } from './user.service';
 
 @Resolver()
 export class UserResolverSubscriptions {
-  constructor(@Inject(PUB_SUB) private pubSub: PubSub) {}
+  constructor(
+    @Inject(PUB_SUB) private pubSub: PubSub,
+    private userService: UserService
+  ) {}
 
   @Subscription(() => CommunicationMessageReceived, {
-    resolve: value => {
+    async resolve(
+      this: UserResolverSubscriptions,
+      value: CommunicationMessageReceived
+    ) {
+      const user = await this.userService.getUserByEmail(value.message.sender);
+      if (!user) {
+        return new CommunicationMessageReceived();
+      }
+
+      value.message.sender = user?.id;
       return value;
     },
   })
