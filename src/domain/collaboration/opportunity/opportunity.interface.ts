@@ -23,7 +23,7 @@ export abstract class IOpportunity
 
   @Field(() => IChallenge, {
     nullable: true,
-    description: 'The parent Challenge to the Opportunity',
+    description: 'The parent Challenge of the Opportunity',
   })
   challenge?: IChallenge;
 }
