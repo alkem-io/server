@@ -147,8 +147,61 @@ export class EcoverseService {
   }
 
   async getEcoverses(): Promise<IEcoverse[]> {
-    const ecoverses = await this.ecoverseRepository.find();
-    return ecoverses || [];
+    const ecoverses = await this.ecoverseRepository
+      .createQueryBuilder('ecoverse')
+      .leftJoinAndSelect('ecoverse.challenges', 'challenge')
+      .leftJoinAndSelect('ecoverse.authorization', 'authorization_definition')
+      .leftJoinAndSelect('challenge.opportunities', 'opportunities')
+      .getMany();
+
+    const sortedEcoverses = ecoverses.sort((a, b) => {
+      if (
+        a.authorization?.anonymousReadAccess === true &&
+        b.authorization?.anonymousReadAccess === false
+      )
+        return -1;
+      if (
+        a.authorization?.anonymousReadAccess === false &&
+        b.authorization?.anonymousReadAccess === true
+      )
+        return 1;
+
+      if (!a.challenges && b.challenges) return 1;
+      if (a.challenges && !b.challenges) return -1;
+      if (!a.challenges && !b.challenges) return 0;
+
+      //Shouldn't get there
+      if (!a.challenges || !b.challenges)
+        throw new ValidationException(
+          `Critical error when comparing Ecoverses! Critical error when loading Challenges for Ecoverse ${a} and Ecoverse ${b}`,
+          LogContext.CHALLENGES
+        );
+
+      const oppChallCountA = this.getChallengeAndOpportunitiesCount(
+        a?.challenges
+      );
+      const oppChallCountB = this.getChallengeAndOpportunitiesCount(
+        b?.challenges
+      );
+
+      if (oppChallCountA > oppChallCountB) return -1;
+      if (oppChallCountA < oppChallCountB) return 1;
+
+      return 0;
+    });
+
+    return sortedEcoverses || [];
+  }
+
+  private getChallengeAndOpportunitiesCount(challenges: IChallenge[]): number {
+    let challengeAndOpportunitiesCount = 0;
+    for (const challenge of challenges) {
+      challengeAndOpportunitiesCount++;
+
+      if (challenge.opportunities)
+        challengeAndOpportunitiesCount += challenge.opportunities.length;
+    }
+    return challengeAndOpportunitiesCount;
   }
 
   async getEcoverseOrFail(
