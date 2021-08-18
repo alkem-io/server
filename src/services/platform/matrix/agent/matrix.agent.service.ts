@@ -15,6 +15,8 @@ import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
 import { MatrixRoom } from '../adapter-room/matrix.room';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { PubSub } from 'graphql-subscriptions';
 
 @Injectable()
 export class MatrixAgentService {
@@ -24,7 +26,9 @@ export class MatrixAgentService {
     private matrixRoomAdapterService: MatrixRoomAdapterService,
     private matrixGroupAdapterService: MatrixGroupAdapterService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    @Inject(PUB_SUB)
+    private readonly subscriptionHandler: PubSub
   ) {}
 
   async createMatrixAgent(
@@ -34,6 +38,8 @@ export class MatrixAgentService {
     return new MatrixAgent(
       matrixClient,
       this.matrixRoomAdapterService,
+      this.matrixUserAdapterService,
+      this.subscriptionHandler,
       this.logger
     );
   }

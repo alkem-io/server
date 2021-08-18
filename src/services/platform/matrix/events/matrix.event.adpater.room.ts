@@ -43,6 +43,7 @@ export class AutoAcceptRoomMembershipMonitorFactory {
 
 export class RoomTimelineMonitorFactory {
   static create(
+    matrixClient: MatrixClient,
     matrixUserAdapterService: MatrixUserAdapterService,
     onMessageReceived: (event: CommunicationMessageReceived) => void
   ): IMatrixEventHandler['roomTimelineMonitor'] {
@@ -56,6 +57,11 @@ export class RoomTimelineMonitorFactory {
             matrixUserAdapterService
           )
         );
+
+        // TODO Notifications - Allow the client to see the event and then mark it as read
+        // With the current behavior the message will automatically be marked as read
+        // to ensure that we are returning only the actual updates
+        await matrixClient.sendReadReceipt(event, {});
 
         if (message) {
           onMessageReceived({
