@@ -210,11 +210,13 @@ export class MatrixAgentService {
     roomId: string,
     msgRequest: MatrixAgentMessageRequest
   ) {
-    await matrixAgent.matrixClient.sendEvent(
+    const response = await matrixAgent.matrixClient.sendEvent(
       roomId,
       'm.room.message',
       { body: msgRequest.text, msgtype: 'm.text' },
       ''
     );
+
+    return response.event_id;
   }
 }

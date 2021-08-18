@@ -14,6 +14,7 @@ import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationModule } from '@services/platform/communication/communication.module';
+import { CommunityResolverQueries } from './community.resolver.queries';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CommunicationModule } from '@services/platform/communication/communicat
     CommunityResolverMutations,
     CommunityResolverFields,
     CommunityLifecycleOptionsProvider,
+    CommunityResolverQueries,
   ],
   exports: [CommunityService, CommunityAuthorizationService],
 })
