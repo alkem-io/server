@@ -25,6 +25,8 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { CommunityRoom } from '@services/platform/communication';
+import { DirectRoom } from '@services/platform/communication/communication.room.dto.direct';
 
 @Injectable()
 export class UserService {
@@ -374,6 +376,38 @@ export class UserService {
 
   async getUserCount(): Promise<number> {
     return await this.userRepository.count();
+  }
+
+  // Not sure about the placement of this one
+  async populateRoomMessageSenders(rooms: (CommunityRoom | DirectRoom)[]) {
+    const uniqueSenders = rooms
+      .map(r => r.messages)
+      .reduce((aggr, current) => aggr.concat(current))
+      .map(m => m.sender)
+      .filter((value, index, arr) => arr.indexOf(value) === index);
+
+    const senderMap = uniqueSenders.reduce(
+      (aggr: Record<string, string | undefined>, value) => {
+        aggr[value] = undefined;
+        return aggr;
+      },
+      {}
+    );
+
+    for (const sender of uniqueSenders) {
+      const user = await this.getUserByEmail(sender);
+      if (!user) {
+        continue;
+      }
+
+      senderMap[sender] = user.id;
+    }
+
+    rooms.forEach(r =>
+      r.messages.forEach(m => (m.sender = senderMap[m.sender] || m.sender))
+    );
+
+    return rooms;
   }
 
   createUserNameID(firstName: string, lastName: string): string {
