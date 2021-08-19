@@ -15,7 +15,10 @@ entryPoints:
     address: ':8008'
   ipfs-api:
     address: ':5001'
-
+  mailslurper-client:
+    address: ':4436'
+  mailslurper-api:
+    address: ':4437'
 providers:
   file:
     filename: /etc/traefik/http.yml
