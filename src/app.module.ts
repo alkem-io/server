@@ -1,9 +1,5 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { ConfigurationTypes } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
-import {
-  extractEmailSubscriptionContext,
-  extractWebSocketKey,
-} from '@common/utils/connectionContext.utils';
 import configuration from '@config/configuration';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -12,13 +8,11 @@ import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filte
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { LoggerService, MiddlewareConsumer, Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CommunicationModule } from '@services/platform/communication/communication.module';
-import { CommunicationServiceEvents } from '@services/platform/communication/communication.service.events';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { WinstonConfigService } from '@src/config/winston.config';
@@ -28,7 +22,7 @@ import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
 import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
 import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
-import { WinstonModule, WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
 
@@ -93,55 +87,23 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
-    GraphQLModule.forRootAsync({
-      imports: [CommunicationModule],
-      inject: [CommunicationServiceEvents, WINSTON_MODULE_NEST_PROVIDER],
-      useFactory: async (
-        communicationServiceEvents: CommunicationServiceEvents,
-        loggerService: LoggerService
-      ) => ({
-        cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
-        uploads: false,
-        autoSchemaFile: true,
-        introspection: true,
-        playground: {
-          settings: {
-            'request.credentials': 'include',
-          },
+    GraphQLModule.forRoot({
+      cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
+      uploads: false,
+      autoSchemaFile: true,
+      introspection: true,
+      playground: {
+        settings: {
+          'request.credentials': 'include',
         },
-        fieldResolverEnhancers: ['guards'],
-        sortSchema: true,
-        context: ({ req }) => ({ req }),
-        installSubscriptionHandlers: true,
-        subscriptions: {
-          keepAlive: 5000,
-          onConnect: async (_, __, context) => {
-            const email = extractEmailSubscriptionContext(context);
-            const key = extractWebSocketKey(context);
-            if (email && key) {
-              await communicationServiceEvents.startSession(email, key);
-            } else {
-              loggerService.warn(
-                `Could not initiate session with [Email: ${email}, SocketKey: ${key}]`,
-                LogContext.COMMUNICATION
-              );
-            }
-          },
-          onDisconnect: async (_, context) => {
-            const email = extractEmailSubscriptionContext(context);
-            const key = extractWebSocketKey(context);
-
-            if (key) {
-              await communicationServiceEvents.endSession(key);
-            } else {
-              loggerService.warn(
-                `Could not terminate session with [Email: ${email}, SocketKey: ${key}]`,
-                LogContext.COMMUNICATION
-              );
-            }
-          },
-        },
-      }),
+      },
+      fieldResolverEnhancers: ['guards'],
+      sortSchema: true,
+      context: ({ req }) => ({ req }),
+      installSubscriptionHandlers: true,
+      subscriptions: {
+        keepAlive: 5000,
+      },
     }),
     ScalarsModule,
     AuthenticationModule,

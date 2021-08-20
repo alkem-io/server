@@ -7,7 +7,6 @@ import { MatrixAgentModule } from '../matrix/agent/matrix.agent.module';
 import { MatrixUserAdapterModule } from '../matrix/adapter-user/matrix.user.adapter.module';
 import { CommunicationService } from './communication.service';
 import { SubscriptionModule } from '../subscription/subscription.module';
-import { CommunicationServiceEvents } from './communication.service.events';
 
 @Module({
   imports: [
@@ -19,7 +18,7 @@ import { CommunicationServiceEvents } from './communication.service.events';
     MatrixAgentPoolModule,
     SubscriptionModule,
   ],
-  providers: [CommunicationService, CommunicationServiceEvents],
-  exports: [CommunicationService, CommunicationServiceEvents],
+  providers: [CommunicationService],
+  exports: [CommunicationService],
 })
 export class CommunicationModule {}

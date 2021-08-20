@@ -389,10 +389,14 @@ export class CommunityService {
       email
     );
 
-    return await this.communicationService.getCommunityRoom(
+    const room = await this.communicationService.getCommunityRoom(
       community.updatesRoomID,
       email
     );
+
+    await this.userService.populateRoomMessageSenders([room]);
+
+    return room;
   }
 
   async getDiscussionCommunicationsRoom(
@@ -409,10 +413,14 @@ export class CommunityService {
       email
     );
 
-    return await this.communicationService.getCommunityRoom(
+    const room = await this.communicationService.getCommunityRoom(
       community.discussionRoomID,
       email
     );
+
+    await this.userService.populateRoomMessageSenders([room]);
+
+    return room;
   }
 
   async sendUpdateMessageToCommunity(

@@ -3,7 +3,7 @@ import { IProject } from '@domain/collaboration/project/project.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { ISearchable } from '@domain/common/interfaces/searchable.interface';
-
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 @ObjectType('Opportunity', {
   implements: () => [ISearchable],
 })
@@ -20,4 +20,10 @@ export abstract class IOpportunity
   relations?: IRelation[];
 
   ecoverseID!: string;
+
+  @Field(() => IChallenge, {
+    nullable: true,
+    description: 'The parent Challenge of the Opportunity',
+  })
+  challenge?: IChallenge;
 }

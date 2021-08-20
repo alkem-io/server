@@ -35,7 +35,11 @@ export class UserResolverFields {
   })
   @Profiling.api
   async communityRooms(@Parent() user: User): Promise<CommunityRoom[]> {
-    return await this.communicationService.getCommunityRooms(user.email);
+    const rooms = await this.communicationService.getCommunityRooms(user.email);
+
+    await this.userService.populateRoomMessageSenders(rooms);
+
+    return rooms;
   }
 
   @ResolveField('directRooms', () => [DirectRoom], {
@@ -44,7 +48,11 @@ export class UserResolverFields {
   })
   @Profiling.api
   async directRooms(@Parent() user: User): Promise<DirectRoom[]> {
-    return await this.communicationService.getDirectRooms(user.email);
+    const rooms = await this.communicationService.getDirectRooms(user.email);
+
+    await this.userService.populateRoomMessageSenders(rooms);
+
+    return rooms;
   }
 
   @UseGuards(GraphqlGuard)

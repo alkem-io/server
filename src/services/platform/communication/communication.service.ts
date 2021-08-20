@@ -71,11 +71,15 @@ export class CommunicationService {
     const matrixAgent = await this.matrixAgentPool.acquire(
       sendMsgData.sendingUserEmail
     );
-    await this.matrixAgentService.message(matrixAgent, sendMsgData.roomID, {
-      text: sendMsgData.message,
-    });
+    const messageId = await this.matrixAgentService.message(
+      matrixAgent,
+      sendMsgData.roomID,
+      {
+        text: sendMsgData.message,
+      }
+    );
 
-    return sendMsgData.roomID;
+    return messageId;
   }
 
   async sendMsgUser(
@@ -100,11 +104,15 @@ export class CommunicationService {
       }
     );
 
-    await this.matrixAgentService.message(matrixAgent, roomID, {
-      text: sendMsgUserData.message,
-    });
+    const messageId = await this.matrixAgentService.message(
+      matrixAgent,
+      roomID,
+      {
+        text: sendMsgUserData.message,
+      }
+    );
 
-    return roomID;
+    return messageId;
   }
 
   async getGlobalAdminUser() {
@@ -233,6 +241,7 @@ export class CommunicationService {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     // first send invites to the room - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
+    // TODO: Need to add a check whether the user is already part of the room/group
     await this.matrixRoomAdapterService.inviteUsersToRoom(
       elevatedAgent.matrixClient,
       roomID,

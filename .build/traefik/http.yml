@@ -1,9 +1,14 @@
 http:
   services:
-    ipfs-http-adapter:
+    mailslurper-client:
       loadBalancer:
         servers:
-          - url: 'http://ipfs:8080'
+          - url: 'http://mailslurper:4436'
+
+    mailslurper-api:
+      loadBalancer:
+        servers:
+          - url: 'http://mailslurper:4437'
 
     ipfs-api:
       loadBalancer:
@@ -106,6 +111,18 @@ http:
       service: 'synapse'
       entryPoints:
         - 'synapse'
+
+    mailslurper-api:
+      rule: 'PathPrefix(`/`)'
+      service: 'mailslurper-api'
+      entryPoints:
+        - 'mailslurper-api'
+
+    mailslurper-client:
+      rule: 'PathPrefix(`/`)'
+      service: 'mailslurper-client'
+      entryPoints:
+        - 'mailslurper-client'
 
     alkemiowebroute:
       rule: 'PathPrefix(`/`)'
