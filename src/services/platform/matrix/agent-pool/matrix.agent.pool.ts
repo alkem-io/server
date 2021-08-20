@@ -46,9 +46,10 @@ export class MatrixAgentPool {
       await client.start();
 
       this._wrappers[email] = client;
-      if (session) {
-        this._sessions[session] = email;
-      }
+    }
+
+    if (session) {
+      this._sessions[session] = email;
     }
 
     return this._wrappers[email];

@@ -4,11 +4,22 @@ import {
   MatrixEventDispatcher,
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
-import { AutoAcceptRoomMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adpater.room';
+import {
+  AutoAcceptRoomMembershipMonitorFactory,
+  RoomMonitorFactory,
+  RoomTimelineMonitorFactory,
+} from '@src/services/platform/matrix/events/matrix.event.adpater.room';
 import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
 import { IMatrixAgent } from './matrix.agent.interface';
-import { LoggerService } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
+import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
+import { PubSub } from 'graphql-subscriptions';
+import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import {
+  COMMUNICATION_MESSAGE_RECEIVED,
+  MATRIX_ROOM_JOINED,
+} from '@services/platform/subscription/subscription.events';
 
 // Wraps an instance of the client sdk
 export class MatrixAgent implements IMatrixAgent, Disposable {
@@ -19,6 +30,9 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   constructor(
     matrixClient: MatrixClient,
     roomAdapterService: MatrixRoomAdapterService,
+    private matrixUserAdapterService: MatrixUserAdapterService,
+    @Inject(PUB_SUB)
+    private readonly subscriptionHandler: PubSub,
     private loggerService: LoggerService
   ) {
     this.matrixClient = matrixClient;
@@ -50,20 +64,48 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
     this.attach({
       id: 'root',
-      roomMemberMembershipMonitor:
-        AutoAcceptRoomMembershipMonitorFactory.create(
-          this.matrixClient,
-          this.roomAdapterService
-        ),
-      groupMyMembershipMonitor: AutoAcceptGroupMembershipMonitorFactory.create(
-        this.matrixClient,
-        this.loggerService
-      ),
+      roomMemberMembershipMonitor: this.resolveRoomMembershipMonitor(),
+      groupMyMembershipMonitor: this.resolveGroupMembershipMonitor(),
+      roomTimelineMonitor: this.resolveRoomTimelineEventHandler(),
+      roomMonitor: this.resolveRoomEventHandler(),
     });
 
     await this.matrixClient.startClient({});
 
     return await startComplete;
+  }
+
+  resolveRoomMembershipMonitor() {
+    return AutoAcceptRoomMembershipMonitorFactory.create(
+      this.matrixClient,
+      this.roomAdapterService
+    );
+  }
+
+  resolveGroupMembershipMonitor() {
+    return AutoAcceptGroupMembershipMonitorFactory.create(
+      this.matrixClient,
+      this.loggerService
+    );
+  }
+
+  resolveRoomTimelineEventHandler() {
+    return RoomTimelineMonitorFactory.create(
+      this.matrixClient,
+      this.matrixUserAdapterService,
+      message => {
+        this.subscriptionHandler.publish(
+          COMMUNICATION_MESSAGE_RECEIVED,
+          message
+        );
+      }
+    );
+  }
+
+  resolveRoomEventHandler() {
+    return RoomMonitorFactory.create(message => {
+      this.subscriptionHandler.publish(MATRIX_ROOM_JOINED, message);
+    });
   }
 
   dispose() {

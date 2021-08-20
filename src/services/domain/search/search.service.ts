@@ -304,6 +304,7 @@ export class SearchService {
         .leftJoinAndSelect('opportunity.projects', 'projects')
         .leftJoinAndSelect('opportunity.authorization', 'authorization')
         .leftJoinAndSelect('opportunity.context', 'context')
+        .leftJoinAndSelect('opportunity.challenge', 'challenge')
         .where('opportunity.nameID like :term')
         .orWhere('opportunity.displayName like :term')
         .orWhere('tagset.tags like :term')
@@ -413,6 +414,7 @@ export class SearchService {
       const organisationMatches = await this.organisationRepository
         .createQueryBuilder('organisation')
         .leftJoinAndSelect('organisation.profile', 'profile')
+        .leftJoinAndSelect('organisation.groups', 'groups')
         .leftJoinAndSelect('profile.tagsets', 'tagset')
         .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
         .andWhere('find_in_set(:term, tagset.tags)')
