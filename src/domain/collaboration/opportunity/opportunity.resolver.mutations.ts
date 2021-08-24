@@ -2,11 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import {
-  CreateRelationInput,
-  IRelation,
-  RelationService,
-} from '@domain/collaboration/relation';
+import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
@@ -22,11 +18,12 @@ import { AuthorizationEngineService } from '@src/services/platform/authorization
 import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { RelationAuthorizationService } from '../relation/relation.service.authorization';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
-    private relationService: RelationService,
+    private relationAuthorizationService: RelationAuthorizationService,
     private projectService: ProjectService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationEngine: AuthorizationEngineService,
@@ -114,19 +111,36 @@ export class OpportunityResolverMutations {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       relationData.parentID
     );
-    await this.authorizationEngine.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `create relation: ${opportunity.nameID}`
-    );
-    const relation = await this.opportunityService.createRelation(relationData);
-    relation.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        relation.authorization,
+    // Extend the authorization definition to use for creating the relation
+    const authorization =
+      this.relationAuthorizationService.localExtendAuthorizationPolicy(
         opportunity.authorization
       );
-    return await this.relationService.saveRelation(relation);
+    // First check if the user has read access
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      AuthorizationPrivilege.READ,
+      `create relation: ${opportunity.nameID}`
+    );
+    // Then check if the user can create
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      AuthorizationPrivilege.CREATE,
+      `create relation: ${opportunity.nameID}`
+    );
+    // Load the authorization policy again to avoid the temporary extension above
+    const oppAuthorization =
+      await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
+        authorization.id
+      );
+    const relation = await this.opportunityService.createRelation(relationData);
+    return await this.relationAuthorizationService.applyAuthorizationPolicy(
+      relation,
+      oppAuthorization,
+      agentInfo.userID
+    );
   }
 
   @UseGuards(GraphqlGuard)

@@ -5,6 +5,7 @@ import { AuthorizationEngineModule } from '@src/services/platform/authorization-
 import { Relation } from './relation.entity';
 import { RelationResolverMutations } from './relation.resolver.mutations';
 import { RelationService } from './relation.service';
+import { RelationAuthorizationService } from './relation.service.authorization';
 
 @Module({
   imports: [
@@ -12,7 +13,11 @@ import { RelationService } from './relation.service';
     AuthorizationEngineModule,
     TypeOrmModule.forFeature([Relation]),
   ],
-  providers: [RelationResolverMutations, RelationService],
-  exports: [RelationService],
+  providers: [
+    RelationResolverMutations,
+    RelationService,
+    RelationAuthorizationService,
+  ],
+  exports: [RelationService, RelationAuthorizationService],
 })
 export class RelationModule {}
