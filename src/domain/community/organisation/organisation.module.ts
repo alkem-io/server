@@ -14,12 +14,10 @@ import { OrganisationAuthorizationService } from './organisation.service.authori
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { AuthorizationModule } from '@core/authorization/authorization.module';
 
 @Module({
   imports: [
     AgentModule,
-    AuthorizationModule,
     AuthorizationPolicyModule,
     AuthorizationEngineModule,
     UserModule,
