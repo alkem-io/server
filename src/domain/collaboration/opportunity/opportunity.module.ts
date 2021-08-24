@@ -13,7 +13,6 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { OpportunityAuthorizationService } from './opportunity.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -25,7 +24,6 @@ import { UserModule } from '@domain/community/user/user.module';
     CommunityModule,
     LifecycleModule,
     TypeOrmModule.forFeature([Opportunity]),
-    UserModule,
   ],
   providers: [
     OpportunityService,
