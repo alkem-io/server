@@ -150,6 +150,8 @@ export class AuthorizationResolverMutations {
       AuthorizationPrivilege.GRANT,
       `remove user global community admin: ${membershipData.userID}`
     );
-    return await this.authorizationService.removeGlobalAdmin(membershipData);
+    return await this.authorizationService.removeGlobalCommunityAdmin(
+      membershipData
+    );
   }
 }
