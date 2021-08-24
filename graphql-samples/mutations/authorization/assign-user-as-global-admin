@@ -1,0 +1,12 @@
+mutation assignUserAsGlobaAdmin($membershipData: AssignGlobalAdminInput!) {
+  assignUserAsGlobalAdmin(membershipData: $membershipData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "membershipData": {
+    "userID": "uuid"
+  }
+}

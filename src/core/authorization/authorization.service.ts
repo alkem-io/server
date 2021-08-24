@@ -19,8 +19,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AgentInfo } from '@core/authentication';
-import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import {
   AuthorizationPolicy,
@@ -29,6 +27,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AssignGlobalAdminInput } from './dto/authorization.dto.assign.global.admin';
+import { RemoveGlobalAdminInput } from './dto/authorization.dto.remove.global.admin';
+import { AssignGlobalCommunityAdminInput } from './dto/authorization.dto.assign.global.community.admin';
+import { RemoveGlobalCommunityAdminInput } from './dto/authorization.dto.remove.global.community.admin';
 
 @Injectable()
 export class AuthorizationService {
@@ -42,9 +44,13 @@ export class AuthorizationService {
   ) {}
 
   async grantCredential(
-    grantCredentialData: GrantAuthorizationCredentialInput,
-    currentAgentInfo?: AgentInfo
+    grantCredentialData: GrantAuthorizationCredentialInput
   ): Promise<IUser> {
+    if (grantCredentialData.type === AuthorizationCredential.GlobalAdmin) {
+      return await this.assignGlobalAdmin({
+        userID: grantCredentialData.userID,
+      });
+    }
     // check the inputs
     if (this.isGlobalAuthorizationCredential(grantCredentialData.type)) {
       if (grantCredentialData.resourceID)
@@ -57,16 +63,6 @@ export class AuthorizationService {
       grantCredentialData.userID
     );
 
-    // Only a global-admin can assign/remove other global-admins
-    if (grantCredentialData.type === AuthorizationCredential.GlobalAdmin) {
-      if (currentAgentInfo) {
-        await this.validateMandatedCredential(
-          currentAgentInfo.credentials,
-          AuthorizationCredential.GlobalAdmin
-        );
-      }
-    }
-
     user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
       type: grantCredentialData.type,
@@ -76,9 +72,13 @@ export class AuthorizationService {
   }
 
   async revokeCredential(
-    revokeCredentialData: RevokeAuthorizationCredentialInput,
-    currentAgentInfo?: AgentInfo
+    revokeCredentialData: RevokeAuthorizationCredentialInput
   ): Promise<IUser> {
+    if (revokeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
+      return await this.removeGlobalAdmin({
+        userID: revokeCredentialData.userID,
+      });
+    }
     // check the inputs
     if (this.isGlobalAuthorizationCredential(revokeCredentialData.type)) {
       if (revokeCredentialData.resourceID)
@@ -92,19 +92,6 @@ export class AuthorizationService {
       revokeCredentialData.userID
     );
 
-    // Check not the last global admin
-    await this.removeValidationSingleGlobalAdmin(revokeCredentialData.type);
-
-    // Only a global-admin can assign/remove other global-admins
-    if (revokeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
-      if (currentAgentInfo) {
-        await this.validateMandatedCredential(
-          currentAgentInfo.credentials,
-          AuthorizationCredential.GlobalAdmin
-        );
-      }
-    }
-
     user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
       type: revokeCredentialData.type,
@@ -114,49 +101,74 @@ export class AuthorizationService {
     return user;
   }
 
-  async validateMandatedCredential(
-    credentials: ICredential[],
-    credentialType: AuthorizationCredential
-  ) {
-    const result = await this.hasMatchingCredential(credentials, {
-      type: credentialType,
+  async assignGlobalAdmin(assignData: AssignGlobalAdminInput): Promise<IUser> {
+    const agent = await this.userService.getAgent(assignData.userID);
+
+    // assign the credential
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.GlobalAdmin,
+      resourceID: '',
     });
-    if (!result)
+
+    return await this.userService.getUserWithAgent(assignData.userID);
+  }
+
+  async removeGlobalAdmin(removeData: RemoveGlobalAdminInput): Promise<IUser> {
+    const agent = await this.userService.getAgent(removeData.userID);
+
+    // Check not the last global admin
+    await this.removeValidationSingleGlobalAdmin();
+
+    await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.GlobalAdmin,
+      resourceID: '',
+    });
+
+    return await this.userService.getUserWithAgent(removeData.userID);
+  }
+
+  async assignGlobalCommunityAdmin(
+    assignData: AssignGlobalCommunityAdminInput
+  ): Promise<IUser> {
+    const agent = await this.userService.getAgent(assignData.userID);
+
+    // assign the credential
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.GlobalAdminCommunity,
+      resourceID: '',
+    });
+
+    return await this.userService.getUserWithAgent(assignData.userID);
+  }
+
+  async removeGlobalCommunityAdmin(
+    removeData: RemoveGlobalCommunityAdminInput
+  ): Promise<IUser> {
+    const agent = await this.userService.getAgent(removeData.userID);
+
+    await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.GlobalAdminCommunity,
+      resourceID: '',
+    });
+
+    return await this.userService.getUserWithAgent(removeData.userID);
+  }
+
+  async removeValidationSingleGlobalAdmin(): Promise<boolean> {
+    // Check more than one
+    const globalAdmins = await this.usersWithCredentials({
+      type: AuthorizationCredential.GlobalAdmin,
+    });
+    if (globalAdmins.length < 2)
       throw new ForbiddenException(
-        `User does not have required credential assigned: ${credentialType}`,
+        `Not allowed to remove ${AuthorizationCredential.GlobalAdmin}: last global-admin`,
         LogContext.AUTH
       );
-  }
 
-  hasMatchingCredential(
-    credentials: ICredential[],
-    credentialCriteria: CredentialsSearchInput
-  ): boolean {
-    for (const credential of credentials) {
-      if (credential.type === credentialCriteria.type) {
-        if (!credentialCriteria.resourceID) return true;
-        if (credentialCriteria.resourceID === credential.resourceID)
-          return true;
-      }
-    }
-    return false;
-  }
-
-  async removeValidationSingleGlobalAdmin(
-    credentialType: string
-  ): Promise<boolean> {
-    const globalAdminType = AuthorizationCredential.GlobalAdmin.toString();
-    if (credentialType === globalAdminType) {
-      // Check more than one
-      const globalAdmins = await this.usersWithCredentials({
-        type: AuthorizationCredential.GlobalAdmin,
-      });
-      if (globalAdmins.length < 2)
-        throw new ForbiddenException(
-          `Not allowed to remove ${credentialType}: last global-admin`,
-          LogContext.AUTH
-        );
-    }
     return true;
   }
 
