@@ -45,6 +45,9 @@ export class MembershipService {
     if (!credentials) {
       return membership;
     }
+    membership.id = user.id;
+    membership.nameID = user.nameID;
+    membership.displayName = user.displayName;
     const storedChallenges: IChallenge[] = [];
     const storedOpportunities: IOpportunity[] = [];
     const storedCommunityUserGroups: IUserGroup[] = [];
@@ -56,7 +59,10 @@ export class MembershipService {
         );
       } else if (credential.type === AuthorizationCredential.EcoverseMember) {
         membership.ecoverses.push(
-          await this.createEcoverseMembershipResult(credential.resourceID)
+          await this.createEcoverseMembershipResult(
+            credential.resourceID,
+            user.id
+          )
         );
       } else if (credential.type === AuthorizationCredential.ChallengeMember) {
         const challenge = await this.challengeService.getChallengeOrFail(
@@ -152,13 +158,15 @@ export class MembershipService {
   }
 
   async createEcoverseMembershipResult(
-    ecoverseID: string
+    ecoverseID: string,
+    parentID: string
   ): Promise<MembershipUserResultEntryEcoverse> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID);
     return new MembershipUserResultEntryEcoverse(
       ecoverse.nameID,
       ecoverse.id,
-      ecoverse.displayName
+      ecoverse.displayName,
+      parentID
     );
   }
 
