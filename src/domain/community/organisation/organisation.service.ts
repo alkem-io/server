@@ -32,11 +32,15 @@ import { RemoveOrganisationMemberInput } from './dto/organisation.dto.remove.mem
 import { AssignOrganisationMemberInput } from './dto/organisation.dto.assign.member';
 import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admin';
 import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
+import { RemoveOrganisationOwnerInput } from './dto/organisation.dto.remove.owner';
+import { AssignOrganisationOwnerInput } from './dto/organisation.dto.assign.owner';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Injectable()
 export class OrganisationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private authorizationService: AuthorizationService,
     private userService: UserService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
@@ -373,6 +377,51 @@ export class OrganisationService {
     await this.agentService.revokeCredential({
       agentID: agent.id,
       type: AuthorizationCredential.OrganisationAdmin,
+      resourceID: organisation.id,
+    });
+
+    return await this.userService.getUserWithAgent(removeData.userID);
+  }
+
+  async assignOrganisationOwner(
+    assignData: AssignOrganisationOwnerInput
+  ): Promise<IUser> {
+    const userID = assignData.userID;
+    const agent = await this.userService.getAgent(userID);
+    const organisation = await this.getOrganisationOrFail(
+      assignData.organisationID
+    );
+
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OrganisationOwner,
+      resourceID: organisation.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
+  }
+
+  async removeOrganisationOwner(
+    removeData: RemoveOrganisationOwnerInput
+  ): Promise<IUser> {
+    const organisationID = removeData.organisationID;
+    const organisation = await this.getOrganisationOrFail(organisationID);
+    const agent = await this.userService.getAgent(removeData.userID);
+
+    // Check more than one
+    const orgOwners = await this.authorizationService.usersWithCredentials({
+      type: AuthorizationCredential.OrganisationOwner,
+      resourceID: organisationID,
+    });
+    if (orgOwners.length < 2)
+      throw new ForbiddenException(
+        `Not allowed to remove last owner for organisaiton: ${organisation.displayName}`,
+        LogContext.AUTH
+      );
+
+    await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OrganisationOwner,
       resourceID: organisation.id,
     });
 

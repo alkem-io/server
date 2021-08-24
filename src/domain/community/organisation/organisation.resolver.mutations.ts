@@ -14,7 +14,6 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { OrganisationAuthorizationService } from './organisation.service.authorization';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { UserGroupService } from '../user-group/user-group.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { AssignOrganisationMemberInput } from './dto/organisation.dto.assign.member';
@@ -23,12 +22,13 @@ import { IUser } from '../user/user.interface';
 import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
 import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admin';
 import { OrganisationAuthorizationResetInput } from './dto/organisation.dto.reset.authorization';
+import { AssignOrganisationOwnerInput } from './dto/organisation.dto.assign.owner';
+import { RemoveOrganisationOwnerInput } from './dto/organisation.dto.remove.owner';
 
 @Resolver(() => IOrganisation)
 export class OrganisationResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private userGroupService: UserGroupService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organisationAuthorizationService: OrganisationAuthorizationService,
     private organisationService: OrganisationService,
@@ -245,6 +245,54 @@ export class OrganisationResolverMutations {
       `remove user organisation admin: ${organisation.displayName}`
     );
     return await this.organisationService.removeOrganisationAdmin(
+      membershipData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Assigns a User as an Organisation Owner.',
+  })
+  @Profiling.api
+  async assignUserAsOrganisationOwner(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignOrganisationOwnerInput
+  ): Promise<IUser> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      membershipData.organisationID
+    );
+    // todo: what additional logic check do we want on the granting of org owner?
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user organisation owner: ${organisation.displayName}`
+    );
+    return await this.organisationService.assignOrganisationOwner(
+      membershipData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Removes a User from being an Organisation Owner.',
+  })
+  @Profiling.api
+  async removeUserAsOrganisationOwner(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveOrganisationOwnerInput
+  ): Promise<IUser> {
+    const organisation = await this.organisationService.getOrganisationOrFail(
+      membershipData.organisationID
+    );
+    // todo: what additional logic check do we want on the granting of org owner?
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organisation.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user organisation admin: ${organisation.displayName}`
+    );
+    return await this.organisationService.removeOrganisationOwner(
       membershipData
     );
   }
