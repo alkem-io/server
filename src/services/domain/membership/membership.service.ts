@@ -53,7 +53,7 @@ export class MembershipService {
     for (const credential of credentials) {
       if (credential.type === AuthorizationCredential.OrganisationMember) {
         membership.organisations.push(
-          await this.createOrganisationResult(credential.resourceID)
+          await this.createOrganisationResult(credential.resourceID, user.id)
         );
       } else if (credential.type === AuthorizationCredential.EcoverseMember) {
         membership.ecoverses.push(
@@ -126,7 +126,9 @@ export class MembershipService {
     for (const organisationResult of membership.organisations) {
       for (const group of storedOrgUserGroups) {
         const parent = await this.userGroupService.getParent(group);
-        if ((parent as IOrganisation).id === organisationResult.id) {
+        if (
+          (parent as IOrganisation).id === organisationResult.organisationID
+        ) {
           const groupResult = new MembershipResultEntry(
             group.name,
             group.id,
@@ -143,7 +145,8 @@ export class MembershipService {
   }
 
   async createOrganisationResult(
-    organisationID: string
+    organisationID: string,
+    userID: string
   ): Promise<MembershipUserResultEntryOrganisation> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       organisationID
@@ -151,7 +154,8 @@ export class MembershipService {
     return new MembershipUserResultEntryOrganisation(
       organisation.nameID,
       organisation.id,
-      organisation.displayName
+      organisation.displayName,
+      userID
     );
   }
 

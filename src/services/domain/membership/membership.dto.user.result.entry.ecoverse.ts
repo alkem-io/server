@@ -8,11 +8,6 @@ export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
   })
   ecoverseID: string;
 
-  @Field(() => String, {
-    description: 'The Parent User ID',
-  })
-  userID: string;
-
   @Field(() => [MembershipResultEntry], {
     description: 'Details of the Challenges the user is a member of',
   })
@@ -35,6 +30,5 @@ export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
   ) {
     super(nameID, `${userID}/${ecoverseID}`, displayName);
     this.ecoverseID = ecoverseID;
-    this.userID = userID;
   }
 }
