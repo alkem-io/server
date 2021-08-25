@@ -45,6 +45,7 @@ export class MembershipService {
     if (!credentials) {
       return membership;
     }
+    membership.id = user.id;
     const storedChallenges: IChallenge[] = [];
     const storedOpportunities: IOpportunity[] = [];
     const storedCommunityUserGroups: IUserGroup[] = [];
@@ -52,11 +53,14 @@ export class MembershipService {
     for (const credential of credentials) {
       if (credential.type === AuthorizationCredential.OrganisationMember) {
         membership.organisations.push(
-          await this.createOrganisationResult(credential.resourceID)
+          await this.createOrganisationResult(credential.resourceID, user.id)
         );
       } else if (credential.type === AuthorizationCredential.EcoverseMember) {
         membership.ecoverses.push(
-          await this.createEcoverseMembershipResult(credential.resourceID)
+          await this.createEcoverseMembershipResult(
+            credential.resourceID,
+            user.id
+          )
         );
       } else if (credential.type === AuthorizationCredential.ChallengeMember) {
         const challenge = await this.challengeService.getChallengeOrFail(
@@ -86,7 +90,7 @@ export class MembershipService {
     // Assign to the right ecoverse
     for (const ecoverseResult of membership.ecoverses) {
       for (const challenge of storedChallenges) {
-        if (challenge.ecoverseID === ecoverseResult.id) {
+        if (challenge.ecoverseID === ecoverseResult.ecoverseID) {
           const challengeResult = new MembershipResultEntry(
             challenge.nameID,
             challenge.id,
@@ -96,7 +100,7 @@ export class MembershipService {
         }
       }
       for (const opportunity of storedOpportunities) {
-        if (opportunity.ecoverseID === ecoverseResult.id) {
+        if (opportunity.ecoverseID === ecoverseResult.ecoverseID) {
           const opportunityResult = new MembershipResultEntry(
             opportunity.nameID,
             opportunity.id,
@@ -107,7 +111,7 @@ export class MembershipService {
       }
       for (const group of storedCommunityUserGroups) {
         const parent = await this.userGroupService.getParent(group);
-        if ((parent as ICommunity).ecoverseID === ecoverseResult.id) {
+        if ((parent as ICommunity).ecoverseID === ecoverseResult.ecoverseID) {
           const groupResult = new MembershipResultEntry(
             group.name,
             group.id,
@@ -122,7 +126,9 @@ export class MembershipService {
     for (const organisationResult of membership.organisations) {
       for (const group of storedOrgUserGroups) {
         const parent = await this.userGroupService.getParent(group);
-        if ((parent as IOrganisation).id === organisationResult.id) {
+        if (
+          (parent as IOrganisation).id === organisationResult.organisationID
+        ) {
           const groupResult = new MembershipResultEntry(
             group.name,
             group.id,
@@ -139,7 +145,8 @@ export class MembershipService {
   }
 
   async createOrganisationResult(
-    organisationID: string
+    organisationID: string,
+    userID: string
   ): Promise<MembershipUserResultEntryOrganisation> {
     const organisation = await this.organisationService.getOrganisationOrFail(
       organisationID
@@ -147,18 +154,21 @@ export class MembershipService {
     return new MembershipUserResultEntryOrganisation(
       organisation.nameID,
       organisation.id,
-      organisation.displayName
+      organisation.displayName,
+      userID
     );
   }
 
   async createEcoverseMembershipResult(
-    ecoverseID: string
+    ecoverseID: string,
+    userID: string
   ): Promise<MembershipUserResultEntryEcoverse> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID);
     return new MembershipUserResultEntryEcoverse(
       ecoverse.nameID,
       ecoverse.id,
-      ecoverse.displayName
+      ecoverse.displayName,
+      userID
     );
   }
 
@@ -172,6 +182,8 @@ export class MembershipService {
         relations: ['agent'],
       }
     );
+    membership.id = organisation.id;
+
     const agent = organisation?.agent;
     if (agent?.credentials) {
       for (const credential of agent.credentials) {
