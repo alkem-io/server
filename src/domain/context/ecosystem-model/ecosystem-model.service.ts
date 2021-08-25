@@ -21,7 +21,7 @@ import { ActorGroupService } from '@domain/context/actor-group/actor-group.servi
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
-import { Canvas } from '@domain/common/canvas';
+import { Canvas, ICanvas } from '@domain/common/canvas';
 
 @Injectable()
 export class EcosystemModelService {
@@ -164,5 +164,14 @@ export class EcosystemModelService {
         LogContext.CONTEXT
       );
     return actorGroups;
+  }
+
+  async getCanvas(ecosystemModel: IEcosystemModel): Promise<ICanvas> {
+    if (!ecosystemModel.canvas) {
+      // create and add the canvas
+      ecosystemModel.canvas = new Canvas();
+      await this.ecosystemModelRepository.save(ecosystemModel);
+    }
+    return ecosystemModel.canvas;
   }
 }

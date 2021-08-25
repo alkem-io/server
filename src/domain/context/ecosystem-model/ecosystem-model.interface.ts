@@ -17,10 +17,6 @@ export abstract class IEcosystemModel extends IAuthorizable {
   })
   actorGroups?: IActorGroup[];
 
-  @Field(() => ICanvas, {
-    nullable: true,
-    description: 'The Canvas for visualizing this EcosystemModel.',
-  })
   canvas?: ICanvas;
 
   restrictedActorGroupNames!: string[];

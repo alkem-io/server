@@ -10,9 +10,9 @@ export class Canvas extends BaseAlkemioEntity implements ICanvas {
     this.value = value || '';
   }
 
-  @Column()
+  @Column('text', { nullable: false })
   name!: string;
 
-  @Column()
+  @Column('text', { nullable: false })
   value!: string;
 }
