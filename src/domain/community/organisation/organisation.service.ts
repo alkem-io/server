@@ -446,7 +446,7 @@ export class OrganisationService {
         type: AuthorizationCredential.OrganisationOwner,
         resourceID: organisationID,
       });
-      if (orgOwners.length < 2)
+      if (orgOwners.length === 1)
         throw new ForbiddenException(
           `Not allowed to remove last owner for organisaiton: ${organisation.displayName}`,
           LogContext.AUTH
