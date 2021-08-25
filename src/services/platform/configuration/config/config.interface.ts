@@ -1,6 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthenticationConfig } from './authentication/authentication.config.interface';
 import { IPlatformConfig } from './platform';
+import { ISentryConfig } from './sentry';
 import { Template } from './template/template.entity';
 import { ITemplate } from './template/template.interface';
 
@@ -23,4 +24,10 @@ export abstract class IConfig {
     description: 'Platform related resources.',
   })
   platform?: IPlatformConfig;
+
+  @Field(() => ISentryConfig, {
+    nullable: false,
+    description: 'Sentry (client monitoring) related configuration.',
+  })
+  sentry?: ISentryConfig;
 }

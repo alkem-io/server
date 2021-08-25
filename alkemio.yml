@@ -241,6 +241,17 @@ monitoring:
       # Elastic Cloud password.
       password: ${ELASTIC_CLOUD_PASSWORD}
 
+  # Sentry (client) logging configuration
+  sentry:
+    # A flag setting whether Sentry monitoring will be used on the client.
+    enabled: ${LOGGING_SENTRY_ENABLED}:false
+
+    # Logging end point for sentry
+    endpoint: ${LOGGING_SENTRY_ENDPOINT}
+
+    # Flag to control whether PII should be included on monitoring
+    submit_pii: ${LOGGING_SENTRY_PII_ENABLED}:false
+
 ## communications ##
 # Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Alkemio.
 communications:
