@@ -22,11 +22,10 @@ export class Context extends AuthorizableEntity implements IContext {
   @Column('text', { nullable: true })
   who?: string = '';
 
-  @OneToMany(
-    () => Reference,
-    reference => reference.context,
-    { eager: false, cascade: true }
-  )
+  @OneToMany(() => Reference, reference => reference.context, {
+    eager: false,
+    cascade: true,
+  })
   references?: Reference[];
 
   @OneToOne(() => EcosystemModel, {
@@ -41,11 +40,10 @@ export class Context extends AuthorizableEntity implements IContext {
   @JoinColumn()
   visual?: Visual;
 
-  @OneToMany(
-    () => Aspect,
-    aspect => aspect.context,
-    { eager: false, cascade: true }
-  )
+  @OneToMany(() => Aspect, aspect => aspect.context, {
+    eager: false,
+    cascade: true,
+  })
   aspects?: Aspect[];
 
   constructor() {

@@ -11,6 +11,8 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
 import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
+import { IEcosystemModel } from './ecosystem-model.interface';
+import { UpdateEcosystemModelInput } from './ecosystem-model.dto.update';
 @Resolver()
 export class EcosystemModelResolverMutations {
   constructor(
@@ -28,9 +30,10 @@ export class EcosystemModelResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('actorGroupData') actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
-    const ecosystemModel = await this.ecosystemModelService.getEcosystemModelOrFail(
-      actorGroupData.ecosystemModelID
-    );
+    const ecosystemModel =
+      await this.ecosystemModelService.getEcosystemModelOrFail(
+        actorGroupData.ecosystemModelID
+      );
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
       ecosystemModel.authorization,
@@ -43,6 +46,31 @@ export class EcosystemModelResolverMutations {
     return await this.actorGroupAuthorizationService.applyAuthorizationPolicy(
       actorGroup,
       ecosystemModel.authorization
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IEcosystemModel, {
+    description: 'Updates the specified EcosystemModel.',
+  })
+  @Profiling.api
+  async updateEcosystemModel(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ecosystemModelData') ecosystemModelData: UpdateEcosystemModelInput
+  ): Promise<IEcosystemModel> {
+    const ecosystemModel =
+      await this.ecosystemModelService.getEcosystemModelOrFail(
+        ecosystemModelData.ID
+      );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      ecosystemModel.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `ecosystem model update: ${ecosystemModel.id}`
+    );
+    return await this.ecosystemModelService.updateEcosystemModel(
+      ecosystemModel,
+      ecosystemModelData
     );
   }
 }
