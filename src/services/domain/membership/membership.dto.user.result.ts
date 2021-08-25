@@ -1,4 +1,4 @@
-import { NameID, UUID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { MembershipUserResultEntryEcoverse } from './membership.dto.user.result.entry.ecoverse';
@@ -10,19 +10,6 @@ export class UserMembership {
     nullable: false,
   })
   id!: string;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'The display name.',
-  })
-  displayName!: string;
-
-  @Field(() => NameID, {
-    nullable: false,
-    description:
-      'A name identifier of the entity, unique within a given scope.',
-  })
-  nameID!: string;
 
   @Field(() => [MembershipUserResultEntryEcoverse], {
     description:

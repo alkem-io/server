@@ -46,8 +46,6 @@ export class MembershipService {
       return membership;
     }
     membership.id = user.id;
-    membership.nameID = user.nameID;
-    membership.displayName = user.displayName;
     const storedChallenges: IChallenge[] = [];
     const storedOpportunities: IOpportunity[] = [];
     const storedCommunityUserGroups: IUserGroup[] = [];
@@ -92,7 +90,7 @@ export class MembershipService {
     // Assign to the right ecoverse
     for (const ecoverseResult of membership.ecoverses) {
       for (const challenge of storedChallenges) {
-        if (challenge.ecoverseID === ecoverseResult.id) {
+        if (challenge.ecoverseID === ecoverseResult.ecoverseID) {
           const challengeResult = new MembershipResultEntry(
             challenge.nameID,
             challenge.id,
@@ -102,7 +100,7 @@ export class MembershipService {
         }
       }
       for (const opportunity of storedOpportunities) {
-        if (opportunity.ecoverseID === ecoverseResult.id) {
+        if (opportunity.ecoverseID === ecoverseResult.ecoverseID) {
           const opportunityResult = new MembershipResultEntry(
             opportunity.nameID,
             opportunity.id,
@@ -113,7 +111,7 @@ export class MembershipService {
       }
       for (const group of storedCommunityUserGroups) {
         const parent = await this.userGroupService.getParent(group);
-        if ((parent as ICommunity).ecoverseID === ecoverseResult.id) {
+        if ((parent as ICommunity).ecoverseID === ecoverseResult.ecoverseID) {
           const groupResult = new MembershipResultEntry(
             group.name,
             group.id,
@@ -159,14 +157,14 @@ export class MembershipService {
 
   async createEcoverseMembershipResult(
     ecoverseID: string,
-    parentID: string
+    userID: string
   ): Promise<MembershipUserResultEntryEcoverse> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID);
     return new MembershipUserResultEntryEcoverse(
       ecoverse.nameID,
       ecoverse.id,
       ecoverse.displayName,
-      parentID
+      userID
     );
   }
 
@@ -180,6 +178,8 @@ export class MembershipService {
         relations: ['agent'],
       }
     );
+    membership.id = organisation.id;
+
     const agent = organisation?.agent;
     if (agent?.credentials) {
       for (const credential of agent.credentials) {

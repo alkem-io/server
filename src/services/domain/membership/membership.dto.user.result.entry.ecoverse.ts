@@ -4,9 +4,14 @@ import { MembershipResultEntry } from './membership.dto.result.entry';
 @ObjectType()
 export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
   @Field(() => String, {
-    description: 'Parent ID (User ID)',
+    description: 'The Ecoverse ID',
   })
-  parentID: string;
+  ecoverseID: string;
+
+  @Field(() => String, {
+    description: 'The Parent User ID',
+  })
+  userID: string;
 
   @Field(() => [MembershipResultEntry], {
     description: 'Details of the Challenges the user is a member of',
@@ -24,11 +29,12 @@ export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
   userGroups: MembershipResultEntry[] = [];
   constructor(
     nameID: string,
-    id: string,
+    ecoverseID: string,
     displayName: string,
-    parentID: string
+    userID: string
   ) {
-    super(nameID, id, displayName);
-    this.parentID = parentID;
+    super(nameID, `${userID}/${ecoverseID}`, displayName);
+    this.ecoverseID = ecoverseID;
+    this.userID = userID;
   }
 }
