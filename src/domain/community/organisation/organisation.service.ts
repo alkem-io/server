@@ -125,17 +125,16 @@ export class OrganisationService {
         LogContext.CHALLENGES
       );
     }
-
-    if (organisation.profile) {
-      await this.profileService.deleteProfile(organisation.profile.id);
-    }
-
-    if (organisation.groups) {
-      for (const group of organisation.groups) {
-        await this.userGroupService.removeUserGroup({
-          ID: group.id,
-        });
-      }
+    // Start by removing all issued org owner credentials in case this causes issues
+    const owners = await this.getOwners(organisation);
+    for (const owner of owners) {
+      await this.removeOrganisationOwner(
+        {
+          userID: owner.id,
+          organisationID: organisation.id,
+        },
+        false
+      );
     }
 
     // Remove all issued membership credentials
@@ -156,17 +155,18 @@ export class OrganisationService {
       });
     }
 
-    // Remove all issued org owner credentials
-    const owners = await this.getOwners(organisation);
-    for (const owner of owners) {
-      await this.removeOrganisationOwner(
-        {
-          userID: owner.id,
-          organisationID: organisation.id,
-        },
-        false
-      );
+    if (organisation.profile) {
+      await this.profileService.deleteProfile(organisation.profile.id);
     }
+
+    if (organisation.groups) {
+      for (const group of organisation.groups) {
+        await this.userGroupService.removeUserGroup({
+          ID: group.id,
+        });
+      }
+    }
+
     if (organisation.authorization) {
       await this.authorizationPolicyService.delete(organisation.authorization);
     }
