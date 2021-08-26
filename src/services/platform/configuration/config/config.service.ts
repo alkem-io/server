@@ -12,6 +12,9 @@ export class KonfigService {
   constructor(private configService: ConfigService) {}
 
   async getConfig(): Promise<IConfig> {
+    const sentryConfig = this.configService.get(
+      ConfigurationTypes.Monitoring
+    )?.sentry;
     return {
       template: await this.getTemplate(),
       authentication: {
@@ -38,6 +41,11 @@ export class KonfigService {
               ?.enabled,
           },
         ],
+      },
+      sentry: {
+        enabled: sentryConfig?.enabled,
+        endpoint: sentryConfig?.endpoint,
+        submitPII: sentryConfig?.submit_pii,
       },
     };
   }
