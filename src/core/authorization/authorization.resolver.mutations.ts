@@ -146,7 +146,7 @@ export class AuthorizationResolverMutations {
   ): Promise<IUser> {
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
-      this.authorizationGlobalAdminPolicy,
+      this.authorizationGlobalCommunityAdminPolicy,
       AuthorizationPrivilege.GRANT,
       `remove user global community admin: ${membershipData.userID}`
     );
