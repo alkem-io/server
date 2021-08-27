@@ -32,6 +32,8 @@ import { RemoveOrganisationMemberInput } from './dto/organisation.dto.remove.mem
 import { AssignOrganisationMemberInput } from './dto/organisation.dto.assign.member';
 import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admin';
 import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
+import { RemoveOrganisationOwnerInput } from './dto/organisation.dto.remove.owner';
+import { AssignOrganisationOwnerInput } from './dto/organisation.dto.assign.owner';
 
 @Injectable()
 export class OrganisationService {
@@ -123,6 +125,35 @@ export class OrganisationService {
         LogContext.CHALLENGES
       );
     }
+    // Start by removing all issued org owner credentials in case this causes issues
+    const owners = await this.getOwners(organisation);
+    for (const owner of owners) {
+      await this.removeOrganisationOwner(
+        {
+          userID: owner.id,
+          organisationID: organisation.id,
+        },
+        false
+      );
+    }
+
+    // Remove all issued membership credentials
+    const members = await this.getMembers(organisation);
+    for (const member of members) {
+      await this.removeMember({
+        userID: member.id,
+        organisationID: organisation.id,
+      });
+    }
+
+    // Remove all issued org admin credentials
+    const admins = await this.getAdmins(organisation);
+    for (const admin of admins) {
+      await this.removeOrganisationAdmin({
+        userID: admin.id,
+        organisationID: organisation.id,
+      });
+    }
 
     if (organisation.profile) {
       await this.profileService.deleteProfile(organisation.profile.id);
@@ -134,15 +165,6 @@ export class OrganisationService {
           ID: group.id,
         });
       }
-    }
-
-    // Remove all issued membership credentials
-    const members = await this.getMembers(organisation);
-    for (const member of members) {
-      await this.removeMember({
-        userID: member.id,
-        organisationID: organisation.id,
-      });
     }
 
     if (organisation.authorization) {
@@ -213,6 +235,20 @@ export class OrganisationService {
   async getMembers(organisation: IOrganisation): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
       type: AuthorizationCredential.OrganisationMember,
+      resourceID: organisation.id,
+    });
+  }
+
+  async getAdmins(organisation: IOrganisation): Promise<IUser[]> {
+    return await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.OrganisationAdmin,
+      resourceID: organisation.id,
+    });
+  }
+
+  async getOwners(organisation: IOrganisation): Promise<IUser[]> {
+    return await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.OrganisationOwner,
       resourceID: organisation.id,
     });
   }
@@ -373,6 +409,53 @@ export class OrganisationService {
     await this.agentService.revokeCredential({
       agentID: agent.id,
       type: AuthorizationCredential.OrganisationAdmin,
+      resourceID: organisation.id,
+    });
+
+    return await this.userService.getUserWithAgent(removeData.userID);
+  }
+
+  async assignOrganisationOwner(
+    assignData: AssignOrganisationOwnerInput
+  ): Promise<IUser> {
+    const userID = assignData.userID;
+    const agent = await this.userService.getAgent(userID);
+    const organisation = await this.getOrganisationOrFail(
+      assignData.organisationID
+    );
+
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OrganisationOwner,
+      resourceID: organisation.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
+  }
+
+  async removeOrganisationOwner(
+    removeData: RemoveOrganisationOwnerInput,
+    checkAtLeastOneOwner = true
+  ): Promise<IUser> {
+    const organisationID = removeData.organisationID;
+    const organisation = await this.getOrganisationOrFail(organisationID);
+    const agent = await this.userService.getAgent(removeData.userID);
+
+    if (checkAtLeastOneOwner) {
+      const orgOwners = await this.userService.usersWithCredentials({
+        type: AuthorizationCredential.OrganisationOwner,
+        resourceID: organisationID,
+      });
+      if (orgOwners.length === 1)
+        throw new ForbiddenException(
+          `Not allowed to remove last owner for organisaiton: ${organisation.displayName}`,
+          LogContext.AUTH
+        );
+    }
+
+    await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OrganisationOwner,
       resourceID: organisation.id,
     });
 

@@ -43,7 +43,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
-    nullable: false,
+    nullable: true,
     description: 'Application available for this community.',
   })
   @Profiling.api
@@ -55,7 +55,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('updatesRoom', () => CommunityRoom, {
-    nullable: false,
+    nullable: true,
     description: 'Room with messages for this community.',
   })
   @Profiling.api
@@ -72,7 +72,7 @@ export class CommunityResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('discussionRoom', () => CommunityRoom, {
-    nullable: false,
+    nullable: true,
     description: 'Room with messages for this community.',
   })
   @Profiling.api

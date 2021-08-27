@@ -7,12 +7,14 @@ import { EcosystemModelResolverMutations } from './ecosystem-model.resolver.muta
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { EcosystemModelAuthorizationService } from './ecosystem-model.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { CanvasModule } from '@domain/common/canvas/canvas.module';
 
 @Module({
   imports: [
     AuthorizationEngineModule,
     AuthorizationPolicyModule,
     ActorGroupModule,
+    CanvasModule,
     TypeOrmModule.forFeature([EcosystemModel]),
   ],
   providers: [
