@@ -292,15 +292,13 @@ export class OpportunityService {
     const membersTopic = new NVP('members', membersCount.toString());
     activity.push(membersTopic);
 
-    const projectsCount = await this.projectService.getProjectsInOpportunityCount(
-      opportunity.id
-    );
+    const projectsCount =
+      await this.projectService.getProjectsInOpportunityCount(opportunity.id);
     const projectsTopic = new NVP('projects', projectsCount.toString());
     activity.push(projectsTopic);
 
-    const relationsCount = await this.relationService.getRelationsInOpportunityCount(
-      opportunity.id
-    );
+    const relationsCount =
+      await this.relationService.getRelationsInOpportunityCount(opportunity.id);
     const relationsTopic = new NVP('relations', relationsCount.toString());
     activity.push(relationsTopic);
 
@@ -311,6 +309,10 @@ export class OpportunityService {
     return await this.opportunityRepository.count({
       where: { ecoverseID: ecoverseID },
     });
+  }
+
+  async getOpportunitiesCount(): Promise<number> {
+    return await this.opportunityRepository.count();
   }
 
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {
