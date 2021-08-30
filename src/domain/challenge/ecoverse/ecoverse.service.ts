@@ -190,7 +190,14 @@ export class EcoverseService {
       return 0;
     });
 
-    return sortedEcoverses || [];
+    // Load the ecoverses through normal mechanisms
+    const ecoversesResult: IEcoverse[] = [];
+    for (const sortedEcoverse of sortedEcoverses) {
+      const ecoverse = await this.getEcoverseOrFail(sortedEcoverse.id);
+      ecoversesResult.push(ecoverse);
+    }
+
+    return ecoversesResult;
   }
 
   private getChallengeAndOpportunitiesCount(challenges: IChallenge[]): number {
