@@ -147,14 +147,37 @@ export class EcoverseService {
   }
 
   async getEcoverses(): Promise<IEcoverse[]> {
-    const ecoverses = await this.ecoverseRepository
+    // Load the ecoverses
+    const ecoverses: IEcoverse[] = await this.ecoverseRepository.find();
+    if (ecoverses.length === 0) return [];
+
+    // Get the order to return the data in
+    const sortedIDs = await this.getEcoversesSortOrderDefault();
+    const ecoversesResult: IEcoverse[] = [];
+    for (const ecoverseID of sortedIDs) {
+      const ecoverse = ecoverses.find(ecoverse => ecoverse.id === ecoverseID);
+      if (ecoverse) {
+        ecoversesResult.push(ecoverse);
+      } else {
+        this.logger.error(
+          'Invalid state error when sorting Ecoverses!',
+          LogContext.CHALLENGES
+        );
+      }
+    }
+    return ecoversesResult;
+  }
+
+  private async getEcoversesSortOrderDefault(): Promise<string[]> {
+    // Then load data to do the sorting
+    const ecoversesDataForSorting = await this.ecoverseRepository
       .createQueryBuilder('ecoverse')
       .leftJoinAndSelect('ecoverse.challenges', 'challenge')
       .leftJoinAndSelect('ecoverse.authorization', 'authorization_definition')
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .getMany();
 
-    const sortedEcoverses = ecoverses.sort((a, b) => {
+    const sortedEcoverses = ecoversesDataForSorting.sort((a, b) => {
       if (
         a.authorization?.anonymousReadAccess === true &&
         b.authorization?.anonymousReadAccess === false
@@ -170,7 +193,7 @@ export class EcoverseService {
       if (a.challenges && !b.challenges) return -1;
       if (!a.challenges && !b.challenges) return 0;
 
-      //Shouldn't get there
+      // Shouldn't get there
       if (!a.challenges || !b.challenges)
         throw new ValidationException(
           `Critical error when comparing Ecoverses! Critical error when loading Challenges for Ecoverse ${a} and Ecoverse ${b}`,
@@ -190,14 +213,11 @@ export class EcoverseService {
       return 0;
     });
 
-    // Load the ecoverses through normal mechanisms
-    const ecoversesResult: IEcoverse[] = [];
-    for (const sortedEcoverse of sortedEcoverses) {
-      const ecoverse = await this.getEcoverseOrFail(sortedEcoverse.id);
-      ecoversesResult.push(ecoverse);
+    const sortedIDs: string[] = [];
+    for (const ecoverse of sortedEcoverses) {
+      sortedIDs.push(ecoverse.id);
     }
-
-    return ecoversesResult;
+    return sortedIDs;
   }
 
   private getChallengeAndOpportunitiesCount(challenges: IChallenge[]): number {
