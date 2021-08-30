@@ -408,6 +408,7 @@ export class EcoverseService {
     const challengesCount =
       await this.challengeService.getChallengesInEcoverseCount(ecoverse.id);
     const challengesTopic = new NVP('challenges', challengesCount.toString());
+    challengesTopic.id = `challenges-${ecoverse.id}`;
     activity.push(challengesTopic);
 
     const opportunitiesCount =
@@ -418,6 +419,7 @@ export class EcoverseService {
       'opportunities',
       opportunitiesCount.toString()
     );
+    opportunitiesTopic.id = `opportunities-${ecoverse.id}`;
     activity.push(opportunitiesTopic);
 
     // Projects
@@ -425,11 +427,13 @@ export class EcoverseService {
       ecoverse.id
     );
     const projectsTopic = new NVP('projects', projectsCount.toString());
+    projectsTopic.id = `projects-${ecoverse.id}`;
     activity.push(projectsTopic);
 
     // Members
     const membersCount = await this.getMembersCount(ecoverse);
     const membersTopic = new NVP('members', membersCount.toString());
+    membersTopic.id = `members-${ecoverse.id}`;
     activity.push(membersTopic);
 
     return activity;
