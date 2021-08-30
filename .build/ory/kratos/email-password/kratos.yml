@@ -30,10 +30,14 @@ selfservice:
     settings:
       ui_url: http://localhost:3000/identity/settings
       privileged_session_max_age: 15m
+      after:
+        default_browser_return_url: http://localhost:3000/profile
 
     recovery:
       enabled: true
       ui_url: http://localhost:3000/identity/recovery
+      after:
+        default_browser_return_url: http://localhost:3000/profile
 
     verification:
       enabled: true
