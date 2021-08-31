@@ -1,8 +1,8 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum OrganizationVerificationEnum {
-  NOT_VERIFIED = 'Not verified',
-  MANUAL_ATTESTATION = 'Manual attestation',
+  NOT_VERIFIED = 'not-verified',
+  MANUAL_ATTESTATION = 'manual-attestation',
 }
 
 registerEnumType(OrganizationVerificationEnum, {

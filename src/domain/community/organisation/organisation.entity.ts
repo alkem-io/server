@@ -5,6 +5,7 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganisation } from './organisation.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
 @Entity()
 export class Organisation
@@ -37,8 +38,8 @@ export class Organisation
   @Column()
   contactEmail?: string;
 
-  @Column()
-  verified!: string;
+  @Column({ default: OrganizationVerificationEnum.NOT_VERIFIED })
+  verificationType!: string;
 
   constructor() {
     super();

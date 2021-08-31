@@ -17,19 +17,31 @@ export abstract class IOrganisation extends INameable {
 
   @Field(() => String, {
     nullable: true,
-    description: '..required if hosting an ecoverse',
+    description: 'Legal name - required if hosting an Ecoverse',
   })
   legalEntityName?: string;
 
-  @Field(() => String, { nullable: true })
+  @Field(() => String, {
+    nullable: true,
+    description: 'Domain name; what is verified, eg. alkem.io',
+  })
   domain?: string;
 
-  @Field(() => String, { nullable: true })
+  @Field(() => String, {
+    nullable: true,
+    description: 'Organisation website',
+  })
   website?: string;
 
-  @Field(() => String, { nullable: true })
+  @Field(() => String, {
+    nullable: true,
+    description: 'Organisation contact email',
+  })
   contactEmail?: string;
 
-  @Field(() => OrganizationVerificationEnum)
-  verified!: string;
+  @Field(() => OrganizationVerificationEnum, {
+    name: 'verified',
+    description: 'Organisation verification type',
+  })
+  verificationType!: string;
 }

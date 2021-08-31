@@ -61,7 +61,7 @@ export class OrganisationService {
       organisationData.profileData
     );
 
-    organisation.verified = OrganizationVerificationEnum.NOT_VERIFIED;
+    organisation.verificationType = OrganizationVerificationEnum.NOT_VERIFIED;
     organisation.groups = [];
 
     organisation.agent = await this.agentService.createAgent({
