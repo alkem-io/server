@@ -13,13 +13,13 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import {
+  CreateOrganisationInput,
+  DeleteOrganisationInput,
   IOrganisation,
   Organisation,
   UpdateOrganisationInput,
-  DeleteOrganisationInput,
-  CreateOrganisationInput,
 } from '@domain/community/organisation';
-import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
+import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
@@ -34,6 +34,7 @@ import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admi
 import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
 import { RemoveOrganisationOwnerInput } from './dto/organisation.dto.remove.owner';
 import { AssignOrganisationOwnerInput } from './dto/organisation.dto.assign.owner';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
 @Injectable()
 export class OrganisationService {
@@ -52,6 +53,7 @@ export class OrganisationService {
     organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
     await this.checkNameIdOrFail(organisationData.nameID);
+    await this.checkDisplayNameOrFail(organisationData.displayName);
 
     const organisation: IOrganisation = Organisation.create(organisationData);
     organisation.authorization = new AuthorizationPolicy();
@@ -59,6 +61,7 @@ export class OrganisationService {
       organisationData.profileData
     );
 
+    organisation.verified = OrganizationVerificationEnum.NOT_VERIFIED;
     organisation.groups = [];
 
     organisation.agent = await this.agentService.createAgent({
@@ -80,6 +83,20 @@ export class OrganisationService {
     if (organisationCount >= 1)
       throw new ValidationException(
         `Organisation: the provided nameID is already taken: ${nameID}`,
+        LogContext.COMMUNITY
+      );
+  }
+
+  async checkDisplayNameOrFail(displayName?: string) {
+    if (!displayName) {
+      return;
+    }
+    const organisationCount = await this.organisationRepository.count({
+      displayName: displayName,
+    });
+    if (organisationCount >= 1)
+      throw new ValidationException(
+        `Organisation: the provided displayName is already taken: ${displayName}`,
         LogContext.COMMUNITY
       );
   }
@@ -107,6 +124,8 @@ export class OrganisationService {
         organisation.nameID = organisationData.nameID;
       }
     }
+
+    // todo: check if fields are provided and update
 
     return await this.organisationRepository.save(organisation);
   }

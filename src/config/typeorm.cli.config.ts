@@ -8,7 +8,7 @@ export const typeormCliConfig: ConnectionOptions = {
   cache: true,
   username: 'root',
   password: process.env.MYSQL_ROOT_PASSWORD ?? 'toor',
-  database: process.env.MYSQL_DATABASE ?? 'alkemio',
+  database: process.env.MYSQL_DATABASE ?? 'alkemio1',
   insecureAuth: true,
   synchronize: false,
   logger: 'advanced-console',
