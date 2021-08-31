@@ -125,7 +125,21 @@ export class OrganisationService {
       }
     }
 
-    // todo: check if fields are provided and update
+    if (organisationData.legalEntityName !== undefined) {
+      organisation.legalEntityName = organisationData.legalEntityName;
+    }
+
+    if (organisationData.domain !== undefined) {
+      organisation.domain = organisationData.domain;
+    }
+
+    if (organisationData.website !== undefined) {
+      organisation.website = organisationData.website;
+    }
+
+    if (organisationData.contactEmail !== undefined) {
+      organisation.contactEmail = organisationData.contactEmail;
+    }
 
     return await this.organisationRepository.save(organisation);
   }
