@@ -8,6 +8,7 @@ import { AuthorizationEngineModule } from '@src/services/platform/authorization-
 import { EcosystemModelAuthorizationService } from './ecosystem-model.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
+import { EcosystemModelResolverFields } from './ecosystem-model.resolver.fields';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CanvasModule } from '@domain/common/canvas/canvas.module';
   ],
   providers: [
     EcosystemModelResolverMutations,
+    EcosystemModelResolverFields,
     EcosystemModelService,
     EcosystemModelAuthorizationService,
   ],
