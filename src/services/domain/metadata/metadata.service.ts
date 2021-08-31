@@ -50,10 +50,12 @@ export class MetadataService {
     // Challenges
     const ecoversesCount = await this.ecoverseService.getEcoverseCount();
     const ecoversesTopic = new NVP('ecoverses', ecoversesCount.toString());
+    ecoversesTopic.id = 'ecoverses';
     activity.push(ecoversesTopic);
 
     const challengesCount = await this.challengeService.getChallengeCount();
     const challengesTopic = new NVP('challenges', challengesCount.toString());
+    challengesTopic.id = 'challenges';
     activity.push(challengesTopic);
 
     const opportunitiesCount =
@@ -62,11 +64,13 @@ export class MetadataService {
       'opportunities',
       opportunitiesCount.toString()
     );
+    opportunitiesTopic.id = 'opportunities';
     activity.push(opportunitiesTopic);
 
     // Users
     const usersCount = await this.userService.getUserCount();
     const usersTopic = new NVP('users', usersCount.toString());
+    usersTopic.id = 'users';
     activity.push(usersTopic);
 
     // Organisations
@@ -76,6 +80,7 @@ export class MetadataService {
       'organisations',
       organisationsCount.toString()
     );
+    organisationsTopic.id = 'organisations';
     activity.push(organisationsTopic);
 
     return activity;
