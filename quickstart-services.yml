@@ -48,7 +48,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v0.6.1-alpha.1
+    image: oryd/kratos:v0.7.3-alpha.1
     depends_on:
       - mysql_db
     environment:
@@ -64,7 +64,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v0.6.1-alpha.1
+    image: oryd/kratos:v0.7.3-alpha.1
     depends_on:
       - kratos-migrate
     ports:
@@ -108,6 +108,7 @@ services:
     container_name: alkemio_dev_kratos_mailslurper
     image: oryd/mailslurper:latest-smtps
     ports:
+      - 1025
       - 4436
       - 4437
     networks:
