@@ -27,16 +27,16 @@ export class Organisation
   agent?: Agent;
 
   @Column()
-  legalEntityName?: string;
+  legalEntityName?: string = '';
 
   @Column()
-  domain?: string;
+  domain?: string = '';
 
   @Column()
-  website?: string;
+  website?: string = '';
 
   @Column()
-  contactEmail?: string;
+  contactEmail?: string = '';
 
   @Column({ default: OrganizationVerificationEnum.NOT_VERIFIED })
   verificationType!: string;
