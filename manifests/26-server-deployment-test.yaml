@@ -2,28 +2,28 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   namespace: default
-  name: ct-server-deployment
+  name: alkemio-server-deployment
   labels:
-    app: ct-server
+    app: alkemio-server
 
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ct-server
+      app: alkemio-server
   template:
     metadata:
       labels:
-        app: ct-server
+        app: alkemio-server
     spec:
       containers:
-        - name: ct-server
-          image: ctdev.azurecr.io/ct-server:latest
+        - name: alkemio-server
+          image: ctdev.azurecr.io/alkemio-server:latest
           envFrom:
             - secretRef:
-                name: ct-secrets
+                name: alkemio-secrets
             - configMapRef:
-                name: ct-config
+                name: alkemio-config
           ports:
             - name: graphql
               containerPort: 4000

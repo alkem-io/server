@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: ct-server-service
+  name: alkemio-server-service
 
 spec:
   ports:
@@ -9,4 +9,4 @@ spec:
       name: graphql
       port: 4000
   selector:
-    app: ct-server
+    app: alkemio-server
