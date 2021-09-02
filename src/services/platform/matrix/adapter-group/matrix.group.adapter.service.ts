@@ -60,8 +60,24 @@ export class MatrixGroupAdapterService {
     groupId: string,
     matrixUsernames: string[]
   ) {
+    // need to cache those
+    // get both the users that have invites and the ones which are already accepted
+    const groupUsers = (await matrixClient.getGroupUsers(groupId)).chunk as {
+      user_id: string;
+    }[];
+    const groupInvitedUsers = (await matrixClient.getGroupInvitedUsers(groupId))
+      .chunk as {
+      user_id: string;
+    }[];
     for (const matrixUsername of matrixUsernames) {
       try {
+        // if the user is part of the group skip invitations
+        if (
+          groupUsers.some(x => x.user_id === matrixUsername) ||
+          groupInvitedUsers.some(x => x.user_id === matrixUsername)
+        ) {
+          continue;
+        }
         await matrixClient.inviteUserToGroup(groupId, matrixUsername);
 
         this.logger.verbose?.(

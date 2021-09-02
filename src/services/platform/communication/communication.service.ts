@@ -149,6 +149,9 @@ export class CommunicationService {
     this.matrixElevatedAgent = await this.matrixAgentService.createMatrixAgent(
       adminUser
     );
+
+    await this.matrixElevatedAgent.start();
+
     return this.matrixElevatedAgent;
   }
 

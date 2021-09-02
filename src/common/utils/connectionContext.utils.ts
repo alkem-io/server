@@ -9,7 +9,7 @@ type OnConnect = Exclude<Subscriptions['onConnect'], undefined>;
 type Context = Parameters<OnConnect>[2];
 
 export function extractEmailSubscriptionContext(
-  context: Context
+  context: Pick<Context, 'request'>
 ): string | undefined {
   const authHeaders = context.request.headers.authorization;
   return extractEmailFromBearerToken(authHeaders);

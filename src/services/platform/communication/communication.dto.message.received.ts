@@ -14,4 +14,10 @@ export class CommunicationMessageReceived {
     description: 'The update message that has been sent.',
   })
   message!: CommunicationMessageResult;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The user email that should receive the message',
+  })
+  userEmail!: string;
 }

@@ -67,6 +67,9 @@ export class RoomTimelineMonitorFactory {
           onMessageReceived({
             message,
             roomId: room.roomId,
+            userEmail: matrixUserAdapterService.convertMatrixIdToEmail(
+              matrixClient.getUserId()
+            ),
           });
         }
       },

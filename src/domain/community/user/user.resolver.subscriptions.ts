@@ -17,6 +17,9 @@ export class UserResolverSubscriptions {
     private userService: UserService
   ) {}
 
+  // The guard does not operate correctly when the connection is established through a WS
+  // See app.module.ts for more information
+  // @UseGuards(GraphqlGuard)
   @Subscription(() => CommunicationMessageReceived, {
     async resolve(
       this: UserResolverSubscriptions,
@@ -29,6 +32,14 @@ export class UserResolverSubscriptions {
 
       value.message.sender = user?.id;
       return value;
+    },
+    async filter(
+      this: UserResolverSubscriptions,
+      payload: CommunicationMessageReceived,
+      _: any,
+      context: any
+    ) {
+      return payload.userEmail === context.req?.user?.email;
     },
   })
   messageReceived() {
