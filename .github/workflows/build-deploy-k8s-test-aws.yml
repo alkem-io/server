@@ -5,7 +5,7 @@ on:
 
 env:
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-  ECR_REPOSITORY: ct-server
+  ECR_REPOSITORY: alkemio-server
   KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA_TEST }}
   IMAGE_TAG: ${{ github.sha }}
 
