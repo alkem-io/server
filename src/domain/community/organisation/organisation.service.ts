@@ -87,16 +87,22 @@ export class OrganisationService {
       );
   }
 
-  async checkDisplayNameOrFail(displayName?: string) {
-    if (!displayName) {
+  async checkDisplayNameOrFail(
+    newDisplayName?: string,
+    existingDisplayName?: string
+  ) {
+    if (!newDisplayName) {
+      return;
+    }
+    if (newDisplayName === existingDisplayName) {
       return;
     }
     const organisationCount = await this.organisationRepository.count({
-      displayName: displayName,
+      displayName: newDisplayName,
     });
     if (organisationCount >= 1)
       throw new ValidationException(
-        `Organisation: the provided displayName is already taken: ${displayName}`,
+        `Organisation: the provided displayName is already taken: ${newDisplayName}`,
         LogContext.COMMUNITY
       );
   }
