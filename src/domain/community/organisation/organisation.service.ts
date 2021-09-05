@@ -112,7 +112,10 @@ export class OrganisationService {
   ): Promise<IOrganisation> {
     const organisation = await this.getOrganisationOrFail(organisationData.ID);
 
-    await this.checkDisplayNameOrFail(organisationData.displayName);
+    await this.checkDisplayNameOrFail(
+      organisationData.displayName,
+      organisation.displayName
+    );
 
     // Merge in the data
     if (organisationData.displayName)
