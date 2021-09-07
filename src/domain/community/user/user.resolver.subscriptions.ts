@@ -21,6 +21,8 @@ export class UserResolverSubscriptions {
   // See app.module.ts for more information
   // @UseGuards(GraphqlGuard)
   @Subscription(() => CommunicationMessageReceived, {
+    description:
+      'Receive new messages for rooms the currently authenticated User is a member of.',
     async resolve(
       this: UserResolverSubscriptions,
       value: CommunicationMessageReceived
@@ -47,6 +49,7 @@ export class UserResolverSubscriptions {
   }
 
   @Subscription(() => RoomInvitationReceived, {
+    description: 'Receive new room invitations.',
     resolve: value => {
       return value;
     },
