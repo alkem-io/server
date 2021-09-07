@@ -464,6 +464,7 @@ export class ChallengeService {
     const community = await this.getCommunity(challenge.id);
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
+    membersTopic.id = `members-${challenge.id}`;
     activity.push(membersTopic);
 
     const opportunitiesCount =
@@ -474,16 +475,19 @@ export class ChallengeService {
       'opportunities',
       opportunitiesCount.toString()
     );
+    opportunitiesTopic.id = `opportunities-${challenge.id}`;
     activity.push(opportunitiesTopic);
 
     const projectsCount = await this.projectService.getProjectsInChallengeCount(
       challenge.id
     );
     const projectsTopic = new NVP('projects', projectsCount.toString());
+    projectsTopic.id = `projects-${challenge.id}`;
     activity.push(projectsTopic);
 
     const challengesCount = await this.getChildChallengesCount(challenge.id);
     const challengesTopic = new NVP('challenges', challengesCount.toString());
+    challengesTopic.id = `challenges-${challenge.id}`;
     activity.push(challengesTopic);
 
     return activity;

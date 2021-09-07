@@ -13,13 +13,13 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import {
+  CreateOrganisationInput,
+  DeleteOrganisationInput,
   IOrganisation,
   Organisation,
   UpdateOrganisationInput,
-  DeleteOrganisationInput,
-  CreateOrganisationInput,
 } from '@domain/community/organisation';
-import { IUserGroup, CreateUserGroupInput } from '@domain/community/user-group';
+import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
@@ -34,6 +34,7 @@ import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admi
 import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
 import { RemoveOrganisationOwnerInput } from './dto/organisation.dto.remove.owner';
 import { AssignOrganisationOwnerInput } from './dto/organisation.dto.assign.owner';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
 @Injectable()
 export class OrganisationService {
@@ -52,6 +53,7 @@ export class OrganisationService {
     organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
     await this.checkNameIdOrFail(organisationData.nameID);
+    await this.checkDisplayNameOrFail(organisationData.displayName);
 
     const organisation: IOrganisation = Organisation.create(organisationData);
     organisation.authorization = new AuthorizationPolicy();
@@ -59,6 +61,7 @@ export class OrganisationService {
       organisationData.profileData
     );
 
+    organisation.verificationType = OrganizationVerificationEnum.NOT_VERIFIED;
     organisation.groups = [];
 
     organisation.agent = await this.agentService.createAgent({
@@ -84,10 +87,35 @@ export class OrganisationService {
       );
   }
 
+  async checkDisplayNameOrFail(
+    newDisplayName?: string,
+    existingDisplayName?: string
+  ) {
+    if (!newDisplayName) {
+      return;
+    }
+    if (newDisplayName === existingDisplayName) {
+      return;
+    }
+    const organisationCount = await this.organisationRepository.count({
+      displayName: newDisplayName,
+    });
+    if (organisationCount >= 1)
+      throw new ValidationException(
+        `Organisation: the provided displayName is already taken: ${newDisplayName}`,
+        LogContext.COMMUNITY
+      );
+  }
+
   async updateOrganisation(
     organisationData: UpdateOrganisationInput
   ): Promise<IOrganisation> {
     const organisation = await this.getOrganisationOrFail(organisationData.ID);
+
+    await this.checkDisplayNameOrFail(
+      organisationData.displayName,
+      organisation.displayName
+    );
 
     // Merge in the data
     if (organisationData.displayName)
@@ -106,6 +134,22 @@ export class OrganisationService {
         await this.checkNameIdOrFail(organisationData.nameID);
         organisation.nameID = organisationData.nameID;
       }
+    }
+
+    if (organisationData.legalEntityName !== undefined) {
+      organisation.legalEntityName = organisationData.legalEntityName;
+    }
+
+    if (organisationData.domain !== undefined) {
+      organisation.domain = organisationData.domain;
+    }
+
+    if (organisationData.website !== undefined) {
+      organisation.website = organisationData.website;
+    }
+
+    if (organisationData.contactEmail !== undefined) {
+      organisation.contactEmail = organisationData.contactEmail;
     }
 
     return await this.organisationRepository.save(organisation);

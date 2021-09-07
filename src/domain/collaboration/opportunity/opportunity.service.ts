@@ -290,16 +290,19 @@ export class OpportunityService {
 
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
+    membersTopic.id = `members-${opportunity.id}`;
     activity.push(membersTopic);
 
     const projectsCount =
       await this.projectService.getProjectsInOpportunityCount(opportunity.id);
     const projectsTopic = new NVP('projects', projectsCount.toString());
+    projectsTopic.id = `projects-${opportunity.id}`;
     activity.push(projectsTopic);
 
     const relationsCount =
       await this.relationService.getRelationsInOpportunityCount(opportunity.id);
     const relationsTopic = new NVP('relations', relationsCount.toString());
+    relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
 
     return activity;
