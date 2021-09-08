@@ -1,66 +1,62 @@
-import { LogContext } from '@common/enums';
-import { Inject, LoggerService } from '@nestjs/common';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
+import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 import { APPLICATION_RECEIVED } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ApplicationReceived } from '../application/application.dto.received';
-import { ApplicationService } from '../application/application.service';
+import { CommunityService } from './community.service';
 
 @Resolver()
 export class CommunityResolverSubscriptions {
   constructor(
     @Inject(PUB_SUB) private pubSub: PubSub,
-    private applicationService: ApplicationService,
+    private communityService: CommunityService,
+    private authorizationEngine: AuthorizationEngineService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // The guard does not operate correctly when the connection is established through a WS
-  // See app.module.ts for more information
-  // @UseGuards(GraphqlGuard)
+  @UseGuards(GraphqlGuard)
   @Subscription(() => ApplicationReceived, {
     description: 'Receive new applications with filtering.',
-    async resolve(
-      this: CommunityResolverSubscriptions,
-      value: ApplicationReceived
-    ) {
-      return value;
-    },
     async filter(
       this: CommunityResolverSubscriptions,
       payload: ApplicationReceived,
       variables: any,
-      _: any
+      context: any
     ) {
       this.logger.verbose?.(
         `variable: communityID = ${variables.communityID}`,
         LogContext.COMMUNITY
       );
-      return payload.userNameID === variables.title;
+      this.logger.verbose?.(`context: ${context}`, LogContext.COMMUNITY);
+      return payload.communityID === variables.communityID;
     },
   })
-  applicationReceivedFiltered(
-    //@CurrentUser() agentInfo: AgentInfo,
-    @Args('title') communityID: string
+  async applicationReceived(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('communityID') communityID: string
   ) {
     // Note: can do authorization etc here, if can get the current user.
     // E.g. require community ID and then check if the user is authorized to subscribe to that community.
-    // And then if thin
     this.logger.verbose?.(
-      `Subscription: is user authorized to access community events with ID: ${communityID}`,
+      `Subscription: user (${agentInfo.email}) wishes to access application events on Community: ${communityID}`,
       LogContext.COMMUNITY
     );
-    return this.pubSub.asyncIterator(APPLICATION_RECEIVED);
-  }
-
-  @Subscription(() => ApplicationReceived, {
-    description: 'Receive new applications without filtering.',
-    resolve: value => {
-      return value;
-    },
-  })
-  applicationReceivedSimple() {
+    const community = await this.communityService.getCommunityOrFail(
+      communityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `subscribe to application events on community: ${community.displayName}`
+    );
     return this.pubSub.asyncIterator(APPLICATION_RECEIVED);
   }
 }
