@@ -108,7 +108,17 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
         installSubscriptionHandlers: true,
         context: ({ req, connection }) =>
           // once the connection is established in onConnect, the context will have the user populated
-          connection ? { req: connection.context } : { req },
+          connection
+            ? {
+                connection: {
+                  headers: {
+                    authorization: connection.context['Authorization']
+                      ? connection.context['Authorization']
+                      : connection.context['authorization'],
+                  },
+                },
+              }
+            : { req },
         subscriptions: {
           keepAlive: 5000,
           onConnect: async (_, __, context) => {

@@ -27,6 +27,9 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CommunitySendMessageInput } from './community.dto.send.msg';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
+import { PubSub } from 'apollo-server-express';
+import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { APPLICATION_RECEIVED } from '@services/platform/subscription/subscription.events';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -38,7 +41,9 @@ export class CommunityResolverMutations {
     private communityService: CommunityService,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
-    private applicationService: ApplicationService
+    private applicationService: ApplicationService,
+    @Inject(PUB_SUB)
+    private readonly subscriptionHandler: PubSub
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -179,6 +184,10 @@ export class CommunityResolverMutations {
           AuthorizationPrivilege.DELETE,
         ]
       );
+    // Trigger an event for subscriptions
+    this.subscriptionHandler.publish(APPLICATION_RECEIVED, {
+      application: application,
+    });
     return await this.applicationService.save(application);
   }
 
