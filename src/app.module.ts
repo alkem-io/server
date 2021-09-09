@@ -111,8 +111,12 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
           context
         ) => {
           const authHeader = context.request.headers.authorization;
-          // Note: passing through headers so can leverage http authentication setup, details in https://github.com/nestjs/docs.nestjs.com/issues/394
+          // Note: passing through headers so can leverage http authentication setup
+          // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
           return { headers: { authorization: `${authHeader}` } };
+        },
+        onDisconnect: async (_: any, __: any) => {
+          // Todo: make a nicer error message if the subscription fails due to an execption being thrown
         },
       },
     }),

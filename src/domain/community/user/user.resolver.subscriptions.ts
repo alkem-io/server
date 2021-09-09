@@ -1,5 +1,10 @@
-import { Inject } from '@nestjs/common';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { GraphqlGuard } from '@core/authorization';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Resolver, Subscription } from '@nestjs/graphql';
+import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
 import { RoomInvitationReceived } from '@services/platform/communication/communication.dto.room.invitation.received';
 import {
@@ -8,18 +13,19 @@ import {
 } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'apollo-server-express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from './user.service';
 
 @Resolver()
 export class UserResolverSubscriptions {
   constructor(
     @Inject(PUB_SUB) private pubSub: PubSub,
-    private userService: UserService
+    private userService: UserService,
+    private authorizationEngine: AuthorizationEngineService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // The guard does not operate correctly when the connection is established through a WS
-  // See app.module.ts for more information
-  // @UseGuards(GraphqlGuard)
+  @UseGuards(GraphqlGuard)
   @Subscription(() => CommunicationMessageReceived, {
     description:
       'Receive new messages for rooms the currently authenticated User is a member of.',
@@ -27,6 +33,8 @@ export class UserResolverSubscriptions {
       this: UserResolverSubscriptions,
       value: CommunicationMessageReceived
     ) {
+      // Use this to update the sender identifer
+      // Todo: should not be doing any heavy work during the resolving
       const user = await this.userService.getUserByEmail(value.message.sender);
       if (!user) {
         return new CommunicationMessageReceived();
@@ -41,10 +49,19 @@ export class UserResolverSubscriptions {
       _: any,
       context: any
     ) {
+      // Note: by going through the passport authentication mechanism the "user" property on
+      // the request will contain the AgentInfo that was authenticated.
       return payload.userEmail === context.req?.user?.email;
     },
   })
-  messageReceived() {
+  async messageReceived(@CurrentUser() agentInfo: AgentInfo) {
+    const user = await this.userService.getUserOrFail(agentInfo.userID);
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      user.authorization,
+      AuthorizationPrivilege.READ,
+      `subscribe to user message received events: ${user.displayName}`
+    );
     return this.pubSub.asyncIterator(COMMUNICATION_MESSAGE_RECEIVED);
   }
 
