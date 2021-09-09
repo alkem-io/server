@@ -1,4 +1,4 @@
-import { NameID, UUID } from '@domain/common/scalars';
+import { NameID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
@@ -13,26 +13,14 @@ export class MembershipResultEntry {
   })
   displayName: string;
 
-  @Field(() => UUID, {
-    description: 'The ID of the entry the user is a member of.',
+  @Field(() => String, {
+    description: 'A unique identifier for this membership result.',
   })
   id: string;
 
-  @Field(() => UUID, {
-    description: 'The ID of the parent ecoverse if applicable.',
-    nullable: true,
-  })
-  ecoverseID?: string;
-
-  constructor(
-    nameID: string,
-    id: string,
-    displayName: string,
-    parentId?: string
-  ) {
+  constructor(nameID: string, id: string, displayName: string) {
     this.displayName = displayName;
     this.nameID = nameID;
     this.id = id;
-    this.ecoverseID = parentId;
   }
 }
