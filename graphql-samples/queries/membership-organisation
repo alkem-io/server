@@ -1,23 +1,10 @@
 query {
-  membershipUser(membershipData: {userID: "luveniakena"}) {
-   	ecoverses {
+  membershipOrganisation(membershipData: {organisationID: "luveniakena"}) {
+   	ecoversesHosting {
       nameID
       id
-      challenges {
-        nameID
-        id
-      }
-      opportunities {
-        nameID
-        displayName
-        id
-      }
-      userGroups {
-        nameID
-        id
-      }
     }
-    organisations {
+    challengesLeading {
       nameID
       id
     }
