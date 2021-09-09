@@ -204,6 +204,7 @@ export class MembershipService {
             nameID: challenge.nameID,
             id: challenge.id,
             displayName: challenge.displayName,
+            ecoverseID: challenge.ecoverseID,
           });
         }
       }

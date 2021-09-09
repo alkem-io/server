@@ -18,9 +18,21 @@ export class MembershipResultEntry {
   })
   id: string;
 
-  constructor(nameID: string, id: string, displayName: string) {
+  @Field(() => UUID, {
+    description: 'The ID of the parent ecoverse if applicable.',
+    nullable: true,
+  })
+  ecoverseID?: string;
+
+  constructor(
+    nameID: string,
+    id: string,
+    displayName: string,
+    parentId?: string
+  ) {
     this.displayName = displayName;
     this.nameID = nameID;
     this.id = id;
+    this.ecoverseID = parentId;
   }
 }
