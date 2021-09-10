@@ -20,6 +20,13 @@ import {
   COMMUNICATION_MESSAGE_RECEIVED,
   MATRIX_ROOM_JOINED,
 } from '@services/platform/subscription/subscription.events';
+import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
+
+export type MatrixAgentMiddlewares = {
+  roomTimelineMonitor?: (
+    message: CommunicationMessageReceived
+  ) => CommunicationMessageReceived;
+};
 
 // Wraps an instance of the client sdk
 export class MatrixAgent implements IMatrixAgent, Disposable {
@@ -48,7 +55,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     this.eventDispatcher.detach(id);
   }
 
-  async start() {
+  async start(middlewares?: MatrixAgentMiddlewares) {
     const startComplete = new Promise<void>((resolve, reject) => {
       const subscription = this.eventDispatcher.syncMonitor.subscribe(
         ({ oldSyncState, syncState }) => {
@@ -69,7 +76,9 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       id: 'root',
       roomMemberMembershipMonitor: this.resolveRoomMembershipMonitor(),
       groupMyMembershipMonitor: this.resolveGroupMembershipMonitor(),
-      roomTimelineMonitor: this.resolveRoomTimelineEventHandler(),
+      roomTimelineMonitor: this.resolveRoomTimelineEventHandler(
+        middlewares?.roomTimelineMonitor
+      ),
       roomMonitor: this.resolveRoomEventHandler(),
     });
   }
@@ -88,14 +97,19 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     );
   }
 
-  resolveRoomTimelineEventHandler() {
+  resolveRoomTimelineEventHandler(
+    middleware?: (
+      message: CommunicationMessageReceived
+    ) => CommunicationMessageReceived
+  ) {
     return RoomTimelineMonitorFactory.create(
       this.matrixClient,
       this.matrixUserAdapterService,
       message => {
+        const updatedMessage = (middleware && middleware(message)) || message;
         this.subscriptionHandler.publish(
           COMMUNICATION_MESSAGE_RECEIVED,
-          message
+          updatedMessage
         );
       }
     );

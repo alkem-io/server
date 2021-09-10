@@ -1,22 +1,22 @@
+import { ConfigurationTypes, LogContext } from '@common/enums';
+import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { createClient } from 'matrix-js-sdk';
-import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
-import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
-import { MatrixAgent } from './matrix.agent';
-import { MatrixClient } from '../types/matrix.client.type';
-import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
-import { MatrixGroupAdapterService } from '../adapter-group/matrix.group.adapter.service';
-import { IMatrixAgent } from './matrix.agent.interface';
-import { MatrixAgentMessageRequestCommunity } from './matrix.agent.dto.message.request.community';
-import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
-import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
-import { MatrixRoom } from '../adapter-room/matrix.room';
-import { MatrixEntityNotFoundException } from '@common/exceptions';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'graphql-subscriptions';
+import { createClient } from 'matrix-js-sdk';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MatrixGroupAdapterService } from '../adapter-group/matrix.group.adapter.service';
+import { MatrixRoom } from '../adapter-room/matrix.room';
+import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
+import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
+import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
+import { MatrixClient } from '../types/matrix.client.type';
+import { MatrixAgent } from './matrix.agent';
+import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
+import { MatrixAgentMessageRequestCommunity } from './matrix.agent.dto.message.request.community';
+import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
+import { IMatrixAgent } from './matrix.agent.interface';
 
 @Injectable()
 export class MatrixAgentService {
@@ -124,6 +124,7 @@ export class MatrixAgentService {
         LogContext.COMMUNICATION
       );
     }
+
     return matrixRoom;
   }
 

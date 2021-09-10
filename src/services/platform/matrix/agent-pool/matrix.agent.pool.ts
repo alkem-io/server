@@ -4,7 +4,7 @@ import { MatrixAgentPoolException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MatrixAgent } from '../agent/matrix.agent';
+import { MatrixAgent, MatrixAgentMiddlewares } from '../agent/matrix.agent';
 import { MatrixAgentService } from '../agent/matrix.agent.service';
 
 @Injectable()
@@ -27,7 +27,11 @@ export class MatrixAgentPool {
     this._sessions = {};
   }
 
-  async acquire(email: string, session?: string): Promise<MatrixAgent> {
+  async acquire(
+    email: string,
+    session?: string,
+    middlewares?: MatrixAgentMiddlewares
+  ): Promise<MatrixAgent> {
     this.logger.verbose?.(
       `[AgentPool] obtaining user for email: ${email}`,
       LogContext.COMMUNICATION
@@ -43,7 +47,7 @@ export class MatrixAgentPool {
       const client = await this.matrixAgentService.createMatrixAgent(
         operatingUser
       );
-      await client.start();
+      await client.start(middlewares);
 
       this._wrappers[email] = client;
     }

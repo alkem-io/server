@@ -358,12 +358,14 @@ export class CommunityService {
       community.updatesRoomID =
         await this.communicationService.createCommunityRoom(
           community.communicationGroupID,
-          `${community.displayName} updates`
+          `${community.displayName} updates`,
+          { communityId: community.id }
         );
       community.discussionRoomID =
         await this.communicationService.createCommunityRoom(
           community.communicationGroupID,
-          `${community.displayName} discussion`
+          `${community.displayName} discussion`,
+          { communityId: community.id }
         );
       return await this.communityRepository.save(community);
     } catch (error) {

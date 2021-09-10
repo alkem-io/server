@@ -70,6 +70,7 @@ export class RoomTimelineMonitorFactory {
             userEmail: matrixUserAdapterService.convertMatrixIdToEmail(
               matrixClient.getUserId()
             ),
+            communityId: undefined,
           });
         }
       },

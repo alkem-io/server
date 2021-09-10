@@ -20,4 +20,10 @@ export class CommunicationMessageReceived {
     description: 'The user email that should receive the message',
   })
   userEmail!: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'The community to which this message corresponds',
+  })
+  communityId!: string | undefined;
 }

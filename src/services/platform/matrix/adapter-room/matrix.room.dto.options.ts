@@ -8,5 +8,6 @@ export type IRoomOpts = {
   encryption?: boolean;
   inlineErrors?: boolean;
   andView?: boolean;
-  communityId?: string;
+  groupId?: string;
+  metadata?: Record<string, string>;
 };

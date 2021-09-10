@@ -22,6 +22,7 @@ import { OrganisationMembership } from './membership.dto.organisation.result';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { IUser } from '@domain/community/user/user.interface';
+import { MembershipCommunityResultEntry } from './membership.dto.community.result.entry';
 
 export class MembershipService {
   constructor(
@@ -64,14 +65,16 @@ export class MembershipService {
         );
       } else if (credential.type === AuthorizationCredential.ChallengeMember) {
         const challenge = await this.challengeService.getChallengeOrFail(
-          credential.resourceID
+          credential.resourceID,
+          { relations: ['community'] }
         );
         storedChallenges.push(challenge);
       } else if (
         credential.type === AuthorizationCredential.OpportunityMember
       ) {
         const opportunity = await this.opportunityService.getOpportunityOrFail(
-          credential.resourceID
+          credential.resourceID,
+          { relations: ['community'] }
         );
         storedOpportunities.push(opportunity);
       } else if (credential.type === AuthorizationCredential.UserGroupMember) {
@@ -87,8 +90,12 @@ export class MembershipService {
       }
     }
 
+    membership.communities = [];
+
     // Assign to the right ecoverse
     for (const ecoverseResult of membership.ecoverses) {
+      membership.communities.push(ecoverseResult.community);
+
       for (const challenge of storedChallenges) {
         if (challenge.ecoverseID === ecoverseResult.ecoverseID) {
           const challengeResult = new MembershipResultEntry(
@@ -97,6 +104,14 @@ export class MembershipService {
             challenge.displayName
           );
           ecoverseResult.challenges.push(challengeResult);
+          if (challenge.community) {
+            membership.communities.push(
+              new MembershipCommunityResultEntry(
+                challenge.community?.id,
+                challenge.displayName
+              )
+            );
+          }
         }
       }
       for (const opportunity of storedOpportunities) {
@@ -107,6 +122,14 @@ export class MembershipService {
             opportunity.displayName
           );
           ecoverseResult.opportunities.push(opportunityResult);
+          if (opportunity.community) {
+            membership.communities.push(
+              new MembershipCommunityResultEntry(
+                opportunity.community?.id,
+                opportunity.displayName
+              )
+            );
+          }
         }
       }
       for (const group of storedCommunityUserGroups) {
@@ -163,12 +186,15 @@ export class MembershipService {
     ecoverseID: string,
     userID: string
   ): Promise<MembershipUserResultEntryEcoverse> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID);
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID, {
+      relations: ['community'],
+    });
     return new MembershipUserResultEntryEcoverse(
       ecoverse.nameID,
       ecoverse.id,
       ecoverse.displayName,
-      userID
+      userID,
+      ecoverse.community?.id || ''
     );
   }
 
