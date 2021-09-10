@@ -1,6 +1,6 @@
 import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { IContent, MatrixEvent } from 'matrix-js-sdk';
+import { IContent } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixClient } from '../types/matrix.client.type';
 import { Preset, Visibility } from './matrix.room.dto.create.options';
@@ -71,14 +71,11 @@ export class MatrixRoomAdapterService {
     }
 
     if (metadata) {
-      const room = await matrixClient.getRoom(roomID);
-      room.addAccountData([
-        new MatrixEvent({
-          type: 'alkemio.metadata',
-          content: { ...metadata },
-        }),
-      ]);
-      console.log(room.getAccountData('alkemio.metadata')?.event.content);
+      await matrixClient.setRoomAccountData(
+        roomID,
+        'alkemio.metadata',
+        metadata
+      );
     }
 
     return roomID;

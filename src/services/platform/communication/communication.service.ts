@@ -170,9 +170,9 @@ export class CommunicationService {
         // need to use the use the elevated agent here
         // the admin created the room and the placed metadata
         // is only available for that account
-        message.communityId = elevatedAgent.matrixClient
-          .getRoom(message.roomId)
-          .getAccountData('alkemio.metadata')?.event.content?.communityId;
+        const room = elevatedAgent.matrixClient.getRoom(message.roomId);
+        message.communityId =
+          room.getAccountData('alkemio.metadata')?.event.content?.communityId;
 
         return message;
       },
