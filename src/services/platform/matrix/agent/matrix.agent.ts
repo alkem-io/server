@@ -62,6 +62,9 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       );
     });
 
+    await this.matrixClient.startClient({});
+    await startComplete;
+
     this.attach({
       id: 'root',
       roomMemberMembershipMonitor: this.resolveRoomMembershipMonitor(),
@@ -69,10 +72,6 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       roomTimelineMonitor: this.resolveRoomTimelineEventHandler(),
       roomMonitor: this.resolveRoomEventHandler(),
     });
-
-    await this.matrixClient.startClient({});
-
-    return await startComplete;
   }
 
   resolveRoomMembershipMonitor() {
