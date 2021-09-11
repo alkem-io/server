@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
@@ -12,9 +12,6 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { COMMUNICATION_MESSAGE_RECEIVED } from '@services/platform/subscription/subscription.events';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -22,8 +19,7 @@ export class UserResolverQueries {
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
-    private userService: UserService,
-    @Inject(PUB_SUB) private pubSub: PubSubEngine
+    private userService: UserService
   ) {
     this.queryAuthorizationPolicy =
       this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
@@ -113,13 +109,6 @@ export class UserResolverQueries {
   })
   @Profiling.api
   async me(@CurrentUser() agentInfo: AgentInfo): Promise<IUser> {
-    const payload = {
-      userId: '1',
-      messageReceived: 'Test message notification!',
-    };
-
-    await this.pubSub.publish(COMMUNICATION_MESSAGE_RECEIVED, payload);
-
     const email = agentInfo.email;
     if (!email || email.length == 0) {
       throw new AuthenticationException(
