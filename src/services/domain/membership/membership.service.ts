@@ -219,7 +219,7 @@ export class MembershipService {
           );
           membership.ecoversesHosting.push({
             nameID: ecoverse.nameID,
-            id: ecoverse.id,
+            id: `${ecoverse.id}`, // note: may way to make this a unique membership identifier for client caching
             displayName: ecoverse.displayName,
           });
         } else if (credential.type === AuthorizationCredential.ChallengeLead) {
@@ -228,8 +228,9 @@ export class MembershipService {
           );
           membership.challengesLeading.push({
             nameID: challenge.nameID,
-            id: challenge.id,
+            id: `${challenge.id}`, // note: may way to make this a unique membership identifier for client caching
             displayName: challenge.displayName,
+            ecoverseID: challenge.ecoverseID,
           });
         }
       }

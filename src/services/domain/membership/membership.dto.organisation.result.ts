@@ -1,6 +1,7 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { MembershipResultEntry } from './membership.dto.result.entry';
+import { MembershipOrganisationResultEntryChallenge } from './membership.dto.organisation.result.entry.challenge';
 
 @ObjectType()
 export class OrganisationMembership {
@@ -14,8 +15,8 @@ export class OrganisationMembership {
   })
   ecoversesHosting: MembershipResultEntry[] = [];
 
-  @Field(() => [MembershipResultEntry], {
+  @Field(() => [MembershipOrganisationResultEntryChallenge], {
     description: 'Details of the Challenges the Organisation is leading.',
   })
-  challengesLeading: MembershipResultEntry[] = [];
+  challengesLeading: MembershipOrganisationResultEntryChallenge[] = [];
 }

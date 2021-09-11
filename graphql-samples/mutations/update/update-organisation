@@ -11,14 +11,10 @@ query variables:
   {
     "ID": "uuid",
     "displayName": "Alkemio2",
-    "profileData": {
-      "description": "some description",
-      "avatar": "http://someUri"
-    },
-    legalEntityName: "Alkemio Legal Name",
+    "legalEntityName": "Alkemio Legal Name",
     "domain": "alkem.io",
     "website": "alkem.io",
-    contactEmail: "contact@alkem.io"
+    "contactEmail": "contact@alkem.io"
   }
 }
 

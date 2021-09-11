@@ -24,6 +24,7 @@ export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
   })
   userGroups: MembershipResultEntry[] = [];
 
+
   @Field(() => MembershipCommunityResultEntry, {
     description: 'The community that represents this ecoverse',
   })
