@@ -2,6 +2,8 @@ version: '3.7'
 
 volumes:
   alkemio_dev_mysql_db:
+  rabbitmq_data:
+    driver: local
 
 networks:
   alkemio_dev_net:
@@ -115,7 +117,7 @@ services:
 
   ipfs:
     container_name: alkemio_dev_ipfs
-    image: ipfs/go-ipfs
+    image: ipfs/go-ipfs:v0.8.0
     networks:
       - alkemio_dev_net
     restart: always
@@ -145,3 +147,19 @@ services:
       - type: bind
         source: ./.build/synapse
         target: /data
+
+  rabbitmq:
+    container_name: alkemio_dev_rabbitmq
+    image: docker.io/bitnami/rabbitmq:3.9
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4369:4369
+      - 5672:5672
+      - 25672:25672
+      - 15672:15672
+    environment:
+      - RABBITMQ_SECURE_PASSWORD=yes
+    volumes:
+      - 'rabbitmq_data:/bitnami'

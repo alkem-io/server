@@ -312,6 +312,30 @@ storage:
     # Max file size of files that will be uploaded to IPFS (in bytes).
     maxFileSize: 1048576
 
+notifications:
+  rabbitmq:
+    # Connection in the form of 'amqp://[user]:[password]@[host]:[port]?heartbeat=30'
+    connection:
+      host: ${RABBITMQ_HOST}:localhost
+      port: ${RABBITMQ_PORT}:5672
+      user: ${RABBITMQ_USER}:user
+      password: ${RABBITMQ_PASSWORD}:bitnami
+    pub_sub:
+      exchange:
+        name: ${RABBITMQ_EXCHANGE_NAME}:alkemio-graphql-subscriptions
+        type: ${RABBITMQ_EXCHANGE_TYPE}:topic
+        options:
+          durable: ${RABBITMQ_EXCHANGE_DURABLE}:true
+          auto_delete: ${RABBITMQ_EXCHANGE_AUTO_DELETE}:false
+      queue:
+        name: ${RABBITMQ_QUEUE_NAME}:alkemio-notifications
+        options:
+          exclusive: ${RABBITMQ_QUEUE_EXCLUSIVE}:false
+          durable: ${RABBITMQ_QUEUE_DURABLE}:true
+          auto_delete: ${RABBITMQ_QUEUE_AUTO_DELETE}:false
+        unbind_on_dispose: ${RABBITMQ_QUEUE_UNBIND_ON_DISPOSE}:false
+        delete_on_dispose: ${RABBITMQ_QUEUE_DELETE_ON_DISPOSE}:false
+
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
