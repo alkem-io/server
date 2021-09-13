@@ -25,7 +25,7 @@ import { SubscriptionModule } from '@services/platform/subscription/subscription
     AuthorizationEngineModule,
     TypeOrmModule.forFeature([User]),
     SubscriptionModule,
-    CacheModule.register({ max: 250 }),
+    CacheModule.register({ max: 250, ttl: 300 }),
   ],
   providers: [
     UserService,

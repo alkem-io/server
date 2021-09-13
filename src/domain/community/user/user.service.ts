@@ -37,7 +37,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 @Injectable()
 export class UserService {
   replaceSpecialCharacters = require('replace-special-characters');
-  cacheOptions: CachingConfig = { ttl: 5000 };
+  cacheOptions: CachingConfig = { ttl: 300 };
 
   constructor(
     private profileService: ProfileService,
