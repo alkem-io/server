@@ -301,7 +301,10 @@ export class CommunicationService {
     const matrixCommunityRooms =
       await this.matrixAgentService.getCommunityRooms(matrixAgent);
     for (const matrixRoom of matrixCommunityRooms) {
-      const room = await this.convertMatrixRoomToCommunityRoom(matrixRoom);
+      const room = await this.convertMatrixRoomToCommunityRoom(
+        matrixRoom,
+        matrixAgent.matrixClient.getUserId()
+      );
       rooms.push(room);
     }
     return rooms;
@@ -326,7 +329,8 @@ export class CommunicationService {
       // todo: likely a bug in the email mapping below
       const room = await this.convertMatrixRoomToDirectRoom(
         matrixRoom,
-        matrixRoom.receiverEmail || ''
+        matrixRoom.receiverEmail || '',
+        matrixAgent.matrixClient.getUserId()
       );
       rooms.push(room);
     }
@@ -354,7 +358,10 @@ export class CommunicationService {
       matrixAgent,
       roomId
     );
-    return await this.convertMatrixRoomToCommunityRoom(matrixRoom);
+    return await this.convertMatrixRoomToCommunityRoom(
+      matrixRoom,
+      matrixAgent.matrixClient.getUserId()
+    );
   }
 
   async getRoom(
@@ -387,20 +394,29 @@ export class CommunicationService {
         this.matrixUserAdapterService.convertMatrixIdToEmail(
           mappedDirectRoomId
         );
-      await this.convertMatrixRoomToDirectRoom(matrixRoom, emailReceiver);
+      await this.convertMatrixRoomToDirectRoom(
+        matrixRoom,
+        emailReceiver,
+        matrixAgent.matrixClient.getUserId()
+      );
     }
-    return await this.convertMatrixRoomToCommunityRoom(matrixRoom);
+    return await this.convertMatrixRoomToCommunityRoom(
+      matrixRoom,
+      matrixAgent.matrixClient.getUserId()
+    );
   }
 
   async convertMatrixRoomToDirectRoom(
     matrixRoom: MatrixRoom,
-    emailReceiver: string
+    emailReceiver: string,
+    userId: string
   ): Promise<DirectRoom> {
     const roomResult = new DirectRoom();
     roomResult.id = matrixRoom.roomId;
     if (matrixRoom.timeline) {
       roomResult.messages = await this.convertMatrixTimelineToMessages(
-        matrixRoom.timeline
+        matrixRoom.timeline,
+        userId
       );
     }
     roomResult.receiverID = emailReceiver;
@@ -408,26 +424,29 @@ export class CommunicationService {
   }
 
   async convertMatrixRoomToCommunityRoom(
-    matrixRoom: MatrixRoom
+    matrixRoom: MatrixRoom,
+    userId: string
   ): Promise<CommunityRoom> {
     const roomResult = new CommunityRoom();
     roomResult.id = matrixRoom.roomId;
     if (matrixRoom.timeline) {
       roomResult.messages = await this.convertMatrixTimelineToMessages(
-        matrixRoom.timeline
+        matrixRoom.timeline,
+        userId
       );
     }
     return roomResult;
   }
 
   async convertMatrixTimelineToMessages(
-    timeline: MatrixRoomResponseMessage[]
+    timeline: MatrixRoomResponseMessage[],
+    userId: string
   ): Promise<CommunicationMessageResult[]> {
     const messages: CommunicationMessageResult[] = [];
 
     for (const timelineMessage of timeline) {
       const message = convertFromMatrixMessage(
-        timelineMessage,
+        Object.assign({}, timelineMessage, { receiver: userId }),
         this.matrixUserAdapterService.convertMatrixIdToEmail.bind(
           this.matrixUserAdapterService
         )

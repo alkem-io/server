@@ -52,7 +52,9 @@ export class RoomTimelineMonitorFactory {
       error: noop,
       next: async ({ event, room }: RoomTimelineEvent) => {
         const message = convertFromMatrixMessage(
-          event,
+          Object.assign({}, event, {
+            receiver: matrixClient.getUserId(),
+          }),
           matrixUserAdapterService.convertMatrixIdToEmail.bind(
             matrixUserAdapterService
           )
@@ -67,9 +69,7 @@ export class RoomTimelineMonitorFactory {
           onMessageReceived({
             message,
             roomId: room.roomId,
-            userEmail: matrixUserAdapterService.convertMatrixIdToEmail(
-              matrixClient.getUserId()
-            ),
+            userEmail: message.receiver,
             communityId: undefined,
           });
         }

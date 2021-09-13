@@ -22,7 +22,8 @@ export class UserResolverSubscriptions {
     @Inject(PUB_SUB) private pubSub: PubSub,
     private userService: UserService,
     private authorizationEngine: AuthorizationEngineService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -34,7 +35,7 @@ export class UserResolverSubscriptions {
       value: CommunicationMessageReceived
     ) {
       // Use this to update the sender identifer
-      // Todo: should not be doing any heavy work during the resolving
+      // Todo: should not be doing any heavy work during the resolving - the user should be cached
       const user = await this.userService.getUserByEmail(value.message.sender);
       if (!user) {
         return new CommunicationMessageReceived();

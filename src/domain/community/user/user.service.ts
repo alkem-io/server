@@ -1,44 +1,90 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { UUID_LENGTH } from '@common/constants';
+import { LogContext } from '@common/enums';
 import {
   AuthenticationException,
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { ProfileService } from '@domain/community/profile/profile.service';
-import {
-  UpdateUserInput,
-  CreateUserInput,
-  DeleteUserInput,
-  User,
-  IUser,
-} from '@domain/community/user';
-import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { IAgent } from '@domain/agent/agent';
-import { UUID_LENGTH } from '@common/constants';
-import { IProfile } from '@domain/community/profile';
-import { LogContext } from '@common/enums';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AgentInfo } from '@core/authentication/agent-info';
+import { IProfile } from '@domain/community/profile';
+import { ProfileService } from '@domain/community/profile/profile.service';
+import {
+  CreateUserInput,
+  DeleteUserInput,
+  IUser,
+  UpdateUserInput,
+  User,
+} from '@domain/community/user';
+import {
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  LoggerService,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { CommunityRoom } from '@services/platform/communication';
 import { DirectRoom } from '@services/platform/communication/communication.room.dto.direct';
+import { Cache, CachingConfig } from 'cache-manager';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
 
 @Injectable()
 export class UserService {
   replaceSpecialCharacters = require('replace-special-characters');
+  cacheOptions: CachingConfig = { ttl: 5000 };
+
   constructor(
     private profileService: ProfileService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
+
+  private getUserIdCacheKey(userID: string): string {
+    return `@user:id:${userID}`;
+  }
+  private getUserEmailCacheKey(email: string): string {
+    return `@user:email:${email}`;
+  }
+  private getUserNameIdCacheKey(nameID: string): string {
+    return `@user:nameID:${nameID}`;
+  }
+  private async setUserCache(user: IUser) {
+    await Promise.all([
+      this.cacheManager.set(
+        this.getUserIdCacheKey(user.id),
+        user,
+        this.cacheOptions
+      ),
+      this.cacheManager.set(
+        this.getUserNameIdCacheKey(user.nameID),
+        user,
+        this.cacheOptions
+      ),
+      this.cacheManager.set(
+        this.getUserEmailCacheKey(user.email),
+        user,
+        this.cacheOptions
+      ),
+    ]);
+  }
+  private async clearUserCache(user: IUser) {
+    await Promise.all([
+      this.cacheManager.del(this.getUserIdCacheKey(user.id)),
+      this.cacheManager.del(this.getUserNameIdCacheKey(user.nameID)),
+      this.cacheManager.del(this.getUserEmailCacheKey(user.email)),
+    ]);
+  }
 
   async createUser(userData: CreateUserInput): Promise<IUser> {
     await this.validateUserProfileCreationRequest(userData);
@@ -67,7 +113,10 @@ export class UserService {
       );
     }
 
-    return await this.userRepository.save(user);
+    const response = await this.userRepository.save(user);
+    await this.setUserCache(response);
+
+    return response;
   }
 
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
@@ -94,6 +143,7 @@ export class UserService {
       relations: ['profile', 'agent'],
     });
     const { id } = user;
+    await this.clearUserCache(user);
 
     if (user.profile) {
       await this.profileService.deleteProfile(user.profile.id);
@@ -146,33 +196,51 @@ export class UserService {
 
   async getUserOrFail(
     userID: string,
-    options?: FindOneOptions<User>
+    options?: FindOneOptions<User>,
+    ignoreCache?: boolean
   ): Promise<IUser> {
     let user: IUser | undefined;
 
     if (this.validateEmail(userID)) {
-      user = await this.userRepository.findOne(
-        {
-          email: userID,
-        },
-        options
-      );
-    } else if (userID.length === UUID_LENGTH) {
-      {
-        user = await this.userRepository.findOne(
+      user = ignoreCache
+        ? undefined
+        : await this.cacheManager.get<IUser>(this.getUserEmailCacheKey(userID));
+      user =
+        user ||
+        (await this.userRepository.findOne(
           {
-            id: userID,
+            email: userID,
           },
           options
-        );
+        ));
+    } else if (userID.length === UUID_LENGTH) {
+      user = ignoreCache
+        ? undefined
+        : await this.cacheManager.get<IUser>(this.getUserIdCacheKey(userID));
+      {
+        user =
+          user ||
+          (await this.userRepository.findOne(
+            {
+              id: userID,
+            },
+            options
+          ));
       }
     } else {
-      user = await this.userRepository.findOne(
-        {
-          nameID: userID,
-        },
-        options
-      );
+      user = ignoreCache
+        ? undefined
+        : await this.cacheManager.get<IUser>(
+            this.getUserNameIdCacheKey(userID)
+          );
+      user =
+        user ||
+        (await this.userRepository.findOne(
+          {
+            nameID: userID,
+          },
+          options
+        ));
     }
 
     if (!user) {
@@ -188,7 +256,9 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | undefined> {
-    let user: IUser | undefined;
+    let user: IUser | undefined = await this.cacheManager.get<IUser>(
+      this.getUserEmailCacheKey(userID)
+    );
 
     if (this.validateEmail(userID)) {
       user = await this.userRepository.findOne(
@@ -232,9 +302,13 @@ export class UserService {
   async getUserAndAgent(
     userID: string
   ): Promise<{ user: IUser; agent: IAgent }> {
-    const user = await this.getUserOrFail(userID, {
-      relations: ['agent'],
-    });
+    const user = await this.getUserOrFail(
+      userID,
+      {
+        relations: ['agent'],
+      },
+      true
+    );
 
     if (!user.agent) {
       throw new EntityNotInitializedException(
@@ -246,9 +320,13 @@ export class UserService {
   }
 
   async getUserWithAgent(userID: string): Promise<IUser> {
-    const user = await this.getUserOrFail(userID, {
-      relations: ['agent'],
-    });
+    const user = await this.getUserOrFail(
+      userID,
+      {
+        relations: ['agent'],
+      },
+      true
+    );
 
     if (!user.agent || !user.agent.credentials) {
       throw new EntityNotInitializedException(
@@ -301,13 +379,19 @@ export class UserService {
       );
     }
 
-    return await this.userRepository.save(user);
+    const response = await this.userRepository.save(user);
+    await this.setUserCache(response);
+    return response;
   }
 
   async getAgent(userID: string): Promise<IAgent> {
-    const userWithAgent = await this.getUserOrFail(userID, {
-      relations: ['agent'],
-    });
+    const userWithAgent = await this.getUserOrFail(
+      userID,
+      {
+        relations: ['agent'],
+      },
+      true
+    );
     const agent = userWithAgent.agent;
     if (!agent)
       throw new EntityNotInitializedException(
