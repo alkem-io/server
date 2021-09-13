@@ -127,6 +127,13 @@ export class OrganisationAuthorizationService {
     };
     newRules.push(organisationMember);
 
+    const registeredUser = {
+      type: AuthorizationCredential.GlobalRegistered,
+      resourceID: '',
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+    };
+    newRules.push(registeredUser);
+
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(
         authorization,
