@@ -52,6 +52,8 @@ export class OrganisationService {
   async createOrganisation(
     organisationData: CreateOrganisationInput
   ): Promise<IOrganisation> {
+    // Convert nameID to lower case
+    organisationData.nameID = organisationData.nameID.toLowerCase();
     await this.checkNameIdOrFail(organisationData.nameID);
     await this.checkDisplayNameOrFail(organisationData.displayName);
 
@@ -129,7 +131,14 @@ export class OrganisationService {
     }
 
     if (organisationData.nameID) {
-      if (organisationData.nameID !== organisation.nameID) {
+      this.logger.verbose?.(
+        `${organisationData.nameID} - ${organisation.nameID}`,
+        LogContext.COMMUNICATION
+      );
+      if (
+        organisationData.nameID.toLowerCase() !==
+        organisation.nameID.toLowerCase()
+      ) {
         // updating the nameID, check new value is allowed
         await this.checkNameIdOrFail(organisationData.nameID);
         organisation.nameID = organisationData.nameID;
