@@ -71,6 +71,7 @@ export class RoomTimelineMonitorFactory {
             roomId: room.roomId,
             userEmail: message.receiver,
             communityId: undefined,
+            roomName: room.name,
           });
         }
       },

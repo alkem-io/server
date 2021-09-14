@@ -1,29 +1,22 @@
 import { Disposable } from '@interfaces/disposable.interface';
-import {
-  IMatrixEventHandler,
-  MatrixEventDispatcher,
-} from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
+import { Inject, LoggerService } from '@nestjs/common';
 import {
   AutoAcceptRoomMembershipMonitorFactory,
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
-} from '@src/services/platform/matrix/events/matrix.event.adpater.room';
-import { MatrixClient } from '../types/matrix.client.type';
-import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
-import { IMatrixAgent } from './matrix.agent.interface';
-import { Inject, LoggerService } from '@nestjs/common';
-import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
-import { PubSub } from 'graphql-subscriptions';
-import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+} from '@services/platform/matrix/events/matrix.event.adapter.room';
 import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
-import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
-
-export type MatrixAgentMiddlewares = {
-  roomTimelineMonitor?: (
-    message: CommunicationMessageReceived
-  ) => CommunicationMessageReceived;
-};
+import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
+import {
+  IMatrixEventHandler,
+  MatrixEventDispatcher,
+} from '@src/services/platform/matrix/events/matrix.event.dispatcher';
+import { PubSub } from 'graphql-subscriptions';
+import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
+import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
+import { MatrixClient } from '../types/matrix.client.type';
+import { IMatrixAgent } from './matrix.agent.interface';
 
 // Wraps an instance of the client sdk
 export class MatrixAgent implements IMatrixAgent, Disposable {
@@ -52,7 +45,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     this.eventDispatcher.detach(id);
   }
 
-  async start(middlewares?: MatrixAgentMiddlewares) {
+  async start() {
     const startComplete = new Promise<void>((resolve, reject) => {
       const subscription = this.eventDispatcher.syncMonitor.subscribe(
         ({ oldSyncState, syncState }) => {
@@ -73,9 +66,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       id: 'root',
       roomMemberMembershipMonitor: this.resolveRoomMembershipMonitor(),
       groupMyMembershipMonitor: this.resolveGroupMembershipMonitor(),
-      roomTimelineMonitor: this.resolveRoomTimelineEventHandler(
-        middlewares?.roomTimelineMonitor
-      ),
+      roomTimelineMonitor: this.resolveRoomTimelineEventHandler(),
       roomMonitor: this.resolveRoomEventHandler(),
     });
   }
@@ -94,19 +85,16 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     );
   }
 
-  resolveRoomTimelineEventHandler(
-    middleware?: (
-      message: CommunicationMessageReceived
-    ) => CommunicationMessageReceived
-  ) {
+  resolveRoomTimelineEventHandler() {
     return RoomTimelineMonitorFactory.create(
       this.matrixClient,
       this.matrixUserAdapterService,
       message => {
-        const updatedMessage = (middleware && middleware(message)) || message;
+        /* TODO - need to find a way to wire the admin user (with simplicity in mind)
+          in order to be able to read community data */
         this.subscriptionHandler.publish(
           SubscriptionEvents.COMMUNICATION_MESSAGE_RECEIVED,
-          updatedMessage
+          message
         );
       }
     );

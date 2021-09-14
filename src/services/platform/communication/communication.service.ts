@@ -11,10 +11,7 @@ import { MatrixRoomAdapterService } from '../matrix/adapter-room/matrix.room.ada
 import { MatrixRoomResponseMessage } from '../matrix/adapter-room/matrix.room.dto.response.message';
 import { MatrixUserAdapterService } from '../matrix/adapter-user/matrix.user.adapter.service';
 import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.interface';
-import {
-  MatrixAgent,
-  MatrixAgentMiddlewares,
-} from '../matrix/agent/matrix.agent';
+import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
 import { PUB_SUB } from '../subscription/subscription.module';
@@ -72,9 +69,7 @@ export class CommunicationService {
       );
     }
     const matrixAgent = await this.matrixAgentPool.acquire(
-      sendMsgData.sendingUserEmail,
-      undefined,
-      await this.getNonElevatedMiddlewares()
+      sendMsgData.sendingUserEmail
     );
     const messageId = await this.matrixAgentService.message(
       matrixAgent,
@@ -97,9 +92,7 @@ export class CommunicationService {
       );
     }
     const matrixAgent = await this.matrixAgentPool.acquire(
-      sendMsgUserData.sendingUserEmail,
-      undefined,
-      await this.getNonElevatedMiddlewares()
+      sendMsgUserData.sendingUserEmail
     );
 
     // todo: not always reinitiate the room connection
@@ -160,23 +153,6 @@ export class CommunicationService {
     await this.matrixElevatedAgent.start();
 
     return this.matrixElevatedAgent;
-  }
-
-  async getNonElevatedMiddlewares(): Promise<MatrixAgentMiddlewares> {
-    const elevatedAgent = await this.getMatrixManagementAgentElevated();
-
-    return {
-      roomTimelineMonitor: message => {
-        // need to use the use the elevated agent here
-        // the admin created the room and the placed metadata
-        // is only available for that account
-        const room = elevatedAgent.matrixClient.getRoom(message.roomId);
-        message.communityId =
-          room.getAccountData('alkemio.metadata')?.event.content?.communityId;
-
-        return message;
-      },
-    };
   }
 
   async registerNewAdminUser(): Promise<IOperationalMatrixUser> {
@@ -292,11 +268,7 @@ export class CommunicationService {
     if (!this.enabled) {
       return rooms;
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(
-      currentUserEmail,
-      undefined,
-      await this.getNonElevatedMiddlewares()
-    );
+    const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
 
     const matrixCommunityRooms =
       await this.matrixAgentService.getCommunityRooms(matrixAgent);
@@ -316,11 +288,7 @@ export class CommunicationService {
     if (!this.enabled) {
       return rooms;
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(
-      currentUserEmail,
-      undefined,
-      await this.getNonElevatedMiddlewares()
-    );
+    const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
 
     const matrixDirectRooms = await this.matrixAgentService.getDirectRooms(
       matrixAgent
@@ -349,11 +317,7 @@ export class CommunicationService {
         messages: [],
       };
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(
-      currentUserEmail,
-      undefined,
-      await this.getNonElevatedMiddlewares()
-    );
+    const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
     const matrixRoom = await this.matrixAgentService.getRoom(
       matrixAgent,
       roomId
@@ -375,11 +339,7 @@ export class CommunicationService {
         messages: [],
       };
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(
-      currentUserEmail,
-      undefined,
-      await this.getNonElevatedMiddlewares()
-    );
+    const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
     const matrixRoom = await this.matrixAgentService.getRoom(
       matrixAgent,
       roomId

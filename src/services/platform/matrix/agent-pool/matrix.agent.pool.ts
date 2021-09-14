@@ -6,7 +6,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnModuleDestroy, OnModuleInit } from '@nestjs/common/interfaces';
 import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MatrixAgent, MatrixAgentMiddlewares } from '../agent/matrix.agent';
+import { MatrixAgent } from '../agent/matrix.agent';
 import { MatrixAgentService } from '../agent/matrix.agent.service';
 
 @Injectable()
@@ -14,7 +14,6 @@ export class MatrixAgentPool
   implements Disposable, OnModuleDestroy, OnModuleInit
 {
   private _cache: Record<string, { agent: MatrixAgent; expiresOn: number }>;
-  private _sessions: Record<string, string>;
   private _intervalService!: NodeJS.Timer;
 
   constructor(
@@ -24,7 +23,6 @@ export class MatrixAgentPool
     private readonly logger: LoggerService
   ) {
     this._cache = {};
-    this._sessions = {};
   }
 
   onModuleInit() {
@@ -55,11 +53,7 @@ export class MatrixAgentPool
     }
   }
 
-  async acquire(
-    email: string,
-    session?: string,
-    middlewares?: MatrixAgentMiddlewares
-  ): Promise<MatrixAgent> {
+  async acquire(email: string): Promise<MatrixAgent> {
     this.logger.verbose?.(
       `[AgentPool] obtaining user for email: ${email}`,
       LogContext.COMMUNICATION
@@ -78,7 +72,8 @@ export class MatrixAgentPool
       const client = await this.matrixAgentService.createMatrixAgent(
         operatingUser
       );
-      await client.start(middlewares);
+
+      await client.start();
 
       this._cache[email] = {
         agent: client,
@@ -88,21 +83,7 @@ export class MatrixAgentPool
       this._cache[email].expiresOn = getExpirationDateTicks();
     }
 
-    if (session) {
-      this._sessions[session] = email;
-    }
-
     return this._cache[email].agent;
-  }
-
-  async acquireSession(session: string) {
-    const email = this._sessions[session];
-
-    return this.acquire(email);
-  }
-
-  async releaseSession(session: string) {
-    delete this._sessions[session];
   }
 
   private async acquireUser(email: string) {

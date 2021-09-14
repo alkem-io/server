@@ -9,6 +9,12 @@ export class CommunicationMessageReceived {
   })
   roomId!: string;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'The public name of the room',
+  })
+  roomName!: string;
+
   @Field(() => CommunicationMessageResult, {
     nullable: false,
     description: 'The update message that has been sent.',
