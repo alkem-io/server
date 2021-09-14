@@ -150,7 +150,10 @@ export class CommunicationService {
       adminUser
     );
 
-    await this.matrixElevatedAgent.start();
+    await this.matrixElevatedAgent.start({
+      registerTimelineMonitor: false,
+      registerRoomMonitor: false,
+    });
 
     return this.matrixElevatedAgent;
   }
@@ -244,21 +247,21 @@ export class CommunicationService {
     if (!this.enabled) {
       return '';
     }
-    const matrixUsername =
-      this.matrixUserAdapterService.convertEmailToMatrixId(email);
+
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
+    const userAgent = await this.matrixAgentPool.acquire(email);
     // first send invites to the room - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
     // TODO: Need to add a check whether the user is already part of the room/group
     await this.matrixRoomAdapterService.inviteUsersToRoom(
       elevatedAgent.matrixClient,
       roomID,
-      [matrixUsername]
+      [userAgent.matrixClient]
     );
     await this.matrixGroupAdapterService.inviteUsersToGroup(
       elevatedAgent.matrixClient,
       groupID,
-      [matrixUsername]
+      [userAgent.matrixClient]
     );
   }
 

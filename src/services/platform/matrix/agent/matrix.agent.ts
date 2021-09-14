@@ -18,6 +18,12 @@ import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.se
 import { MatrixClient } from '../types/matrix.client.type';
 import { IMatrixAgent } from './matrix.agent.interface';
 
+export type MatrixAgentStartOptions = {
+  registerTimelineMonitor?: boolean;
+  registerRoomMonitor?: boolean;
+  registerMembershipMonitor?: boolean;
+};
+
 // Wraps an instance of the client sdk
 export class MatrixAgent implements IMatrixAgent, Disposable {
   matrixClient: MatrixClient;
@@ -45,7 +51,17 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     this.eventDispatcher.detach(id);
   }
 
-  async start() {
+  async start(
+    {
+      registerMembershipMonitor = true,
+      registerRoomMonitor = true,
+      registerTimelineMonitor = true,
+    }: MatrixAgentStartOptions = {
+      registerMembershipMonitor: true,
+      registerRoomMonitor: true,
+      registerTimelineMonitor: true,
+    }
+  ) {
     const startComplete = new Promise<void>((resolve, reject) => {
       const subscription = this.eventDispatcher.syncMonitor.subscribe(
         ({ oldSyncState, syncState }) => {
@@ -62,13 +78,27 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     await this.matrixClient.startClient({});
     await startComplete;
 
-    this.attach({
+    const eventHandler: IMatrixEventHandler = {
       id: 'root',
-      roomMemberMembershipMonitor: this.resolveRoomMembershipMonitor(),
-      groupMyMembershipMonitor: this.resolveGroupMembershipMonitor(),
-      roomTimelineMonitor: this.resolveRoomTimelineEventHandler(),
-      roomMonitor: this.resolveRoomEventHandler(),
-    });
+    };
+
+    if (registerMembershipMonitor) {
+      eventHandler['roomMemberMembershipMonitor'] =
+        this.resolveRoomMembershipMonitor();
+      eventHandler['groupMyMembershipMonitor'] =
+        this.resolveGroupMembershipMonitor();
+    }
+
+    if (registerTimelineMonitor) {
+      eventHandler['roomTimelineMonitor'] =
+        this.resolveRoomTimelineEventHandler();
+    }
+
+    if (registerRoomMonitor) {
+      eventHandler['roomMonitor'] = this.resolveRoomEventHandler();
+    }
+
+    this.attach(eventHandler);
   }
 
   resolveRoomMembershipMonitor() {

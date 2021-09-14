@@ -82,26 +82,30 @@ export class MatrixRoomAdapterService {
   }
 
   async inviteUsersToRoom(
-    matrixClient: MatrixClient,
+    adminMatrixClient: MatrixClient,
     roomID: string,
-    matrixUsernames: string[]
+    matrixClients: MatrixClient[]
   ) {
     // need to cache those
-    const room = await matrixClient.getRoom(roomID);
+    const room = await adminMatrixClient.getRoom(roomID);
 
-    for (const matrixUsername of matrixUsernames) {
+    for (const matrixClient of matrixClients) {
       // not very well documented but we can validate whether the user has membership like this
       // seen in https://github.com/matrix-org/matrix-js-sdk/blob/3c36be9839091bf63a4850f4babed0c976d48c0e/src/models/room-member.ts#L29
-      if (
-        room.hasMembershipState(matrixUsername, 'join') === false &&
-        room.hasMembershipState(matrixUsername, 'invite') === false
-      ) {
-        await matrixClient.invite(roomID, matrixUsername);
-        this.logger.verbose?.(
-          `invited user to room: ${matrixUsername} - ${roomID}`,
-          LogContext.COMMUNICATION
-        );
+      const userId = matrixClient.getUserId();
+      if (room.hasMembershipState(userId, 'join')) {
+        continue;
       }
+      if (room.hasMembershipState(userId, 'invite')) {
+        await matrixClient.joinRoom(room.roomId);
+        continue;
+      }
+
+      await adminMatrixClient.invite(roomID, userId);
+      this.logger.verbose?.(
+        `invited user to room: ${userId} - ${roomID}`,
+        LogContext.COMMUNICATION
+      );
     }
   }
 }

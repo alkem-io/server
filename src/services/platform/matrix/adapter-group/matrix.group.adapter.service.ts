@@ -56,32 +56,35 @@ export class MatrixGroupAdapterService {
   }
 
   public async inviteUsersToGroup(
-    matrixClient: MatrixClient,
+    adminClient: MatrixClient,
     groupId: string,
-    matrixUsernames: string[]
+    matrixClients: MatrixClient[]
   ) {
     // need to cache those
     // get both the users that have invites and the ones which are already accepted
-    const groupUsers = (await matrixClient.getGroupUsers(groupId)).chunk as {
+    const groupUsers = (await adminClient.getGroupUsers(groupId)).chunk as {
       user_id: string;
     }[];
-    const groupInvitedUsers = (await matrixClient.getGroupInvitedUsers(groupId))
+    const groupInvitedUsers = (await adminClient.getGroupInvitedUsers(groupId))
       .chunk as {
       user_id: string;
     }[];
-    for (const matrixUsername of matrixUsernames) {
+    for (const matrixClient of matrixClients) {
       try {
+        const userId = matrixClient.getUserId();
         // if the user is part of the group skip invitations
-        if (
-          groupUsers.some(x => x.user_id === matrixUsername) ||
-          groupInvitedUsers.some(x => x.user_id === matrixUsername)
-        ) {
+        if (groupUsers.some(x => x.user_id === userId)) {
           continue;
         }
-        await matrixClient.inviteUserToGroup(groupId, matrixUsername);
+        if (groupInvitedUsers.some(x => x.user_id === userId)) {
+          await matrixClient.acceptGroupInvite(groupId);
+          continue;
+        }
+
+        await adminClient.inviteUserToGroup(groupId, userId);
 
         this.logger.verbose?.(
-          `Invited users to group: ${matrixUsername} - ${groupId}`,
+          `Invited users to group: ${userId} - ${groupId}`,
           LogContext.COMMUNICATION
         );
       } catch (err) {
