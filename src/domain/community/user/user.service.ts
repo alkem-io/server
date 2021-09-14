@@ -50,40 +50,18 @@ export class UserService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
-  private getUserIdCacheKey(userID: string): string {
-    return `@user:id:${userID}`;
-  }
   private getUserEmailCacheKey(email: string): string {
     return `@user:email:${email}`;
   }
-  private getUserNameIdCacheKey(nameID: string): string {
-    return `@user:nameID:${nameID}`;
-  }
   private async setUserCache(user: IUser) {
-    await Promise.all([
-      this.cacheManager.set(
-        this.getUserIdCacheKey(user.id),
-        user,
-        this.cacheOptions
-      ),
-      this.cacheManager.set(
-        this.getUserNameIdCacheKey(user.nameID),
-        user,
-        this.cacheOptions
-      ),
-      this.cacheManager.set(
-        this.getUserEmailCacheKey(user.email),
-        user,
-        this.cacheOptions
-      ),
-    ]);
+    await this.cacheManager.set(
+      this.getUserEmailCacheKey(user.email),
+      user,
+      this.cacheOptions
+    );
   }
   private async clearUserCache(user: IUser) {
-    await Promise.all([
-      this.cacheManager.del(this.getUserIdCacheKey(user.id)),
-      this.cacheManager.del(this.getUserNameIdCacheKey(user.nameID)),
-      this.cacheManager.del(this.getUserEmailCacheKey(user.email)),
-    ]);
+    await this.cacheManager.del(this.getUserEmailCacheKey(user.email));
   }
 
   async createUser(userData: CreateUserInput): Promise<IUser> {
@@ -196,51 +174,31 @@ export class UserService {
 
   async getUserOrFail(
     userID: string,
-    options?: FindOneOptions<User>,
-    ignoreCache?: boolean
+    options?: FindOneOptions<User>
   ): Promise<IUser> {
     let user: IUser | undefined;
 
     if (this.validateEmail(userID)) {
-      user = ignoreCache
-        ? undefined
-        : await this.cacheManager.get<IUser>(this.getUserEmailCacheKey(userID));
-      user =
-        user ||
-        (await this.userRepository.findOne(
-          {
-            email: userID,
-          },
-          options
-        ));
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
+      );
     } else if (userID.length === UUID_LENGTH) {
-      user = ignoreCache
-        ? undefined
-        : await this.cacheManager.get<IUser>(this.getUserIdCacheKey(userID));
-      {
-        user =
-          user ||
-          (await this.userRepository.findOne(
-            {
-              id: userID,
-            },
-            options
-          ));
-      }
+      user = await this.userRepository.findOne(
+        {
+          id: userID,
+        },
+        options
+      );
     } else {
-      user = ignoreCache
-        ? undefined
-        : await this.cacheManager.get<IUser>(
-            this.getUserNameIdCacheKey(userID)
-          );
-      user =
-        user ||
-        (await this.userRepository.findOne(
-          {
-            nameID: userID,
-          },
-          options
-        ));
+      user = await this.userRepository.findOne(
+        {
+          nameID: userID,
+        },
+        options
+      );
     }
 
     if (!user) {
@@ -302,13 +260,9 @@ export class UserService {
   async getUserAndAgent(
     userID: string
   ): Promise<{ user: IUser; agent: IAgent }> {
-    const user = await this.getUserOrFail(
-      userID,
-      {
-        relations: ['agent'],
-      },
-      true
-    );
+    const user = await this.getUserOrFail(userID, {
+      relations: ['agent'],
+    });
 
     if (!user.agent) {
       throw new EntityNotInitializedException(
@@ -320,13 +274,9 @@ export class UserService {
   }
 
   async getUserWithAgent(userID: string): Promise<IUser> {
-    const user = await this.getUserOrFail(
-      userID,
-      {
-        relations: ['agent'],
-      },
-      true
-    );
+    const user = await this.getUserOrFail(userID, {
+      relations: ['agent'],
+    });
 
     if (!user.agent || !user.agent.credentials) {
       throw new EntityNotInitializedException(
@@ -385,13 +335,9 @@ export class UserService {
   }
 
   async getAgent(userID: string): Promise<IAgent> {
-    const userWithAgent = await this.getUserOrFail(
-      userID,
-      {
-        relations: ['agent'],
-      },
-      true
-    );
+    const userWithAgent = await this.getUserOrFail(userID, {
+      relations: ['agent'],
+    });
     const agent = userWithAgent.agent;
     if (!agent)
       throw new EntityNotInitializedException(
