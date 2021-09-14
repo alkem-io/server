@@ -23,6 +23,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { IUser } from '@domain/community/user/user.interface';
 import { MembershipCommunityResultEntry } from './membership.dto.community.result.entry';
+import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
 
 export class MembershipService {
   constructor(
@@ -47,6 +48,7 @@ export class MembershipService {
       return membership;
     }
     membership.id = user.id;
+    const storedEcoverse: IEcoverse[] = [];
     const storedChallenges: IChallenge[] = [];
     const storedOpportunities: IOpportunity[] = [];
     const storedCommunityUserGroups: IUserGroup[] = [];
@@ -57,12 +59,12 @@ export class MembershipService {
           await this.createOrganisationResult(credential.resourceID, user.id)
         );
       } else if (credential.type === AuthorizationCredential.EcoverseMember) {
-        membership.ecoverses.push(
-          await this.createEcoverseMembershipResult(
-            credential.resourceID,
-            user.id
-          )
+        const response = await this.createEcoverseMembershipResult(
+          credential.resourceID,
+          user.id
         );
+        membership.ecoverses.push(response.entry);
+        storedEcoverse.push(response.ecoverse);
       } else if (credential.type === AuthorizationCredential.ChallengeMember) {
         const challenge = await this.challengeService.getChallengeOrFail(
           credential.resourceID,
@@ -94,7 +96,12 @@ export class MembershipService {
 
     // Assign to the right ecoverse
     for (const ecoverseResult of membership.ecoverses) {
-      membership.communities.push(ecoverseResult.community);
+      const community = storedEcoverse.find(
+        se => se.id === ecoverseResult.id
+      )?.community;
+      if (community) {
+        membership.communities.push(community);
+      }
 
       for (const challenge of storedChallenges) {
         if (challenge.ecoverseID === ecoverseResult.ecoverseID) {
@@ -185,17 +192,22 @@ export class MembershipService {
   async createEcoverseMembershipResult(
     ecoverseID: string,
     userID: string
-  ): Promise<MembershipUserResultEntryEcoverse> {
+  ): Promise<{
+    entry: MembershipUserResultEntryEcoverse;
+    ecoverse: IEcoverse;
+  }> {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID, {
       relations: ['community'],
     });
-    return new MembershipUserResultEntryEcoverse(
-      ecoverse.nameID,
-      ecoverse.id,
-      ecoverse.displayName,
-      userID,
-      ecoverse.community?.id || ''
-    );
+    return {
+      entry: new MembershipUserResultEntryEcoverse(
+        ecoverse.nameID,
+        ecoverse.id,
+        ecoverse.displayName,
+        userID
+      ),
+      ecoverse,
+    };
   }
 
   async getOrganisationMemberships(
