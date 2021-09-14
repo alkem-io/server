@@ -123,6 +123,6 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
   dispose() {
     this.matrixClient.stopClient();
-    this.eventDispatcher.dispose();
+    this.eventDispatcher.dispose.bind(this.eventDispatcher)();
   }
 }

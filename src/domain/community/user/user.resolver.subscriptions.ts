@@ -35,7 +35,8 @@ export class UserResolverSubscriptions {
       value: CommunicationMessageReceived
     ) {
       // Use this to update the sender identifer
-      // Todo: should not be doing any heavy work during the resolving - the user should be cached
+      // Todo: should not be doing any heavy work during the resolving
+      // The user is now cached so it should be better
       const user = await this.userService.getUserByEmail(value.message.sender);
       if (!user) {
         return new CommunicationMessageReceived();
@@ -60,7 +61,7 @@ export class UserResolverSubscriptions {
     await this.authorizationEngine.grantAccessOrFail(
       agentInfo,
       user.authorization,
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.UPDATE,
       `subscribe to user message received events: ${user.displayName}`
     );
     return this.pubSub.asyncIterator(COMMUNICATION_MESSAGE_RECEIVED);

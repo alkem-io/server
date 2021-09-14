@@ -33,7 +33,7 @@ export class MatrixAgentPool
         // implement basic caching - the cache-manager should not be used for dto's only
         const now = new Date().getTime();
         for (const key in this._cache) {
-          if (this._cache[key].expiresOn < now) {
+          if (this._cache[key].expiresOn > now) {
             continue;
           }
 

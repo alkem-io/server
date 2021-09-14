@@ -33,6 +33,12 @@ export function convertFromMatrixMessage(
   userResolver: (senderName: string) => string
 ): (CommunicationMessageResult & { receiver: string }) | undefined {
   const { event, sender, receiver } = message;
+  if (event.type !== 'm.room.message') {
+    return;
+  }
+  if (event.event_id?.indexOf(event.room_id || '') !== -1) {
+    return;
+  }
   if (!event.content?.body) {
     return;
   }
