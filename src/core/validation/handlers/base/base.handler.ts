@@ -42,7 +42,7 @@ export class BaseHandler extends AbstractHandler {
       CreateChallengeInput,
       CreateContextInput,
       CreateOpportunityInput,
-      CreateOrganisationInput,
+      // CreateOrganisationInput,
       CreateProfileInput,
       CreateProjectInput,
       CreateReferenceInput,

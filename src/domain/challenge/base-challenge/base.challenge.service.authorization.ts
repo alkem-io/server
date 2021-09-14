@@ -26,7 +26,7 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    // disable anonymous access for community
+
     if (community.authorization) {
       baseChallenge.community =
         await this.communityAuthorizationService.applyAuthorizationPolicy(
