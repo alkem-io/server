@@ -1,0 +1,17 @@
+name: Test Release
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [server-1335]
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: alkem-io/test-suites
+      - name: Run .travis.yml build script
+        uses: ktomk/run-travis-yml@v1
