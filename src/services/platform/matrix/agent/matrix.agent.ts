@@ -16,10 +16,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
 import { PubSub } from 'graphql-subscriptions';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import {
-  COMMUNICATION_MESSAGE_RECEIVED,
-  MATRIX_ROOM_JOINED,
-} from '@services/platform/subscription/subscription.events';
+import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
 import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
 
 export type MatrixAgentMiddlewares = {
@@ -108,7 +105,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       message => {
         const updatedMessage = (middleware && middleware(message)) || message;
         this.subscriptionHandler.publish(
-          COMMUNICATION_MESSAGE_RECEIVED,
+          SubscriptionEvents.COMMUNICATION_MESSAGE_RECEIVED,
           updatedMessage
         );
       }
@@ -117,7 +114,10 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
   resolveRoomEventHandler() {
     return RoomMonitorFactory.create(message => {
-      this.subscriptionHandler.publish(MATRIX_ROOM_JOINED, message);
+      this.subscriptionHandler.publish(
+        SubscriptionEvents.MATRIX_ROOM_JOINED,
+        message
+      );
     });
   }
 

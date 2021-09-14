@@ -7,10 +7,7 @@ import { Resolver, Subscription } from '@nestjs/graphql';
 import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
 import { RoomInvitationReceived } from '@services/platform/communication/communication.dto.room.invitation.received';
-import {
-  COMMUNICATION_MESSAGE_RECEIVED,
-  MATRIX_ROOM_JOINED,
-} from '@services/platform/subscription/subscription.events';
+import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -64,7 +61,9 @@ export class UserResolverSubscriptions {
       AuthorizationPrivilege.UPDATE,
       `subscribe to user message received events: ${user.displayName}`
     );
-    return this.pubSub.asyncIterator(COMMUNICATION_MESSAGE_RECEIVED);
+    return this.pubSub.asyncIterator(
+      SubscriptionEvents.COMMUNICATION_MESSAGE_RECEIVED
+    );
   }
 
   @Subscription(() => RoomInvitationReceived, {
@@ -74,6 +73,6 @@ export class UserResolverSubscriptions {
     },
   })
   roomNotificationReceived() {
-    return this.pubSub.asyncIterator(MATRIX_ROOM_JOINED);
+    return this.pubSub.asyncIterator(SubscriptionEvents.MATRIX_ROOM_JOINED);
   }
 }

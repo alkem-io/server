@@ -29,7 +29,7 @@ import { UserGroupAuthorizationService } from '../user-group/user-group.service.
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSub } from 'apollo-server-express';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { APPLICATION_RECEIVED } from '@services/platform/subscription/subscription.events';
+import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -185,7 +185,7 @@ export class CommunityResolverMutations {
         ]
       );
     // Trigger an event for subscriptions
-    this.subscriptionHandler.publish(APPLICATION_RECEIVED, {
+    this.subscriptionHandler.publish(SubscriptionEvents.APPLICATION_RECEIVED, {
       application: application,
     });
     return await this.applicationService.save(application);

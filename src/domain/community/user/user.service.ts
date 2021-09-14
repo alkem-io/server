@@ -186,12 +186,14 @@ export class UserService {
         options
       );
     } else if (userID.length === UUID_LENGTH) {
-      user = await this.userRepository.findOne(
-        {
-          id: userID,
-        },
-        options
-      );
+      {
+        user = await this.userRepository.findOne(
+          {
+            id: userID,
+          },
+          options
+        );
+      }
     } else {
       user = await this.userRepository.findOne(
         {

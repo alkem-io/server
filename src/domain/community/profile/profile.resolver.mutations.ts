@@ -21,7 +21,7 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { USER_AVATAR_UPLOADED } from '@services/platform/subscription/subscription.events';
+import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
 
 @Resolver()
 export class ProfileResolverMutations {
@@ -135,7 +135,7 @@ export class ProfileResolverMutations {
       mimetype,
       uploadData
     );
-    this.subscriptionHandler.publish(USER_AVATAR_UPLOADED, {
+    this.subscriptionHandler.publish(SubscriptionEvents.USER_AVATAR_UPLOADED, {
       avatarUploaded: updatedProfile,
     });
     return updatedProfile;
@@ -143,6 +143,8 @@ export class ProfileResolverMutations {
 
   @Subscription(() => IProfile)
   avatarUploaded() {
-    return this.subscriptionHandler.asyncIterator(USER_AVATAR_UPLOADED);
+    return this.subscriptionHandler.asyncIterator(
+      SubscriptionEvents.USER_AVATAR_UPLOADED
+    );
   }
 }
