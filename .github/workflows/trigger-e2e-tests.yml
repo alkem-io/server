@@ -15,3 +15,5 @@ jobs:
           repository: alkem-io/test-suites
       - name: Run e2e Tests
         uses: travis-ci/actions@master
+        env:
+          TRAVIS_TOKEN: ${{ secrets.TRAVIS_TOKEN }}
