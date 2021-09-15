@@ -52,9 +52,8 @@ export class RoomTimelineMonitorFactory {
       error: noop,
       next: async ({ event, room }: RoomTimelineEvent) => {
         const message = convertFromMatrixMessage(
-          Object.assign({}, event, {
-            receiver: matrixClient.getUserId(),
-          }),
+          event,
+          matrixClient.getUserId(),
           matrixUserAdapterService.convertMatrixIdToEmail.bind(
             matrixUserAdapterService
           )

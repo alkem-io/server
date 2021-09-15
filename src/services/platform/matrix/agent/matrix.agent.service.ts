@@ -4,7 +4,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'graphql-subscriptions';
-import { createClient } from 'matrix-js-sdk';
+import { createClient, IContent } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapterService } from '../adapter-group/matrix.group.adapter.service';
 import { MatrixRoom } from '../adapter-room/matrix.room';
@@ -225,5 +225,54 @@ export class MatrixAgentService {
     );
 
     return response.event_id;
+  }
+
+  // TODO - see if the js sdk supports message aggregation
+  async editMessage(
+    matrixAgent: IMatrixAgent,
+    roomId: string,
+    messageId: string,
+    msgRequest: MatrixAgentMessageRequest
+  ) {
+    const newContent: IContent = {
+      msgtype: 'm.text',
+      body: msgRequest.text,
+    };
+    await matrixAgent.matrixClient.sendMessage(
+      roomId,
+      Object.assign(
+        {
+          'm.new_content': newContent,
+          'm.relates_to': {
+            rel_type: 'm.replace',
+            event_id: messageId,
+          },
+        },
+        newContent
+      )
+    );
+
+    // const response = await matrixAgent.matrixClient.sendEvent(
+    //   roomId,
+    //   'm.replace',
+    //   {
+    //     body: msgRequest.text,
+    //     msgtype: 'm.text',
+    //   }
+    // );
+
+    // need to find a way to retrieve the correct content for the event
+    // const replacementMessage = await matrixAgent.matrixClient.fetchRoomEvent(
+    //   roomId,
+    //   response.event_id
+    // );
+  }
+
+  async deleteMessage(
+    matrixAgent: IMatrixAgent,
+    roomId: string,
+    messageId: string
+  ) {
+    await matrixAgent.matrixClient.redactEvent(roomId, messageId);
   }
 }

@@ -15,6 +15,8 @@ import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
 import { PUB_SUB } from '../subscription/subscription.module';
+import { CommunicationDeleteMessageCommunityInput } from './communication.dto.delete.msg.community';
+import { CommunicationEditMessageCommunityInput } from './communication.dto.edit.msg.community';
 import {
   CommunicationMessageResult,
   convertFromMatrixMessage,
@@ -80,6 +82,50 @@ export class CommunicationService {
     );
 
     return messageId;
+  }
+
+  async editMsgCommunity(
+    editMsgData: CommunicationEditMessageCommunityInput
+  ): Promise<void> {
+    if (!this.enabled) {
+      throw new NotEnabledException(
+        'Communications not enabled',
+        LogContext.COMMUNICATION
+      );
+    }
+
+    const matrixAgent = await this.matrixAgentPool.acquire(
+      editMsgData.sendingUserEmail
+    );
+
+    await this.matrixAgentService.editMessage(
+      matrixAgent,
+      editMsgData.roomID,
+      editMsgData.messageId,
+      {
+        text: editMsgData.message,
+      }
+    );
+  }
+
+  async deleteMsgCommunity(
+    deleteMsgData: CommunicationDeleteMessageCommunityInput
+  ) {
+    if (!this.enabled) {
+      throw new NotEnabledException(
+        'Communications not enabled',
+        LogContext.COMMUNICATION
+      );
+    }
+    const matrixAgent = await this.matrixAgentPool.acquire(
+      deleteMsgData.sendingUserEmail
+    );
+
+    await this.matrixAgentService.deleteMessage(
+      matrixAgent,
+      deleteMsgData.roomID,
+      deleteMsgData.messageId
+    );
   }
 
   async sendMsgUser(
@@ -392,9 +438,11 @@ export class CommunicationService {
   ): Promise<CommunityRoom> {
     const roomResult = new CommunityRoom();
     roomResult.id = matrixRoom.roomId;
-    if (matrixRoom.timeline) {
+    // do NOT use the deprecated room.timeline property
+    const timeline = matrixRoom.getLiveTimeline().getEvents();
+    if (timeline) {
       roomResult.messages = await this.convertMatrixTimelineToMessages(
-        matrixRoom.timeline,
+        timeline,
         userId
       );
     }
@@ -409,7 +457,8 @@ export class CommunicationService {
 
     for (const timelineMessage of timeline) {
       const message = convertFromMatrixMessage(
-        Object.assign({}, timelineMessage, { receiver: userId }),
+        timelineMessage,
+        userId,
         this.matrixUserAdapterService.convertMatrixIdToEmail.bind(
           this.matrixUserAdapterService
         )

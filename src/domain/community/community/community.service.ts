@@ -33,6 +33,7 @@ import { CommunicationService } from '@services/platform/communication/communica
 import { CommunitySendMessageInput } from './community.dto.send.msg';
 import { CommunityRoom } from '@services/platform/communication/communication.room.dto.community';
 import { ConfigService } from '@nestjs/config';
+import { CommunityRemoveMessageInput } from './community.dto.remove.msg';
 
 @Injectable()
 export class CommunityService {
@@ -455,6 +456,42 @@ export class CommunityService {
     return await this.communicationService.sendMsgCommunity({
       sendingUserEmail: email,
       message: msgData.message,
+      roomID: community.discussionRoomID,
+    });
+  }
+
+  async removeUpdateMessageFromCommunity(
+    community: ICommunity,
+    email: string,
+    msgData: CommunityRemoveMessageInput
+  ) {
+    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
+      community.communicationGroupID,
+      community.updatesRoomID,
+      email
+    );
+
+    return await this.communicationService.deleteMsgCommunity({
+      sendingUserEmail: email,
+      messageId: msgData.messageId,
+      roomID: community.updatesRoomID,
+    });
+  }
+
+  async removeDiscussionMessageFromCommunity(
+    community: ICommunity,
+    email: string,
+    msgData: CommunityRemoveMessageInput
+  ) {
+    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
+      community.communicationGroupID,
+      community.discussionRoomID,
+      email
+    );
+
+    return await this.communicationService.deleteMsgCommunity({
+      sendingUserEmail: email,
+      messageId: msgData.messageId,
       roomID: community.discussionRoomID,
     });
   }

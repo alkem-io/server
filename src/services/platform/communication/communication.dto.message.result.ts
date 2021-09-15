@@ -29,25 +29,32 @@ export class CommunicationMessageResult {
 }
 
 export function convertFromMatrixMessage(
-  message: MatrixRoomResponseMessage & { receiver: string },
+  message: MatrixRoomResponseMessage,
+  receiver: string,
   userResolver: (senderName: string) => string
 ): (CommunicationMessageResult & { receiver: string }) | undefined {
-  const { event, sender, receiver } = message;
+  const { event, sender } = message;
   if (event.type !== 'm.room.message') {
     return;
   }
   if (event.event_id?.indexOf(event.room_id || '') !== -1) {
     return;
   }
-  if (!event.content?.body) {
+  // need to use getContent - should be able to resolve the edited value if any
+  const content = message.getContent();
+  if (!content.body) {
     return;
   }
+
+  // these are used to detect whether a message is a replacement one
+  // const isRelation = message.isRelation('m.replace');
+  // const mRelatesTo = message.getWireContent()['m.relates_to'];
 
   const sendingUser = userResolver(sender.name);
   const receivingUser = userResolver(receiver);
 
   return {
-    message: event.content.body,
+    message: content.body,
     sender: sendingUser ? `${sendingUser}` : 'unknown',
     timestamp: event.origin_server_ts || 0,
     id: event.event_id || '',

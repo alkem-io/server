@@ -30,6 +30,7 @@ import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSub } from 'apollo-server-express';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
+import { CommunityRemoveMessageInput } from './community.dto.remove.msg';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -262,6 +263,31 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
+    description: 'Removes an update message from the specified community',
+  })
+  @Profiling.api
+  async removeUpdateCommunity(
+    @Args('msgData') msgData: CommunityRemoveMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<void> {
+    const community = await this.communityService.getCommunityOrFail(
+      msgData.communityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `community send message: ${community.displayName}`
+    );
+    return await this.communityService.removeUpdateMessageFromCommunity(
+      community,
+      agentInfo.email,
+      msgData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
     description: 'Sends an update message on the specified community',
   })
   @Profiling.api
@@ -279,6 +305,31 @@ export class CommunityResolverMutations {
       `community send discussion message: ${community.displayName}`
     );
     return await this.communityService.sendDiscussionMessageToCommunity(
+      community,
+      agentInfo.email,
+      msgData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description: 'Removes a discussion message from the specified community',
+  })
+  @Profiling.api
+  async removeDiscussionCommunity(
+    @Args('msgData') msgData: CommunityRemoveMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<void> {
+    const community = await this.communityService.getCommunityOrFail(
+      msgData.communityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `community send message: ${community.displayName}`
+    );
+    return await this.communityService.removeDiscussionMessageFromCommunity(
       community,
       agentInfo.email,
       msgData
