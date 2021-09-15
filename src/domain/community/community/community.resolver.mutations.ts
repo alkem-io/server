@@ -269,7 +269,7 @@ export class CommunityResolverMutations {
   async removeUpdateCommunity(
     @Args('msgData') msgData: CommunityRemoveMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<void> {
+  ): Promise<string> {
     const community = await this.communityService.getCommunityOrFail(
       msgData.communityID
     );
@@ -279,11 +279,13 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `community send message: ${community.displayName}`
     );
-    return await this.communityService.removeUpdateMessageFromCommunity(
+    await this.communityService.removeUpdateMessageFromCommunity(
       community,
       agentInfo.email,
       msgData
     );
+
+    return msgData.messageId;
   }
 
   @UseGuards(GraphqlGuard)
@@ -319,7 +321,7 @@ export class CommunityResolverMutations {
   async removeDiscussionCommunity(
     @Args('msgData') msgData: CommunityRemoveMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<void> {
+  ): Promise<string> {
     const community = await this.communityService.getCommunityOrFail(
       msgData.communityID
     );
@@ -329,10 +331,12 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `community send message: ${community.displayName}`
     );
-    return await this.communityService.removeDiscussionMessageFromCommunity(
+    await this.communityService.removeDiscussionMessageFromCommunity(
       community,
       agentInfo.email,
       msgData
     );
+
+    return msgData.messageId;
   }
 }

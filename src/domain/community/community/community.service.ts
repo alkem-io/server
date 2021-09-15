@@ -470,8 +470,7 @@ export class CommunityService {
       community.updatesRoomID,
       email
     );
-
-    return await this.communicationService.deleteMsgCommunity({
+    await this.communicationService.deleteMsgCommunity({
       sendingUserEmail: email,
       messageId: msgData.messageId,
       roomID: community.updatesRoomID,
@@ -488,8 +487,7 @@ export class CommunityService {
       community.discussionRoomID,
       email
     );
-
-    return await this.communicationService.deleteMsgCommunity({
+    await this.communicationService.deleteMsgCommunity({
       sendingUserEmail: email,
       messageId: msgData.messageId,
       roomID: community.discussionRoomID,
