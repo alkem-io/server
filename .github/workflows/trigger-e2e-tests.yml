@@ -13,6 +13,5 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: alkem-io/test-suites
-          token: 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
-      - name: Run .travis.yml build script
-        uses: ktomk/run-travis-yml@v1
+      - name: Run e2e Tests
+        uses: travis-ci/actions@master
