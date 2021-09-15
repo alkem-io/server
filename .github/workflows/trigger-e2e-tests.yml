@@ -6,8 +6,10 @@ on:
   push:
     branches: [server-1335]
 jobs:
-  docker:
+  trigger-e2e-tests-travis-ci:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_REPOSITORY: alkem-io/test-suites
     steps:
       - name: Run e2e Tests
         uses: travis-ci/actions@master
