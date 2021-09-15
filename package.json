@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.12.7p1",
+  "version": "0.12.8",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Cherrytwist Foundation",
   "private": false,

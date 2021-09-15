@@ -18,9 +18,9 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP, NVP } from '@domain/common/nvp';
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
+import { IOrganization } from '@domain/community/organization/organization.interface';
 import { ICommunity } from '@domain/community/community';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
 import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
@@ -45,7 +45,7 @@ import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.c
 export class EcoverseService {
   constructor(
     private agentService: AgentService,
-    private organisationService: OrganisationService,
+    private organizationService: OrganizationService,
     private lifecycleService: LifecycleService,
     private projectService: ProjectService,
     private opportunityService: OpportunityService,
@@ -132,13 +132,13 @@ export class EcoverseService {
     // Remove any host credentials
     const hostOrg = await this.getHost(ecoverse.id);
     if (hostOrg) {
-      const agentHostOrg = await this.organisationService.getAgent(hostOrg);
+      const agentHostOrg = await this.organizationService.getAgent(hostOrg);
       hostOrg.agent = await this.agentService.revokeCredential({
         agentID: agentHostOrg.id,
         type: AuthorizationCredential.EcoverseHost,
         resourceID: ecoverse.id,
       });
-      await this.organisationService.save(hostOrg);
+      await this.organizationService.save(hostOrg);
     }
 
     const result = await this.ecoverseRepository.remove(ecoverse as Ecoverse);
@@ -260,7 +260,7 @@ export class EcoverseService {
     ecoverseID: string,
     hostOrgID: string
   ): Promise<IEcoverse> {
-    const organisation = await this.organisationService.getOrganisationOrFail(
+    const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
       { relations: ['groups', 'agent'] }
     );
@@ -268,10 +268,10 @@ export class EcoverseService {
     const existingHost = await this.getHost(ecoverseID);
 
     if (existingHost) {
-      const agentExisting = await this.organisationService.getAgent(
+      const agentExisting = await this.organizationService.getAgent(
         existingHost
       );
-      organisation.agent = await this.agentService.revokeCredential({
+      organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
         type: AuthorizationCredential.EcoverseHost,
         resourceID: ecoverseID,
@@ -279,14 +279,14 @@ export class EcoverseService {
     }
 
     // assign the credential
-    const agent = await this.organisationService.getAgent(organisation);
-    organisation.agent = await this.agentService.grantCredential({
+    const agent = await this.organizationService.getAgent(organization);
+    organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
       type: AuthorizationCredential.EcoverseHost,
       resourceID: ecoverseID,
     });
 
-    await this.organisationService.save(organisation);
+    await this.organizationService.save(organization);
     return await this.getEcoverseOrFail(ecoverseID);
   }
 
@@ -297,7 +297,7 @@ export class EcoverseService {
     if (challengeCount != 0) return false;
 
     // check restricted ecoverse names
-    const restrictedEcoverseNames = ['user', 'organisation'];
+    const restrictedEcoverseNames = ['user', 'organization'];
     if (restrictedEcoverseNames.includes(nameID.toLowerCase())) return false;
 
     return true;
@@ -481,22 +481,22 @@ export class EcoverseService {
     return await this.ecoverseRepository.count();
   }
 
-  async getHost(ecoverseID: string): Promise<IOrganisation | undefined> {
-    const organisations =
-      await this.organisationService.organisationsWithCredentials({
+  async getHost(ecoverseID: string): Promise<IOrganization | undefined> {
+    const organizations =
+      await this.organizationService.organizationsWithCredentials({
         type: AuthorizationCredential.EcoverseHost,
         resourceID: ecoverseID,
       });
-    if (organisations.length == 0) {
+    if (organizations.length == 0) {
       return undefined;
     }
-    if (organisations.length > 1) {
+    if (organizations.length > 1) {
       throw new RelationshipNotFoundException(
         `More than one host for Ecoverse ${ecoverseID} `,
         LogContext.CHALLENGES
       );
     }
-    return organisations[0];
+    return organizations[0];
   }
 
   async assignEcoverseAdmin(

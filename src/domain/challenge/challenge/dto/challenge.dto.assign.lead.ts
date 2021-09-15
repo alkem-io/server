@@ -4,7 +4,7 @@ import { InputType, Field } from '@nestjs/graphql';
 @InputType()
 export class AssignChallengeLeadInput {
   @Field(() => UUID_NAMEID, { nullable: false })
-  organisationID!: string;
+  organizationID!: string;
 
   @Field(() => UUID, { nullable: false })
   challengeID!: string;

@@ -1,5 +1,5 @@
 query {
-  membershipOrganisation(membershipData: {organisationID: "luveniakena"}) {
+  membershipOrganization(membershipData: {organizationID: "luveniakena"}) {
    	ecoversesHosting {
       nameID
       id

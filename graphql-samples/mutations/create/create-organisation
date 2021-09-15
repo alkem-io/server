@@ -1,5 +1,5 @@
-mutation CreateOrganisation($organisationData: CreateOrganisationInput!) {
-  createOrganisation(organisationData: $organisationData) {
+mutation CreateOrganization($organizationData: CreateOrganizationInput!) {
+  createOrganization(organizationData: $organizationData) {
     displayName
     nameID,
     id
@@ -13,7 +13,7 @@ mutation CreateOrganisation($organisationData: CreateOrganisationInput!) {
 
 query variables:
 {
-  "organisationData":
+  "organizationData":
   {
     "nameID": "AlkemioOrg",
     "displayName": "Stichting Alkemio",

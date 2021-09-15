@@ -1,5 +1,5 @@
-mutation assignUserAsOrganisationAdmin($membershipData: AssignOrganisationAdminInput!) {
-  assignUserAsOrganisationAdmin(membershipData: $membershipData) {
+mutation assignUserAsOrganizationAdmin($membershipData: AssignOrganizationAdminInput!) {
+  assignUserAsOrganizationAdmin(membershipData: $membershipData) {
     id,
   }
 }
@@ -8,6 +8,6 @@ Variables:
 {
   "membershipData": {
     "userID": "uuid",
-    "organisationID": "uuid_nameid"
+    "organizationID": "uuid_nameid"
   }
 }

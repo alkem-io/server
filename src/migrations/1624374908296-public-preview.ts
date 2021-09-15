@@ -44,10 +44,10 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'CREATE TABLE `lifecycle` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `machineState` text NULL, `machineDef` text NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `organisation` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `profileId` varchar(36) NULL, `agentId` varchar(36) NULL, UNIQUE INDEX `REL_badc07674ce4e44801e5a5f36c` (`authorizationId`), UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), UNIQUE INDEX `REL_7671a7e33f6665764f4534a596` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `organization` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `profileId` varchar(36) NULL, `agentId` varchar(36) NULL, UNIQUE INDEX `REL_badc07674ce4e44801e5a5f36c` (`authorizationId`), UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), UNIQUE INDEX `REL_7671a7e33f6665764f4534a596` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `user_group` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `profileId` varchar(36) NULL, `organisationId` varchar(36) NULL, `communityId` varchar(36) NULL, UNIQUE INDEX `REL_e8e32f1e59c349b406a4752e54` (`authorizationId`), UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `user_group` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `profileId` varchar(36) NULL, `organizationId` varchar(36) NULL, `communityId` varchar(36) NULL, UNIQUE INDEX `REL_e8e32f1e59c349b406a4752e54` (`authorizationId`), UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `nvp` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `value` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
@@ -137,13 +137,13 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'ALTER TABLE `tagset` ADD CONSTRAINT `FK_81fc213b2d9ad0cddeab1a9ce64` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `organisation` ADD CONSTRAINT `FK_badc07674ce4e44801e5a5f36ce` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_definition`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `organization` ADD CONSTRAINT `FK_badc07674ce4e44801e5a5f36ce` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_definition`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `organisation` ADD CONSTRAINT `FK_037ba4b170844c039e74aa22ecd` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `organization` ADD CONSTRAINT `FK_037ba4b170844c039e74aa22ecd` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `organisation` ADD CONSTRAINT `FK_7671a7e33f6665764f4534a5967` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `organization` ADD CONSTRAINT `FK_7671a7e33f6665764f4534a5967` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `user_group` ADD CONSTRAINT `FK_e8e32f1e59c349b406a4752e545` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_definition`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
@@ -152,7 +152,7 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'ALTER TABLE `user_group` ADD CONSTRAINT `FK_9912e4cfc1e09848a392a651514` FOREIGN KEY (`profileId`) REFERENCES `profile`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_2b8381df8c3a1680f50e4bc2351` FOREIGN KEY (`organisationId`) REFERENCES `organisation`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_2b8381df8c3a1680f50e4bc2351` FOREIGN KEY (`organizationId`) REFERENCES `organization`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `user_group` ADD CONSTRAINT `FK_9fcc131f256e969d773327f07cb` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
@@ -423,13 +423,13 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_e8e32f1e59c349b406a4752e545`'
     );
     await queryRunner.query(
-      'ALTER TABLE `organisation` DROP FOREIGN KEY `FK_7671a7e33f6665764f4534a5967`'
+      'ALTER TABLE `organization` DROP FOREIGN KEY `FK_7671a7e33f6665764f4534a5967`'
     );
     await queryRunner.query(
-      'ALTER TABLE `organisation` DROP FOREIGN KEY `FK_037ba4b170844c039e74aa22ecd`'
+      'ALTER TABLE `organization` DROP FOREIGN KEY `FK_037ba4b170844c039e74aa22ecd`'
     );
     await queryRunner.query(
-      'ALTER TABLE `organisation` DROP FOREIGN KEY `FK_badc07674ce4e44801e5a5f36ce`'
+      'ALTER TABLE `organization` DROP FOREIGN KEY `FK_badc07674ce4e44801e5a5f36ce`'
     );
     await queryRunner.query(
       'ALTER TABLE `tagset` DROP FOREIGN KEY `FK_81fc213b2d9ad0cddeab1a9ce64`'
@@ -600,15 +600,15 @@ export class publicPreview1624374908296 implements MigrationInterface {
     );
     await queryRunner.query('DROP TABLE `user_group`');
     await queryRunner.query(
-      'DROP INDEX `REL_7671a7e33f6665764f4534a596` ON `organisation`'
+      'DROP INDEX `REL_7671a7e33f6665764f4534a596` ON `organization`'
     );
     await queryRunner.query(
-      'DROP INDEX `REL_037ba4b170844c039e74aa22ec` ON `organisation`'
+      'DROP INDEX `REL_037ba4b170844c039e74aa22ec` ON `organization`'
     );
     await queryRunner.query(
-      'DROP INDEX `REL_badc07674ce4e44801e5a5f36c` ON `organisation`'
+      'DROP INDEX `REL_badc07674ce4e44801e5a5f36c` ON `organization`'
     );
-    await queryRunner.query('DROP TABLE `organisation`');
+    await queryRunner.query('DROP TABLE `organization`');
     await queryRunner.query('DROP TABLE `lifecycle`');
     await queryRunner.query(
       'DROP INDEX `REL_eb59b98ee6ef26c993d0d75c83` ON `tagset`'

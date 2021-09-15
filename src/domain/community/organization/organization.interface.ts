@@ -7,10 +7,10 @@ import { INameable } from '@domain/common/entity/nameable-entity';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
-@ObjectType('Organisation', {
+@ObjectType('Organization', {
   implements: () => [IGroupable, ISearchable],
 })
-export abstract class IOrganisation extends INameable {
+export abstract class IOrganization extends INameable {
   profile?: IProfile;
   groups?: IUserGroup[];
   agent?: IAgent;
@@ -29,19 +29,19 @@ export abstract class IOrganisation extends INameable {
 
   @Field(() => String, {
     nullable: true,
-    description: 'Organisation website',
+    description: 'Organization website',
   })
   website?: string;
 
   @Field(() => String, {
     nullable: true,
-    description: 'Organisation contact email',
+    description: 'Organization contact email',
   })
   contactEmail?: string;
 
   @Field(() => OrganizationVerificationEnum, {
     name: 'verified',
-    description: 'Organisation verification type',
+    description: 'Organization verification type',
   })
   verificationType!: string;
 }

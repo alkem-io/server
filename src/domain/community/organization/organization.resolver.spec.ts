@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { OrganisationResolverMutations } from './organisation.resolver.mutations';
+import { OrganizationResolverMutations } from './organization.resolver.mutations';
 
-describe('OrganisationResolver', () => {
-  let resolver: OrganisationResolverMutations;
+describe('OrganizationResolver', () => {
+  let resolver: OrganizationResolverMutations;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    resolver = module.get<OrganisationResolverMutations>(
-      OrganisationResolverMutations
+    resolver = module.get<OrganizationResolverMutations>(
+      OrganizationResolverMutations
     );
   });
 

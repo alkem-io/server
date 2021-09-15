@@ -1,12 +1,12 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
-import { Organisation } from './organisation.entity';
-import { OrganisationService } from './organisation.service';
+import { Organization } from './organization.entity';
+import { OrganizationService } from './organization.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { IOrganisation } from '@domain/community/organisation';
+import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/community/profile';
@@ -14,10 +14,10 @@ import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-@Resolver(() => IOrganisation)
-export class OrganisationResolverFields {
+@Resolver(() => IOrganization)
+export class OrganizationResolverFields {
   constructor(
-    private organisationService: OrganisationService,
+    private organizationService: OrganizationService,
     private groupService: UserGroupService
   ) {}
 
@@ -25,26 +25,26 @@ export class OrganisationResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
-    description: 'Groups defined on this organisation.',
+    description: 'Groups defined on this organization.',
   })
   @Profiling.api
-  async groups(@Parent() organisation: Organisation) {
-    return await this.organisationService.getUserGroups(organisation);
+  async groups(@Parent() organization: Organization) {
+    return await this.organizationService.getUserGroups(organization);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: true,
-    description: 'Group defined on this organisation.',
+    description: 'Group defined on this organization.',
   })
   @Profiling.api
   async group(
-    @Parent() organisation: Organisation,
+    @Parent() organization: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
   ): Promise<IUserGroup> {
     return await this.groupService.getUserGroupOrFail(groupID, {
-      where: { organisation: organisation },
+      where: { organization: organization },
     });
   }
 
@@ -52,28 +52,28 @@ export class OrganisationResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,
-    description: 'All users that are members of this Organisation.',
+    description: 'All users that are members of this Organization.',
   })
   @Profiling.api
-  async members(@Parent() organisation: Organisation) {
-    return await this.organisationService.getMembers(organisation);
+  async members(@Parent() organization: Organization) {
+    return await this.organizationService.getMembers(organization);
   }
 
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description: 'The profile for this organisation.',
+    description: 'The profile for this organization.',
   })
   @Profiling.api
-  async profile(@Parent() organisation: Organisation) {
-    const profile = organisation.profile;
+  async profile(@Parent() organization: Organization) {
+    const profile = organization.profile;
     if (!profile) {
       throw new EntityNotInitializedException(
-        `Profile not initialised on organisation: ${organisation.displayName}`,
+        `Profile not initialised on organization: ${organization.displayName}`,
         LogContext.COMMUNITY
       );
     }
 
-    return organisation.profile;
+    return organization.profile;
   }
 
   @ResolveField('agent', () => IAgent, {
@@ -81,7 +81,7 @@ export class OrganisationResolverFields {
     description: 'The Agent representing this User.',
   })
   @Profiling.api
-  async agent(@Parent() organisation: Organisation): Promise<IAgent> {
-    return await this.organisationService.getAgent(organisation);
+  async agent(@Parent() organization: Organization): Promise<IAgent> {
+    return await this.organizationService.getAgent(organization);
   }
 }

@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
-import { OrganisationService } from './organisation.service';
-import { OrganisationResolverMutations } from './organisation.resolver.mutations';
+import { OrganizationService } from './organization.service';
+import { OrganizationResolverMutations } from './organization.resolver.mutations';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Organisation } from '@domain/community/organisation';
-import { OrganisationResolverFields } from './organisation.resolver.fields';
+import { Organization } from '@domain/community/organization';
+import { OrganizationResolverFields } from './organization.resolver.fields';
 import { ProfileModule } from '@domain/community/profile/profile.module';
-import { OrganisationResolverQueries } from './organisation.resolver.queries';
+import { OrganizationResolverQueries } from './organization.resolver.queries';
 import { UserModule } from '@domain/community/user/user.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
-import { OrganisationAuthorizationService } from './organisation.service.authorization';
+import { OrganizationAuthorizationService } from './organization.service.authorization';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
@@ -25,15 +25,15 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     TagsetModule,
     NamingModule,
     ProfileModule,
-    TypeOrmModule.forFeature([Organisation]),
+    TypeOrmModule.forFeature([Organization]),
   ],
   providers: [
-    OrganisationService,
-    OrganisationAuthorizationService,
-    OrganisationResolverQueries,
-    OrganisationResolverMutations,
-    OrganisationResolverFields,
+    OrganizationService,
+    OrganizationAuthorizationService,
+    OrganizationResolverQueries,
+    OrganizationResolverMutations,
+    OrganizationResolverFields,
   ],
-  exports: [OrganisationService, OrganisationAuthorizationService],
+  exports: [OrganizationService, OrganizationAuthorizationService],
 })
-export class OrganisationModule {}
+export class OrganizationModule {}

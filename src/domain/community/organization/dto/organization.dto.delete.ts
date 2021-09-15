@@ -3,7 +3,7 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class DeleteOrganisationInput extends DeleteBaseAlkemioInput {
+export class DeleteOrganizationInput extends DeleteBaseAlkemioInput {
   @Field(() => UUID_NAMEID, { nullable: false })
   ID!: string;
 }

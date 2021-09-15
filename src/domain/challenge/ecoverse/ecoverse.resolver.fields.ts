@@ -6,7 +6,7 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { ITagset } from '@domain/common/tagset';
-import { IOrganisation } from '@domain/community';
+import { IOrganization } from '@domain/community';
 import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community';
@@ -218,12 +218,12 @@ export class EcoverseResolverFields {
     return await this.ecoverseService.getActivity(ecoverse);
   }
 
-  @ResolveField('host', () => IOrganisation, {
+  @ResolveField('host', () => IOrganization, {
     nullable: true,
     description: 'The Ecoverse host.',
   })
   @Profiling.api
-  async host(@Parent() ecoverse: Ecoverse): Promise<IOrganisation | undefined> {
+  async host(@Parent() ecoverse: Ecoverse): Promise<IOrganization | undefined> {
     return await this.ecoverseService.getHost(ecoverse.id);
   }
 }

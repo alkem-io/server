@@ -2,21 +2,21 @@ import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { IOrganisation } from './organisation.interface';
+import { IOrganization } from './organization.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
-@Entity()
-export class Organisation
+@Entity('organisation')
+export class Organization
   extends NameableEntity
-  implements IOrganisation, IGroupable
+  implements IOrganization, IGroupable
 {
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
   profile?: Profile;
 
-  @OneToMany(() => UserGroup, userGroup => userGroup.organisation, {
+  @OneToMany(() => UserGroup, userGroup => userGroup.organization, {
     eager: false,
     cascade: true,
   })

@@ -1,5 +1,5 @@
-mutation updateOrganisation($organisationData: UpdateOrganisationInput!) {
-  updateOrganisation(organisationData: $organisationData) {
+mutation updateOrganization($organizationData: UpdateOrganizationInput!) {
+  updateOrganization(organizationData: $organizationData) {
     displayName,
     id
   }
@@ -7,7 +7,7 @@ mutation updateOrganisation($organisationData: UpdateOrganisationInput!) {
 
 query variables:
 {
-  "organisationData":
+  "organizationData":
   {
     "ID": "uuid",
     "displayName": "Alkemio2",

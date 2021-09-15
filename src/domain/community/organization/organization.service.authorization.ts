@@ -3,79 +3,79 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
-import { IOrganisation, Organisation } from '@domain/community/organisation';
+import { IOrganization, Organization } from '@domain/community/organization';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { OrganisationService } from './organisation.service';
+import { OrganizationService } from './organization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 
 @Injectable()
-export class OrganisationAuthorizationService {
+export class OrganizationAuthorizationService {
   constructor(
-    private organisationService: OrganisationService,
+    private organizationService: OrganizationService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    @InjectRepository(Organisation)
-    private organisationRepository: Repository<Organisation>
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>
   ) {}
 
   async applyAuthorizationPolicy(
-    organisation: IOrganisation
-  ): Promise<IOrganisation> {
-    organisation.authorization = await this.authorizationPolicyService.reset(
-      organisation.authorization
+    organization: IOrganization
+  ): Promise<IOrganization> {
+    organization.authorization = await this.authorizationPolicyService.reset(
+      organization.authorization
     );
-    organisation.authorization = this.appendCredentialRules(
-      organisation.authorization,
-      organisation.id
+    organization.authorization = this.appendCredentialRules(
+      organization.authorization,
+      organization.id
     );
 
-    if (organisation.profile) {
-      organisation.profile.authorization =
+    if (organization.profile) {
+      organization.profile.authorization =
         this.authorizationPolicy.inheritParentAuthorization(
-          organisation.profile.authorization,
-          organisation.authorization
+          organization.profile.authorization,
+          organization.authorization
         );
-      organisation.profile =
+      organization.profile =
         await this.profileAuthorizationService.applyAuthorizationPolicy(
-          organisation.profile
+          organization.profile
         );
     }
 
-    organisation.agent = await this.organisationService.getAgent(organisation);
-    organisation.agent.authorization =
+    organization.agent = await this.organizationService.getAgent(organization);
+    organization.agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        organisation.agent.authorization,
-        organisation.authorization
+        organization.agent.authorization,
+        organization.authorization
       );
 
-    organisation.groups = await this.organisationService.getUserGroups(
-      organisation
+    organization.groups = await this.organizationService.getUserGroups(
+      organization
     );
-    for (const group of organisation.groups) {
+    for (const group of organization.groups) {
       group.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
           group.authorization,
-          organisation.authorization
+          organization.authorization
         );
       await this.userGroupAuthorizationService.applyAuthorizationPolicy(group);
     }
 
-    return await this.organisationRepository.save(organisation);
+    return await this.organizationRepository.save(organization);
   }
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    organisationID: string
+    organizationID: string
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for organisation: ${organisationID}`,
+        `Authorization definition not found for organization: ${organizationID}`,
         LogContext.COMMUNITY
       );
 
@@ -107,9 +107,9 @@ export class OrganisationAuthorizationService {
     };
     newRules.push(communityAdmin);
 
-    const organisationAdmin = {
-      type: AuthorizationCredential.OrganisationAdmin,
-      resourceID: organisationID,
+    const organizationAdmin = {
+      type: AuthorizationCredential.OrganizationAdmin,
+      resourceID: organizationID,
       grantedPrivileges: [
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.CREATE,
@@ -118,14 +118,14 @@ export class OrganisationAuthorizationService {
         AuthorizationPrivilege.DELETE,
       ],
     };
-    newRules.push(organisationAdmin);
+    newRules.push(organizationAdmin);
 
-    const organisationMember = {
-      type: AuthorizationCredential.OrganisationMember,
-      resourceID: organisationID,
+    const organizationMember = {
+      type: AuthorizationCredential.OrganizationMember,
+      resourceID: organizationID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
-    newRules.push(organisationMember);
+    newRules.push(organizationMember);
 
     const registeredUser = {
       type: AuthorizationCredential.GlobalRegistered,
