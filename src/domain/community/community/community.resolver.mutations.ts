@@ -29,8 +29,8 @@ import { UserGroupAuthorizationService } from '../user-group/user-group.service.
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSub } from 'apollo-server-express';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
 import { CommunityRemoveMessageInput } from './community.dto.remove.msg';
+import { SubscriptionType } from '@common/enums/subscription.type';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -186,9 +186,12 @@ export class CommunityResolverMutations {
         ]
       );
     // Trigger an event for subscriptions
-    this.subscriptionHandler.publish(SubscriptionEvents.APPLICATION_RECEIVED, {
-      application: application,
-    });
+    this.subscriptionHandler.publish(
+      SubscriptionType.USER_APPLICATION_RECEIVED,
+      {
+        application: application,
+      }
+    );
     return await this.applicationService.save(application);
   }
 
@@ -266,7 +269,7 @@ export class CommunityResolverMutations {
     description: 'Removes an update message from the specified community',
   })
   @Profiling.api
-  async removeUpdateCommunity(
+  async removeUpdateMessageFromCommunity(
     @Args('msgData') msgData: CommunityRemoveMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
@@ -318,7 +321,7 @@ export class CommunityResolverMutations {
     description: 'Removes a discussion message from the specified community',
   })
   @Profiling.api
-  async removeDiscussionCommunity(
+  async removeDiscussionMessageFromCommunity(
     @Args('msgData') msgData: CommunityRemoveMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {

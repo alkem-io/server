@@ -1,5 +1,6 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums';
+import { SubscriptionType } from '@common/enums/subscription.type';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
@@ -7,7 +8,6 @@ import { Resolver, Subscription } from '@nestjs/graphql';
 import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
 import { RoomInvitationReceived } from '@services/platform/communication/communication.dto.room.invitation.received';
-import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -62,7 +62,7 @@ export class UserResolverSubscriptions {
       `subscribe to user message received events: ${user.displayName}`
     );
     return this.pubSub.asyncIterator(
-      SubscriptionEvents.COMMUNICATION_MESSAGE_RECEIVED
+      SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED
     );
   }
 
@@ -73,6 +73,8 @@ export class UserResolverSubscriptions {
     },
   })
   roomNotificationReceived() {
-    return this.pubSub.asyncIterator(SubscriptionEvents.MATRIX_ROOM_JOINED);
+    return this.pubSub.asyncIterator(
+      SubscriptionType.COMMUNICATION_ROOM_JOINED
+    );
   }
 }

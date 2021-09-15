@@ -15,8 +15,8 @@ import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
 import { PUB_SUB } from '../subscription/subscription.module';
-import { CommunicationDeleteMessageCommunityInput } from './communication.dto.delete.msg.community';
-import { CommunicationEditMessageCommunityInput } from './communication.dto.edit.msg.community';
+import { CommunicationDeleteMessageFromCommunityRoomInput } from './communication.dto.delete.msg.community';
+import { CommunicationEditMessageOnCommunityRoomInput } from './communication.dto.edit.msg.community';
 import {
   CommunicationMessageResult,
   convertFromMatrixMessage,
@@ -84,8 +84,8 @@ export class CommunicationService {
     return messageId;
   }
 
-  async editMsgCommunity(
-    editMsgData: CommunicationEditMessageCommunityInput
+  async editMessageInCommunityRoom(
+    editMsgData: CommunicationEditMessageOnCommunityRoomInput
   ): Promise<void> {
     if (!this.enabled) {
       throw new NotEnabledException(
@@ -109,7 +109,7 @@ export class CommunicationService {
   }
 
   async deleteMsgCommunity(
-    deleteMsgData: CommunicationDeleteMessageCommunityInput
+    deleteMsgData: CommunicationDeleteMessageFromCommunityRoomInput
   ) {
     if (!this.enabled) {
       throw new NotEnabledException(

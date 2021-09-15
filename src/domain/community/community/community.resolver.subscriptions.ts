@@ -1,11 +1,11 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { SubscriptionType } from '@common/enums/subscription.type';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
 import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
-import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSub } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -57,6 +57,8 @@ export class CommunityResolverSubscriptions {
       AuthorizationPrivilege.UPDATE,
       `subscribe to application events on community: ${community.displayName}`
     );
-    return this.pubSub.asyncIterator(SubscriptionEvents.APPLICATION_RECEIVED);
+    return this.pubSub.asyncIterator(
+      SubscriptionType.USER_APPLICATION_RECEIVED
+    );
   }
 }

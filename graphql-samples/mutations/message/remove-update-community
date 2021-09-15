@@ -1,5 +1,5 @@
-mutation removeUpdateCommunity($msgData: CommunityRemoveMessageInput!) {
-  removeUpdateCommunity(msgData: $msgData)
+mutation removeUpdateMessageOnCommunity($msgData: CommunityRemoveMessageInput!) {
+  removeUpdateMessageOnCommunity(msgData: $msgData)
 }
 
 Variables:

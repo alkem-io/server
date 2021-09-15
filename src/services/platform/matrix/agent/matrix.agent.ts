@@ -1,3 +1,4 @@
+import { SubscriptionType } from '@common/enums/subscription.type';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import {
@@ -5,7 +6,6 @@ import {
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
 } from '@services/platform/matrix/events/matrix.event.adapter.room';
-import { SubscriptionEvents } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import {
@@ -123,7 +123,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
         /* TODO - need to find a way to wire the admin user (with simplicity in mind)
           in order to be able to read community data */
         this.subscriptionHandler.publish(
-          SubscriptionEvents.COMMUNICATION_MESSAGE_RECEIVED,
+          SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
           message
         );
       }
@@ -133,7 +133,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   resolveRoomEventHandler() {
     return RoomMonitorFactory.create(message => {
       this.subscriptionHandler.publish(
-        SubscriptionEvents.MATRIX_ROOM_JOINED,
+        SubscriptionType.COMMUNICATION_ROOM_JOINED,
         message
       );
     });
