@@ -3,8 +3,6 @@ name: Test Release
 on:
   release:
     types: [published]
-  push:
-    branches: [server-1335]
 jobs:
   trigger-e2e-tests-travis-ci:
     runs-on: ubuntu-latest
