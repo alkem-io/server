@@ -10,6 +10,11 @@ http:
         servers:
           - url: 'http://mailslurper:4437'
 
+    ipfs-http-adapter:
+      loadBalancer:
+        servers:
+          - url: 'http://ipfs:8080'
+
     ipfs-api:
       loadBalancer:
         servers:
