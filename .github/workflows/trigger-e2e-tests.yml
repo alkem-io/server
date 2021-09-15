@@ -9,11 +9,8 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          repository: alkem-io/test-suites
       - name: Run e2e Tests
         uses: travis-ci/actions@master
         env:
           TRAVIS_TOKEN: ${{ secrets.TRAVIS_TOKEN }}
+          GITHUB_REPOSITORY: alkem-io/test-suites
