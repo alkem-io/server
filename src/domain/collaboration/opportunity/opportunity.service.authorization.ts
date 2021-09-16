@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  IAuthorizationPolicy,
-  UpdateAuthorizationPolicyInput,
-} from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { IOpportunity } from '..';
@@ -49,39 +46,6 @@ export class OpportunityAuthorizationService {
           this.authorizationPolicyService.inheritParentAuthorization(
             relation.authorization,
             opportunity.authorization
-          );
-      }
-    }
-
-    return await this.opportunityRepository.save(opportunity);
-  }
-
-  async updateAuthorization(
-    opportunity: IOpportunity,
-    authorizationUpdateData: UpdateAuthorizationPolicyInput
-  ): Promise<IOpportunity> {
-    await this.baseChallengeAuthorizationService.updateAuthorization(
-      opportunity,
-      this.opportunityRepository,
-      authorizationUpdateData
-    );
-
-    // propagate authorization rules for child entities
-    if (opportunity.projects) {
-      for (const project of opportunity.projects) {
-        project.authorization =
-          this.authorizationPolicyService.updateAuthorization(
-            project.authorization,
-            authorizationUpdateData
-          );
-      }
-    }
-    if (opportunity.relations) {
-      for (const relation of opportunity.relations) {
-        relation.authorization =
-          this.authorizationPolicyService.updateAuthorization(
-            relation.authorization,
-            authorizationUpdateData
           );
       }
     }
