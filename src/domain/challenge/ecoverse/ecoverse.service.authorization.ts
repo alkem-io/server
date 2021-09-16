@@ -30,7 +30,7 @@ export class EcoverseAuthorizationService {
   async applyAuthorizationPolicy(ecoverse: IEcoverse): Promise<IEcoverse> {
     // Store the current value of anonymousReadAccess
     const anonymousReadAccessCache =
-      ecoverse.authorization?.anonymousReadAccess || true;
+      ecoverse.authorization?.anonymousReadAccess;
     // Ensure always applying from a clean state
     ecoverse.authorization = await this.authorizationPolicyService.reset(
       ecoverse.authorization
@@ -39,7 +39,9 @@ export class EcoverseAuthorizationService {
       ecoverse.authorization,
       ecoverse.id
     );
-    ecoverse.authorization.anonymousReadAccess = anonymousReadAccessCache;
+    if (anonymousReadAccessCache === false) {
+      ecoverse.authorization.anonymousReadAccess = anonymousReadAccessCache;
+    }
 
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       ecoverse,
