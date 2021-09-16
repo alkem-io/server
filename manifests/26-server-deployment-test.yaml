@@ -34,7 +34,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: alkemio-rabbitmq-cluster-default-user
-                  key: user
+                  key: username
             - name: RABBITMQ_PASSWORD
               valueFrom:
                 secretKeyRef:
