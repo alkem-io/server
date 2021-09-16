@@ -12,11 +12,11 @@ import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { PubSub } from 'graphql-subscriptions';
 import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
 import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
 import { MatrixClient } from '../types/matrix.client.type';
 import { IMatrixAgent } from './matrix.agent.interface';
+import { PubSubEngine } from 'graphql-subscriptions';
 
 export type MatrixAgentStartOptions = {
   registerTimelineMonitor?: boolean;
@@ -35,7 +35,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     roomAdapterService: MatrixRoomAdapterService,
     private matrixUserAdapterService: MatrixUserAdapterService,
     @Inject(PUB_SUB)
-    private readonly subscriptionHandler: PubSub,
+    private readonly subscriptionHandler: PubSubEngine,
     private loggerService: LoggerService
   ) {
     this.matrixClient = matrixClient;

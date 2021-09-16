@@ -9,18 +9,18 @@ import { AuthorizationEngineService } from '@services/platform/authorization-eng
 import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
 import { RoomInvitationReceived } from '@services/platform/communication/communication.dto.room.invitation.received';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { PubSub } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from './user.service';
+import { PubSubEngine } from 'graphql-subscriptions';
 
 @Resolver()
 export class UserResolverSubscriptions {
   constructor(
-    @Inject(PUB_SUB) private pubSub: PubSub,
     private userService: UserService,
     private authorizationEngine: AuthorizationEngineService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    @Inject(PUB_SUB) private pubSub: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
