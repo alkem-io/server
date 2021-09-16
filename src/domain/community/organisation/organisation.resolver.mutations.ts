@@ -15,13 +15,13 @@ import { OrganisationAuthorizationService } from './organisation.service.authori
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IUser } from '@domain/community/user/user.interface';
+import { OrganisationAuthorizationResetInput } from './dto/organisation.dto.reset.authorization';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { AssignOrganisationMemberInput } from './dto/organisation.dto.assign.member';
 import { RemoveOrganisationMemberInput } from './dto/organisation.dto.remove.member';
-import { IUser } from '../user/user.interface';
 import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
 import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admin';
-import { OrganisationAuthorizationResetInput } from './dto/organisation.dto.reset.authorization';
 import { AssignOrganisationOwnerInput } from './dto/organisation.dto.assign.owner';
 import { RemoveOrganisationOwnerInput } from './dto/organisation.dto.remove.owner';
 

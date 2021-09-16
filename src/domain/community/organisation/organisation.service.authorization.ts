@@ -11,6 +11,7 @@ import { AuthorizationRuleCredential } from '@domain/common/authorization-policy
 import { EntityNotInitializedException } from '@common/exceptions';
 import { OrganisationService } from './organisation.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+import { OrganizationVerificationAuthorizationService } from './verification/organization.verification.service.authorization';
 
 @Injectable()
 export class OrganisationAuthorizationService {
@@ -19,6 +20,7 @@ export class OrganisationAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
+    private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Organisation)
     private organisationRepository: Repository<Organisation>
@@ -65,6 +67,14 @@ export class OrganisationAuthorizationService {
         );
       await this.userGroupAuthorizationService.applyAuthorizationPolicy(group);
     }
+
+    organisation.verification = await this.organisationService.getVerification(
+      organisation
+    );
+    organisation.verification =
+      await this.organizationVerificationAuthorizationService.applyAuthorizationPolicy(
+        organisation.verification
+      );
 
     return await this.organisationRepository.save(organisation);
   }

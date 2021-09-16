@@ -8,6 +8,7 @@ import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filte
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import { OrganizationVerificationModule } from '@domain/community/organisation/verification/organization.verification.module';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
@@ -114,6 +115,7 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     BootstrapModule,
     SearchModule,
     MembershipModule,
+    OrganizationVerificationModule,
     KonfigModule,
     IpfsModule,
     SsiAgentModule,

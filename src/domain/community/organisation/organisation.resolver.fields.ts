@@ -14,6 +14,7 @@ import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { IOrganizationVerification } from './verification/organization.verification.interface';
 @Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
   constructor(
@@ -74,6 +75,15 @@ export class OrganisationResolverFields {
     }
 
     return organisation.profile;
+  }
+
+  @ResolveField('verification', () => IOrganizationVerification, {
+    nullable: false,
+    description: 'The verification handler for this organisation.',
+  })
+  @Profiling.api
+  async verification(@Parent() organisation: Organisation) {
+    return await this.organisationService.getVerification(organisation);
   }
 
   @ResolveField('agent', () => IAgent, {
