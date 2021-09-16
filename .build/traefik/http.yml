@@ -1,5 +1,10 @@
 http:
   services:
+    rabbitmq-management:
+      loadBalancer:
+        servers:
+          - url: 'http://rabbitmq:15672'
+
     mailslurper-client:
       loadBalancer:
         servers:
@@ -81,6 +86,12 @@ http:
         forceSlash: false
 
   routers:
+    rabbitmq-management:
+      rule: 'PathPrefix(`/`)'
+      service: 'rabbitmq-management'
+      entryPoints:
+        - 'rabbitmq-management'
+
     graphql:
       rule: 'PathPrefix(`/graphql`)'
       service: 'oathkeeper-proxy'
@@ -162,9 +173,20 @@ tcp:
         servers:
           - address: 'mysql_db:3306'
 
+    rabbitmq-amqp:
+      loadBalancer:
+        servers:
+          - address: 'rabbitmq:5672'
+
   routers:
     mysql:
       rule: 'HostSNI(`*`)'
       service: 'mysql'
       entryPoints:
         - 'mysql'
+
+    rabbitmq-amqp:
+      rule: 'HostSNI(`*`)'
+      service: 'rabbitmq-amqp'
+      entryPoints:
+        - 'rabbitmq-amqp'
