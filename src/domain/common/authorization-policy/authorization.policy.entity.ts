@@ -2,7 +2,6 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity } from 'typeorm';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 
-// @Entity('authorization_definition')
 @Entity()
 export class AuthorizationPolicy
   extends BaseAlkemioEntity

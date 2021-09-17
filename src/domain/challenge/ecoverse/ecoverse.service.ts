@@ -173,7 +173,7 @@ export class EcoverseService {
     const ecoversesDataForSorting = await this.ecoverseRepository
       .createQueryBuilder('ecoverse')
       .leftJoinAndSelect('ecoverse.challenges', 'challenge')
-      .leftJoinAndSelect('ecoverse.authorization', 'authorization_definition')
+      .leftJoinAndSelect('ecoverse.authorization', 'authorization_policy')
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .getMany();
 
