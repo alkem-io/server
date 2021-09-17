@@ -11,7 +11,7 @@ import { AuthorizationRuleCredential } from '@domain/common/authorization-policy
 import { EntityNotInitializedException } from '@common/exceptions';
 import { OrganisationService } from './organisation.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { OrganizationVerificationAuthorizationService } from './verification/organization.verification.service.authorization';
+import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
 
 @Injectable()
 export class OrganisationAuthorizationService {

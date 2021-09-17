@@ -14,7 +14,7 @@ import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { IOrganizationVerification } from './verification/organization.verification.interface';
+import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 @Resolver(() => IOrganisation)
 export class OrganisationResolverFields {
   constructor(

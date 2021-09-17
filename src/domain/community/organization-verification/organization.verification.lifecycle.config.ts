@@ -7,14 +7,14 @@ export const organizationVerificationLifecycleConfig = {
   states: {
     notVerified: {
       on: {
-        VERIFICATION_REQUESTED: {
+        VERIFICATION_REQUEST: {
           target: 'verificationPending',
         },
       },
     },
     verificationPending: {
       on: {
-        MANUALLY_VERIFIED: {
+        MANUALLY_VERIFY: {
           target: 'manuallyVerified',
           cond: 'organisationVerificationAuthorized',
         },

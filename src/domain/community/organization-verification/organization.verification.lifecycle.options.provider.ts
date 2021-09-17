@@ -7,7 +7,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { OrganizationVerificationEventInput } from './organization.verification.dto.event';
+import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationVerificationService } from './organization.verification.service';
 import { IOrganizationVerification } from './organization.verification.interface';
@@ -38,12 +38,12 @@ export class OrganizationVerificationLifecycleOptionsProvider {
 
     // Send the event, translated if needed
     this.logger.verbose?.(
-      `Event ${organizationVerificationEventData.eventName} triggered on organization: ${organizationVerification.id} using lifecycle ${organizationVerification.id}`,
+      `Event ${organizationVerificationEventData.eventName} triggered on organization: ${organizationVerification.id} using lifecycle ${organizationVerification.lifecycle.id}`,
       LogContext.COMMUNITY
     );
     await this.lifecycleService.event(
       {
-        ID: organizationVerification.id,
+        ID: organizationVerification.lifecycle.id,
         eventName: organizationVerificationEventData.eventName,
       },
       this.organizationVerificationLifecycleMachineOptions,
@@ -76,7 +76,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
           );
         }
         organizationVerification.status =
-          OrganizationVerificationEnum.MANUAL_ATTESTATION;
+          OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION;
         await this.organizationVerificationService.save(
           organizationVerification
         );

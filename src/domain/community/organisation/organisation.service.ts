@@ -34,8 +34,8 @@ import { AssignOrganisationAdminInput } from './dto/organisation.dto.assign.admi
 import { RemoveOrganisationAdminInput } from './dto/organisation.dto.remove.admin';
 import { RemoveOrganisationOwnerInput } from './dto/organisation.dto.remove.owner';
 import { AssignOrganisationOwnerInput } from './dto/organisation.dto.assign.owner';
-import { OrganizationVerificationService } from './verification/organization.verification.service';
-import { IOrganizationVerification } from './verification/organization.verification.interface';
+import { OrganizationVerificationService } from '../organization-verification/organization.verification.service';
+import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 
 @Injectable()
 export class OrganisationService {
