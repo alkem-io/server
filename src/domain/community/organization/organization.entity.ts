@@ -7,7 +7,8 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
-@Entity({ name: 'organisation' })
+// @Entity({ name: 'organisation' })
+@Entity()
 export class Organization
   extends NameableEntity
   implements IOrganization, IGroupable
