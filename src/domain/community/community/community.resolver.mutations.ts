@@ -27,7 +27,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CommunitySendMessageInput } from './community.dto.send.msg';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
-import { PubSub } from 'apollo-server-express';
+import { PubSubEngine } from 'apollo-server-express';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { CommunityRemoveMessageInput } from './community.dto.remove.msg';
 import { SubscriptionType } from '@common/enums/subscription.type';
@@ -44,7 +44,7 @@ export class CommunityResolverMutations {
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
     @Inject(PUB_SUB)
-    private readonly subscriptionHandler: PubSub
+    private readonly subscriptionHandler: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
