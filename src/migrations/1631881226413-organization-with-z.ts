@@ -13,7 +13,7 @@ export class organizationWithZ1631881226413 implements MigrationInterface {
       'ALTER TABLE `user_group` CHANGE COLUMN `organisationId` `organizationId` VARCHAR(36) NULL DEFAULT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_2b8381df8c3a1680f50e4bc2351` FOREIGN KEY (`organizationId`) REFERENCES `alkemio`.`organization` (`id`) ON DELETE CASCADE'
+      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_2b8381df8c3a1680f50e4bc2351` FOREIGN KEY (`organizationId`) REFERENCES `organization` (`id`) ON DELETE CASCADE'
     );
     await queryRunner.query(
       "UPDATE `credential` SET `type` = 'organization-owner' WHERE `type` = 'organisation-owner'"
@@ -38,7 +38,7 @@ export class organizationWithZ1631881226413 implements MigrationInterface {
       'ALTER TABLE `user_group` CHANGE COLUMN `organizationId` `organisationId` VARCHAR(36) NULL DEFAULT NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_2b8381df8c3a1680f50e4bc2351` FOREIGN KEY (`organisationId`) REFERENCES `alkemio`.`organisation` (`id`) ON DELETE CASCADE'
+      'ALTER TABLE `user_group` ADD CONSTRAINT `FK_2b8381df8c3a1680f50e4bc2351` FOREIGN KEY (`organisationId`) REFERENCES `organisation` (`id`) ON DELETE CASCADE'
     );
     await queryRunner.query(
       "UPDATE `credential` SET `type` = 'organisation-owner' WHERE `type` = 'organization-owner'"
