@@ -1,6 +1,6 @@
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { ContextModule } from '@domain/context/context/context.module';
-import { OrganisationModule } from '@domain/community/organisation/organisation.module';
+import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -35,7 +35,7 @@ import { UserModule } from '@domain/community/user/user.module';
     LifecycleModule,
     OpportunityModule,
     ProjectModule,
-    OrganisationModule,
+    OrganizationModule,
     TagsetModule,
     UserGroupModule,
     ApplicationModule,

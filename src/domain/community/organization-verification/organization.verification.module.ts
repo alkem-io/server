@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationVerificationLifecycleOptionsProvider } from './organization.verification.lifecycle.options.provider';
-import { OrganisationVerificationResolverMutations } from './organization.verification.resolver.mutations';
+import { OrganizationVerificationResolverMutations } from './organization.verification.resolver.mutations';
 import { OrganizationVerification } from './organization.verification.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrganizationVerificationService } from './organization.verification.service';
@@ -19,7 +19,7 @@ import { OrganizationVerificationAuthorizationService } from './organization.ver
   providers: [
     OrganizationVerificationService,
     OrganizationVerificationAuthorizationService,
-    OrganisationVerificationResolverMutations,
+    OrganizationVerificationResolverMutations,
     OrganizationVerificationLifecycleOptionsProvider,
   ],
   exports: [

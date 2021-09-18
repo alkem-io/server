@@ -16,33 +16,33 @@ export class OrganizationVerificationAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(OrganizationVerification)
-    private organisationVerificationRepository: Repository<OrganizationVerification>
+    private organizationVerificationRepository: Repository<OrganizationVerification>
   ) {}
 
   async applyAuthorizationPolicy(
-    organisationVerification: IOrganizationVerification
+    organizationVerification: IOrganizationVerification
   ): Promise<IOrganizationVerification> {
-    organisationVerification.authorization =
+    organizationVerification.authorization =
       await this.authorizationPolicyService.reset(
-        organisationVerification.authorization
+        organizationVerification.authorization
       );
-    organisationVerification.authorization = this.appendCredentialRules(
-      organisationVerification.authorization,
-      organisationVerification.id
+    organizationVerification.authorization = this.appendCredentialRules(
+      organizationVerification.authorization,
+      organizationVerification.id
     );
 
-    return await this.organisationVerificationRepository.save(
-      organisationVerification
+    return await this.organizationVerificationRepository.save(
+      organizationVerification
     );
   }
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    organisationVerificationID: string
+    organizationVerificationID: string
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for organisation verification: ${organisationVerificationID}`,
+        `Authorization definition not found for organization verification: ${organizationVerificationID}`,
         LogContext.COMMUNITY
       );
 

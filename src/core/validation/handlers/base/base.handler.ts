@@ -9,7 +9,7 @@ import {
 } from '@domain/challenge/challenge';
 import { CreateContextInput } from '@domain/context/context';
 import { UpdateEcoverseInput } from '@domain/challenge/ecoverse/dto/ecoverse.dto.update';
-import { CreateOrganisationInput } from '@domain/community/organisation';
+import { CreateOrganizationInput } from '@domain/community/organization';
 import { CreateProfileInput } from '@domain/community/profile';
 import {
   CreateProjectInput,
@@ -42,7 +42,7 @@ export class BaseHandler extends AbstractHandler {
       CreateChallengeInput,
       CreateContextInput,
       CreateOpportunityInput,
-      // CreateOrganisationInput,
+      // CreateOrganizationInput,
       CreateProfileInput,
       CreateProjectInput,
       CreateReferenceInput,

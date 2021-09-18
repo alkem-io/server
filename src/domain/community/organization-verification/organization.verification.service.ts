@@ -21,7 +21,7 @@ export class OrganizationVerificationService {
     private lifecycleService: LifecycleService
   ) {}
 
-  async createOrganisationVerification(
+  async createOrganizationVerification(
     organizationVerificationData: CreateOrganizationVerificationInput
   ): Promise<IOrganizationVerification> {
     const organizationVerification: IOrganizationVerification =

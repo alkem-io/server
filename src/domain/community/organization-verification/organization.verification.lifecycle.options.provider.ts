@@ -83,7 +83,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
       },
     },
     guards: {
-      organisationVerificationAuthorized: (_, event) => {
+      organizationVerificationAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: IAuthorizationPolicy = event.authorization;
         return this.authorizationEngineService.isAccessGranted(

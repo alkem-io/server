@@ -26,12 +26,12 @@ import {
 } from '@common/enums';
 import { Inject, Injectable } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LoggerService } from '@nestjs/common';
-import { IOrganisation } from '@domain/community/organisation';
+import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
 import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
 import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
@@ -60,7 +60,7 @@ export class ChallengeService {
     private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private lifecycleService: LifecycleService,
-    private organisationService: OrganisationService,
+    private organizationService: OrganizationService,
     private ssiAgentService: SsiAgentService,
     private userService: UserService,
     @InjectRepository(Challenge)
@@ -109,10 +109,10 @@ export class ChallengeService {
     // assigning lead orgs does not update the challenge entity
     const savedChallenge = await this.challengeRepository.save(challenge);
 
-    if (challengeData.leadOrganisations) {
+    if (challengeData.leadOrganizations) {
       await this.setChallengeLeads(
         challenge.id,
-        challengeData.leadOrganisations
+        challengeData.leadOrganizations
       );
     }
 
@@ -139,10 +139,10 @@ export class ChallengeService {
       }
     }
 
-    if (challengeData.leadOrganisations) {
+    if (challengeData.leadOrganizations) {
       await this.setChallengeLeads(
         challenge.id,
-        challengeData.leadOrganisations
+        challengeData.leadOrganizations
       );
     }
     return challenge;
@@ -169,9 +169,9 @@ export class ChallengeService {
       );
 
     // Remove any challenge lead credentials
-    const challengeLeads = await this.getLeadOrganisations(challengeID);
+    const challengeLeads = await this.getLeadOrganizations(challengeID);
     for (const challengeLead of challengeLeads) {
-      const agentHostOrg = await this.organisationService.getAgent(
+      const agentHostOrg = await this.organizationService.getAgent(
         challengeLead
       );
       challengeLead.agent = await this.agentService.revokeCredential({
@@ -179,7 +179,7 @@ export class ChallengeService {
         type: AuthorizationCredential.ChallengeLead,
         resourceID: challengeID,
       });
-      await this.organisationService.save(challengeLead);
+      await this.organizationService.save(challengeLead);
     }
 
     const baseChallenge = await this.getChallengeOrFail(challengeID, {
@@ -255,7 +255,7 @@ export class ChallengeService {
     challengeID: string,
     challengeLeadsIDs: string[]
   ): Promise<IChallenge> {
-    const existingLeads = await this.getLeadOrganisations(challengeID);
+    const existingLeads = await this.getLeadOrganizations(challengeID);
 
     // first remove any existing leads that are not in the new set
     for (const existingLeadOrg of existingLeads) {
@@ -271,23 +271,23 @@ export class ChallengeService {
       if (!inNewList) {
         await this.removeChallengeLead({
           challengeID: challengeID,
-          organisationID: existingLeadOrg.id,
+          organizationID: existingLeadOrg.id,
         });
       }
     }
 
     // add any new ones
     for (const challengeLeadID of challengeLeadsIDs) {
-      const organisation = await this.organisationService.getOrganisationOrFail(
+      const organization = await this.organizationService.getOrganizationOrFail(
         challengeLeadID
       );
       const existingLead = existingLeads.find(
-        leadOrg => leadOrg.id === organisation.id
+        leadOrg => leadOrg.id === organization.id
       );
       if (!existingLead) {
         await this.assignChallengeLead({
           challengeID: challengeID,
-          organisationID: organisation.id,
+          organizationID: organization.id,
         });
       }
     }
@@ -493,44 +493,44 @@ export class ChallengeService {
     return activity;
   }
 
-  async getLeadOrganisations(challengeID: string): Promise<IOrganisation[]> {
-    const organisations =
-      await this.organisationService.organisationsWithCredentials({
+  async getLeadOrganizations(challengeID: string): Promise<IOrganization[]> {
+    const organizations =
+      await this.organizationService.organizationsWithCredentials({
         type: AuthorizationCredential.ChallengeLead,
         resourceID: challengeID,
       });
-    return organisations;
+    return organizations;
   }
 
   async assignChallengeLead(
     assignData: AssignChallengeLeadInput
   ): Promise<IChallenge> {
-    const organisationID = assignData.organisationID;
+    const organizationID = assignData.organizationID;
     const challengeID = assignData.challengeID;
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      organisationID,
+    const organization = await this.organizationService.getOrganizationOrFail(
+      organizationID,
       { relations: ['groups', 'agent'] }
     );
 
-    const existingLeads = await this.getLeadOrganisations(challengeID);
+    const existingLeads = await this.getLeadOrganizations(challengeID);
 
     const existingOrg = existingLeads.find(
-      existingOrg => existingOrg.id === organisation.id
+      existingOrg => existingOrg.id === organization.id
     );
     if (existingOrg)
       throw new ValidationException(
-        `Challenge ${challengeID} already has an organisation with the provided organisation ID: ${organisationID}`,
+        `Challenge ${challengeID} already has an organization with the provided organization ID: ${organizationID}`,
         LogContext.COMMUNITY
       );
     // assign the credential
-    const agent = await this.organisationService.getAgent(organisation);
-    organisation.agent = await this.agentService.grantCredential({
+    const agent = await this.organizationService.getAgent(organization);
+    organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
       type: AuthorizationCredential.ChallengeLead,
       resourceID: challengeID,
     });
 
-    await this.organisationService.save(organisation);
+    await this.organizationService.save(organization);
     return await this.getChallengeOrFail(challengeID);
   }
 
@@ -539,30 +539,30 @@ export class ChallengeService {
   ): Promise<IChallenge> {
     const challengeID = removeData.challengeID;
     const challenge = await this.getChallengeOrFail(challengeID);
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      removeData.organisationID
+    const organization = await this.organizationService.getOrganizationOrFail(
+      removeData.organizationID
     );
 
-    const existingLeads = await this.getLeadOrganisations(challengeID);
+    const existingLeads = await this.getLeadOrganizations(challengeID);
 
     const existingOrg = existingLeads.find(
-      existingOrg => existingOrg.id === organisation.id
+      existingOrg => existingOrg.id === organization.id
     );
 
     if (!existingOrg)
       throw new ValidationException(
-        `Community ${removeData.challengeID} does not have a lead with the provided organisation ID: ${removeData.organisationID}`,
+        `Community ${removeData.challengeID} does not have a lead with the provided organization ID: ${removeData.organizationID}`,
         LogContext.COMMUNITY
       );
     // ok to remove the org
-    const agent = await this.organisationService.getAgent(organisation);
-    organisation.agent = await this.agentService.revokeCredential({
+    const agent = await this.organizationService.getAgent(organization);
+    organization.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
       type: AuthorizationCredential.ChallengeLead,
       resourceID: challengeID,
     });
 
-    await this.organisationService.save(organisation);
+    await this.organizationService.save(organization);
     return challenge;
   }
 

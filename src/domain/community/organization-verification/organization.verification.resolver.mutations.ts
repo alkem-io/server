@@ -11,9 +11,9 @@ import { IOrganizationVerification } from './organization.verification.interface
 import { OrganizationVerificationService } from './organization.verification.service';
 
 @Resolver(() => IOrganizationVerification)
-export class OrganisationVerificationResolverMutations {
+export class OrganizationVerificationResolverMutations {
   constructor(
-    private organisationVerificationService: OrganizationVerificationService,
+    private organizationVerificationService: OrganizationVerificationService,
     private organizationVerificationLifecycleOptionsProvider: OrganizationVerificationLifecycleOptionsProvider,
     private authorizationEngine: AuthorizationEngineService
   ) {}
@@ -28,7 +28,7 @@ export class OrganisationVerificationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IOrganizationVerification> {
     const organizationVerification =
-      await this.organisationVerificationService.getOrganizationVerificationOrFail(
+      await this.organizationVerificationService.getOrganizationVerificationOrFail(
         organizationVerificationEventData.organizationVerificationID
       );
     await this.authorizationEngine.grantAccessOrFail(

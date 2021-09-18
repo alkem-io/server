@@ -8,7 +8,7 @@ export abstract class IOrganizationVerification extends IAuthorizable {
   organizationID!: string;
 
   @Field(() => OrganizationVerificationEnum, {
-    description: 'Organisation verification type',
+    description: 'Organization verification type',
   })
   status!: string;
 

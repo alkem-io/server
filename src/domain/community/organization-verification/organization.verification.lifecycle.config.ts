@@ -16,7 +16,7 @@ export const organizationVerificationLifecycleConfig = {
       on: {
         MANUALLY_VERIFY: {
           target: 'manuallyVerified',
-          cond: 'organisationVerificationAuthorized',
+          cond: 'organizationVerificationAuthorized',
         },
         REJECT: 'rejected',
       },
