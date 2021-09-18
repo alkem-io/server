@@ -12,7 +12,6 @@ import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
 import { AuthorizationRuleCredential } from './authorization.rule.credential';
-import { UpdateAuthorizationPolicyInput } from './authorization.policy.dto.update';
 import { AuthorizationRuleVerifiedCredential } from './authorization.rule.verified.credential';
 import { IAuthorizationRuleCredential } from './authorization.rule.credential.interface';
 
@@ -114,16 +113,6 @@ export class AuthorizationPolicyService {
     this.appendCredentialAuthorizationRules(child, newRules);
     child.anonymousReadAccess = parent.anonymousReadAccess;
     return child;
-  }
-
-  updateAuthorization(
-    origAuthorization: IAuthorizationPolicy | undefined,
-    authorizationUpdateData: UpdateAuthorizationPolicyInput
-  ): IAuthorizationPolicy {
-    const authorization = this.validateAuthorization(origAuthorization);
-    authorization.anonymousReadAccess =
-      authorizationUpdateData.anonymousReadAccess;
-    return authorization;
   }
 
   appendCredentialAuthorizationRules(
