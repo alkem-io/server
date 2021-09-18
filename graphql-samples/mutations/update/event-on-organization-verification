@@ -1,0 +1,19 @@
+mutation eventOnOrganizationVerification($organizationVerificationEventData: OrganizationVerificationEventInput!) {
+  eventOnOrganizationVerification(organizationVerificationEventData: $organizationVerificationEventData) {
+    id
+    status
+    lifecycle {
+      state
+      nextEvents
+    }
+  }
+}
+
+variables:
+{
+  "organizationVerificationEventData":
+  {
+    "organizationVerificationID": "uuid",
+  	"eventName": "VERIFICATION_REQUEST"
+  }
+}

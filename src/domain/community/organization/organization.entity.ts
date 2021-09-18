@@ -5,7 +5,7 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganization } from './organization.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 
 @Entity()
 export class Organization
@@ -38,8 +38,13 @@ export class Organization
   @Column()
   contactEmail?: string = '';
 
-  @Column({ default: OrganizationVerificationEnum.NOT_VERIFIED })
-  verificationType!: string;
+  @OneToOne(() => OrganizationVerification, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  verification!: OrganizationVerification;
 
   constructor() {
     super();

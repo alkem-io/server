@@ -5,7 +5,7 @@ import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { IAgent } from '@domain/agent/agent/agent.interface';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 
 @ObjectType('Organization', {
   implements: () => [IGroupable, ISearchable],
@@ -39,9 +39,6 @@ export abstract class IOrganization extends INameable {
   })
   contactEmail?: string;
 
-  @Field(() => OrganizationVerificationEnum, {
-    name: 'verified',
-    description: 'Organization verification type',
-  })
-  verificationType!: string;
+  @Field(() => IOrganizationVerification, { nullable: false })
+  verification?: IOrganizationVerification;
 }
