@@ -20,7 +20,8 @@ export class OrganizationVerificationAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    organizationVerification: IOrganizationVerification
+    organizationVerification: IOrganizationVerification,
+    organizationID: string
   ): Promise<IOrganizationVerification> {
     organizationVerification.authorization =
       await this.authorizationPolicyService.reset(
@@ -28,7 +29,8 @@ export class OrganizationVerificationAuthorizationService {
       );
     organizationVerification.authorization = this.appendCredentialRules(
       organizationVerification.authorization,
-      organizationVerification.id
+      organizationVerification.id,
+      organizationID
     );
 
     return await this.organizationVerificationRepository.save(
@@ -38,7 +40,8 @@ export class OrganizationVerificationAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    organizationVerificationID: string
+    organizationVerificationID: string,
+    organizationID: string
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -73,6 +76,16 @@ export class OrganizationVerificationAuthorizationService {
       ],
     };
     newRules.push(communityAdmin);
+
+    const orgAdmin = {
+      type: AuthorizationCredential.OrganizationAdmin,
+      resourceID: organizationID,
+      grantedPrivileges: [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+      ],
+    };
+    newRules.push(orgAdmin);
 
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(

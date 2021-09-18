@@ -73,7 +73,8 @@ export class OrganizationAuthorizationService {
     );
     organization.verification =
       await this.organizationVerificationAuthorizationService.applyAuthorizationPolicy(
-        organization.verification
+        organization.verification,
+        organization.id
       );
 
     return await this.organizationRepository.save(organization);

@@ -83,7 +83,17 @@ export class OrganizationVerificationLifecycleOptionsProvider {
       },
     },
     guards: {
-      organizationVerificationAuthorized: (_, event) => {
+      // To actually assign the verified status the GRANT privilege is needed on the verification
+      organizationVerificationGrantAuthorized: (_, event) => {
+        const agentInfo: AgentInfo = event.agentInfo;
+        const authorizationPolicy: IAuthorizationPolicy = event.authorization;
+        return this.authorizationEngineService.isAccessGranted(
+          agentInfo,
+          authorizationPolicy,
+          AuthorizationPrivilege.GRANT
+        );
+      },
+      organizationVerificationUpdateAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: IAuthorizationPolicy = event.authorization;
         return this.authorizationEngineService.isAccessGranted(

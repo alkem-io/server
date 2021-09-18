@@ -9,6 +9,7 @@ export const organizationVerificationLifecycleConfig = {
       on: {
         VERIFICATION_REQUEST: {
           target: 'verificationPending',
+          cond: 'organizationVerificationUpdateAuthorized',
         },
       },
     },
@@ -16,7 +17,7 @@ export const organizationVerificationLifecycleConfig = {
       on: {
         MANUALLY_VERIFY: {
           target: 'manuallyVerified',
-          cond: 'organizationVerificationAuthorized',
+          cond: 'organizationVerificationGrantAuthorized',
         },
         REJECT: 'rejected',
       },
