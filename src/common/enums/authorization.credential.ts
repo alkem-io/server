@@ -12,6 +12,8 @@ export enum AuthorizationCredential {
   ChallengeMember = 'challenge-member',
   ChallengeLead = 'challenge-lead', // For organizations that are leads of a challenge
   OpportunityMember = 'opportunity-member',
+
+  OpportunityAdmin = 'opportunity-admin',
   OrganizationOwner = 'organization-owner', // Able to commit an organization
   OrganizationAdmin = 'organization-admin', // Able to administer an organization
   OrganizationMember = 'organization-member', // Able to be a part of an organization
