@@ -193,27 +193,6 @@ export class MatrixAgentService {
     return await this.getRoom(matrixAgent, targetRoomId);
   }
 
-  // // Todo: used? rename to sendMessageToGroup default room?
-  // async sendMessageToCommunity(
-  //   matrixAgent: IMatrixAgent,
-  //   messageRequest: MatrixAgentMessageRequestCommunity
-  // ): Promise<string> {
-  //   const rooms = await matrixAgent.matrixClient.getGroupRooms(
-  //     messageRequest.communityId
-  //   );
-  //   const room = rooms.chunk[0];
-
-  //   if (!room) {
-  //     throw new Error('The community does not have a default room set');
-  //   }
-
-  //   await this.sendMessage(matrixAgent, room.room_id, {
-  //     text: messageRequest.text,
-  //   });
-
-  //   return room.room_id;
-  // }
-
   async sendMessage(
     matrixAgent: IMatrixAgent,
     roomId: string,
