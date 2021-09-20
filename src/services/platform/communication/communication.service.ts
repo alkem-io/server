@@ -15,14 +15,14 @@ import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
 import { PUB_SUB } from '../subscription/subscription.module';
-import { CommunicationDeleteMessageFromCommunityRoomInput } from './communication.dto.delete.msg.community';
-import { CommunicationEditMessageOnCommunityRoomInput } from './communication.dto.edit.msg.community';
+import { CommunicationDeleteMessageFromCommunityRoomInput } from './communication.dto.delete.message.community';
+import { CommunicationEditMessageOnCommunityRoomInput } from './communication.dto.edit.message.community';
 import {
   CommunicationMessageResult,
   convertFromMatrixMessage,
 } from './communication.dto.message.result';
-import { CommunicationSendMessageCommunityInput } from './communication.dto.send.msg.community';
-import { CommunicationSendMessageUserInput } from './communication.dto.send.msg.user';
+import { CommunicationSendMessageCommunityInput } from './communication.dto.send.message.community';
+import { CommunicationSendMessageUserInput } from './communication.dto.send.message.user';
 import { CommunityRoom } from './communication.room.dto.community';
 import { DirectRoom } from './communication.room.dto.direct';
 
@@ -61,8 +61,8 @@ export class CommunicationService {
         ?.enabled;
   }
 
-  async sendMsgCommunity(
-    sendMsgData: CommunicationSendMessageCommunityInput
+  async sendMessageToCommunityRoom(
+    sendMessageData: CommunicationSendMessageCommunityInput
   ): Promise<string> {
     if (!this.enabled) {
       throw new NotEnabledException(
@@ -71,13 +71,13 @@ export class CommunicationService {
       );
     }
     const matrixAgent = await this.matrixAgentPool.acquire(
-      sendMsgData.sendingUserEmail
+      sendMessageData.sendingUserEmail
     );
     const messageId = await this.matrixAgentService.message(
       matrixAgent,
-      sendMsgData.roomID,
+      sendMessageData.roomID,
       {
-        text: sendMsgData.message,
+        text: sendMessageData.message,
       }
     );
 
@@ -85,7 +85,7 @@ export class CommunicationService {
   }
 
   async editMessageInCommunityRoom(
-    editMsgData: CommunicationEditMessageOnCommunityRoomInput
+    editMessageData: CommunicationEditMessageOnCommunityRoomInput
   ): Promise<void> {
     if (!this.enabled) {
       throw new NotEnabledException(
@@ -95,21 +95,21 @@ export class CommunicationService {
     }
 
     const matrixAgent = await this.matrixAgentPool.acquire(
-      editMsgData.sendingUserEmail
+      editMessageData.sendingUserEmail
     );
 
     await this.matrixAgentService.editMessage(
       matrixAgent,
-      editMsgData.roomID,
-      editMsgData.messageId,
+      editMessageData.roomID,
+      editMessageData.messageId,
       {
-        text: editMsgData.message,
+        text: editMessageData.message,
       }
     );
   }
 
-  async deleteMsgCommunity(
-    deleteMsgData: CommunicationDeleteMessageFromCommunityRoomInput
+  async deleteMessageFromCommunityRoom(
+    deleteMessageData: CommunicationDeleteMessageFromCommunityRoomInput
   ) {
     if (!this.enabled) {
       throw new NotEnabledException(
@@ -118,18 +118,18 @@ export class CommunicationService {
       );
     }
     const matrixAgent = await this.matrixAgentPool.acquire(
-      deleteMsgData.sendingUserEmail
+      deleteMessageData.sendingUserEmail
     );
 
     await this.matrixAgentService.deleteMessage(
       matrixAgent,
-      deleteMsgData.roomID,
-      deleteMsgData.messageId
+      deleteMessageData.roomID,
+      deleteMessageData.messageId
     );
   }
 
-  async sendMsgUser(
-    sendMsgUserData: CommunicationSendMessageUserInput
+  async sendMessageToUser(
+    sendMessageUserData: CommunicationSendMessageUserInput
   ): Promise<string> {
     if (!this.enabled) {
       throw new NotEnabledException(
@@ -138,7 +138,7 @@ export class CommunicationService {
       );
     }
     const matrixAgent = await this.matrixAgentPool.acquire(
-      sendMsgUserData.sendingUserEmail
+      sendMessageUserData.sendingUserEmail
     );
 
     // todo: not always reinitiate the room connection
@@ -146,7 +146,7 @@ export class CommunicationService {
       matrixAgent,
       {
         text: '',
-        email: sendMsgUserData.receiverID,
+        email: sendMessageUserData.receiverID,
       }
     );
 
@@ -154,7 +154,7 @@ export class CommunicationService {
       matrixAgent,
       roomID,
       {
-        text: sendMsgUserData.message,
+        text: sendMessageUserData.message,
       }
     );
 

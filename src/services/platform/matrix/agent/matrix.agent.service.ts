@@ -130,17 +130,17 @@ export class MatrixAgentService {
 
   async initiateMessagingToUser(
     matrixAgent: IMatrixAgent,
-    msgRequest: MatrixAgentMessageRequestDirect
+    messageRequest: MatrixAgentMessageRequestDirect
   ): Promise<string> {
     const directRoom = await this.getDirectRoomForUserEmail(
       matrixAgent,
-      msgRequest.email
+      messageRequest.email
     );
     if (directRoom) return directRoom.roomId;
 
     // Room does not exist, create...
     const matrixUsername = this.matrixUserAdapterService.convertEmailToMatrixId(
-      msgRequest.email
+      messageRequest.email
     );
 
     const targetRoomId = await this.matrixRoomAdapterService.createRoom(
@@ -196,10 +196,10 @@ export class MatrixAgentService {
 
   async messageCommunity(
     matrixAgent: IMatrixAgent,
-    msgRequest: MatrixAgentMessageRequestCommunity
+    messageRequest: MatrixAgentMessageRequestCommunity
   ): Promise<string> {
     const rooms = await matrixAgent.matrixClient.getGroupRooms(
-      msgRequest.communityId
+      messageRequest.communityId
     );
     const room = rooms.chunk[0];
 
@@ -207,7 +207,9 @@ export class MatrixAgentService {
       throw new Error('The community does not have a default room set');
     }
 
-    await this.message(matrixAgent, room.room_id, { text: msgRequest.text });
+    await this.message(matrixAgent, room.room_id, {
+      text: messageRequest.text,
+    });
 
     return room.room_id;
   }
@@ -215,12 +217,12 @@ export class MatrixAgentService {
   async message(
     matrixAgent: IMatrixAgent,
     roomId: string,
-    msgRequest: MatrixAgentMessageRequest
+    messageRequest: MatrixAgentMessageRequest
   ) {
     const response = await matrixAgent.matrixClient.sendEvent(
       roomId,
       'm.room.message',
-      { body: msgRequest.text, msgtype: 'm.text' },
+      { body: messageRequest.text, messagetype: 'm.text' },
       ''
     );
 
@@ -232,11 +234,11 @@ export class MatrixAgentService {
     matrixAgent: IMatrixAgent,
     roomId: string,
     messageId: string,
-    msgRequest: MatrixAgentMessageRequest
+    messageRequest: MatrixAgentMessageRequest
   ) {
     const newContent: IContent = {
-      msgtype: 'm.text',
-      body: msgRequest.text,
+      messagetype: 'm.text',
+      body: messageRequest.text,
     };
     await matrixAgent.matrixClient.sendMessage(
       roomId,
@@ -256,8 +258,8 @@ export class MatrixAgentService {
     //   roomId,
     //   'm.replace',
     //   {
-    //     body: msgRequest.text,
-    //     msgtype: 'm.text',
+    //     body: messageRequest.text,
+    //     messagetype: 'm.text',
     //   }
     // );
 
