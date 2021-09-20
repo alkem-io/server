@@ -4,7 +4,7 @@ import { OrganizationVerificationEnum } from '@common/enums/organization.verific
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
-@Entity('OrganizationVerification')
+@Entity()
 export class OrganizationVerification
   extends AuthorizableEntity
   implements IOrganizationVerification
