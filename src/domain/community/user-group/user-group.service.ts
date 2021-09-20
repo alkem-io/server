@@ -122,10 +122,10 @@ export class UserGroupService {
 
   async getParent(group: IUserGroup): Promise<IGroupable> {
     const groupWithParent = (await this.getUserGroupOrFail(group.id, {
-      relations: ['community', 'organisation'],
+      relations: ['community', 'organization'],
     })) as UserGroup;
     if (groupWithParent?.community) return groupWithParent?.community;
-    if (groupWithParent?.organisation) return groupWithParent?.organisation;
+    if (groupWithParent?.organization) return groupWithParent?.organization;
     throw new EntityNotFoundException(
       `Unable to locate parent for user group: ${group.name}`,
       LogContext.COMMUNITY

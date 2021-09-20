@@ -1,0 +1,145 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { AuthorizationCredential, LogContext } from '@common/enums';
+import { Repository } from 'typeorm';
+import { AuthorizationPrivilege } from '@common/enums';
+import { IOrganization, Organization } from '@domain/community/organization';
+import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { OrganizationService } from './organization.service';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+
+@Injectable()
+export class OrganizationAuthorizationService {
+  constructor(
+    private organizationService: OrganizationService,
+    private authorizationPolicy: AuthorizationPolicyService,
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private userGroupAuthorizationService: UserGroupAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>
+  ) {}
+
+  async applyAuthorizationPolicy(
+    organization: IOrganization
+  ): Promise<IOrganization> {
+    organization.authorization = await this.authorizationPolicyService.reset(
+      organization.authorization
+    );
+    organization.authorization = this.appendCredentialRules(
+      organization.authorization,
+      organization.id
+    );
+
+    if (organization.profile) {
+      organization.profile.authorization =
+        this.authorizationPolicy.inheritParentAuthorization(
+          organization.profile.authorization,
+          organization.authorization
+        );
+      organization.profile =
+        await this.profileAuthorizationService.applyAuthorizationPolicy(
+          organization.profile
+        );
+    }
+
+    organization.agent = await this.organizationService.getAgent(organization);
+    organization.agent.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        organization.agent.authorization,
+        organization.authorization
+      );
+
+    organization.groups = await this.organizationService.getUserGroups(
+      organization
+    );
+    for (const group of organization.groups) {
+      group.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          group.authorization,
+          organization.authorization
+        );
+      await this.userGroupAuthorizationService.applyAuthorizationPolicy(group);
+    }
+
+    return await this.organizationRepository.save(organization);
+  }
+
+  private appendCredentialRules(
+    authorization: IAuthorizationPolicy | undefined,
+    organizationID: string
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for organization: ${organizationID}`,
+        LogContext.COMMUNITY
+      );
+
+    const newRules: AuthorizationRuleCredential[] = [];
+
+    const globalAdmin = {
+      type: AuthorizationCredential.GlobalAdmin,
+      resourceID: '',
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    newRules.push(globalAdmin);
+
+    const communityAdmin = {
+      type: AuthorizationCredential.GlobalAdminCommunity,
+      resourceID: '',
+      grantedPrivileges: [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    newRules.push(communityAdmin);
+
+    const organizationAdmin = {
+      type: AuthorizationCredential.OrganizationAdmin,
+      resourceID: organizationID,
+      grantedPrivileges: [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    newRules.push(organizationAdmin);
+
+    const organizationMember = {
+      type: AuthorizationCredential.OrganizationMember,
+      resourceID: organizationID,
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+    };
+    newRules.push(organizationMember);
+
+    const registeredUser = {
+      type: AuthorizationCredential.GlobalRegistered,
+      resourceID: '',
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+    };
+    newRules.push(registeredUser);
+
+    const updatedAuthorization =
+      this.authorizationPolicy.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
+  }
+}

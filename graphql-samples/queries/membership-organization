@@ -1,0 +1,13 @@
+query {
+  membershipOrganization(membershipData: {organizationID: "luveniakena"}) {
+   	ecoversesHosting {
+      nameID
+      id
+    }
+    challengesLeading {
+      nameID
+      id
+    }
+  }
+
+}

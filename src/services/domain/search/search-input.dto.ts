@@ -18,7 +18,7 @@ export class SearchInput {
   @Field(() => [String], {
     nullable: true,
     description:
-      'Restrict the search to only the specified entity types. Values allowed: user, group, organisation, Default is all.',
+      'Restrict the search to only the specified entity types. Values allowed: user, group, organization, Default is all.',
   })
   typesFilter?: string[];
 

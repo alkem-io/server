@@ -8,7 +8,7 @@ import { UpdateAuthorizationPolicyInput } from '@domain/common/authorization-pol
 export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
   @Field(() => UUID_NAMEID, {
     nullable: true,
-    description: 'Update the host Organisation for the Ecoverse.',
+    description: 'Update the host Organization for the Ecoverse.',
   })
   @IsOptional()
   hostID?: string;

@@ -30,10 +30,10 @@ hosting:
 ## bootstrap ##
 # Used to determine the the information that is used to to initialize a functional Alkemio instance.
 bootstrap:
-  # The bootstrap authorisation file specifies the minimum set of users and their associated credentials that are always available
+  # The bootstrap authorization file specifies the minimum set of users and their associated credentials that are always available
   # in the Alkemio instance.
   #
-  # Default: the default file that is picked up is: src/services/configuraiton/templates/authorisation-bootstrap.json.
+  # Default: the default file that is picked up is: src/services/configuraiton/templates/authorization-bootstrap.json.
   authorization:
     enabled: ${BOOTSTRAP_AUTHORIZATION_ENABLED}:true
     file: ${BOOTSTRAP_AUTHORIZATION_FILE}
@@ -65,7 +65,7 @@ security:
 
 # Defines all authentication and authorization configuration.
 # Authentication is pluggable, using the notion of "Authentication Providers", which have the responsibility to authenticate users.
-# Authorisation is handled within the platfor.
+# Authorization is handled within the platform.
 #
 # Note: the term Authentication Provider is based on the more widely understood concept of Identity Providers (Servers, Services),
 # but it is in Alkemio restricted to Authentication. Configuration is unique per provider.

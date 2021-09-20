@@ -1,4 +1,4 @@
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
+import { IOrganization } from '@domain/community/organization/organization.interface';
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { IUser } from '@domain/community/user/user.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
@@ -11,7 +11,7 @@ import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.inte
 @InterfaceType('Searchable', {
   resolveType(searchable) {
     if (searchable.groups) {
-      return IOrganisation;
+      return IOrganization;
     }
     if (searchable.opportunities) {
       return IChallenge;

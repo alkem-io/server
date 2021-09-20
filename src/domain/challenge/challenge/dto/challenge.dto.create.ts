@@ -7,8 +7,8 @@ import { IsOptional } from 'class-validator';
 export class CreateChallengeInput extends CreateBaseChallengeInput {
   @Field(() => [UUID_NAMEID], {
     nullable: true,
-    description: 'Set lead Organisations for the Challenge.',
+    description: 'Set lead Organizations for the Challenge.',
   })
   @IsOptional()
-  leadOrganisations?: string[];
+  leadOrganizations?: string[];
 }
