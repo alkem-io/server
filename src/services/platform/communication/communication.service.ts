@@ -64,13 +64,7 @@ export class CommunicationService {
   async sendMessageToCommunityRoom(
     sendMessageData: CommunicationSendMessageCommunityInput
   ): Promise<string> {
-    if (!this.enabled) {
-      throw new NotEnabledException(
-        'Communications not enabled',
-        LogContext.COMMUNICATION
-      );
-    }
-    const matrixAgent = await this.matrixAgentPool.acquire(
+    const matrixAgent = await this.acquireMatrixAgent(
       sendMessageData.sendingUserEmail
     );
     const messageId = await this.matrixAgentService.message(
@@ -87,14 +81,7 @@ export class CommunicationService {
   async editMessageInCommunityRoom(
     editMessageData: CommunicationEditMessageOnCommunityRoomInput
   ): Promise<void> {
-    if (!this.enabled) {
-      throw new NotEnabledException(
-        'Communications not enabled',
-        LogContext.COMMUNICATION
-      );
-    }
-
-    const matrixAgent = await this.matrixAgentPool.acquire(
+    const matrixAgent = await this.acquireMatrixAgent(
       editMessageData.sendingUserEmail
     );
 
@@ -111,13 +98,7 @@ export class CommunicationService {
   async deleteMessageFromCommunityRoom(
     deleteMessageData: CommunicationDeleteMessageFromCommunityRoomInput
   ) {
-    if (!this.enabled) {
-      throw new NotEnabledException(
-        'Communications not enabled',
-        LogContext.COMMUNICATION
-      );
-    }
-    const matrixAgent = await this.matrixAgentPool.acquire(
+    const matrixAgent = await this.acquireMatrixAgent(
       deleteMessageData.sendingUserEmail
     );
 
@@ -131,13 +112,7 @@ export class CommunicationService {
   async sendMessageToUser(
     sendMessageUserData: CommunicationSendMessageUserInput
   ): Promise<string> {
-    if (!this.enabled) {
-      throw new NotEnabledException(
-        'Communications not enabled',
-        LogContext.COMMUNICATION
-      );
-    }
-    const matrixAgent = await this.matrixAgentPool.acquire(
+    const matrixAgent = await this.acquireMatrixAgent(
       sendMessageUserData.sendingUserEmail
     );
 
@@ -159,6 +134,16 @@ export class CommunicationService {
     );
 
     return messageId;
+  }
+
+  private async acquireMatrixAgent(email: string) {
+    if (!this.enabled) {
+      throw new NotEnabledException(
+        'Communications not enabled',
+        LogContext.COMMUNICATION
+      );
+    }
+    return await this.matrixAgentPool.acquire(email);
   }
 
   async getGlobalAdminUser() {
