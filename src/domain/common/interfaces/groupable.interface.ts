@@ -1,4 +1,4 @@
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
+import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -6,7 +6,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 @InterfaceType('Groupable', {
   resolveType(groupable) {
     if (groupable.profile) {
-      return IOrganisation;
+      return IOrganization;
     }
     return ICommunity;
   },

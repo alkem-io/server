@@ -10,12 +10,13 @@ export enum AuthorizationCredential {
   EcoverseMember = 'ecoverse-member',
   ChallengeAdmin = 'challenge-admin',
   ChallengeMember = 'challenge-member',
-  ChallengeLead = 'challenge-lead', // For organisations that are leads of a challenge
+  ChallengeLead = 'challenge-lead', // For organizations that are leads of a challenge
   OpportunityMember = 'opportunity-member',
+
   OpportunityAdmin = 'opportunity-admin',
-  OrganisationOwner = 'organisation-owner', // Able to commit an organisation
-  OrganisationAdmin = 'organisation-admin', // Able to administer an organisation
-  OrganisationMember = 'organisation-member', // Able to be a part of an organisation
+  OrganizationOwner = 'organization-owner', // Able to commit an organization
+  OrganizationAdmin = 'organization-admin', // Able to administer an organization
+  OrganizationMember = 'organization-member', // Able to be a part of an organization
   UserGroupMember = 'user-group-member', // Able to be a part of an user group
   UserSelfManagement = 'user-self', // able to update a user
 }

@@ -10,7 +10,7 @@ query search($searchData: SearchInput!){
       ... on UserGroup {
         name
       }
-      ... on Organisation {
+      ... on Organization {
         name
       }
     }
@@ -22,6 +22,6 @@ query search($searchData: SearchInput!){
   {
     "tagsetNames": ["Keywords"],
     "terms": ["Alisha", "Alisha", "Alisha", "Neil", "members"],
-    "typesFilter": ["user", "group", "organisation"]
+    "typesFilter": ["user", "group", "organization"]
   }
 }

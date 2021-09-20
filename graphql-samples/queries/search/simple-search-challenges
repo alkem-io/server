@@ -10,7 +10,7 @@ query search($searchData: SearchInput!){
       ... on UserGroup {
         name
       }
-      ... on Organisation {
+      ... on Organization {
         nameID
       }
       ... on Challenge {

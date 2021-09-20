@@ -7,7 +7,7 @@ import { ChallengeResolverFields } from './challenge.resolver.fields';
 import { ChallengeResolverMutations } from './challenge.resolver.mutations';
 import { ChallengeService } from './challenge.service';
 import { CommunityModule } from '@domain/community/community/community.module';
-import { OrganisationModule } from '@domain/community/organisation/organisation.module';
+import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
@@ -31,7 +31,7 @@ import { UserModule } from '@domain/community/user/user.module';
     CommunityModule,
     OpportunityModule,
     TagsetModule,
-    OrganisationModule,
+    OrganizationModule,
     NamingModule,
     LifecycleModule,
     ProjectModule,
