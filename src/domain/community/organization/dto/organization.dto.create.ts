@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { CreateProfileInput } from '@domain/community/profile';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
-import { SMALL_TEXT_LENGTH } from '@src/common';
+import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 
 @InputType()
 export class CreateOrganizationInput extends CreateNameableInput {
