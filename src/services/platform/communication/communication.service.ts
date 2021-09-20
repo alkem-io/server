@@ -67,7 +67,7 @@ export class CommunicationService {
     const matrixAgent = await this.acquireMatrixAgent(
       sendMessageData.sendingUserEmail
     );
-    const messageId = await this.matrixAgentService.message(
+    const messageId = await this.matrixAgentService.sendMessage(
       matrixAgent,
       sendMessageData.roomID,
       {
@@ -125,7 +125,7 @@ export class CommunicationService {
       }
     );
 
-    const messageId = await this.matrixAgentService.message(
+    const messageId = await this.matrixAgentService.sendMessage(
       matrixAgent,
       roomID,
       {

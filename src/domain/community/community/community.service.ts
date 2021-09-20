@@ -426,7 +426,7 @@ export class CommunityService {
     return room;
   }
 
-  async sendMessageToCommunityUpdatesRoom(
+  async sendMessageToCommunityUpdates(
     community: ICommunity,
     email: string,
     messageData: CommunitySendMessageInput
@@ -460,7 +460,7 @@ export class CommunityService {
     });
   }
 
-  async removeMessageFromCommunityUpdatesRoom(
+  async removeMessageFromCommunityUpdates(
     community: ICommunity,
     email: string,
     messageData: CommunityRemoveMessageInput
