@@ -15,6 +15,5 @@ export enum LogContext {
   IPFS = 'ipfs',
   LIFECYCLE = 'lifecycle',
   UNSPECIFIED = 'not_specified',
-  NOTIFICATIONS = 'notifications',
   SSI = 'ssi',
 }

@@ -14,7 +14,7 @@ import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.se
 import { IMatrixAgent } from './matrix.agent.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
-import { PubSubEngine } from 'graphql-subscriptions';
+import { PubSub } from 'graphql-subscriptions';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import {
   COMMUNICATION_MESSAGE_RECEIVED,
@@ -32,7 +32,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     roomAdapterService: MatrixRoomAdapterService,
     private matrixUserAdapterService: MatrixUserAdapterService,
     @Inject(PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine,
+    private readonly subscriptionHandler: PubSub,
     private loggerService: LoggerService
   ) {
     this.matrixClient = matrixClient;

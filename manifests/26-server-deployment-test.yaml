@@ -19,27 +19,6 @@ spec:
       containers:
         - name: alkemio-server
           image: ctdev.azurecr.io/alkemio-server:latest
-          env:
-            - name: RABBITMQ_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: alkemio-rabbitmq-cluster-default-user
-                  key: host
-            - name: RABBITMQ_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: alkemio-rabbitmq-cluster-default-user
-                  key: port
-            - name: RABBITMQ_USER
-              valueFrom:
-                secretKeyRef:
-                  name: alkemio-rabbitmq-cluster-default-user
-                  key: username
-            - name: RABBITMQ_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: alkemio-rabbitmq-cluster-default-user
-                  key: password
           envFrom:
             - secretRef:
                 name: alkemio-secrets

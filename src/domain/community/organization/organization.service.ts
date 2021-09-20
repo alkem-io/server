@@ -34,14 +34,12 @@ import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admi
 import { RemoveOrganizationAdminInput } from './dto/organization.dto.remove.admin';
 import { RemoveOrganizationOwnerInput } from './dto/organization.dto.remove.owner';
 import { AssignOrganizationOwnerInput } from './dto/organization.dto.assign.owner';
-import { OrganizationVerificationService } from '../organization-verification/organization.verification.service';
-import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 
 @Injectable()
 export class OrganizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private organizationVerificationService: OrganizationVerificationService,
     private userService: UserService,
     private agentService: AgentService,
     private userGroupService: UserGroupService,
@@ -65,6 +63,7 @@ export class OrganizationService {
       organizationData.profileData
     );
 
+    organization.verificationType = OrganizationVerificationEnum.NOT_VERIFIED;
     organization.groups = [];
 
     organization.agent = await this.agentService.createAgent({
@@ -76,12 +75,7 @@ export class OrganizationService {
       `Created new organization with id ${organization.id}`,
       LogContext.COMMUNITY
     );
-    organization.verification =
-      await this.organizationVerificationService.createOrganizationVerification(
-        { organizationID: savedOrg.id }
-      );
-
-    return await this.organizationRepository.save(organization);
+    return savedOrg;
   }
 
   async checkNameIdOrFail(nameID: string) {
@@ -232,12 +226,6 @@ export class OrganizationService {
 
     if (organization.agent) {
       await this.agentService.deleteAgent(organization.agent.id);
-    }
-
-    if (organization.verification) {
-      await this.organizationVerificationService.delete(
-        organization.verification.id
-      );
     }
 
     const result = await this.organizationRepository.remove(
@@ -525,20 +513,5 @@ export class OrganizationService {
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async getVerification(
-    organization: IOrganization
-  ): Promise<IOrganizationVerification> {
-    if (!organization.verification) {
-      // create and add the verification
-      organization.verification =
-        await this.organizationVerificationService.createOrganizationVerification(
-          { organizationID: organization.id }
-        );
-
-      await this.organizationRepository.save(organization);
-    }
-    return organization.verification;
   }
 }

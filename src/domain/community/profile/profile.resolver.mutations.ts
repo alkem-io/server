@@ -8,6 +8,7 @@ import {
   UploadProfileAvatarInput,
 } from '@domain/community/profile';
 import { Inject, UseGuards } from '@nestjs/common';
+import { PubSub } from 'apollo-server-express';
 import { Args, Mutation, Resolver, Subscription } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
@@ -21,7 +22,6 @@ import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { USER_AVATAR_UPLOADED } from '@services/platform/subscription/subscription.events';
-import { PubSubEngine } from 'apollo-server-express';
 
 @Resolver()
 export class ProfileResolverMutations {
@@ -32,7 +32,7 @@ export class ProfileResolverMutations {
     private authorizationEngine: AuthorizationEngineService,
     private profileService: ProfileService,
     @Inject(PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine
+    private readonly subscriptionHandler: PubSub
   ) {}
 
   @UseGuards(GraphqlGuard)

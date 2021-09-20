@@ -2,6 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { Organization } from './organization.entity';
+import { OrganizationService } from './organization.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
@@ -13,8 +14,6 @@ import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
-import { OrganizationService } from './organization.service';
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
@@ -75,15 +74,6 @@ export class OrganizationResolverFields {
     }
 
     return organization.profile;
-  }
-
-  @ResolveField('verification', () => IOrganizationVerification, {
-    nullable: false,
-    description: 'The verification handler for this organization.',
-  })
-  @Profiling.api
-  async verification(@Parent() organization: Organization) {
-    return await this.organizationService.getVerification(organization);
   }
 
   @ResolveField('agent', () => IAgent, {

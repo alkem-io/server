@@ -33,7 +33,6 @@ services:
       - CORS_ENABLED=true
       - LOGGING_LEVEL_CONSOLE=verbose
       - LOGGING_CONSOLE_ENABLED=true
-      - RABBITMQ_HOST=rabbitmq
     restart: always
     ports:
       - 4000:4000

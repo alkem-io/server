@@ -14,14 +14,12 @@ import { OrganizationAuthorizationService } from './organization.service.authori
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { OrganizationVerificationModule } from '../organization-verification/organization.verification.module';
 
 @Module({
   imports: [
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationEngineModule,
-    OrganizationVerificationModule,
     UserModule,
     UserGroupModule,
     TagsetModule,

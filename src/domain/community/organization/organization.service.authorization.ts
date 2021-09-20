@@ -9,9 +9,8 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
 import { OrganizationService } from './organization.service';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -20,7 +19,6 @@ export class OrganizationAuthorizationService {
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
-    private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>
