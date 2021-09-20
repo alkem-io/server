@@ -13,7 +13,6 @@ import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
 import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixAgent } from './matrix.agent';
 import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
-import { MatrixAgentMessageRequestCommunity } from './matrix.agent.dto.message.request.community';
 import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
 import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -194,27 +193,28 @@ export class MatrixAgentService {
     return await this.getRoom(matrixAgent, targetRoomId);
   }
 
-  async messageCommunity(
-    matrixAgent: IMatrixAgent,
-    messageRequest: MatrixAgentMessageRequestCommunity
-  ): Promise<string> {
-    const rooms = await matrixAgent.matrixClient.getGroupRooms(
-      messageRequest.communityId
-    );
-    const room = rooms.chunk[0];
+  // // Todo: used? rename to sendMessageToGroup default room?
+  // async sendMessageToCommunity(
+  //   matrixAgent: IMatrixAgent,
+  //   messageRequest: MatrixAgentMessageRequestCommunity
+  // ): Promise<string> {
+  //   const rooms = await matrixAgent.matrixClient.getGroupRooms(
+  //     messageRequest.communityId
+  //   );
+  //   const room = rooms.chunk[0];
 
-    if (!room) {
-      throw new Error('The community does not have a default room set');
-    }
+  //   if (!room) {
+  //     throw new Error('The community does not have a default room set');
+  //   }
 
-    await this.message(matrixAgent, room.room_id, {
-      text: messageRequest.text,
-    });
+  //   await this.sendMessage(matrixAgent, room.room_id, {
+  //     text: messageRequest.text,
+  //   });
 
-    return room.room_id;
-  }
+  //   return room.room_id;
+  // }
 
-  async message(
+  async sendMessage(
     matrixAgent: IMatrixAgent,
     roomId: string,
     messageRequest: MatrixAgentMessageRequest

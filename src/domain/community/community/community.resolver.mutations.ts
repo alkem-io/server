@@ -255,7 +255,7 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `community send message: ${community.displayName}`
     );
-    return await this.communityService.sendMessageToCommunityUpdatesRoom(
+    return await this.communityService.sendMessageToCommunityUpdates(
       community,
       agentInfo.email,
       messageData
@@ -280,7 +280,7 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `community send message: ${community.displayName}`
     );
-    await this.communityService.removeMessageFromCommunityUpdatesRoom(
+    await this.communityService.removeMessageFromCommunityUpdates(
       community,
       agentInfo.email,
       messageData
