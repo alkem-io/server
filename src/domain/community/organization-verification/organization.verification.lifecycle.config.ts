@@ -28,6 +28,12 @@ export const organizationVerificationLifecycleConfig = {
       data: {
         organizationID: (context: any, _event: any) => context.parentID,
       },
+      on: {
+        RESET: {
+          target: 'notVerified',
+          cond: 'organizationVerificationGrantAuthorized',
+        },
+      },
     },
     rejected: {
       on: {
