@@ -25,6 +25,6 @@ variables:
               }
             ]
       },
-      "leadOrganisations": ["Eco1"]
+      "leadOrganizations": ["Eco1"]
 		}
 }

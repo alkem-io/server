@@ -7,7 +7,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { BootstrapService } from './bootstrap.service';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { OrganisationModule } from '@domain/community/organisation/organisation.module';
+import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
@@ -18,7 +18,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     TagsetModule,
     UserModule,
     AuthorizationModule,
-    OrganisationModule,
+    OrganizationModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],
   providers: [BootstrapService],

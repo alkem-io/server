@@ -1,0 +1,299 @@
+import { UseGuards } from '@nestjs/common';
+import { Args, Resolver, Mutation } from '@nestjs/graphql';
+import { OrganizationService } from './organization.service';
+import { CurrentUser, Profiling } from '@src/common/decorators';
+import {
+  CreateOrganizationInput,
+  UpdateOrganizationInput,
+  IOrganization,
+  DeleteOrganizationInput,
+} from '@domain/community/organization';
+import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
+import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { OrganizationAuthorizationService } from './organization.service.authorization';
+import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+import { AssignOrganizationMemberInput } from './dto/organization.dto.assign.member';
+import { RemoveOrganizationMemberInput } from './dto/organization.dto.remove.member';
+import { IUser } from '../user/user.interface';
+import { RemoveOrganizationAdminInput } from './dto/organization.dto.remove.admin';
+import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admin';
+import { OrganizationAuthorizationResetInput } from './dto/organization.dto.reset.authorization';
+import { AssignOrganizationOwnerInput } from './dto/organization.dto.assign.owner';
+import { RemoveOrganizationOwnerInput } from './dto/organization.dto.remove.owner';
+
+@Resolver(() => IOrganization)
+export class OrganizationResolverMutations {
+  constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private userGroupAuthorizationService: UserGroupAuthorizationService,
+    private organizationAuthorizationService: OrganizationAuthorizationService,
+    private organizationService: OrganizationService,
+    private authorizationEngine: AuthorizationEngineService
+  ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Creates a new Organization on the platform.',
+  })
+  @Profiling.api
+  async createOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('organizationData') organizationData: CreateOrganizationInput
+  ): Promise<IOrganization> {
+    const authorizationPolicy =
+      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+        [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
+        [AuthorizationPrivilege.CREATE]
+      );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      authorizationPolicy,
+      AuthorizationPrivilege.CREATE,
+      `create Organization: ${organizationData.nameID}`
+    );
+    const organization = await this.organizationService.createOrganization(
+      organizationData
+    );
+
+    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
+      organization
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUserGroup, {
+    description: 'Creates a new User Group for the specified Organization.',
+  })
+  @Profiling.api
+  async createGroupOnOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('groupData') groupData: CreateUserGroupInput
+  ): Promise<IUserGroup> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      groupData.parentID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.CREATE,
+      `orgCreateGroup: ${organization.nameID}`
+    );
+
+    const group = await this.organizationService.createGroup(groupData);
+    group.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        group.authorization,
+        organization.authorization
+      );
+    return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
+      group
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Updates the specified Organization.',
+  })
+  @Profiling.api
+  async updateOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('organizationData') organizationData: UpdateOrganizationInput
+  ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      organizationData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `orgUpdate: ${organization.nameID}`
+    );
+
+    return await this.organizationService.updateOrganization(organizationData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Deletes the specified Organization.',
+  })
+  async deleteOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteOrganizationInput
+  ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      deleteData.ID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.DELETE,
+      `deleteOrg: ${organization.nameID}`
+    );
+    return await this.organizationService.deleteOrganization(deleteData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description:
+      'Reset the Authorization Policy on the specified Organization.',
+  })
+  @Profiling.api
+  async authorizationPolicyResetOnOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('authorizationResetData')
+    authorizationResetData: OrganizationAuthorizationResetInput
+  ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      authorizationResetData.organizationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `reset authorization definition on organization: ${authorizationResetData.organizationID}`
+    );
+    return await this.organizationAuthorizationService.applyAuthorizationPolicy(
+      organization
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Assigns a User as a member of the specified Organization.',
+  })
+  @Profiling.api
+  async assignUserToOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignOrganizationMemberInput
+  ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      membershipData.organizationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user organization: ${organization.displayName}`
+    );
+    return await this.organizationService.assignMember(membershipData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOrganization, {
+    description: 'Removes a User as a member of the specified Organization.',
+  })
+  @Profiling.api
+  async removeUserFromOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveOrganizationMemberInput
+  ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      membershipData.organizationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user organization: ${organization.displayName}`
+    );
+    return await this.organizationService.removeMember(membershipData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Assigns a User as an Organization Admin.',
+  })
+  @Profiling.api
+  async assignUserAsOrganizationAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignOrganizationAdminInput
+  ): Promise<IUser> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      membershipData.organizationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user organization admin: ${organization.displayName}`
+    );
+    return await this.organizationService.assignOrganizationAdmin(
+      membershipData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Removes a User from being an Organization Admin.',
+  })
+  @Profiling.api
+  async removeUserAsOrganizationAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveOrganizationAdminInput
+  ): Promise<IUser> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      membershipData.organizationID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user organization admin: ${organization.displayName}`
+    );
+    return await this.organizationService.removeOrganizationAdmin(
+      membershipData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Assigns a User as an Organization Owner.',
+  })
+  @Profiling.api
+  async assignUserAsOrganizationOwner(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignOrganizationOwnerInput
+  ): Promise<IUser> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      membershipData.organizationID
+    );
+    // todo: what additional logic check do we want on the granting of org owner?
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user organization owner: ${organization.displayName}`
+    );
+    return await this.organizationService.assignOrganizationOwner(
+      membershipData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Removes a User from being an Organization Owner.',
+  })
+  @Profiling.api
+  async removeUserAsOrganizationOwner(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveOrganizationOwnerInput
+  ): Promise<IUser> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      membershipData.organizationID
+    );
+    // todo: what additional logic check do we want on the granting of org owner?
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user organization admin: ${organization.displayName}`
+    );
+    return await this.organizationService.removeOrganizationOwner(
+      membershipData
+    );
+  }
+}

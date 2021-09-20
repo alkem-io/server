@@ -178,10 +178,10 @@ export class UserAuthorizationService {
         };
         newRules.push(challengeAdmin);
       } else if (
-        credential.type === AuthorizationCredential.OrganisationMember
+        credential.type === AuthorizationCredential.OrganizationMember
       ) {
         const challengeAdmin = {
-          type: AuthorizationCredential.OrganisationAdmin,
+          type: AuthorizationCredential.OrganizationAdmin,
           resourceID: credential.resourceID,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         };
