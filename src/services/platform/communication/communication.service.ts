@@ -407,12 +407,10 @@ export class CommunicationService {
   ): Promise<DirectRoom> {
     const roomResult = new DirectRoom();
     roomResult.id = matrixRoom.roomId;
-    if (matrixRoom.timeline) {
-      roomResult.messages = await this.convertMatrixTimelineToMessages(
-        matrixRoom.timeline,
-        userId
-      );
-    }
+    roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
+      matrixRoom,
+      userId
+    );
     roomResult.receiverID = emailReceiver;
     return roomResult;
   }
@@ -423,15 +421,24 @@ export class CommunicationService {
   ): Promise<CommunityRoom> {
     const roomResult = new CommunityRoom();
     roomResult.id = matrixRoom.roomId;
+    roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
+      matrixRoom,
+      userId
+    );
+
+    return roomResult;
+  }
+
+  async getMatrixRoomTimelineAsMessages(
+    matrixRoom: MatrixRoom,
+    userId: string
+  ): Promise<CommunicationMessageResult[]> {
     // do NOT use the deprecated room.timeline property
     const timeline = matrixRoom.getLiveTimeline().getEvents();
     if (timeline) {
-      roomResult.messages = await this.convertMatrixTimelineToMessages(
-        timeline,
-        userId
-      );
+      return await this.convertMatrixTimelineToMessages(timeline, userId);
     }
-    return roomResult;
+    return [];
   }
 
   async convertMatrixTimelineToMessages(
