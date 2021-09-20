@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.12.7p1",
+  "version": "0.13.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -78,7 +78,7 @@
     "rimraf": "^3.0.2",
     "rxjs": "^7.3.0",
     "sqlite3": "^5.0.2",
-    "typeorm": "^0.2.35",
+    "typeorm": "^0.2.37",
     "winston": "^3.3.3",
     "winston-elasticsearch": "^0.15.8",
     "xstate": "^4.23.1",

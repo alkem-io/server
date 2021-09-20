@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { MembershipUserInput } from './membership.dto.user.input';
 import { MembershipUserResultEntryEcoverse } from './membership.dto.user.result.entry.ecoverse';
@@ -9,16 +9,16 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { AuthorizationCredential } from '@common/enums';
 import { IOpportunity } from '@domain/collaboration/opportunity';
-import { IOrganisation } from '@domain/community/organisation';
-import { MembershipUserResultEntryOrganisation } from './membership.dto.user.result.entry.organisation';
+import { IOrganization } from '@domain/community/organization';
+import { MembershipUserResultEntryOrganization } from './membership.dto.user.result.entry.organization';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IUserGroup } from '@domain/community/user-group';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 import { ICommunity } from '@domain/community/community';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { UserMembership } from './membership.dto.user.result';
-import { MembershipOrganisationInput } from './membership.dto.organisation.input';
-import { OrganisationMembership } from './membership.dto.organisation.result';
+import { MembershipOrganizationInput } from './membership.dto.organization.input';
+import { OrganizationMembership } from './membership.dto.organization.result';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { IUser } from '@domain/community/user/user.interface';
@@ -33,7 +33,7 @@ export class MembershipService {
     private challengeService: ChallengeService,
     private applicationService: ApplicationService,
     private opportunityService: OpportunityService,
-    private organisationService: OrganisationService,
+    private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -54,9 +54,9 @@ export class MembershipService {
     const storedCommunityUserGroups: IUserGroup[] = [];
     const storedOrgUserGroups: IUserGroup[] = [];
     for (const credential of credentials) {
-      if (credential.type === AuthorizationCredential.OrganisationMember) {
-        membership.organisations.push(
-          await this.createOrganisationResult(credential.resourceID, user.id)
+      if (credential.type === AuthorizationCredential.OrganizationMember) {
+        membership.organizations.push(
+          await this.createOrganizationResult(credential.resourceID, user.id)
         );
       } else if (credential.type === AuthorizationCredential.EcoverseMember) {
         const response = await this.createEcoverseMembershipResult(
@@ -153,18 +153,18 @@ export class MembershipService {
     }
 
     // Assign org groups
-    for (const organisationResult of membership.organisations) {
+    for (const organizationResult of membership.organizations) {
       for (const group of storedOrgUserGroups) {
         const parent = await this.userGroupService.getParent(group);
         if (
-          (parent as IOrganisation).id === organisationResult.organisationID
+          (parent as IOrganization).id === organizationResult.organizationID
         ) {
           const groupResult = new MembershipResultEntry(
             group.name,
             group.id,
             group.name
           );
-          organisationResult.userGroups.push(groupResult);
+          organizationResult.userGroups.push(groupResult);
         }
       }
     }
@@ -174,17 +174,17 @@ export class MembershipService {
     return membership;
   }
 
-  async createOrganisationResult(
-    organisationID: string,
+  async createOrganizationResult(
+    organizationID: string,
     userID: string
-  ): Promise<MembershipUserResultEntryOrganisation> {
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      organisationID
+  ): Promise<MembershipUserResultEntryOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      organizationID
     );
-    return new MembershipUserResultEntryOrganisation(
-      organisation.nameID,
-      organisation.id,
-      organisation.displayName,
+    return new MembershipUserResultEntryOrganization(
+      organization.nameID,
+      organization.id,
+      organization.displayName,
       userID
     );
   }
@@ -210,19 +210,19 @@ export class MembershipService {
     };
   }
 
-  async getOrganisationMemberships(
-    membershipData: MembershipOrganisationInput
-  ): Promise<OrganisationMembership> {
-    const membership = new OrganisationMembership();
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      membershipData.organisationID,
+  async getOrganizationMemberships(
+    membershipData: MembershipOrganizationInput
+  ): Promise<OrganizationMembership> {
+    const membership = new OrganizationMembership();
+    const organization = await this.organizationService.getOrganizationOrFail(
+      membershipData.organizationID,
       {
         relations: ['agent'],
       }
     );
-    membership.id = organisation.id;
+    membership.id = organization.id;
 
-    const agent = organisation?.agent;
+    const agent = organization?.agent;
     if (agent?.credentials) {
       for (const credential of agent.credentials) {
         if (credential.type === AuthorizationCredential.EcoverseHost) {

@@ -12,7 +12,7 @@ import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
-import { IOrganisation } from '@domain/community/organisation/organisation.interface';
+import { IOrganization } from '@domain/community/organization/organization.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -89,11 +89,11 @@ export class ChallengeResolverFields {
     return await this.challengeService.getActivity(challenge);
   }
 
-  @ResolveField('leadOrganisations', () => [IOrganisation], {
-    description: 'The Organisations that are leading this Challenge.',
+  @ResolveField('leadOrganizations', () => [IOrganization], {
+    description: 'The Organizations that are leading this Challenge.',
   })
   @Profiling.api
-  async leadOrganisations(@Parent() challenge: Challenge) {
-    return await this.challengeService.getLeadOrganisations(challenge.id);
+  async leadOrganizations(@Parent() challenge: Challenge) {
+    return await this.challengeService.getLeadOrganizations(challenge.id);
   }
 }

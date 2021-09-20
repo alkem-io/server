@@ -7,8 +7,8 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 export class UpdateChallengeInput extends UpdateBaseChallengeInput {
   @Field(() => [UUID_NAMEID], {
     nullable: true,
-    description: 'Update the lead Organisations for the Challenge.',
+    description: 'Update the lead Organizations for the Challenge.',
   })
   @IsOptional()
-  leadOrganisations?: string[];
+  leadOrganizations?: string[];
 }

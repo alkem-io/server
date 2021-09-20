@@ -6,12 +6,6 @@ import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
-import {
-  DeleteOpportunityInput,
-  IOpportunity,
-  OpportunityEventInput,
-  UpdateOpportunityInput,
-} from '@domain/collaboration/opportunity';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
@@ -19,6 +13,15 @@ import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RelationAuthorizationService } from '../relation/relation.service.authorization';
+import { IUser } from '@domain/community/user/user.interface';
+import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin';
+import { AssignOpportunityAdminInput } from './dto/opportunity.dto.assign.admin';
+import { IOpportunity } from './opportunity.interface';
+import {
+  DeleteOpportunityInput,
+  OpportunityEventInput,
+  UpdateOpportunityInput,
+} from './dto';
 
 @Resolver()
 export class OpportunityResolverMutations {
@@ -168,5 +171,47 @@ export class OpportunityResolverMutations {
       },
       agentInfo
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Assigns a User as an Opportunity Admin.',
+  })
+  @Profiling.api
+  async assignUserAsOpportunityAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignOpportunityAdminInput
+  ): Promise<IUser> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      membershipData.opportunityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user opportunity admin: ${opportunity.displayName}`
+    );
+    return await this.opportunityService.assignOpportunityAdmin(membershipData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Removes a User from being an Opportunity Admin.',
+  })
+  @Profiling.api
+  async removeUserAsOpportunityAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveOpportunityAdminInput
+  ): Promise<IUser> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      membershipData.opportunityID
+    );
+    await this.authorizationEngine.grantAccessOrFail(
+      agentInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user opportunity admin: ${opportunity.displayName}`
+    );
+    return await this.opportunityService.removeOpportunityAdmin(membershipData);
   }
 }

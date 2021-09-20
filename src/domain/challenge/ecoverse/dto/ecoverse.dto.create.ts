@@ -6,7 +6,7 @@ import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
 export class CreateEcoverseInput extends CreateBaseChallengeInput {
   @Field(() => UUID_NAMEID, {
     nullable: false,
-    description: 'The host Organisation for the ecoverse',
+    description: 'The host Organization for the ecoverse',
   })
   hostID!: string;
 }

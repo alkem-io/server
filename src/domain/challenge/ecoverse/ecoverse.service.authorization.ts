@@ -27,10 +27,13 @@ export class EcoverseAuthorizationService {
     private ecoverseRepository: Repository<Ecoverse>
   ) {}
 
-  async applyAuthorizationPolicy(ecoverse: IEcoverse): Promise<IEcoverse> {
+  async applyAuthorizationPolicy(
+    ecoverse: IEcoverse,
+    authorizationPolicyData?: UpdateAuthorizationPolicyInput
+  ): Promise<IEcoverse> {
     // Store the current value of anonymousReadAccess
     const anonymousReadAccessCache =
-      ecoverse.authorization?.anonymousReadAccess || true;
+      ecoverse.authorization?.anonymousReadAccess;
     // Ensure always applying from a clean state
     ecoverse.authorization = await this.authorizationPolicyService.reset(
       ecoverse.authorization
@@ -39,7 +42,12 @@ export class EcoverseAuthorizationService {
       ecoverse.authorization,
       ecoverse.id
     );
-    ecoverse.authorization.anonymousReadAccess = anonymousReadAccessCache;
+    if (authorizationPolicyData) {
+      ecoverse.authorization.anonymousReadAccess =
+        authorizationPolicyData.anonymousReadAccess;
+    } else if (anonymousReadAccessCache === false) {
+      ecoverse.authorization.anonymousReadAccess = false;
+    }
 
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       ecoverse,
@@ -61,33 +69,6 @@ export class EcoverseAuthorizationService {
             resourceID: ecoverse.id,
           },
           [AuthorizationPrivilege.DELETE]
-        );
-    }
-
-    return await this.ecoverseRepository.save(ecoverse);
-  }
-
-  async updateAuthorizationPolicy(
-    ecoverse: IEcoverse,
-    authorizationUpdateData: UpdateAuthorizationPolicyInput
-  ): Promise<IEcoverse> {
-    await this.baseChallengeAuthorizationService.updateAuthorization(
-      ecoverse,
-      this.ecoverseRepository,
-      authorizationUpdateData
-    );
-
-    // propagate authorization rules for child entities
-    const challenges = await this.ecoverseService.getChallenges(ecoverse);
-    for (const challenge of challenges) {
-      await this.challengeAuthorizationService.updateAuthorization(
-        challenge,
-        authorizationUpdateData
-      );
-      challenge.authorization =
-        this.authorizationPolicyService.updateAuthorization(
-          challenge.authorization,
-          authorizationUpdateData
         );
     }
 
