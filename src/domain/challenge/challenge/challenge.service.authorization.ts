@@ -7,10 +7,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { Repository } from 'typeorm';
-import {
-  IAuthorizationPolicy,
-  UpdateAuthorizationPolicyInput,
-} from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
@@ -150,33 +147,5 @@ export class ChallengeAuthorizationService {
     rules.push(stateChange);
 
     return JSON.stringify(rules);
-  }
-
-  async updateAuthorization(
-    challenge: IChallenge,
-    authorizationUpdateData: UpdateAuthorizationPolicyInput
-  ): Promise<IChallenge> {
-    await this.baseChallengeAuthorizationService.updateAuthorization(
-      challenge,
-      this.challengeRepository,
-      authorizationUpdateData
-    );
-
-    // propagate authorization rules for child entities
-    if (challenge.opportunities) {
-      for (const opportunity of challenge.opportunities) {
-        opportunity.authorization =
-          this.authorizationPolicyService.updateAuthorization(
-            opportunity.authorization,
-            authorizationUpdateData
-          );
-        await this.opportunityAuthorizationService.updateAuthorization(
-          opportunity,
-          opportunity.authorization
-        );
-      }
-    }
-
-    return await this.challengeRepository.save(challenge);
   }
 }
