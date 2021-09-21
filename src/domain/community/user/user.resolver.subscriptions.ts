@@ -7,13 +7,13 @@ import {
   MATRIX_ROOM_JOINED,
 } from '@services/platform/subscription/subscription.events';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { PubSub } from 'apollo-server-express';
 import { UserService } from './user.service';
+import { PubSubEngine } from 'graphql-subscriptions';
 
 @Resolver()
 export class UserResolverSubscriptions {
   constructor(
-    @Inject(PUB_SUB) private pubSub: PubSub,
+    @Inject(PUB_SUB) private pubSub: PubSubEngine,
     private userService: UserService
   ) {}
 

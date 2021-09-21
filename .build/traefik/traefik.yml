@@ -19,6 +19,11 @@ entryPoints:
     address: ':4436'
   mailslurper-api:
     address: ':4437'
+  rabbitmq-amqp:
+    address: ':5672'
+  rabbitmq-management:
+    address: ':15672'
+
 providers:
   file:
     filename: /etc/traefik/http.yml

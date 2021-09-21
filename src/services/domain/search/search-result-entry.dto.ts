@@ -20,7 +20,7 @@ export class SearchResultEntry implements ISearchResultEntry {
   @Field(() => ISearchable, {
     nullable: true,
     description:
-      'Each search result contains either a User, UserGroup or Organisation',
+      'Each search result contains either a User, UserGroup or Organization',
   })
   result?: ISearchable;
 

@@ -83,7 +83,7 @@ export class EcoverseResolverMutations {
     ecoverseData.ID = ecoverse.id;
 
     if (ecoverseData.authorizationPolicy) {
-      await this.ecoverseAuthorizationService.updateAuthorizationPolicy(
+      await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
         ecoverse,
         ecoverseData.authorizationPolicy
       );

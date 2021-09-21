@@ -1,0 +1,15 @@
+name: Test Release
+
+on:
+  release:
+    types: [published]
+jobs:
+  trigger-e2e-tests-travis-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run e2e Tests
+        uses: cmdbg/travis-ci-action@main
+        env:
+          TRAVIS_TOKEN: ${{ secrets.TRAVIS_TOKEN }}
+          TARGET_REPOSITORY: alkem-io/test-suites
+          TARGET_BRANCH: develop

@@ -2,13 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
+  AuthorizationRuleCredential,
   IAuthorizationPolicy,
-  UpdateAuthorizationPolicyInput,
 } from '@domain/common/authorization-policy';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { IOpportunity } from '..';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -23,11 +27,17 @@ export class OpportunityAuthorizationService {
     opportunity: IOpportunity,
     challengeAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IOpportunity> {
+    // Start with parent authorization
     opportunity.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         opportunity.authorization,
         challengeAuthorization
       );
+    // Add in opportunity specified policy rules
+    opportunity.authorization = this.appendCredentialRules(
+      opportunity.authorization,
+      opportunity.id
+    );
 
     // propagate authorization rules for child entities
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
@@ -56,36 +66,49 @@ export class OpportunityAuthorizationService {
     return await this.opportunityRepository.save(opportunity);
   }
 
-  async updateAuthorization(
-    opportunity: IOpportunity,
-    authorizationUpdateData: UpdateAuthorizationPolicyInput
-  ): Promise<IOpportunity> {
-    await this.baseChallengeAuthorizationService.updateAuthorization(
-      opportunity,
-      this.opportunityRepository,
-      authorizationUpdateData
+  private appendCredentialRules(
+    authorization: IAuthorizationPolicy | undefined,
+    opportunityID: string
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${opportunityID}`,
+        LogContext.OPPORTUNITY
+      );
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      this.createCredentialRules(opportunityID)
     );
 
-    // propagate authorization rules for child entities
-    if (opportunity.projects) {
-      for (const project of opportunity.projects) {
-        project.authorization =
-          this.authorizationPolicyService.updateAuthorization(
-            project.authorization,
-            authorizationUpdateData
-          );
-      }
-    }
-    if (opportunity.relations) {
-      for (const relation of opportunity.relations) {
-        relation.authorization =
-          this.authorizationPolicyService.updateAuthorization(
-            relation.authorization,
-            authorizationUpdateData
-          );
-      }
-    }
+    return authorization;
+  }
 
-    return await this.opportunityRepository.save(opportunity);
+  private createCredentialRules(
+    opportunityID: string
+  ): AuthorizationRuleCredential[] {
+    const rules: AuthorizationRuleCredential[] = [];
+
+    const opportunityAdmin = {
+      type: AuthorizationCredential.OpportunityAdmin,
+      resourceID: opportunityID,
+      grantedPrivileges: [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    rules.push(opportunityAdmin);
+
+    const opportunityMember = {
+      type: AuthorizationCredential.OpportunityMember,
+      resourceID: opportunityID,
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+    };
+    rules.push(opportunityMember);
+
+    return rules;
   }
 }

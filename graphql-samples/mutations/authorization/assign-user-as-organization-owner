@@ -1,0 +1,13 @@
+mutation assignUserAsOrganizationOwner($membershipData: AssignOrganizationOwnerInput!) {
+  assignUserAsOrganizationOwner(membershipData: $membershipData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "membershipData": {
+    "userID": "uuid",
+    "organizationID": "uuid_nameid"
+  }
+}
