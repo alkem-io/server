@@ -201,7 +201,7 @@ export class MatrixAgentService {
     const response = await matrixAgent.matrixClient.sendEvent(
       roomId,
       'm.room.message',
-      { body: messageRequest.text, messagetype: 'm.text' },
+      { body: messageRequest.text, msgtype: 'm.text' },
       ''
     );
 
@@ -216,7 +216,7 @@ export class MatrixAgentService {
     messageRequest: MatrixAgentMessageRequest
   ) {
     const newContent: IContent = {
-      messagetype: 'm.text',
+      msgtype: 'm.text',
       body: messageRequest.text,
     };
     await matrixAgent.matrixClient.sendMessage(
@@ -238,7 +238,7 @@ export class MatrixAgentService {
     //   'm.replace',
     //   {
     //     body: messageRequest.text,
-    //     messagetype: 'm.text',
+    //     msgtype: 'm.text',
     //   }
     // );
 
