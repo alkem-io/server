@@ -60,6 +60,11 @@ http:
         servers:
           - url: 'http://synapse:8008/'
 
+    synapse-admin:
+      loadBalancer:
+        servers:
+          - url: 'http://synapse-admin:80/'
+
   middlewares:
     strip-admin-prefix:
       stripPrefix:
@@ -127,6 +132,12 @@ http:
       service: 'synapse'
       entryPoints:
         - 'synapse'
+
+    synapse-admin:
+      rule: 'PathPrefix(`/`)'
+      service: 'synapse-admin'
+      entryPoints:
+        - 'synapse-admin'
 
     mailslurper-api:
       rule: 'PathPrefix(`/`)'
