@@ -73,7 +73,7 @@ export class EcoverseService {
     // set the credential type in use by the community
     await this.baseChallengeService.setMembershipCredential(
       ecoverse,
-      AuthorizationCredential.EcoverseMember
+      AuthorizationCredential.ECOVERSE_MEMBER
     );
 
     // Lifecycle
@@ -135,7 +135,7 @@ export class EcoverseService {
       const agentHostOrg = await this.organizationService.getAgent(hostOrg);
       hostOrg.agent = await this.agentService.revokeCredential({
         agentID: agentHostOrg.id,
-        type: AuthorizationCredential.EcoverseHost,
+        type: AuthorizationCredential.ECOVERSE_HOST,
         resourceID: ecoverse.id,
       });
       await this.organizationService.save(hostOrg);
@@ -273,7 +273,7 @@ export class EcoverseService {
       );
       organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
-        type: AuthorizationCredential.EcoverseHost,
+        type: AuthorizationCredential.ECOVERSE_HOST,
         resourceID: ecoverseID,
       });
     }
@@ -282,7 +282,7 @@ export class EcoverseService {
     const agent = await this.organizationService.getAgent(organization);
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.EcoverseHost,
+      type: AuthorizationCredential.ECOVERSE_HOST,
       resourceID: ecoverseID,
     });
 
@@ -484,7 +484,7 @@ export class EcoverseService {
   async getHost(ecoverseID: string): Promise<IOrganization | undefined> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.EcoverseHost,
+        type: AuthorizationCredential.ECOVERSE_HOST,
         resourceID: ecoverseID,
       });
     if (organizations.length == 0) {
@@ -509,7 +509,7 @@ export class EcoverseService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.EcoverseAdmin,
+      type: AuthorizationCredential.ECOVERSE_ADMIN,
       resourceID: ecoverse.id,
     });
 
@@ -525,7 +525,7 @@ export class EcoverseService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.EcoverseAdmin,
+      type: AuthorizationCredential.ECOVERSE_ADMIN,
       resourceID: ecoverse.id,
     });
 

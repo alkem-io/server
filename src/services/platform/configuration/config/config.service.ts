@@ -13,31 +13,31 @@ export class KonfigService {
 
   async getConfig(): Promise<IConfig> {
     const sentryConfig = this.configService.get(
-      ConfigurationTypes.Monitoring
+      ConfigurationTypes.MONITORING
     )?.sentry;
     return {
       template: await this.getTemplate(),
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
-        enabled: this.configService.get(ConfigurationTypes.Identity)
+        enabled: this.configService.get(ConfigurationTypes.IDENTITY)
           ?.authentication?.enabled,
       },
       platform: {
-        security: this.configService.get(ConfigurationTypes.Platform)?.security,
-        privacy: this.configService.get(ConfigurationTypes.Platform)?.privacy,
-        about: this.configService.get(ConfigurationTypes.Platform)?.about,
-        feedback: this.configService.get(ConfigurationTypes.Platform)?.feedback,
-        support: this.configService.get(ConfigurationTypes.Platform)?.support,
-        terms: this.configService.get(ConfigurationTypes.Platform)?.terms,
+        security: this.configService.get(ConfigurationTypes.PLATFORM)?.security,
+        privacy: this.configService.get(ConfigurationTypes.PLATFORM)?.privacy,
+        about: this.configService.get(ConfigurationTypes.PLATFORM)?.about,
+        feedback: this.configService.get(ConfigurationTypes.PLATFORM)?.feedback,
+        support: this.configService.get(ConfigurationTypes.PLATFORM)?.support,
+        terms: this.configService.get(ConfigurationTypes.PLATFORM)?.terms,
         featureFlags: [
           {
             name: 'ssi',
-            enabled: this.configService.get(ConfigurationTypes.Identity)?.ssi
+            enabled: this.configService.get(ConfigurationTypes.IDENTITY)?.ssi
               .enabled,
           },
           {
             name: 'communications',
-            enabled: this.configService.get(ConfigurationTypes.Communications)
+            enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
               ?.enabled,
           },
         ],
@@ -76,7 +76,7 @@ export class KonfigService {
 
   async getOryConfig(): Promise<IOryConfig> {
     const oryConfig = (
-      await this.configService.get(ConfigurationTypes.Identity)
+      await this.configService.get(ConfigurationTypes.IDENTITY)
     )?.authentication?.providers?.ory;
     const res = {
       kratosPublicBaseURL: oryConfig.kratos_public_base_url,

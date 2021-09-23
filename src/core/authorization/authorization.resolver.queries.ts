@@ -23,7 +23,7 @@ export class AuthorizationResolverQueries {
   ) {
     this.authorizationQueriesPolicy =
       this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.Registered],
+        [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );
   }

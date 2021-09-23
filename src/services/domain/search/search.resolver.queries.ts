@@ -20,7 +20,7 @@ export class SearchResolverQueries {
   ) {
     this.searchAuthorizationPolicy =
       this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.Registered],
+        [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );
   }

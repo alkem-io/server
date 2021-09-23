@@ -155,7 +155,7 @@ export class SsiAgentService {
     receivingAgent: IAgent,
     receivingResourceID: string
   ): Promise<boolean> {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
       .enabled;
     if (!ssiEnabled) {
       throw new NotEnabledException('SSI is not enabled', LogContext.SSI);

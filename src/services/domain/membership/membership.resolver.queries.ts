@@ -21,7 +21,7 @@ export class MembershipResolverQueries {
   ) {
     this.membershipAuthorizationPolicy =
       this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.Registered],
+        [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );
   }

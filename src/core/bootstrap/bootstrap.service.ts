@@ -49,8 +49,8 @@ export class BootstrapService {
 
       Profiling.logger = this.logger;
       const profilingEnabled = this.configService.get(
-        ConfigurationTypes.Monitoring
-      )?.logging?.profilingEnabled;
+        ConfigurationTypes.MONITORING
+      )?.logging?.profiling_enabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
 
       await this.ensureEcoverseSingleton();
@@ -91,7 +91,7 @@ export class BootstrapService {
 
   async bootstrapProfiles() {
     const bootstrapAuthorizationEnabled = this.configService.get(
-      ConfigurationTypes.Bootstrap
+      ConfigurationTypes.BOOTSTRAP
     )?.authorization?.enabled;
     if (!bootstrapAuthorizationEnabled) {
       this.logger.verbose?.(
@@ -102,7 +102,7 @@ export class BootstrapService {
     }
 
     const bootstrapFilePath = this.configService.get(
-      ConfigurationTypes.Bootstrap
+      ConfigurationTypes.BOOTSTRAP
     )?.authorization?.file as string;
 
     let bootstrapJson = {
@@ -182,7 +182,7 @@ export class BootstrapService {
   }
 
   async ensureSsiPopulated() {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
       .enabled;
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();

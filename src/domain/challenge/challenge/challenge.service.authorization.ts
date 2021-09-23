@@ -82,7 +82,7 @@ export class ChallengeAuthorizationService {
       challenge.community =
         await this.baseChallengeService.setMembershipCredential(
           challenge,
-          AuthorizationCredential.ChallengeMember
+          AuthorizationCredential.CHALLENGE_MEMBER
         );
     }
 
@@ -113,7 +113,7 @@ export class ChallengeAuthorizationService {
     const rules: AuthorizationRuleCredential[] = [];
 
     const challengeAdmin = {
-      type: AuthorizationCredential.ChallengeAdmin,
+      type: AuthorizationCredential.CHALLENGE_ADMIN,
       resourceID: challengeID,
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -126,7 +126,7 @@ export class ChallengeAuthorizationService {
     rules.push(challengeAdmin);
 
     const challengeMember = {
-      type: AuthorizationCredential.ChallengeMember,
+      type: AuthorizationCredential.CHALLENGE_MEMBER,
       resourceID: challengeID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
@@ -140,7 +140,7 @@ export class ChallengeAuthorizationService {
     const agent = await this.challengeService.getAgent(challengeID);
 
     const stateChange = {
-      type: AuthorizationVerifiedCredential.StateModificationCredential,
+      type: AuthorizationVerifiedCredential.STATE_MODIFICATION_CREDENTIAL,
       resourceID: agent.did,
       grantedPrivileges: [AuthorizationPrivilege.UPDATE],
     };

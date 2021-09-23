@@ -65,7 +65,7 @@ export class EcoverseAuthorizationService {
         await this.authorizationPolicyService.appendCredentialAuthorizationRule(
           challenge.authorization,
           {
-            type: AuthorizationCredential.EcoverseAdmin,
+            type: AuthorizationCredential.ECOVERSE_ADMIN,
             resourceID: ecoverse.id,
           },
           [AuthorizationPrivilege.DELETE]
@@ -89,7 +89,7 @@ export class EcoverseAuthorizationService {
     authorization.anonymousReadAccess = true;
 
     const globalAdmin = {
-      type: AuthorizationCredential.GlobalAdmin,
+      type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -102,14 +102,14 @@ export class EcoverseAuthorizationService {
     newRules.push(globalAdmin);
 
     const communityAdmin = {
-      type: AuthorizationCredential.GlobalAdminCommunity,
+      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
       resourceID: '',
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
     newRules.push(communityAdmin);
 
     const ecoverseAdmin = {
-      type: AuthorizationCredential.EcoverseAdmin,
+      type: AuthorizationCredential.ECOVERSE_ADMIN,
       resourceID: ecoverseID,
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -122,7 +122,7 @@ export class EcoverseAuthorizationService {
     newRules.push(ecoverseAdmin);
 
     const ecoverseMember = {
-      type: AuthorizationCredential.EcoverseMember,
+      type: AuthorizationCredential.ECOVERSE_MEMBER,
       resourceID: ecoverseID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };

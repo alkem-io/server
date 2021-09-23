@@ -22,14 +22,14 @@ const bootstrap = async () => {
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   await bootstrapService.bootstrapEcoverse();
-  const corsEnabled = configService.get(ConfigurationTypes.Security).cors
+  const corsEnabled = configService.get(ConfigurationTypes.SECURITY).cors
     .enabled;
   if (corsEnabled) {
     app.enableCors({
-      origin: configService.get(ConfigurationTypes.Security)?.cors?.origin,
-      allowedHeaders: configService.get(ConfigurationTypes.Security)?.cors
-        ?.allowedHeaders,
-      methods: configService.get(ConfigurationTypes.Security)?.cors?.methods,
+      origin: configService.get(ConfigurationTypes.SECURITY)?.cors?.origin,
+      allowedHeaders: configService.get(ConfigurationTypes.SECURITY)?.cors
+        ?.allowed_headers,
+      methods: configService.get(ConfigurationTypes.SECURITY)?.cors?.methods,
     });
   }
 
@@ -42,13 +42,13 @@ const bootstrap = async () => {
 
   app.use(
     graphqlUploadExpress({
-      maxFileSize: configService.get(ConfigurationTypes.Storage)?.ipfs
-        ?.maxFileSize,
+      maxFileSize: configService.get(ConfigurationTypes.STORAGE)?.ipfs
+        ?.max_file_size,
     })
   );
 
   await app.listen(
-    configService.get(ConfigurationTypes.Hosting)?.port as number
+    configService.get(ConfigurationTypes.HOSTING)?.port as number
   );
 };
 

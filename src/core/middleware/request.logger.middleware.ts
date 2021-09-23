@@ -18,11 +18,11 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     this.fullRequestLogging = this.configService.get(
-      ConfigurationTypes.Monitoring
-    )?.logging?.requests?.fullLoggingEnabled;
+      ConfigurationTypes.MONITORING
+    )?.logging?.requests?.full_logging_enabled;
 
     this.headerRequestLogging = this.configService.get(
-      ConfigurationTypes.Monitoring
+      ConfigurationTypes.MONITORING
     )?.logging?.requests?.headerLoggingEnabled;
   }
 

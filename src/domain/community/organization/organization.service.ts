@@ -255,7 +255,7 @@ export class OrganizationService {
       );
 
     return await this.agentService.hasValidCredential(organization.agent.id, {
-      type: AuthorizationCredential.EcoverseHost,
+      type: AuthorizationCredential.ECOVERSE_HOST,
     });
   }
 
@@ -299,21 +299,21 @@ export class OrganizationService {
 
   async getMembers(organization: IOrganization): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.OrganizationMember,
+      type: AuthorizationCredential.ORGANIZATION_MEMBER,
       resourceID: organization.id,
     });
   }
 
   async getAdmins(organization: IOrganization): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.OrganizationAdmin,
+      type: AuthorizationCredential.ORGANIZATION_ADMIN,
       resourceID: organization.id,
     });
   }
 
   async getOwners(organization: IOrganization): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.OrganizationOwner,
+      type: AuthorizationCredential.ORGANIZATION_OWNER,
       resourceID: organization.id,
     });
   }
@@ -421,7 +421,7 @@ export class OrganizationService {
 
     user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.OrganizationMember,
+      type: AuthorizationCredential.ORGANIZATION_MEMBER,
       resourceID: organization.id,
     });
     return organization;
@@ -439,7 +439,7 @@ export class OrganizationService {
     );
     user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.OrganizationMember,
+      type: AuthorizationCredential.ORGANIZATION_MEMBER,
       resourceID: organization.id,
     });
 
@@ -457,7 +457,7 @@ export class OrganizationService {
 
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.OrganizationAdmin,
+      type: AuthorizationCredential.ORGANIZATION_ADMIN,
       resourceID: organization.id,
     });
 
@@ -473,7 +473,7 @@ export class OrganizationService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.OrganizationAdmin,
+      type: AuthorizationCredential.ORGANIZATION_ADMIN,
       resourceID: organization.id,
     });
 
@@ -491,7 +491,7 @@ export class OrganizationService {
 
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.OrganizationOwner,
+      type: AuthorizationCredential.ORGANIZATION_OWNER,
       resourceID: organization.id,
     });
 
@@ -508,7 +508,7 @@ export class OrganizationService {
 
     if (checkAtLeastOneOwner) {
       const orgOwners = await this.userService.usersWithCredentials({
-        type: AuthorizationCredential.OrganizationOwner,
+        type: AuthorizationCredential.ORGANIZATION_OWNER,
         resourceID: organizationID,
       });
       if (orgOwners.length === 1)
@@ -520,7 +520,7 @@ export class OrganizationService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.OrganizationOwner,
+      type: AuthorizationCredential.ORGANIZATION_OWNER,
       resourceID: organization.id,
     });
 
