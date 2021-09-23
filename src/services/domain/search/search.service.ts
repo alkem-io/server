@@ -16,19 +16,19 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 enum SearchEntityTypes {
-  User = 'user',
-  Group = 'group',
-  Organization = 'organization',
-  Challenge = 'challenge',
-  Opportunity = 'opportunity',
+  USER = 'user',
+  GROUP = 'group',
+  ORGANIZATION = 'organization',
+  CHALLENGE = 'challenge',
+  OPPORTUNITY = 'opportunity',
 }
 
 const SEARCH_ENTITIES: string[] = [
-  SearchEntityTypes.User,
-  SearchEntityTypes.Group,
-  SearchEntityTypes.Organization,
-  SearchEntityTypes.Challenge,
-  SearchEntityTypes.Opportunity,
+  SearchEntityTypes.USER,
+  SearchEntityTypes.GROUP,
+  SearchEntityTypes.ORGANIZATION,
+  SearchEntityTypes.CHALLENGE,
+  SearchEntityTypes.OPPORTUNITY,
 ];
 
 const SEARCH_TERM_LIMIT = 10;
@@ -169,15 +169,15 @@ export class SearchService {
     let searchOpportunities = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
-      if (!entityTypesFilter.includes(SearchEntityTypes.User))
+      if (!entityTypesFilter.includes(SearchEntityTypes.USER))
         searchUsers = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Group))
+      if (!entityTypesFilter.includes(SearchEntityTypes.GROUP))
         searchGroups = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Organization))
+      if (!entityTypesFilter.includes(SearchEntityTypes.ORGANIZATION))
         searchOrganizations = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Challenge))
+      if (!entityTypesFilter.includes(SearchEntityTypes.CHALLENGE))
         searchChallenges = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Opportunity))
+      if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
         searchOpportunities = false;
     }
 

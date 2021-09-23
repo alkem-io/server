@@ -9,18 +9,16 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
-  @OneToMany(
-    () => Reference,
-    reference => reference.profile,
-    { eager: true, cascade: true }
-  )
+  @OneToMany(() => Reference, reference => reference.profile, {
+    eager: true,
+    cascade: true,
+  })
   references?: Reference[];
 
-  @OneToMany(
-    () => Tagset,
-    tagset => tagset.profile,
-    { eager: true, cascade: true }
-  )
+  @OneToMany(() => Tagset, tagset => tagset.profile, {
+    eager: true,
+    cascade: true,
+  })
   tagsets?: Tagset[];
 
   @Column('text', { nullable: true })
@@ -34,6 +32,6 @@ export class Profile extends AuthorizableEntity implements IProfile {
   // Constructor
   constructor() {
     super();
-    this.restrictedTagsetNames = [RestrictedTagsetNames.Default];
+    this.restrictedTagsetNames = [RestrictedTagsetNames.DEFAULT];
   }
 }

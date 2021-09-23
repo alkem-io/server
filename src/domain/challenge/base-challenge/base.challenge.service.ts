@@ -62,7 +62,7 @@ export class BaseChallengeService {
     }
 
     baseChallenge.tagset = await this.tagsetService.createTagset({
-      name: RestrictedTagsetNames.Default,
+      name: RestrictedTagsetNames.DEFAULT,
       tags: baseChallengeData.tags || [],
     });
 

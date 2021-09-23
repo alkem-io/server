@@ -52,8 +52,8 @@ export class CommunityService {
   ) {
     // need both to be true
     this.communicationsEnabled =
-      this.configService.get(ConfigurationTypes.Communications)?.enabled &&
-      this.configService.get(ConfigurationTypes.Identity)?.authentication
+      this.configService.get(ConfigurationTypes.COMMUNICATIONS)?.enabled &&
+      this.configService.get(ConfigurationTypes.IDENTITY)?.authentication
         ?.enabled;
   }
 

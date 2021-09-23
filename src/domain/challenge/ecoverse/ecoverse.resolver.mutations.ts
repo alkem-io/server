@@ -34,7 +34,7 @@ export class EcoverseResolverMutations {
   ) {
     this.globalAdminAuthorization =
       this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.Admin],
+        [AuthorizationRoleGlobal.ADMIN],
         [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
       );
   }

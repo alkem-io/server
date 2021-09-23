@@ -51,30 +51,32 @@ export class MembershipService {
     const storedCommunityUserGroups: IUserGroup[] = [];
     const storedOrgUserGroups: IUserGroup[] = [];
     for (const credential of credentials) {
-      if (credential.type === AuthorizationCredential.OrganizationMember) {
+      if (credential.type === AuthorizationCredential.ORGANIZATION_MEMBER) {
         membership.organizations.push(
           await this.createOrganizationResult(credential.resourceID, user.id)
         );
-      } else if (credential.type === AuthorizationCredential.EcoverseMember) {
+      } else if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
         membership.ecoverses.push(
           await this.createEcoverseMembershipResult(
             credential.resourceID,
             user.id
           )
         );
-      } else if (credential.type === AuthorizationCredential.ChallengeMember) {
+      } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
         const challenge = await this.challengeService.getChallengeOrFail(
           credential.resourceID
         );
         storedChallenges.push(challenge);
       } else if (
-        credential.type === AuthorizationCredential.OpportunityMember
+        credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
       ) {
         const opportunity = await this.opportunityService.getOpportunityOrFail(
           credential.resourceID
         );
         storedOpportunities.push(opportunity);
-      } else if (credential.type === AuthorizationCredential.UserGroupMember) {
+      } else if (
+        credential.type === AuthorizationCredential.USER_GROUP_MEMBER
+      ) {
         const group = await this.userGroupService.getUserGroupOrFail(
           credential.resourceID
         );
@@ -187,7 +189,7 @@ export class MembershipService {
     const agent = organization?.agent;
     if (agent?.credentials) {
       for (const credential of agent.credentials) {
-        if (credential.type === AuthorizationCredential.EcoverseHost) {
+        if (credential.type === AuthorizationCredential.ECOVERSE_HOST) {
           const ecoverse = await this.ecoverseService.getEcoverseOrFail(
             credential.resourceID
           );
@@ -196,7 +198,7 @@ export class MembershipService {
             id: `${ecoverse.id}`, // note: may way to make this a unique membership identifier for client caching
             displayName: ecoverse.displayName,
           });
-        } else if (credential.type === AuthorizationCredential.ChallengeLead) {
+        } else if (credential.type === AuthorizationCredential.CHALLENGE_LEAD) {
           const challenge = await this.challengeService.getChallengeOrFail(
             credential.resourceID
           );

@@ -38,7 +38,7 @@ export class RelationAuthorizationService {
 
     // Allow users to update their own created relation
     const selfCreatedRelation = {
-      type: AuthorizationCredential.UserSelfManagement,
+      type: AuthorizationCredential.USER_SELF_MANAGEMENT,
       resourceID: userID,
       grantedPrivileges: [
         AuthorizationPrivilege.READ,
@@ -67,7 +67,7 @@ export class RelationAuthorizationService {
 
     // Allow global registered users to create
     const globalRegisteredCreateRelation = {
-      type: AuthorizationCredential.GlobalRegistered,
+      type: AuthorizationCredential.GLOBAL_REGISTERED,
       resourceID: '',
       grantedPrivileges: [AuthorizationPrivilege.CREATE],
     };

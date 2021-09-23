@@ -62,7 +62,7 @@ export class AuthenticationService {
     agentInfo.userID = user.id;
 
     // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
-    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
       .enabled;
     if (ssiEnabled) {
       agentInfo.verifiedCredentials =

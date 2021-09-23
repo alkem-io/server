@@ -2,23 +2,23 @@ import { registerEnumType } from '@nestjs/graphql';
 
 // Credentials to be added later:
 export enum AuthorizationCredential {
-  GlobalAdmin = 'global-admin', // able to do everything, god mode
-  GlobalAdminCommunity = 'global-admin-community', // able to manage the top level community, including assigning credentials
-  GlobalRegistered = 'global-registered', // credential issued to all registered users
-  EcoverseAdmin = 'ecoverse-admin',
-  EcoverseHost = 'ecoverse-host', // host for an ecoverse; can only be one...
-  EcoverseMember = 'ecoverse-member',
-  ChallengeAdmin = 'challenge-admin',
-  ChallengeMember = 'challenge-member',
-  ChallengeLead = 'challenge-lead', // For organizations that are leads of a challenge
-  OpportunityMember = 'opportunity-member',
+  GLOBAL_ADMIN = 'global-admin', // able to do everything, god mode
+  GLOBAL_ADMIN_COMMUNITY = 'global-admin-community', // able to manage the top level community, including assigning credentials
+  GLOBAL_REGISTERED = 'global-registered', // credential issued to all registered users
+  ECOVERSE_ADMIN = 'ecoverse-admin',
+  ECOVERSE_HOST = 'ecoverse-host', // host for an ecoverse; can only be one...
+  ECOVERSE_MEMBER = 'ecoverse-member',
+  CHALLENGE_ADMIN = 'challenge-admin',
+  CHALLENGE_MEMBER = 'challenge-member',
+  CHALLENGE_LEAD = 'challenge-lead', // For organizations that are leads of a challenge
+  OPPORTUNITY_MEMBER = 'opportunity-member',
 
-  OpportunityAdmin = 'opportunity-admin',
-  OrganizationOwner = 'organization-owner', // Able to commit an organization
-  OrganizationAdmin = 'organization-admin', // Able to administer an organization
-  OrganizationMember = 'organization-member', // Able to be a part of an organization
-  UserGroupMember = 'user-group-member', // Able to be a part of an user group
-  UserSelfManagement = 'user-self', // able to update a user
+  OPPORTUNITY_ADMIN = 'opportunity-admin',
+  ORGANIZATION_OWNER = 'organization-owner', // Able to commit an organization
+  ORGANIZATION_ADMIN = 'organization-admin', // Able to administer an organization
+  ORGANIZATION_MEMBER = 'organization-member', // Able to be a part of an organization
+  USER_GROUP_MEMBER = 'user-group-member', // Able to be a part of an user group
+  USER_SELF_MANAGEMENT = 'user-self', // able to update a user
 }
 
 registerEnumType(AuthorizationCredential, {

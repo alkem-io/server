@@ -31,7 +31,7 @@ export class MatrixUserAdapterService {
 
   convertMatrixUsernameToMatrixId(username: string) {
     const homeserverName = this.configService.get(
-      ConfigurationTypes.Communications
+      ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.homeserver_name;
 
     return `@${username}:${homeserverName}`;

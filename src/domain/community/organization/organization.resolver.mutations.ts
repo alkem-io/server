@@ -46,7 +46,10 @@ export class OrganizationResolverMutations {
   ): Promise<IOrganization> {
     const authorizationPolicy =
       this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.CommunityAdmin, AuthorizationRoleGlobal.Admin],
+        [
+          AuthorizationRoleGlobal.COMMUNITY_ADMIN,
+          AuthorizationRoleGlobal.ADMIN,
+        ],
         [AuthorizationPrivilege.CREATE]
       );
     await this.authorizationEngine.grantAccessOrFail(

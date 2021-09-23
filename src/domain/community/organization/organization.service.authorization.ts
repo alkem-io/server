@@ -93,7 +93,7 @@ export class OrganizationAuthorizationService {
     const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
-      type: AuthorizationCredential.GlobalAdmin,
+      type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -106,7 +106,7 @@ export class OrganizationAuthorizationService {
     newRules.push(globalAdmin);
 
     const communityAdmin = {
-      type: AuthorizationCredential.GlobalAdminCommunity,
+      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
       resourceID: '',
       grantedPrivileges: [
         AuthorizationPrivilege.GRANT,
@@ -119,7 +119,7 @@ export class OrganizationAuthorizationService {
     newRules.push(communityAdmin);
 
     const organizationAdmin = {
-      type: AuthorizationCredential.OrganizationAdmin,
+      type: AuthorizationCredential.ORGANIZATION_ADMIN,
       resourceID: organizationID,
       grantedPrivileges: [
         AuthorizationPrivilege.GRANT,
@@ -132,14 +132,14 @@ export class OrganizationAuthorizationService {
     newRules.push(organizationAdmin);
 
     const organizationMember = {
-      type: AuthorizationCredential.OrganizationMember,
+      type: AuthorizationCredential.ORGANIZATION_MEMBER,
       resourceID: organizationID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
     newRules.push(organizationMember);
 
     const registeredUser = {
-      type: AuthorizationCredential.GlobalRegistered,
+      type: AuthorizationCredential.GLOBAL_REGISTERED,
       resourceID: '',
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };

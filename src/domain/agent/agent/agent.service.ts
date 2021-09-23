@@ -38,7 +38,7 @@ export class AgentService {
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
 
-    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
       .enabled;
 
     if (ssiEnabled) {
