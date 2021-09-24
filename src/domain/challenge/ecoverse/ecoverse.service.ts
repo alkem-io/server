@@ -40,6 +40,7 @@ import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
 import { UserService } from '@domain/community/user/user.service';
 import { UpdateEcoverseInput } from './dto/ecoverse.dto.update';
 import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
+import { CommunityService } from '@domain/community/community/community.service';
 
 @Injectable()
 export class EcoverseService {
@@ -52,6 +53,7 @@ export class EcoverseService {
     private baseChallengeService: BaseChallengeService,
     private namingService: NamingService,
     private userService: UserService,
+    private communityService: CommunityService,
     private challengeService: ChallengeService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -379,7 +381,7 @@ export class EcoverseService {
     challengeData: CreateChallengeOnEcoverseInput
   ): Promise<IChallenge> {
     const ecoverse = await this.getEcoverseOrFail(challengeData.ecoverseID, {
-      relations: ['challenges'],
+      relations: ['challenges', 'community'],
     });
     const nameAvailable = await this.namingService.isNameIdAvailableInEcoverse(
       challengeData.nameID,
@@ -403,6 +405,12 @@ export class EcoverseService {
       );
 
     ecoverse.challenges.push(newChallenge);
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      newChallenge.community,
+      ecoverse.community
+    );
+
     await this.ecoverseRepository.save(ecoverse);
     return newChallenge;
   }

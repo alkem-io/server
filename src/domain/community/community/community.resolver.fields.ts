@@ -54,17 +54,6 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('parent', () => ICommunity, {
-    nullable: true,
-    description: 'Parent community for this community.',
-  })
-  @Profiling.api
-  async parent(@Parent() community: Community) {
-    return await this.communityService.getParentCommunity(community);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('updatesRoom', () => CommunityRoom, {
     nullable: true,
     description: 'Room with messages for this community.',
