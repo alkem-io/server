@@ -177,6 +177,28 @@ export class CommunityService {
     });
   }
 
+  async getParentCommunity(
+    community: ICommunity
+  ): Promise<ICommunity | undefined> {
+    // const communityWithParent = await this.getCommunityOrFail(community.id, {
+    //   relations: ['parentCommunity'],
+    // });
+
+    const communityWithParent = await this.communityRepository
+      .createQueryBuilder('community')
+      .leftJoinAndSelect('community.parentCommunity', 'parentCommunity')
+      .where('community.id = :communityID')
+      .setParameters({
+        communityID: `${community.id}`,
+      })
+      .getOne();
+    const parentCommunity = communityWithParent?.parentCommunity;
+    if (parentCommunity) {
+      return await this.getCommunityOrFail(parentCommunity.id);
+    }
+    return undefined;
+  }
+
   async assignMember(
     membershipData: AssignCommunityMemberInput
   ): Promise<ICommunity> {

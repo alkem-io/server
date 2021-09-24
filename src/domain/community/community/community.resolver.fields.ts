@@ -60,16 +60,7 @@ export class CommunityResolverFields {
   })
   @Profiling.api
   async parent(@Parent() community: Community) {
-    const communityWithParent = await this.communityService.getCommunityOrFail(
-      community.id,
-      {
-        relations: ['parentCommunity'],
-      }
-    );
-    if (!communityWithParent.parentCommunity) return null;
-    return await this.communityService.getCommunityOrFail(
-      communityWithParent.parentCommunity.id
-    );
+    return await this.communityService.getParentCommunity(community);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
