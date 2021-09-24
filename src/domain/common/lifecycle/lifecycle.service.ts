@@ -123,7 +123,15 @@ export class LifecycleService {
 
   getState(lifecycle: ILifecycle): string {
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
-    return State.create(restoredStateDef).value.toString();
+    const state = State.create(restoredStateDef);
+    return state.value.toString();
+  }
+
+  isFinalState(lifecycle: ILifecycle): boolean {
+    const restoredState = this.getRestoredState(lifecycle);
+    const isFinal = restoredState.done;
+    if (!isFinal) return false;
+    return isFinal;
   }
 
   getTemplateIdentifier(lifecycle: ILifecycle): string {
@@ -132,10 +140,7 @@ export class LifecycleService {
   }
 
   getNextEvents(lifecycle: ILifecycle): string[] {
-    const machineDef = JSON.parse(lifecycle.machineDef);
-    const machine = createMachine(machineDef);
-    const restoredStateDefinition = this.getRestoredStateDefinition(lifecycle);
-    const restoredState = machine.resolveState(restoredStateDefinition);
+    const restoredState = this.getRestoredState(lifecycle);
     const next = restoredState.nextEvents;
     return next || [];
   }
@@ -151,5 +156,14 @@ export class LifecycleService {
 
   async save(lifecycle: Lifecycle): Promise<Lifecycle> {
     return await this.lifecycleRepository.save(lifecycle);
+  }
+
+  getRestoredState(
+    lifecycle: ILifecycle
+  ): State<any, any, any, { value: any; context: any }> {
+    const machineDef = JSON.parse(lifecycle.machineDef);
+    const machine = createMachine(machineDef);
+    const restoredStateDefinition = this.getRestoredStateDefinition(lifecycle);
+    return machine.resolveState(restoredStateDefinition);
   }
 }
