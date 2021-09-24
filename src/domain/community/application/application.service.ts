@@ -122,11 +122,11 @@ export class ApplicationService {
     return '';
   }
 
-  async findExistingApplication(
+  async findExistingApplications(
     userID: string,
     communityID: string
-  ): Promise<IApplication | undefined> {
-    const existingApplication = await this.applicationRepository
+  ): Promise<IApplication[]> {
+    const existingApplications = await this.applicationRepository
       .createQueryBuilder('application')
       .leftJoinAndSelect('application.user', 'user')
       .leftJoinAndSelect('application.community', 'community')
@@ -137,8 +137,8 @@ export class ApplicationService {
         communityID: communityID,
       })
       .getMany();
-    if (existingApplication.length > 0) return existingApplication[0];
-    return undefined;
+    if (existingApplications.length > 0) return existingApplications;
+    return [];
   }
 
   async findApplicationsForUser(userID: string): Promise<IApplication[]> {
@@ -153,5 +153,17 @@ export class ApplicationService {
       .getMany();
     if (existingApplications.length > 0) return existingApplications;
     return [];
+  }
+
+  async isFinalizedApplication(applicationID: string): Promise<boolean> {
+    const application = await this.getApplicationOrFail(applicationID);
+    const lifecycle = application.lifecycle;
+    if (!lifecycle) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Lifecycle for Application ${application.id} `,
+        LogContext.COMMUNITY
+      );
+    }
+    return await this.lifecycleService.isFinalState(lifecycle);
   }
 }

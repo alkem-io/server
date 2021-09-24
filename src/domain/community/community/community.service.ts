@@ -263,10 +263,14 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(communityID);
     const membershipCredential = this.getMembershipCredential(community);
 
-    return await this.agentService.hasValidCredential(agent.id, {
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
+    const validCredential = await this.agentService.hasValidCredential(
+      agent.id,
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+    return validCredential;
   }
 
   async getCommunities(ecoverseId: string): Promise<Community[]> {
@@ -284,19 +288,37 @@ export class CommunityService {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
 
-    const existingApplication =
-      await this.applicationService.findExistingApplication(
+    // Check presence / status of existing applications
+    const existingApplications =
+      await this.applicationService.findExistingApplications(
         user.id,
         community.id
       );
-
-    if (existingApplication) {
-      throw new InvalidStateTransitionException(
-        `An application for user ${existingApplication.user?.email} already exists for Community: ${community.id}.`,
-        LogContext.COMMUNITY
-      );
+    for (const existingApplication of existingApplications) {
+      const isApplicationFinalized =
+        await this.applicationService.isFinalizedApplication(
+          existingApplication.id
+        );
+      if (!isApplicationFinalized) {
+        throw new InvalidStateTransitionException(
+          `An application (ID: ${existingApplication.id}) already exists for user ${existingApplication.user?.email} on Community: ${community.displayName} that is not finalized.`,
+          LogContext.COMMUNITY
+        );
+      }
     }
 
+    // Check if the user is already a member; if so do not allow an application
+    const isExistingMember = await this.isMember(
+      applicationData.userID,
+      community.id
+    );
+    if (isExistingMember)
+      throw new InvalidStateTransitionException(
+        `User ${applicationData.userID} is already a member of the Community: ${community.displayName}.`,
+        LogContext.COMMUNITY
+      );
+
+    // Check if there is a parent community, and that the user is a member there
     const parentCommunity = community.parentCommunity;
     if (parentCommunity) {
       const isMember = await this.isMember(
