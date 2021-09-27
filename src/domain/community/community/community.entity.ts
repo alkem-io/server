@@ -15,26 +15,26 @@ import { Credential } from '@domain/agent/credential/credential.entity';
 import { Application } from '@domain/community/application/application.entity';
 
 @Entity()
-export class Community extends AuthorizableEntity
-  implements ICommunity, IGroupable {
+export class Community
+  extends AuthorizableEntity
+  implements ICommunity, IGroupable
+{
   @Column()
   displayName: string;
 
   @Column()
   ecoverseID: string;
 
-  @OneToMany(
-    () => UserGroup,
-    userGroup => userGroup.community,
-    { eager: true, cascade: true }
-  )
+  @OneToMany(() => UserGroup, userGroup => userGroup.community, {
+    eager: true,
+    cascade: true,
+  })
   groups?: UserGroup[];
 
-  @OneToMany(
-    () => Application,
-    application => application.community,
-    { eager: true, cascade: true }
-  )
+  @OneToMany(() => Application, application => application.community, {
+    eager: true,
+    cascade: true,
+  })
   applications?: IApplication[];
 
   // The credential profile  that is used for determining membership of this community

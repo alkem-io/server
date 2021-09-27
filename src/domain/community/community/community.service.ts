@@ -106,16 +106,16 @@ export class CommunityService {
     communityID: string,
     options?: FindOneOptions<Community>
   ): Promise<ICommunity> {
-    const Community = await this.communityRepository.findOne(
+    const community = await this.communityRepository.findOne(
       { id: communityID },
       options
     );
-    if (!Community)
+    if (!community)
       throw new EntityNotFoundException(
         `Unable to find Community with ID: ${communityID}`,
         LogContext.COMMUNITY
       );
-    return Community;
+    return community;
   }
 
   async removeCommunity(communityID: string): Promise<boolean> {
@@ -153,6 +153,20 @@ export class CommunityService {
 
     await this.communityRepository.remove(community as Community);
     return true;
+  }
+
+  async getParentCommunity(
+    community: ICommunity
+  ): Promise<ICommunity | undefined> {
+    const communityWithParent = await this.getCommunityOrFail(community.id, {
+      relations: ['parentCommunity'],
+    });
+
+    const parentCommunity = communityWithParent?.parentCommunity;
+    if (parentCommunity) {
+      return await this.getCommunityOrFail(parentCommunity.id);
+    }
+    return undefined;
   }
 
   async setParentCommunity(
