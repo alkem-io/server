@@ -87,6 +87,16 @@ export class OrganizationVerificationAuthorizationService {
     };
     newRules.push(orgAdmin);
 
+    const orgOwner = {
+      type: AuthorizationCredential.ORGANIZATION_OWNER,
+      resourceID: organizationID,
+      grantedPrivileges: [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+      ],
+    };
+    newRules.push(orgOwner);
+
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(
         authorization,
