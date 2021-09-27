@@ -67,7 +67,7 @@ export class CommunityAuthorizationService {
     const newRules: AuthorizationRuleCredential[] = [];
 
     const globalCommunityAdmin = {
-      type: AuthorizationCredential.GlobalAdminCommunity,
+      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
       resourceID: '',
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -81,7 +81,7 @@ export class CommunityAuthorizationService {
 
     if (allowGlobalRegisteredReadAccess) {
       const globalRegistered = {
-        type: AuthorizationCredential.GlobalRegistered,
+        type: AuthorizationCredential.GLOBAL_REGISTERED,
         resourceID: '',
         grantedPrivileges: [AuthorizationPrivilege.READ],
       };

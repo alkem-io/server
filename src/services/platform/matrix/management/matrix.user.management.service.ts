@@ -26,10 +26,10 @@ export class MatrixUserManagementService {
     private httpService: HttpService
   ) {
     this.idBaseUrl = this.configService.get(
-      ConfigurationTypes.Communications
+      ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.server?.url;
     this.baseUrl = this.configService.get(
-      ConfigurationTypes.Communications
+      ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.server?.url;
 
     if (!this.idBaseUrl || !this.baseUrl) {

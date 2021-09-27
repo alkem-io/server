@@ -46,16 +46,16 @@ export class CommunicationService {
     private readonly subscriptionHandler: PubSubEngine
   ) {
     this.adminUserName = this.configService.get(
-      ConfigurationTypes.Communications
+      ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.admin?.username;
     this.adminPassword = this.configService.get(
-      ConfigurationTypes.Communications
+      ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.admin?.password;
 
     // need both to be true
     this.enabled =
-      this.configService.get(ConfigurationTypes.Communications)?.enabled &&
-      this.configService.get(ConfigurationTypes.Identity)?.authentication
+      this.configService.get(ConfigurationTypes.COMMUNICATIONS)?.enabled &&
+      this.configService.get(ConfigurationTypes.IDENTITY)?.authentication
         ?.enabled;
   }
 

@@ -24,6 +24,15 @@ export class LifecycleResolverFields {
     return await this.lifecycleService.getNextEvents(lifecycle);
   }
 
+  @ResolveField('stateIsFinal', () => Boolean, {
+    nullable: false,
+    description: 'Is this lifecycle in a final state (done).',
+  })
+  @Profiling.api
+  async isFinalized(@Parent() lifecycle: ILifecycle) {
+    return await this.lifecycleService.isFinalState(lifecycle);
+  }
+
   @ResolveField('templateName', () => String, {
     nullable: true,
     description: 'The Lifecycle template name.',

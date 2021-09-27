@@ -46,7 +46,7 @@ export class AuthorizationService {
   async grantCredential(
     grantCredentialData: GrantAuthorizationCredentialInput
   ): Promise<IUser> {
-    if (grantCredentialData.type === AuthorizationCredential.GlobalAdmin) {
+    if (grantCredentialData.type === AuthorizationCredential.GLOBAL_ADMIN) {
       return await this.assignGlobalAdmin({
         userID: grantCredentialData.userID,
       });
@@ -74,7 +74,7 @@ export class AuthorizationService {
   async revokeCredential(
     revokeCredentialData: RevokeAuthorizationCredentialInput
   ): Promise<IUser> {
-    if (revokeCredentialData.type === AuthorizationCredential.GlobalAdmin) {
+    if (revokeCredentialData.type === AuthorizationCredential.GLOBAL_ADMIN) {
       return await this.removeGlobalAdmin({
         userID: revokeCredentialData.userID,
       });
@@ -107,7 +107,7 @@ export class AuthorizationService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GlobalAdmin,
+      type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
 
@@ -122,7 +122,7 @@ export class AuthorizationService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GlobalAdmin,
+      type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
     });
 
@@ -137,7 +137,7 @@ export class AuthorizationService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GlobalAdminCommunity,
+      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
       resourceID: '',
     });
 
@@ -151,7 +151,7 @@ export class AuthorizationService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GlobalAdminCommunity,
+      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
       resourceID: '',
     });
 
@@ -161,11 +161,11 @@ export class AuthorizationService {
   async removeValidationSingleGlobalAdmin(): Promise<boolean> {
     // Check more than one
     const globalAdmins = await this.usersWithCredentials({
-      type: AuthorizationCredential.GlobalAdmin,
+      type: AuthorizationCredential.GLOBAL_ADMIN,
     });
     if (globalAdmins.length < 2)
       throw new ForbiddenException(
-        `Not allowed to remove ${AuthorizationCredential.GlobalAdmin}: last global-admin`,
+        `Not allowed to remove ${AuthorizationCredential.GLOBAL_ADMIN}: last global-admin`,
         LogContext.AUTH
       );
 

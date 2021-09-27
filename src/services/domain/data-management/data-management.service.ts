@@ -110,7 +110,7 @@ export class DataManagementService {
     this.logger.verbose?.('Dropping database... ', LogContext.DATA_MGMT);
     try {
       const dropDbScript = `DROP DATABASE ${
-        this.configService.get(ConfigurationTypes.Storage).database.database
+        this.configService.get(ConfigurationTypes.STORAGE).database.database
       }`;
 
       await new Promise<void>((resolve, reject) => {
@@ -137,26 +137,26 @@ export class DataManagementService {
 
   private buildSqlCommandFromFile(scriptPath: string): string {
     const command = `mysql --user=root --host=${
-      this.configService.get(ConfigurationTypes.Storage).database.host
+      this.configService.get(ConfigurationTypes.STORAGE).database.host
     } --port=${
-      this.configService.get(ConfigurationTypes.Storage).database.port
+      this.configService.get(ConfigurationTypes.STORAGE).database.port
     } --password=${
-      this.configService.get(ConfigurationTypes.Storage).database.password
+      this.configService.get(ConfigurationTypes.STORAGE).database.password
     } --database=${
-      this.configService.get(ConfigurationTypes.Storage).database.database
+      this.configService.get(ConfigurationTypes.STORAGE).database.database
     } < ${scriptPath}`;
     return command;
   }
 
   private buildInlineSqlCommand(script: string): string {
     const command = `mysql --user=root --host=${
-      this.configService.get(ConfigurationTypes.Storage).database.host
+      this.configService.get(ConfigurationTypes.STORAGE).database.host
     } --port=${
-      this.configService.get(ConfigurationTypes.Storage).database.port
+      this.configService.get(ConfigurationTypes.STORAGE).database.port
     } --password=${
-      this.configService.get(ConfigurationTypes.Storage).database.password
+      this.configService.get(ConfigurationTypes.STORAGE).database.password
     } --database=${
-      this.configService.get(ConfigurationTypes.Storage).database.database
+      this.configService.get(ConfigurationTypes.STORAGE).database.database
     }  ${script}`;
     return command;
   }

@@ -94,7 +94,7 @@ export class AuthorizationEngineService {
   };
 
   isAuthenticationDisabled(): boolean {
-    const authEnabled = this.configService.get(ConfigurationTypes.Identity)
+    const authEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
       ?.authentication?.enabled;
     if (!authEnabled) return true;
     return false;
@@ -197,12 +197,12 @@ export class AuthorizationEngineService {
 
     for (const globalRole of globalRoles) {
       let credType: AuthorizationCredential;
-      if (globalRole === AuthorizationRoleGlobal.Admin) {
-        credType = AuthorizationCredential.GlobalAdmin;
-      } else if (globalRole === AuthorizationRoleGlobal.CommunityAdmin) {
-        credType = AuthorizationCredential.GlobalAdminCommunity;
-      } else if (globalRole === AuthorizationRoleGlobal.Registered) {
-        credType = AuthorizationCredential.GlobalRegistered;
+      if (globalRole === AuthorizationRoleGlobal.ADMIN) {
+        credType = AuthorizationCredential.GLOBAL_ADMIN;
+      } else if (globalRole === AuthorizationRoleGlobal.COMMUNITY_ADMIN) {
+        credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
+      } else if (globalRole === AuthorizationRoleGlobal.REGISTERED) {
+        credType = AuthorizationCredential.GLOBAL_REGISTERED;
       } else {
         throw new ForbiddenException(
           `Authorization: invalid global role encountered: ${globalRole}`,

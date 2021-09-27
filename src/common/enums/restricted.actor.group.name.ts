@@ -1,3 +1,3 @@
 export enum RestrictedActorGroupName {
-  Collaborators = 'collaborators',
+  COLLABORATORS = 'collaborators',
 }

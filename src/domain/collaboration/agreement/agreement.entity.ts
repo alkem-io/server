@@ -15,11 +15,11 @@ export class Agreement extends BaseAlkemioEntity implements IAgreement {
   @Column('text', { nullable: true })
   description?: string;
 
-  @ManyToOne(
-    () => Project,
-    project => project.agreements,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Project, project => project.agreements, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   project?: Project;
 
   @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'SET NULL' })
@@ -29,6 +29,6 @@ export class Agreement extends BaseAlkemioEntity implements IAgreement {
   constructor(name: string) {
     super();
     this.name = name;
-    this.tagset = new Tagset(RestrictedTagsetNames.Default);
+    this.tagset = new Tagset(RestrictedTagsetNames.DEFAULT);
   }
 }

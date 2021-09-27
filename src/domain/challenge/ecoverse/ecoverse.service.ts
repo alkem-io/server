@@ -40,6 +40,7 @@ import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
 import { UserService } from '@domain/community/user/user.service';
 import { UpdateEcoverseInput } from './dto/ecoverse.dto.update';
 import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
+import { CommunityService } from '@domain/community/community/community.service';
 
 @Injectable()
 export class EcoverseService {
@@ -52,6 +53,7 @@ export class EcoverseService {
     private baseChallengeService: BaseChallengeService,
     private namingService: NamingService,
     private userService: UserService,
+    private communityService: CommunityService,
     private challengeService: ChallengeService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -73,7 +75,7 @@ export class EcoverseService {
     // set the credential type in use by the community
     await this.baseChallengeService.setMembershipCredential(
       ecoverse,
-      AuthorizationCredential.EcoverseMember
+      AuthorizationCredential.ECOVERSE_MEMBER
     );
 
     // Lifecycle
@@ -135,7 +137,7 @@ export class EcoverseService {
       const agentHostOrg = await this.organizationService.getAgent(hostOrg);
       hostOrg.agent = await this.agentService.revokeCredential({
         agentID: agentHostOrg.id,
-        type: AuthorizationCredential.EcoverseHost,
+        type: AuthorizationCredential.ECOVERSE_HOST,
         resourceID: ecoverse.id,
       });
       await this.organizationService.save(hostOrg);
@@ -273,7 +275,7 @@ export class EcoverseService {
       );
       organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
-        type: AuthorizationCredential.EcoverseHost,
+        type: AuthorizationCredential.ECOVERSE_HOST,
         resourceID: ecoverseID,
       });
     }
@@ -282,7 +284,7 @@ export class EcoverseService {
     const agent = await this.organizationService.getAgent(organization);
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.EcoverseHost,
+      type: AuthorizationCredential.ECOVERSE_HOST,
       resourceID: ecoverseID,
     });
 
@@ -379,7 +381,7 @@ export class EcoverseService {
     challengeData: CreateChallengeOnEcoverseInput
   ): Promise<IChallenge> {
     const ecoverse = await this.getEcoverseOrFail(challengeData.ecoverseID, {
-      relations: ['challenges'],
+      relations: ['challenges', 'community'],
     });
     const nameAvailable = await this.namingService.isNameIdAvailableInEcoverse(
       challengeData.nameID,
@@ -403,6 +405,12 @@ export class EcoverseService {
       );
 
     ecoverse.challenges.push(newChallenge);
+    // Finally set the community relationship
+    await this.communityService.setParentCommunity(
+      newChallenge.community,
+      ecoverse.community
+    );
+
     await this.ecoverseRepository.save(ecoverse);
     return newChallenge;
   }
@@ -484,7 +492,7 @@ export class EcoverseService {
   async getHost(ecoverseID: string): Promise<IOrganization | undefined> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.EcoverseHost,
+        type: AuthorizationCredential.ECOVERSE_HOST,
         resourceID: ecoverseID,
       });
     if (organizations.length == 0) {
@@ -509,7 +517,7 @@ export class EcoverseService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.EcoverseAdmin,
+      type: AuthorizationCredential.ECOVERSE_ADMIN,
       resourceID: ecoverse.id,
     });
 
@@ -525,7 +533,7 @@ export class EcoverseService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.EcoverseAdmin,
+      type: AuthorizationCredential.ECOVERSE_ADMIN,
       resourceID: ecoverse.id,
     });
 
