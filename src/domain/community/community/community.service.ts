@@ -332,20 +332,6 @@ export class CommunityService {
         LogContext.COMMUNITY
       );
 
-    // Check if there is a parent community, and that the user is a member there
-    const parentCommunity = community.parentCommunity;
-    if (parentCommunity) {
-      const isMember = await this.isMember(
-        applicationData.userID,
-        parentCommunity.id
-      );
-      if (!isMember)
-        throw new InvalidStateTransitionException(
-          `User ${applicationData.userID} is not a member of the parent Community: ${parentCommunity.displayName}.`,
-          LogContext.COMMUNITY
-        );
-    }
-
     const ecoverseID = community.ecoverseID;
     if (!ecoverseID)
       throw new EntityNotInitializedException(

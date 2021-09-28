@@ -23,7 +23,6 @@ export const organizationVerificationLifecycleConfig = {
       },
     },
     manuallyVerified: {
-      type: 'final',
       entry: ['organizationManuallyVerified'],
       data: {
         organizationID: (context: any, _event: any) => context.parentID,
