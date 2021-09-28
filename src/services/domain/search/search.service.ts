@@ -9,26 +9,26 @@ import { SearchResultEntry } from './search-result-entry.dto';
 import { ISearchResultEntry } from './search-result-entry.interface';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { Organisation } from '@domain/community/organisation/organisation.entity';
+import { Organization } from '@domain/community/organization/organization.entity';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 enum SearchEntityTypes {
-  User = 'user',
-  Group = 'group',
-  Organisation = 'organisation',
-  Challenge = 'challenge',
-  Opportunity = 'opportunity',
+  USER = 'user',
+  GROUP = 'group',
+  ORGANIZATION = 'organization',
+  CHALLENGE = 'challenge',
+  OPPORTUNITY = 'opportunity',
 }
 
 const SEARCH_ENTITIES: string[] = [
-  SearchEntityTypes.User,
-  SearchEntityTypes.Group,
-  SearchEntityTypes.Organisation,
-  SearchEntityTypes.Challenge,
-  SearchEntityTypes.Opportunity,
+  SearchEntityTypes.USER,
+  SearchEntityTypes.GROUP,
+  SearchEntityTypes.ORGANIZATION,
+  SearchEntityTypes.CHALLENGE,
+  SearchEntityTypes.OPPORTUNITY,
 ];
 
 const SEARCH_TERM_LIMIT = 10;
@@ -40,7 +40,7 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity: User | UserGroup | Organisation | Challenge | Opportunity | undefined;
+  entity: User | UserGroup | Organization | Challenge | Opportunity | undefined;
 }
 
 export class SearchService {
@@ -49,8 +49,8 @@ export class SearchService {
     private userRepository: Repository<User>,
     @InjectRepository(UserGroup)
     private groupRepository: Repository<UserGroup>,
-    @InjectRepository(Organisation)
-    private organisationRepository: Repository<Organisation>,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
@@ -68,7 +68,7 @@ export class SearchService {
     // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
     const userResults: Map<number, Match> = new Map();
     const groupResults: Map<number, Match> = new Map();
-    const organisationResults: Map<number, Match> = new Map();
+    const organizationResults: Map<number, Match> = new Map();
     const challengeResults: Map<number, Match> = new Map();
     const opportunityResults: Map<number, Match> = new Map();
 
@@ -77,14 +77,14 @@ export class SearchService {
     // By default search all entity types
     let searchUsers = true;
     let searchGroups = true;
-    let searchOrganisations = true;
+    let searchOrganizations = true;
     let searchChallenges = true;
     let searchOpportunities = true;
     const entityTypesFilter = searchData.typesFilter;
     [
       searchUsers,
       searchGroups,
-      searchOrganisations,
+      searchOrganizations,
       searchChallenges,
       searchOpportunities,
     ] = await this.searchBy(entityTypesFilter);
@@ -101,15 +101,15 @@ export class SearchService {
         filteredTerms,
         userResults,
         groupResults,
-        organisationResults,
+        organizationResults,
         entityTypesFilter
       );
 
     if (searchUsers) await this.searchUsersByTerms(filteredTerms, userResults);
     if (searchGroups)
       await this.searchGroupsByTerms(filteredTerms, groupResults);
-    if (searchOrganisations)
-      await this.searchOrganisationsByTerms(filteredTerms, organisationResults);
+    if (searchOrganizations)
+      await this.searchOrganizationsByTerms(filteredTerms, organizationResults);
     if (searchChallenges)
       await this.searchChallengesByTerms(
         filteredTerms,
@@ -123,14 +123,14 @@ export class SearchService {
         agentInfo
       );
     this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organisationResults.size} organisation results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found`,
+      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found`,
       LogContext.API
     );
 
     let results: ISearchResultEntry[] = [];
     results = await this.buildSearchResults(userResults);
     results.push(...(await this.buildSearchResults(groupResults)));
-    results.push(...(await this.buildSearchResults(organisationResults)));
+    results.push(...(await this.buildSearchResults(organizationResults)));
     results.push(...(await this.buildSearchResults(challengeResults)));
     results.push(...(await this.buildSearchResults(opportunityResults)));
     this.ensureUniqueTermsPerResult(results);
@@ -164,27 +164,27 @@ export class SearchService {
   ): Promise<[boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
-    let searchOrganisations = true;
+    let searchOrganizations = true;
     let searchChallenges = true;
     let searchOpportunities = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
-      if (!entityTypesFilter.includes(SearchEntityTypes.User))
+      if (!entityTypesFilter.includes(SearchEntityTypes.USER))
         searchUsers = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Group))
+      if (!entityTypesFilter.includes(SearchEntityTypes.GROUP))
         searchGroups = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Organisation))
-        searchOrganisations = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Challenge))
+      if (!entityTypesFilter.includes(SearchEntityTypes.ORGANIZATION))
+        searchOrganizations = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.CHALLENGE))
         searchChallenges = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.Opportunity))
+      if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
         searchOpportunities = false;
     }
 
     return [
       searchUsers,
       searchGroups,
-      searchOrganisations,
+      searchOrganizations,
       searchChallenges,
       searchOpportunities,
     ];
@@ -224,24 +224,24 @@ export class SearchService {
     }
   }
 
-  async searchOrganisationsByTerms(
+  async searchOrganizationsByTerms(
     terms: string[],
-    organisationResults: Map<number, Match>
+    organizationResults: Map<number, Match>
   ) {
     for (const term of terms) {
-      const organisationMatches = await this.organisationRepository
-        .createQueryBuilder('organisation')
-        .leftJoinAndSelect('organisation.profile', 'profile')
-        .leftJoinAndSelect('organisation.groups', 'groups')
-        .where('organisation.nameID like :term')
-        .orWhere('organisation.displayName like :term')
+      const organizationMatches = await this.organizationRepository
+        .createQueryBuilder('organization')
+        .leftJoinAndSelect('organization.profile', 'profile')
+        .leftJoinAndSelect('organization.groups', 'groups')
+        .where('organization.nameID like :term')
+        .orWhere('organization.displayName like :term')
         .orWhere('profile.description like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();
       // Create results for each match
       await this.buildMatchingResults(
-        organisationMatches,
-        organisationResults,
+        organizationMatches,
+        organizationResults,
         term
       );
     }
@@ -341,13 +341,13 @@ export class SearchService {
     terms: string[],
     userResults: Map<number, Match>,
     groupResults: Map<number, Match>,
-    organisationResults: Map<number, Match>,
+    organizationResults: Map<number, Match>,
     entityTypesFilter?: string[]
   ) {
     let searchUsers = true;
     let searchGroups = true;
-    let searchOrganisations = true;
-    [searchUsers, searchGroups, searchOrganisations] = await this.searchBy(
+    let searchOrganizations = true;
+    [searchUsers, searchGroups, searchOrganizations] = await this.searchBy(
       entityTypesFilter
     );
 
@@ -357,11 +357,11 @@ export class SearchService {
     if (searchGroups)
       await this.searchGroupsByTagsets(terms, tagsets, groupResults);
 
-    if (searchOrganisations)
-      await this.searchOrganisationsByTagsets(
+    if (searchOrganizations)
+      await this.searchOrganizationsByTagsets(
         terms,
         tagsets,
-        organisationResults
+        organizationResults
       );
   }
 
@@ -405,16 +405,16 @@ export class SearchService {
     }
   }
 
-  async searchOrganisationsByTagsets(
+  async searchOrganizationsByTagsets(
     terms: string[],
     tagsets: string[],
-    organisationResults: Map<number, Match>
+    organizationResults: Map<number, Match>
   ) {
     for (const term of terms) {
-      const organisationMatches = await this.organisationRepository
-        .createQueryBuilder('organisation')
-        .leftJoinAndSelect('organisation.profile', 'profile')
-        .leftJoinAndSelect('organisation.groups', 'groups')
+      const organizationMatches = await this.organizationRepository
+        .createQueryBuilder('organization')
+        .leftJoinAndSelect('organization.profile', 'profile')
+        .leftJoinAndSelect('organization.groups', 'groups')
         .leftJoinAndSelect('profile.tagsets', 'tagset')
         .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
         .andWhere('find_in_set(:term, tagset.tags)')
@@ -423,8 +423,8 @@ export class SearchService {
 
       // Create results for each match
       await this.buildMatchingResults(
-        organisationMatches,
-        organisationResults,
+        organizationMatches,
+        organizationResults,
         term
       );
     }

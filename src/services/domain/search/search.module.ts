@@ -6,8 +6,8 @@ import { User } from '@domain/community/user/user.entity';
 import { UserModule } from '@domain/community/user/user.module';
 import { SearchResolverQueries } from './search.resolver.queries';
 import { SearchService } from './search.service';
-import { OrganisationModule } from '@domain/community/organisation/organisation.module';
-import { Organisation } from '@domain/community/organisation';
+import { OrganizationModule } from '@domain/community/organization/organization.module';
+import { Organization } from '@domain/community/organization';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
@@ -18,11 +18,11 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
     AuthorizationEngineModule,
     UserModule,
     UserGroupModule,
-    OrganisationModule,
+    OrganizationModule,
     ChallengeModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
-    TypeOrmModule.forFeature([Organisation]),
+    TypeOrmModule.forFeature([Organization]),
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
   ],

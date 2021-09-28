@@ -3,7 +3,7 @@ import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
-import { PubSub } from 'graphql-subscriptions';
+import { PubSubEngine } from 'graphql-subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.adapter.service';
 import { MatrixRoom } from '../matrix/adapter-room/matrix.room';
@@ -43,19 +43,19 @@ export class CommunicationService {
     private matrixRoomAdapterService: MatrixRoomAdapterService,
     private matrixGroupAdapterService: MatrixGroupAdapterService,
     @Inject(PUB_SUB)
-    private readonly subscriptionHandler: PubSub
+    private readonly subscriptionHandler: PubSubEngine
   ) {
     this.adminUserName = this.configService.get(
-      ConfigurationTypes.Communications
+      ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.admin?.username;
     this.adminPassword = this.configService.get(
-      ConfigurationTypes.Communications
+      ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.admin?.password;
 
     // need both to be true
     this.enabled =
-      this.configService.get(ConfigurationTypes.Communications)?.enabled &&
-      this.configService.get(ConfigurationTypes.Identity)?.authentication
+      this.configService.get(ConfigurationTypes.COMMUNICATIONS)?.enabled &&
+      this.configService.get(ConfigurationTypes.IDENTITY)?.authentication
         ?.enabled;
   }
 

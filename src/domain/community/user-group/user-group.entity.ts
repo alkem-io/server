@@ -1,4 +1,4 @@
-import { Organisation } from '@domain/community/organisation/organisation.entity';
+import { Organization } from '@domain/community/organization/organization.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
@@ -17,18 +17,18 @@ export class UserGroup extends AuthorizableEntity implements IUserGroup {
   @JoinColumn()
   profile?: Profile;
 
-  @ManyToOne(
-    () => Organisation,
-    organisation => organisation.groups,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
-  organisation?: Organisation;
+  @ManyToOne(() => Organization, organization => organization.groups, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  organization?: Organization;
 
-  @ManyToOne(
-    () => Community,
-    community => community.groups,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Community, community => community.groups, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   community?: Community;
 
   constructor(name: string) {

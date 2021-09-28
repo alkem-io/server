@@ -122,10 +122,10 @@ export class UserGroupService {
 
   async getParent(group: IUserGroup): Promise<IGroupable> {
     const groupWithParent = (await this.getUserGroupOrFail(group.id, {
-      relations: ['community', 'organisation'],
+      relations: ['community', 'organization'],
     })) as UserGroup;
     if (groupWithParent?.community) return groupWithParent?.community;
-    if (groupWithParent?.organisation) return groupWithParent?.organisation;
+    if (groupWithParent?.organization) return groupWithParent?.organization;
     throw new EntityNotFoundException(
       `Unable to locate parent for user group: ${group.name}`,
       LogContext.COMMUNITY
@@ -158,7 +158,7 @@ export class UserGroupService {
 
     user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.UserGroupMember,
+      type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: membershipData.groupID,
     });
 
@@ -171,7 +171,7 @@ export class UserGroupService {
     const agent = await this.userService.getUserWithAgent(userID);
 
     return await this.agentService.hasValidCredential(agent.id, {
-      type: AuthorizationCredential.UserGroupMember,
+      type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: groupID,
     });
   }
@@ -185,7 +185,7 @@ export class UserGroupService {
 
     user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.UserGroupMember,
+      type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: membershipData.groupID,
     });
 
@@ -241,7 +241,7 @@ export class UserGroupService {
 
   async getMembers(groupID: string): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.UserGroupMember,
+      type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: groupID,
     });
   }

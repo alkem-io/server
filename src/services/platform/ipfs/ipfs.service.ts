@@ -19,11 +19,11 @@ export class IpfsService {
     private readonly logger: LoggerService
   ) {
     this.ipfsEndpoint = this.configService.get(
-      ConfigurationTypes.Storage
+      ConfigurationTypes.STORAGE
     )?.ipfs?.endpoint;
     this.ipfsClientEndpoint = this.configService.get(
-      ConfigurationTypes.Storage
-    )?.ipfs?.clientEndpoint;
+      ConfigurationTypes.STORAGE
+    )?.ipfs?.client_endpoint;
   }
 
   public async uploadFile(filePath: string): Promise<string> {

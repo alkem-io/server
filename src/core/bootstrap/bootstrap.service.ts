@@ -6,7 +6,7 @@ import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
 import fs from 'fs';
-import * as defaultRoles from '@templates/authorisation-bootstrap.json';
+import * as defaultRoles from '@templates/authorization-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
@@ -20,8 +20,8 @@ import {
   DEFAULT_HOST_ORG_DISPLAY_NAME,
   DEFAULT_HOST_ORG_NAMEID,
 } from '@common/constants';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
-import { OrganisationAuthorizationService } from '@domain/community/organisation/organisation.service.authorization';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Injectable()
@@ -34,8 +34,8 @@ export class BootstrapService {
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private authorizationService: AuthorizationService,
     private configService: ConfigService,
-    private organisationService: OrganisationService,
-    private organisationAuthorizationService: OrganisationAuthorizationService,
+    private organizationService: OrganizationService,
+    private organizationAuthorizationService: OrganizationAuthorizationService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -49,8 +49,8 @@ export class BootstrapService {
 
       Profiling.logger = this.logger;
       const profilingEnabled = this.configService.get(
-        ConfigurationTypes.Monitoring
-      )?.logging?.profilingEnabled;
+        ConfigurationTypes.MONITORING
+      )?.logging?.profiling_enabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
 
       await this.ensureEcoverseSingleton();
@@ -91,7 +91,7 @@ export class BootstrapService {
 
   async bootstrapProfiles() {
     const bootstrapAuthorizationEnabled = this.configService.get(
-      ConfigurationTypes.Bootstrap
+      ConfigurationTypes.BOOTSTRAP
     )?.authorization?.enabled;
     if (!bootstrapAuthorizationEnabled) {
       this.logger.verbose?.(
@@ -102,7 +102,7 @@ export class BootstrapService {
     }
 
     const bootstrapFilePath = this.configService.get(
-      ConfigurationTypes.Bootstrap
+      ConfigurationTypes.BOOTSTRAP
     )?.authorization?.file as string;
 
     let bootstrapJson = {
@@ -115,20 +115,20 @@ export class BootstrapService {
       fs.statSync(bootstrapFilePath).isFile()
     ) {
       this.logger.verbose?.(
-        `Authorisation bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
+        `Authorization bootstrap: configuration being loaded from '${bootstrapFilePath}'`,
         LogContext.BOOTSTRAP
       );
       const bootstratDataStr = fs.readFileSync(bootstrapFilePath).toString();
       this.logger.verbose?.(bootstratDataStr);
       if (!bootstratDataStr) {
         throw new BootstrapException(
-          'Specified authorisation bootstrap file not found!'
+          'Specified authorization bootstrap file not found!'
         );
       }
       bootstrapJson = JSON.parse(bootstratDataStr);
     } else {
       this.logger.verbose?.(
-        'Authorisation bootstrap: default configuration being loaded',
+        'Authorization bootstrap: default configuration being loaded',
         LogContext.BOOTSTRAP
       );
     }
@@ -136,7 +136,7 @@ export class BootstrapService {
     const users = bootstrapJson.users;
     if (!users) {
       this.logger.verbose?.(
-        'No users section in the authorisation bootstrap file!',
+        'No users section in the authorization bootstrap file!',
         LogContext.BOOTSTRAP
       );
     } else {
@@ -182,7 +182,7 @@ export class BootstrapService {
   }
 
   async ensureSsiPopulated() {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.Identity).ssi
+    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
       .enabled;
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();
@@ -199,15 +199,15 @@ export class BootstrapService {
       this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // create a default host org
-      const hostOrganisation = await this.organisationService.getOrganisation(
+      const hostOrganization = await this.organizationService.getOrganization(
         DEFAULT_HOST_ORG_NAMEID
       );
-      if (!hostOrganisation) {
-        const hostOrg = await this.organisationService.createOrganisation({
+      if (!hostOrganization) {
+        const hostOrg = await this.organizationService.createOrganization({
           nameID: DEFAULT_HOST_ORG_NAMEID,
           displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
         });
-        await this.organisationAuthorizationService.applyAuthorizationPolicy(
+        await this.organizationAuthorizationService.applyAuthorizationPolicy(
           hostOrg
         );
       }

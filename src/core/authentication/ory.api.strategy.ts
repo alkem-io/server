@@ -22,10 +22,10 @@ export class OryApiStrategy extends PassportStrategy(
 
   async validate(payload: any) {
     const kratosPublicBaseUrl = this.configService.get(
-      ConfigurationTypes.Identity
+      ConfigurationTypes.IDENTITY
     ).authentication.providers.ory.kratos_public_base_url_server;
 
-    const apiAccessEnabled = this.configService.get(ConfigurationTypes.Identity)
+    const apiAccessEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
       .authentication.api_access_enabled;
 
     const kratos = new PublicApi(

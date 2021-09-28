@@ -1,7 +1,7 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { MembershipUserInput } from './membership.dto.user.input';
 import { MembershipUserResultEntryEcoverse } from './membership.dto.user.result.entry.ecoverse';
@@ -9,16 +9,16 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { AuthorizationCredential } from '@common/enums';
 import { IOpportunity } from '@domain/collaboration/opportunity';
-import { IOrganisation } from '@domain/community/organisation';
-import { MembershipUserResultEntryOrganisation } from './membership.dto.user.result.entry.organisation';
+import { IOrganization } from '@domain/community/organization';
+import { MembershipUserResultEntryOrganization } from './membership.dto.user.result.entry.organization';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IUserGroup } from '@domain/community/user-group';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 import { ICommunity } from '@domain/community/community';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { UserMembership } from './membership.dto.user.result';
-import { MembershipOrganisationInput } from './membership.dto.organisation.input';
-import { OrganisationMembership } from './membership.dto.organisation.result';
+import { MembershipOrganizationInput } from './membership.dto.organization.input';
+import { OrganizationMembership } from './membership.dto.organization.result';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { IUser } from '@domain/community/user/user.interface';
@@ -31,7 +31,7 @@ export class MembershipService {
     private challengeService: ChallengeService,
     private applicationService: ApplicationService,
     private opportunityService: OpportunityService,
-    private organisationService: OrganisationService,
+    private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -51,30 +51,32 @@ export class MembershipService {
     const storedCommunityUserGroups: IUserGroup[] = [];
     const storedOrgUserGroups: IUserGroup[] = [];
     for (const credential of credentials) {
-      if (credential.type === AuthorizationCredential.OrganisationMember) {
-        membership.organisations.push(
-          await this.createOrganisationResult(credential.resourceID, user.id)
+      if (credential.type === AuthorizationCredential.ORGANIZATION_MEMBER) {
+        membership.organizations.push(
+          await this.createOrganizationResult(credential.resourceID, user.id)
         );
-      } else if (credential.type === AuthorizationCredential.EcoverseMember) {
+      } else if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
         membership.ecoverses.push(
           await this.createEcoverseMembershipResult(
             credential.resourceID,
             user.id
           )
         );
-      } else if (credential.type === AuthorizationCredential.ChallengeMember) {
+      } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
         const challenge = await this.challengeService.getChallengeOrFail(
           credential.resourceID
         );
         storedChallenges.push(challenge);
       } else if (
-        credential.type === AuthorizationCredential.OpportunityMember
+        credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
       ) {
         const opportunity = await this.opportunityService.getOpportunityOrFail(
           credential.resourceID
         );
         storedOpportunities.push(opportunity);
-      } else if (credential.type === AuthorizationCredential.UserGroupMember) {
+      } else if (
+        credential.type === AuthorizationCredential.USER_GROUP_MEMBER
+      ) {
         const group = await this.userGroupService.getUserGroupOrFail(
           credential.resourceID
         );
@@ -123,18 +125,18 @@ export class MembershipService {
     }
 
     // Assign org groups
-    for (const organisationResult of membership.organisations) {
+    for (const organizationResult of membership.organizations) {
       for (const group of storedOrgUserGroups) {
         const parent = await this.userGroupService.getParent(group);
         if (
-          (parent as IOrganisation).id === organisationResult.organisationID
+          (parent as IOrganization).id === organizationResult.organizationID
         ) {
           const groupResult = new MembershipResultEntry(
             group.name,
             group.id,
             group.name
           );
-          organisationResult.userGroups.push(groupResult);
+          organizationResult.userGroups.push(groupResult);
         }
       }
     }
@@ -144,17 +146,17 @@ export class MembershipService {
     return membership;
   }
 
-  async createOrganisationResult(
-    organisationID: string,
+  async createOrganizationResult(
+    organizationID: string,
     userID: string
-  ): Promise<MembershipUserResultEntryOrganisation> {
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      organisationID
+  ): Promise<MembershipUserResultEntryOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      organizationID
     );
-    return new MembershipUserResultEntryOrganisation(
-      organisation.nameID,
-      organisation.id,
-      organisation.displayName,
+    return new MembershipUserResultEntryOrganization(
+      organization.nameID,
+      organization.id,
+      organization.displayName,
       userID
     );
   }
@@ -172,38 +174,39 @@ export class MembershipService {
     );
   }
 
-  async getOrganisationMemberships(
-    membershipData: MembershipOrganisationInput
-  ): Promise<OrganisationMembership> {
-    const membership = new OrganisationMembership();
-    const organisation = await this.organisationService.getOrganisationOrFail(
-      membershipData.organisationID,
+  async getOrganizationMemberships(
+    membershipData: MembershipOrganizationInput
+  ): Promise<OrganizationMembership> {
+    const membership = new OrganizationMembership();
+    const organization = await this.organizationService.getOrganizationOrFail(
+      membershipData.organizationID,
       {
         relations: ['agent'],
       }
     );
-    membership.id = organisation.id;
+    membership.id = organization.id;
 
-    const agent = organisation?.agent;
+    const agent = organization?.agent;
     if (agent?.credentials) {
       for (const credential of agent.credentials) {
-        if (credential.type === AuthorizationCredential.EcoverseHost) {
+        if (credential.type === AuthorizationCredential.ECOVERSE_HOST) {
           const ecoverse = await this.ecoverseService.getEcoverseOrFail(
             credential.resourceID
           );
           membership.ecoversesHosting.push({
             nameID: ecoverse.nameID,
-            id: ecoverse.id,
+            id: `${ecoverse.id}`, // note: may way to make this a unique membership identifier for client caching
             displayName: ecoverse.displayName,
           });
-        } else if (credential.type === AuthorizationCredential.ChallengeLead) {
+        } else if (credential.type === AuthorizationCredential.CHALLENGE_LEAD) {
           const challenge = await this.challengeService.getChallengeOrFail(
             credential.resourceID
           );
           membership.challengesLeading.push({
             nameID: challenge.nameID,
-            id: challenge.id,
+            id: `${challenge.id}`, // note: may way to make this a unique membership identifier for client caching
             displayName: challenge.displayName,
+            ecoverseID: challenge.ecoverseID,
           });
         }
       }

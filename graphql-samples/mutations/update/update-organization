@@ -1,0 +1,20 @@
+mutation updateOrganization($organizationData: UpdateOrganizationInput!) {
+  updateOrganization(organizationData: $organizationData) {
+    displayName,
+    id
+  }
+}
+
+query variables:
+{
+  "organizationData":
+  {
+    "ID": "uuid",
+    "displayName": "Alkemio2",
+    "legalEntityName": "Alkemio Legal Name",
+    "domain": "alkem.io",
+    "website": "alkem.io",
+    "contactEmail": "contact@alkem.io"
+  }
+}
+

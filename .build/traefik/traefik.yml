@@ -13,12 +13,19 @@ entryPoints:
     address: ':3306'
   synapse:
     address: ':8008'
+  synapse-admin:
+    address: ':8088'
   ipfs-api:
     address: ':5001'
   mailslurper-client:
     address: ':4436'
   mailslurper-api:
     address: ':4437'
+  rabbitmq-amqp:
+    address: ':5672'
+  rabbitmq-management:
+    address: ':15672'
+
 providers:
   file:
     filename: /etc/traefik/http.yml

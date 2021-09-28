@@ -8,8 +8,8 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AgentInfo } from '@core/authentication';
-import { OrganisationMembership } from './membership.dto.organisation.result';
-import { MembershipOrganisationInput } from './membership.dto.organisation.input';
+import { OrganizationMembership } from './membership.dto.organization.result';
+import { MembershipOrganizationInput } from './membership.dto.organization.input';
 
 @Resolver()
 export class MembershipResolverQueries {
@@ -21,7 +21,7 @@ export class MembershipResolverQueries {
   ) {
     this.membershipAuthorizationPolicy =
       this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.Registered],
+        [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );
   }
@@ -45,14 +45,14 @@ export class MembershipResolverQueries {
   }
 
   @UseGuards(GraphqlGuard)
-  @Query(() => OrganisationMembership, {
-    description: 'The memberships for this Organisation',
+  @Query(() => OrganizationMembership, {
+    description: 'The memberships for this Organization',
   })
   @Profiling.api
-  async membershipOrganisation(
-    @Args('membershipData') membershipData: MembershipOrganisationInput
-  ): Promise<OrganisationMembership> {
-    return await this.membershipService.getOrganisationMemberships(
+  async membershipOrganization(
+    @Args('membershipData') membershipData: MembershipOrganizationInput
+  ): Promise<OrganizationMembership> {
+    return await this.membershipService.getOrganizationMemberships(
       membershipData
     );
   }

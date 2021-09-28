@@ -8,8 +8,10 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
 
-export abstract class BaseChallenge extends NameableEntity
-  implements IBaseChallenge {
+export abstract class BaseChallenge
+  extends NameableEntity
+  implements IBaseChallenge
+{
   @OneToOne(() => Context, {
     eager: false,
     cascade: true,

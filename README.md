@@ -15,7 +15,7 @@ Welcome to the Alkemio Server! This server is the heart of the Alkemio Platform,
 A high level overview of the Design of the Alkemio Server is shown below.
 
 <p >
-<img src="docs/images/ct-server-design.png" alt="Component Diagram" width="600" />
+<img src="docs/images/alkemio-server-design.png" alt="Component Diagram" width="600" />
 </p>
 
 The server primarily interacts via a _*GraphQL api*_' that it exposes. This can be found at the following location: <http://localhost:4000/graphql> (assuming default port).

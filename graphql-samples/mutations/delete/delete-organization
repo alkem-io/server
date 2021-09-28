@@ -1,0 +1,13 @@
+mutation deleteOrganization($deleteData: DeleteOrganizationInput!) {
+  deleteOrganization(deleteData: $deleteData) {
+    id
+  }
+}
+
+
+Variables:
+{
+  "deleteData": {
+    "ID": "uuid"
+  }
+}

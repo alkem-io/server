@@ -1,3 +1,3 @@
 export enum AuthorizationVerifiedCredential {
-  StateModificationCredential = 'StateModificationCredential',
+  STATE_MODIFICATION_CREDENTIAL = 'StateModificationCredential',
 }

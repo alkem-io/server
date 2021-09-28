@@ -24,8 +24,8 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
       - run: |
-          docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }} -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:latest
-          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }}
+          docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }} -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:latest
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
 
       - uses: Azure/aks-set-context@v1
         with:
@@ -38,7 +38,7 @@ jobs:
           container-registry-url: ${{ secrets.REGISTRY_LOGIN_SERVER }}
           container-registry-username: ${{ secrets.REGISTRY_USERNAME }}
           container-registry-password: ${{ secrets.REGISTRY_PASSWORD }}
-          secret-name: ct-server-secret
+          secret-name: alkemio-server-secret
 
       - uses: Azure/k8s-deploy@v1
         with:
@@ -46,6 +46,6 @@ jobs:
             manifests/25-server-deployment-dev.yaml
             manifests/30-server-service.yaml
           images: |
-            ${{ secrets.REGISTRY_LOGIN_SERVER }}/ct-server:${{ github.sha }}
+            ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
           imagepullsecrets: |
-            ct-server-secret
+            alkemio-server-secret

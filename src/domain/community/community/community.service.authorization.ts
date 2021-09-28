@@ -7,6 +7,7 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -27,12 +28,14 @@ export class CommunityAuthorizationService {
         community.authorization,
         parentAuthorization
       );
-    // always false
-    community.authorization.anonymousReadAccess = false;
 
     community.authorization = this.extendAuthorizationPolicy(
-      community.authorization
+      community.authorization,
+      parentAuthorization?.anonymousReadAccess
     );
+
+    // always false
+    community.authorization.anonymousReadAccess = false;
 
     // cascade
     const groups = await this.communityService.getUserGroups(community);
@@ -58,21 +61,40 @@ export class CommunityAuthorizationService {
   }
 
   private extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined
+    authorization: IAuthorizationPolicy | undefined,
+    allowGlobalRegisteredReadAccess: boolean | undefined
   ): IAuthorizationPolicy {
-    return this.authorizationPolicyService.appendCredentialAuthorizationRule(
-      authorization,
-      {
-        type: AuthorizationCredential.GlobalAdminCommunity,
-        resourceID: '',
-      },
-      [
+    const newRules: AuthorizationRuleCredential[] = [];
+
+    const globalCommunityAdmin = {
+      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+      resourceID: '',
+      grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-      ]
-    );
+      ],
+    };
+    newRules.push(globalCommunityAdmin);
+
+    if (allowGlobalRegisteredReadAccess) {
+      const globalRegistered = {
+        type: AuthorizationCredential.GLOBAL_REGISTERED,
+        resourceID: '',
+        grantedPrivileges: [AuthorizationPrivilege.READ],
+      };
+      newRules.push(globalRegistered);
+    }
+
+    //
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
   }
 }

@@ -26,7 +26,7 @@ module.exports = {
   collectCoverageFrom: [
     '<rootDir>/src/**/*.service.ts',
     '<rootDir>/src/core/authentication/*.strategy.*',
-    '<rootDir>/src/core/authorisation/*.guard.*',
+    '<rootDir>/src/core/authorization/*.guard.*',
     '<rootDir>/src/core/middleware/*.*',
     '<rootDir>/src/core/logging/logging.profiling.decorator.ts',
     '<rootDir>/src/common/error-handling/http.exceptions.filter.ts',

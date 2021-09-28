@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "email": "admin@alkem.io",
+      "firstName": "admin",
+      "lastName": "alkemio",
+      "credentials": [
+        {
+          "type": "global-admin"
+        }
+      ]
+    },
+    {
+      "email": "community.admin@alkem.io",
+      "firstName": "community",
+      "lastName": "admin",
+      "credentials": [
+        {
+          "type": "global-admin-community"
+        }
+      ]
+    },
+    {
+      "email": "ecoverse.admin@alkem.io",
+      "firstName": "ecoverse",
+      "lastName": "admin",
+      "credentials": []
+    },
+    {
+      "email": "ecoverse.member@alkem.io",
+      "firstName": "ecoverse",
+      "lastName": "member",
+      "credentials": []
+    },
+    {
+      "email": "qa.user@alkem.io",
+      "firstName": "qa",
+      "lastName": "user",
+      "credentials": []
+    },
+    {
+      "email": "non.ecoverse@alkem.io",
+      "firstName": "non",
+      "lastName": "ecoverse",
+      "credentials": []
+    }
+  ]
+}

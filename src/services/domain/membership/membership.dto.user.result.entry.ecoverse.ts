@@ -22,6 +22,7 @@ export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
     description: 'Details of the UserGroups the user is a member of',
   })
   userGroups: MembershipResultEntry[] = [];
+
   constructor(
     nameID: string,
     ecoverseID: string,

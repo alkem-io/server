@@ -2,7 +2,7 @@ import { ChallengeService } from '@domain/challenge/challenge/challenge.service'
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { INVP, NVP } from '@domain/common/nvp';
-import { OrganisationService } from '@domain/community/organisation/organisation.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -16,7 +16,7 @@ export class MetadataService {
     private ecoverseService: EcoverseService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
-    private organisationService: OrganisationService,
+    private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -50,10 +50,12 @@ export class MetadataService {
     // Challenges
     const ecoversesCount = await this.ecoverseService.getEcoverseCount();
     const ecoversesTopic = new NVP('ecoverses', ecoversesCount.toString());
+    ecoversesTopic.id = 'ecoverses';
     activity.push(ecoversesTopic);
 
     const challengesCount = await this.challengeService.getChallengeCount();
     const challengesTopic = new NVP('challenges', challengesCount.toString());
+    challengesTopic.id = 'challenges';
     activity.push(challengesTopic);
 
     const opportunitiesCount =
@@ -62,21 +64,24 @@ export class MetadataService {
       'opportunities',
       opportunitiesCount.toString()
     );
+    opportunitiesTopic.id = 'opportunities';
     activity.push(opportunitiesTopic);
 
     // Users
     const usersCount = await this.userService.getUserCount();
     const usersTopic = new NVP('users', usersCount.toString());
+    usersTopic.id = 'users';
     activity.push(usersTopic);
 
-    // Organisations
-    const organisationsCount =
-      await this.organisationService.getOrganisationCount();
-    const organisationsTopic = new NVP(
-      'organisations',
-      organisationsCount.toString()
+    // Organizations
+    const organizationsCount =
+      await this.organizationService.getOrganizationCount();
+    const organizationsTopic = new NVP(
+      'organizations',
+      organizationsCount.toString()
     );
-    activity.push(organisationsTopic);
+    organizationsTopic.id = 'organizations';
+    activity.push(organizationsTopic);
 
     return activity;
   }

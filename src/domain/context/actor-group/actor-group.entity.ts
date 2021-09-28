@@ -5,7 +5,7 @@ import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.
 import { IActorGroup } from '@domain/context/actor-group/actor-group.interface';
 
 export enum RestrictedActorGroupNames {
-  Collaborators = 'collaborators',
+  COLLABORATORS = 'collaborators',
 }
 
 @Entity()
@@ -23,11 +23,10 @@ export class ActorGroup extends AuthorizableEntity implements IActorGroup {
   )
   ecosystemModel?: EcosystemModel;
 
-  @OneToMany(
-    () => Actor,
-    actor => actor.actorGroup,
-    { eager: true, cascade: true }
-  )
+  @OneToMany(() => Actor, actor => actor.actorGroup, {
+    eager: true,
+    cascade: true,
+  })
   actors?: Actor[];
 
   constructor(name: string) {

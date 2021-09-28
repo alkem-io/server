@@ -1,5 +1,10 @@
 http:
   services:
+    rabbitmq-management:
+      loadBalancer:
+        servers:
+          - url: 'http://rabbitmq:15672'
+
     mailslurper-client:
       loadBalancer:
         servers:
@@ -9,6 +14,11 @@ http:
       loadBalancer:
         servers:
           - url: 'http://mailslurper:4437'
+
+    ipfs-http-adapter:
+      loadBalancer:
+        servers:
+          - url: 'http://ipfs:8080'
 
     ipfs-api:
       loadBalancer:
@@ -50,6 +60,11 @@ http:
         servers:
           - url: 'http://synapse:8008/'
 
+    synapse-admin:
+      loadBalancer:
+        servers:
+          - url: 'http://synapse-admin:80/'
+
   middlewares:
     strip-admin-prefix:
       stripPrefix:
@@ -76,6 +91,12 @@ http:
         forceSlash: false
 
   routers:
+    rabbitmq-management:
+      rule: 'PathPrefix(`/`)'
+      service: 'rabbitmq-management'
+      entryPoints:
+        - 'rabbitmq-management'
+
     graphql:
       rule: 'PathPrefix(`/graphql`)'
       service: 'oathkeeper-proxy'
@@ -111,6 +132,12 @@ http:
       service: 'synapse'
       entryPoints:
         - 'synapse'
+
+    synapse-admin:
+      rule: 'PathPrefix(`/`)'
+      service: 'synapse-admin'
+      entryPoints:
+        - 'synapse-admin'
 
     mailslurper-api:
       rule: 'PathPrefix(`/`)'
@@ -157,9 +184,20 @@ tcp:
         servers:
           - address: 'mysql_db:3306'
 
+    rabbitmq-amqp:
+      loadBalancer:
+        servers:
+          - address: 'rabbitmq:5672'
+
   routers:
     mysql:
       rule: 'HostSNI(`*`)'
       service: 'mysql'
       entryPoints:
         - 'mysql'
+
+    rabbitmq-amqp:
+      rule: 'HostSNI(`*`)'
+      service: 'rabbitmq-amqp'
+      entryPoints:
+        - 'rabbitmq-amqp'

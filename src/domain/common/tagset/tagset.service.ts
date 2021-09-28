@@ -119,7 +119,7 @@ export class TagsetService {
         LogContext.COMMUNITY
       );
     const defaultTagset = tagsetable.tagsets.find(
-      t => t.name === RestrictedTagsetNames.Default
+      t => t.name === RestrictedTagsetNames.DEFAULT
     );
     return defaultTagset;
   }

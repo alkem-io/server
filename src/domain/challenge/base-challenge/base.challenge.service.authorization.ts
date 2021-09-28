@@ -1,4 +1,3 @@
-import { UpdateAuthorizationPolicyInput } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
@@ -26,7 +25,7 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    // disable anonymous access for community
+
     if (community.authorization) {
       baseChallenge.community =
         await this.communityAuthorizationService.applyAuthorizationPolicy(
@@ -67,30 +66,5 @@ export class BaseChallengeAuthorizationService {
       );
 
     return await repository.save(baseChallenge);
-  }
-
-  async updateAuthorization(
-    baseChallenge: IBaseChallenge,
-    repository: Repository<BaseChallenge>,
-    authorizationUpdateData: UpdateAuthorizationPolicyInput
-  ): Promise<IBaseChallenge> {
-    baseChallenge.authorization =
-      this.authorizationPolicyService.updateAuthorization(
-        baseChallenge.authorization,
-        authorizationUpdateData
-      );
-
-    // propagate authorization rules for child entities
-    baseChallenge.context = await this.baseChallengeService.getContext(
-      baseChallenge.id,
-      repository
-    );
-    baseChallenge.context.authorization =
-      this.authorizationPolicyService.updateAuthorization(
-        baseChallenge.context.authorization,
-        authorizationUpdateData
-      );
-
-    return baseChallenge;
   }
 }

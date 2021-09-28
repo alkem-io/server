@@ -53,7 +53,7 @@ export class UserAuthorizationService {
       await this.authorizationPolicyService.appendCredentialAuthorizationRule(
         profile.authorization,
         {
-          type: AuthorizationCredential.UserSelfManagement,
+          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
           resourceID: user.id,
         },
         [AuthorizationPrivilege.DELETE]
@@ -74,11 +74,11 @@ export class UserAuthorizationService {
     const agent = await this.userService.getAgent(user.id);
 
     user.agent = await this.agentService.grantCredential({
-      type: AuthorizationCredential.GlobalRegistered,
+      type: AuthorizationCredential.GLOBAL_REGISTERED,
       agentID: agent.id,
     });
     user.agent = await this.agentService.grantCredential({
-      type: AuthorizationCredential.UserSelfManagement,
+      type: AuthorizationCredential.USER_SELF_MANAGEMENT,
       agentID: agent.id,
       resourceID: user.id,
     });
@@ -97,7 +97,7 @@ export class UserAuthorizationService {
     const newRules: AuthorizationRuleCredential[] = [];
 
     const globalAdmin = {
-      type: AuthorizationCredential.GlobalAdmin,
+      type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -110,7 +110,7 @@ export class UserAuthorizationService {
     newRules.push(globalAdmin);
 
     const communityAdmin = {
-      type: AuthorizationCredential.GlobalAdminCommunity,
+      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
       resourceID: '',
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -147,7 +147,7 @@ export class UserAuthorizationService {
     const newRules: AuthorizationRuleCredential[] = [];
 
     const userSelfAdmin = {
-      type: AuthorizationCredential.UserSelfManagement,
+      type: AuthorizationCredential.USER_SELF_MANAGEMENT,
       resourceID: user.id,
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -163,25 +163,25 @@ export class UserAuthorizationService {
     );
     for (const credential of credentials) {
       // Grant read access to Ecoverse Admins for ecoverses the user is a member of
-      if (credential.type === AuthorizationCredential.EcoverseMember) {
+      if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
         const ecoverseAdmin = {
-          type: AuthorizationCredential.EcoverseAdmin,
+          type: AuthorizationCredential.ECOVERSE_ADMIN,
           resourceID: credential.resourceID,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         };
         newRules.push(ecoverseAdmin);
-      } else if (credential.type === AuthorizationCredential.ChallengeMember) {
+      } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
         const challengeAdmin = {
-          type: AuthorizationCredential.ChallengeAdmin,
+          type: AuthorizationCredential.CHALLENGE_ADMIN,
           resourceID: credential.resourceID,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         };
         newRules.push(challengeAdmin);
       } else if (
-        credential.type === AuthorizationCredential.OrganisationMember
+        credential.type === AuthorizationCredential.ORGANIZATION_MEMBER
       ) {
         const challengeAdmin = {
-          type: AuthorizationCredential.OrganisationAdmin,
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
           resourceID: credential.resourceID,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         };

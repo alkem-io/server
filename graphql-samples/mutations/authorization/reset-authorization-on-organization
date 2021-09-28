@@ -1,0 +1,11 @@
+mutation authorizationPolicyResetOnOrganization($authorizationResetData: OrganizationAuthorizationResetInput!) {
+  authorizationPolicyResetOnOrganization(authorizationResetData: $authorizationResetData) {
+    nameID
+  }
+}
+
+{
+  "authorizationResetData": {
+    "organizationID": "uuid_nameid"
+  }
+}

@@ -7,10 +7,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { Repository } from 'typeorm';
-import {
-  IAuthorizationPolicy,
-  UpdateAuthorizationPolicyInput,
-} from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
@@ -85,7 +82,7 @@ export class ChallengeAuthorizationService {
       challenge.community =
         await this.baseChallengeService.setMembershipCredential(
           challenge,
-          AuthorizationCredential.ChallengeMember
+          AuthorizationCredential.CHALLENGE_MEMBER
         );
     }
 
@@ -116,7 +113,7 @@ export class ChallengeAuthorizationService {
     const rules: AuthorizationRuleCredential[] = [];
 
     const challengeAdmin = {
-      type: AuthorizationCredential.ChallengeAdmin,
+      type: AuthorizationCredential.CHALLENGE_ADMIN,
       resourceID: challengeID,
       grantedPrivileges: [
         AuthorizationPrivilege.CREATE,
@@ -129,7 +126,7 @@ export class ChallengeAuthorizationService {
     rules.push(challengeAdmin);
 
     const challengeMember = {
-      type: AuthorizationCredential.ChallengeMember,
+      type: AuthorizationCredential.CHALLENGE_MEMBER,
       resourceID: challengeID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };
@@ -143,40 +140,12 @@ export class ChallengeAuthorizationService {
     const agent = await this.challengeService.getAgent(challengeID);
 
     const stateChange = {
-      type: AuthorizationVerifiedCredential.StateModificationCredential,
+      type: AuthorizationVerifiedCredential.STATE_MODIFICATION_CREDENTIAL,
       resourceID: agent.did,
       grantedPrivileges: [AuthorizationPrivilege.UPDATE],
     };
     rules.push(stateChange);
 
     return JSON.stringify(rules);
-  }
-
-  async updateAuthorization(
-    challenge: IChallenge,
-    authorizationUpdateData: UpdateAuthorizationPolicyInput
-  ): Promise<IChallenge> {
-    await this.baseChallengeAuthorizationService.updateAuthorization(
-      challenge,
-      this.challengeRepository,
-      authorizationUpdateData
-    );
-
-    // propagate authorization rules for child entities
-    if (challenge.opportunities) {
-      for (const opportunity of challenge.opportunities) {
-        opportunity.authorization =
-          this.authorizationPolicyService.updateAuthorization(
-            opportunity.authorization,
-            authorizationUpdateData
-          );
-        await this.opportunityAuthorizationService.updateAuthorization(
-          opportunity,
-          opportunity.authorization
-        );
-      }
-    }
-
-    return await this.challengeRepository.save(challenge);
   }
 }
