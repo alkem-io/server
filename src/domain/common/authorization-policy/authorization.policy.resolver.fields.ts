@@ -43,10 +43,10 @@ export class AuthorizationPolicyResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('agentPrivileges', () => [AuthorizationPrivilege], {
+  @ResolveField('myPrivileges', () => [AuthorizationPrivilege], {
     nullable: true,
     description:
-      'The privileges granted to the current Agent based on this Authorization Policy.',
+      'The privileges granted to the current user based on this Authorization Policy.',
   })
   @Profiling.api
   myPrivileges(
