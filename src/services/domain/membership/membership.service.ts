@@ -298,6 +298,7 @@ export class MembershipService {
             .setParameters({ communityID: `%${community.id}%` })
             .getOne();
           if (challengeForCommunity) {
+            // the application is issued for a challenge
             applicationResult.challengeID = challengeForCommunity.id;
           } else {
             const opportunityForCommunity = await this.opportunityRepository
@@ -308,22 +309,20 @@ export class MembershipService {
               .setParameters({ communityID: `%${community.id}%` })
               .getOne();
 
-            if (!opportunityForCommunity) {
+            if (
+              !opportunityForCommunity ||
+              !opportunityForCommunity.challenge
+            ) {
               throw new RelationshipNotFoundException(
                 `Unable to find Challenge or Opportunity with the community specified: ${community.id}`,
                 LogContext.COMMUNITY
               );
             }
 
-            if (!opportunityForCommunity.challenge) {
-              throw new RelationshipNotFoundException(
-                `Unable to find Challenge for Opportunity with the community specified: ${community.id}`,
-                LogContext.COMMUNITY
-              );
-            }
+            // the application is issued for an an opportunity
+            applicationResult.opportunityID = opportunityForCommunity.id;
             applicationResult.challengeID =
               opportunityForCommunity.challenge.id;
-            applicationResult.opportunityID = opportunityForCommunity.id;
           }
         }
 
