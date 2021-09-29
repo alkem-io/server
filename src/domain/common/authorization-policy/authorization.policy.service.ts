@@ -19,6 +19,7 @@ import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -189,5 +190,17 @@ export class AuthorizationPolicyService {
     this.appendCredentialAuthorizationRules(authorization, newRules);
 
     return authorization;
+  }
+
+  getAgentPrivileges(
+    agentInfo: AgentInfo,
+    authorizationPolicy: IAuthorizationPolicy
+  ): AuthorizationPrivilege[] {
+    if (!agentInfo || !agentInfo.credentials) return [];
+
+    return this.authorizationService.getGrantedPrivileges(
+      agentInfo.credentials,
+      authorizationPolicy
+    );
   }
 }
