@@ -20,4 +20,7 @@ export abstract class IApplication extends IAuthorizable {
   questions?: Question[];
 
   ecoverseID?: string;
+
+  createdDate!: Date;
+  updatedDate!: Date;
 }

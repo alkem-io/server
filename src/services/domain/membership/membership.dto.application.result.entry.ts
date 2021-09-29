@@ -23,15 +23,29 @@ export class ApplicationResultEntry {
   })
   state: string;
 
+  @Field(() => Date, {
+    description: 'Date of creation',
+  })
+  createdDate: Date;
+
+  @Field(() => Date, {
+    description: 'Date of last update',
+  })
+  updatedDate: Date;
+
   constructor(
     communityID: string,
     displayName: string,
     state: string,
-    id: string
+    id: string,
+    createdDate: Date,
+    updatedDate: Date
   ) {
     this.displayName = displayName;
     this.communityID = communityID;
     this.state = state;
     this.id = id;
+    this.createdDate = createdDate;
+    this.updatedDate = updatedDate;
   }
 }

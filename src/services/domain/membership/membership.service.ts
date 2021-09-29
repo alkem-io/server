@@ -267,7 +267,9 @@ export class MembershipService {
           community.id,
           community.displayName,
           state,
-          application.id
+          application.id,
+          application.createdDate,
+          application.updatedDate
         );
         applicationResults.push(applicationResult);
       }
