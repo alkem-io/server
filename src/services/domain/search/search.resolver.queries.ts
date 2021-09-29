@@ -10,16 +10,18 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Resolver()
 export class SearchResolverQueries {
   private searchAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private searchService: SearchService
   ) {
     this.searchAuthorizationPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );

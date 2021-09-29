@@ -22,18 +22,20 @@ import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
 import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
 import { EcoverseAuthorizationResetInput } from './dto/ecoverse.dto.reset.authorization';
 import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Resolver()
 export class EcoverseResolverMutations {
   private globalAdminAuthorization: IAuthorizationPolicy;
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private ecoverseService: EcoverseService,
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService
   ) {
     this.globalAdminAuthorization =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.ADMIN],
         [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
       );

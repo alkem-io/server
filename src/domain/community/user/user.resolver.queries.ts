@@ -12,6 +12,7 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -19,10 +20,11 @@ export class UserResolverQueries {
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService
   ) {
     this.queryAuthorizationPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );

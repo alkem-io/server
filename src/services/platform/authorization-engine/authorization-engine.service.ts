@@ -3,19 +3,13 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
-import {
-  AuthorizationCredential,
-  AuthorizationRoleGlobal,
-  ConfigurationTypes,
-  LogContext,
-} from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { ConfigService } from '@nestjs/config';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationRuleVerifiedCredential } from '@domain/common/authorization-policy/authorization.rule.verified.credential';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class AuthorizationEngineService {
@@ -186,41 +180,5 @@ export class AuthorizationEngineService {
     );
 
     return uniquePrivileges;
-  }
-
-  createGlobalRolesAuthorizationPolicy(
-    globalRoles: AuthorizationRoleGlobal[],
-    privileges: AuthorizationPrivilege[]
-  ): IAuthorizationPolicy {
-    const authorization = new AuthorizationPolicy();
-    const newRules: AuthorizationRuleCredential[] = [];
-
-    for (const globalRole of globalRoles) {
-      let credType: AuthorizationCredential;
-      if (globalRole === AuthorizationRoleGlobal.ADMIN) {
-        credType = AuthorizationCredential.GLOBAL_ADMIN;
-      } else if (globalRole === AuthorizationRoleGlobal.COMMUNITY_ADMIN) {
-        credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
-      } else if (globalRole === AuthorizationRoleGlobal.REGISTERED) {
-        credType = AuthorizationCredential.GLOBAL_REGISTERED;
-      } else {
-        throw new ForbiddenException(
-          `Authorization: invalid global role encountered: ${globalRole}`,
-          LogContext.AUTH
-        );
-      }
-      const roleCred = {
-        type: credType,
-        resourceID: '',
-        grantedPrivileges: privileges,
-      };
-      newRules.push(roleCred);
-    }
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      newRules
-    );
-
-    return authorization;
   }
 }

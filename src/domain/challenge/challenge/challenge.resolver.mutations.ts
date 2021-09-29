@@ -8,10 +8,7 @@ import {
   DeleteChallengeInput,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
-import {
-  ChallengeAuthorizeStateModificationInput,
-  GraphqlGuard,
-} from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 import {
   CreateOpportunityInput,
   IOpportunity,
@@ -27,6 +24,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
+import { ChallengeAuthorizeStateModificationInput } from './dto/challenge.dto.authorize.state.modification';
 
 @Resolver()
 export class ChallengeResolverMutations {

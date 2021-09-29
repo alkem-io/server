@@ -10,6 +10,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AgentInfo } from '@core/authentication';
 import { OrganizationMembership } from './membership.dto.organization.result';
 import { MembershipOrganizationInput } from './membership.dto.organization.input';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class MembershipResolverQueries {
@@ -17,10 +18,11 @@ export class MembershipResolverQueries {
 
   constructor(
     private authorizationEngine: AuthorizationEngineService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private membershipService: MembershipService
   ) {
     this.membershipAuthorizationPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );

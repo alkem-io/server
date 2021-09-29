@@ -45,7 +45,7 @@ export class OrganizationResolverMutations {
     @Args('organizationData') organizationData: CreateOrganizationInput
   ): Promise<IOrganization> {
     const authorizationPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [
           AuthorizationRoleGlobal.COMMUNITY_ADMIN,
           AuthorizationRoleGlobal.ADMIN,

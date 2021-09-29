@@ -6,7 +6,12 @@ import {
   ForbiddenException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  AuthorizationRoleGlobal,
+  LogContext,
+} from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -168,5 +173,38 @@ export class AuthorizationPolicyService {
       this.logger.error(msg);
       throw new ForbiddenException(msg, LogContext.AUTH);
     }
+  }
+
+  createGlobalRolesAuthorizationPolicy(
+    globalRoles: AuthorizationRoleGlobal[],
+    privileges: AuthorizationPrivilege[]
+  ): IAuthorizationPolicy {
+    const authorization = new AuthorizationPolicy();
+    const newRules: AuthorizationRuleCredential[] = [];
+
+    for (const globalRole of globalRoles) {
+      let credType: AuthorizationCredential;
+      if (globalRole === AuthorizationRoleGlobal.ADMIN) {
+        credType = AuthorizationCredential.GLOBAL_ADMIN;
+      } else if (globalRole === AuthorizationRoleGlobal.COMMUNITY_ADMIN) {
+        credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
+      } else if (globalRole === AuthorizationRoleGlobal.REGISTERED) {
+        credType = AuthorizationCredential.GLOBAL_REGISTERED;
+      } else {
+        throw new ForbiddenException(
+          `Authorization: invalid global role encountered: ${globalRole}`,
+          LogContext.AUTH
+        );
+      }
+      const roleCred = {
+        type: credType,
+        resourceID: '',
+        grantedPrivileges: privileges,
+      };
+      newRules.push(roleCred);
+    }
+    this.appendCredentialAuthorizationRules(authorization, newRules);
+
+    return authorization;
   }
 }

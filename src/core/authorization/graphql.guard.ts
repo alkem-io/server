@@ -85,21 +85,4 @@ export class GraphqlGuard extends AuthGuard([
 
     return resultAgentInfo;
   }
-
-  logAuthorizationToken(req: any) {
-    try {
-      let authorizationHeader: string = req.headers.authorization;
-      if (authorizationHeader)
-        authorizationHeader = authorizationHeader.substring(7);
-      this.logger.verbose?.(
-        `Authorization header token: ${authorizationHeader}`,
-        LogContext.AUTH
-      );
-    } catch (error) {
-      this.logger.error(
-        `Unable to retrieve Authorization header token: ${req}`,
-        LogContext.AUTH
-      );
-    }
-  }
 }

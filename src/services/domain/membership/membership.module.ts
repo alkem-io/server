@@ -10,10 +10,12 @@ import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationEngineModule,
+    AuthorizationPolicyModule,
     ApplicationModule,
     UserModule,
     UserGroupModule,

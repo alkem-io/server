@@ -12,10 +12,12 @@ import { AuthorizationEngineModule } from '@src/services/platform/authorization-
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationEngineModule,
+    AuthorizationPolicyModule,
     UserModule,
     UserGroupModule,
     OrganizationModule,
