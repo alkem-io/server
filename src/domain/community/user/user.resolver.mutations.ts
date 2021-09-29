@@ -14,8 +14,8 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
 import { CommunicationService } from '@src/services/platform/communication/communication.service';
-import { UserSendMessageInput } from './user.dto.send.msg';
-import { UserAuthorizationResetInput } from './user.dto.reset.authorization';
+import { UserSendMessageInput } from './dto/user.dto.send.message';
+import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -108,11 +108,11 @@ export class UserResolverMutations {
   })
   @Profiling.api
   async messageUser(
-    @Args('msgData') msgData: UserSendMessageInput,
+    @Args('messageData') messageData: UserSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const receivingUser = await this.userService.getUserOrFail(
-      msgData.receivingUserID
+      messageData.receivingUserID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -121,9 +121,9 @@ export class UserResolverMutations {
       `user send message: ${receivingUser.nameID}`
     );
 
-    return await this.communicationService.sendMsgUser({
+    return await this.communicationService.sendMessageToUser({
       sendingUserEmail: agentInfo.email,
-      message: msgData.message,
+      message: messageData.message,
       receiverID: receivingUser.email,
     });
   }

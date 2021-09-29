@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Inject,
   LoggerService,
+  ContextType,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
@@ -34,8 +35,19 @@ export class GraphqlGuard extends AuthGuard([
 
   // Need to override base method for graphql requests
   getRequest(context: ExecutionContext) {
-    const ctx = GqlExecutionContext.create(context);
-    return ctx.getContext().req;
+    if (context.getType<ContextType | 'graphql'>() === 'graphql') {
+      const ctx = GqlExecutionContext.create(context).getContext();
+
+      // required for passport.js for websocket grapqhl subscriptions
+      if (ctx.websocketHeader?.connectionParams) {
+        const websocketHeader = ctx.websocketHeader?.connectionParams || {};
+
+        return { headers: { ...websocketHeader } };
+      }
+
+      return ctx.req;
+    }
+    return context.switchToHttp().getRequest();
   }
 
   handleRequest(

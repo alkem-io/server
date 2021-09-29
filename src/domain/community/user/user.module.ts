@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { CacheModule, Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/community/profile/profile.module';
@@ -25,6 +25,7 @@ import { SubscriptionModule } from '@services/platform/subscription/subscription
     AuthorizationModule,
     TypeOrmModule.forFeature([User]),
     SubscriptionModule,
+    CacheModule.register({ max: 250, ttl: 300 }),
   ],
   providers: [
     UserService,

@@ -30,9 +30,10 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
-import { CommunitySendMessageInput } from './community.dto.send.msg';
+import { CommunitySendMessageInput } from './dto/community.dto.send.message';
 import { CommunityRoom } from '@services/platform/communication/communication.room.dto.community';
 import { ConfigService } from '@nestjs/config';
+import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
 
 @Injectable()
 export class CommunityService {
@@ -380,12 +381,14 @@ export class CommunityService {
       community.updatesRoomID =
         await this.communicationService.createCommunityRoom(
           community.communicationGroupID,
-          `${community.displayName} updates`
+          `${community.displayName} updates`,
+          { communityId: community.id }
         );
       community.discussionRoomID =
         await this.communicationService.createCommunityRoom(
           community.communicationGroupID,
-          `${community.displayName} discussion`
+          `${community.displayName} discussion`,
+          { communityId: community.id }
         );
       return await this.communityRepository.save(community);
     } catch (error) {
@@ -445,36 +448,70 @@ export class CommunityService {
     return room;
   }
 
-  async sendUpdateMessageToCommunity(
+  async sendMessageToCommunityUpdates(
     community: ICommunity,
     email: string,
-    msgData: CommunitySendMessageInput
+    messageData: CommunitySendMessageInput
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.updatesRoomID,
       email
     );
-    return await this.communicationService.sendMsgCommunity({
+    return await this.communicationService.sendMessageToCommunityRoom({
       sendingUserEmail: email,
-      message: msgData.message,
+      message: messageData.message,
       roomID: community.updatesRoomID,
     });
   }
 
-  async sendDiscussionMessageToCommunity(
+  async sendMessageToCommunityDiscussions(
     community: ICommunity,
     email: string,
-    msgData: CommunitySendMessageInput
+    messageData: CommunitySendMessageInput
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.discussionRoomID,
       email
     );
-    return await this.communicationService.sendMsgCommunity({
+    return await this.communicationService.sendMessageToCommunityRoom({
       sendingUserEmail: email,
-      message: msgData.message,
+      message: messageData.message,
+      roomID: community.discussionRoomID,
+    });
+  }
+
+  async removeMessageFromCommunityUpdates(
+    community: ICommunity,
+    email: string,
+    messageData: CommunityRemoveMessageInput
+  ) {
+    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
+      community.communicationGroupID,
+      community.updatesRoomID,
+      email
+    );
+    await this.communicationService.deleteMessageFromCommunityRoom({
+      sendingUserEmail: email,
+      messageId: messageData.messageId,
+      roomID: community.updatesRoomID,
+    });
+  }
+
+  async removeMessageFromCommunityDiscussions(
+    community: ICommunity,
+    email: string,
+    messageData: CommunityRemoveMessageInput
+  ) {
+    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
+      community.communicationGroupID,
+      community.discussionRoomID,
+      email
+    );
+    await this.communicationService.deleteMessageFromCommunityRoom({
+      sendingUserEmail: email,
+      messageId: messageData.messageId,
       roomID: community.discussionRoomID,
     });
   }

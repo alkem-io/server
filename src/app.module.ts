@@ -99,10 +99,25 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
       },
       fieldResolverEnhancers: ['guards'],
       sortSchema: true,
-      context: ({ req }) => ({ req }),
       installSubscriptionHandlers: true,
+      context: ({ req, connection }) =>
+        // once the connection is established in onConnect, the context will have the user populated
+        connection ? { req: connection.context } : { req },
       subscriptions: {
         keepAlive: 5000,
+        onConnect: async (
+          _: { [key: string]: any },
+          __: { [key: string]: any },
+          context
+        ) => {
+          const authHeader = context.request.headers.authorization;
+          // Note: passing through headers so can leverage http authentication setup
+          // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
+          return { headers: { authorization: `${authHeader}` } };
+        },
+        onDisconnect: async (_: any, __: any) => {
+          // Todo: make a nicer error message if the subscription fails due to an execption being thrown
+        },
       },
     }),
     ScalarsModule,
