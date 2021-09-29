@@ -1,16 +1,20 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { LogContext } from '@common/enums';
 import { MatrixAgentPoolException } from '@common/exceptions';
+import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { OnModuleDestroy, OnModuleInit } from '@nestjs/common/interfaces';
 import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixAgent } from '../agent/matrix.agent';
 import { MatrixAgentService } from '../agent/matrix.agent.service';
 
 @Injectable()
-export class MatrixAgentPool {
-  private _wrappers: Record<string, MatrixAgent>;
-  private _sessions: Record<string, string>;
+export class MatrixAgentPool
+  implements Disposable, OnModuleDestroy, OnModuleInit
+{
+  private _cache: Record<string, { agent: MatrixAgent; expiresOn: number }>;
+  private _intervalService!: NodeJS.Timer;
 
   constructor(
     private matrixAgentService: MatrixAgentService,
@@ -18,16 +22,38 @@ export class MatrixAgentPool {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    /* TODO
-      - need to create sliding expiration mechanism
-      - additionally have a maximum pool size and destroy clients to make space for new ones
-      - need to expose mechanism to subscribe (socket) using the event-dispatcher
-    */
-    this._wrappers = {};
-    this._sessions = {};
+    this._cache = {};
   }
 
-  async acquire(email: string, session?: string): Promise<MatrixAgent> {
+  onModuleInit() {
+    this._intervalService = setInterval(
+      function (this: MatrixAgentPool) {
+        // implement basic caching - the cache-manager should not be used for dto's only
+        const now = new Date().getTime();
+        for (const key in this._cache) {
+          if (this._cache[key].expiresOn > now) {
+            continue;
+          }
+
+          this.release(key);
+        }
+      }.bind(this),
+      2000
+    );
+  }
+
+  onModuleDestroy() {
+    this.dispose();
+  }
+
+  dispose(): void {
+    clearInterval(this._intervalService);
+    for (const key in this._cache) {
+      this.release(key);
+    }
+  }
+
+  async acquire(email: string): Promise<MatrixAgent> {
     this.logger.verbose?.(
       `[AgentPool] obtaining user for email: ${email}`,
       LogContext.COMMUNICATION
@@ -38,31 +64,26 @@ export class MatrixAgentPool {
         LogContext.COMMUNICATION
       );
     }
-    if (!this._wrappers[email]) {
+
+    const getExpirationDateTicks = () => new Date().getTime() + 1000 * 60 * 15;
+
+    if (!this._cache[email]) {
       const operatingUser = await this.acquireUser(email);
       const client = await this.matrixAgentService.createMatrixAgent(
         operatingUser
       );
+
       await client.start();
 
-      this._wrappers[email] = client;
+      this._cache[email] = {
+        agent: client,
+        expiresOn: getExpirationDateTicks(),
+      };
+    } else {
+      this._cache[email].expiresOn = getExpirationDateTicks();
     }
 
-    if (session) {
-      this._sessions[session] = email;
-    }
-
-    return this._wrappers[email];
-  }
-
-  async acquireSession(session: string) {
-    const email = this._sessions[session];
-
-    return this.acquire(email);
-  }
-
-  async releaseSession(session: string) {
-    delete this._sessions[session];
+    return this._cache[email].agent;
   }
 
   private async acquireUser(email: string) {
@@ -82,9 +103,9 @@ export class MatrixAgentPool {
       `[AgentPool] releasing session for email: ${email}`,
       LogContext.COMMUNICATION
     );
-    if (this._wrappers[email]) {
-      this._wrappers[email].dispose();
-      delete this._wrappers[email];
+    if (this._cache[email]) {
+      this._cache[email].agent.dispose();
+      delete this._cache[email];
     }
   }
 }

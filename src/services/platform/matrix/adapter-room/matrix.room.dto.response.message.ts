@@ -1,5 +1,5 @@
 import { MatrixEvent } from 'matrix-js-sdk';
-export type MatrixRoomResponseMessage = MatrixEvent;
+export class MatrixRoomResponseMessage extends MatrixEvent {}
 
 export type MatrixRoomResponseMessageSender = {
   name: string;

@@ -1,0 +1,11 @@
+mutation removeUpdateMessageOnCommunity($messageData: CommunityRemoveMessageInput!) {
+  removeUpdateMessageOnCommunity(messageData: $messageData)
+}
+
+Variables:
+{
+  "messageData": {
+    "messageId": "example222",
+    "communityID": "uuid"
+  }
+}
