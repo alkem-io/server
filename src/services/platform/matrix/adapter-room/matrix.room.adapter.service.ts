@@ -44,7 +44,7 @@ export class MatrixRoomAdapterService {
     matrixClient: MatrixClient,
     options: IRoomOpts
   ): Promise<string> {
-    const { dmUserId, communityId } = options;
+    const { dmUserId, groupId, metadata } = options;
     // adjust options
     const createOpts = options.createOpts || {};
 
@@ -66,22 +66,44 @@ export class MatrixRoomAdapterService {
       LogContext.COMMUNICATION
     );
 
-    if (communityId) {
-      await matrixClient.addRoomToGroup(communityId, roomResult.room_id, true);
+    if (groupId) {
+      await matrixClient.addRoomToGroup(groupId, roomResult.room_id, true);
+    }
+
+    if (metadata) {
+      await matrixClient.setRoomAccountData(
+        roomID,
+        'alkemio.metadata',
+        metadata
+      );
     }
 
     return roomID;
   }
 
   async inviteUsersToRoom(
-    matrixClient: MatrixClient,
+    adminMatrixClient: MatrixClient,
     roomID: string,
-    matrixUsernames: string[]
+    matrixClients: MatrixClient[]
   ) {
-    for (const matrixUsername of matrixUsernames) {
-      await matrixClient.invite(roomID, matrixUsername);
+    // need to cache those
+    const room = await adminMatrixClient.getRoom(roomID);
+
+    for (const matrixClient of matrixClients) {
+      // not very well documented but we can validate whether the user has membership like this
+      // seen in https://github.com/matrix-org/matrix-js-sdk/blob/3c36be9839091bf63a4850f4babed0c976d48c0e/src/models/room-member.ts#L29
+      const userId = matrixClient.getUserId();
+      if (room.hasMembershipState(userId, 'join')) {
+        continue;
+      }
+      if (room.hasMembershipState(userId, 'invite')) {
+        await matrixClient.joinRoom(room.roomId);
+        continue;
+      }
+
+      await adminMatrixClient.invite(roomID, userId);
       this.logger.verbose?.(
-        `invited user to room: ${matrixUsername} - ${roomID}`,
+        `invited user to room: ${userId} - ${roomID}`,
         LogContext.COMMUNICATION
       );
     }

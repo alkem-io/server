@@ -1,10 +1,10 @@
-mutation messageUser($msgData: UserSendMessageInput!) {
-  messageUser(msgData: $msgData)
+mutation messageUser($messageData: UserSendMessageInput!) {
+  messageUser(messageData: $messageData)
 }
 
 Variables:
 {
-  "msgData": {
+  "messageData": {
     "message": "example",
     "receivingUserID": "uuid_nameid_email"
   }

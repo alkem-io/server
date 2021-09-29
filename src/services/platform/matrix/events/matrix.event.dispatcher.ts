@@ -153,7 +153,7 @@ export class MatrixEventDispatcher
   }
 
   dispose(): void {
-    Object.keys(this._subscriptions).forEach(this.detach);
+    Object.keys(this._subscriptions).forEach(this.detach.bind(this));
     this._disposables.forEach(d => d());
   }
 }

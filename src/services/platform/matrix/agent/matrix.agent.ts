@@ -1,25 +1,28 @@
+import { SubscriptionType } from '@common/enums/subscription.type';
 import { Disposable } from '@interfaces/disposable.interface';
-import {
-  IMatrixEventHandler,
-  MatrixEventDispatcher,
-} from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
+import { Inject, LoggerService } from '@nestjs/common';
 import {
   AutoAcceptRoomMembershipMonitorFactory,
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
-} from '@src/services/platform/matrix/events/matrix.event.adpater.room';
-import { MatrixClient } from '../types/matrix.client.type';
-import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
-import { IMatrixAgent } from './matrix.agent.interface';
-import { Inject, LoggerService } from '@nestjs/common';
-import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
-import { PubSubEngine } from 'graphql-subscriptions';
+} from '@services/platform/matrix/events/matrix.event.adapter.room';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import {
-  COMMUNICATION_MESSAGE_RECEIVED,
-  MATRIX_ROOM_JOINED,
-} from '@services/platform/subscription/subscription.events';
+  IMatrixEventHandler,
+  MatrixEventDispatcher,
+} from '@src/services/platform/matrix/events/matrix.event.dispatcher';
+import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
+import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
+import { MatrixClient } from '../types/matrix.client.type';
+import { IMatrixAgent } from './matrix.agent.interface';
+import { PubSubEngine } from 'graphql-subscriptions';
+
+export type MatrixAgentStartOptions = {
+  registerTimelineMonitor?: boolean;
+  registerRoomMonitor?: boolean;
+  registerMembershipMonitor?: boolean;
+};
 
 // Wraps an instance of the client sdk
 export class MatrixAgent implements IMatrixAgent, Disposable {
@@ -48,7 +51,17 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     this.eventDispatcher.detach(id);
   }
 
-  async start() {
+  async start(
+    {
+      registerMembershipMonitor = true,
+      registerRoomMonitor = true,
+      registerTimelineMonitor = true,
+    }: MatrixAgentStartOptions = {
+      registerMembershipMonitor: true,
+      registerRoomMonitor: true,
+      registerTimelineMonitor: true,
+    }
+  ) {
     const startComplete = new Promise<void>((resolve, reject) => {
       const subscription = this.eventDispatcher.syncMonitor.subscribe(
         ({ oldSyncState, syncState }) => {
@@ -62,17 +75,30 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       );
     });
 
-    this.attach({
-      id: 'root',
-      roomMemberMembershipMonitor: this.resolveRoomMembershipMonitor(),
-      groupMyMembershipMonitor: this.resolveGroupMembershipMonitor(),
-      roomTimelineMonitor: this.resolveRoomTimelineEventHandler(),
-      roomMonitor: this.resolveRoomEventHandler(),
-    });
-
     await this.matrixClient.startClient({});
+    await startComplete;
 
-    return await startComplete;
+    const eventHandler: IMatrixEventHandler = {
+      id: 'root',
+    };
+
+    if (registerMembershipMonitor) {
+      eventHandler['roomMemberMembershipMonitor'] =
+        this.resolveRoomMembershipMonitor();
+      eventHandler['groupMyMembershipMonitor'] =
+        this.resolveGroupMembershipMonitor();
+    }
+
+    if (registerTimelineMonitor) {
+      eventHandler['roomTimelineMonitor'] =
+        this.resolveRoomTimelineEventHandler();
+    }
+
+    if (registerRoomMonitor) {
+      eventHandler['roomMonitor'] = this.resolveRoomEventHandler();
+    }
+
+    this.attach(eventHandler);
   }
 
   resolveRoomMembershipMonitor() {
@@ -94,8 +120,10 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       this.matrixClient,
       this.matrixUserAdapterService,
       message => {
+        /* TODO - need to find a way to wire the admin user (with simplicity in mind)
+          in order to be able to read community data */
         this.subscriptionHandler.publish(
-          COMMUNICATION_MESSAGE_RECEIVED,
+          SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
           message
         );
       }
@@ -104,12 +132,15 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
   resolveRoomEventHandler() {
     return RoomMonitorFactory.create(message => {
-      this.subscriptionHandler.publish(MATRIX_ROOM_JOINED, message);
+      this.subscriptionHandler.publish(
+        SubscriptionType.COMMUNICATION_ROOM_JOINED,
+        message
+      );
     });
   }
 
   dispose() {
     this.matrixClient.stopClient();
-    this.eventDispatcher.dispose();
+    this.eventDispatcher.dispose.bind(this.eventDispatcher)();
   }
 }

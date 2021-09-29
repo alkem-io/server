@@ -1,21 +1,20 @@
+import { ConfigurationTypes, LogContext } from '@common/enums';
+import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { createClient } from 'matrix-js-sdk';
-import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
-import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
-import { MatrixAgent } from './matrix.agent';
-import { MatrixClient } from '../types/matrix.client.type';
-import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
-import { MatrixGroupAdapterService } from '../adapter-group/matrix.group.adapter.service';
-import { IMatrixAgent } from './matrix.agent.interface';
-import { MatrixAgentMessageRequestCommunity } from './matrix.agent.dto.message.request.community';
-import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
-import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
-import { MatrixRoom } from '../adapter-room/matrix.room';
-import { MatrixEntityNotFoundException } from '@common/exceptions';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { createClient, IContent } from 'matrix-js-sdk';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MatrixGroupAdapterService } from '../adapter-group/matrix.group.adapter.service';
+import { MatrixRoom } from '../adapter-room/matrix.room';
+import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
+import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
+import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
+import { MatrixClient } from '../types/matrix.client.type';
+import { MatrixAgent } from './matrix.agent';
+import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
+import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
+import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 
 @Injectable()
@@ -124,22 +123,23 @@ export class MatrixAgentService {
         LogContext.COMMUNICATION
       );
     }
+
     return matrixRoom;
   }
 
   async initiateMessagingToUser(
     matrixAgent: IMatrixAgent,
-    msgRequest: MatrixAgentMessageRequestDirect
+    messageRequest: MatrixAgentMessageRequestDirect
   ): Promise<string> {
     const directRoom = await this.getDirectRoomForUserEmail(
       matrixAgent,
-      msgRequest.email
+      messageRequest.email
     );
     if (directRoom) return directRoom.roomId;
 
     // Room does not exist, create...
     const matrixUsername = this.matrixUserAdapterService.convertEmailToMatrixId(
-      msgRequest.email
+      messageRequest.email
     );
 
     const targetRoomId = await this.matrixRoomAdapterService.createRoom(
@@ -193,36 +193,67 @@ export class MatrixAgentService {
     return await this.getRoom(matrixAgent, targetRoomId);
   }
 
-  async messageCommunity(
-    matrixAgent: IMatrixAgent,
-    msgRequest: MatrixAgentMessageRequestCommunity
-  ): Promise<string> {
-    const rooms = await matrixAgent.matrixClient.getGroupRooms(
-      msgRequest.communityId
-    );
-    const room = rooms.chunk[0];
-
-    if (!room) {
-      throw new Error('The community does not have a default room set');
-    }
-
-    await this.message(matrixAgent, room.room_id, { text: msgRequest.text });
-
-    return room.room_id;
-  }
-
-  async message(
+  async sendMessage(
     matrixAgent: IMatrixAgent,
     roomId: string,
-    msgRequest: MatrixAgentMessageRequest
+    messageRequest: MatrixAgentMessageRequest
   ) {
     const response = await matrixAgent.matrixClient.sendEvent(
       roomId,
       'm.room.message',
-      { body: msgRequest.text, msgtype: 'm.text' },
+      { body: messageRequest.text, msgtype: 'm.text' },
       ''
     );
 
     return response.event_id;
+  }
+
+  // TODO - see if the js sdk supports message aggregation
+  async editMessage(
+    matrixAgent: IMatrixAgent,
+    roomId: string,
+    messageId: string,
+    messageRequest: MatrixAgentMessageRequest
+  ) {
+    const newContent: IContent = {
+      msgtype: 'm.text',
+      body: messageRequest.text,
+    };
+    await matrixAgent.matrixClient.sendMessage(
+      roomId,
+      Object.assign(
+        {
+          'm.new_content': newContent,
+          'm.relates_to': {
+            rel_type: 'm.replace',
+            event_id: messageId,
+          },
+        },
+        newContent
+      )
+    );
+
+    // const response = await matrixAgent.matrixClient.sendEvent(
+    //   roomId,
+    //   'm.replace',
+    //   {
+    //     body: messageRequest.text,
+    //     msgtype: 'm.text',
+    //   }
+    // );
+
+    // need to find a way to retrieve the correct content for the event
+    // const replacementMessage = await matrixAgent.matrixClient.fetchRoomEvent(
+    //   roomId,
+    //   response.event_id
+    // );
+  }
+
+  async deleteMessage(
+    matrixAgent: IMatrixAgent,
+    roomId: string,
+    messageId: string
+  ) {
+    await matrixAgent.matrixClient.redactEvent(roomId, messageId);
   }
 }
