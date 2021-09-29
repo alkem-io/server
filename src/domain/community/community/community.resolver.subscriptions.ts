@@ -2,10 +2,10 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
-import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSubEngine } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -17,7 +17,7 @@ export class CommunityResolverSubscriptions {
   constructor(
     @Inject(PUB_SUB) private pubSub: PubSubEngine,
     private communityService: CommunityService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -51,7 +51,7 @@ export class CommunityResolverSubscriptions {
     const community = await this.communityService.getCommunityOrFail(
       communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,

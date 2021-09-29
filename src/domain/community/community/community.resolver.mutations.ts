@@ -274,7 +274,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       messageData.communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -326,7 +326,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       messageData.communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,
