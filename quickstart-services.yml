@@ -17,6 +17,7 @@ services:
     restart: always
     ports:
       - 8888:8080
+      - 8088:8088
       - 3000:80
       - 3306:3306
       - 8008:8008
@@ -149,6 +150,16 @@ services:
       - type: bind
         source: ./.build/synapse
         target: /data
+
+  synapse-admin:
+    container_name: alkemio_dev_synapse_admin
+    hostname: synapse-admin
+    image: awesometechnologies/synapse-admin:0.8.1
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 80
 
   rabbitmq:
     container_name: alkemio_dev_rabbitmq

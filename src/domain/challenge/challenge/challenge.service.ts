@@ -102,7 +102,7 @@ export class ChallengeService {
     // set the credential type in use by the community
     await this.baseChallengeService.setMembershipCredential(
       challenge,
-      AuthorizationCredential.ChallengeMember
+      AuthorizationCredential.CHALLENGE_MEMBER
     );
 
     // save the challenge, just in case the lead orgs assignment fails. Note that
@@ -176,7 +176,7 @@ export class ChallengeService {
       );
       challengeLead.agent = await this.agentService.revokeCredential({
         agentID: agentHostOrg.id,
-        type: AuthorizationCredential.ChallengeLead,
+        type: AuthorizationCredential.CHALLENGE_LEAD,
         resourceID: challengeID,
       });
       await this.organizationService.save(challengeLead);
@@ -496,7 +496,7 @@ export class ChallengeService {
   async getLeadOrganizations(challengeID: string): Promise<IOrganization[]> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.ChallengeLead,
+        type: AuthorizationCredential.CHALLENGE_LEAD,
         resourceID: challengeID,
       });
     return organizations;
@@ -526,7 +526,7 @@ export class ChallengeService {
     const agent = await this.organizationService.getAgent(organization);
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ChallengeLead,
+      type: AuthorizationCredential.CHALLENGE_LEAD,
       resourceID: challengeID,
     });
 
@@ -558,7 +558,7 @@ export class ChallengeService {
     const agent = await this.organizationService.getAgent(organization);
     organization.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ChallengeLead,
+      type: AuthorizationCredential.CHALLENGE_LEAD,
       resourceID: challengeID,
     });
 
@@ -576,7 +576,7 @@ export class ChallengeService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ChallengeAdmin,
+      type: AuthorizationCredential.CHALLENGE_ADMIN,
       resourceID: assignData.challengeID,
     });
 
@@ -592,7 +592,7 @@ export class ChallengeService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ChallengeAdmin,
+      type: AuthorizationCredential.CHALLENGE_ADMIN,
       resourceID: challengeID,
     });
 

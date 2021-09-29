@@ -46,9 +46,9 @@ export class MatrixAgentService {
   async createMatrixClient(
     operator: IOperationalMatrixUser
   ): Promise<MatrixClient> {
-    const idBaseUrl = this.configService.get(ConfigurationTypes.Communications)
+    const idBaseUrl = this.configService.get(ConfigurationTypes.COMMUNICATIONS)
       ?.matrix?.server?.url;
-    const baseUrl = this.configService.get(ConfigurationTypes.Communications)
+    const baseUrl = this.configService.get(ConfigurationTypes.COMMUNICATIONS)
       ?.matrix?.server?.url;
 
     if (!idBaseUrl || !baseUrl) {

@@ -60,7 +60,7 @@ export class UserGroupAuthorizationService {
     const newRules: AuthorizationRuleCredential[] = [];
 
     const userGroupMember = {
-      type: AuthorizationCredential.UserGroupMember,
+      type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: userGroupID,
       grantedPrivileges: [AuthorizationPrivilege.READ],
     };

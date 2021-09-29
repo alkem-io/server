@@ -85,7 +85,7 @@ export class OpportunityService {
     // set the credential type in use by the community
     await this.baseChallengeService.setMembershipCredential(
       opportunity,
-      AuthorizationCredential.OpportunityMember
+      AuthorizationCredential.OPPORTUNITY_MEMBER
     );
 
     return await this.saveOpportunity(opportunity);
@@ -343,7 +343,7 @@ export class OpportunityService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.OpportunityAdmin,
+      type: AuthorizationCredential.OPPORTUNITY_ADMIN,
       resourceID: opportunity.id,
     });
 
@@ -359,7 +359,7 @@ export class OpportunityService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.OpportunityAdmin,
+      type: AuthorizationCredential.OPPORTUNITY_ADMIN,
       resourceID: opportunity.id,
     });
 

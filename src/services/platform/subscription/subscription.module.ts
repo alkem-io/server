@@ -19,7 +19,7 @@ export const PUB_SUB = 'PUB_SUB';
       ) => {
         let pubsub;
         const rabbitMqOptions = configService.get(
-          ConfigurationTypes.Notifications
+          ConfigurationTypes.NOTIFICATIONS
         )?.rabbitmq;
         const connectionOptions = rabbitMqOptions.connection;
         const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;

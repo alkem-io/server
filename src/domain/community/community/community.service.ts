@@ -53,8 +53,8 @@ export class CommunityService {
   ) {
     // need both to be true
     this.communicationsEnabled =
-      this.configService.get(ConfigurationTypes.Communications)?.enabled &&
-      this.configService.get(ConfigurationTypes.Identity)?.authentication
+      this.configService.get(ConfigurationTypes.COMMUNICATIONS)?.enabled &&
+      this.configService.get(ConfigurationTypes.IDENTITY)?.authentication
         ?.enabled;
   }
 
@@ -107,16 +107,16 @@ export class CommunityService {
     communityID: string,
     options?: FindOneOptions<Community>
   ): Promise<ICommunity> {
-    const Community = await this.communityRepository.findOne(
+    const community = await this.communityRepository.findOne(
       { id: communityID },
       options
     );
-    if (!Community)
+    if (!community)
       throw new EntityNotFoundException(
         `Unable to find Community with ID: ${communityID}`,
         LogContext.COMMUNITY
       );
-    return Community;
+    return community;
   }
 
   async removeCommunity(communityID: string): Promise<boolean> {
@@ -154,6 +154,20 @@ export class CommunityService {
 
     await this.communityRepository.remove(community as Community);
     return true;
+  }
+
+  async getParentCommunity(
+    community: ICommunity
+  ): Promise<ICommunity | undefined> {
+    const communityWithParent = await this.getCommunityOrFail(community.id, {
+      relations: ['parentCommunity'],
+    });
+
+    const parentCommunity = communityWithParent?.parentCommunity;
+    if (parentCommunity) {
+      return await this.getCommunityOrFail(parentCommunity.id);
+    }
+    return undefined;
   }
 
   async setParentCommunity(
@@ -264,10 +278,14 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(communityID);
     const membershipCredential = this.getMembershipCredential(community);
 
-    return await this.agentService.hasValidCredential(agent.id, {
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
+    const validCredential = await this.agentService.hasValidCredential(
+      agent.id,
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+    return validCredential;
   }
 
   async getCommunities(ecoverseId: string): Promise<Community[]> {
@@ -285,31 +303,35 @@ export class CommunityService {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
 
-    const existingApplication =
-      await this.applicationService.findExistingApplication(
+    // Check presence / status of existing applications
+    const existingApplications =
+      await this.applicationService.findExistingApplications(
         user.id,
         community.id
       );
-
-    if (existingApplication) {
-      throw new InvalidStateTransitionException(
-        `An application for user ${existingApplication.user?.email} already exists for Community: ${community.id}.`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    const parentCommunity = community.parentCommunity;
-    if (parentCommunity) {
-      const isMember = await this.isMember(
-        applicationData.userID,
-        parentCommunity.id
-      );
-      if (!isMember)
+    for (const existingApplication of existingApplications) {
+      const isApplicationFinalized =
+        await this.applicationService.isFinalizedApplication(
+          existingApplication.id
+        );
+      if (!isApplicationFinalized) {
         throw new InvalidStateTransitionException(
-          `User ${applicationData.userID} is not a member of the parent Community: ${parentCommunity.displayName}.`,
+          `An application (ID: ${existingApplication.id}) already exists for user ${existingApplication.user?.email} on Community: ${community.displayName} that is not finalized.`,
           LogContext.COMMUNITY
         );
+      }
     }
+
+    // Check if the user is already a member; if so do not allow an application
+    const isExistingMember = await this.isMember(
+      applicationData.userID,
+      community.id
+    );
+    if (isExistingMember)
+      throw new InvalidStateTransitionException(
+        `User ${applicationData.userID} is already a member of the Community: ${community.displayName}.`,
+        LogContext.COMMUNITY
+      );
 
     const ecoverseID = community.ecoverseID;
     if (!ecoverseID)

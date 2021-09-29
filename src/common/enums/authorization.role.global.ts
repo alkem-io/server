@@ -1,6 +1,6 @@
 export enum AuthorizationRoleGlobal {
-  Registered = 'global-registered',
-  CommunityAdmin = 'global-admin-community',
-  ChallengesAdmin = 'global-admin-challenges',
-  Admin = 'global-admin',
+  REGISTERED = 'global-registered',
+  COMMUNITY_ADMIN = 'global-admin-community',
+  CHALLENGES_ADMIN = 'global-admin-challenges',
+  ADMIN = 'global-admin',
 }

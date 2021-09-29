@@ -13,6 +13,8 @@ entryPoints:
     address: ':3306'
   synapse:
     address: ':8008'
+  synapse-admin:
+    address: ':8088'
   ipfs-api:
     address: ':5001'
   mailslurper-client:

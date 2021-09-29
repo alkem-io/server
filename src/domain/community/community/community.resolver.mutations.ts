@@ -147,7 +147,7 @@ export class CommunityResolverMutations {
       this.authorizationPolicyService.appendCredentialAuthorizationRule(
         community.authorization,
         {
-          type: AuthorizationCredential.UserSelfManagement,
+          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
           resourceID: user.id,
         },
         [AuthorizationPrivilege.UPDATE]
@@ -174,7 +174,7 @@ export class CommunityResolverMutations {
       await this.authorizationPolicyService.appendCredentialAuthorizationRule(
         application.authorization,
         {
-          type: AuthorizationCredential.UserSelfManagement,
+          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
           resourceID: user.id,
         },
         [

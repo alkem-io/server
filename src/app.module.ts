@@ -43,15 +43,15 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
         synchronize: false,
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        host: configService.get(ConfigurationTypes.Storage)?.database?.host,
-        port: configService.get(ConfigurationTypes.Storage)?.database?.port,
-        username: configService.get(ConfigurationTypes.Storage)?.database
+        host: configService.get(ConfigurationTypes.STORAGE)?.database?.host,
+        port: configService.get(ConfigurationTypes.STORAGE)?.database?.port,
+        username: configService.get(ConfigurationTypes.STORAGE)?.database
           ?.username,
-        password: configService.get(ConfigurationTypes.Storage)?.database
+        password: configService.get(ConfigurationTypes.STORAGE)?.database
           ?.password,
-        database: configService.get(ConfigurationTypes.Storage)?.database
+        database: configService.get(ConfigurationTypes.STORAGE)?.database
           ?.schema,
-        logging: configService.get(ConfigurationTypes.Storage)?.database
+        logging: configService.get(ConfigurationTypes.STORAGE)?.database
           ?.logging,
       }),
     }),
@@ -68,18 +68,18 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     //       'node_modules/@jolocom/sdk-storage-typeorm/js/src/entities/*.js',
     //     ],
     //     // NOTE: these are in until jolocom fixes the name issue on typeorm-mysql.
-    //     // host: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
+    //     // host: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom.database
     //     //   ?.host,
-    //     // port: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
+    //     // port: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom.database
     //     //   ?.port,
-    //     // username: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
+    //     // username: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom
     //     //   .database?.username,
-    //     // password: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
+    //     // password: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom
     //     //   .database?.password,
-    //     // database: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom.database
+    //     // database: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom.database
     //     //   ?.schema,
 
-    //     logging: configService.get(ConfigurationTypes.Identity)?.ssi.jolocom
+    //     logging: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom
     //       .database?.logging,
     //     database: './jolocom.sqlite3',
     //   }),

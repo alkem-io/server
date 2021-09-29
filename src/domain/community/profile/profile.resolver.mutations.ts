@@ -7,8 +7,8 @@ import {
   UpdateProfileInput,
   UploadProfileAvatarInput,
 } from '@domain/community/profile';
-import { Inject, UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver, Subscription } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
@@ -19,9 +19,6 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { SubscriptionType } from '@common/enums/subscription.type';
-import { PubSubEngine } from 'apollo-server-express';
 
 @Resolver()
 export class ProfileResolverMutations {
@@ -30,9 +27,7 @@ export class ProfileResolverMutations {
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationEngine: AuthorizationEngineService,
-    private profileService: ProfileService,
-    @Inject(PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine
+    private profileService: ProfileService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -135,16 +130,7 @@ export class ProfileResolverMutations {
       mimetype,
       uploadData
     );
-    this.subscriptionHandler.publish(SubscriptionType.USER_AVATAR_UPLOADED, {
-      avatarUploaded: updatedProfile,
-    });
-    return updatedProfile;
-  }
 
-  @Subscription(() => IProfile)
-  avatarUploaded() {
-    return this.subscriptionHandler.asyncIterator(
-      SubscriptionType.USER_AVATAR_UPLOADED
-    );
+    return updatedProfile;
   }
 }
