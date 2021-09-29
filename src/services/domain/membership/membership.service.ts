@@ -7,8 +7,8 @@ import { MembershipUserInput } from './membership.dto.user.input';
 import { MembershipUserResultEntryEcoverse } from './membership.dto.user.result.entry.ecoverse';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { AuthorizationCredential } from '@common/enums';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { AuthorizationCredential, LogContext } from '@common/enums';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { IOrganization } from '@domain/community/organization';
 import { MembershipUserResultEntryOrganization } from './membership.dto.user.result.entry.organization';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
@@ -24,6 +24,12 @@ import { ApplicationResultEntry } from './membership.dto.application.result.entr
 import { IUser } from '@domain/community/user/user.interface';
 import { MembershipCommunityResultEntry } from './membership.dto.community.result.entry';
 import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
+import { CommunityService } from '@domain/community/community/community.service';
+import { Repository } from 'typeorm/repository/Repository';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { RelationshipNotFoundException } from '@common/exceptions';
 
 export class MembershipService {
   constructor(
@@ -32,7 +38,11 @@ export class MembershipService {
     private ecoverseService: EcoverseService,
     private challengeService: ChallengeService,
     private applicationService: ApplicationService,
+    private communityService: CommunityService,
     private opportunityService: OpportunityService,
+    private challengeRepository: Repository<Challenge>,
+    @InjectRepository(Opportunity)
+    private opportunityRepository: Repository<Opportunity>,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -269,6 +279,50 @@ export class MembershipService {
           state,
           application.id
         );
+        const communityParent = await this.communityService.getParentCommunity(
+          community
+        );
+        // Store the ecoverse the application is for, regardless of level
+        applicationResult.ecoverseID = community.ecoverseID;
+
+        if (communityParent) {
+          // For Challenge or an Opporunity, need to dig deeper...
+          const challengeForCommunity = await this.challengeRepository
+            .createQueryBuilder('challenge')
+            .leftJoinAndSelect('challenge.community', 'community')
+            .orWhere('community.id like :communityID')
+            .setParameters({ communityID: `%${community.id}%` })
+            .getOne();
+          if (challengeForCommunity) {
+            applicationResult.challengeID = challengeForCommunity.id;
+          } else {
+            const opportunityForCommunity = await this.opportunityRepository
+              .createQueryBuilder('opportunity')
+              .leftJoinAndSelect('opportunity.challenge', 'challenge')
+              .leftJoinAndSelect('opportunity.community', 'community')
+              .orWhere('community.id like :communityID')
+              .setParameters({ communityID: `%${community.id}%` })
+              .getOne();
+
+            if (!opportunityForCommunity) {
+              throw new RelationshipNotFoundException(
+                `Unable to find Challenge or Opportunity with the community specified: ${community.id}`,
+                LogContext.COMMUNITY
+              );
+            }
+
+            if (!opportunityForCommunity.challenge) {
+              throw new RelationshipNotFoundException(
+                `Unable to find Challenge for Opportunity with the community specified: ${community.id}`,
+                LogContext.COMMUNITY
+              );
+            }
+            applicationResult.challengeID =
+              opportunityForCommunity.challenge.id;
+            applicationResult.opportunityID = opportunityForCommunity.id;
+          }
+        }
+
         applicationResults.push(applicationResult);
       }
     }

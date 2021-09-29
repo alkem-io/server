@@ -10,6 +10,9 @@ import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Module({
   imports: [
@@ -22,6 +25,8 @@ import { ApplicationModule } from '@domain/community/application/application.mod
     CommunityModule,
     OrganizationModule,
     EcoverseModule,
+    TypeOrmModule.forFeature([Challenge]),
+    TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [MembershipService, MembershipResolverQueries],
   exports: [MembershipService],

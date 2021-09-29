@@ -23,6 +23,22 @@ export class ApplicationResultEntry {
   })
   state: string;
 
+  @Field(() => UUID, {
+    description: 'ID for the ultimate containing Hub',
+  })
+  ecoverseID!: string;
+
+  @Field(() => UUID, {
+    description:
+      'ID for the Challenge being applied to, if any. Or the Challenge containing the Opportunity being applied to.',
+  })
+  challengeID?: string;
+
+  @Field(() => UUID, {
+    description: 'ID for the Opportunity being applied to, if any.',
+  })
+  opportunityID?: string;
+
   constructor(
     communityID: string,
     displayName: string,
