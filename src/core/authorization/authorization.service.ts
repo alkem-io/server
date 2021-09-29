@@ -6,18 +6,16 @@ import { ConfigService } from '@nestjs/config';
 import { ForbiddenException } from '@common/exceptions';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationRuleVerifiedCredential } from '@domain/common/authorization-policy/authorization.rule.verified.credential';
+import { AuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential';
+import { AuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential';
 
 @Injectable()
 export class AuthorizationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private configService: ConfigService
   ) {}
 
   grantAccessOrFail(
@@ -28,8 +26,7 @@ export class AuthorizationService {
   ) {
     if (this.isAuthenticationDisabled()) return true;
 
-    const auth =
-      this.authorizationPolicyService.validateAuthorization(authorization);
+    const auth = this.validateAuthorization(authorization);
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
     const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
@@ -87,6 +84,17 @@ export class AuthorizationService {
     else return value;
   };
 
+  validateAuthorization(
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new ForbiddenException(
+        'Authorization: no definition provided',
+        LogContext.AUTH
+      );
+    return authorization;
+  }
+
   isAuthenticationDisabled(): boolean {
     const authEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
       ?.authentication?.enabled;
@@ -107,10 +115,8 @@ export class AuthorizationService {
     )
       return true;
 
-    const credentialRules: AuthorizationRuleCredential[] =
-      this.authorizationPolicyService.convertCredentialRulesStr(
-        authorization.credentialRules
-      );
+    const credentialRules: AuthorizationPolicyRuleCredential[] =
+      this.convertCredentialRulesStr(authorization.credentialRules);
     for (const rule of credentialRules) {
       for (const credential of agentInfo.credentials) {
         if (
@@ -123,8 +129,8 @@ export class AuthorizationService {
         }
       }
     }
-    const verifiedCredentialRules: AuthorizationRuleVerifiedCredential[] =
-      this.authorizationPolicyService.convertVerifiedCredentialRulesStr(
+    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[] =
+      this.convertVerifiedCredentialRulesStr(
         authorization.verifiedCredentialRules
       );
     for (const rule of verifiedCredentialRules) {
@@ -158,10 +164,8 @@ export class AuthorizationService {
       grantedPrivileges.push(AuthorizationPrivilege.READ);
     }
 
-    const credentialRules: AuthorizationRuleCredential[] =
-      this.authorizationPolicyService.convertCredentialRulesStr(
-        authorization.credentialRules
-      );
+    const credentialRules: AuthorizationPolicyRuleCredential[] =
+      this.convertCredentialRulesStr(authorization.credentialRules);
     for (const rule of credentialRules) {
       for (const credential of credentials) {
         if (
@@ -180,5 +184,34 @@ export class AuthorizationService {
     );
 
     return uniquePrivileges;
+  }
+
+  convertCredentialRulesStr(
+    rulesStr: string
+  ): AuthorizationPolicyRuleCredential[] {
+    if (!rulesStr || rulesStr.length == 0) return [];
+    try {
+      const rules: AuthorizationPolicyRuleCredential[] = JSON.parse(rulesStr);
+      return rules;
+    } catch (error) {
+      const msg = `Unable to convert rules to json: ${error}`;
+      this.logger.error(msg);
+      throw new ForbiddenException(msg, LogContext.AUTH);
+    }
+  }
+
+  convertVerifiedCredentialRulesStr(
+    rulesStr: string
+  ): AuthorizationPolicyRuleVerifiedCredential[] {
+    if (!rulesStr || rulesStr.length == 0) return [];
+    try {
+      const rules: AuthorizationPolicyRuleVerifiedCredential[] =
+        JSON.parse(rulesStr);
+      return rules;
+    } catch (error) {
+      const msg = `Unable to convert rules to json: ${error}`;
+      this.logger.error(msg);
+      throw new ForbiddenException(msg, LogContext.AUTH);
+    }
   }
 }

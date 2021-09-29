@@ -1,9 +1,8 @@
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
 import { AuthorizationService } from './authorization.service';
 
 @Module({
-  imports: [AuthorizationPolicyModule],
+  imports: [],
   providers: [AuthorizationService],
   exports: [AuthorizationService],
 })

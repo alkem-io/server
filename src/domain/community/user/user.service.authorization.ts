@@ -12,11 +12,11 @@ import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import {
   AuthorizationPolicy,
-  AuthorizationRuleCredential,
   IAuthorizationPolicy,
 } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -94,7 +94,7 @@ export class UserAuthorizationService {
   private appendGlobalCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
-    const newRules: AuthorizationRuleCredential[] = [];
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GLOBAL_ADMIN,
@@ -144,7 +144,7 @@ export class UserAuthorizationService {
     this.appendGlobalCredentialRules(authorization);
 
     // add the rules dependent on the user
-    const newRules: AuthorizationRuleCredential[] = [];
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     const userSelfAdmin = {
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,

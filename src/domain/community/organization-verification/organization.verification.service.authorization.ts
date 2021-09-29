@@ -5,10 +5,10 @@ import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerification } from './organization.verification.entity';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
 export class OrganizationVerificationAuthorizationService {
@@ -49,7 +49,7 @@ export class OrganizationVerificationAuthorizationService {
         LogContext.COMMUNITY
       );
 
-    const newRules: AuthorizationRuleCredential[] = [];
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GLOBAL_ADMIN,
