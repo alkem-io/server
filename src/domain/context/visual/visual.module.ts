@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Visual } from './visual.entity';
 import { VisualService } from './visual.service';
 
 @Module({
-  imports: [AuthorizationEngineModule, TypeOrmModule.forFeature([Visual])],
+  imports: [AuthorizationModule, TypeOrmModule.forFeature([Visual])],
   providers: [VisualService],
   exports: [VisualService],
 })

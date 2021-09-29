@@ -5,13 +5,13 @@ import { GraphqlGuard } from '@core/authorization';
 import { DeleteReferenceInput, IReference } from '@domain/common/reference';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ReferenceService } from './reference.service';
 
 @Resolver()
 export class ReferenceResolverMutations {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private referenceService: ReferenceService
   ) {}
 
@@ -26,7 +26,7 @@ export class ReferenceResolverMutations {
     const reference = await this.referenceService.getReferenceOrFail(
       deleteData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       reference.authorization,
       AuthorizationPrivilege.DELETE,

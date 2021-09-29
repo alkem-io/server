@@ -9,13 +9,13 @@ import {
 import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 
 @Resolver()
 export class AspectResolverMutations {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private aspectService: AspectService
   ) {}
 
@@ -28,7 +28,7 @@ export class AspectResolverMutations {
     @Args('deleteData') deleteData: DeleteAspectInput
   ): Promise<IAspect> {
     const aspect = await this.aspectService.getAspectOrFail(deleteData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       aspect.authorization,
       AuthorizationPrivilege.DELETE,
@@ -46,7 +46,7 @@ export class AspectResolverMutations {
     @Args('aspectData') aspectData: UpdateAspectInput
   ): Promise<IAspect> {
     const aspect = await this.aspectService.getAspectOrFail(aspectData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       aspect.authorization,
       AuthorizationPrivilege.UPDATE,

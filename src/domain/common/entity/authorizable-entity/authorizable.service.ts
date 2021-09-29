@@ -3,11 +3,11 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { IAuthorizable } from '.';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Injectable()
 export class AuthorizableService {
-  constructor(private authorizationEngine: AuthorizationEngineService) {}
+  constructor(private authorizationService: AuthorizationService) {}
 
   getGrantedPrivileges(
     authorizable: IAuthorizable,
@@ -20,7 +20,7 @@ export class AuthorizableService {
         `Unable to retrieve AuthorizationPolicy on authorizable entity ${authorizable.id} `,
         LogContext.AUTH
       );
-    return this.authorizationEngine.getGrantedPrivileges(
+    return this.authorizationService.getGrantedPrivileges(
       agentInfo.credentials,
       authorizationPolicy
     );

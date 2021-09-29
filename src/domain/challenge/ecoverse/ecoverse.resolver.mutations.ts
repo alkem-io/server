@@ -11,7 +11,7 @@ import {
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationRoleGlobal } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
@@ -28,7 +28,7 @@ export class EcoverseResolverMutations {
   private globalAdminAuthorization: IAuthorizationPolicy;
 
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private ecoverseService: EcoverseService,
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
@@ -50,7 +50,7 @@ export class EcoverseResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ecoverseData') ecoverseData: CreateEcoverseInput
   ): Promise<IEcoverse> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.globalAdminAuthorization,
       AuthorizationPrivilege.CREATE,
@@ -74,7 +74,7 @@ export class EcoverseResolverMutations {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       ecoverseData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -105,7 +105,7 @@ export class EcoverseResolverMutations {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       deleteData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.DELETE,
@@ -126,7 +126,7 @@ export class EcoverseResolverMutations {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       challengeData.ecoverseID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.CREATE,
@@ -154,7 +154,7 @@ export class EcoverseResolverMutations {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       authorizationResetData.ecoverseID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -177,7 +177,7 @@ export class EcoverseResolverMutations {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       membershipData.ecoverseID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.GRANT,
@@ -198,7 +198,7 @@ export class EcoverseResolverMutations {
     const ecoverse = await this.ecoverseService.getEcoverseOrFail(
       membershipData.ecoverseID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       ecoverse.authorization,
       AuthorizationPrivilege.GRANT,

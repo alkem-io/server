@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationVerificationLifecycleOptionsProvider } from './organization.verification.lifecycle.options.provider';
 import { OrganizationVerificationResolverMutations } from './organization.verification.resolver.mutations';
@@ -12,7 +12,7 @@ import { OrganizationVerificationAuthorizationService } from './organization.ver
 @Module({
   imports: [
     AuthorizationPolicyModule,
-    AuthorizationEngineModule,
+    AuthorizationModule,
     LifecycleModule,
     TypeOrmModule.forFeature([OrganizationVerification]),
   ],

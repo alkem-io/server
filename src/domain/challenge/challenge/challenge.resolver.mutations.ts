@@ -16,7 +16,7 @@ import {
 import { AuthorizationPrivilege } from '@common/enums';
 import { ChallengeLifecycleOptionsProvider } from './challenge.lifecycle.options.provider';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
@@ -31,7 +31,7 @@ export class ChallengeResolverMutations {
   constructor(
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private challengeService: ChallengeService,
     private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider
   ) {}
@@ -48,7 +48,7 @@ export class ChallengeResolverMutations {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.challengeID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.CREATE,
@@ -75,7 +75,7 @@ export class ChallengeResolverMutations {
     const challenge = await this.challengeService.getChallengeOrFail(
       opportunityData.challengeID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.CREATE,
@@ -102,7 +102,7 @@ export class ChallengeResolverMutations {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -122,7 +122,7 @@ export class ChallengeResolverMutations {
     const challenge = await this.challengeService.getChallengeOrFail(
       deleteData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.DELETE,
@@ -143,7 +143,7 @@ export class ChallengeResolverMutations {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeEventData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -172,7 +172,7 @@ export class ChallengeResolverMutations {
     const challenge = await this.challengeService.getChallengeOrFail(
       grantStateModificationVC.challengeID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.CREATE,
@@ -196,7 +196,7 @@ export class ChallengeResolverMutations {
     const challenge = await this.challengeService.getChallengeOrFail(
       membershipData.challengeID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.GRANT,
@@ -217,7 +217,7 @@ export class ChallengeResolverMutations {
     const challenge = await this.challengeService.getChallengeOrFail(
       membershipData.challengeID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.GRANT,

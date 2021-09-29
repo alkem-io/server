@@ -6,7 +6,7 @@ import { IAgent } from '@domain/agent/agent';
 import { IUser, User } from '@domain/community/user';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CommunityRoom } from '@services/platform/communication';
 import { DirectRoom } from '@services/platform/communication/communication.room.dto.direct';
 import { CommunicationService } from '@src/services/platform/communication/communication.service';
@@ -15,7 +15,7 @@ import { UserService } from './user.service';
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private userService: UserService,
     private communicationService: CommunicationService
   ) {}
@@ -66,7 +66,7 @@ export class UserResolverFields {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     // Need to do inside rather than as decorator so can return a replacement string
-    const accessGranted = await this.authorizationEngine.isAccessGranted(
+    const accessGranted = await this.authorizationService.isAccessGranted(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.READ
@@ -87,7 +87,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
-    const accessGranted = await this.authorizationEngine.isAccessGranted(
+    const accessGranted = await this.authorizationService.isAccessGranted(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.READ

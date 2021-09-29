@@ -10,7 +10,7 @@ import {
 import { IActor } from '@domain/context/actor/actor.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CurrentUser } from '@common/decorators';
 import { ActorService } from '../actor/actor.service';
 import { CreateActorInput } from '@domain/context/actor/actor.dto.create';
@@ -21,7 +21,7 @@ export class ActorGroupResolverMutations {
   constructor(
     private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private actorGroupService: ActorGroupService
   ) {}
 
@@ -36,7 +36,7 @@ export class ActorGroupResolverMutations {
     const actorGroup = await this.actorGroupService.getActorGroupOrFail(
       actorData.actorGroupID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       actorGroup.authorization,
       AuthorizationPrivilege.CREATE,
@@ -63,7 +63,7 @@ export class ActorGroupResolverMutations {
     const actorGroup = await this.actorGroupService.getActorGroupOrFail(
       deleteData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       actorGroup.authorization,
       AuthorizationPrivilege.DELETE,

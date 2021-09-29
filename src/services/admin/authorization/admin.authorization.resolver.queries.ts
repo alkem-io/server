@@ -6,7 +6,7 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
@@ -18,7 +18,7 @@ export class AdminAuthorizationResolverQueries {
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService
   ) {
     this.authorizationQueriesPolicy =
@@ -40,7 +40,7 @@ export class AdminAuthorizationResolverQueries {
     credentialsCriteriaData: UsersWithAuthorizationCredentialInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser[]> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationQueriesPolicy,
       AuthorizationPrivilege.READ,
@@ -63,7 +63,7 @@ export class AdminAuthorizationResolverQueries {
     userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<AuthorizationPrivilege[]> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationQueriesPolicy,
       AuthorizationPrivilege.READ,

@@ -11,12 +11,12 @@ import {
 } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 @Resolver()
 export class UserGroupResolverMutations {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private groupService: UserGroupService
   ) {}
 
@@ -29,7 +29,7 @@ export class UserGroupResolverMutations {
     @Args('deleteData') deleteData: DeleteUserGroupInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(deleteData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       group.authorization,
       AuthorizationPrivilege.DELETE,
@@ -48,7 +48,7 @@ export class UserGroupResolverMutations {
     @Args('userGroupData') userGroupData: UpdateUserGroupInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(userGroupData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       group.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -69,7 +69,7 @@ export class UserGroupResolverMutations {
     const group = await this.groupService.getUserGroupOrFail(
       membershipData.groupID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       group.authorization,
       AuthorizationPrivilege.GRANT,
@@ -90,7 +90,7 @@ export class UserGroupResolverMutations {
     const group = await this.groupService.getUserGroupOrFail(
       membershipData.groupID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       group.authorization,
       AuthorizationPrivilege.DELETE,

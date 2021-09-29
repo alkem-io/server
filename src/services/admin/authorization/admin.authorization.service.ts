@@ -10,7 +10,7 @@ import {
 } from '@common/enums';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AssignGlobalAdminInput } from '@services/admin/authorization/dto/authorization.dto.assign.global.admin';
 import { RemoveGlobalAdminInput } from '@services/admin/authorization/dto/authorization.dto.remove.global.admin';
 import { AssignGlobalCommunityAdminInput } from '@services/admin/authorization/dto/authorization.dto.assign.global.community.admin';
@@ -24,7 +24,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 @Injectable()
 export class AdminAuthorizationService {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
@@ -130,7 +130,7 @@ export class AdminAuthorizationService {
         userAuthorizationPrivilegesData.authorizationID
       );
 
-    const privileges = await this.authorizationEngine.getGrantedPrivileges(
+    const privileges = await this.authorizationService.getGrantedPrivileges(
       credentials,
       authorizationPolicy
     );

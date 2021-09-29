@@ -8,7 +8,7 @@ import { SearchResolverQueries } from './search.resolver.queries';
 import { SearchService } from './search.service';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { Organization } from '@domain/community/organization';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
@@ -16,7 +16,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 
 @Module({
   imports: [
-    AuthorizationEngineModule,
+    AuthorizationModule,
     AuthorizationPolicyModule,
     UserModule,
     UserGroupModule,

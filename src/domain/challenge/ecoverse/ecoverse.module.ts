@@ -16,7 +16,7 @@ import { ApplicationModule } from '@domain/community/application/application.mod
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
@@ -27,7 +27,7 @@ import { UserModule } from '@domain/community/user/user.module';
   imports: [
     AgentModule,
     AuthorizationPolicyModule,
-    AuthorizationEngineModule,
+    AuthorizationModule,
     ContextModule,
     CommunityModule,
     ChallengeModule,

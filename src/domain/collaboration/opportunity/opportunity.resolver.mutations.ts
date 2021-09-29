@@ -8,7 +8,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -29,7 +29,7 @@ export class OpportunityResolverMutations {
     private relationAuthorizationService: RelationAuthorizationService,
     private projectService: ProjectService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private opportunityService: OpportunityService,
     private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
   ) {}
@@ -46,7 +46,7 @@ export class OpportunityResolverMutations {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -66,7 +66,7 @@ export class OpportunityResolverMutations {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       deleteData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.DELETE,
@@ -87,7 +87,7 @@ export class OpportunityResolverMutations {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       projectData.opportunityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -120,14 +120,14 @@ export class OpportunityResolverMutations {
         opportunity.authorization
       );
     // First check if the user has read access
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
       AuthorizationPrivilege.READ,
       `create relation: ${opportunity.nameID}`
     );
     // Then check if the user can create
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
       AuthorizationPrivilege.CREATE,
@@ -158,7 +158,7 @@ export class OpportunityResolverMutations {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityEventData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -185,7 +185,7 @@ export class OpportunityResolverMutations {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       membershipData.opportunityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.GRANT,
@@ -206,7 +206,7 @@ export class OpportunityResolverMutations {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       membershipData.opportunityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.GRANT,

@@ -7,13 +7,13 @@ import { ChallengeService } from './challenge.service';
 import { ChallengeEventInput } from '@domain/challenge/challenge/dto/challenge.dto.event';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IChallenge } from './challenge.interface';
 
 @Injectable()
 export class ChallengeLifecycleOptionsProvider {
   constructor(
-    private authorizationEngineService: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private lifecycleService: LifecycleService,
     private challengeService: ChallengeService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -65,12 +65,11 @@ export class ChallengeLifecycleOptionsProvider {
         challengeStateUpdateAuthorized: (_, event) => {
           const agentInfo: AgentInfo = event.agentInfo;
           const authorizationPolicy: AuthorizationPolicy = event.authorization;
-          const stateChangeAllowed =
-            this.authorizationEngineService.isAccessGranted(
-              agentInfo,
-              authorizationPolicy,
-              AuthorizationPrivilege.UPDATE
-            );
+          const stateChangeAllowed = this.authorizationService.isAccessGranted(
+            agentInfo,
+            authorizationPolicy,
+            AuthorizationPrivilege.UPDATE
+          );
           // Todo: disabling the logic check for now to always return true
           if (!stateChangeAllowed) return true;
           return true;

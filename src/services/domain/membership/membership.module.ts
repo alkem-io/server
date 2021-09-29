@@ -8,13 +8,13 @@ import { MembershipResolverQueries } from './membership.resolver.queries';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
-    AuthorizationEngineModule,
+    AuthorizationModule,
     AuthorizationPolicyModule,
     ApplicationModule,
     UserModule,

@@ -14,7 +14,7 @@ import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.chall
 import { ChallengeLifecycleOptionsProvider } from '@domain/challenge/challenge/challenge.lifecycle.options.provider';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
@@ -25,7 +25,7 @@ import { UserModule } from '@domain/community/user/user.module';
   imports: [
     AgentModule,
     AuthorizationPolicyModule,
-    AuthorizationEngineModule,
+    AuthorizationModule,
     ContextModule,
     BaseChallengeModule,
     CommunityModule,

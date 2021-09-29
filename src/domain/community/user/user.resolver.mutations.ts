@@ -9,7 +9,7 @@ import {
   DeleteUserInput,
 } from '@domain/community/user';
 import { UserService } from './user.service';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
@@ -21,7 +21,7 @@ import { UserAuthorizationResetInput } from './user.dto.reset.authorization';
 export class UserResolverMutations {
   constructor(
     private readonly communicationService: CommunicationService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private readonly userService: UserService,
     private readonly userAuthorizationService: UserAuthorizationService
   ) {}
@@ -37,7 +37,7 @@ export class UserResolverMutations {
   ): Promise<IUser> {
     const authorization =
       this.userAuthorizationService.createUserAuthorizationPolicy();
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
       AuthorizationPrivilege.CREATE,
@@ -73,7 +73,7 @@ export class UserResolverMutations {
     @Args('userData') userData: UpdateUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserOrFail(userData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -92,7 +92,7 @@ export class UserResolverMutations {
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserOrFail(deleteData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.DELETE,
@@ -114,7 +114,7 @@ export class UserResolverMutations {
     const receivingUser = await this.userService.getUserOrFail(
       msgData.receivingUserID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       receivingUser.authorization,
       AuthorizationPrivilege.READ,
@@ -141,7 +141,7 @@ export class UserResolverMutations {
     const user = await this.userService.getUserOrFail(
       authorizationResetData.userID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.UPDATE,
