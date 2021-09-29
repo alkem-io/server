@@ -1,4 +1,4 @@
-version: "3.7"
+version: '3.7'
 
 volumes:
   alkemio_dev_mysql_db:
@@ -11,7 +11,7 @@ networks:
 services:
   traefik:
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_traefik
     image: traefik:v2.4.9
     restart: always
@@ -53,7 +53,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v0.7.3-alpha.1
+    image: oryd/kratos:v0.7.6-alpha.1
     depends_on:
       - mysql_db
     environment:
@@ -69,7 +69,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v0.7.3-alpha.1
+    image: oryd/kratos:v0.7.6-alpha.1
     depends_on:
       - kratos-migrate
     ports:
@@ -92,7 +92,7 @@ services:
 
   oathkeeper:
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oathkeeper
     image: oryd/oathkeeper:v0.38
     depends_on:
