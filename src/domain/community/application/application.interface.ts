@@ -21,6 +21,9 @@ export abstract class IApplication extends IAuthorizable {
 
   ecoverseID?: string;
 
+  @Field(() => Date)
   createdDate!: Date;
+
+  @Field(() => Date)
   updatedDate!: Date;
 }
