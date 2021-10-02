@@ -16,7 +16,7 @@ export class ApplicationResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('user', () => IUser, {
-    nullable: true,
+    nullable: false,
     description: 'The User for this Application.',
   })
   @Profiling.api
