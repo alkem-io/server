@@ -54,23 +54,28 @@
           "questions": [
             {
               "question": "What makes you want to join?",
-              "required": true
+              "required": true,
+              "sortOrder": 1
             },
             {
               "question": "Any particular role or contribution that you have in mind?",
-              "required": false
+              "required": false,
+              "sortOrder": 2
             },
             {
               "question": "Are you already in contact with anyone in this community?",
-              "required": false
+              "required": false,
+              "sortOrder": 3
             },
             {
               "question": "Anything fun you want to tell us about yourself?!",
-              "required": false
+              "required": false,
+              "sortOrder": 4
             },
             {
               "question": "Do you already want to join a Challenge? If so, please provide the name(s).",
-              "required": false
+              "required": false,
+              "sortOrder": 5
             }
           ]
         }
@@ -86,19 +91,23 @@
           "questions": [
             {
               "question": "What makes you want to join this Challenge?",
-              "required": true
+              "required": true,
+              "sortOrder": 1
             },
             {
               "question": "Any particular role or contribution that you have in mind?",
-              "required": false
+              "required": false,
+              "sortOrder": 2
             },
             {
               "question": "Are you already in contact with anyone in this community?",
-              "required": false
+              "required": false,
+              "sortOrder": 3
             },
             {
               "question": "Anything fun you want to tell us about yourself?!",
-              "required": false
+              "required": false,
+              "sortOrder": 4
             }
           ]
         }

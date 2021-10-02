@@ -4,11 +4,9 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { Question } from '@domain/common/question/question.type';
 
 @ObjectType('Application')
 export abstract class IApplication extends IAuthorizable {
-  @Field(() => IUser)
   user?: IUser;
 
   community?: ICommunity;
@@ -16,8 +14,7 @@ export abstract class IApplication extends IAuthorizable {
   @Field(() => ILifecycle, { nullable: false })
   lifecycle?: ILifecycle;
 
-  @Field(() => [IQuestion])
-  questions?: Question[];
+  questions?: IQuestion[];
 
   ecoverseID?: string;
 }
