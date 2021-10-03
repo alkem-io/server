@@ -425,7 +425,7 @@ export class EcoverseService {
     );
   }
 
-  async getCOmmunityInNameableScope(
+  async getCommunityInNameableScope(
     communityID: string,
     ecoverse: IEcoverse
   ): Promise<ICommunity> {
