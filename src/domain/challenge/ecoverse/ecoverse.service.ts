@@ -425,6 +425,16 @@ export class EcoverseService {
     );
   }
 
+  async getCOmmunityInNameableScope(
+    communityID: string,
+    ecoverse: IEcoverse
+  ): Promise<ICommunity> {
+    return await this.communityService.getCommunityInNameableScopeOrFail(
+      communityID,
+      ecoverse.id
+    );
+  }
+
   async getProjects(ecoverse: IEcoverse): Promise<IProject[]> {
     return await this.projectService.getProjects(ecoverse.id);
   }

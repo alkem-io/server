@@ -33,11 +33,19 @@ export class EcoverseResolverFields {
 
   @ResolveField('community', () => ICommunity, {
     nullable: true,
-    description: 'The community for the ecoverse.',
+    description:
+      'Get a Community within the Ecoverse. Defaults to the Community for the Ecoverse itself.',
   })
   @Profiling.api
-  async community(@Parent() ecoverse: Ecoverse) {
-    return await this.ecoverseService.getCommunity(ecoverse);
+  async community(
+    @Parent() ecoverse: Ecoverse,
+    @Args('ID', { type: () => UUID, nullable: true }) ID: string
+  ) {
+    // Default to returning the community for the Ecoverse
+    if (!ID) {
+      return await this.ecoverseService.getCommunity(ecoverse);
+    }
+    return await this.ecoverseService.getCommunityInNameableScope(ID, ecoverse);
   }
 
   @ResolveField('context', () => IContext, {
