@@ -131,6 +131,19 @@ export class OrganizationAuthorizationService {
     };
     newRules.push(organizationAdmin);
 
+    const organizationOwner = {
+      type: AuthorizationCredential.ORGANIZATION_OWNER,
+      resourceID: organizationID,
+      grantedPrivileges: [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    newRules.push(organizationOwner);
+
     const organizationMember = {
       type: AuthorizationCredential.ORGANIZATION_MEMBER,
       resourceID: organizationID,
