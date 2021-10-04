@@ -163,7 +163,7 @@ export class UserService {
     });
     if (userCount != 0)
       throw new ValidationException(
-        `Unable to create User: the provided nameID is already taken: ${nameID}`,
+        `The provided nameID is already taken: ${nameID}`,
         LogContext.COMMUNITY
       );
   }
@@ -297,7 +297,7 @@ export class UserService {
     const user = await this.getUserOrFail(userInput.ID);
 
     if (userInput.nameID) {
-      if (userInput.nameID !== user.nameID) {
+      if (userInput.nameID.toLowerCase() !== user.nameID.toLowerCase()) {
         // new NameID, check for uniqueness
         await this.isNameIdAvailableOrFail(userInput.nameID);
         user.nameID = userInput.nameID;
