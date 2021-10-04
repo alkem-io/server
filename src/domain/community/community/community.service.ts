@@ -349,6 +349,25 @@ export class CommunityService {
     return application;
   }
 
+  async getCommunityInNameableScopeOrFail(
+    communityID: string,
+    nameableScopeID: string
+  ): Promise<ICommunity> {
+    const community = await this.communityRepository.findOne({
+      id: communityID,
+      ecoverseID: nameableScopeID,
+    });
+
+    if (!community) {
+      throw new EntityNotFoundException(
+        `Unable to find Community with ID: ${communityID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return community;
+  }
+
   async getApplications(community: ICommunity): Promise<IApplication[]> {
     const communityApps = await this.getCommunityOrFail(community.id, {
       relations: ['applications'],
