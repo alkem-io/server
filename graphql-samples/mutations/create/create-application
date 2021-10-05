@@ -18,10 +18,10 @@ query variables:
     "parentID": "uuid",
     "userID": "uuid",
     "questions": [
-      {"name": "Question 1", "value": "No"},
-      {"name": "Question 2", "value": "Yes"},
-      {"name": "Question 3", "value": "Maybe"},
-      {"name": "Question 4", "value": "Yes"}
+      {"name": "Question 1", "value": "No", "sortOrder": 1},
+      {"name": "Question 2", "value": "Yes", "sortOrder": 2},
+      {"name": "Question 3", "value": "Maybe", "sortOrder": 3},
+      {"name": "Question 4", "value": "Yes", "sortOrder": 4}
     ]
   }
 }

@@ -18,4 +18,7 @@ export class NVP extends BaseAlkemioEntity implements INVP {
 
   @Column()
   value?: string;
+
+  @Column('int')
+  sortOrder!: number;
 }
