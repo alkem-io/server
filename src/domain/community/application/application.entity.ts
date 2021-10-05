@@ -19,12 +19,6 @@ export class Application extends AuthorizableEntity implements IApplication {
   @Column()
   ecoverseID?: string;
 
-  @Column()
-  createdDate!: Date;
-
-  @Column()
-  updatedDate!: Date;
-
   @OneToOne(() => Lifecycle, {
     eager: true,
     cascade: true,
