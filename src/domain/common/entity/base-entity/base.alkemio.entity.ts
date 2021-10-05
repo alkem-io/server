@@ -11,10 +11,10 @@ export abstract class BaseAlkemioEntity extends BaseEntity {
   id!: string;
 
   @CreateDateColumn()
-  createdDate?: Date;
+  createdDate!: Date;
 
   @UpdateDateColumn()
-  updatedDate?: Date;
+  updatedDate!: Date;
 
   @VersionColumn()
   version?: number;
