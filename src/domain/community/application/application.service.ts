@@ -21,6 +21,7 @@ import { applicationLifecycleConfig } from '@domain/community/application/applic
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { IQuestion } from '@domain/common/question/question.interface';
 
 @Injectable()
 export class ApplicationService {
@@ -165,5 +166,20 @@ export class ApplicationService {
       );
     }
     return await this.lifecycleService.isFinalState(lifecycle);
+  }
+
+  async getQuestionsSorted(application: IApplication): Promise<IQuestion[]> {
+    const questions = application.questions;
+    if (!questions) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Questions for Application ${application.id} `,
+        LogContext.COMMUNITY
+      );
+    }
+    // Sort according to order
+    const sortedQuestions = questions.sort((a, b) =>
+      a.sortOrder > b.sortOrder ? 1 : -1
+    );
+    return sortedQuestions;
   }
 }

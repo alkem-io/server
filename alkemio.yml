@@ -27,6 +27,10 @@ hosting:
   # Options: Dev, Prod
   environment: ${ENVIRONMENT}:Dev
 
+  # Support for subscriptions enabled or not. These require WebSocket connectioins
+  subscriptions:
+    enabled: ${SUBSCRIPTIONS_ENABLED}:false
+
 ## bootstrap ##
 # Used to determine the the information that is used to to initialize a functional Alkemio instance.
 bootstrap:

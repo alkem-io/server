@@ -11,6 +11,9 @@ import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Module({
   imports: [
@@ -24,6 +27,8 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     CommunityModule,
     OrganizationModule,
     EcoverseModule,
+    TypeOrmModule.forFeature([Challenge]),
+    TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [MembershipService, MembershipResolverQueries],
   exports: [MembershipService],

@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { NVP } from '@domain/common/nvp';
 import { Canvas } from './canvas.entity';
 import { ICanvas } from './canvas.interface';
 import { UpdateCanvasInput } from './canvas.dto.update';
@@ -15,7 +14,7 @@ export class CanvasService {
     private canvasRepository: Repository<Canvas>
   ) {}
 
-  async getCanvasOrFail(canvasID: string): Promise<NVP> {
+  async getCanvasOrFail(canvasID: string): Promise<ICanvas> {
     const canvas = await this.canvasRepository.findOne({
       id: canvasID,
     });
