@@ -120,7 +120,7 @@ services:
 
   ipfs:
     container_name: alkemio_dev_ipfs
-    image: ipfs/go-ipfs
+    image: ipfs/go-ipfs:v0.9.1
     networks:
       - alkemio_dev_net
     restart: always
