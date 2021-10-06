@@ -11,9 +11,9 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -55,7 +55,7 @@ export class SearchService {
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -273,7 +273,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const challenge of challengeMatches) {
         if (
-          this.authorizationEngine.isAccessGranted(
+          this.authorizationService.isAccessGranted(
             agentInfo,
             challenge.authorization,
             AuthorizationPrivilege.READ
@@ -318,7 +318,7 @@ export class SearchService {
       // Only show challenges that the current user has read access to
       for (const opportunity of opportunityMatches) {
         if (
-          this.authorizationEngine.isAccessGranted(
+          this.authorizationService.isAccessGranted(
             agentInfo,
             opportunity.authorization,
             AuthorizationPrivilege.READ

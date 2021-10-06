@@ -5,19 +5,19 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Resolver, Subscription } from '@nestjs/graphql';
-import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
 import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
 import { RoomInvitationReceived } from '@services/platform/communication/communication.dto.room.invitation.received';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from './user.service';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Resolver()
 export class UserResolverSubscriptions {
   constructor(
     private userService: UserService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(PUB_SUB) private pubSub: PubSubEngine
@@ -55,7 +55,7 @@ export class UserResolverSubscriptions {
   })
   async messageReceived(@CurrentUser() agentInfo: AgentInfo) {
     const user = await this.userService.getUserOrFail(agentInfo.userID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.UPDATE,

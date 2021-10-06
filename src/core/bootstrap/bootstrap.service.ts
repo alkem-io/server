@@ -10,7 +10,6 @@ import * as defaultRoles from '@templates/authorization-bootstrap.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
@@ -23,6 +22,7 @@ import {
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
 
 @Injectable()
 export class BootstrapService {
@@ -32,7 +32,7 @@ export class BootstrapService {
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
-    private authorizationService: AuthorizationService,
+    private adminAuthorizationService: AdminAuthorizationService,
     private configService: ConfigService,
     private organizationService: OrganizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
@@ -56,7 +56,7 @@ export class BootstrapService {
       await this.ensureEcoverseSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
-    } catch (error) {
+    } catch (error: any) {
       throw new BootstrapException(error.message);
     }
   }
@@ -162,7 +162,7 @@ export class BootstrapService {
           });
           const credentialsData = userData.credentials;
           for (const credentialData of credentialsData) {
-            await this.authorizationService.grantCredential({
+            await this.adminAuthorizationService.grantCredential({
               userID: user.id,
               type: credentialData.type,
               resourceID: credentialData.resourceID,
@@ -174,7 +174,7 @@ export class BootstrapService {
           );
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       throw new BootstrapException(
         `Unable to create profiles ${error.message}`
       );

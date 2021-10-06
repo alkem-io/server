@@ -3,7 +3,7 @@ import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
 import { OrganizationVerificationLifecycleOptionsProvider } from './organization.verification.lifecycle.options.provider';
@@ -15,7 +15,7 @@ export class OrganizationVerificationResolverMutations {
   constructor(
     private organizationVerificationService: OrganizationVerificationService,
     private organizationVerificationLifecycleOptionsProvider: OrganizationVerificationLifecycleOptionsProvider,
-    private authorizationEngine: AuthorizationEngineService
+    private authorizationService: AuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -31,7 +31,7 @@ export class OrganizationVerificationResolverMutations {
       await this.organizationVerificationService.getOrganizationVerificationOrFail(
         organizationVerificationEventData.organizationVerificationID
       );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organizationVerification.authorization,
       AuthorizationPrivilege.UPDATE,

@@ -1,237 +1,217 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  GrantAuthorizationCredentialInput,
-  RevokeAuthorizationCredentialInput,
-  UsersWithAuthorizationCredentialInput,
-} from '@core/authorization';
-import { IUser } from '@domain/community/user';
-import { UserService } from '@domain/community/user/user.service';
-import {
-  LogContext,
-  AuthorizationCredentialGlobal,
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-} from '@common/enums';
-import {
-  EntityNotFoundException,
-  ForbiddenException,
-  ValidationException,
-} from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
-import {
-  AuthorizationPolicy,
-  IAuthorizationPolicy,
-} from '@domain/common/authorization-policy';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
-import { AssignGlobalAdminInput } from './dto/authorization.dto.assign.global.admin';
-import { RemoveGlobalAdminInput } from './dto/authorization.dto.remove.global.admin';
-import { AssignGlobalCommunityAdminInput } from './dto/authorization.dto.assign.global.community.admin';
-import { RemoveGlobalCommunityAdminInput } from './dto/authorization.dto.remove.global.community.admin';
+import { ICredential } from '@domain/agent/credential/credential.interface';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ConfigService } from '@nestjs/config';
+import { ForbiddenException } from '@common/exceptions';
+import { ConfigurationTypes, LogContext } from '@common/enums';
+import { AgentInfo } from '@core/authentication';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential';
+import { AuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential';
 
 @Injectable()
 export class AuthorizationService {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
-    private readonly agentService: AgentService,
-    private readonly userService: UserService,
-    @InjectRepository(AuthorizationPolicy)
-    private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private configService: ConfigService
   ) {}
 
-  async grantCredential(
-    grantCredentialData: GrantAuthorizationCredentialInput
-  ): Promise<IUser> {
-    if (grantCredentialData.type === AuthorizationCredential.GLOBAL_ADMIN) {
-      return await this.assignGlobalAdmin({
-        userID: grantCredentialData.userID,
-      });
-    }
-    // check the inputs
-    if (this.isGlobalAuthorizationCredential(grantCredentialData.type)) {
-      if (grantCredentialData.resourceID)
-        throw new ForbiddenException(
-          `resourceID should not be specified for global AuthorizationCredentials: ${grantCredentialData.type}`,
-          LogContext.AUTH
-        );
-    }
-    const { user, agent } = await this.userService.getUserAndAgent(
-      grantCredentialData.userID
+  grantAccessOrFail(
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationPolicy | undefined,
+    privilegeRequired: AuthorizationPrivilege,
+    msg: string
+  ) {
+    if (this.isAuthenticationDisabled()) return true;
+
+    const auth = this.validateAuthorization(authorization);
+    if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
+
+    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
+    this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
+
+    // If get to here then no match was found
+    throw new ForbiddenException(errorMsg, LogContext.AUTH);
+  }
+
+  grantReadAccessOrFail(
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationPolicy | undefined,
+    msg: string
+  ) {
+    this.grantAccessOrFail(
+      agentInfo,
+      authorization,
+      AuthorizationPrivilege.READ,
+      msg
     );
-
-    user.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: grantCredentialData.type,
-      resourceID: grantCredentialData.resourceID,
-    });
-    return user;
   }
 
-  async revokeCredential(
-    revokeCredentialData: RevokeAuthorizationCredentialInput
-  ): Promise<IUser> {
-    if (revokeCredentialData.type === AuthorizationCredential.GLOBAL_ADMIN) {
-      return await this.removeGlobalAdmin({
-        userID: revokeCredentialData.userID,
-      });
-    }
-    // check the inputs
-    if (this.isGlobalAuthorizationCredential(revokeCredentialData.type)) {
-      if (revokeCredentialData.resourceID)
-        throw new ForbiddenException(
-          `resourceID should not be specified for global AuthorizationCredentials: ${revokeCredentialData.type}`,
-          LogContext.AUTH
-        );
-    }
+  logCredentialCheckFailDetails(
+    errorMsg: string,
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationPolicy
+  ) {
+    const msg = `${errorMsg}; agentInfo: ${
+      agentInfo.email
+    } has credentials '${JSON.stringify(
+      agentInfo.credentials,
+      this.replacer
+    )}'; authorization definition: anonymousAccess=${
+      authorization?.anonymousReadAccess
+    } & rules: ${authorization?.credentialRules}`;
+    this.logger.verbose?.(msg, LogContext.AUTH);
+  }
 
-    const { user, agent } = await this.userService.getUserAndAgent(
-      revokeCredentialData.userID
+  logAgentInfo(agentInfo: AgentInfo) {
+    this.logger.verbose?.(
+      `AgentInfo: '${agentInfo.email}' has credentials '${JSON.stringify(
+        agentInfo.credentials,
+        this.replacer
+      )}'`,
+      LogContext.AUTH
     );
-
-    user.agent = await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: revokeCredentialData.type,
-      resourceID: revokeCredentialData.resourceID,
-    });
-
-    return user;
   }
 
-  async assignGlobalAdmin(assignData: AssignGlobalAdminInput): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
+  // Utility function to avoid having a bunch of fields that are not relevant on log output for credentials logging.
+  replacer = (key: any, value: any) => {
+    if (key == 'createdDate') return undefined;
+    else if (key == 'updatedDate') return undefined;
+    else if (key == 'version') return undefined;
+    else if (key == 'id') return undefined;
+    else return value;
+  };
 
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
-
-  async removeGlobalAdmin(removeData: RemoveGlobalAdminInput): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    // Check not the last global admin
-    await this.removeValidationSingleGlobalAdmin();
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async assignGlobalCommunityAdmin(
-    assignData: AssignGlobalCommunityAdminInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(assignData.userID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(assignData.userID);
-  }
-
-  async removeGlobalCommunityAdmin(
-    removeData: RemoveGlobalCommunityAdminInput
-  ): Promise<IUser> {
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async removeValidationSingleGlobalAdmin(): Promise<boolean> {
-    // Check more than one
-    const globalAdmins = await this.usersWithCredentials({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-    });
-    if (globalAdmins.length < 2)
+  validateAuthorization(
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    if (!authorization)
       throw new ForbiddenException(
-        `Not allowed to remove ${AuthorizationCredential.GLOBAL_ADMIN}: last global-admin`,
+        'Authorization: no definition provided',
         LogContext.AUTH
       );
-
-    return true;
+    return authorization;
   }
 
-  async usersWithCredentials(
-    credentialCriteria: UsersWithAuthorizationCredentialInput
-  ): Promise<IUser[]> {
-    if (!this.isAuthorizationCredential(credentialCriteria.type))
-      throw new ValidationException(
-        `Invalid type provided: ${credentialCriteria.type}`,
-        LogContext.AUTH
-      );
-
-    return await this.userService.usersWithCredentials({
-      type: credentialCriteria.type.toString(),
-      resourceID: credentialCriteria.resourceID,
-    });
-  }
-
-  async userAuthorizationPrivileges(
-    userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput
-  ): Promise<AuthorizationPrivilege[]> {
-    // get the user
-    const { credentials } = await this.userService.getUserAndCredentials(
-      userAuthorizationPrivilegesData.userID
-    );
-
-    const authorizationPolicy = await this.getAuthorizationPolicyOrFail(
-      userAuthorizationPrivilegesData.authorizationID
-    );
-
-    const privileges = await this.authorizationEngine.getGrantedPrivileges(
-      credentials,
-      authorizationPolicy
-    );
-    return privileges;
-  }
-
-  async getAuthorizationPolicyOrFail(
-    authorizationID: string
-  ): Promise<IAuthorizationPolicy> {
-    const authorizationPolicy =
-      await this.authorizationPolicyRepository.findOne({
-        id: authorizationID,
-      });
-    if (!authorizationPolicy)
-      throw new EntityNotFoundException(
-        `Not able to locate Authorization Policy with the specified ID: ${authorizationID}`,
-        LogContext.CHALLENGES
-      );
-    return authorizationPolicy;
-  }
-
-  isGlobalAuthorizationCredential(credentialType: string): boolean {
-    const values = Object.values(AuthorizationCredentialGlobal);
-    const match = values.find(value => value.toString() === credentialType);
-    if (match) return true;
+  isAuthenticationDisabled(): boolean {
+    const authEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
+      ?.authentication?.enabled;
+    if (!authEnabled) return true;
     return false;
   }
 
-  isAuthorizationCredential(credentialType: string): boolean {
-    const values = Object.values(AuthorizationCredential);
-    const match = values.find(value => value.toString() === credentialType);
-    if (match) return true;
+  isAccessGranted(
+    agentInfo: AgentInfo,
+    authorization: IAuthorizationPolicy | undefined,
+    privilegeRequired: AuthorizationPrivilege
+  ): boolean {
+    if (!authorization) throw new Error();
+    if (this.isAuthenticationDisabled()) return true;
+    if (
+      authorization.anonymousReadAccess &&
+      privilegeRequired === AuthorizationPrivilege.READ
+    )
+      return true;
+
+    const credentialRules: AuthorizationPolicyRuleCredential[] =
+      this.convertCredentialRulesStr(authorization.credentialRules);
+    for (const rule of credentialRules) {
+      for (const credential of agentInfo.credentials) {
+        if (
+          credential.type === rule.type &&
+          credential.resourceID === rule.resourceID
+        ) {
+          for (const privilege of rule.grantedPrivileges) {
+            if (privilege === privilegeRequired) return true;
+          }
+        }
+      }
+    }
+    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[] =
+      this.convertVerifiedCredentialRulesStr(
+        authorization.verifiedCredentialRules
+      );
+    for (const rule of verifiedCredentialRules) {
+      for (const verifiedCredential of agentInfo.verifiedCredentials) {
+        if (
+          verifiedCredential.type === rule.type &&
+          verifiedCredential.issuer === rule.resourceID
+        ) {
+          for (const privilege of rule.grantedPrivileges) {
+            if (privilege === privilegeRequired) {
+              this.logger.warn?.(
+                `Authorization engine: granting access for '${verifiedCredential.type}'`,
+                LogContext.AUTH
+              );
+              return true;
+            }
+          }
+        }
+      }
+    }
     return false;
+  }
+
+  getGrantedPrivileges(
+    credentials: ICredential[],
+    authorization: IAuthorizationPolicy
+  ) {
+    const grantedPrivileges: AuthorizationPrivilege[] = [];
+
+    if (authorization.anonymousReadAccess) {
+      grantedPrivileges.push(AuthorizationPrivilege.READ);
+    }
+
+    const credentialRules: AuthorizationPolicyRuleCredential[] =
+      this.convertCredentialRulesStr(authorization.credentialRules);
+    for (const rule of credentialRules) {
+      for (const credential of credentials) {
+        if (
+          credential.type === rule.type &&
+          credential.resourceID === rule.resourceID
+        ) {
+          for (const privilege of rule.grantedPrivileges) {
+            grantedPrivileges.push(privilege);
+          }
+        }
+      }
+    }
+
+    const uniquePrivileges = grantedPrivileges.filter(
+      (item, i, ar) => ar.indexOf(item) === i
+    );
+
+    return uniquePrivileges;
+  }
+
+  convertCredentialRulesStr(
+    rulesStr: string
+  ): AuthorizationPolicyRuleCredential[] {
+    if (!rulesStr || rulesStr.length == 0) return [];
+    try {
+      const rules: AuthorizationPolicyRuleCredential[] = JSON.parse(rulesStr);
+      return rules;
+    } catch (error) {
+      const msg = `Unable to convert rules to json: ${error}`;
+      this.logger.error(msg);
+      throw new ForbiddenException(msg, LogContext.AUTH);
+    }
+  }
+
+  convertVerifiedCredentialRulesStr(
+    rulesStr: string
+  ): AuthorizationPolicyRuleVerifiedCredential[] {
+    if (!rulesStr || rulesStr.length == 0) return [];
+    try {
+      const rules: AuthorizationPolicyRuleVerifiedCredential[] =
+        JSON.parse(rulesStr);
+      return rules;
+    } catch (error) {
+      const msg = `Unable to convert rules to json: ${error}`;
+      this.logger.error(msg);
+      throw new ForbiddenException(msg, LogContext.AUTH);
+    }
   }
 }

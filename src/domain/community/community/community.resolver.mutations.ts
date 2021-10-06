@@ -17,7 +17,7 @@ import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
@@ -33,7 +33,7 @@ import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 export class CommunityResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
@@ -57,7 +57,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       groupData.parentID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.CREATE,
@@ -86,7 +86,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
@@ -113,7 +113,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
@@ -153,7 +153,7 @@ export class CommunityResolverMutations {
         [AuthorizationPrivilege.UPDATE]
       );
 
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
       AuthorizationPrivilege.UPDATE,
@@ -204,7 +204,7 @@ export class CommunityResolverMutations {
     const application = await this.applicationService.getApplicationOrFail(
       deleteData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -225,7 +225,7 @@ export class CommunityResolverMutations {
     const application = await this.applicationService.getApplicationOrFail(
       applicationEventData.applicationID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -249,7 +249,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       messageData.communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -274,7 +274,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       messageData.communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -301,7 +301,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       messageData.communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.READ,
@@ -326,7 +326,7 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       messageData.communityID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,

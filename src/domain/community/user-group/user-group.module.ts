@@ -8,14 +8,14 @@ import { ProfileModule } from '@domain/community/profile/profile.module';
 import { UserGroupResolverFields } from './user-group.resolver.fields';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserGroupAuthorizationService } from './user-group.service.authorization';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
-    AuthorizationEngineModule,
+    AuthorizationModule,
     ProfileModule,
     UserModule,
     AgentModule,

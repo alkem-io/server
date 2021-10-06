@@ -11,7 +11,7 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
 
@@ -24,7 +24,7 @@ export class GraphqlGuard extends AuthGuard([
 
   constructor(
     private reflector: Reflector,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     super();
@@ -70,7 +70,7 @@ export class GraphqlGuard extends AuthGuard([
     let resultAgentInfo = agentInfo;
 
     if (agentInfo) {
-      this.authorizationEngine.logAgentInfo(agentInfo);
+      this.authorizationService.logAgentInfo(agentInfo);
     } else {
       this.logger.warn?.(
         `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
@@ -87,7 +87,7 @@ export class GraphqlGuard extends AuthGuard([
     if (privilege) {
       const fieldParent = gqlContext.getRoot();
       const rule = new AuthorizationRuleAgentPrivilege(
-        this.authorizationEngine,
+        this.authorizationService,
         privilege,
         fieldParent,
         fieldName
@@ -96,22 +96,5 @@ export class GraphqlGuard extends AuthGuard([
     }
 
     return resultAgentInfo;
-  }
-
-  logAuthorizationToken(req: any) {
-    try {
-      let authorizationHeader: string = req.headers.authorization;
-      if (authorizationHeader)
-        authorizationHeader = authorizationHeader.substring(7);
-      this.logger.verbose?.(
-        `Authorization header token: ${authorizationHeader}`,
-        LogContext.AUTH
-      );
-    } catch (error) {
-      this.logger.error(
-        `Unable to retrieve Authorization header token: ${req}`,
-        LogContext.AUTH
-      );
-    }
   }
 }

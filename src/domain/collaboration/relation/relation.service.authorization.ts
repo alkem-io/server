@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  AuthorizationRuleCredential,
-  IAuthorizationPolicy,
-} from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IRelation } from './relation.interface';
 import {
@@ -14,6 +11,7 @@ import {
 } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { Relation } from './relation.entity';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
 export class RelationAuthorizationService {
@@ -34,7 +32,7 @@ export class RelationAuthorizationService {
         opportunityAuthorization
       );
 
-    const newRules: AuthorizationRuleCredential[] = [];
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     // Allow users to update their own created relation
     const selfCreatedRelation = {
@@ -63,7 +61,7 @@ export class RelationAuthorizationService {
         'Authorization definition not found',
         LogContext.OPPORTUNITY
       );
-    const newRules: AuthorizationRuleCredential[] = [];
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     // Allow global registered users to create
     const globalRegisteredCreateRelation = {

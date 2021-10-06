@@ -8,7 +8,7 @@ import {
   IActorGroup,
 } from '@domain/context/actor-group';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
 import { IEcosystemModel } from './ecosystem-model.interface';
@@ -16,7 +16,7 @@ import { UpdateEcosystemModelInput } from './ecosystem-model.dto.update';
 @Resolver()
 export class EcosystemModelResolverMutations {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private actorGroupAuthorizationService: ActorGroupAuthorizationService,
     private ecosystemModelService: EcosystemModelService
   ) {}
@@ -34,7 +34,7 @@ export class EcosystemModelResolverMutations {
       await this.ecosystemModelService.getEcosystemModelOrFail(
         actorGroupData.ecosystemModelID
       );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       ecosystemModel.authorization,
       AuthorizationPrivilege.CREATE,
@@ -62,7 +62,7 @@ export class EcosystemModelResolverMutations {
       await this.ecosystemModelService.getEcosystemModelOrFail(
         ecosystemModelData.ID
       );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       ecosystemModel.authorization,
       AuthorizationPrivilege.UPDATE,

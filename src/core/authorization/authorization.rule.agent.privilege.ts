@@ -1,7 +1,7 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 export class AuthorizationRuleAgentPrivilege {
   privilege: AuthorizationPrivilege;
@@ -10,7 +10,7 @@ export class AuthorizationRuleAgentPrivilege {
   fieldName: string;
 
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     privilege: AuthorizationPrivilege,
     fieldParent: any,
     fieldName: string,
@@ -29,7 +29,7 @@ export class AuthorizationRuleAgentPrivilege {
   }
 
   execute(agentInfo: AgentInfo): boolean {
-    const accessGranted = this.authorizationEngine.isAccessGranted(
+    const accessGranted = this.authorizationService.isAccessGranted(
       agentInfo,
       this.fieldParent.authorization,
       this.privilege
@@ -37,7 +37,7 @@ export class AuthorizationRuleAgentPrivilege {
     if (!accessGranted) {
       const fieldParentType = this.fieldParent.__proto__.constructor.name;
       const errorMsg = `User (${agentInfo.email}) does not have credentials that grant '${this.privilege}' access to ${fieldParentType}.${this.fieldName}`;
-      this.authorizationEngine.logCredentialCheckFailDetails(
+      this.authorizationService.logCredentialCheckFailDetails(
         errorMsg,
         agentInfo,
         this.fieldParent.authorization

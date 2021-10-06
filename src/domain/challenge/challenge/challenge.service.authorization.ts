@@ -12,14 +12,13 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 import { ChallengeService } from './challenge.service';
-import {
-  AuthorizationRuleCredential,
-  AuthorizationRuleVerifiedCredential,
-} from '@domain/common/authorization-policy';
+
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -109,8 +108,8 @@ export class ChallengeAuthorizationService {
 
   private createCredentialRules(
     challengeID: string
-  ): AuthorizationRuleCredential[] {
-    const rules: AuthorizationRuleCredential[] = [];
+  ): AuthorizationPolicyRuleCredential[] {
+    const rules: AuthorizationPolicyRuleCredential[] = [];
 
     const challengeAdmin = {
       type: AuthorizationCredential.CHALLENGE_ADMIN,
@@ -136,7 +135,7 @@ export class ChallengeAuthorizationService {
   }
 
   async appendVerifiedCredentialRules(challengeID: string): Promise<string> {
-    const rules: AuthorizationRuleVerifiedCredential[] = [];
+    const rules: AuthorizationPolicyRuleVerifiedCredential[] = [];
     const agent = await this.challengeService.getAgent(challengeID);
 
     const stateChange = {

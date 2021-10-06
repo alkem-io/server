@@ -4,7 +4,7 @@ import { UserGroupModule } from '@domain/community/user-group/user-group.module'
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { Community } from './community.entity';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
@@ -19,7 +19,7 @@ import { CommunityResolverSubscriptions } from './community.resolver.subscriptio
 
 @Module({
   imports: [
-    AuthorizationEngineModule,
+    AuthorizationModule,
     AuthorizationPolicyModule,
     AgentModule,
     UserGroupModule,

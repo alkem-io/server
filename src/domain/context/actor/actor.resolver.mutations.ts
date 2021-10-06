@@ -8,14 +8,14 @@ import {
 import { ActorService } from './actor.service';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { CurrentUser } from '@common/decorators';
 
 @Resolver()
 export class ActorResolverMutations {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private actorService: ActorService
   ) {}
 
@@ -28,7 +28,7 @@ export class ActorResolverMutations {
     @Args('deleteData') deleteData: DeleteActorInput
   ): Promise<IActor> {
     const actor = await this.actorService.getActorOrFail(deleteData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       actor.authorization,
       AuthorizationPrivilege.DELETE,
@@ -46,7 +46,7 @@ export class ActorResolverMutations {
     @Args('actorData') actorData: UpdateActorInput
   ): Promise<IActor> {
     const actor = await this.actorService.getActorOrFail(actorData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       actor.authorization,
       AuthorizationPrivilege.DELETE,

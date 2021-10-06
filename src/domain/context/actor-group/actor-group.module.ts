@@ -4,14 +4,14 @@ import { ActorModule } from '@domain/context/actor/actor.module';
 import { ActorGroup } from './actor-group.entity';
 import { ActorGroupResolverMutations } from './actor-group.resolver.mutations';
 import { ActorGroupService } from './actor-group.service';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorGroupAuthorizationService } from './actor-group.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
-    AuthorizationEngineModule,
+    AuthorizationModule,
     ActorModule,
     TypeOrmModule.forFeature([ActorGroup]),
   ],

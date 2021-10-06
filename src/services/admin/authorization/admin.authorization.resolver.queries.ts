@@ -1,28 +1,28 @@
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from './authorization.service';
-import {
-  GraphqlGuard,
-  UsersWithAuthorizationCredentialInput,
-} from '@core/authorization';
+import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationEngineService } from '@services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { AdminAuthorizationService } from './admin.authorization.service';
+import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
-export class AuthorizationResolverQueries {
+export class AdminAuthorizationResolverQueries {
   private authorizationQueriesPolicy: IAuthorizationPolicy;
 
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
-    private authorizationService: AuthorizationService
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private authorizationService: AuthorizationService,
+    private adminAuthorizationService: AdminAuthorizationService
   ) {
     this.authorizationQueriesPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );
@@ -40,13 +40,13 @@ export class AuthorizationResolverQueries {
     credentialsCriteriaData: UsersWithAuthorizationCredentialInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser[]> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationQueriesPolicy,
       AuthorizationPrivilege.READ,
       `authorization query: ${agentInfo.email}`
     );
-    return await this.authorizationService.usersWithCredentials(
+    return await this.adminAuthorizationService.usersWithCredentials(
       credentialsCriteriaData
     );
   }
@@ -63,13 +63,13 @@ export class AuthorizationResolverQueries {
     userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<AuthorizationPrivilege[]> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationQueriesPolicy,
       AuthorizationPrivilege.READ,
       `authorization query: ${agentInfo.email}`
     );
-    return await this.authorizationService.userAuthorizationPrivileges(
+    return await this.adminAuthorizationService.userAuthorizationPrivileges(
       userAuthorizationPrivilegesData
     );
   }

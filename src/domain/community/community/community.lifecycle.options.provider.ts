@@ -11,7 +11,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { EntityNotInitializedException } from '@common/exceptions';
 import { CommunityService } from './community.service';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class CommunityLifecycleOptionsProvider {
   constructor(
     private lifecycleService: LifecycleService,
     private communityService: CommunityService,
-    private authorizationEngineService: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private applicationService: ApplicationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -86,7 +86,7 @@ export class CommunityLifecycleOptionsProvider {
       communityUpdateAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: AuthorizationPolicy = event.authorization;
-        return this.authorizationEngineService.isAccessGranted(
+        return this.authorizationService.isAccessGranted(
           agentInfo,
           authorizationPolicy,
           AuthorizationPrivilege.UPDATE
