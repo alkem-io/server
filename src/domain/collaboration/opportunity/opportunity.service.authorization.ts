@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  AuthorizationRuleCredential,
-  IAuthorizationPolicy,
-} from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { IOpportunity } from '..';
@@ -13,6 +10,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -86,8 +84,8 @@ export class OpportunityAuthorizationService {
 
   private createCredentialRules(
     opportunityID: string
-  ): AuthorizationRuleCredential[] {
-    const rules: AuthorizationRuleCredential[] = [];
+  ): AuthorizationPolicyRuleCredential[] {
+    const rules: AuthorizationPolicyRuleCredential[] = [];
 
     const opportunityAdmin = {
       type: AuthorizationCredential.OPPORTUNITY_ADMIN,

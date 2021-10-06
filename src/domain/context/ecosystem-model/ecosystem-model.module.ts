@@ -4,7 +4,7 @@ import { EcosystemModelService } from './ecosystem-model.service';
 import { ActorGroupModule } from '@domain/context/actor-group/actor-group.module';
 import { EcosystemModel } from './ecosystem-model.entity';
 import { EcosystemModelResolverMutations } from './ecosystem-model.resolver.mutations';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { EcosystemModelAuthorizationService } from './ecosystem-model.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
@@ -12,7 +12,7 @@ import { EcosystemModelResolverFields } from './ecosystem-model.resolver.fields'
 
 @Module({
   imports: [
-    AuthorizationEngineModule,
+    AuthorizationModule,
     AuthorizationPolicyModule,
     ActorGroupModule,
     CanvasModule,

@@ -1,3 +1,4 @@
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationPolicy } from './authorization.policy.entity';
@@ -5,7 +6,10 @@ import { AuthorizationPolicyResolverFields } from './authorization.policy.resolv
 import { AuthorizationPolicyService } from './authorization.policy.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AuthorizationPolicy])],
+  imports: [
+    AuthorizationModule,
+    TypeOrmModule.forFeature([AuthorizationPolicy]),
+  ],
   providers: [AuthorizationPolicyService, AuthorizationPolicyResolverFields],
   exports: [AuthorizationPolicyService],
 })

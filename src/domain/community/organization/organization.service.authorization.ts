@@ -7,11 +7,11 @@ import { IOrganization, Organization } from '@domain/community/organization';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { OrganizationService } from './organization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -90,7 +90,7 @@ export class OrganizationAuthorizationService {
         LogContext.COMMUNITY
       );
 
-    const newRules: AuthorizationRuleCredential[] = [];
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     const globalAdmin = {
       type: AuthorizationCredential.GLOBAL_ADMIN,
@@ -130,6 +130,19 @@ export class OrganizationAuthorizationService {
       ],
     };
     newRules.push(organizationAdmin);
+
+    const organizationOwner = {
+      type: AuthorizationCredential.ORGANIZATION_OWNER,
+      resourceID: organizationID,
+      grantedPrivileges: [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+    };
+    newRules.push(organizationOwner);
 
     const organizationMember = {
       type: AuthorizationCredential.ORGANIZATION_MEMBER,

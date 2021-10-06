@@ -8,12 +8,12 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 import { ProjectResolverFields } from './project.resolver.fields';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
   imports: [
-    AuthorizationEngineModule,
+    AuthorizationModule,
     AuthorizationPolicyModule,
     AspectModule,
     NamingModule,

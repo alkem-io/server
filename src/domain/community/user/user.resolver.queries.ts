@@ -10,19 +10,21 @@ import { UserNotRegisteredException } from '@common/exceptions/registration.exce
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
   private queryAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService
   ) {
     this.queryAuthorizationPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );
@@ -35,7 +37,7 @@ export class UserResolverQueries {
   })
   @Profiling.api
   async users(@CurrentUser() agentInfo: AgentInfo): Promise<IUser[]> {
-    await this.authorizationEngine.grantReadAccessOrFail(
+    await this.authorizationService.grantReadAccessOrFail(
       agentInfo,
       this.queryAuthorizationPolicy,
       `users query: ${agentInfo.email}`
@@ -53,7 +55,7 @@ export class UserResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID_NAMEID_EMAIL }) id: string
   ): Promise<IUser> {
-    await this.authorizationEngine.grantReadAccessOrFail(
+    await this.authorizationService.grantReadAccessOrFail(
       agentInfo,
       this.queryAuthorizationPolicy,
       `user query: ${agentInfo.email}`
@@ -71,7 +73,7 @@ export class UserResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ name: 'IDs', type: () => [UUID_NAMEID_EMAIL] }) ids: string[]
   ): Promise<IUser[]> {
-    await this.authorizationEngine.grantReadAccessOrFail(
+    await this.authorizationService.grantReadAccessOrFail(
       agentInfo,
       this.queryAuthorizationPolicy,
       `users query: ${agentInfo.email}`

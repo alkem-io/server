@@ -14,7 +14,7 @@ import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
@@ -26,7 +26,7 @@ export class ProfileResolverMutations {
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private profileService: ProfileService
   ) {}
 
@@ -42,7 +42,7 @@ export class ProfileResolverMutations {
     const profile = await this.profileService.getProfileOrFail(
       tagsetData.profileID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.CREATE,
@@ -70,7 +70,7 @@ export class ProfileResolverMutations {
     const profile = await this.profileService.getProfileOrFail(
       referenceInput.profileID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.CREATE,
@@ -95,7 +95,7 @@ export class ProfileResolverMutations {
     @Args('profileData') profileData: UpdateProfileInput
   ): Promise<IProfile> {
     const profile = await this.profileService.getProfileOrFail(profileData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -117,7 +117,7 @@ export class ProfileResolverMutations {
     const profile = await this.profileService.getProfileOrFail(
       uploadData.profileID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.UPDATE,

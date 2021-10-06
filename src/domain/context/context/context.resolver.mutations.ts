@@ -6,7 +6,7 @@ import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { CreateReferenceOnContextInput } from '@domain/context/context';
 import { ReferenceService } from '@domain/common/reference/reference.service';
@@ -18,7 +18,7 @@ export class ContextResolverMutations {
     private aspectService: AspectService,
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private contextService: ContextService
   ) {}
 
@@ -34,7 +34,7 @@ export class ContextResolverMutations {
     const context = await this.contextService.getContextOrFail(
       referenceInput.contextID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
       AuthorizationPrivilege.CREATE,
@@ -61,7 +61,7 @@ export class ContextResolverMutations {
     const context = await this.contextService.getContextOrFail(
       aspectData.parentID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
       AuthorizationPrivilege.CREATE,

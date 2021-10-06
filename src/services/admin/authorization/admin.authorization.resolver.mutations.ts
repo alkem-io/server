@@ -2,38 +2,39 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import {
-  GrantAuthorizationCredentialInput,
-  RevokeAuthorizationCredentialInput,
-} from '@core/authorization';
-import { AuthorizationService } from './authorization.service';
+
 import { IUser } from '@domain/community/user';
-import { GraphqlGuard } from './graphql.guard';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AssignGlobalAdminInput } from './dto/authorization.dto.assign.global.admin';
 import { RemoveGlobalAdminInput } from './dto/authorization.dto.remove.global.admin';
 import { AssignGlobalCommunityAdminInput } from './dto/authorization.dto.assign.global.community.admin';
 import { RemoveGlobalCommunityAdminInput } from './dto/authorization.dto.remove.global.community.admin';
+import { AdminAuthorizationService } from './admin.authorization.service';
+import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
+import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
-export class AuthorizationResolverMutations {
+export class AdminAuthorizationResolverMutations {
   private authorizationGlobalAdminPolicy: IAuthorizationPolicy;
   private authorizationGlobalCommunityAdminPolicy: IAuthorizationPolicy;
 
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
-    private authorizationService: AuthorizationService
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private authorizationService: AuthorizationService,
+    private adminAuthorizationService: AdminAuthorizationService
   ) {
     this.authorizationGlobalAdminPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.ADMIN],
         [AuthorizationPrivilege.GRANT]
       );
     this.authorizationGlobalCommunityAdminPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [
           AuthorizationRoleGlobal.ADMIN,
           AuthorizationRoleGlobal.COMMUNITY_ADMIN,
@@ -52,13 +53,15 @@ export class AuthorizationResolverMutations {
     grantCredentialData: GrantAuthorizationCredentialInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
       `grant credential: ${agentInfo.email}`
     );
-    return await this.authorizationService.grantCredential(grantCredentialData);
+    return await this.adminAuthorizationService.grantCredential(
+      grantCredentialData
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -71,13 +74,13 @@ export class AuthorizationResolverMutations {
     credentialRemoveData: RevokeAuthorizationCredentialInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IUser> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
       `revoke credential: ${agentInfo.email}`
     );
-    return await this.authorizationService.revokeCredential(
+    return await this.adminAuthorizationService.revokeCredential(
       credentialRemoveData
     );
   }
@@ -91,13 +94,15 @@ export class AuthorizationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: AssignGlobalAdminInput
   ): Promise<IUser> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
       `assign user global admin: ${membershipData.userID}`
     );
-    return await this.authorizationService.assignGlobalAdmin(membershipData);
+    return await this.adminAuthorizationService.assignGlobalAdmin(
+      membershipData
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -109,13 +114,15 @@ export class AuthorizationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: RemoveGlobalAdminInput
   ): Promise<IUser> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
       `remove user global admin: ${membershipData.userID}`
     );
-    return await this.authorizationService.removeGlobalAdmin(membershipData);
+    return await this.adminAuthorizationService.removeGlobalAdmin(
+      membershipData
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -127,13 +134,13 @@ export class AuthorizationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: AssignGlobalCommunityAdminInput
   ): Promise<IUser> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalCommunityAdminPolicy,
       AuthorizationPrivilege.GRANT,
       `assign user global communityadmin: ${membershipData.userID}`
     );
-    return await this.authorizationService.assignGlobalCommunityAdmin(
+    return await this.adminAuthorizationService.assignGlobalCommunityAdmin(
       membershipData
     );
   }
@@ -147,13 +154,13 @@ export class AuthorizationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: RemoveGlobalCommunityAdminInput
   ): Promise<IUser> {
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalCommunityAdminPolicy,
       AuthorizationPrivilege.GRANT,
       `remove user global community admin: ${membershipData.userID}`
     );
-    return await this.authorizationService.removeGlobalCommunityAdmin(
+    return await this.adminAuthorizationService.removeGlobalCommunityAdmin(
       membershipData
     );
   }

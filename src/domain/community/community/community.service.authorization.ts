@@ -7,7 +7,7 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { AuthorizationRuleCredential } from '@domain/common/authorization-policy/authorization.rule.credential';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -64,7 +64,7 @@ export class CommunityAuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined
   ): IAuthorizationPolicy {
-    const newRules: AuthorizationRuleCredential[] = [];
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     const globalCommunityAdmin = {
       type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,

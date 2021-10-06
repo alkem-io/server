@@ -6,7 +6,6 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { EcoverseService } from './ecoverse.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import {
-  AuthorizationRuleCredential,
   IAuthorizationPolicy,
   UpdateAuthorizationPolicyInput,
 } from '@domain/common/authorization-policy';
@@ -15,6 +14,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IEcoverse } from './ecoverse.interface';
 import { Ecoverse } from './ecoverse.entity';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
 export class EcoverseAuthorizationService {
@@ -84,7 +84,7 @@ export class EcoverseAuthorizationService {
         `Authorization definition not found for: ${ecoverseID}`,
         LogContext.CHALLENGES
       );
-    const newRules: AuthorizationRuleCredential[] = [];
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible
     authorization.anonymousReadAccess = true;
 

@@ -13,4 +13,10 @@ export class QuestionTemplate {
     description: 'Is question required?',
   })
   required!: boolean;
+
+  @Field(() => Number, {
+    nullable: true,
+    description: 'Sorting order for the question. Lower is first.',
+  })
+  sortOrder!: number;
 }

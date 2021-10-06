@@ -7,8 +7,8 @@ import { MembershipUserInput } from './membership.dto.user.input';
 import { MembershipUserResultEntryEcoverse } from './membership.dto.user.result.entry.ecoverse';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { AuthorizationCredential } from '@common/enums';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { AuthorizationCredential, LogContext } from '@common/enums';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { IOrganization } from '@domain/community/organization';
 import { MembershipUserResultEntryOrganization } from './membership.dto.user.result.entry.organization';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
@@ -22,6 +22,14 @@ import { OrganizationMembership } from './membership.dto.organization.result';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { IUser } from '@domain/community/user/user.interface';
+import { MembershipCommunityResultEntry } from './membership.dto.community.result.entry';
+import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
+import { CommunityService } from '@domain/community/community/community.service';
+import { Repository } from 'typeorm/repository/Repository';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { RelationshipNotFoundException } from '@common/exceptions';
 
 export class MembershipService {
   constructor(
@@ -30,7 +38,12 @@ export class MembershipService {
     private ecoverseService: EcoverseService,
     private challengeService: ChallengeService,
     private applicationService: ApplicationService,
+    private communityService: CommunityService,
     private opportunityService: OpportunityService,
+    @InjectRepository(Challenge)
+    private challengeRepository: Repository<Challenge>,
+    @InjectRepository(Opportunity)
+    private opportunityRepository: Repository<Opportunity>,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -46,6 +59,7 @@ export class MembershipService {
       return membership;
     }
     membership.id = user.id;
+    const storedEcoverse: IEcoverse[] = [];
     const storedChallenges: IChallenge[] = [];
     const storedOpportunities: IOpportunity[] = [];
     const storedCommunityUserGroups: IUserGroup[] = [];
@@ -56,22 +70,24 @@ export class MembershipService {
           await this.createOrganizationResult(credential.resourceID, user.id)
         );
       } else if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
-        membership.ecoverses.push(
-          await this.createEcoverseMembershipResult(
-            credential.resourceID,
-            user.id
-          )
+        const response = await this.createEcoverseMembershipResult(
+          credential.resourceID,
+          user.id
         );
+        membership.ecoverses.push(response.entry);
+        storedEcoverse.push(response.ecoverse);
       } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
         const challenge = await this.challengeService.getChallengeOrFail(
-          credential.resourceID
+          credential.resourceID,
+          { relations: ['community'] }
         );
         storedChallenges.push(challenge);
       } else if (
         credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
       ) {
         const opportunity = await this.opportunityService.getOpportunityOrFail(
-          credential.resourceID
+          credential.resourceID,
+          { relations: ['community'] }
         );
         storedOpportunities.push(opportunity);
       } else if (
@@ -89,8 +105,17 @@ export class MembershipService {
       }
     }
 
+    membership.communities = [];
+
     // Assign to the right ecoverse
     for (const ecoverseResult of membership.ecoverses) {
+      const community = storedEcoverse.find(
+        se => se.id === ecoverseResult.id
+      )?.community;
+      if (community) {
+        membership.communities.push(community);
+      }
+
       for (const challenge of storedChallenges) {
         if (challenge.ecoverseID === ecoverseResult.ecoverseID) {
           const challengeResult = new MembershipResultEntry(
@@ -99,6 +124,14 @@ export class MembershipService {
             challenge.displayName
           );
           ecoverseResult.challenges.push(challengeResult);
+          if (challenge.community) {
+            membership.communities.push(
+              new MembershipCommunityResultEntry(
+                challenge.community?.id,
+                challenge.displayName
+              )
+            );
+          }
         }
       }
       for (const opportunity of storedOpportunities) {
@@ -109,6 +142,14 @@ export class MembershipService {
             opportunity.displayName
           );
           ecoverseResult.opportunities.push(opportunityResult);
+          if (opportunity.community) {
+            membership.communities.push(
+              new MembershipCommunityResultEntry(
+                opportunity.community?.id,
+                opportunity.displayName
+              )
+            );
+          }
         }
       }
       for (const group of storedCommunityUserGroups) {
@@ -164,14 +205,22 @@ export class MembershipService {
   async createEcoverseMembershipResult(
     ecoverseID: string,
     userID: string
-  ): Promise<MembershipUserResultEntryEcoverse> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID);
-    return new MembershipUserResultEntryEcoverse(
-      ecoverse.nameID,
-      ecoverse.id,
-      ecoverse.displayName,
-      userID
-    );
+  ): Promise<{
+    entry: MembershipUserResultEntryEcoverse;
+    ecoverse: IEcoverse;
+  }> {
+    const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID, {
+      relations: ['community'],
+    });
+    return {
+      entry: new MembershipUserResultEntryEcoverse(
+        ecoverse.nameID,
+        ecoverse.id,
+        ecoverse.displayName,
+        userID
+      ),
+      ecoverse,
+    };
   }
 
   async getOrganizationMemberships(
@@ -229,8 +278,54 @@ export class MembershipService {
           community.id,
           community.displayName,
           state,
-          application.id
+          application.id,
+          community.ecoverseID, // Store the ecoverse the application is for, regardless of level
+          application.createdDate,
+          application.updatedDate
         );
+
+        const communityParent = await this.communityService.getParentCommunity(
+          community
+        );
+
+        // not an ecoverse
+        if (communityParent) {
+          // For Challenge or an Opportunity, need to dig deeper...
+          const challengeForCommunity = await this.challengeRepository
+            .createQueryBuilder('challenge')
+            .leftJoinAndSelect('challenge.community', 'community')
+            .orWhere('community.id like :communityID')
+            .setParameters({ communityID: `%${community.id}%` })
+            .getOne();
+          if (challengeForCommunity) {
+            // the application is issued for a challenge
+            applicationResult.challengeID = challengeForCommunity.id;
+          } else {
+            const opportunityForCommunity = await this.opportunityRepository
+              .createQueryBuilder('opportunity')
+              .leftJoinAndSelect('opportunity.challenge', 'challenge')
+              .leftJoinAndSelect('opportunity.community', 'community')
+              .orWhere('community.id like :communityID')
+              .setParameters({ communityID: `%${community.id}%` })
+              .getOne();
+
+            if (
+              !opportunityForCommunity ||
+              !opportunityForCommunity.challenge
+            ) {
+              throw new RelationshipNotFoundException(
+                `Unable to find Challenge or Opportunity with the community specified: ${community.id}`,
+                LogContext.COMMUNITY
+              );
+            }
+
+            // the application is issued for an an opportunity
+            applicationResult.opportunityID = opportunityForCommunity.id;
+            applicationResult.challengeID =
+              opportunityForCommunity.challenge.id;
+          }
+        }
+
         applicationResults.push(applicationResult);
       }
     }

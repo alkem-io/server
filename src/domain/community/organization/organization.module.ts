@@ -11,7 +11,7 @@ import { OrganizationResolverQueries } from './organization.resolver.queries';
 import { UserModule } from '@domain/community/user/user.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationVerificationModule } from '../organization-verification/organization.verification.module';
@@ -20,7 +20,7 @@ import { OrganizationVerificationModule } from '../organization-verification/org
   imports: [
     AgentModule,
     AuthorizationPolicyModule,
-    AuthorizationEngineModule,
+    AuthorizationModule,
     OrganizationVerificationModule,
     UserModule,
     UserGroupModule,

@@ -7,12 +7,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from '@domain/community/user/user.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ApplicationResolverFields } from './application.resolver.fields';
-import { AuthorizationEngineModule } from '@services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
-    AuthorizationEngineModule,
+    AuthorizationModule,
     NVPModule,
     LifecycleModule,
     UserModule,

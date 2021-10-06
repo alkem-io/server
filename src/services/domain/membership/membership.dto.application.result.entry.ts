@@ -23,15 +23,49 @@ export class ApplicationResultEntry {
   })
   state: string;
 
+  @Field(() => Date, {
+    description: 'Date of creation',
+  })
+  createdDate: Date;
+
+  @Field(() => Date, {
+    description: 'Date of last update',
+  })
+  updatedDate: Date;
+
+  @Field(() => UUID, {
+    description: 'ID for the ultimate containing Hub',
+  })
+  ecoverseID!: string;
+
+  @Field(() => UUID, {
+    description:
+      'ID for the Challenge being applied to, if any. Or the Challenge containing the Opportunity being applied to.',
+    nullable: true,
+  })
+  challengeID?: string;
+
+  @Field(() => UUID, {
+    description: 'ID for the Opportunity being applied to, if any.',
+    nullable: true,
+  })
+  opportunityID?: string;
+
   constructor(
     communityID: string,
     displayName: string,
     state: string,
-    id: string
+    id: string,
+    ecoverseID: string,
+    createdDate: Date,
+    updatedDate: Date
   ) {
     this.displayName = displayName;
     this.communityID = communityID;
     this.state = state;
     this.id = id;
+    this.ecoverseID = ecoverseID;
+    this.createdDate = createdDate;
+    this.updatedDate = updatedDate;
   }
 }

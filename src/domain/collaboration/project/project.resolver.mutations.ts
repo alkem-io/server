@@ -11,7 +11,7 @@ import {
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -19,7 +19,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 export class ProjectResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private aspectService: AspectService,
     private projectService: ProjectService,
     private projectLifecycleOptionsProvider: ProjectLifecycleOptionsProvider
@@ -34,7 +34,7 @@ export class ProjectResolverMutations {
     @Args('deleteData') deleteData: DeleteProjectInput
   ): Promise<IProject> {
     const project = await this.projectService.getProjectOrFail(deleteData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       project.authorization,
       AuthorizationPrivilege.DELETE,
@@ -52,7 +52,7 @@ export class ProjectResolverMutations {
     @Args('projectData') projectData: UpdateProjectInput
   ): Promise<IProject> {
     const project = await this.projectService.getProjectOrFail(projectData.ID);
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       project.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -73,7 +73,7 @@ export class ProjectResolverMutations {
     const project = await this.projectService.getProjectOrFail(
       projectEventData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       project.authorization,
       AuthorizationPrivilege.CREATE,

@@ -5,12 +5,12 @@ import { IRelation, DeleteRelationInput } from '@domain/collaboration/relation';
 import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 @Resolver()
 export class RelationResolverMutations {
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     private relationService: RelationService
   ) {}
 
@@ -25,7 +25,7 @@ export class RelationResolverMutations {
     const relation = await this.relationService.getRelationOrFail(
       deleteData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       relation.authorization,
       AuthorizationPrivilege.DELETE,

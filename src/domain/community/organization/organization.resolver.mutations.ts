@@ -12,7 +12,6 @@ import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
@@ -24,6 +23,7 @@ import { RemoveOrganizationAdminInput } from './dto/organization.dto.remove.admi
 import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admin';
 import { AssignOrganizationOwnerInput } from './dto/organization.dto.assign.owner';
 import { RemoveOrganizationOwnerInput } from './dto/organization.dto.remove.owner';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {
@@ -32,7 +32,7 @@ export class OrganizationResolverMutations {
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private organizationService: OrganizationService,
-    private authorizationEngine: AuthorizationEngineService
+    private authorizationService: AuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -45,14 +45,14 @@ export class OrganizationResolverMutations {
     @Args('organizationData') organizationData: CreateOrganizationInput
   ): Promise<IOrganization> {
     const authorizationPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [
           AuthorizationRoleGlobal.COMMUNITY_ADMIN,
           AuthorizationRoleGlobal.ADMIN,
         ],
         [AuthorizationPrivilege.CREATE]
       );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE,
@@ -79,7 +79,7 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       groupData.parentID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.CREATE,
@@ -109,7 +109,7 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       organizationData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -130,7 +130,7 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       deleteData.ID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.DELETE,
@@ -153,7 +153,7 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       authorizationResetData.organizationID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -176,7 +176,7 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
@@ -197,7 +197,7 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
@@ -218,7 +218,7 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
@@ -241,7 +241,7 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
     );
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
@@ -265,7 +265,7 @@ export class OrganizationResolverMutations {
       membershipData.organizationID
     );
     // todo: what additional logic check do we want on the granting of org owner?
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
@@ -289,7 +289,7 @@ export class OrganizationResolverMutations {
       membershipData.organizationID
     );
     // todo: what additional logic check do we want on the granting of org owner?
-    await this.authorizationEngine.grantAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,

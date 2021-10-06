@@ -5,7 +5,7 @@ import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
@@ -17,7 +17,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
   constructor(
     private lifecycleService: LifecycleService,
     private organizationVerificationService: OrganizationVerificationService,
-    private authorizationEngineService: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -87,7 +87,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
       organizationVerificationGrantAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: IAuthorizationPolicy = event.authorization;
-        return this.authorizationEngineService.isAccessGranted(
+        return this.authorizationService.isAccessGranted(
           agentInfo,
           authorizationPolicy,
           AuthorizationPrivilege.GRANT
@@ -96,7 +96,7 @@ export class OrganizationVerificationLifecycleOptionsProvider {
       organizationVerificationUpdateAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: IAuthorizationPolicy = event.authorization;
-        return this.authorizationEngineService.isAccessGranted(
+        return this.authorizationService.isAccessGranted(
           agentInfo,
           authorizationPolicy,
           AuthorizationPrivilege.UPDATE

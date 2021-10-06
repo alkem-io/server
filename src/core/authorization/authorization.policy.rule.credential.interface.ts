@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('AuthorizationRuleCredential')
-export abstract class IAuthorizationRuleCredential {
+@ObjectType('AuthorizationPolicyRuleCredential')
+export abstract class IAuthorizationPolicyRuleCredential {
   @Field(() => String)
   type!: string;
 

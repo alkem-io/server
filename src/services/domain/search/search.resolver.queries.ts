@@ -8,18 +8,20 @@ import { SearchResultEntry } from './search-result-entry.dto';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationEngineService } from '@src/services/platform/authorization-engine/authorization-engine.service';
 import { AgentInfo } from '@core/authentication';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 @Resolver()
 export class SearchResolverQueries {
   private searchAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(
-    private authorizationEngine: AuthorizationEngineService,
+    private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private searchService: SearchService
   ) {
     this.searchAuthorizationPolicy =
-      this.authorizationEngine.createGlobalRolesAuthorizationPolicy(
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.REGISTERED],
         [AuthorizationPrivilege.READ]
       );
@@ -35,7 +37,7 @@ export class SearchResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('searchData') searchData: SearchInput
   ): Promise<ISearchResultEntry[]> {
-    await this.authorizationEngine.grantReadAccessOrFail(
+    await this.authorizationService.grantReadAccessOrFail(
       agentInfo,
       this.searchAuthorizationPolicy,
       `search query: ${agentInfo.email}`

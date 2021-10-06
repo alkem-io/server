@@ -4,7 +4,7 @@ import { UserGroupModule } from '@domain/community/user-group/user-group.module'
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthorizationEngineModule } from '@src/services/platform/authorization-engine/authorization-engine.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { Community } from './community.entity';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
@@ -15,10 +15,11 @@ import { CommunityAuthorizationService } from './community.service.authorization
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationModule } from '@services/platform/communication/communication.module';
 import { CommunityResolverQueries } from './community.resolver.queries';
+import { CommunityResolverSubscriptions } from './community.resolver.subscriptions';
 
 @Module({
   imports: [
-    AuthorizationEngineModule,
+    AuthorizationModule,
     AuthorizationPolicyModule,
     AgentModule,
     UserGroupModule,
@@ -33,6 +34,7 @@ import { CommunityResolverQueries } from './community.resolver.queries';
     CommunityAuthorizationService,
     CommunityResolverMutations,
     CommunityResolverFields,
+    CommunityResolverSubscriptions,
     CommunityLifecycleOptionsProvider,
     CommunityResolverQueries,
   ],
