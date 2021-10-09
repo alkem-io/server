@@ -26,7 +26,9 @@ export class MatrixUserAdapterService {
   }
 
   convertEmailToMatrixUsername(email: string) {
-    return email.replace(this.mailRegex, '=');
+    // TODO: "User ID can only contain characters a-z, 0-9, or '=_-./'"
+    const username = email.replace(this.mailRegex, '=');
+    return username.toLowerCase();
   }
 
   convertMatrixUsernameToMatrixId(username: string) {

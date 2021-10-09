@@ -154,8 +154,14 @@ export class MatrixUserManagementService {
     try {
       await this._matrixClient.isUsernameAvailable(username);
       return false;
-    } catch (error) {
-      return true;
+    } catch (error: any) {
+      const errcode = error.errcode;
+      if (errcode === 'M_USER_IN_USE') return true;
+      this.logger.error(
+        `Unable to check if username is available: ${error}`,
+        LogContext.COMMUNICATION
+      );
+      throw error;
     }
   }
 }

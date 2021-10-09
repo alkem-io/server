@@ -3,7 +3,7 @@ mutation removeUserFromCommunity($membershipData: RemoveCommunityMemberInput!) {
     id,
     members {
       id,
-      name
+      nameID
     }
   }
 }
