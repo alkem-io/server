@@ -6,7 +6,7 @@ import { IMatrixUser } from './matrix.user.interface';
 
 @Injectable()
 export class MatrixUserAdapterService {
-  private mailRegex = /[@]/g;
+  private emailUsernameSpecialCharactersRegex = /[^a-zA-Z0-9_/-/=.]/g;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -26,8 +26,22 @@ export class MatrixUserAdapterService {
   }
 
   convertEmailToMatrixUsername(email: string) {
-    // TODO: "User ID can only contain characters a-z, 0-9, or '=_-./'"
-    const username = email.replace(this.mailRegex, '=');
+    // Note: the incoming email has the form "username@domain". This is then used to create a matrix ID.
+    // Matrix: A user ID can only contain characters a-z, 0-9, or '=_-./'
+    // Email username: Uppercase and lowercase letters in English (A-Z, a-z), Digits from 0 to 9, Special characters such as ! # $ % & ' * + - / = ? ^ _ ` { |
+    // Email domain: Uppercase and lowercase letters in English (A-Z, a-z), digits from 0 to 9, A hyphen (-), A period (.)
+
+    const emailParts = email.split('@');
+    const emailUsername = emailParts[0];
+
+    // All characters from email domain are valid in Matrix usernames
+    const emailDomain = emailParts[1];
+    // Email usernames need to have the not allowed characters removed
+    const emailUsernameAdjusted = emailUsername.replace(
+      this.emailUsernameSpecialCharactersRegex,
+      ''
+    );
+    const username = `${emailUsernameAdjusted}=${emailDomain}`;
     return username.toLowerCase();
   }
 
