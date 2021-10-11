@@ -36,7 +36,7 @@ export abstract class IUser extends INameable {
 
   agent?: IAgent;
 
-  // the internal communicationsID (Matrix) for the user
+  // the internal communicationID (Matrix) for the user
   communicationID!: string;
 
   // Protected via field access for gdpr reasons

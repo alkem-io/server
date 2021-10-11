@@ -15,18 +15,18 @@ export class MatrixUserAdapterService {
   ) {}
 
   convertCommunicationsIdToMatrixUser(
-    communicationsID: string,
+    communicationID: string,
     password = 'generated_password'
   ): IMatrixUser {
     return {
-      name: this.convertCommunicationsIdToUsername(communicationsID),
-      username: communicationsID,
+      name: this.convertCommunicationsIdToUsername(communicationID),
+      username: communicationID,
       password: password,
     };
   }
 
-  convertCommunicationsIdToUsername(communicationsID: string) {
-    return communicationsID.replace('@', '').split(':')[0];
+  convertCommunicationsIdToUsername(communicationID: string) {
+    return communicationID.replace('@', '').split(':')[0];
   }
 
   convertEmailToMatrixUsername(email: string) {

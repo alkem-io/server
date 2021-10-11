@@ -444,7 +444,7 @@ export class CommunityService {
 
   async getDiscussionCommunicationsRoom(
     community: ICommunity,
-    communicationsID: string
+    communicationID: string
   ): Promise<CommunityRoom> {
     if (this.communicationsEnabled && community.communicationGroupID === '') {
       await this.initializeCommunicationsRoom(community);
@@ -453,12 +453,12 @@ export class CommunityService {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.discussionRoomID,
-      communicationsID
+      communicationID
     );
 
     const room = await this.communicationService.getCommunityRoom(
       community.discussionRoomID,
-      communicationsID
+      communicationID
     );
 
     await this.userService.populateRoomMessageSenders([room]);

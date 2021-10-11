@@ -45,7 +45,7 @@ export class MatrixUserManagementService {
   }
 
   async register(
-    communicationsID: string,
+    communicationID: string,
     //email: string,
     password?: string,
     isAdmin = false
@@ -56,7 +56,7 @@ export class MatrixUserManagementService {
     );
     const user =
       this.matrixUserAdapterService.convertCommunicationsIdToMatrixUser(
-        communicationsID,
+        communicationID,
         password
       );
 
@@ -121,12 +121,12 @@ export class MatrixUserManagementService {
   }
 
   async login(
-    communicationsID: string,
+    communicationID: string,
     password?: string
   ): Promise<IOperationalMatrixUser> {
     const matrixUser =
       this.matrixUserAdapterService.convertCommunicationsIdToMatrixUser(
-        communicationsID,
+        communicationID,
         password
       );
 
@@ -150,11 +150,11 @@ export class MatrixUserManagementService {
     }
   }
 
-  async isRegistered(communicationsID: string): Promise<boolean> {
+  async isRegistered(communicationID: string): Promise<boolean> {
     try {
       const username =
         this.matrixUserAdapterService.convertCommunicationsIdToUsername(
-          communicationsID
+          communicationID
         );
       await this._matrixClient.isUsernameAvailable(username);
       return false;

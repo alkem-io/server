@@ -416,12 +416,12 @@ export class UserService {
     return await this.userRepository.count();
   }
 
-  async getUserIDByCommunicationsID(communicationsID: string): Promise<string> {
+  async getUserIDByCommunicationsID(communicationID: string): Promise<string> {
     const userMatch = await this.userRepository
       .createQueryBuilder('user')
-      .where('user.communictionID = :communicationID')
+      .where('user.communicationID = :communicationID')
       .setParameters({
-        communicationsID: `${communicationsID}`,
+        communicationID: `${communicationID}`,
       })
       .getOne();
     if (userMatch) return userMatch.id;

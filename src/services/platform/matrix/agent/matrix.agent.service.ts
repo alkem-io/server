@@ -184,11 +184,11 @@ export class MatrixAgentService {
 
   async getDirectRoomForCommunicationsID(
     matrixAgent: IMatrixAgent,
-    communicationsID: string
+    communicationID: string
   ): Promise<MatrixRoom | undefined> {
     const matrixUsername =
       this.matrixUserAdapterService.convertCommunicationsIdToUsername(
-        communicationsID
+        communicationID
       );
     // Need to implement caching for performance
     const dmRoomIds = this.matrixRoomAdapterService.getDirectMessageRoomsMap(
