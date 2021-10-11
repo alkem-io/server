@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { IContent } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -88,6 +89,12 @@ export class MatrixRoomAdapterService {
   ) {
     // need to cache those
     const room = await adminMatrixClient.getRoom(roomID);
+    if (!room) {
+      throw new MatrixEntityNotFoundException(
+        `Unable to locate room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
 
     for (const matrixClient of matrixClients) {
       // not very well documented but we can validate whether the user has membership like this
