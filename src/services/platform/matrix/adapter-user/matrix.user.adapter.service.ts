@@ -60,6 +60,7 @@ export class MatrixUserAdapterService {
   }
 
   convertMatrixUsernameToEmail(username: string) {
+    // Todo: this is problematic...
     return username.replace(/[=]/g, '@');
   }
 
