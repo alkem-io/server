@@ -233,12 +233,12 @@ export class CommunityService {
     await this.communicationService.addUserToCommunityMessaging(
       community.communicationGroupID,
       community.updatesRoomID,
-      user.email
+      user.communicationID
     );
     await this.communicationService.addUserToCommunityMessaging(
       community.communicationGroupID,
       community.discussionRoomID,
-      user.email
+      user.communicationID
     );
 
     return community;
