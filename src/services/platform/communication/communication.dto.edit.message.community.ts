@@ -1,5 +1,5 @@
 export class CommunicationEditMessageOnCommunityRoomInput {
-  sendingUserEmail!: string;
+  senderCommunicationsID!: string;
   message!: string;
   messageId!: string;
   roomID!: string;

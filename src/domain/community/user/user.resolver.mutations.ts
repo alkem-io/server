@@ -122,9 +122,9 @@ export class UserResolverMutations {
     );
 
     return await this.communicationService.sendMessageToUser({
-      sendingUserEmail: agentInfo.email,
+      senderCommunicationsID: agentInfo.email,
       message: messageData.message,
-      receiverID: receivingUser.email,
+      receiverCommunicationsID: receivingUser.email,
     });
   }
 

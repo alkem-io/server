@@ -65,7 +65,7 @@ export class CommunityResolverFields {
   ): Promise<CommunityRoom> {
     return await this.communityService.getUpdatesCommunicationsRoom(
       community,
-      agentInfo.email
+      agentInfo.communicationID
     );
   }
 
@@ -82,7 +82,7 @@ export class CommunityResolverFields {
   ): Promise<CommunityRoom> {
     return await this.communityService.getDiscussionCommunicationsRoom(
       community,
-      agentInfo.email
+      agentInfo.communicationID
     );
   }
 }

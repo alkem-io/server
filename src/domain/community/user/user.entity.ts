@@ -40,11 +40,13 @@ export class User extends NameableEntity implements IUser {
   @JoinColumn()
   agent?: Agent;
 
-  @OneToMany(
-    () => Application,
-    application => application.id,
-    { eager: false, cascade: false }
-  )
+  @Column()
+  communicationID: string = '';
+
+  @OneToMany(() => Application, application => application.id, {
+    eager: false,
+    cascade: false,
+  })
   applications?: Application[];
 
   constructor() {

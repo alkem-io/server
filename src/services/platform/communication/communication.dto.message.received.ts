@@ -21,6 +21,7 @@ export class CommunicationMessageReceived {
   })
   message!: CommunicationMessageResult;
 
+  // TODO: is this needed? Should it not just be the user ID?
   @Field(() => String, {
     nullable: false,
     description: 'The user email that should receive the message',

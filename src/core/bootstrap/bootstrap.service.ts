@@ -56,6 +56,7 @@ export class BootstrapService {
       await this.ensureEcoverseSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
+      await this.ensureCommunicationIDsPopulated();
     } catch (error: any) {
       throw new BootstrapException(error.message);
     }
@@ -187,6 +188,10 @@ export class BootstrapService {
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();
     }
+  }
+
+  async ensureCommunicationIDsPopulated() {
+    await this.userService.ensureCommunicationIDsCreated();
   }
 
   async ensureEcoverseSingleton() {

@@ -30,6 +30,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunityRoom } from '@services/platform/communication';
 import { DirectRoom } from '@services/platform/communication/communication.room.dto.direct';
+import { CommunicationService } from '@services/platform/communication/communication.service';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -42,6 +43,7 @@ export class UserService {
   constructor(
     private profileService: ProfileService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private communicationService: CommunicationService,
     private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -77,6 +79,10 @@ export class UserService {
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
     });
+
+    user.communicationID = this.communicationService.generateMatrixIDFromEmail(
+      user.email
+    );
 
     this.logger.verbose?.(
       `Created a new user with nameID: ${user.nameID}`,
@@ -410,34 +416,47 @@ export class UserService {
     return await this.userRepository.count();
   }
 
+  async getUserIDByCommunicationsID(communicationsID: string): Promise<string> {
+    const userMatch = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.communictionID = :communicationID')
+      .setParameters({
+        communicationsID: `${communicationsID}`,
+      })
+      .getOne();
+    if (userMatch) return userMatch.id;
+    return '';
+  }
+
+  async ensureCommunicationIDsCreated() {
+    const userMatches = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.communicationID = :communicationID')
+      .setParameters({
+        communicationID: '',
+      })
+      .getMany();
+    for (const userMatch of userMatches) {
+      const user = await this.getUserOrFail(userMatch.id);
+      user.communicationID =
+        this.communicationService.generateMatrixIDFromEmail(user.email);
+      await this.saveUser(user);
+    }
+  }
+
   // Not sure about the placement of this one
   async populateRoomMessageSenders(rooms: (CommunityRoom | DirectRoom)[]) {
-    const uniqueSenders = rooms
-      .map(r => r.messages)
-      .reduce((aggr, current) => aggr.concat(current))
-      .map(m => m.sender)
-      .filter((value, index, arr) => arr.indexOf(value) === index);
-
-    const senderMap = uniqueSenders.reduce(
-      (aggr: Record<string, string | undefined>, value) => {
-        aggr[value] = undefined;
-        return aggr;
-      },
-      {}
-    );
-
-    for (const sender of uniqueSenders) {
-      const user = await this.getUserByEmail(sender);
-      if (!user) {
-        continue;
+    const knownSendersMap = new Map();
+    for (const room of rooms) {
+      for (const message of room.messages) {
+        let knownSender = knownSendersMap.get(message.sender);
+        if (!knownSender) {
+          knownSender = await this.getUserIDByCommunicationsID(message.sender);
+          knownSendersMap.set(message.sender, knownSender);
+        }
+        message.sender = knownSender;
       }
-
-      senderMap[sender] = user.id;
     }
-
-    rooms.forEach(r =>
-      r.messages.forEach(m => (m.sender = senderMap[m.sender] || m.sender))
-    );
 
     return rooms;
   }

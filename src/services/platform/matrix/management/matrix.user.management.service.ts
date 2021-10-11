@@ -45,7 +45,8 @@ export class MatrixUserManagementService {
   }
 
   async register(
-    email: string,
+    communicationsID: string,
+    //email: string,
     password?: string,
     isAdmin = false
   ): Promise<IOperationalMatrixUser> {
@@ -53,10 +54,11 @@ export class MatrixUserManagementService {
       CommunicationsSynapseEndpoint.REGISTRATION,
       this.baseUrl
     );
-    const user = this.matrixUserAdapterService.convertEmailToMatrixUser(
-      email,
-      password
-    );
+    const user =
+      this.matrixUserAdapterService.convertCommunicationsIdToMatrixUser(
+        communicationsID,
+        password
+      );
 
     const nonceResponse = await this.httpService
       .get<{ nonce: string }>(url.href)
@@ -74,9 +76,9 @@ export class MatrixUserManagementService {
     const registrationResponse = await this.httpService
       .post<{ user_id: string; access_token: string }>(url.href, {
         nonce,
-        username: user.name,
+        username: user.username,
         password: user.password,
-        bind_emails: [email],
+        bind_emails: [],
         admin: isAdmin,
         mac: hmac,
       })
@@ -119,13 +121,14 @@ export class MatrixUserManagementService {
   }
 
   async login(
-    email: string,
+    communicationsID: string,
     password?: string
   ): Promise<IOperationalMatrixUser> {
-    const matrixUser = this.matrixUserAdapterService.convertEmailToMatrixUser(
-      email,
-      password
-    );
+    const matrixUser =
+      this.matrixUserAdapterService.convertCommunicationsIdToMatrixUser(
+        communicationsID,
+        password
+      );
 
     try {
       const operationalUser = await this._matrixClient.loginWithPassword(
@@ -147,11 +150,12 @@ export class MatrixUserManagementService {
     }
   }
 
-  async isRegistered(email: string): Promise<boolean> {
-    const username =
-      this.matrixUserAdapterService.convertEmailToMatrixUsername(email);
-
+  async isRegistered(communicationsID: string): Promise<boolean> {
     try {
+      const username =
+        this.matrixUserAdapterService.convertCommunicationsIdToUsername(
+          communicationsID
+        );
       await this._matrixClient.isUsernameAvailable(username);
       return false;
     } catch (error: any) {

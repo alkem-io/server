@@ -11,7 +11,7 @@ export class CommunicationMessageResult {
 
   @Field(() => String, {
     nullable: false,
-    description: 'The sender email',
+    description: 'The sender user ID',
   })
   sender!: string;
 
@@ -26,13 +26,14 @@ export class CommunicationMessageResult {
     description: 'The id for the message event (Matrix)',
   })
   id!: string;
+
+  receiver!: string;
 }
 
 export function convertFromMatrixMessage(
   message: MatrixRoomResponseMessage,
-  receiver: string,
-  userResolver: (senderName: string) => string
-): (CommunicationMessageResult & { receiver: string }) | undefined {
+  receiverMatrixID: string
+): CommunicationMessageResult | undefined {
   const { event, sender } = message;
   if (event.type !== 'm.room.message') {
     return;
@@ -50,14 +51,11 @@ export function convertFromMatrixMessage(
   // const isRelation = message.isRelation('m.replace');
   // const mRelatesTo = message.getWireContent()['m.relates_to'];
 
-  const sendingUser = userResolver(sender.name);
-  const receivingUser = userResolver(receiver);
-
   return {
     message: content.body,
-    sender: sendingUser ? `${sendingUser}` : 'unknown',
+    sender: sender.userId,
     timestamp: event.origin_server_ts || 0,
     id: event.event_id || '',
-    receiver: receivingUser ? `${receivingUser}` : 'unknown',
+    receiver: receiverMatrixID,
   };
 }

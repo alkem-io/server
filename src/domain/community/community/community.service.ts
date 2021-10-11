@@ -393,7 +393,6 @@ export class CommunityService {
     try {
       community.communicationGroupID =
         await this.communicationService.createCommunityGroup(
-          // generate a unique identifier for the community because the community does not have an id (not persisted yet)
           community.id,
           community.displayName
         );
@@ -445,7 +444,7 @@ export class CommunityService {
 
   async getDiscussionCommunicationsRoom(
     community: ICommunity,
-    email: string
+    communicationsID: string
   ): Promise<CommunityRoom> {
     if (this.communicationsEnabled && community.communicationGroupID === '') {
       await this.initializeCommunicationsRoom(community);
@@ -454,12 +453,12 @@ export class CommunityService {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.discussionRoomID,
-      email
+      communicationsID
     );
 
     const room = await this.communicationService.getCommunityRoom(
       community.discussionRoomID,
-      email
+      communicationsID
     );
 
     await this.userService.populateRoomMessageSenders([room]);
@@ -478,7 +477,7 @@ export class CommunityService {
       email
     );
     return await this.communicationService.sendMessageToCommunityRoom({
-      sendingUserEmail: email,
+      senderCommunicationsID: email,
       message: messageData.message,
       roomID: community.updatesRoomID,
     });
@@ -495,7 +494,7 @@ export class CommunityService {
       email
     );
     return await this.communicationService.sendMessageToCommunityRoom({
-      sendingUserEmail: email,
+      senderCommunicationsID: email,
       message: messageData.message,
       roomID: community.discussionRoomID,
     });
@@ -512,7 +511,7 @@ export class CommunityService {
       email
     );
     await this.communicationService.deleteMessageFromCommunityRoom({
-      sendingUserEmail: email,
+      senderCommunicationsID: email,
       messageId: messageData.messageId,
       roomID: community.updatesRoomID,
     });
@@ -529,7 +528,7 @@ export class CommunityService {
       email
     );
     await this.communicationService.deleteMessageFromCommunityRoom({
-      sendingUserEmail: email,
+      senderCommunicationsID: email,
       messageId: messageData.messageId,
       roomID: community.discussionRoomID,
     });

@@ -33,7 +33,7 @@ export class AutoAcceptRoomMembershipMonitorFactory {
 
           await client.joinRoom(roomId);
           if (content.is_direct) {
-            await adapter.setDmRoom(client, roomId, senderId);
+            await adapter.storeDirectMessageRoom(client, roomId, senderId);
           }
         }
       },
@@ -53,10 +53,7 @@ export class RoomTimelineMonitorFactory {
       next: async ({ event, room }: RoomTimelineEvent) => {
         const message = convertFromMatrixMessage(
           event,
-          matrixClient.getUserId(),
-          matrixUserAdapterService.convertMatrixIdToEmail.bind(
-            matrixUserAdapterService
-          )
+          matrixClient.getUserId()
         );
 
         // TODO Notifications - Allow the client to see the event and then mark it as read

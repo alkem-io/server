@@ -14,17 +14,24 @@ export class MatrixRoomAdapterService {
     private readonly logger: LoggerService
   ) {}
 
-  async setDmRoom(matrixClient: MatrixClient, roomId: string, userId: string) {
+  async storeDirectMessageRoom(
+    matrixClient: MatrixClient,
+    roomId: string,
+    userId: string
+  ) {
     // NOT OPTIMIZED - needs caching
-    const dmRooms = this.dmRooms(matrixClient);
+    const dmRooms = this.getDirectMessageRoomsMap(matrixClient);
 
     dmRooms[userId] = [roomId];
     await matrixClient.setAccountData('m.direct', dmRooms);
   }
 
   // there could be more than one dm room per user
-  dmRooms(matrixClient: MatrixClient): Record<string, string[]> {
+  getDirectMessageRoomsMap(
+    matrixClient: MatrixClient
+  ): Record<string, string[]> {
     const mDirectEvent = matrixClient.getAccountData('m.direct');
+    // todo: tidy up this logic
     const eventContent = mDirectEvent
       ? mDirectEvent.getContent<IContent>()
       : {};

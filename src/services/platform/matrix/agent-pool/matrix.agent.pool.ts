@@ -53,59 +53,59 @@ export class MatrixAgentPool
     }
   }
 
-  async acquire(email: string): Promise<MatrixAgent> {
+  async acquire(communicationsID: string): Promise<MatrixAgent> {
     this.logger.verbose?.(
-      `[AgentPool] obtaining user for email: ${email}`,
+      `[AgentPool] obtaining agent for commsID: ${communicationsID}`,
       LogContext.COMMUNICATION
     );
-    if (!email || email.length === 0) {
+    if (!communicationsID || communicationsID.length === 0) {
       throw new MatrixAgentPoolException(
-        `Invalid email address provided: ${email}`,
+        `Invalid communicationsID provided: ${communicationsID}`,
         LogContext.COMMUNICATION
       );
     }
 
     const getExpirationDateTicks = () => new Date().getTime() + 1000 * 60 * 15;
 
-    if (!this._cache[email]) {
-      const operatingUser = await this.acquireUser(email);
+    if (!this._cache[communicationsID]) {
+      const operatingUser = await this.acquireMatrixUser(communicationsID);
       const client = await this.matrixAgentService.createMatrixAgent(
         operatingUser
       );
 
       await client.start();
 
-      this._cache[email] = {
+      this._cache[communicationsID] = {
         agent: client,
         expiresOn: getExpirationDateTicks(),
       };
     } else {
-      this._cache[email].expiresOn = getExpirationDateTicks();
+      this._cache[communicationsID].expiresOn = getExpirationDateTicks();
     }
 
-    return this._cache[email].agent;
+    return this._cache[communicationsID].agent;
   }
 
-  private async acquireUser(email: string) {
+  private async acquireMatrixUser(communicationsID: string) {
     const isRegistered = await this.matrixUserManagementService.isRegistered(
-      email
+      communicationsID
     );
 
     if (isRegistered) {
-      return await this.matrixUserManagementService.login(email);
+      return await this.matrixUserManagementService.login(communicationsID);
     }
 
-    return await this.matrixUserManagementService.register(email);
+    return await this.matrixUserManagementService.register(communicationsID);
   }
 
-  release(email: string): void {
+  release(communicationsID: string): void {
     this.logger.verbose?.(
-      `[AgentPool] releasing session for email: ${email}`,
+      `[AgentPool] releasing session for communicationsID: ${communicationsID}`,
       LogContext.COMMUNICATION
     );
-    if (this._cache[email]) {
-      this._cache[email].agent.dispose();
-      delete this._cache[email];
+    if (this._cache[communicationsID]) {
+      this._cache[communicationsID].agent.dispose();
+      delete this._cache[communicationsID];
     }
   }
 }

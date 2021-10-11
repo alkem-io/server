@@ -3,7 +3,6 @@ import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
-import { PubSubEngine } from 'graphql-subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.adapter.service';
 import { MatrixRoom } from '../matrix/adapter-room/matrix.room';
@@ -14,7 +13,6 @@ import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.inter
 import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
-import { PUB_SUB } from '../subscription/subscription.module';
 import { CommunicationDeleteMessageFromCommunityRoomInput } from './communication.dto.delete.message.community';
 import { CommunicationEditMessageOnCommunityRoomInput } from './communication.dto.edit.message.community';
 import {
@@ -30,7 +28,8 @@ import { DirectRoom } from './communication.room.dto.direct';
 export class CommunicationService {
   private adminUser!: IOperationalMatrixUser;
   private matrixElevatedAgent!: MatrixAgent; // elevated as created with an admin account
-  private adminUserName!: string;
+  private adminEmail!: string;
+  private adminCommunicationsID!: string;
   private adminPassword!: string;
   private enabled = false;
 
@@ -43,16 +42,17 @@ export class CommunicationService {
     private matrixUserManagementService: MatrixUserManagementService,
     private matrixUserAdapterService: MatrixUserAdapterService,
     private matrixRoomAdapterService: MatrixRoomAdapterService,
-    private matrixGroupAdapterService: MatrixGroupAdapterService,
-    @Inject(PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine
+    private matrixGroupAdapterService: MatrixGroupAdapterService
   ) {
-    this.adminUserName = this.configService.get(
+    this.adminEmail = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.admin?.username;
     this.adminPassword = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.admin?.password;
+
+    this.adminCommunicationsID =
+      this.matrixUserAdapterService.convertEmailToMatrixId(this.adminEmail);
 
     // need both to be true
     this.enabled =
@@ -65,7 +65,7 @@ export class CommunicationService {
     sendMessageData: CommunicationSendMessageCommunityInput
   ): Promise<string> {
     const matrixAgent = await this.acquireMatrixAgent(
-      sendMessageData.sendingUserEmail
+      sendMessageData.senderCommunicationsID
     );
     const messageId = await this.matrixAgentService.sendMessage(
       matrixAgent,
@@ -82,7 +82,7 @@ export class CommunicationService {
     editMessageData: CommunicationEditMessageOnCommunityRoomInput
   ): Promise<void> {
     const matrixAgent = await this.acquireMatrixAgent(
-      editMessageData.sendingUserEmail
+      editMessageData.senderCommunicationsID
     );
 
     await this.matrixAgentService.editMessage(
@@ -99,7 +99,7 @@ export class CommunicationService {
     deleteMessageData: CommunicationDeleteMessageFromCommunityRoomInput
   ) {
     const matrixAgent = await this.acquireMatrixAgent(
-      deleteMessageData.sendingUserEmail
+      deleteMessageData.senderCommunicationsID
     );
 
     await this.matrixAgentService.deleteMessage(
@@ -113,7 +113,7 @@ export class CommunicationService {
     sendMessageUserData: CommunicationSendMessageUserInput
   ): Promise<string> {
     const matrixAgent = await this.acquireMatrixAgent(
-      sendMessageUserData.sendingUserEmail
+      sendMessageUserData.senderCommunicationsID
     );
 
     // todo: not always reinitiate the room connection
@@ -121,7 +121,7 @@ export class CommunicationService {
       matrixAgent,
       {
         text: '',
-        email: sendMessageUserData.receiverID,
+        matrixID: sendMessageUserData.receiverCommunicationsID,
       }
     );
 
@@ -136,14 +136,14 @@ export class CommunicationService {
     return messageId;
   }
 
-  private async acquireMatrixAgent(email: string) {
+  private async acquireMatrixAgent(communicationsID: string) {
     if (!this.enabled) {
       throw new NotEnabledException(
         'Communications not enabled',
         LogContext.COMMUNICATION
       );
     }
-    return await this.matrixAgentPool.acquire(email);
+    return await this.matrixAgentPool.acquire(communicationsID);
   }
 
   async getGlobalAdminUser() {
@@ -152,15 +152,15 @@ export class CommunicationService {
     }
 
     const adminExists = await this.matrixUserManagementService.isRegistered(
-      this.adminUserName
+      this.adminCommunicationsID
     );
     if (adminExists) {
       this.logger.verbose?.(
-        `Admin user is registered: ${this.adminUserName}, logging in...`,
+        `Admin user is registered: ${this.adminEmail}, logging in...`,
         LogContext.COMMUNICATION
       );
       const adminUser = await this.matrixUserManagementService.login(
-        this.adminUserName,
+        this.adminCommunicationsID,
         this.adminPassword
       );
       this.adminUser = adminUser;
@@ -191,7 +191,7 @@ export class CommunicationService {
 
   async registerNewAdminUser(): Promise<IOperationalMatrixUser> {
     return await this.matrixUserManagementService.register(
-      this.adminUserName,
+      this.adminCommunicationsID,
       this.adminPassword,
       true
     );
@@ -220,6 +220,10 @@ export class CommunicationService {
       LogContext.COMMUNICATION
     );
     return group;
+  }
+
+  generateMatrixIDFromEmail(email: string): string {
+    return this.matrixUserAdapterService.convertEmailToMatrixId(email);
   }
 
   async createCommunityRoom(
@@ -252,7 +256,7 @@ export class CommunicationService {
   async ensureUserHasAccesToCommunityMessaging(
     groupID: string,
     roomID: string,
-    email: string
+    communicationsID: string
   ) {
     // If not enabled just return an empty string
     if (!this.enabled) {
@@ -260,10 +264,10 @@ export class CommunicationService {
     }
     // todo: check that the user has access properly
     try {
-      await this.addUserToCommunityMessaging(groupID, roomID, email);
+      await this.addUserToCommunityMessaging(groupID, roomID, communicationsID);
     } catch (error) {
       this.logger.verbose?.(
-        `Unable to add user ${email}: already added?: ${error}`,
+        `Unable to add user ${communicationsID}: already added?: ${error}`,
         LogContext.COMMUNICATION
       );
     }
@@ -272,7 +276,7 @@ export class CommunicationService {
   async addUserToCommunityMessaging(
     groupID: string,
     roomID: string,
-    email: string
+    communicationID: string
   ) {
     // If not enabled just return an empty string
     if (!this.enabled) {
@@ -280,7 +284,7 @@ export class CommunicationService {
     }
 
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    const userAgent = await this.matrixAgentPool.acquire(email);
+    const userAgent = await this.matrixAgentPool.acquire(communicationID);
     // first send invites to the room - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
     // TODO: Need to add a check whether the user is already part of the room/group
@@ -296,13 +300,13 @@ export class CommunicationService {
     );
   }
 
-  async getCommunityRooms(currentUserEmail: string): Promise<CommunityRoom[]> {
+  async getCommunityRooms(communicationsID: string): Promise<CommunityRoom[]> {
     const rooms: CommunityRoom[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
+    const matrixAgent = await this.matrixAgentPool.acquire(communicationsID);
 
     const matrixCommunityRooms =
       await this.matrixAgentService.getCommunityRooms(matrixAgent);
@@ -316,13 +320,13 @@ export class CommunicationService {
     return rooms;
   }
 
-  async getDirectRooms(currentUserEmail: string): Promise<DirectRoom[]> {
+  async getDirectRooms(communicationsID: string): Promise<DirectRoom[]> {
     const rooms: DirectRoom[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
+    const matrixAgent = await this.matrixAgentPool.acquire(communicationsID);
 
     const matrixDirectRooms = await this.matrixAgentService.getDirectRooms(
       matrixAgent
@@ -331,7 +335,7 @@ export class CommunicationService {
       // todo: likely a bug in the email mapping below
       const room = await this.convertMatrixRoomToDirectRoom(
         matrixRoom,
-        matrixRoom.receiverEmail || '',
+        matrixRoom.receiverCommunicationsID || '',
         matrixAgent.matrixClient.getUserId()
       );
       rooms.push(room);
@@ -342,7 +346,7 @@ export class CommunicationService {
 
   async getCommunityRoom(
     roomId: string,
-    currentUserEmail: string
+    communicationsID: string
   ): Promise<CommunityRoom> {
     // If not enabled just return an empty room
     if (!this.enabled) {
@@ -351,7 +355,7 @@ export class CommunicationService {
         messages: [],
       };
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
+    const matrixAgent = await this.matrixAgentPool.acquire(communicationsID);
     const matrixRoom = await this.matrixAgentService.getRoom(
       matrixAgent,
       roomId
@@ -364,7 +368,7 @@ export class CommunicationService {
 
   async getRoom(
     roomId: string,
-    currentUserEmail: string
+    communicationsID: string
   ): Promise<CommunityRoom | DirectRoom> {
     // If not enabled just return an empty room
     if (!this.enabled) {
@@ -373,7 +377,7 @@ export class CommunicationService {
         messages: [],
       };
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(currentUserEmail);
+    const matrixAgent = await this.matrixAgentPool.acquire(communicationsID);
     const matrixRoom = await this.matrixAgentService.getRoom(
       matrixAgent,
       roomId
@@ -384,13 +388,9 @@ export class CommunicationService {
         matrixRoom.roomId
       );
     if (mappedDirectRoomId) {
-      const emailReceiver =
-        this.matrixUserAdapterService.convertMatrixIdToEmail(
-          mappedDirectRoomId
-        );
-      await this.convertMatrixRoomToDirectRoom(
+      return await this.convertMatrixRoomToDirectRoom(
         matrixRoom,
-        emailReceiver,
+        mappedDirectRoomId, // may need to convert from an matrix ID to matrix username
         matrixAgent.matrixClient.getUserId()
       );
     }
@@ -402,7 +402,7 @@ export class CommunicationService {
 
   async convertMatrixRoomToDirectRoom(
     matrixRoom: MatrixRoom,
-    emailReceiver: string,
+    receiverCommunicationsID: string,
     userId: string
   ): Promise<DirectRoom> {
     const roomResult = new DirectRoom();
@@ -411,7 +411,7 @@ export class CommunicationService {
       matrixRoom,
       userId
     );
-    roomResult.receiverID = emailReceiver;
+    roomResult.receiverID = receiverCommunicationsID;
     return roomResult;
   }
 
@@ -448,13 +448,7 @@ export class CommunicationService {
     const messages: CommunicationMessageResult[] = [];
 
     for (const timelineMessage of timeline) {
-      const message = convertFromMatrixMessage(
-        timelineMessage,
-        userId,
-        this.matrixUserAdapterService.convertMatrixIdToEmail.bind(
-          this.matrixUserAdapterService
-        )
-      );
+      const message = convertFromMatrixMessage(timelineMessage, userId);
       if (!message) {
         continue;
       }
