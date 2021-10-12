@@ -420,7 +420,7 @@ export class CommunityService {
 
   async getUpdatesCommunicationsRoom(
     community: ICommunity,
-    email: string
+    communicationID: string
   ): Promise<CommunityRoom> {
     if (this.communicationsEnabled && community.communicationGroupID === '') {
       await this.initializeCommunicationsRoom(community);
@@ -429,12 +429,12 @@ export class CommunityService {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.updatesRoomID,
-      email
+      communicationID
     );
 
     const room = await this.communicationService.getCommunityRoom(
       community.updatesRoomID,
-      email
+      communicationID
     );
 
     await this.userService.populateRoomMessageSenders([room]);
@@ -468,16 +468,16 @@ export class CommunityService {
 
   async sendMessageToCommunityUpdates(
     community: ICommunity,
-    email: string,
+    communicationID: string,
     messageData: CommunitySendMessageInput
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.updatesRoomID,
-      email
+      communicationID
     );
     return await this.communicationService.sendMessageToCommunityRoom({
-      senderCommunicationsID: email,
+      senderCommunicationsID: communicationID,
       message: messageData.message,
       roomID: community.updatesRoomID,
     });
@@ -485,16 +485,16 @@ export class CommunityService {
 
   async sendMessageToCommunityDiscussions(
     community: ICommunity,
-    email: string,
+    communicationID: string,
     messageData: CommunitySendMessageInput
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.discussionRoomID,
-      email
+      communicationID
     );
     return await this.communicationService.sendMessageToCommunityRoom({
-      senderCommunicationsID: email,
+      senderCommunicationsID: communicationID,
       message: messageData.message,
       roomID: community.discussionRoomID,
     });
@@ -502,16 +502,16 @@ export class CommunityService {
 
   async removeMessageFromCommunityUpdates(
     community: ICommunity,
-    email: string,
+    communicationID: string,
     messageData: CommunityRemoveMessageInput
   ) {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.updatesRoomID,
-      email
+      communicationID
     );
     await this.communicationService.deleteMessageFromCommunityRoom({
-      senderCommunicationsID: email,
+      senderCommunicationsID: communicationID,
       messageId: messageData.messageId,
       roomID: community.updatesRoomID,
     });
@@ -519,16 +519,16 @@ export class CommunityService {
 
   async removeMessageFromCommunityDiscussions(
     community: ICommunity,
-    email: string,
+    communicationID: string,
     messageData: CommunityRemoveMessageInput
   ) {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
       community.discussionRoomID,
-      email
+      communicationID
     );
     await this.communicationService.deleteMessageFromCommunityRoom({
-      senderCommunicationsID: email,
+      senderCommunicationsID: communicationID,
       messageId: messageData.messageId,
       roomID: community.discussionRoomID,
     });
