@@ -95,20 +95,12 @@ export class AuthorizationService {
     return authorization;
   }
 
-  isAuthenticationDisabled(): boolean {
-    const authEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
-      ?.authentication?.enabled;
-    if (!authEnabled) return true;
-    return false;
-  }
-
   isAccessGranted(
     agentInfo: AgentInfo,
     authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
     if (!authorization) throw new Error();
-    if (this.isAuthenticationDisabled()) return true;
     if (
       authorization.anonymousReadAccess &&
       privilegeRequired === AuthorizationPrivilege.READ
