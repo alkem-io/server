@@ -13,7 +13,7 @@ export class Profiling {
   ) => {
     const originalMethod = descriptor.value;
 
-    descriptor.value = function(...args: any) {
+    descriptor.value = function (...args: any) {
       if (!Profiling.profilingEnabled) {
         // just execute the wrapped function
         return originalMethod.apply(this, args);
@@ -25,6 +25,34 @@ export class Profiling {
       const msg = `${target.constructor.name}-${propertyKey}: Execution time: ${elapsed} milliseconds`;
       Profiling.logger.verbose?.(msg, LogContext.API);
 
+      return result;
+    };
+
+    return descriptor;
+  };
+
+  static asyncApi = (
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    target: Object,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) => {
+    const originalMethod = descriptor.value;
+
+    descriptor.value = function (...args: any) {
+      if (!Profiling.profilingEnabled) {
+        // just execute the wrapped function
+        return originalMethod.apply(this, args);
+      }
+      // profiling is enabled
+      const start = performance.now();
+      const result = originalMethod.apply(this, args).then(() => {
+        const elapsed = (performance.now() - start).toFixed(3);
+        const msg = `${target.constructor.name}-${propertyKey}: Execution time: ${elapsed} milliseconds`;
+        Profiling.logger.verbose?.(msg, LogContext.API);
+
+        // todo: pass on the promise call
+      });
       return result;
     };
 
