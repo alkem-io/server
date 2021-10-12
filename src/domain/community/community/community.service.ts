@@ -229,15 +229,10 @@ export class CommunityService {
       resourceID: membershipCredential.resourceID,
     });
 
-    // register the user for the community room(s)
+    // register the user for the community rooms
     await this.communicationService.addUserToCommunityMessaging(
       community.communicationGroupID,
-      community.updatesRoomID,
-      user.communicationID
-    );
-    await this.communicationService.addUserToCommunityMessaging(
-      community.communicationGroupID,
-      community.discussionRoomID,
+      [community.updatesRoomID, community.discussionRoomID],
       user.communicationID
     );
 
@@ -428,7 +423,7 @@ export class CommunityService {
 
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.updatesRoomID,
+      [community.updatesRoomID],
       communicationID
     );
 
@@ -452,7 +447,7 @@ export class CommunityService {
 
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.discussionRoomID,
+      [community.discussionRoomID],
       communicationID
     );
 
@@ -473,7 +468,7 @@ export class CommunityService {
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.updatesRoomID,
+      [community.updatesRoomID],
       communicationID
     );
     return await this.communicationService.sendMessageToCommunityRoom({
@@ -490,7 +485,7 @@ export class CommunityService {
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.discussionRoomID,
+      [community.discussionRoomID],
       communicationID
     );
     return await this.communicationService.sendMessageToCommunityRoom({
@@ -507,7 +502,7 @@ export class CommunityService {
   ) {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.updatesRoomID,
+      [community.updatesRoomID],
       communicationID
     );
     await this.communicationService.deleteMessageFromCommunityRoom({
@@ -524,7 +519,7 @@ export class CommunityService {
   ) {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.discussionRoomID,
+      [community.discussionRoomID],
       communicationID
     );
     await this.communicationService.deleteMessageFromCommunityRoom({

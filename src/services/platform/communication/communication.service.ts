@@ -255,7 +255,7 @@ export class CommunicationService {
 
   async ensureUserHasAccesToCommunityMessaging(
     groupID: string,
-    roomID: string,
+    roomIDs: string[],
     communicationID: string
   ) {
     // If not enabled just return an empty string
@@ -264,7 +264,7 @@ export class CommunicationService {
     }
     // todo: check that the user has access properly
     try {
-      await this.addUserToCommunityMessaging(groupID, roomID, communicationID);
+      await this.addUserToCommunityMessaging(groupID, roomIDs, communicationID);
     } catch (error) {
       this.logger.verbose?.(
         `Unable to add user ${communicationID}: already added?: ${error}`,
@@ -275,7 +275,7 @@ export class CommunicationService {
 
   async addUserToCommunityMessaging(
     groupID: string,
-    roomID: string,
+    roomIDs: string[],
     communicationID: string
   ) {
     // If not enabled just return an empty string
@@ -285,14 +285,16 @@ export class CommunicationService {
 
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(communicationID);
-    // first send invites to the room - the group invite fails once accepted
+    // first send invites to the rooms - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
     // TODO: Need to add a check whether the user is already part of the room/group
-    await this.matrixRoomAdapterService.inviteUsersToRoom(
-      elevatedAgent.matrixClient,
-      roomID,
-      [userAgent.matrixClient]
-    );
+    for (const roomID of roomIDs) {
+      await this.matrixRoomAdapterService.inviteUsersToRoom(
+        elevatedAgent.matrixClient,
+        roomID,
+        [userAgent.matrixClient]
+      );
+    }
     await this.matrixGroupAdapterService.inviteUsersToGroup(
       elevatedAgent.matrixClient,
       groupID,

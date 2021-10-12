@@ -150,6 +150,7 @@ export class MatrixUserManagementService {
     }
   }
 
+  //@Profiling.asyncApi
   async isRegistered(communicationID: string): Promise<boolean> {
     try {
       const username =
@@ -160,7 +161,9 @@ export class MatrixUserManagementService {
       return false;
     } catch (error: any) {
       const errcode = error.errcode;
-      if (errcode === 'M_USER_IN_USE') return true;
+      if (errcode === 'M_USER_IN_USE') {
+        return true;
+      }
       this.logger.error(
         `Unable to check if username is available: ${error}`,
         LogContext.COMMUNICATION
