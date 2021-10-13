@@ -4,7 +4,7 @@ import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ConfigService } from '@nestjs/config';
 import { ForbiddenException } from '@common/exceptions';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential';
@@ -24,8 +24,6 @@ export class AuthorizationService {
     privilegeRequired: AuthorizationPrivilege,
     msg: string
   ) {
-    if (this.isAuthenticationDisabled()) return true;
-
     const auth = this.validateAuthorization(authorization);
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
