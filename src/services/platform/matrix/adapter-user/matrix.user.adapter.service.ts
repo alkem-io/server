@@ -14,19 +14,19 @@ export class MatrixUserAdapterService {
     private configService: ConfigService
   ) {}
 
-  convertMatrixIdToMatrixUser(
-    matrixId: string,
+  convertMatrixIDToMatrixUser(
+    matrixUserID: string,
     password = 'generated_password'
   ): IMatrixUser {
     return {
-      name: this.convertMatrixIdToUsername(matrixId),
-      username: matrixId,
+      name: this.convertMatrixIDToUsername(matrixUserID),
+      username: matrixUserID,
       password: password,
     };
   }
 
-  convertMatrixIdToUsername(matrixId: string) {
-    return matrixId.replace('@', '').split(':')[0];
+  convertMatrixIDToUsername(matrixUserID: string) {
+    return matrixUserID.replace('@', '').split(':')[0];
   }
 
   convertEmailToMatrixUsername(email: string) {
@@ -49,13 +49,13 @@ export class MatrixUserAdapterService {
     return username.toLowerCase();
   }
 
-  convertEmailToMatrixId(email: string) {
-    return this.convertMatrixUsernameToMatrixId(
+  convertEmailToMatrixID(email: string) {
+    return this.convertMatrixUsernameToMatrixID(
       this.convertEmailToMatrixUsername(email)
     );
   }
 
-  convertMatrixUsernameToMatrixId(username: string) {
+  convertMatrixUsernameToMatrixID(username: string) {
     const homeserverName = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.homeserver_name;

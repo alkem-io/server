@@ -52,10 +52,9 @@ export class CommunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     // need both to be true
-    this.communicationsEnabled =
-      this.configService.get(ConfigurationTypes.COMMUNICATIONS)?.enabled &&
-      this.configService.get(ConfigurationTypes.IDENTITY)?.authentication
-        ?.enabled;
+    this.communicationsEnabled = this.configService.get(
+      ConfigurationTypes.COMMUNICATIONS
+    )?.enabled;
   }
 
   async createCommunity(name: string): Promise<ICommunity> {

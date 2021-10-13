@@ -109,7 +109,7 @@ export class MatrixAgentService {
         dmRoomMap[matrixUsername][0]
       );
       room.receiverCommunicationsID =
-        this.matrixUserAdapterService.convertMatrixUsernameToMatrixId(
+        this.matrixUserAdapterService.convertMatrixUsernameToMatrixID(
           matrixUsername
         );
       room.isDirect = true;
@@ -173,13 +173,13 @@ export class MatrixAgentService {
     matrixRoomId: string
   ): Promise<string | undefined> {
     // Need to implement caching for performance
-    const dmRoomByUserMatrixIdMap =
+    const dmRoomByUserMatrixIDMap =
       await this.matrixRoomAdapterService.getDirectMessageRoomsMap(
         matrixAgent.matrixClient
       );
-    const dmUserMatrixIds = Object.keys(dmRoomByUserMatrixIdMap);
-    const dmRoom = dmUserMatrixIds.find(
-      userID => dmRoomByUserMatrixIdMap[userID].indexOf(matrixRoomId) !== -1
+    const dmUserMatrixIDs = Object.keys(dmRoomByUserMatrixIDMap);
+    const dmRoom = dmUserMatrixIDs.find(
+      userID => dmRoomByUserMatrixIDMap[userID].indexOf(matrixRoomId) !== -1
     );
     return dmRoom;
   }
@@ -189,7 +189,7 @@ export class MatrixAgentService {
     matrixUserId: string
   ): Promise<MatrixRoom | undefined> {
     const matrixUsername =
-      this.matrixUserAdapterService.convertMatrixIdToUsername(matrixUserId);
+      this.matrixUserAdapterService.convertMatrixIDToUsername(matrixUserId);
     // Need to implement caching for performance
     const dmRoomIds = this.matrixRoomAdapterService.getDirectMessageRoomsMap(
       matrixAgent.matrixClient

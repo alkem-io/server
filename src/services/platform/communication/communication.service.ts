@@ -52,13 +52,12 @@ export class CommunicationService {
     )?.matrix?.admin?.password;
 
     this.adminCommunicationsID =
-      this.matrixUserAdapterService.convertEmailToMatrixId(this.adminEmail);
+      this.matrixUserAdapterService.convertEmailToMatrixID(this.adminEmail);
 
     // need both to be true
-    this.enabled =
-      this.configService.get(ConfigurationTypes.COMMUNICATIONS)?.enabled &&
-      this.configService.get(ConfigurationTypes.IDENTITY)?.authentication
-        ?.enabled;
+    this.enabled = this.configService.get(
+      ConfigurationTypes.COMMUNICATIONS
+    )?.enabled;
   }
 
   async sendMessageToCommunityRoom(
@@ -199,7 +198,7 @@ export class CommunicationService {
 
   async tryRegisterNewUser(email: string): Promise<string> {
     const matrixUserID =
-      this.matrixUserAdapterService.convertEmailToMatrixId(email);
+      this.matrixUserAdapterService.convertEmailToMatrixID(email);
 
     const isRegistered = await this.matrixUserManagementService.isRegistered(
       matrixUserID
@@ -395,16 +394,16 @@ export class CommunicationService {
       matrixAgent,
       roomId
     );
-    const targetUserMatrixId =
+    const targetUserMatrixID =
       await this.matrixAgentService.getDirectUserMatrixIDForRoomID(
         matrixAgent,
         matrixRoom.roomId
       );
-    if (targetUserMatrixId) {
+    if (targetUserMatrixID) {
       return await this.convertMatrixRoomToDirectRoom(
         matrixRoom,
         // may need to convert from an matrix ID to matrix username
-        targetUserMatrixId,
+        targetUserMatrixID,
         matrixAgent.matrixClient.getUserId()
       );
     }

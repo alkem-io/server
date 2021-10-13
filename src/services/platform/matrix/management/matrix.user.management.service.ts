@@ -54,7 +54,7 @@ export class MatrixUserManagementService {
       CommunicationsSynapseEndpoint.REGISTRATION,
       this.baseUrl
     );
-    const user = this.matrixUserAdapterService.convertMatrixIdToMatrixUser(
+    const user = this.matrixUserAdapterService.convertMatrixIDToMatrixUser(
       matrixUserID,
       password
     );
@@ -124,7 +124,7 @@ export class MatrixUserManagementService {
     password?: string
   ): Promise<IOperationalMatrixUser> {
     const matrixUser =
-      this.matrixUserAdapterService.convertMatrixIdToMatrixUser(
+      this.matrixUserAdapterService.convertMatrixIDToMatrixUser(
         matrixUserID,
         password
       );
@@ -153,7 +153,7 @@ export class MatrixUserManagementService {
   async isRegistered(matrixUserID: string): Promise<boolean> {
     try {
       const username =
-        this.matrixUserAdapterService.convertMatrixIdToUsername(matrixUserID);
+        this.matrixUserAdapterService.convertMatrixIDToUsername(matrixUserID);
       await this._matrixClient.isUsernameAvailable(username);
       return false;
     } catch (error: any) {
