@@ -45,6 +45,13 @@ export class UpdateUserInput extends UpdateNameableInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   gender?: string;
 
+  @Field({
+    nullable: true,
+    description:
+      'Set this user profile as being used as a service account or not.',
+  })
+  serviceProfile?: boolean;
+
   @Field(() => UpdateProfileInput, { nullable: true })
   profileData?: UpdateProfileInput;
 }
