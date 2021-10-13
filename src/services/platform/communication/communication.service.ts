@@ -197,6 +197,21 @@ export class CommunicationService {
     );
   }
 
+  async tryRegisterNewUser(email: string): Promise<string> {
+    const matrixUserID =
+      this.matrixUserAdapterService.convertEmailToMatrixId(email);
+
+    const isRegistered = await this.matrixUserManagementService.isRegistered(
+      matrixUserID
+    );
+
+    if (!isRegistered) {
+      await this.matrixUserManagementService.register(matrixUserID);
+    }
+
+    return matrixUserID;
+  }
+
   async createCommunityGroup(
     communityId: string,
     communityName: string
@@ -220,10 +235,6 @@ export class CommunicationService {
       LogContext.COMMUNICATION
     );
     return group;
-  }
-
-  generateMatrixIDFromEmail(email: string): string {
-    return this.matrixUserAdapterService.convertEmailToMatrixId(email);
   }
 
   async createCommunityRoom(
