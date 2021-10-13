@@ -15,7 +15,6 @@ services:
     networks:
       - alkemio_dev_net
     environment:
-      - AUTH_ENABLED
       - NODE_ENV
       - DATABASE_HOST=mysql_db
       - MYSQL_ROOT_PASSWORD

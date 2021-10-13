@@ -21,7 +21,6 @@ query
 
     authentication
     {
-      enabled
       providers
       {
         name

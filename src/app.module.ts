@@ -16,7 +16,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { DataManagementModule } from '@src/services/domain/data-management/data-management.module';
 import { MembershipModule } from '@src/services/domain/membership/membership.module';
 import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
@@ -125,7 +124,6 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     AuthorizationModule,
     EcoverseModule,
     MetadataModule,
-    DataManagementModule,
     BootstrapModule,
     SearchModule,
     MembershipModule,

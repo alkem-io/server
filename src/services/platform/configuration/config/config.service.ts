@@ -19,8 +19,6 @@ export class KonfigService {
       template: await this.getTemplate(),
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
-        enabled: this.configService.get(ConfigurationTypes.IDENTITY)
-          ?.authentication?.enabled,
       },
       platform: {
         security: this.configService.get(ConfigurationTypes.PLATFORM)?.security,
