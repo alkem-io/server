@@ -63,11 +63,3 @@ docker run --name some-mysql \
 -d mysql \
 --default-authentication-plugin=mysql_native_password
 ```
-
-### Data Management
-
-For evaluation / development with the Alkemio server, there is also a simple Data Management panel, available at the following URL: <http://localhost:4000/data-management>.
-
-The Data Management panel provides the following capabilities:
-
-- **Empty Ecoverse**: Resets the database back to an empty state, and ensures there is an empty Ecoverse available. It is triggered by a http request to <http://localhost:4000/data-management/empty-ecoverse>, or alternatively by pressing the relevant button on the main Data Management panel.

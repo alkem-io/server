@@ -5,8 +5,6 @@ Initial version of integration tests is in place. To run them, look at the prere
 - Used frameworks/packages [jest](https://jestjs.io/) and `supertest`
 - Running `MySQL sql server`
 - Running `Alkemio/Server` service.
-- Local .env file must contain the following vairable, to run tests with authentication:
-- `AUTH_ENABLED` env variable must be set to `true`.
 - `LOGGING_CONSOLE_ENABLED=false` can be used to disable logging the exceptions (exceptions are quite verbose and will pollute the test results log).
 - In order to run the unit, integration and end-to-end, navigate to the `/Server` repository, and execute the following command: `npm run test:[TEST_TYPE]` where TEST_TYPE is `e2e` for end-to-end, `it` for
   integration tests and `ut` for unit tests
