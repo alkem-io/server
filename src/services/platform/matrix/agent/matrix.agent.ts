@@ -116,18 +116,14 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   }
 
   resolveRoomTimelineEventHandler() {
-    return RoomTimelineMonitorFactory.create(
-      this.matrixClient,
-      this.matrixUserAdapterService,
-      message => {
-        /* TODO - need to find a way to wire the admin user (with simplicity in mind)
+    return RoomTimelineMonitorFactory.create(this.matrixClient, message => {
+      /* TODO - need to find a way to wire the admin user (with simplicity in mind)
           in order to be able to read community data */
-        this.subscriptionHandler.publish(
-          SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
-          message
-        );
-      }
-    );
+      this.subscriptionHandler.publish(
+        SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
+        message
+      );
+    });
   }
 
   resolveRoomEventHandler() {

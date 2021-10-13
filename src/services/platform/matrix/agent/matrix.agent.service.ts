@@ -139,57 +139,57 @@ export class MatrixAgentService {
     matrixAgent: IMatrixAgent,
     messageRequest: MatrixAgentMessageRequestDirect
   ): Promise<string> {
-    const directRoom = await this.getDirectRoomForCommunicationsID(
+    const directRoom = await this.getDirectRoomForMatrixID(
       matrixAgent,
       messageRequest.matrixID
     );
     if (directRoom) return directRoom.roomId;
 
     // Room does not exist, create...
-    const matrixUsername = this.matrixUserAdapterService.convertEmailToMatrixId(
-      messageRequest.matrixID
-    );
-
     const targetRoomId = await this.matrixRoomAdapterService.createRoom(
       matrixAgent.matrixClient,
       {
-        dmUserId: matrixUsername,
+        dmUserId: messageRequest.matrixID,
       }
     );
 
     await this.matrixRoomAdapterService.storeDirectMessageRoom(
       matrixAgent.matrixClient,
       targetRoomId,
-      matrixUsername
+      messageRequest.matrixID
     );
 
     return targetRoomId;
   }
 
-  async getDirectRoomIdForRoomID(
+  /*
+    the naming is really confusing
+    what we attempt to solve is a race condition
+    where two or more DM rooms are created between the two users
+    we aim to always resolve the
+  */
+  async getDirectUserMatrixIDForRoomID(
     matrixAgent: MatrixAgent,
     matrixRoomId: string
   ): Promise<string | undefined> {
     // Need to implement caching for performance
-    const dmRoomMap =
+    const dmRoomByUserMatrixIdMap =
       await this.matrixRoomAdapterService.getDirectMessageRoomsMap(
         matrixAgent.matrixClient
       );
-    const dmRoomMapKeys = Object.keys(dmRoomMap);
-    const dmRoom = dmRoomMapKeys.find(
-      userID => dmRoomMap[userID].indexOf(matrixRoomId) !== -1
+    const dmUserMatrixIds = Object.keys(dmRoomByUserMatrixIdMap);
+    const dmRoom = dmUserMatrixIds.find(
+      userID => dmRoomByUserMatrixIdMap[userID].indexOf(matrixRoomId) !== -1
     );
     return dmRoom;
   }
 
-  async getDirectRoomForCommunicationsID(
+  async getDirectRoomForMatrixID(
     matrixAgent: IMatrixAgent,
-    communicationID: string
+    matrixUserId: string
   ): Promise<MatrixRoom | undefined> {
     const matrixUsername =
-      this.matrixUserAdapterService.convertCommunicationsIdToUsername(
-        communicationID
-      );
+      this.matrixUserAdapterService.convertMatrixIdToUsername(matrixUserId);
     // Need to implement caching for performance
     const dmRoomIds = this.matrixRoomAdapterService.getDirectMessageRoomsMap(
       matrixAgent.matrixClient

@@ -34,12 +34,17 @@ export class UserResolverSubscriptions {
       // Use this to update the sender identifer
       // Todo: should not be doing any heavy work during the resolving
       // The user is now cached so it should be better
-      const user = await this.userService.getUserByEmail(value.message.sender);
+      const user = await this.userService.getUserByCommunicationId(
+        value.message.senderId
+      );
       if (!user) {
         return new CommunicationMessageReceived();
       }
 
-      value.message.sender = user?.id;
+      // Note: we need to convert the senderId only
+      // the value.userID should remain a matrix id
+      value.message.senderId = user?.id;
+
       return value;
     },
     async filter(
@@ -50,7 +55,7 @@ export class UserResolverSubscriptions {
     ) {
       // Note: by going through the passport authentication mechanism the "user" property on
       // the request will contain the AgentInfo that was authenticated.
-      return payload.userEmail === context.req?.user?.email;
+      return payload.userID === context.req?.user?.communicationID;
     },
   })
   async messageReceived(@CurrentUser() agentInfo: AgentInfo) {

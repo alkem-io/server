@@ -14,19 +14,19 @@ export class MatrixUserAdapterService {
     private configService: ConfigService
   ) {}
 
-  convertCommunicationsIdToMatrixUser(
-    communicationID: string,
+  convertMatrixIdToMatrixUser(
+    matrixId: string,
     password = 'generated_password'
   ): IMatrixUser {
     return {
-      name: this.convertCommunicationsIdToUsername(communicationID),
-      username: communicationID,
+      name: this.convertMatrixIdToUsername(matrixId),
+      username: matrixId,
       password: password,
     };
   }
 
-  convertCommunicationsIdToUsername(communicationID: string) {
-    return communicationID.replace('@', '').split(':')[0];
+  convertMatrixIdToUsername(matrixId: string) {
+    return matrixId.replace('@', '').split(':')[0];
   }
 
   convertEmailToMatrixUsername(email: string) {

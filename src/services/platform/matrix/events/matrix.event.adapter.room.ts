@@ -7,7 +7,6 @@ import {
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
 import { MatrixRoom } from '../adapter-room/matrix.room';
 import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
-import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
 import { MatrixClient } from '../types/matrix.client.type';
 
 const noop = function () {
@@ -44,7 +43,6 @@ export class AutoAcceptRoomMembershipMonitorFactory {
 export class RoomTimelineMonitorFactory {
   static create(
     matrixClient: MatrixClient,
-    matrixUserAdapterService: MatrixUserAdapterService,
     onMessageReceived: (event: CommunicationMessageReceived) => void
   ): IMatrixEventHandler['roomTimelineMonitor'] {
     return {
@@ -65,7 +63,7 @@ export class RoomTimelineMonitorFactory {
           onMessageReceived({
             message,
             roomId: room.roomId,
-            userEmail: message.receiver,
+            userID: message.receiver,
             communityId: undefined,
             roomName: room.name,
           });

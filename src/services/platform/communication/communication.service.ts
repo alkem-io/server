@@ -136,14 +136,14 @@ export class CommunicationService {
     return messageId;
   }
 
-  private async acquireMatrixAgent(communicationID: string) {
+  private async acquireMatrixAgent(matrixUserId: string) {
     if (!this.enabled) {
       throw new NotEnabledException(
         'Communications not enabled',
         LogContext.COMMUNICATION
       );
     }
-    return await this.matrixAgentPool.acquire(communicationID);
+    return await this.matrixAgentPool.acquire(matrixUserId);
   }
 
   async getGlobalAdminUser() {
@@ -256,7 +256,7 @@ export class CommunicationService {
   async ensureUserHasAccesToCommunityMessaging(
     groupID: string,
     roomIDs: string[],
-    communicationID: string
+    matrixUserID: string
   ) {
     // If not enabled just return an empty string
     if (!this.enabled) {
@@ -264,10 +264,10 @@ export class CommunicationService {
     }
     // todo: check that the user has access properly
     try {
-      await this.addUserToCommunityMessaging(groupID, roomIDs, communicationID);
+      await this.addUserToCommunityMessaging(groupID, roomIDs, matrixUserID);
     } catch (error) {
       this.logger.verbose?.(
-        `Unable to add user ${communicationID}: already added?: ${error}`,
+        `Unable to add user ${matrixUserID}: already added?: ${error}`,
         LogContext.COMMUNICATION
       );
     }
@@ -276,7 +276,7 @@ export class CommunicationService {
   async addUserToCommunityMessaging(
     groupID: string,
     roomIDs: string[],
-    communicationID: string
+    matrixUserID: string
   ) {
     // If not enabled just return an empty string
     if (!this.enabled) {
@@ -284,7 +284,7 @@ export class CommunicationService {
     }
 
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    const userAgent = await this.matrixAgentPool.acquire(communicationID);
+    const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
     // first send invites to the rooms - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
     // TODO: Need to add a check whether the user is already part of the room/group
@@ -302,13 +302,13 @@ export class CommunicationService {
     );
   }
 
-  async getCommunityRooms(communicationID: string): Promise<CommunityRoom[]> {
+  async getCommunityRooms(matrixUserID: string): Promise<CommunityRoom[]> {
     const rooms: CommunityRoom[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(communicationID);
+    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
 
     const matrixCommunityRooms =
       await this.matrixAgentService.getCommunityRooms(matrixAgent);
@@ -322,13 +322,13 @@ export class CommunicationService {
     return rooms;
   }
 
-  async getDirectRooms(communicationID: string): Promise<DirectRoom[]> {
+  async getDirectRooms(matrixUserID: string): Promise<DirectRoom[]> {
     const rooms: DirectRoom[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(communicationID);
+    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
 
     const matrixDirectRooms = await this.matrixAgentService.getDirectRooms(
       matrixAgent
@@ -348,7 +348,7 @@ export class CommunicationService {
 
   async getCommunityRoom(
     roomId: string,
-    communicationID: string
+    matrixUserID: string
   ): Promise<CommunityRoom> {
     // If not enabled just return an empty room
     if (!this.enabled) {
@@ -357,7 +357,7 @@ export class CommunicationService {
         messages: [],
       };
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(communicationID);
+    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
     const matrixRoom = await this.matrixAgentService.getRoom(
       matrixAgent,
       roomId
@@ -370,7 +370,7 @@ export class CommunicationService {
 
   async getRoom(
     roomId: string,
-    communicationID: string
+    matrixUserID: string
   ): Promise<CommunityRoom | DirectRoom> {
     // If not enabled just return an empty room
     if (!this.enabled) {
@@ -379,20 +379,21 @@ export class CommunicationService {
         messages: [],
       };
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(communicationID);
+    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
     const matrixRoom = await this.matrixAgentService.getRoom(
       matrixAgent,
       roomId
     );
-    const mappedDirectRoomId =
-      await this.matrixAgentService.getDirectRoomIdForRoomID(
+    const targetUserMatrixId =
+      await this.matrixAgentService.getDirectUserMatrixIDForRoomID(
         matrixAgent,
         matrixRoom.roomId
       );
-    if (mappedDirectRoomId) {
+    if (targetUserMatrixId) {
       return await this.convertMatrixRoomToDirectRoom(
         matrixRoom,
-        mappedDirectRoomId, // may need to convert from an matrix ID to matrix username
+        // may need to convert from an matrix ID to matrix username
+        targetUserMatrixId,
         matrixAgent.matrixClient.getUserId()
       );
     }
@@ -404,7 +405,7 @@ export class CommunicationService {
 
   async convertMatrixRoomToDirectRoom(
     matrixRoom: MatrixRoom,
-    receiverCommunicationsID: string,
+    receiverMatrixID: string,
     userId: string
   ): Promise<DirectRoom> {
     const roomResult = new DirectRoom();
@@ -413,7 +414,7 @@ export class CommunicationService {
       matrixRoom,
       userId
     );
-    roomResult.receiverID = receiverCommunicationsID;
+    roomResult.receiverID = receiverMatrixID;
     return roomResult;
   }
 

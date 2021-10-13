@@ -45,7 +45,7 @@ export class MatrixUserManagementService {
   }
 
   async register(
-    communicationID: string,
+    matrixUserID: string,
     //email: string,
     password?: string,
     isAdmin = false
@@ -54,11 +54,10 @@ export class MatrixUserManagementService {
       CommunicationsSynapseEndpoint.REGISTRATION,
       this.baseUrl
     );
-    const user =
-      this.matrixUserAdapterService.convertCommunicationsIdToMatrixUser(
-        communicationID,
-        password
-      );
+    const user = this.matrixUserAdapterService.convertMatrixIdToMatrixUser(
+      matrixUserID,
+      password
+    );
 
     const nonceResponse = await this.httpService
       .get<{ nonce: string }>(url.href)
@@ -121,12 +120,12 @@ export class MatrixUserManagementService {
   }
 
   async login(
-    communicationID: string,
+    matrixUserID: string,
     password?: string
   ): Promise<IOperationalMatrixUser> {
     const matrixUser =
-      this.matrixUserAdapterService.convertCommunicationsIdToMatrixUser(
-        communicationID,
+      this.matrixUserAdapterService.convertMatrixIdToMatrixUser(
+        matrixUserID,
         password
       );
 
@@ -151,12 +150,10 @@ export class MatrixUserManagementService {
   }
 
   //@Profiling.asyncApi
-  async isRegistered(communicationID: string): Promise<boolean> {
+  async isRegistered(matrixUserID: string): Promise<boolean> {
     try {
       const username =
-        this.matrixUserAdapterService.convertCommunicationsIdToUsername(
-          communicationID
-        );
+        this.matrixUserAdapterService.convertMatrixIdToUsername(matrixUserID);
       await this._matrixClient.isUsernameAvailable(username);
       return false;
     } catch (error: any) {

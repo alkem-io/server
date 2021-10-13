@@ -6,6 +6,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
+import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -52,18 +53,20 @@ export class UserService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
-  private getUserEmailCacheKey(email: string): string {
-    return `@user:email:${email}`;
+  private getUserCommunicationIdCacheKey(communicationId: string): string {
+    return `@user:communicationId:${communicationId}`;
   }
   private async setUserCache(user: IUser) {
     await this.cacheManager.set(
-      this.getUserEmailCacheKey(user.email),
+      this.getUserCommunicationIdCacheKey(user.email),
       user,
       this.cacheOptions
     );
   }
   private async clearUserCache(user: IUser) {
-    await this.cacheManager.del(this.getUserEmailCacheKey(user.email));
+    await this.cacheManager.del(
+      this.getUserCommunicationIdCacheKey(user.communicationID)
+    );
   }
 
   async createUser(userData: CreateUserInput): Promise<IUser> {
@@ -219,20 +222,43 @@ export class UserService {
   }
 
   async getUserByEmail(
-    userID: string,
+    email: string,
+    options?: FindOneOptions<User>
+  ): Promise<IUser | undefined> {
+    if (this.validateEmail(email)) {
+      throw new FormatNotSupportedException(
+        `Incorrect format of the user email: ${email}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return await this.userRepository.findOne(
+      {
+        email,
+      },
+      options
+    );
+  }
+
+  async getUserByCommunicationId(
+    communicationID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | undefined> {
     let user: IUser | undefined = await this.cacheManager.get<IUser>(
-      this.getUserEmailCacheKey(userID)
+      this.getUserCommunicationIdCacheKey(communicationID)
     );
 
-    if (this.validateEmail(userID)) {
+    if (!user) {
       user = await this.userRepository.findOne(
         {
-          email: userID,
+          communicationID: communicationID,
         },
         options
       );
+
+      if (user) {
+        await this.setUserCache(user);
+      }
     }
 
     return user;
@@ -428,6 +454,7 @@ export class UserService {
     return '';
   }
 
+  // TODO [] - ensure the user has a communication id and is registered in a single pass
   async ensureCommunicationIDsCreated() {
     const userMatches = await this.userRepository
       .createQueryBuilder('user')
@@ -449,12 +476,14 @@ export class UserService {
     const knownSendersMap = new Map();
     for (const room of rooms) {
       for (const message of room.messages) {
-        let knownSender = knownSendersMap.get(message.sender);
+        let knownSender = knownSendersMap.get(message.senderId);
         if (!knownSender) {
-          knownSender = await this.getUserIDByCommunicationsID(message.sender);
-          knownSendersMap.set(message.sender, knownSender);
+          knownSender = await this.getUserIDByCommunicationsID(
+            message.senderId
+          );
+          knownSendersMap.set(message.senderId, knownSender);
         }
-        message.sender = knownSender;
+        message.senderId = knownSender;
       }
     }
 

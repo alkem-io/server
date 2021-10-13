@@ -53,59 +53,59 @@ export class MatrixAgentPool
     }
   }
 
-  async acquire(communicationID: string): Promise<MatrixAgent> {
+  async acquire(matrixUserID: string): Promise<MatrixAgent> {
     this.logger.verbose?.(
-      `[AgentPool] obtaining agent for commsID: ${communicationID}`,
+      `[AgentPool] obtaining agent for commsID: ${matrixUserID}`,
       LogContext.COMMUNICATION
     );
-    if (!communicationID || communicationID.length === 0) {
+    if (!matrixUserID || matrixUserID.length === 0) {
       throw new MatrixAgentPoolException(
-        `Invalid communicationID provided: ${communicationID}`,
+        `Invalid matrixUserID provided: ${matrixUserID}`,
         LogContext.COMMUNICATION
       );
     }
 
     const getExpirationDateTicks = () => new Date().getTime() + 1000 * 60 * 15;
 
-    if (!this._cache[communicationID]) {
-      const operatingUser = await this.acquireMatrixUser(communicationID);
+    if (!this._cache[matrixUserID]) {
+      const operatingUser = await this.acquireMatrixUser(matrixUserID);
       const client = await this.matrixAgentService.createMatrixAgent(
         operatingUser
       );
 
       await client.start();
 
-      this._cache[communicationID] = {
+      this._cache[matrixUserID] = {
         agent: client,
         expiresOn: getExpirationDateTicks(),
       };
     } else {
-      this._cache[communicationID].expiresOn = getExpirationDateTicks();
+      this._cache[matrixUserID].expiresOn = getExpirationDateTicks();
     }
 
-    return this._cache[communicationID].agent;
+    return this._cache[matrixUserID].agent;
   }
 
-  private async acquireMatrixUser(communicationID: string) {
+  private async acquireMatrixUser(matrixUserID: string) {
     const isRegistered = await this.matrixUserManagementService.isRegistered(
-      communicationID
+      matrixUserID
     );
 
     if (isRegistered) {
-      return await this.matrixUserManagementService.login(communicationID);
+      return await this.matrixUserManagementService.login(matrixUserID);
     }
 
-    return await this.matrixUserManagementService.register(communicationID);
+    return await this.matrixUserManagementService.register(matrixUserID);
   }
 
-  release(communicationID: string): void {
+  release(matrixUserID: string): void {
     this.logger.verbose?.(
-      `[AgentPool] releasing session for communicationID: ${communicationID}`,
+      `[AgentPool] releasing session for matrixUserID: ${matrixUserID}`,
       LogContext.COMMUNICATION
     );
-    if (this._cache[communicationID]) {
-      this._cache[communicationID].agent.dispose();
-      delete this._cache[communicationID];
+    if (this._cache[matrixUserID]) {
+      this._cache[matrixUserID].agent.dispose();
+      delete this._cache[matrixUserID];
     }
   }
 }
