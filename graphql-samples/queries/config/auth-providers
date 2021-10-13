@@ -4,7 +4,6 @@ query config
   {
     authentication
     {
-      enabled
       providers
       {
         name
