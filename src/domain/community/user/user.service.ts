@@ -257,7 +257,7 @@ export class UserService {
     email: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | undefined> {
-    if (this.validateEmail(email)) {
+    if (!this.validateEmail(email)) {
       throw new FormatNotSupportedException(
         `Incorrect format of the user email: ${email}`,
         LogContext.COMMUNITY
@@ -510,14 +510,12 @@ export class UserService {
     const knownSendersMap = new Map();
     for (const room of rooms) {
       for (const message of room.messages) {
-        let knownSender = knownSendersMap.get(message.senderId);
+        let knownSender = knownSendersMap.get(message.sender);
         if (!knownSender) {
-          knownSender = await this.getUserIDByCommunicationsID(
-            message.senderId
-          );
-          knownSendersMap.set(message.senderId, knownSender);
+          knownSender = await this.getUserIDByCommunicationsID(message.sender);
+          knownSendersMap.set(message.sender, knownSender);
         }
-        message.senderId = knownSender;
+        message.sender = knownSender;
       }
     }
 

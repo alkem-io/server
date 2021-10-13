@@ -35,7 +35,7 @@ export class UserResolverSubscriptions {
       // Todo: should not be doing any heavy work during the resolving
       // The user is now cached so it should be better
       const user = await this.userService.getUserByCommunicationId(
-        value.message.senderId
+        value.message.sender
       );
       if (!user) {
         return new CommunicationMessageReceived();
@@ -43,7 +43,7 @@ export class UserResolverSubscriptions {
 
       // Note: we need to convert the senderId only
       // the value.userID should remain a matrix id
-      value.message.senderId = user?.id;
+      value.message.sender = user?.id;
 
       return value;
     },

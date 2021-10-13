@@ -13,7 +13,7 @@ export class CommunicationMessageResult {
     nullable: false,
     description: 'The sender user ID',
   })
-  senderId!: string;
+  sender!: string;
 
   @Field(() => Number, {
     nullable: false,
@@ -53,7 +53,7 @@ export function convertFromMatrixMessage(
 
   return {
     message: content.body,
-    senderId: sender.userId,
+    sender: sender.userId,
     timestamp: event.origin_server_ts || 0,
     id: event.event_id || '',
     receiver: receiverMatrixID,
