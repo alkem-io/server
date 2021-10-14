@@ -82,8 +82,10 @@ export class ProjectService {
         { id: projectID, ecoverseID: nameableScopeID },
         options
       );
-    } else {
-      // look up based on nameID
+    }
+
+    if (!project) {
+      // look up based on nameID instead
       project = await this.projectRepository.findOne(
         { nameID: projectID, ecoverseID: nameableScopeID },
         options
@@ -117,19 +119,10 @@ export class ProjectService {
     projectID: string,
     options?: FindOneOptions<Project>
   ): Promise<IProject> {
-    let project: IProject | undefined;
-    if (projectID.length === UUID_LENGTH) {
-      project = await this.projectRepository.findOne(
-        { id: projectID },
-        options
-      );
-    } else {
-      // look up based on nameID
-      project = await this.projectRepository.findOne(
-        { nameID: projectID },
-        options
-      );
-    }
+    const project = await this.projectRepository.findOne(
+      { id: projectID },
+      options
+    );
     if (!project)
       throw new EntityNotFoundException(
         `Unable to find Project with ID: ${projectID}`,
