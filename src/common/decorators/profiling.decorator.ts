@@ -6,56 +6,51 @@ export class Profiling {
   static logger: LoggerService;
   static profilingEnabled = false;
   static api = (
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    target: Object,
+    targetObj: any,
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) => {
     const originalMethod = descriptor.value;
+    descriptor.value = new Proxy(originalMethod, {
+      apply(target: any, thisArg: any, argArray: any[]): any {
+        const targetName = target.constructor.name;
+        const targetObjName = targetObj.constructor.name;
 
-    descriptor.value = function (...args: any) {
-      if (!Profiling.profilingEnabled) {
-        // just execute the wrapped function
-        return originalMethod.apply(this, args);
-      }
-      // profiling is enabled
-      const start = performance.now();
-      const result = originalMethod.apply(this, args);
-      const elapsed = (performance.now() - start).toFixed(3);
-      const msg = `${target.constructor.name}-${propertyKey}: Execution time: ${elapsed} milliseconds`;
-      Profiling.logger.verbose?.(msg, LogContext.API);
+        const func = Reflect.apply(target, thisArg, argArray);
+        const isPromise = func instanceof Promise;
+        const isFunction = func instanceof Function;
 
-      return result;
-    };
+        let result;
+        const start = performance.now();
 
-    return descriptor;
-  };
+        if (isPromise) {
+          result = (func as PromiseLike<any>).then(x => {
+            Profiling._log(start, targetName, targetObjName, propertyKey);
+            return x;
+          });
+        } else if (isFunction) {
+          result = Reflect.apply(func, thisArg, argArray);
+          Profiling._log(start, targetName, targetObjName, propertyKey);
+        } else {
+          result = func;
+          Profiling._log(start, targetName, targetObjName, propertyKey);
+        }
 
-  static asyncApi = (
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    target: Object,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
-  ) => {
-    const originalMethod = descriptor.value;
-
-    descriptor.value = function (...args: any) {
-      if (!Profiling.profilingEnabled) {
-        // just execute the wrapped function
-        return originalMethod.apply(this, args);
-      }
-      // profiling is enabled
-      const start = performance.now();
-      const result = originalMethod.apply(this, args).then(() => {
-        const elapsed = (performance.now() - start).toFixed(3);
-        const msg = `${target.constructor.name}-${propertyKey}: Execution time: ${elapsed} milliseconds`;
-        Profiling.logger.verbose?.(msg, LogContext.API);
-
-        // todo: pass on the promise call
-      });
-      return result;
-    };
+        return result;
+      },
+    });
 
     return descriptor;
   };
+
+  private static _log(
+    start: number,
+    funcType: 'Function' | 'AsyncFunction',
+    name: string,
+    propertyKey: string
+  ): void {
+    const elapsed = (performance.now() - start).toFixed(3);
+    const msg = `${funcType}-${name}-${propertyKey}: Execution time: ${elapsed} milliseconds`;
+    Profiling.logger.verbose?.(msg, LogContext.API);
+  }
 }
