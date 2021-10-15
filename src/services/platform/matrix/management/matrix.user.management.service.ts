@@ -46,7 +46,6 @@ export class MatrixUserManagementService {
 
   async register(
     matrixUserID: string,
-    //email: string,
     password?: string,
     isAdmin = false
   ): Promise<IOperationalMatrixUser> {
@@ -75,7 +74,7 @@ export class MatrixUserManagementService {
     const registrationResponse = await this.httpService
       .post<{ user_id: string; access_token: string }>(url.href, {
         nonce,
-        username: user.username,
+        username: user.name,
         password: user.password,
         bind_emails: [],
         admin: isAdmin,

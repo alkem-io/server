@@ -196,19 +196,23 @@ export class CommunicationService {
     );
   }
 
-  async tryRegisterNewUser(email: string): Promise<string> {
-    const matrixUserID =
-      this.matrixUserAdapterService.convertEmailToMatrixID(email);
+  async tryRegisterNewUser(email: string): Promise<string | undefined> {
+    try {
+      const matrixUserID =
+        this.matrixUserAdapterService.convertEmailToMatrixID(email);
 
-    const isRegistered = await this.matrixUserManagementService.isRegistered(
-      matrixUserID
-    );
+      const isRegistered = await this.matrixUserManagementService.isRegistered(
+        matrixUserID
+      );
 
-    if (!isRegistered) {
-      await this.matrixUserManagementService.register(matrixUserID);
+      if (!isRegistered) {
+        await this.matrixUserManagementService.register(matrixUserID);
+      }
+
+      return matrixUserID;
+    } catch (error) {
+      this.logger.error(error);
     }
-
-    return matrixUserID;
   }
 
   async createCommunityGroup(

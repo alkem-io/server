@@ -105,6 +105,13 @@ export class UserService {
     this.communicationService.tryRegisterNewUser(user.email).then(
       async communicationID => {
         try {
+          if (!communicationID) {
+            this.logger.warn(
+              `User registration failed on user creation ${user.id}.`
+            );
+            return user;
+          }
+
           response.communicationID = communicationID;
 
           await this.userRepository.save(response);
@@ -241,7 +248,15 @@ export class UserService {
     // should go through this block only once
     // we want this to happen synchronously
     if (!Boolean(user.communicationID)) {
-      const communicationID = await this.registerUserCommunication(user);
+      const communicationID = await this.tryRegisterUserCommunication(user);
+
+      if (!communicationID) {
+        this.logger.warn(
+          `User could not be registered for communication ${user.id}`
+        );
+        return user;
+      }
+
       user.communicationID = communicationID;
 
       await this.userRepository.save(user);
@@ -273,7 +288,15 @@ export class UserService {
 
     // same as in getUserOrFail
     if (user && !Boolean(user?.communicationID)) {
-      const communicationID = await this.registerUserCommunication(user);
+      const communicationID = await this.tryRegisterUserCommunication(user);
+
+      if (!communicationID) {
+        this.logger.warn(
+          `User could not be registered for communication ${user.id}`
+        );
+        return user;
+      }
+
       user.communicationID = communicationID;
 
       await this.userRepository.save(user);
@@ -497,7 +520,7 @@ export class UserService {
     return '';
   }
 
-  async registerUserCommunication(user: IUser): Promise<string> {
+  async tryRegisterUserCommunication(user: IUser): Promise<string | undefined> {
     const communicationID = await this.communicationService.tryRegisterNewUser(
       user.email
     );
