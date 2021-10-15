@@ -64,7 +64,7 @@ export class RoomTimelineMonitorFactory {
           onMessageReceived({
             message,
             roomId: room.roomId,
-            userID: message.receiverID,
+            communicationID: message.receiverID,
             communityId: undefined,
             roomName: room.name,
           });

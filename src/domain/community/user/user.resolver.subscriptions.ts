@@ -24,6 +24,8 @@ export class UserResolverSubscriptions {
     @Inject(PUB_SUB) private pubSub: PubSubEngine
   ) {}
 
+  // Note: the resolving method should not be doing any heavy lifting.
+  // Relies on users being cached for performance.
   @UseGuards(GraphqlGuard)
   @Subscription(() => CommunicationMessageReceived, {
     description:
@@ -32,16 +34,13 @@ export class UserResolverSubscriptions {
       this: UserResolverSubscriptions,
       value: CommunicationMessageReceived
     ) {
-      // Note: the resolving method should not be doing any heavy lifting.
-      // Relies on users being cached for performance.
+      // Convert from matrix IDs to alkemio User IDs
       const sender = await this.userService.getUserByCommunicationIdOrFail(
         value.message.sender
       );
       const receiver = await this.userService.getUserByCommunicationIdOrFail(
         value.userID
       );
-
-      // Convert from matrix IDs to alkemio User IDs
       value.message.sender = sender.id;
       value.userID = receiver.id;
 
@@ -53,9 +52,9 @@ export class UserResolverSubscriptions {
       _: any,
       context: any
     ) {
-      // Note: by going through the passport authentication mechanism the "user" property on
+      // Note: by going through the passport authentication mechanism the "user" property
       // the request will contain the AgentInfo that was authenticated.
-      return payload.userID === context.req?.user?.communicationID;
+      return payload.communicationID === context.req?.user?.communicationID;
     },
   })
   async messageReceived(@CurrentUser() agentInfo: AgentInfo) {

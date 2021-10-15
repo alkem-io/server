@@ -7,7 +7,7 @@ export class CommunicationEventMessageReceived {
 
   message!: CommunicationMessageResult;
 
-  userID!: string;
+  communicationID!: string;
 
   communityId!: string | undefined;
 }

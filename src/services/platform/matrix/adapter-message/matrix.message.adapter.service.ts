@@ -18,9 +18,9 @@ export class MatrixMessageAdapterService {
     if (event.type !== 'm.room.message') {
       return;
     }
-    if (event.event_id?.indexOf(event.room_id || '') !== -1) {
-      return;
-    }
+    // if (event.event_id?.indexOf(event.room_id || '') !== -1) {
+    //   return;
+    // }
     // need to use getContent - should be able to resolve the edited value if any
     const content = message.getContent();
     if (!content.body) {
