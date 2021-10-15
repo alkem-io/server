@@ -43,6 +43,9 @@ export class User extends NameableEntity implements IUser {
   @Column()
   communicationID: string = '';
 
+  @Column({ type: 'boolean' })
+  serviceProfile: boolean = false;
+
   @OneToMany(() => Application, application => application.id, {
     eager: false,
     cascade: false,

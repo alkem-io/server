@@ -365,7 +365,7 @@ export class UserService {
   }
 
   async getUsers(): Promise<IUser[]> {
-    return (await this.userRepository.find()) || [];
+    return (await this.userRepository.find({ serviceProfile: false })) || [];
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
@@ -398,6 +398,10 @@ export class UserService {
     }
     if (userInput.gender !== undefined) {
       user.gender = userInput.gender;
+    }
+
+    if (userInput.serviceProfile !== undefined) {
+      user.serviceProfile = userInput.serviceProfile;
     }
 
     if (userInput.profileData) {
@@ -482,7 +486,7 @@ export class UserService {
   }
 
   async getUserCount(): Promise<number> {
-    return await this.userRepository.count();
+    return await this.userRepository.count({ serviceProfile: false });
   }
 
   async getUserIDByCommunicationsID(communicationID: string): Promise<string> {
