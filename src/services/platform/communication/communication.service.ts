@@ -475,6 +475,10 @@ export class CommunicationService {
 
       messages.push(message);
     }
+    this.logger.verbose?.(
+      `Timeline converted: ${timeline.length} events ==> ${messages.length} messages`,
+      LogContext.COMMUNICATION
+    );
     return messages;
   }
 }

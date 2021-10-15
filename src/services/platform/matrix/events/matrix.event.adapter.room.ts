@@ -1,4 +1,6 @@
+import { LogContext } from '@common/enums';
 import { CommunicationEventMessageReceived } from '@domain/common/communication/communication.dto.event.message.received';
+import { LoggerService } from '@nestjs/common';
 import { MatrixRoomInvitationReceived } from '@services/platform/communication/dto/communication.dto.room.invitation.received';
 import {
   IMatrixEventHandler,
@@ -44,12 +46,21 @@ export class RoomTimelineMonitorFactory {
   static create(
     matrixClient: MatrixClient,
     messageAdapterService: MatrixMessageAdapterService,
+    logger: LoggerService,
     onMessageReceived: (event: CommunicationEventMessageReceived) => void
   ): IMatrixEventHandler['roomTimelineMonitor'] {
     return {
       complete: noop,
       error: noop,
       next: async ({ event, room }: RoomTimelineEvent) => {
+        logger.verbose?.(
+          `RoomTimelineMonitor: received event of type ${
+            event.event.type
+          } with id ${event.event.event_id} and body: ${
+            event.getContent().body
+          }`,
+          LogContext.COMMUNICATION
+        );
         const ignoreMessage = messageAdapterService.isMessageToIgnore(event);
 
         // TODO Notifications - Allow the client to see the event and then mark it as read
@@ -61,6 +72,12 @@ export class RoomTimelineMonitorFactory {
           const message = messageAdapterService.convertFromMatrixMessage(
             event,
             matrixClient.getUserId()
+          );
+          logger.verbose?.(
+            `Triggering message Received event for msg body: ${
+              event.getContent().body
+            }`,
+            LogContext.COMMUNICATION
           );
 
           onMessageReceived({

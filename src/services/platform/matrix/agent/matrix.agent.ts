@@ -17,6 +17,7 @@ import { MatrixClient } from '../types/matrix.client.type';
 import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { MatrixMessageAdapterService } from '../adapter-message/matrix.message.adapter.service';
+import { LogContext } from '@common/enums';
 
 export type MatrixAgentStartOptions = {
   registerTimelineMonitor?: boolean;
@@ -121,12 +122,17 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     return RoomTimelineMonitorFactory.create(
       this.matrixClient,
       this.messageAdapterService,
-      message => {
+      this.loggerService,
+      messageReceivedEvent => {
+        this.loggerService.verbose?.(
+          `Publishing message: ${messageReceivedEvent.message.message}`,
+          LogContext.COMMUNICATION
+        );
         /* TODO - need to find a way to wire the admin user (with simplicity in mind)
           in order to be able to read community data */
         this.subscriptionHandler.publish(
           SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
-          message
+          messageReceivedEvent
         );
       }
     );

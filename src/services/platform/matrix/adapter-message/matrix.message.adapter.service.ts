@@ -41,21 +41,21 @@ export class MatrixMessageAdapterService {
     // Only handle events that are for messages (more in there)
     if (event.type !== 'm.room.message') {
       this.logger.verbose?.(
-        `Ignorning message of type: ${event.type} as it is not m.room.message type `,
+        `[MessageAction] Ignorning message of type: ${event.type} as it is not m.room.message type `,
         LogContext.COMMUNICATION
       );
       return true;
     }
     // Want to ignore acknowledgements
-    if (event.event_id?.indexOf(event.room_id || '') !== -1) {
-      this.logger.verbose?.(
-        `Ignorning temporary message: ${event.type} - ${event.event_id}`,
-        LogContext.COMMUNICATION
-      );
-      return true;
-    }
+    // if (event.event_id?.indexOf(event.room_id || '') !== -1) {
+    //   this.logger.verbose?.(
+    //     `[MessageAction] Identified as temporary: ${event.type} - ${event.event_id}`,
+    //     LogContext.COMMUNICATION
+    //   );
+    //   //return true;
+    // }
     this.logger.verbose?.(
-      `Processing message with type: ${event.type} - ${event.event_id}`,
+      `[MessageAction] Processing message with type: ${event.type} - ${event.event_id}`,
       LogContext.COMMUNICATION
     );
     return false;
