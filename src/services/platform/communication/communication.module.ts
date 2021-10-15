@@ -7,6 +7,7 @@ import { MatrixAgentModule } from '../matrix/agent/matrix.agent.module';
 import { MatrixUserAdapterModule } from '../matrix/adapter-user/matrix.user.adapter.module';
 import { CommunicationService } from './communication.service';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { MatrixMessageAdapterModule } from '../matrix/adapter-message/matrix.message.adapter.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { SubscriptionModule } from '../subscription/subscription.module';
     MatrixUserAdapterModule,
     MatrixRoomAdapterModule,
     MatrixGroupAdapterModule,
+    MatrixMessageAdapterModule,
     MatrixAgentModule,
     MatrixAgentPoolModule,
     SubscriptionModule,

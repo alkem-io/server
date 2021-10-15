@@ -16,6 +16,7 @@ import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
 import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
 import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { MatrixMessageAdapterService } from '../adapter-message/matrix.message.adapter.service';
 
 @Injectable()
 export class MatrixAgentService {
@@ -24,6 +25,7 @@ export class MatrixAgentService {
     private matrixUserAdapterService: MatrixUserAdapterService,
     private matrixRoomAdapterService: MatrixRoomAdapterService,
     private matrixGroupAdapterService: MatrixGroupAdapterService,
+    private matrixMessageAdapterService: MatrixMessageAdapterService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(PUB_SUB)
@@ -37,7 +39,7 @@ export class MatrixAgentService {
     return new MatrixAgent(
       matrixClient,
       this.matrixRoomAdapterService,
-      this.matrixUserAdapterService,
+      this.matrixMessageAdapterService,
       this.subscriptionHandler,
       this.logger
     );

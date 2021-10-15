@@ -1,5 +1,5 @@
+import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { CommunicationMessageResult } from './communication.dto.message.result';
 
 @ObjectType('CommunicationMessageReceived')
 export class CommunicationMessageReceived {
@@ -17,13 +17,13 @@ export class CommunicationMessageReceived {
 
   @Field(() => CommunicationMessageResult, {
     nullable: false,
-    description: 'The update message that has been sent.',
+    description: 'The message that has been sent.',
   })
   message!: CommunicationMessageResult;
 
   @Field(() => String, {
     nullable: false,
-    description: 'The user email that should receive the message',
+    description: 'The User that should receive the message',
   })
   userID!: string;
 

@@ -1,10 +1,14 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
+import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
+import { CommunityRoomResult } from '@domain/community/community/dto/community.dto.room.result';
+import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.adapter.service';
+import { MatrixMessageAdapterService } from '../matrix/adapter-message/matrix.message.adapter.service';
 import { MatrixRoom } from '../matrix/adapter-room/matrix.room';
 import { MatrixRoomAdapterService } from '../matrix/adapter-room/matrix.room.adapter.service';
 import { MatrixRoomResponseMessage } from '../matrix/adapter-room/matrix.room.dto.response.message';
@@ -13,16 +17,10 @@ import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.inter
 import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
 import { MatrixUserManagementService } from '../matrix/management/matrix.user.management.service';
-import { CommunicationDeleteMessageFromCommunityRoomInput } from './communication.dto.delete.message.community';
-import { CommunicationEditMessageOnCommunityRoomInput } from './communication.dto.edit.message.community';
-import {
-  CommunicationMessageResult,
-  convertFromMatrixMessage,
-} from './communication.dto.message.result';
-import { CommunicationSendMessageCommunityInput } from './communication.dto.send.message.community';
-import { CommunicationSendMessageUserInput } from './communication.dto.send.message.user';
-import { CommunityRoom } from './communication.room.dto.community';
-import { DirectRoom } from './communication.room.dto.direct';
+import { CommunicationDeleteMessageFromCommunityRoomInput } from './dto/communication.dto.message.delete.community';
+import { CommunicationEditMessageOnCommunityRoomInput } from './dto/communication.dto.message.edit.community';
+import { CommunicationSendMessageCommunityInput } from './dto/communication.dto.message.send.community';
+import { CommunicationSendMessageUserInput } from './dto/communication.dto.message.send.user';
 
 @Injectable()
 export class CommunicationService {
@@ -42,7 +40,8 @@ export class CommunicationService {
     private matrixUserManagementService: MatrixUserManagementService,
     private matrixUserAdapterService: MatrixUserAdapterService,
     private matrixRoomAdapterService: MatrixRoomAdapterService,
-    private matrixGroupAdapterService: MatrixGroupAdapterService
+    private matrixGroupAdapterService: MatrixGroupAdapterService,
+    private matrixMessageAdapterService: MatrixMessageAdapterService
   ) {
     this.adminEmail = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
@@ -316,8 +315,10 @@ export class CommunicationService {
     );
   }
 
-  async getCommunityRooms(matrixUserID: string): Promise<CommunityRoom[]> {
-    const rooms: CommunityRoom[] = [];
+  async getCommunityRooms(
+    matrixUserID: string
+  ): Promise<CommunityRoomResult[]> {
+    const rooms: CommunityRoomResult[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
@@ -336,8 +337,8 @@ export class CommunicationService {
     return rooms;
   }
 
-  async getDirectRooms(matrixUserID: string): Promise<DirectRoom[]> {
-    const rooms: DirectRoom[] = [];
+  async getDirectRooms(matrixUserID: string): Promise<DirectRoomResult[]> {
+    const rooms: DirectRoomResult[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
@@ -363,7 +364,7 @@ export class CommunicationService {
   async getCommunityRoom(
     roomId: string,
     matrixUserID: string
-  ): Promise<CommunityRoom> {
+  ): Promise<CommunityRoomResult> {
     // If not enabled just return an empty room
     if (!this.enabled) {
       return {
@@ -385,7 +386,7 @@ export class CommunicationService {
   async getRoom(
     roomId: string,
     matrixUserID: string
-  ): Promise<CommunityRoom | DirectRoom> {
+  ): Promise<CommunityRoomResult | DirectRoomResult> {
     // If not enabled just return an empty room
     if (!this.enabled) {
       return {
@@ -421,8 +422,8 @@ export class CommunicationService {
     matrixRoom: MatrixRoom,
     receiverMatrixID: string,
     userId: string
-  ): Promise<DirectRoom> {
-    const roomResult = new DirectRoom();
+  ): Promise<DirectRoomResult> {
+    const roomResult = new DirectRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
       matrixRoom,
@@ -435,8 +436,8 @@ export class CommunicationService {
   async convertMatrixRoomToCommunityRoom(
     matrixRoom: MatrixRoom,
     userId: string
-  ): Promise<CommunityRoom> {
-    const roomResult = new CommunityRoom();
+  ): Promise<CommunityRoomResult> {
+    const roomResult = new CommunityRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
       matrixRoom,
@@ -465,10 +466,12 @@ export class CommunicationService {
     const messages: CommunicationMessageResult[] = [];
 
     for (const timelineMessage of timeline) {
-      const message = convertFromMatrixMessage(timelineMessage, userId);
-      if (!message) {
+      if (this.matrixMessageAdapterService.isMessageToIgnore(timelineMessage))
         continue;
-      }
+      const message = this.matrixMessageAdapterService.convertFromMatrixMessage(
+        timelineMessage,
+        userId
+      );
 
       messages.push(message);
     }
