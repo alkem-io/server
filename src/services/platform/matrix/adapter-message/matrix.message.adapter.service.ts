@@ -49,11 +49,15 @@ export class MatrixMessageAdapterService {
     // Want to ignore acknowledgements
     if (event.event_id?.indexOf(event.room_id || '') !== -1) {
       this.logger.verbose?.(
-        `Ignorning message from the room: ${event.type} - ${event.event_id}`,
+        `Ignorning temporary message: ${event.type} - ${event.event_id}`,
         LogContext.COMMUNICATION
       );
-      return false; // todo: this should really be false; something with read receipts if failing.
+      return true;
     }
+    this.logger.verbose?.(
+      `Processing message with type: ${event.type} - ${event.event_id}`,
+      LogContext.COMMUNICATION
+    );
     return false;
   }
 }
