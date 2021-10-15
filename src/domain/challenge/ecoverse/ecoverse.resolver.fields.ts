@@ -151,9 +151,10 @@ export class EcoverseResolverFields {
     @Parent() ecoverse: Ecoverse,
     @Args('ID', { type: () => UUID_NAMEID }) projectID: string
   ): Promise<IProject> {
-    return await this.projectService.getProjectOrFail(projectID, {
-      where: { ecoverseID: ecoverse.id },
-    });
+    return await this.ecoverseService.getProjectInNameableScope(
+      projectID,
+      ecoverse
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
