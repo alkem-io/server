@@ -82,8 +82,10 @@ export class ProjectService {
         { id: projectID, ecoverseID: nameableScopeID },
         options
       );
-    } else {
-      // look up based on nameID
+    }
+
+    if (!project) {
+      // look up based on nameID instead
       project = await this.projectRepository.findOne(
         { nameID: projectID, ecoverseID: nameableScopeID },
         options
