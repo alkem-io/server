@@ -50,17 +50,19 @@ export class RoomTimelineMonitorFactory {
       complete: noop,
       error: noop,
       next: async ({ event, room }: RoomTimelineEvent) => {
-        const message = messageAdapterService.convertFromMatrixMessage(
-          event,
-          matrixClient.getUserId()
-        );
+        const ignoreMessage = messageAdapterService.isMessageToIgnore(event);
 
         // TODO Notifications - Allow the client to see the event and then mark it as read
         // With the current behavior the message will automatically be marked as read
         // to ensure that we are returning only the actual updates
         await matrixClient.sendReadReceipt(event, {});
 
-        if (message) {
+        if (!ignoreMessage) {
+          const message = messageAdapterService.convertFromMatrixMessage(
+            event,
+            matrixClient.getUserId()
+          );
+
           onMessageReceived({
             message,
             roomId: room.roomId,

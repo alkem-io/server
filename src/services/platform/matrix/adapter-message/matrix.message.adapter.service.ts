@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -13,19 +14,14 @@ export class MatrixMessageAdapterService {
   convertFromMatrixMessage(
     message: MatrixRoomResponseMessage,
     receiverMatrixID: string
-  ): CommunicationMessageResult | undefined {
+  ): CommunicationMessageResult {
     const { event, sender } = message;
-    if (event.type !== 'm.room.message') {
-      return;
-    }
-    // if (event.event_id?.indexOf(event.room_id || '') !== -1) {
-    //   return;
-    // }
+
     // need to use getContent - should be able to resolve the edited value if any
     const content = message.getContent();
-    if (!content.body) {
-      return;
-    }
+    // if (!content.body) {
+    //   return;
+    // }
 
     // these are used to detect whether a message is a replacement one
     // const isRelation = message.isRelation('m.replace');
@@ -38,5 +34,26 @@ export class MatrixMessageAdapterService {
       id: event.event_id || '',
       receiverID: receiverMatrixID,
     };
+  }
+
+  isMessageToIgnore(message: MatrixRoomResponseMessage): boolean {
+    const event = message.event;
+    // Only handle events that are for messages (more in there)
+    if (event.type !== 'm.room.message') {
+      this.logger.verbose?.(
+        `Ignorning message of type: ${event.type} as it is not m.room.message type `,
+        LogContext.COMMUNICATION
+      );
+      return true;
+    }
+    // Want to ignore acknowledgements
+    if (event.event_id?.indexOf(event.room_id || '') !== -1) {
+      this.logger.verbose?.(
+        `Ignorning message from the room: ${event.type} - ${event.event_id}`,
+        LogContext.COMMUNICATION
+      );
+      return false; // todo: this should really be false; something with read receipts if failing.
+    }
+    return false;
   }
 }
