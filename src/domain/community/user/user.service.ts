@@ -13,6 +13,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CommunicationRoomResult } from '@domain/common/communication/communication.dto.room.result';
 import { IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import {
@@ -29,12 +30,12 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CommunityRoom } from '@services/platform/communication';
-import { DirectRoom } from '@services/platform/communication/communication.room.dto.direct';
 import { CommunicationService } from '@services/platform/communication/communication.service';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
+import { CommunityRoomResult } from '../community/dto/community.dto.room.result';
+import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 
 @Injectable()
 export class UserService {
@@ -283,10 +284,10 @@ export class UserService {
     return user;
   }
 
-  async getUserByCommunicationId(
+  async getUserByCommunicationIdOrFail(
     communicationID: string,
     options?: FindOneOptions<User>
-  ): Promise<IUser | undefined> {
+  ): Promise<IUser> {
     let user: IUser | undefined = await this.cacheManager.get<IUser>(
       this.getUserCommunicationIdCacheKey(communicationID)
     );
@@ -299,9 +300,14 @@ export class UserService {
         options
       );
 
-      if (user) {
-        await this.setUserCache(user);
+      if (!user) {
+        throw new EntityNotFoundException(
+          `Unable to find user with given communicationID: ${communicationID}`,
+          LogContext.COMMUNITY
+        );
       }
+
+      await this.setUserCache(user);
     }
 
     return user;
@@ -505,17 +511,40 @@ export class UserService {
     return communicationID;
   }
 
-  // Not sure about the placement of this one
-  async populateRoomMessageSenders(rooms: (CommunityRoom | DirectRoom)[]) {
+  async getCommunityRooms(user: IUser): Promise<CommunityRoomResult[]> {
+    const communityRooms = await this.communicationService.getCommunityRooms(
+      user.communicationID
+    );
+
+    await this.populateRoomMessageSenders(communityRooms);
+
+    return communityRooms;
+  }
+
+  async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
+    const directRooms = await this.communicationService.getDirectRooms(
+      user.communicationID
+    );
+
+    await this.populateRoomMessageSenders(directRooms);
+
+    return directRooms;
+  }
+
+  // Convert from Matrix ID to Alkemio User ID
+  async populateRoomMessageSenders(
+    rooms: CommunicationRoomResult[]
+  ): Promise<CommunicationRoomResult[]> {
     const knownSendersMap = new Map();
     for (const room of rooms) {
       for (const message of room.messages) {
-        let knownSender = knownSendersMap.get(message.sender);
-        if (!knownSender) {
-          knownSender = await this.getUserIDByCommunicationsID(message.sender);
-          knownSendersMap.set(message.sender, knownSender);
+        const matrixUserID = message.senderID;
+        let alkemioUserID = knownSendersMap.get(matrixUserID);
+        if (!alkemioUserID) {
+          alkemioUserID = await this.getUserIDByCommunicationsID(matrixUserID);
+          knownSendersMap.set(matrixUserID, alkemioUserID);
         }
-        message.sender = knownSender;
+        message.senderID = alkemioUserID;
       }
     }
 

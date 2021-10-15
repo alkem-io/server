@@ -31,9 +31,9 @@ import { ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
 import { CommunitySendMessageInput } from './dto/community.dto.send.message';
-import { CommunityRoom } from '@services/platform/communication/communication.room.dto.community';
 import { ConfigService } from '@nestjs/config';
 import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
+import { CommunityRoomResult } from './dto/community.dto.room.result';
 
 @Injectable()
 export class CommunityService {
@@ -415,7 +415,7 @@ export class CommunityService {
   async getUpdatesCommunicationsRoom(
     community: ICommunity,
     communicationID: string
-  ): Promise<CommunityRoom> {
+  ): Promise<CommunityRoomResult> {
     if (this.communicationsEnabled && community.communicationGroupID === '') {
       await this.initializeCommunicationsRoom(community);
     }
@@ -439,7 +439,7 @@ export class CommunityService {
   async getDiscussionCommunicationsRoom(
     community: ICommunity,
     communicationID: string
-  ): Promise<CommunityRoom> {
+  ): Promise<CommunityRoomResult> {
     if (this.communicationsEnabled && community.communicationGroupID === '') {
       await this.initializeCommunicationsRoom(community);
     }
