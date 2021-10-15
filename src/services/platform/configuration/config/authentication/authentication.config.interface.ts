@@ -4,12 +4,6 @@ import { IAuthenticationProviderConfig } from './providers/authentication.provid
 
 @ObjectType('AuthenticationConfig')
 export abstract class IAuthenticationConfig {
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Is authentication enabled?',
-  })
-  enabled?: boolean;
-
   @Field(() => [AuthenticationProviderConfig], {
     nullable: false,
     description: 'Alkemio Authentication Providers Config.',
