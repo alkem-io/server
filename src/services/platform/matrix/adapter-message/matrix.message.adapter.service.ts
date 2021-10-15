@@ -33,7 +33,7 @@ export class MatrixMessageAdapterService {
 
     return {
       message: content.body,
-      senderID: sender.userId,
+      sender: sender.userId,
       timestamp: event.origin_server_ts || 0,
       id: event.event_id || '',
       receiverID: receiverMatrixID,

@@ -538,13 +538,13 @@ export class UserService {
     const knownSendersMap = new Map();
     for (const room of rooms) {
       for (const message of room.messages) {
-        const matrixUserID = message.senderID;
+        const matrixUserID = message.sender;
         let alkemioUserID = knownSendersMap.get(matrixUserID);
         if (!alkemioUserID) {
           alkemioUserID = await this.getUserIDByCommunicationsID(matrixUserID);
           knownSendersMap.set(matrixUserID, alkemioUserID);
         }
-        message.senderID = alkemioUserID;
+        message.sender = alkemioUserID;
       }
     }
 

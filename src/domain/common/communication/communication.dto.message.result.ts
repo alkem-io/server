@@ -12,7 +12,7 @@ export class CommunicationMessageResult {
     nullable: false,
     description: 'The sender user ID',
   })
-  senderID!: string;
+  sender!: string;
 
   @Field(() => Number, {
     nullable: false,

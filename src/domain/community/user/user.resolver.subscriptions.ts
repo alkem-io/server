@@ -35,14 +35,14 @@ export class UserResolverSubscriptions {
       // Note: the resolving method should not be doing any heavy lifting.
       // Relies on users being cached for performance.
       const sender = await this.userService.getUserByCommunicationIdOrFail(
-        value.message.senderID
+        value.message.sender
       );
       const receiver = await this.userService.getUserByCommunicationIdOrFail(
         value.userID
       );
 
       // Convert from matrix IDs to alkemio User IDs
-      value.message.senderID = sender.id;
+      value.message.sender = sender.id;
       value.userID = receiver.id;
 
       return value;
