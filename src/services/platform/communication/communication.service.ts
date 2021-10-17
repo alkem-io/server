@@ -466,7 +466,7 @@ export class CommunicationService {
     const messages: CommunicationMessageResult[] = [];
 
     for (const timelineMessage of timeline) {
-      if (this.matrixMessageAdapterService.isMessageToIgnore(timelineMessage))
+      if (this.matrixMessageAdapterService.isEventToIgnore(timelineMessage))
         continue;
       const message = this.matrixMessageAdapterService.convertFromMatrixMessage(
         timelineMessage,

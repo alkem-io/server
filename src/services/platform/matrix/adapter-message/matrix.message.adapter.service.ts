@@ -6,6 +6,8 @@ import { MatrixRoomResponseMessage } from '../adapter-room/matrix.room.dto.respo
 
 @Injectable()
 export class MatrixMessageAdapterService {
+  readonly EVENT_TYPE_MESSAGE = 'm.room.message';
+
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -36,12 +38,12 @@ export class MatrixMessageAdapterService {
     };
   }
 
-  isMessageToIgnore(message: MatrixRoomResponseMessage): boolean {
+  isEventToIgnore(message: MatrixRoomResponseMessage): boolean {
     const event = message.event;
     // Only handle events that are for messages (more in there)
-    if (event.type !== 'm.room.message') {
+    if (event.type !== this.EVENT_TYPE_MESSAGE) {
       this.logger.verbose?.(
-        `[MessageAction] Ignorning message of type: ${event.type} as it is not m.room.message type `,
+        `[Timeline] Ignoring event of type: ${event.type} as it is not '${this.EVENT_TYPE_MESSAGE}' type `,
         LogContext.COMMUNICATION
       );
       return true;
@@ -55,7 +57,7 @@ export class MatrixMessageAdapterService {
     //   //return true;
     // }
     this.logger.verbose?.(
-      `[MessageAction] Processing message with type: ${event.type} - ${event.event_id}`,
+      `[Timeline] Processing event which is a message: ${event.type} - ${event.event_id}`,
       LogContext.COMMUNICATION
     );
     return false;

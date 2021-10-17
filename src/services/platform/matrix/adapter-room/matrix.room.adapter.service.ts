@@ -94,6 +94,11 @@ export class MatrixRoomAdapterService {
     roomID: string,
     matrixClients: MatrixClient[]
   ) {
+    if (roomID === '')
+      throw new MatrixEntityNotFoundException(
+        'No room ID specified',
+        LogContext.COMMUNICATION
+      );
     // need to cache those
     const room = await adminMatrixClient.getRoom(roomID);
     if (!room) {

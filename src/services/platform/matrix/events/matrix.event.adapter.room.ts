@@ -61,7 +61,7 @@ export class RoomTimelineMonitorFactory {
           }`,
           LogContext.COMMUNICATION
         );
-        const ignoreMessage = messageAdapterService.isMessageToIgnore(event);
+        const ignoreMessage = messageAdapterService.isEventToIgnore(event);
 
         // TODO Notifications - Allow the client to see the event and then mark it as read
         // With the current behavior the message will automatically be marked as read
@@ -74,7 +74,7 @@ export class RoomTimelineMonitorFactory {
             matrixClient.getUserId()
           );
           logger.verbose?.(
-            `Triggering message Received event for msg body: ${
+            `Triggering messageReceived event for msg body: ${
               event.getContent().body
             }`,
             LogContext.COMMUNICATION

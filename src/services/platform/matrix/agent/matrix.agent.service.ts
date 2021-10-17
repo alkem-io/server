@@ -213,7 +213,7 @@ export class MatrixAgentService {
   ) {
     const response = await matrixAgent.matrixClient.sendEvent(
       roomId,
-      'm.room.message',
+      this.matrixMessageAdapterService.EVENT_TYPE_MESSAGE,
       { body: messageRequest.text, msgtype: 'm.text' },
       ''
     );
