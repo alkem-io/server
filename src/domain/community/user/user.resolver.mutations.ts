@@ -14,7 +14,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
 import { CommunicationService } from '@src/services/platform/communication/communication.service';
-import { UserSendMessageInput } from './dto/user.dto.send.message';
+import { UserSendMessageInput } from './dto/user.dto.communication.message.send';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
 
 @Resolver(() => IUser)
@@ -122,9 +122,9 @@ export class UserResolverMutations {
     );
 
     return await this.communicationService.sendMessageToUser({
-      sendingUserEmail: agentInfo.email,
+      senderCommunicationsID: agentInfo.communicationID,
       message: messageData.message,
-      receiverID: receivingUser.email,
+      receiverCommunicationsID: receivingUser.communicationID,
     });
   }
 

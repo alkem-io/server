@@ -45,7 +45,7 @@ export class MatrixUserManagementService {
   }
 
   async register(
-    email: string,
+    matrixUserID: string,
     password?: string,
     isAdmin = false
   ): Promise<IOperationalMatrixUser> {
@@ -53,8 +53,8 @@ export class MatrixUserManagementService {
       CommunicationsSynapseEndpoint.REGISTRATION,
       this.baseUrl
     );
-    const user = this.matrixUserAdapterService.convertEmailToMatrixUser(
-      email,
+    const user = this.matrixUserAdapterService.convertMatrixIDToMatrixUser(
+      matrixUserID,
       password
     );
 
@@ -76,7 +76,7 @@ export class MatrixUserManagementService {
         nonce,
         username: user.name,
         password: user.password,
-        bind_emails: [email],
+        bind_emails: [],
         admin: isAdmin,
         mac: hmac,
       })
@@ -119,13 +119,14 @@ export class MatrixUserManagementService {
   }
 
   async login(
-    email: string,
+    matrixUserID: string,
     password?: string
   ): Promise<IOperationalMatrixUser> {
-    const matrixUser = this.matrixUserAdapterService.convertEmailToMatrixUser(
-      email,
-      password
-    );
+    const matrixUser =
+      this.matrixUserAdapterService.convertMatrixIDToMatrixUser(
+        matrixUserID,
+        password
+      );
 
     try {
       const operationalUser = await this._matrixClient.loginWithPassword(
@@ -147,16 +148,18 @@ export class MatrixUserManagementService {
     }
   }
 
-  async isRegistered(email: string): Promise<boolean> {
-    const username =
-      this.matrixUserAdapterService.convertEmailToMatrixUsername(email);
-
+  //@Profiling.asyncApi
+  async isRegistered(matrixUserID: string): Promise<boolean> {
     try {
+      const username =
+        this.matrixUserAdapterService.convertMatrixIDToUsername(matrixUserID);
       await this._matrixClient.isUsernameAvailable(username);
       return false;
     } catch (error: any) {
       const errcode = error.errcode;
-      if (errcode === 'M_USER_IN_USE') return true;
+      if (errcode === 'M_USER_IN_USE') {
+        return true;
+      }
       this.logger.error(
         `Unable to check if username is available: ${error}`,
         LogContext.COMMUNICATION

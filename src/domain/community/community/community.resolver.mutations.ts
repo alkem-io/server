@@ -257,7 +257,7 @@ export class CommunityResolverMutations {
     );
     return await this.communityService.sendMessageToCommunityUpdates(
       community,
-      agentInfo.email,
+      agentInfo.communicationID,
       messageData
     );
   }
@@ -282,7 +282,7 @@ export class CommunityResolverMutations {
     );
     await this.communityService.removeMessageFromCommunityUpdates(
       community,
-      agentInfo.email,
+      agentInfo.communicationID,
       messageData
     );
 
@@ -309,7 +309,7 @@ export class CommunityResolverMutations {
     );
     return await this.communityService.sendMessageToCommunityDiscussions(
       community,
-      agentInfo.email,
+      agentInfo.communicationID,
       messageData
     );
   }
@@ -334,7 +334,7 @@ export class CommunityResolverMutations {
     );
     await this.communityService.removeMessageFromCommunityDiscussions(
       community,
-      agentInfo.email,
+      agentInfo.communicationID,
       messageData
     );
 

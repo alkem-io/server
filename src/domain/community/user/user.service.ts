@@ -6,12 +6,14 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
+import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CommunicationRoomResult } from '@domain/common/communication/communication.dto.room.result';
 import { IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import {
@@ -28,11 +30,12 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CommunityRoom } from '@services/platform/communication';
-import { DirectRoom } from '@services/platform/communication/communication.room.dto.direct';
+import { CommunicationService } from '@services/platform/communication/communication.service';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
+import { CommunityRoomResult } from '../community/dto/community.dto.room.result';
+import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 
 @Injectable()
 export class UserService {
@@ -42,6 +45,7 @@ export class UserService {
   constructor(
     private profileService: ProfileService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private communicationService: CommunicationService,
     private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -50,18 +54,20 @@ export class UserService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
-  private getUserEmailCacheKey(email: string): string {
-    return `@user:email:${email}`;
+  private getUserCommunicationIdCacheKey(communicationId: string): string {
+    return `@user:communicationId:${communicationId}`;
   }
   private async setUserCache(user: IUser) {
     await this.cacheManager.set(
-      this.getUserEmailCacheKey(user.email),
+      this.getUserCommunicationIdCacheKey(user.email),
       user,
       this.cacheOptions
     );
   }
   private async clearUserCache(user: IUser) {
-    await this.cacheManager.del(this.getUserEmailCacheKey(user.email));
+    await this.cacheManager.del(
+      this.getUserCommunicationIdCacheKey(user.communicationID)
+    );
   }
 
   async createUser(userData: CreateUserInput): Promise<IUser> {
@@ -92,6 +98,32 @@ export class UserService {
     }
 
     const response = await this.userRepository.save(user);
+
+    // all users need to be registered for communications at the absolute beginning
+    // there are cases where a user could be messaged before they actually log-in
+    // which will result in failure in communication (either missing user or unsent messages)
+    // register the user asynchronously - we don't want to block the creation operation
+    this.communicationService.tryRegisterNewUser(user.email).then(
+      async communicationID => {
+        try {
+          if (!communicationID) {
+            this.logger.warn(
+              `User registration failed on user creation ${user.id}.`
+            );
+            return user;
+          }
+
+          response.communicationID = communicationID;
+
+          await this.userRepository.save(response);
+          await this.setUserCache(response);
+        } catch (e) {
+          this.logger.error(e);
+        }
+      },
+      error => this.logger.error(error)
+    );
+
     await this.setUserCache(response);
 
     return response;
@@ -136,6 +168,9 @@ export class UserService {
     }
 
     const result = await this.userRepository.remove(user as User);
+
+    // Note: Should we unregister the user from communications?
+
     return {
       ...result,
       id,
@@ -209,24 +244,95 @@ export class UserService {
         LogContext.COMMUNITY
       );
     }
+
+    // check if the user is registered for communications
+    // should go through this block only once
+    // we want this to happen synchronously
+    if (!Boolean(user.communicationID)) {
+      const communicationID = await this.tryRegisterUserCommunication(user);
+
+      if (!communicationID) {
+        this.logger.warn(
+          `User could not be registered for communication ${user.id}`,
+          LogContext.COMMUNICATION
+        );
+        return user;
+      }
+
+      user.communicationID = communicationID;
+
+      await this.userRepository.save(user);
+      // need to update the cache in case the user is already in it
+      // but the previous registration attempt has failed
+      await this.setUserCache(user);
+    }
+
     return user;
   }
 
   async getUserByEmail(
-    userID: string,
+    email: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | undefined> {
-    let user: IUser | undefined = await this.cacheManager.get<IUser>(
-      this.getUserEmailCacheKey(userID)
+    if (!this.validateEmail(email)) {
+      throw new FormatNotSupportedException(
+        `Incorrect format of the user email: ${email}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    const user = await this.userRepository.findOne(
+      {
+        email,
+      },
+      options
     );
 
-    if (this.validateEmail(userID)) {
+    // same as in getUserOrFail
+    if (user && !Boolean(user?.communicationID)) {
+      const communicationID = await this.tryRegisterUserCommunication(user);
+
+      if (!communicationID) {
+        this.logger.warn(
+          `User could not be registered for communication ${user.id}`,
+          LogContext.COMMUNICATION
+        );
+        return user;
+      }
+
+      user.communicationID = communicationID;
+
+      await this.userRepository.save(user);
+      await this.setUserCache(user);
+    }
+
+    return user;
+  }
+
+  async getUserByCommunicationIdOrFail(
+    communicationID: string,
+    options?: FindOneOptions<User>
+  ): Promise<IUser> {
+    let user: IUser | undefined = await this.cacheManager.get<IUser>(
+      this.getUserCommunicationIdCacheKey(communicationID)
+    );
+
+    if (!user) {
       user = await this.userRepository.findOne(
         {
-          email: userID,
+          communicationID: communicationID,
         },
         options
       );
+
+      if (!user) {
+        throw new EntityNotFoundException(
+          `Unable to find user with given communicationID: ${communicationID}`,
+          LogContext.COMMUNITY
+        );
+      }
+
+      await this.setUserCache(user);
     }
 
     return user;
@@ -290,7 +396,7 @@ export class UserService {
   }
 
   async getUsers(): Promise<IUser[]> {
-    return (await this.userRepository.find()) || [];
+    return (await this.userRepository.find({ serviceProfile: false })) || [];
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
@@ -323,6 +429,10 @@ export class UserService {
     }
     if (userInput.gender !== undefined) {
       user.gender = userInput.gender;
+    }
+
+    if (userInput.serviceProfile !== undefined) {
+      user.serviceProfile = userInput.serviceProfile;
     }
 
     if (userInput.profileData) {
@@ -407,37 +517,65 @@ export class UserService {
   }
 
   async getUserCount(): Promise<number> {
-    return await this.userRepository.count();
+    return await this.userRepository.count({ serviceProfile: false });
   }
 
-  // Not sure about the placement of this one
-  async populateRoomMessageSenders(rooms: (CommunityRoom | DirectRoom)[]) {
-    const uniqueSenders = rooms
-      .map(r => r.messages)
-      .reduce((aggr, current) => aggr.concat(current))
-      .map(m => m.sender)
-      .filter((value, index, arr) => arr.indexOf(value) === index);
+  async getUserIDByCommunicationsID(communicationID: string): Promise<string> {
+    const userMatch = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.communicationID = :communicationID')
+      .setParameters({
+        communicationID: `${communicationID}`,
+      })
+      .getOne();
+    if (userMatch) return userMatch.id;
+    return '';
+  }
 
-    const senderMap = uniqueSenders.reduce(
-      (aggr: Record<string, string | undefined>, value) => {
-        aggr[value] = undefined;
-        return aggr;
-      },
-      {}
+  async tryRegisterUserCommunication(user: IUser): Promise<string | undefined> {
+    const communicationID = await this.communicationService.tryRegisterNewUser(
+      user.email
     );
 
-    for (const sender of uniqueSenders) {
-      const user = await this.getUserByEmail(sender);
-      if (!user) {
-        continue;
+    return communicationID;
+  }
+
+  async getCommunityRooms(user: IUser): Promise<CommunityRoomResult[]> {
+    const communityRooms = await this.communicationService.getCommunityRooms(
+      user.communicationID
+    );
+
+    await this.populateRoomMessageSenders(communityRooms);
+
+    return communityRooms;
+  }
+
+  async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
+    const directRooms = await this.communicationService.getDirectRooms(
+      user.communicationID
+    );
+
+    await this.populateRoomMessageSenders(directRooms);
+
+    return directRooms;
+  }
+
+  // Convert from Matrix ID to Alkemio User ID
+  async populateRoomMessageSenders(
+    rooms: CommunicationRoomResult[]
+  ): Promise<CommunicationRoomResult[]> {
+    const knownSendersMap = new Map();
+    for (const room of rooms) {
+      for (const message of room.messages) {
+        const matrixUserID = message.sender;
+        let alkemioUserID = knownSendersMap.get(matrixUserID);
+        if (!alkemioUserID) {
+          alkemioUserID = await this.getUserIDByCommunicationsID(matrixUserID);
+          knownSendersMap.set(matrixUserID, alkemioUserID);
+        }
+        message.sender = alkemioUserID;
       }
-
-      senderMap[sender] = user.id;
     }
-
-    rooms.forEach(r =>
-      r.messages.forEach(m => (m.sender = senderMap[m.sender] || m.sender))
-    );
 
     return rooms;
   }
