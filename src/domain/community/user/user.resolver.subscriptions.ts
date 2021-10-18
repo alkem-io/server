@@ -32,19 +32,24 @@ export class UserResolverSubscriptions {
       'Receive new messages for rooms the currently authenticated User is a member of.',
     async resolve(
       this: UserResolverSubscriptions,
-      value: CommunicationMessageReceived
+      value: CommunicationEventMessageReceived
     ) {
       // Convert from matrix IDs to alkemio User IDs
       const sender = await this.userService.getUserByCommunicationIdOrFail(
         value.message.sender
       );
       const receiver = await this.userService.getUserByCommunicationIdOrFail(
-        value.userID
+        value.communicationID
       );
       value.message.sender = sender.id;
-      value.userID = receiver.id;
 
-      return value;
+      return {
+        roomId: value.roomId,
+        roomName: value.roomName,
+        message: value.message,
+        userID: receiver.id,
+        communityId: value.communityId,
+      };
     },
     async filter(
       this: UserResolverSubscriptions,
