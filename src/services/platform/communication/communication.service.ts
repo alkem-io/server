@@ -451,10 +451,16 @@ export class CommunicationService {
     matrixRoom: MatrixRoom,
     userId: string
   ): Promise<CommunicationMessageResult[]> {
+    this.logger.verbose?.(
+      `[MatrixRoom] Obtaining messages on room: ${matrixRoom.name}`,
+      LogContext.COMMUNICATION
+    );
+
     // do NOT use the deprecated room.timeline property
-    const timeline = matrixRoom.getLiveTimeline().getEvents();
-    if (timeline) {
-      return await this.convertMatrixTimelineToMessages(timeline, userId);
+    const timeline = matrixRoom.getLiveTimeline();
+    const timelineEvents = timeline.getEvents();
+    if (timelineEvents) {
+      return await this.convertMatrixTimelineToMessages(timelineEvents, userId);
     }
     return [];
   }
@@ -476,7 +482,7 @@ export class CommunicationService {
       messages.push(message);
     }
     this.logger.verbose?.(
-      `Timeline converted: ${timeline.length} events ==> ${messages.length} messages`,
+      `[MatrixRoom] Timeline converted: ${timeline.length} events ==> ${messages.length} messages`,
       LogContext.COMMUNICATION
     );
     return messages;
