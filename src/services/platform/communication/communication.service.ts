@@ -210,7 +210,10 @@ export class CommunicationService {
 
       return matrixUserID;
     } catch (error) {
-      this.logger.error(error);
+      this.logger.verbose?.(
+        `Attempt to register user failed: ${error}; user registration for Communication to be re-tried later`,
+        LogContext.COMMUNICATION
+      );
     }
   }
 
