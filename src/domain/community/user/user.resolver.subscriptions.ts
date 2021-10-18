@@ -43,13 +43,14 @@ export class UserResolverSubscriptions {
       );
       value.message.sender = sender.id;
 
-      return {
+      const result = {
         roomId: value.roomId,
         roomName: value.roomName,
         message: value.message,
         userID: receiver.id,
         communityId: value.communityId,
       };
+      return result;
     },
     async filter(
       this: UserResolverSubscriptions,
