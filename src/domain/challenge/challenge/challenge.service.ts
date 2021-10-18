@@ -205,7 +205,8 @@ export class ChallengeService {
         { id: challengeID, ecoverseID: nameableScopeID },
         options
       );
-    } else {
+    }
+    if (!challenge) {
       // look up based on nameID
       challenge = await this.challengeRepository.findOne(
         { nameID: challengeID, ecoverseID: nameableScopeID },
@@ -233,7 +234,8 @@ export class ChallengeService {
         { id: challengeID },
         options
       );
-    } else {
+    }
+    if (!challenge) {
       // look up based on nameID
       challenge = await this.challengeRepository.findOne(
         { nameID: challengeID },
