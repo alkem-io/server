@@ -177,3 +177,25 @@ services:
       - RABBITMQ_SECURE_PASSWORD=yes
     volumes:
       - 'rabbitmq_data:/bitnami'
+
+  notification:
+    container_name: alkemio_dev_notifications
+    hostname: notifications
+    image: alkemio/notifications:v0.1.0
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_PORT
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
+      - EMAIL_SMTP_HOST
+      - EMAIL_SMTP_PORT
+      - EMAIL_SMTP_SECURE
+      - EMAIL_SMTP_USER
+      - EMAIL_SMTP_PASSWORD
+      - EMAIL_SMTP_REJECT_UNAUTHORIZED
+      - ENVIRONMENT=dev
+    restart: always
+    networks:
+      - alkemio_dev_net

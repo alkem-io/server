@@ -41,7 +41,7 @@ jobs:
       - uses: Azure/k8s-deploy@v1
         with:
           manifests: |
-            manifests/26-server-deployment-test.yaml
+            manifests/25-server-deployment-dev.yaml
             manifests/30-server-service.yaml
           images: |
             ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
