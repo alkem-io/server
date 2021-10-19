@@ -14,15 +14,19 @@ export class MatrixUserAdapterService {
     private configService: ConfigService
   ) {}
 
-  convertEmailToMatrixUser(
-    email: string,
+  convertMatrixIDToMatrixUser(
+    matrixUserID: string,
     password = 'generated_password'
   ): IMatrixUser {
     return {
-      name: this.convertEmailToMatrixUsername(email),
-      username: this.convertEmailToMatrixId(email),
+      name: this.convertMatrixIDToUsername(matrixUserID),
+      username: matrixUserID,
       password: password,
     };
+  }
+
+  convertMatrixIDToUsername(matrixUserID: string) {
+    return matrixUserID.replace('@', '').split(':')[0];
   }
 
   convertEmailToMatrixUsername(email: string) {
@@ -45,27 +49,18 @@ export class MatrixUserAdapterService {
     return username.toLowerCase();
   }
 
-  convertMatrixUsernameToMatrixId(username: string) {
+  convertEmailToMatrixID(email: string) {
+    return this.convertMatrixUsernameToMatrixID(
+      this.convertEmailToMatrixUsername(email)
+    );
+  }
+
+  convertMatrixUsernameToMatrixID(username: string) {
     const homeserverName = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.homeserver_name;
 
     return `@${username}:${homeserverName}`;
-  }
-
-  convertEmailToMatrixId(email: string) {
-    return this.convertMatrixUsernameToMatrixId(
-      this.convertEmailToMatrixUsername(email)
-    );
-  }
-
-  convertMatrixUsernameToEmail(username: string) {
-    // Todo: this is problematic...
-    return username.replace(/[=]/g, '@');
-  }
-
-  convertMatrixIdToEmail(id: string) {
-    return this.convertMatrixUsernameToEmail(id.replace('@', '').split(':')[0]);
   }
 
   logMatrixUser(matrixUser: Partial<IMatrixUser>, msg?: string) {

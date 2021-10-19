@@ -102,7 +102,8 @@ export class OpportunityService {
         { id: opportunityID, ecoverseID: nameableScopeID },
         options
       );
-    } else {
+    }
+    if (!opportunity) {
       // look up based on nameID
       opportunity = await this.opportunityRepository.findOne(
         { nameID: opportunityID, ecoverseID: nameableScopeID },

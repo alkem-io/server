@@ -16,6 +16,21 @@
       ]
     }
   ],
+  "organizations": [
+    {
+      "name": "default",
+      "tagsets": [
+        {
+          "name": "capabilities",
+          "placeholder": "Innovation, Collaboration"
+        },
+        {
+          "name": "keywords",
+          "placeholder": "Public sector, Industry"
+        }
+      ]
+    }
+  ],
   "opportunities": [
     {
       "name": "default",

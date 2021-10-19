@@ -13,10 +13,11 @@ import {
   MatrixEventDispatcher,
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
 import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
-import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
 import { MatrixClient } from '../types/matrix.client.type';
 import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { MatrixMessageAdapterService } from '../adapter-message/matrix.message.adapter.service';
+import { LogContext } from '@common/enums';
 
 export type MatrixAgentStartOptions = {
   registerTimelineMonitor?: boolean;
@@ -29,11 +30,12 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   matrixClient: MatrixClient;
   eventDispatcher: MatrixEventDispatcher;
   roomAdapterService: MatrixRoomAdapterService;
+  messageAdapterService: MatrixMessageAdapterService;
 
   constructor(
     matrixClient: MatrixClient,
     roomAdapterService: MatrixRoomAdapterService,
-    private matrixUserAdapterService: MatrixUserAdapterService,
+    messageAdapterService: MatrixMessageAdapterService,
     @Inject(PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
     private loggerService: LoggerService
@@ -41,6 +43,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     this.matrixClient = matrixClient;
     this.eventDispatcher = new MatrixEventDispatcher(this.matrixClient);
     this.roomAdapterService = roomAdapterService;
+    this.messageAdapterService = messageAdapterService;
   }
 
   attach(handler: IMatrixEventHandler) {
@@ -118,13 +121,18 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   resolveRoomTimelineEventHandler() {
     return RoomTimelineMonitorFactory.create(
       this.matrixClient,
-      this.matrixUserAdapterService,
-      message => {
+      this.messageAdapterService,
+      this.loggerService,
+      messageReceivedEvent => {
+        this.loggerService.verbose?.(
+          `Publishing message: ${messageReceivedEvent.message.message}`,
+          LogContext.COMMUNICATION
+        );
         /* TODO - need to find a way to wire the admin user (with simplicity in mind)
           in order to be able to read community data */
         this.subscriptionHandler.publish(
           SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
-          message
+          messageReceivedEvent
         );
       }
     );

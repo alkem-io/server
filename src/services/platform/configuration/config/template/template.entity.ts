@@ -1,11 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ChallengeTemplate } from '@src/services/platform/configuration/config/template/challenge.template.entity';
-import { EcoverseTemplate } from '@src/services/platform/configuration/config/template/ecoverse.template.entity';
+import { ChallengeTemplate } from './challenge.template.entity';
+import { EcoverseTemplate } from './ecoverse.template.entity';
 import { OpportunityTemplate } from './opportunity.template.entity';
 import { IOpportunityTemplate } from './opportunity.template.interface';
 import { ITemplate } from './template.interface';
 import { UserTemplate } from './user.template.entity';
 import { IUserTemplate } from './user.template.interface';
+import { OrganizationTemplate } from './organization.template.entity';
 
 @ObjectType()
 export class Template implements ITemplate {
@@ -44,6 +45,12 @@ export class Template implements ITemplate {
     description: 'Challenge templates.',
   })
   challenges?: ChallengeTemplate[];
+
+  @Field(() => [OrganizationTemplate], {
+    nullable: false,
+    description: 'Challenge templates.',
+  })
+  organizations?: OrganizationTemplate[];
 
   constructor(name: string) {
     this.name = name;
