@@ -180,7 +180,7 @@ services:
   notification:
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:0.1.0
+    image: alkemio/notifications:v0.1.0
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_PORT
