@@ -10,7 +10,7 @@ Welcome to the Alkemio Server! This server is the heart of the Alkemio Platform,
 [![Build Status](https://api.travis-ci.com/alkem-io/server.svg?branch=develop)](https://travis-ci.com/github/alkem-io/server)
 [![Coverage Status](https://coveralls.io/repos/github/alkem-io/server/badge.svg?branch=develop)](https://coveralls.io/github/alkem-io/server?branch=develop)
 [![BCH compliance](https://bettercodehub.com/edge/badge/alkem-io/server?branch=develop)](https://bettercodehub.com/)
-![Docker Image CI](https://github.com/alkem-io/Server/workflows/Docker%20Image%20CI/badge.svg?branch=master)
+![Docker Image CI](https://github.com/alkem-io/Server/workflows/Docker%20Image%20CI/badge.svg?branch=develop)
 
 A high level overview of the Design of the Alkemio Server is shown below.
 
