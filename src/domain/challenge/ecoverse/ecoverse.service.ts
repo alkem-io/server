@@ -243,7 +243,8 @@ export class EcoverseService {
         { id: ecoverseID },
         options
       );
-    } else {
+    }
+    if (!ecoverse) {
       // look up based on nameID
       ecoverse = await this.ecoverseRepository.findOne(
         { nameID: ecoverseID },
