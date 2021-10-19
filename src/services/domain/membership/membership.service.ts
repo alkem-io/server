@@ -30,7 +30,12 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { IGroupable } from '@domain/common';
 
+export type UserGroupResult = {
+  userGroup: IUserGroup;
+  userGroupParent: IGroupable;
+};
 export class MembershipService {
   constructor(
     private userService: UserService,
@@ -62,8 +67,8 @@ export class MembershipService {
     const storedEcoverse: IEcoverse[] = [];
     const storedChallenges: IChallenge[] = [];
     const storedOpportunities: IOpportunity[] = [];
-    const storedCommunityUserGroups: IUserGroup[] = [];
-    const storedOrgUserGroups: IUserGroup[] = [];
+    const storedCommunityUserGroupResults: UserGroupResult[] = [];
+    const storedOrgUserGroupResults: UserGroupResult[] = [];
     for (const credential of credentials) {
       if (credential.type === AuthorizationCredential.ORGANIZATION_MEMBER) {
         membership.organizations.push(
@@ -98,9 +103,15 @@ export class MembershipService {
         );
         const parent = await this.userGroupService.getParent(group);
         if ('ecoverseID' in parent) {
-          storedCommunityUserGroups.push(group);
+          storedCommunityUserGroupResults.push({
+            userGroup: group,
+            userGroupParent: parent,
+          });
         } else {
-          storedOrgUserGroups.push(group);
+          storedOrgUserGroupResults.push({
+            userGroup: group,
+            userGroupParent: parent,
+          });
         }
       }
     }
@@ -152,8 +163,9 @@ export class MembershipService {
           }
         }
       }
-      for (const group of storedCommunityUserGroups) {
-        const parent = await this.userGroupService.getParent(group);
+      for (const userGroupResult of storedCommunityUserGroupResults) {
+        const parent = userGroupResult.userGroupParent;
+        const group = userGroupResult.userGroup;
         if ((parent as ICommunity).ecoverseID === ecoverseResult.ecoverseID) {
           const groupResult = new MembershipResultEntry(
             group.name,
@@ -167,8 +179,9 @@ export class MembershipService {
 
     // Assign org groups
     for (const organizationResult of membership.organizations) {
-      for (const group of storedOrgUserGroups) {
-        const parent = await this.userGroupService.getParent(group);
+      for (const userGroupResult of storedOrgUserGroupResults) {
+        const parent = userGroupResult.userGroupParent;
+        const group = userGroupResult.userGroup;
         if (
           (parent as IOrganization).id === organizationResult.organizationID
         ) {
