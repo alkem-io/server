@@ -98,7 +98,7 @@ export class BaseChallengeService {
       baseChallengeData.ID,
       repository,
       {
-        relations: ['context'],
+        relations: ['context', 'community'],
       }
     );
 
@@ -119,8 +119,16 @@ export class BaseChallengeService {
         baseChallengeData.tags
       );
 
-    if (baseChallengeData.displayName)
+    if (
+      baseChallengeData.displayName &&
+      baseChallenge.displayName !== baseChallengeData.displayName
+    ) {
+      if (baseChallenge.community) {
+        // will be retrieved; see relations above
+        baseChallenge.community.displayName = baseChallengeData.displayName;
+      }
       baseChallenge.displayName = baseChallengeData.displayName;
+    }
 
     return await repository.save(baseChallenge);
   }
