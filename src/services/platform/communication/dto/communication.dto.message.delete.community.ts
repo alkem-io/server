@@ -1,5 +1,5 @@
 export class CommunicationDeleteMessageFromCommunityRoomInput {
-  sendingUserEmail!: string;
+  senderCommunicationsID!: string;
   messageId!: string;
   roomID!: string;
 }

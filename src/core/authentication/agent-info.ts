@@ -8,4 +8,5 @@ export class AgentInfo {
   lastName = '';
   credentials: ICredential[] = [];
   verifiedCredentials: VerifiedCredential[] = [];
+  communicationID = '';
 }

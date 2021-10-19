@@ -36,6 +36,13 @@ export abstract class IUser extends INameable {
 
   agent?: IAgent;
 
+  // the internal communicationID (Matrix) for the user
+  communicationID!: string;
+
+  // Indicates if this profile is a service profile that is only used for service account style access
+  // to the platform. Temporary measure, full service account support for later.
+  serviceProfile!: boolean;
+
   // Protected via field access for gdpr reasons
   email!: string;
   phone!: string;

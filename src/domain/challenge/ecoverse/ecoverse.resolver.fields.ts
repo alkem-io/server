@@ -2,7 +2,6 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { IProject } from '@domain/collaboration/project';
-import { ProjectService } from '@domain/collaboration/project/project.service';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { ITagset } from '@domain/common/tagset';
@@ -15,17 +14,23 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@src/common/decorators';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
 import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IAgent } from '@domain/agent/agent';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AgentInfo } from '@core/authentication';
 
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
   constructor(
-    private projectService: ProjectService,
+    private authorizationService: AuthorizationService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
     private ecoverseService: EcoverseService
@@ -151,9 +156,10 @@ export class EcoverseResolverFields {
     @Parent() ecoverse: Ecoverse,
     @Args('ID', { type: () => UUID_NAMEID }) projectID: string
   ): Promise<IProject> {
-    return await this.projectService.getProjectOrFail(projectID, {
-      where: { ecoverseID: ecoverse.id },
-    });
+    return await this.ecoverseService.getProjectInNameableScope(
+      projectID,
+      ecoverse
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -202,19 +208,30 @@ export class EcoverseResolverFields {
     });
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('application', () => IApplication, {
     nullable: false,
-    description: 'All applications to join',
+    description: 'A particular User Application within this Hub.',
   })
   async application(
+    @CurrentUser() agentInfo: AgentInfo,
     @Parent() ecoverse: Ecoverse,
     @Args('ID', { type: () => UUID }) applicationID: string
   ): Promise<IApplication> {
-    return await this.applicationService.getApplicationOrFail(applicationID, {
-      where: { ecoverseID: ecoverse.id },
-    });
+    const application = await this.applicationService.getApplicationOrFail(
+      applicationID,
+      {
+        where: { ecoverseID: ecoverse.id },
+      }
+    );
+    // Check the user can access this particular application
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      application.authorization,
+      AuthorizationPrivilege.READ,
+      `read application: ${application.id} on hub ${ecoverse.nameID}`
+    );
+    return application;
   }
 
   @ResolveField('activity', () => [INVP], {

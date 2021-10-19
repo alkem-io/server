@@ -5,13 +5,14 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Resolver, Subscription } from '@nestjs/graphql';
-import { CommunicationMessageReceived } from '@services/platform/communication/communication.dto.message.received';
-import { RoomInvitationReceived } from '@services/platform/communication/communication.dto.room.invitation.received';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from './user.service';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CommunicationMessageReceived } from './dto/user.dto.communication.message.received';
+import { RoomInvitationReceived } from './dto/user.dto.communication.room.invitation.received';
+import { CommunicationEventMessageReceived } from '@domain/common/communication/communication.dto.event.message.received';
 
 @Resolver()
 export class UserResolverSubscriptions {
@@ -23,34 +24,43 @@ export class UserResolverSubscriptions {
     @Inject(PUB_SUB) private pubSub: PubSubEngine
   ) {}
 
+  // Note: the resolving method should not be doing any heavy lifting.
+  // Relies on users being cached for performance.
   @UseGuards(GraphqlGuard)
   @Subscription(() => CommunicationMessageReceived, {
     description:
       'Receive new messages for rooms the currently authenticated User is a member of.',
     async resolve(
       this: UserResolverSubscriptions,
-      value: CommunicationMessageReceived
+      value: CommunicationEventMessageReceived
     ) {
-      // Use this to update the sender identifer
-      // Todo: should not be doing any heavy work during the resolving
-      // The user is now cached so it should be better
-      const user = await this.userService.getUserByEmail(value.message.sender);
-      if (!user) {
-        return new CommunicationMessageReceived();
-      }
+      // Convert from matrix IDs to alkemio User IDs
+      const sender = await this.userService.getUserByCommunicationIdOrFail(
+        value.message.sender
+      );
+      const receiver = await this.userService.getUserByCommunicationIdOrFail(
+        value.communicationID
+      );
+      value.message.sender = sender.id;
 
-      value.message.sender = user?.id;
-      return value;
+      const result = {
+        roomId: value.roomId,
+        roomName: value.roomName,
+        message: value.message,
+        userID: receiver.id,
+        communityId: value.communityId,
+      };
+      return result;
     },
     async filter(
       this: UserResolverSubscriptions,
-      payload: CommunicationMessageReceived,
+      payload: CommunicationEventMessageReceived,
       _: any,
       context: any
     ) {
-      // Note: by going through the passport authentication mechanism the "user" property on
+      // Note: by going through the passport authentication mechanism the "user" property
       // the request will contain the AgentInfo that was authenticated.
-      return payload.userEmail === context.req?.user?.email;
+      return payload.communicationID === context.req?.user?.communicationID;
     },
   })
   async messageReceived(@CurrentUser() agentInfo: AgentInfo) {

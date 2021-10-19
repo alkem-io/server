@@ -243,7 +243,8 @@ export class EcoverseService {
         { id: ecoverseID },
         options
       );
-    } else {
+    }
+    if (!ecoverse) {
       // look up based on nameID
       ecoverse = await this.ecoverseRepository.findOne(
         { nameID: ecoverseID },
@@ -352,6 +353,16 @@ export class EcoverseService {
   ): Promise<IChallenge> {
     return await this.challengeService.getChallengeInNameableScopeOrFail(
       challengeID,
+      ecoverse.id
+    );
+  }
+
+  async getProjectInNameableScope(
+    projectID: string,
+    ecoverse: IEcoverse
+  ): Promise<IProject> {
+    return await this.projectService.getProjectInNameableScopeOrFail(
+      projectID,
       ecoverse.id
     );
   }
