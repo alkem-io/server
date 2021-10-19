@@ -31,9 +31,9 @@ import { ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@services/platform/communication/communication.service';
 import { CommunitySendMessageInput } from './dto/community.dto.send.message';
-import { CommunityRoom } from '@services/platform/communication/communication.room.dto.community';
 import { ConfigService } from '@nestjs/config';
 import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
+import { CommunityRoomResult } from './dto/community.dto.room.result';
 
 @Injectable()
 export class CommunityService {
@@ -52,10 +52,9 @@ export class CommunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     // need both to be true
-    this.communicationsEnabled =
-      this.configService.get(ConfigurationTypes.COMMUNICATIONS)?.enabled &&
-      this.configService.get(ConfigurationTypes.IDENTITY)?.authentication
-        ?.enabled;
+    this.communicationsEnabled = this.configService.get(
+      ConfigurationTypes.COMMUNICATIONS
+    )?.enabled;
   }
 
   async createCommunity(name: string): Promise<ICommunity> {
@@ -229,16 +228,11 @@ export class CommunityService {
       resourceID: membershipCredential.resourceID,
     });
 
-    // register the user for the community room(s)
+    // register the user for the community rooms
     await this.communicationService.addUserToCommunityMessaging(
       community.communicationGroupID,
-      community.updatesRoomID,
-      user.email
-    );
-    await this.communicationService.addUserToCommunityMessaging(
-      community.communicationGroupID,
-      community.discussionRoomID,
-      user.email
+      [community.updatesRoomID, community.discussionRoomID],
+      user.communicationID
     );
 
     return community;
@@ -393,7 +387,6 @@ export class CommunityService {
     try {
       community.communicationGroupID =
         await this.communicationService.createCommunityGroup(
-          // generate a unique identifier for the community because the community does not have an id (not persisted yet)
           community.id,
           community.displayName
         );
@@ -421,21 +414,21 @@ export class CommunityService {
 
   async getUpdatesCommunicationsRoom(
     community: ICommunity,
-    email: string
-  ): Promise<CommunityRoom> {
+    communicationID: string
+  ): Promise<CommunityRoomResult> {
     if (this.communicationsEnabled && community.communicationGroupID === '') {
       await this.initializeCommunicationsRoom(community);
     }
 
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.updatesRoomID,
-      email
+      [community.updatesRoomID],
+      communicationID
     );
 
     const room = await this.communicationService.getCommunityRoom(
       community.updatesRoomID,
-      email
+      communicationID
     );
 
     await this.userService.populateRoomMessageSenders([room]);
@@ -445,21 +438,21 @@ export class CommunityService {
 
   async getDiscussionCommunicationsRoom(
     community: ICommunity,
-    email: string
-  ): Promise<CommunityRoom> {
+    communicationID: string
+  ): Promise<CommunityRoomResult> {
     if (this.communicationsEnabled && community.communicationGroupID === '') {
       await this.initializeCommunicationsRoom(community);
     }
 
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.discussionRoomID,
-      email
+      [community.discussionRoomID],
+      communicationID
     );
 
     const room = await this.communicationService.getCommunityRoom(
       community.discussionRoomID,
-      email
+      communicationID
     );
 
     await this.userService.populateRoomMessageSenders([room]);
@@ -469,16 +462,16 @@ export class CommunityService {
 
   async sendMessageToCommunityUpdates(
     community: ICommunity,
-    email: string,
+    communicationID: string,
     messageData: CommunitySendMessageInput
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.updatesRoomID,
-      email
+      [community.updatesRoomID],
+      communicationID
     );
     return await this.communicationService.sendMessageToCommunityRoom({
-      sendingUserEmail: email,
+      senderCommunicationsID: communicationID,
       message: messageData.message,
       roomID: community.updatesRoomID,
     });
@@ -486,16 +479,16 @@ export class CommunityService {
 
   async sendMessageToCommunityDiscussions(
     community: ICommunity,
-    email: string,
+    communicationID: string,
     messageData: CommunitySendMessageInput
   ): Promise<string> {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.discussionRoomID,
-      email
+      [community.discussionRoomID],
+      communicationID
     );
     return await this.communicationService.sendMessageToCommunityRoom({
-      sendingUserEmail: email,
+      senderCommunicationsID: communicationID,
       message: messageData.message,
       roomID: community.discussionRoomID,
     });
@@ -503,16 +496,16 @@ export class CommunityService {
 
   async removeMessageFromCommunityUpdates(
     community: ICommunity,
-    email: string,
+    communicationID: string,
     messageData: CommunityRemoveMessageInput
   ) {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.updatesRoomID,
-      email
+      [community.updatesRoomID],
+      communicationID
     );
     await this.communicationService.deleteMessageFromCommunityRoom({
-      sendingUserEmail: email,
+      senderCommunicationsID: communicationID,
       messageId: messageData.messageId,
       roomID: community.updatesRoomID,
     });
@@ -520,16 +513,16 @@ export class CommunityService {
 
   async removeMessageFromCommunityDiscussions(
     community: ICommunity,
-    email: string,
+    communicationID: string,
     messageData: CommunityRemoveMessageInput
   ) {
     await this.communicationService.ensureUserHasAccesToCommunityMessaging(
       community.communicationGroupID,
-      community.discussionRoomID,
-      email
+      [community.discussionRoomID],
+      communicationID
     );
     await this.communicationService.deleteMessageFromCommunityRoom({
-      sendingUserEmail: email,
+      senderCommunicationsID: communicationID,
       messageId: messageData.messageId,
       roomID: community.discussionRoomID,
     });

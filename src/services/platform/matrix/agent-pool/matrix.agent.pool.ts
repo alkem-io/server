@@ -53,59 +53,59 @@ export class MatrixAgentPool
     }
   }
 
-  async acquire(email: string): Promise<MatrixAgent> {
+  async acquire(matrixUserID: string): Promise<MatrixAgent> {
     this.logger.verbose?.(
-      `[AgentPool] obtaining user for email: ${email}`,
+      `[AgentPool] obtaining agent for commsID: ${matrixUserID}`,
       LogContext.COMMUNICATION
     );
-    if (!email || email.length === 0) {
+    if (!matrixUserID || matrixUserID.length === 0) {
       throw new MatrixAgentPoolException(
-        `Invalid email address provided: ${email}`,
+        `Invalid matrixUserID provided: ${matrixUserID}`,
         LogContext.COMMUNICATION
       );
     }
 
     const getExpirationDateTicks = () => new Date().getTime() + 1000 * 60 * 15;
 
-    if (!this._cache[email]) {
-      const operatingUser = await this.acquireUser(email);
+    if (!this._cache[matrixUserID]) {
+      const operatingUser = await this.acquireMatrixUser(matrixUserID);
       const client = await this.matrixAgentService.createMatrixAgent(
         operatingUser
       );
 
       await client.start();
 
-      this._cache[email] = {
+      this._cache[matrixUserID] = {
         agent: client,
         expiresOn: getExpirationDateTicks(),
       };
     } else {
-      this._cache[email].expiresOn = getExpirationDateTicks();
+      this._cache[matrixUserID].expiresOn = getExpirationDateTicks();
     }
 
-    return this._cache[email].agent;
+    return this._cache[matrixUserID].agent;
   }
 
-  private async acquireUser(email: string) {
+  private async acquireMatrixUser(matrixUserID: string) {
     const isRegistered = await this.matrixUserManagementService.isRegistered(
-      email
+      matrixUserID
     );
 
     if (isRegistered) {
-      return await this.matrixUserManagementService.login(email);
+      return await this.matrixUserManagementService.login(matrixUserID);
     }
 
-    return await this.matrixUserManagementService.register(email);
+    return await this.matrixUserManagementService.register(matrixUserID);
   }
 
-  release(email: string): void {
+  release(matrixUserID: string): void {
     this.logger.verbose?.(
-      `[AgentPool] releasing session for email: ${email}`,
+      `[AgentPool] releasing session for matrixUserID: ${matrixUserID}`,
       LogContext.COMMUNICATION
     );
-    if (this._cache[email]) {
-      this._cache[email].agent.dispose();
-      delete this._cache[email];
+    if (this._cache[matrixUserID]) {
+      this._cache[matrixUserID].agent.dispose();
+      delete this._cache[matrixUserID];
     }
   }
 }

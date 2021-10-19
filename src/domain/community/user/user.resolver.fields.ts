@@ -7,10 +7,10 @@ import { IUser, User } from '@domain/community/user';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CommunityRoom } from '@services/platform/communication';
-import { DirectRoom } from '@services/platform/communication/communication.room.dto.direct';
 import { CommunicationService } from '@src/services/platform/communication/communication.service';
 import { UserService } from './user.service';
+import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
+import { CommunityRoomResult } from '../community/dto/community.dto.room.result';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -29,30 +29,22 @@ export class UserResolverFields {
     return await this.userService.getAgent(user.id);
   }
 
-  @ResolveField('communityRooms', () => [CommunityRoom], {
+  @ResolveField('communityRooms', () => [CommunityRoomResult], {
     nullable: true,
     description: 'The Community rooms this user is a member of',
   })
   @Profiling.api
-  async communityRooms(@Parent() user: User): Promise<CommunityRoom[]> {
-    const rooms = await this.communicationService.getCommunityRooms(user.email);
-
-    await this.userService.populateRoomMessageSenders(rooms);
-
-    return rooms;
+  async communityRooms(@Parent() user: User): Promise<CommunityRoomResult[]> {
+    return await this.userService.getCommunityRooms(user);
   }
 
-  @ResolveField('directRooms', () => [DirectRoom], {
+  @ResolveField('directRooms', () => [DirectRoomResult], {
     nullable: true,
     description: 'The direct rooms this user is a member of',
   })
   @Profiling.api
-  async directRooms(@Parent() user: User): Promise<DirectRoom[]> {
-    const rooms = await this.communicationService.getDirectRooms(user.email);
-
-    await this.userService.populateRoomMessageSenders(rooms);
-
-    return rooms;
+  async directRooms(@Parent() user: User): Promise<DirectRoomResult[]> {
+    return this.userService.getDirectRooms(user);
   }
 
   @UseGuards(GraphqlGuard)

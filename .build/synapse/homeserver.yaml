@@ -837,31 +837,31 @@ log_config: "/data/alkemio.matrix.host.log.config"
 # The defaults are as shown below.
 #
 rc_message:
-  per_second: 2
-  burst_count: 10
+  per_second: 10
+  burst_count: 30
 #
 rc_registration:
-  per_second: 2
-  burst_count: 3
+  per_second: 10
+  burst_count: 30
 #
 rc_login:
   address:
-    per_second: 2
-    burst_count: 3
+    per_second: 10
+    burst_count: 30
   account:
-    per_second: 2
-    burst_count: 3
+    per_second: 10
+    burst_count: 30
   failed_attempts:
     per_second: 2
     burst_count: 3
 #
 rc_admin_redaction:
-  per_second: 1
+  per_second: 5
   burst_count: 50
 #
 rc_joins:
   local:
-    per_second: 1
+    per_second: 5
     burst_count: 10
   remote:
     per_second: 1
@@ -873,10 +873,10 @@ rc_3pid_validation:
 #
 rc_invites:
   per_room:
-    per_second: 1
+    per_second: 5
     burst_count: 10
   per_user:
-    per_second: 1
+    per_second: 5
     burst_count: 5
 
 # Ratelimiting settings for incoming federation

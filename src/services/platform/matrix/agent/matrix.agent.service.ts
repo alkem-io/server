@@ -16,6 +16,7 @@ import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
 import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
 import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { MatrixMessageAdapterService } from '../adapter-message/matrix.message.adapter.service';
 
 @Injectable()
 export class MatrixAgentService {
@@ -24,6 +25,7 @@ export class MatrixAgentService {
     private matrixUserAdapterService: MatrixUserAdapterService,
     private matrixRoomAdapterService: MatrixRoomAdapterService,
     private matrixGroupAdapterService: MatrixGroupAdapterService,
+    private matrixMessageAdapterService: MatrixMessageAdapterService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(PUB_SUB)
@@ -37,7 +39,7 @@ export class MatrixAgentService {
     return new MatrixAgent(
       matrixClient,
       this.matrixRoomAdapterService,
-      this.matrixUserAdapterService,
+      this.matrixMessageAdapterService,
       this.subscriptionHandler,
       this.logger
     );
@@ -99,11 +101,19 @@ export class MatrixAgentService {
     const rooms: MatrixRoom[] = [];
 
     // Direct rooms
-    const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(matrixClient);
-    for (const userID of Object.keys(dmRoomMap)) {
-      const room = await this.getRoom(matrixAgent, dmRoomMap[userID][0]);
-      room.receiverEmail =
-        this.matrixUserAdapterService.convertMatrixIdToEmail(userID);
+    const dmRoomMap =
+      await this.matrixRoomAdapterService.getDirectMessageRoomsMap(
+        matrixClient
+      );
+    for (const matrixUsername of Object.keys(dmRoomMap)) {
+      const room = await this.getRoom(
+        matrixAgent,
+        dmRoomMap[matrixUsername][0]
+      );
+      room.receiverCommunicationsID =
+        this.matrixUserAdapterService.convertMatrixUsernameToMatrixID(
+          matrixUsername
+        );
       room.isDirect = true;
       rooms.push(room);
     }
@@ -131,56 +141,59 @@ export class MatrixAgentService {
     matrixAgent: IMatrixAgent,
     messageRequest: MatrixAgentMessageRequestDirect
   ): Promise<string> {
-    const directRoom = await this.getDirectRoomForUserEmail(
+    const directRoom = await this.getDirectRoomForMatrixID(
       matrixAgent,
-      messageRequest.email
+      messageRequest.matrixID
     );
     if (directRoom) return directRoom.roomId;
 
     // Room does not exist, create...
-    const matrixUsername = this.matrixUserAdapterService.convertEmailToMatrixId(
-      messageRequest.email
-    );
-
     const targetRoomId = await this.matrixRoomAdapterService.createRoom(
       matrixAgent.matrixClient,
       {
-        dmUserId: matrixUsername,
+        dmUserId: messageRequest.matrixID,
       }
     );
 
-    await this.matrixRoomAdapterService.setDmRoom(
+    await this.matrixRoomAdapterService.storeDirectMessageRoom(
       matrixAgent.matrixClient,
       targetRoomId,
-      matrixUsername
+      messageRequest.matrixID
     );
 
     return targetRoomId;
   }
 
-  async getDirectRoomIdForRoomID(
+  /*
+    the naming is really confusing
+    what we attempt to solve is a race condition
+    where two or more DM rooms are created between the two users
+    we aim to always resolve the
+  */
+  async getDirectUserMatrixIDForRoomID(
     matrixAgent: MatrixAgent,
     matrixRoomId: string
   ): Promise<string | undefined> {
     // Need to implement caching for performance
-    const dmRoomMap = await this.matrixRoomAdapterService.dmRooms(
-      matrixAgent.matrixClient
-    );
-    const dmRoomMapKeys = Object.keys(dmRoomMap);
-    const dmRoom = dmRoomMapKeys.find(
-      userID => dmRoomMap[userID].indexOf(matrixRoomId) !== -1
+    const dmRoomByUserMatrixIDMap =
+      await this.matrixRoomAdapterService.getDirectMessageRoomsMap(
+        matrixAgent.matrixClient
+      );
+    const dmUserMatrixIDs = Object.keys(dmRoomByUserMatrixIDMap);
+    const dmRoom = dmUserMatrixIDs.find(
+      userID => dmRoomByUserMatrixIDMap[userID].indexOf(matrixRoomId) !== -1
     );
     return dmRoom;
   }
 
-  async getDirectRoomForUserEmail(
+  async getDirectRoomForMatrixID(
     matrixAgent: IMatrixAgent,
-    userEmail: string
+    matrixUserId: string
   ): Promise<MatrixRoom | undefined> {
     const matrixUsername =
-      this.matrixUserAdapterService.convertEmailToMatrixId(userEmail);
+      this.matrixUserAdapterService.convertMatrixIDToUsername(matrixUserId);
     // Need to implement caching for performance
-    const dmRoomIds = this.matrixRoomAdapterService.dmRooms(
+    const dmRoomIds = this.matrixRoomAdapterService.getDirectMessageRoomsMap(
       matrixAgent.matrixClient
     )[matrixUsername];
 
@@ -200,7 +213,7 @@ export class MatrixAgentService {
   ) {
     const response = await matrixAgent.matrixClient.sendEvent(
       roomId,
-      'm.room.message',
+      this.matrixMessageAdapterService.EVENT_TYPE_MESSAGE,
       { body: messageRequest.text, msgtype: 'm.text' },
       ''
     );
