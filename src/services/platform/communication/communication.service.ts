@@ -1,4 +1,5 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
+import { ValidationException } from '@common/exceptions';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
 import { CommunityRoomResult } from '@domain/community/community/dto/community.dto.room.result';
@@ -62,6 +63,14 @@ export class CommunicationService {
   async sendMessageToCommunityRoom(
     sendMessageData: CommunicationSendMessageCommunityInput
   ): Promise<string> {
+    // Todo: replace with proper data validation
+    const message = sendMessageData.message;
+    if (message.length === 0) {
+      throw new ValidationException(
+        'Message length cannot be empty',
+        LogContext.COMMUNICATION
+      );
+    }
     const matrixAgent = await this.acquireMatrixAgent(
       sendMessageData.senderCommunicationsID
     );
