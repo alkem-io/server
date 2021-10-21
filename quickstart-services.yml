@@ -95,6 +95,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oathkeeper
     image: oryd/oathkeeper:v0.38
+    restart: always
     depends_on:
       - kratos
     ports:
@@ -102,7 +103,6 @@ services:
       - 4456
     environment:
       - LOG_LEVEL=debug
-    restart: on-failure
     networks:
       - alkemio_dev_net
     volumes:
@@ -112,6 +112,7 @@ services:
   mailslurper:
     container_name: alkemio_dev_kratos_mailslurper
     image: oryd/mailslurper:latest-smtps
+    restart: always
     ports:
       - 4436
       - 4437
