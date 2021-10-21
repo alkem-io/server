@@ -21,9 +21,6 @@ export class MatrixMessageAdapterService {
 
     // need to use getContent - should be able to resolve the edited value if any
     const content = message.getContent();
-    // if (!content.body) {
-    //   return;
-    // }
 
     // these are used to detect whether a message is a replacement one
     // const isRelation = message.isRelation('m.replace');
@@ -44,6 +41,15 @@ export class MatrixMessageAdapterService {
     if (event.type !== this.EVENT_TYPE_MESSAGE) {
       this.logger.verbose?.(
         `[Timeline] Ignoring event of type: ${event.type} as it is not '${this.EVENT_TYPE_MESSAGE}' type `,
+        LogContext.COMMUNICATION
+      );
+      return true;
+    }
+
+    const content = message.getContent();
+    if (!content || !content.body) {
+      this.logger.verbose?.(
+        `[Timeline] Ignoring event with no content: ${event.type}`,
         LogContext.COMMUNICATION
       );
       return true;
