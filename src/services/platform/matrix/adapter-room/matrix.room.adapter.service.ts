@@ -1,9 +1,10 @@
 import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { IContent } from 'matrix-js-sdk';
+import { Direction, IContent, TimelineWindow } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixClient } from '../types/matrix.client.type';
+import { MatrixRoom } from './matrix.room';
 import { Preset, Visibility } from './matrix.room.dto.create.options';
 import { IRoomOpts } from './matrix.room.dto.options';
 
@@ -126,5 +127,27 @@ export class MatrixRoomAdapterService {
         LogContext.COMMUNICATION
       );
     }
+  }
+
+  async getAllRoomEvents(client: MatrixClient, matrixRoom: MatrixRoom) {
+    // do NOT use the deprecated room.timeline property
+    const timeline = matrixRoom.getLiveTimeline();
+    const loadedEvents = timeline.getEvents();
+    const lastKnownEvent = loadedEvents[loadedEvents.length - 1];
+    // got the idea from - components/structures/TimelinePanel.tsx in matrix-react-sdk
+    const timelineWindow = new TimelineWindow(
+      client,
+      timeline.getTimelineSet()
+    );
+
+    // need to set an anchor on the last known event and load from there
+    await timelineWindow.load(lastKnownEvent.getId(), 1000);
+    // atempt to paginate while we have outstanding messages
+    while (timelineWindow.canPaginate(Direction.Backward)) {
+      // do the actual event loading in memory
+      await timelineWindow.paginate(Direction.Backward, 1000);
+    }
+
+    return timelineWindow.getEvents();
   }
 }
