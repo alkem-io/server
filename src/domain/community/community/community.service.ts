@@ -112,7 +112,7 @@ export class CommunityService {
   async removeCommunity(communityID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['applications', 'groups'],
+      relations: ['applications', 'groups', 'communication'],
     });
 
     // Remove all groups
@@ -122,6 +122,12 @@ export class CommunityService {
           ID: group.id,
         });
       }
+    }
+
+    if (community.communication) {
+      await this.communicationService.removeCommunication(
+        community.communication.id
+      );
     }
 
     // Remove all issued membership credentials
