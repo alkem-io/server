@@ -314,6 +314,8 @@ storage:
     max_file_size: 1048576
 
 notifications:
+  enabled: ${NOTIFICATIONS_ENABLED}:false
+
   rabbitmq:
     # Connection in the form of 'amqp://[user]:[password]@[host]:[port]?heartbeat=30'
     connection:
