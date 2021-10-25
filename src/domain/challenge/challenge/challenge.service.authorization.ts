@@ -77,7 +77,7 @@ export class ChallengeAuthorizationService {
       }
     }
 
-    if (!challenge.community?.communication) {
+    if (!challenge.community?.credential) {
       challenge.community =
         await this.baseChallengeService.setMembershipCredential(
           challenge,
