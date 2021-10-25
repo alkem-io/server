@@ -24,11 +24,10 @@ import { UserGroupAuthorizationService } from '../user-group/user-group.service.
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSubEngine } from 'apollo-server-express';
 import { PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
-import { CommunitySendMessageInput } from './dto/community.dto.send.message';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
+
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -235,109 +234,5 @@ export class CommunityResolverMutations {
       applicationEventData,
       agentInfo
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Sends an update message on the specified community',
-  })
-  @Profiling.api
-  async sendMessageToCommunityUpdates(
-    @Args('messageData') messageData: CommunitySendMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const community = await this.communityService.getCommunityOrFail(
-      messageData.communityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `community send message: ${community.displayName}`
-    );
-    return await this.communityService.sendMessageToCommunityUpdates(
-      community,
-      agentInfo.communicationID,
-      messageData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Removes an update message from the specified community',
-  })
-  @Profiling.api
-  async removeMessageFromCommunityUpdates(
-    @Args('messageData') messageData: CommunityRemoveMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const community = await this.communityService.getCommunityOrFail(
-      messageData.communityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `community send message: ${community.displayName}`
-    );
-    await this.communityService.removeMessageFromCommunityUpdates(
-      community,
-      agentInfo.communicationID,
-      messageData
-    );
-
-    return messageData.messageId;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Sends a message to the discussions room on the community',
-  })
-  @Profiling.api
-  async sendMessageToCommunityDiscussions(
-    @Args('messageData') messageData: CommunitySendMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const community = await this.communityService.getCommunityOrFail(
-      messageData.communityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.READ,
-      `community send discussion message: ${community.displayName}`
-    );
-    return await this.communityService.sendMessageToCommunityDiscussions(
-      community,
-      agentInfo.communicationID,
-      messageData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Removes a discussion message from the specified community',
-  })
-  @Profiling.api
-  async removeMessageFromCommunityDiscussions(
-    @Args('messageData') messageData: CommunityRemoveMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const community = await this.communityService.getCommunityOrFail(
-      messageData.communityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `community send message: ${community.displayName}`
-    );
-    await this.communityService.removeMessageFromCommunityDiscussions(
-      community,
-      agentInfo.communicationID,
-      messageData
-    );
-
-    return messageData.messageId;
   }
 }

@@ -1,9 +1,8 @@
-import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
-import { CommunicationRoomResult } from '@domain/common/communication/communication.dto.room.result';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('CommunityRoom')
-export class CommunityRoomResult extends CommunicationRoomResult {
+@ObjectType('CommunicationRoom')
+export class CommunicationRoomResult {
   @Field(() => String, {
     nullable: false,
     description: 'The identifier of the room',

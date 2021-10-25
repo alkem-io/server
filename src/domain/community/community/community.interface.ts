@@ -4,6 +4,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ICredential } from '@domain/agent/credential/credential.interface';
+import { ICommunication } from '@domain/communication/communication';
 
 @ObjectType('Community', {
   implements: () => [IGroupable],
@@ -26,10 +27,7 @@ export abstract class ICommunity extends IAuthorizable {
 
   ecoverseID!: string;
 
-  // Communications related information
-  updatesRoomID!: string;
-  discussionRoomID!: string;
-  communicationGroupID!: string;
+  communication?: ICommunication;
 
   constructor() {
     super();

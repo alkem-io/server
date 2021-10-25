@@ -13,14 +13,14 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
-import { CommunicationService } from '@src/services/platform/communication/communication.service';
 import { UserSendMessageInput } from './dto/user.dto.communication.message.send';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
+import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
-    private readonly communicationService: CommunicationService,
+    private readonly communicationAdapterService: CommunicationAdapterService,
     private authorizationService: AuthorizationService,
     private readonly userService: UserService,
     private readonly userAuthorizationService: UserAuthorizationService
@@ -121,7 +121,7 @@ export class UserResolverMutations {
       `user send message: ${receivingUser.nameID}`
     );
 
-    return await this.communicationService.sendMessageToUser({
+    return await this.communicationAdapterService.sendMessageToUser({
       senderCommunicationsID: agentInfo.communicationID,
       message: messageData.message,
       receiverCommunicationsID: receivingUser.communicationID,

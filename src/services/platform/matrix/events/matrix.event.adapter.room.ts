@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
-import { CommunicationEventMessageReceived } from '@domain/common/communication/communication.dto.event.message.received';
+import { CommunicationEventMessageReceived } from '@domain/communication/communication/dto/communication.dto.event.message.received';
 import { LoggerService } from '@nestjs/common';
-import { MatrixRoomInvitationReceived } from '@services/platform/communication/dto/communication.dto.room.invitation.received';
+import { MatrixRoomInvitationReceived } from '@services/platform/communication-adapter/dto/communication.dto.room.invitation.received';
 import {
   IMatrixEventHandler,
   RoomTimelineEvent,

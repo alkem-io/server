@@ -1,12 +1,12 @@
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class CommunityRemoveMessageInput {
+export class DiscussionRemoveMessageInput {
   @Field(() => String, {
     nullable: false,
-    description: 'The community the message is being sent to',
+    description: 'The Discussion the message is being removed from to',
   })
-  communityID!: string;
+  discussionID!: string;
 
   @Field(() => String, {
     nullable: false,

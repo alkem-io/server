@@ -13,7 +13,8 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunicationRoomResult } from '@domain/common/communication/communication.dto.room.result';
+import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
+import { RoomService } from '@domain/communication/room/room.service';
 import { IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import {
@@ -30,11 +31,10 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CommunicationService } from '@services/platform/communication/communication.service';
+import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { CommunityRoomResult } from '../community/dto/community.dto.room.result';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 
 @Injectable()
@@ -45,7 +45,8 @@ export class UserService {
   constructor(
     private profileService: ProfileService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private communicationService: CommunicationService,
+    private communicationAdapterService: CommunicationAdapterService,
+    private roomService: RoomService,
     private agentService: AgentService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -103,7 +104,7 @@ export class UserService {
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
     // register the user asynchronously - we don't want to block the creation operation
-    this.communicationService.tryRegisterNewUser(user.email).then(
+    this.communicationAdapterService.tryRegisterNewUser(user.email).then(
       async communicationID => {
         try {
           if (!communicationID) {
@@ -520,66 +521,33 @@ export class UserService {
     return await this.userRepository.count({ serviceProfile: false });
   }
 
-  async getUserIDByCommunicationsID(communicationID: string): Promise<string> {
-    const userMatch = await this.userRepository
-      .createQueryBuilder('user')
-      .where('user.communicationID = :communicationID')
-      .setParameters({
-        communicationID: `${communicationID}`,
-      })
-      .getOne();
-    if (userMatch) return userMatch.id;
-    return '';
-  }
-
   async tryRegisterUserCommunication(user: IUser): Promise<string | undefined> {
-    const communicationID = await this.communicationService.tryRegisterNewUser(
-      user.email
-    );
+    const communicationID =
+      await this.communicationAdapterService.tryRegisterNewUser(user.email);
 
     return communicationID;
   }
 
-  async getCommunityRooms(user: IUser): Promise<CommunityRoomResult[]> {
-    const communityRooms = await this.communicationService.getCommunityRooms(
-      user.communicationID
-    );
+  async getCommunityRooms(user: IUser): Promise<CommunicationRoomResult[]> {
+    const communityRooms =
+      await this.communicationAdapterService.getCommunityRooms(
+        user.communicationID
+      );
 
-    await this.populateRoomMessageSenders(communityRooms);
+    await this.roomService.populateRoomMessageSenders(communityRooms);
 
     return communityRooms;
   }
 
   async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
-    const directRooms = await this.communicationService.getDirectRooms(
+    const directRooms = await this.communicationAdapterService.getDirectRooms(
       user.communicationID
     );
 
-    await this.populateRoomMessageSenders(directRooms);
+    await this.roomService.populateRoomMessageSenders(directRooms);
 
     return directRooms;
   }
-
-  // Convert from Matrix ID to Alkemio User ID
-  async populateRoomMessageSenders(
-    rooms: CommunicationRoomResult[]
-  ): Promise<CommunicationRoomResult[]> {
-    const knownSendersMap = new Map();
-    for (const room of rooms) {
-      for (const message of room.messages) {
-        const matrixUserID = message.sender;
-        let alkemioUserID = knownSendersMap.get(matrixUserID);
-        if (!alkemioUserID) {
-          alkemioUserID = await this.getUserIDByCommunicationsID(matrixUserID);
-          knownSendersMap.set(matrixUserID, alkemioUserID);
-        }
-        message.sender = alkemioUserID;
-      }
-    }
-
-    return rooms;
-  }
-
   createUserNameID(firstName: string, lastName: string): string {
     const randomNumber = Math.floor(Math.random() * 10000).toString();
     const nameID = `${firstName}-${lastName}-${randomNumber}`

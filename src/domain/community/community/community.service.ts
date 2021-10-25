@@ -13,7 +13,6 @@ import {
   InvalidStateTransitionException,
   ValidationException,
 } from '@common/exceptions';
-import { ConfigurationTypes, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IUser } from '@domain/community/user';
@@ -29,16 +28,13 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunicationService } from '@services/platform/communication/communication.service';
-import { CommunitySendMessageInput } from './dto/community.dto.send.message';
 import { ConfigService } from '@nestjs/config';
-import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
-import { CommunityRoomResult } from './dto/community.dto.room.result';
+import { CommunicationService } from '@domain/communication/communication/communication.service';
+import { ICommunication } from '@domain/communication/communication';
+import { LogContext } from '@common/enums/logging.context';
 
 @Injectable()
 export class CommunityService {
-  private communicationsEnabled = false;
-
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
@@ -50,21 +46,16 @@ export class CommunityService {
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {
-    // need both to be true
-    this.communicationsEnabled = this.configService.get(
-      ConfigurationTypes.COMMUNICATIONS
-    )?.enabled;
-  }
+  ) {}
 
   async createCommunity(name: string): Promise<ICommunity> {
-    const community = new Community(name);
+    const community: ICommunity = new Community(name);
     community.authorization = new AuthorizationPolicy();
 
     community.groups = [];
-    // save to get an id assigned
-    await this.communityRepository.save(community);
-    return await this.initializeCommunicationsRoom(community);
+    community.communication =
+      await this.communicationService.createCommunication();
+    return await this.communityRepository.save(community);
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
@@ -229,13 +220,27 @@ export class CommunityService {
     });
 
     // register the user for the community rooms
-    await this.communicationService.addUserToCommunityMessaging(
-      community.communicationGroupID,
-      [community.updatesRoomID, community.discussionRoomID],
-      user.communicationID
+    const communication = await this.getCommunication(community.id);
+    await this.communicationService.addUserToCommunications(
+      communication,
+      user
     );
 
     return community;
+  }
+
+  async getCommunication(communityID: string): Promise<ICommunication> {
+    const community = await this.getCommunityOrFail(communityID, {
+      relations: ['communication'],
+    });
+    const communication = community.communication;
+    if (!communication) {
+      throw new EntityNotInitializedException(
+        `Unable to locate communication for community: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return communication;
   }
 
   getMembershipCredential(community: ICommunity): ICredential {
@@ -379,152 +384,5 @@ export class CommunityService {
       });
     // Need to reduce by one to take into account that the community itself also holds a credential as reference
     return credentialMatches - 1;
-  }
-
-  async initializeCommunicationsRoom(
-    community: ICommunity
-  ): Promise<ICommunity> {
-    try {
-      community.communicationGroupID =
-        await this.communicationService.createCommunityGroup(
-          community.id,
-          community.displayName
-        );
-      community.updatesRoomID =
-        await this.communicationService.createCommunityRoom(
-          community.communicationGroupID,
-          `${community.displayName} updates`,
-          { communityId: community.id }
-        );
-      community.discussionRoomID =
-        await this.communicationService.createCommunityRoom(
-          community.communicationGroupID,
-          `${community.displayName} discussion`,
-          { communityId: community.id }
-        );
-      return await this.communityRepository.save(community);
-    } catch (error) {
-      this.logger.error?.(
-        `Unable to initialize communications for community (${community.displayName}): ${error}`,
-        LogContext.COMMUNICATION
-      );
-    }
-    return community;
-  }
-
-  async getUpdatesCommunicationsRoom(
-    community: ICommunity,
-    communicationID: string
-  ): Promise<CommunityRoomResult> {
-    if (this.communicationsEnabled && community.communicationGroupID === '') {
-      await this.initializeCommunicationsRoom(community);
-    }
-
-    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
-      community.communicationGroupID,
-      [community.updatesRoomID],
-      communicationID
-    );
-
-    const room = await this.communicationService.getCommunityRoom(
-      community.updatesRoomID,
-      communicationID
-    );
-
-    await this.userService.populateRoomMessageSenders([room]);
-
-    return room;
-  }
-
-  async getDiscussionCommunicationsRoom(
-    community: ICommunity,
-    communicationID: string
-  ): Promise<CommunityRoomResult> {
-    if (this.communicationsEnabled && community.communicationGroupID === '') {
-      await this.initializeCommunicationsRoom(community);
-    }
-
-    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
-      community.communicationGroupID,
-      [community.discussionRoomID],
-      communicationID
-    );
-
-    const room = await this.communicationService.getCommunityRoom(
-      community.discussionRoomID,
-      communicationID
-    );
-
-    await this.userService.populateRoomMessageSenders([room]);
-
-    return room;
-  }
-
-  async sendMessageToCommunityUpdates(
-    community: ICommunity,
-    communicationID: string,
-    messageData: CommunitySendMessageInput
-  ): Promise<string> {
-    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
-      community.communicationGroupID,
-      [community.updatesRoomID],
-      communicationID
-    );
-    return await this.communicationService.sendMessageToCommunityRoom({
-      senderCommunicationsID: communicationID,
-      message: messageData.message,
-      roomID: community.updatesRoomID,
-    });
-  }
-
-  async sendMessageToCommunityDiscussions(
-    community: ICommunity,
-    communicationID: string,
-    messageData: CommunitySendMessageInput
-  ): Promise<string> {
-    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
-      community.communicationGroupID,
-      [community.discussionRoomID],
-      communicationID
-    );
-    return await this.communicationService.sendMessageToCommunityRoom({
-      senderCommunicationsID: communicationID,
-      message: messageData.message,
-      roomID: community.discussionRoomID,
-    });
-  }
-
-  async removeMessageFromCommunityUpdates(
-    community: ICommunity,
-    communicationID: string,
-    messageData: CommunityRemoveMessageInput
-  ) {
-    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
-      community.communicationGroupID,
-      [community.updatesRoomID],
-      communicationID
-    );
-    await this.communicationService.deleteMessageFromCommunityRoom({
-      senderCommunicationsID: communicationID,
-      messageId: messageData.messageId,
-      roomID: community.updatesRoomID,
-    });
-  }
-
-  async removeMessageFromCommunityDiscussions(
-    community: ICommunity,
-    communicationID: string,
-    messageData: CommunityRemoveMessageInput
-  ) {
-    await this.communicationService.ensureUserHasAccesToCommunityMessaging(
-      community.communicationGroupID,
-      [community.discussionRoomID],
-      communicationID
-    );
-    await this.communicationService.deleteMessageFromCommunityRoom({
-      senderCommunicationsID: communicationID,
-      messageId: messageData.messageId,
-      roomID: community.discussionRoomID,
-    });
   }
 }

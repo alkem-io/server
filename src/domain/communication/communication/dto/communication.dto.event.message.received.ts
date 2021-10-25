@@ -1,4 +1,4 @@
-import { CommunicationMessageResult } from './communication.dto.message.result';
+import { CommunicationMessageResult } from '../../message/communication.dto.message.result';
 
 export class CommunicationEventMessageReceived {
   roomId!: string;

@@ -1,8 +1,8 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
-import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
-import { CommunityRoomResult } from '@domain/community/community/dto/community.dto.room.result';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -25,7 +25,7 @@ import { CommunicationSendMessageCommunityInput } from './dto/communication.dto.
 import { CommunicationSendMessageUserInput } from './dto/communication.dto.message.send.user';
 
 @Injectable()
-export class CommunicationService {
+export class CommunicationAdapterService {
   private adminUser!: IOperationalMatrixUser;
   private matrixElevatedAgent!: MatrixAgent; // elevated as created with an admin account
   private adminEmail!: string;
@@ -330,8 +330,8 @@ export class CommunicationService {
 
   async getCommunityRooms(
     matrixUserID: string
-  ): Promise<CommunityRoomResult[]> {
-    const rooms: CommunityRoomResult[] = [];
+  ): Promise<CommunicationRoomResult[]> {
+    const rooms: CommunicationRoomResult[] = [];
     // If not enabled just return an empty array
     if (!this.enabled) {
       return rooms;
@@ -379,7 +379,7 @@ export class CommunicationService {
   async getCommunityRoom(
     roomId: string,
     matrixUserID: string
-  ): Promise<CommunityRoomResult> {
+  ): Promise<CommunicationRoomResult> {
     // If not enabled just return an empty room
     if (!this.enabled) {
       return {
@@ -402,7 +402,7 @@ export class CommunicationService {
   async getRoom(
     roomId: string,
     matrixUserID: string
-  ): Promise<CommunityRoomResult | DirectRoomResult> {
+  ): Promise<CommunicationRoomResult | DirectRoomResult> {
     // If not enabled just return an empty room
     if (!this.enabled) {
       return {
@@ -457,8 +457,8 @@ export class CommunicationService {
     matrixClient: MatrixClient,
     matrixRoom: MatrixRoom,
     userId: string
-  ): Promise<CommunityRoomResult> {
-    const roomResult = new CommunityRoomResult();
+  ): Promise<CommunicationRoomResult> {
+    const roomResult = new CommunicationRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
       matrixClient,

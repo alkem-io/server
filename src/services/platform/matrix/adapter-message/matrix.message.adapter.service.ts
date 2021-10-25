@@ -1,5 +1,5 @@
 import { LogContext } from '@common/enums';
-import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixRoomResponseMessage } from '../adapter-room/matrix.room.dto.response.message';

@@ -1,19 +1,14 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from './community.service';
 import { IUser } from '@domain/community/user';
 import { IUserGroup } from '@domain/community/user-group';
 import { IApplication } from '@domain/community/application';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication/agent-info';
-import { CommunityRoomResult } from './dto/community.dto.room.result';
+import { ICommunication } from '@domain/communication/communication/communication.interface';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
@@ -54,35 +49,12 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('updatesRoom', () => CommunityRoomResult, {
+  @ResolveField('communication', () => ICommunication, {
     nullable: true,
-    description: 'Room with messages for this community.',
+    description: 'The Communications for this Community.',
   })
   @Profiling.api
-  async updatesRoom(
-    @Parent() community: Community,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CommunityRoomResult> {
-    return await this.communityService.getUpdatesCommunicationsRoom(
-      community,
-      agentInfo.communicationID
-    );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('discussionRoom', () => CommunityRoomResult, {
-    nullable: true,
-    description: 'Room with messages for this community.',
-  })
-  @Profiling.api
-  async discussionRoom(
-    @Parent() community: Community,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CommunityRoomResult> {
-    return await this.communityService.getDiscussionCommunicationsRoom(
-      community,
-      agentInfo.communicationID
-    );
+  async communication(@Parent() community: Community) {
+    return await this.communityService.getCommunication(community.id);
   }
 }
