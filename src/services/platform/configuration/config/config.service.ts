@@ -43,6 +43,11 @@ export class KonfigService {
             enabled: this.configService.get(ConfigurationTypes.HOSTING)
               ?.subscriptions?.enabled,
           },
+          {
+            name: 'notifications',
+            enabled: this.configService.get(ConfigurationTypes.NOTIFICATIONS)
+              ?.enabled,
+          },
         ],
       },
       sentry: {
