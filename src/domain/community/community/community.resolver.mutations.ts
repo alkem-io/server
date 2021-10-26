@@ -190,43 +190,28 @@ export class CommunityResolverMutations {
 
     // Trigger an event for subscriptions
     this.client.emit<number>(SubscriptionType.COMMUNITY_APPLICATION_CREATED, {
-      data: {
-        applicantionCreatorID: agentInfo.userID,
-        applicantID: applicationData.userID,
-        community: {
-          name: community.displayName,
-          type: communityType,
-        },
-        hub: {
-          id: community.ecoverseID,
-          challenge: {
-            id: '7b86f954-d8c3-4fac-a652-b922c80e5c20', //to be resolved
-            opportunity: {
-              id: 'not supported',
-            },
+      applicantionCreatorID: agentInfo.userID,
+      applicantID: applicationData.userID,
+      community: {
+        name: community.displayName,
+        type: communityType,
+      },
+      hub: {
+        id: community.ecoverseID,
+        challenge: {
+          id: '7b86f954-d8c3-4fac-a652-b922c80e5c20', //to be resolved
+          opportunity: {
+            id: 'not supported',
           },
         },
       },
     });
-    // this.subscriptionHandler.publish('communityApplicationCreated', {
-    //   data: {
-    //     applicantionCreatorID: agentInfo.userID,
-    //     applicantID: applicationData.userID,
-    //     community: {
-    //       name: community.displayName,
-    //       type: communityType,
-    //     },
-    //     hub: {
-    //       id: community.ecoverseID,
-    //       challenge: {
-    //         id: '7b86f954-d8c3-4fac-a652-b922c80e5c20', //to be resolved
-    //         opportunity: {
-    //           id: 'not supported',
-    //         },
-    //       },
-    //     },
-    //   },
-    // });
+    this.subscriptionHandler.publish(
+      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
+      {
+        application: application,
+      }
+    );
     return await this.applicationService.save(application);
   }
 
