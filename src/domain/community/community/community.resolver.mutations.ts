@@ -23,12 +23,13 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSubEngine } from 'apollo-server-express';
-import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
 import { CommunitySendMessageInput } from './dto/community.dto.send.message';
-import { SubscriptionType } from '@common/enums/subscription.type';
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
+import { ClientProxy } from '@nestjs/microservices';
+import { SubscriptionType } from '@common/enums/subscription.type';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -41,8 +42,9 @@ export class CommunityResolverMutations {
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
-    @Inject(PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine
+    @Inject(SUBSCRIPTION_PUB_SUB)
+    private readonly subscriptionHandler: PubSubEngine,
+    @Inject('NOTIFICATIONS_SERVICE') private client: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -183,9 +185,29 @@ export class CommunityResolverMutations {
           AuthorizationPrivilege.DELETE,
         ]
       );
+
+    const communityType = community.parentCommunity ? 'challenge' : 'hub';
+
     // Trigger an event for subscriptions
+    this.client.emit<number>(SubscriptionType.COMMUNITY_APPLICATION_CREATED, {
+      applicantionCreatorID: agentInfo.userID,
+      applicantID: applicationData.userID,
+      community: {
+        name: community.displayName,
+        type: communityType,
+      },
+      hub: {
+        id: community.ecoverseID,
+        challenge: {
+          id: '7b86f954-d8c3-4fac-a652-b922c80e5c20', //to be resolved
+          opportunity: {
+            id: 'not supported',
+          },
+        },
+      },
+    });
     this.subscriptionHandler.publish(
-      SubscriptionType.USER_APPLICATION_RECEIVED,
+      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
       {
         application: application,
       }

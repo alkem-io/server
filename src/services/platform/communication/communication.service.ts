@@ -1,4 +1,5 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
+import { ValidationException } from '@common/exceptions';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
 import { CommunityRoomResult } from '@domain/community/community/dto/community.dto.room.result';
@@ -6,6 +7,7 @@ import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communicat
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
+import { MatrixClient } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.adapter.service';
 import { MatrixMessageAdapterService } from '../matrix/adapter-message/matrix.message.adapter.service';
@@ -62,6 +64,14 @@ export class CommunicationService {
   async sendMessageToCommunityRoom(
     sendMessageData: CommunicationSendMessageCommunityInput
   ): Promise<string> {
+    // Todo: replace with proper data validation
+    const message = sendMessageData.message;
+    if (message.length === 0) {
+      throw new ValidationException(
+        'Message length cannot be empty',
+        LogContext.COMMUNICATION
+      );
+    }
     const matrixAgent = await this.acquireMatrixAgent(
       sendMessageData.senderCommunicationsID
     );
@@ -332,6 +342,7 @@ export class CommunicationService {
       await this.matrixAgentService.getCommunityRooms(matrixAgent);
     for (const matrixRoom of matrixCommunityRooms) {
       const room = await this.convertMatrixRoomToCommunityRoom(
+        matrixAgent.matrixClient,
         matrixRoom,
         matrixAgent.matrixClient.getUserId()
       );
@@ -354,6 +365,7 @@ export class CommunicationService {
     for (const matrixRoom of matrixDirectRooms) {
       // todo: likely a bug in the email mapping below
       const room = await this.convertMatrixRoomToDirectRoom(
+        matrixAgent.matrixClient,
         matrixRoom,
         matrixRoom.receiverCommunicationsID || '',
         matrixAgent.matrixClient.getUserId()
@@ -381,6 +393,7 @@ export class CommunicationService {
       roomId
     );
     return await this.convertMatrixRoomToCommunityRoom(
+      matrixAgent.matrixClient,
       matrixRoom,
       matrixAgent.matrixClient.getUserId()
     );
@@ -409,6 +422,7 @@ export class CommunicationService {
       );
     if (targetUserMatrixID) {
       return await this.convertMatrixRoomToDirectRoom(
+        matrixAgent.matrixClient,
         matrixRoom,
         // may need to convert from an matrix ID to matrix username
         targetUserMatrixID,
@@ -416,12 +430,14 @@ export class CommunicationService {
       );
     }
     return await this.convertMatrixRoomToCommunityRoom(
+      matrixAgent.matrixClient,
       matrixRoom,
       matrixAgent.matrixClient.getUserId()
     );
   }
 
   async convertMatrixRoomToDirectRoom(
+    matrixClient: MatrixClient,
     matrixRoom: MatrixRoom,
     receiverMatrixID: string,
     userId: string
@@ -429,6 +445,7 @@ export class CommunicationService {
     const roomResult = new DirectRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
+      matrixClient,
       matrixRoom,
       userId
     );
@@ -437,12 +454,14 @@ export class CommunicationService {
   }
 
   async convertMatrixRoomToCommunityRoom(
+    matrixClient: MatrixClient,
     matrixRoom: MatrixRoom,
     userId: string
   ): Promise<CommunityRoomResult> {
     const roomResult = new CommunityRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
+      matrixClient,
       matrixRoom,
       userId
     );
@@ -451,6 +470,7 @@ export class CommunicationService {
   }
 
   async getMatrixRoomTimelineAsMessages(
+    matrixClient: MatrixClient,
     matrixRoom: MatrixRoom,
     userId: string
   ): Promise<CommunicationMessageResult[]> {
@@ -459,9 +479,10 @@ export class CommunicationService {
       LogContext.COMMUNICATION
     );
 
-    // do NOT use the deprecated room.timeline property
-    const timeline = matrixRoom.getLiveTimeline();
-    const timelineEvents = timeline.getEvents();
+    const timelineEvents = await this.matrixRoomAdapterService.getAllRoomEvents(
+      matrixClient,
+      matrixRoom
+    );
     if (timelineEvents) {
       return await this.convertMatrixTimelineToMessages(timelineEvents, userId);
     }

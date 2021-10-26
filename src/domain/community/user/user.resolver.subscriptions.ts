@@ -5,7 +5,7 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Resolver, Subscription } from '@nestjs/graphql';
-import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from './user.service';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -21,7 +21,7 @@ export class UserResolverSubscriptions {
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(PUB_SUB) private pubSub: PubSubEngine
+    @Inject(SUBSCRIPTION_PUB_SUB) private pubSub: PubSubEngine
   ) {}
 
   // Note: the resolving method should not be doing any heavy lifting.

@@ -6,7 +6,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
-import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { ClientProxy } from '@nestjs/microservices';
+import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { PubSubEngine } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ApplicationReceived } from '../application/application.dto.received';
@@ -15,10 +16,12 @@ import { CommunityService } from './community.service';
 @Resolver()
 export class CommunityResolverSubscriptions {
   constructor(
-    @Inject(PUB_SUB) private pubSub: PubSubEngine,
+    @Inject(SUBSCRIPTION_PUB_SUB) private pubSub: PubSubEngine,
     private communityService: CommunityService,
     private authorizationService: AuthorizationService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @Inject('NOTIFICATIONS_SERVICE') private client: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -58,7 +61,7 @@ export class CommunityResolverSubscriptions {
       `subscribe to application events on community: ${community.displayName}`
     );
     return this.pubSub.asyncIterator(
-      SubscriptionType.USER_APPLICATION_RECEIVED
+      SubscriptionType.COMMUNITY_APPLICATION_CREATED
     );
   }
 }
