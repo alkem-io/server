@@ -1,10 +1,11 @@
+import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class DiscussionRemoveMessageInput {
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: false,
-    description: 'The Discussion the message is being removed from to',
+    description: 'The Discussion to remove a message from.',
   })
   discussionID!: string;
 

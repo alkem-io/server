@@ -28,7 +28,6 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ConfigService } from '@nestjs/config';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
@@ -38,7 +37,6 @@ export class CommunityService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
-    private configService: ConfigService,
     private userService: UserService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
@@ -239,6 +237,7 @@ export class CommunityService {
     const community = await this.getCommunityOrFail(communityID, {
       relations: ['communication'],
     });
+
     const communication = community.communication;
     if (!communication) {
       throw new EntityNotInitializedException(

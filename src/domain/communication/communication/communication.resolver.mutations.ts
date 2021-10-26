@@ -25,7 +25,7 @@ export class CommunicationResolverMutations {
     description: 'Sends an update message on the specified communication',
   })
   @Profiling.api
-  async sendCommunicationUpdate(
+  async sendUpdate(
     @Args('messageData') messageData: CommunicationSendUpdateMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
@@ -51,7 +51,7 @@ export class CommunicationResolverMutations {
     description: 'Removes an update message from the specified communication',
   })
   @Profiling.api
-  async removeCommunicationUpdate(
+  async removeUpdate(
     @Args('messageData') messageData: CommunicationRemoveUpdateMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
@@ -82,15 +82,15 @@ export class CommunicationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('createData') createData: CommunicationCreateDiscussionInput
   ): Promise<IDiscussion> {
-    // const discussion = await this.discussionService.getDiscussionOrFail(
-    //   deleteData.ID
-    // );
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   discussion.authorization,
-    //   AuthorizationPrivilege.DELETE,
-    //   `delete reference: ${reference.id}`
-    // );
+    const discussion = await this.communicationService.getCommunicationOrFail(
+      createData.communicationID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.CREATE,
+      `delete reference: ${discussion.id}`
+    );
     return await this.communicationService.createDiscussion(createData);
   }
 }

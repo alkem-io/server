@@ -1,10 +1,10 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { IDiscussion } from './discussion.interface';
 import { Communication } from '../communication/communication.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 
 @Entity()
-export class Discussion extends BaseAlkemioEntity implements IDiscussion {
+export class Discussion extends AuthorizableEntity implements IDiscussion {
   constructor(title?: string, category?: string) {
     super();
     this.title = title || '';

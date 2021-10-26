@@ -1,8 +1,9 @@
+import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class CommunicationRemoveUpdateMessageInput {
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: false,
     description: 'The communication the message is being removed from to',
   })

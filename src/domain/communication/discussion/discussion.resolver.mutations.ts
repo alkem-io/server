@@ -11,6 +11,7 @@ import { DiscussionRemoveMessageInput } from './dto/discussion.dto.remove.messag
 import { IDiscussion } from './discussion.interface';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -31,12 +32,12 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       messageData.discussionID
     );
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   discussion.authorization,
-    //   AuthorizationPrivilege.UPDATE,
-    //   `discussion send message: ${discussion.title}`
-    // );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.CREATE,
+      `discussion send message: ${discussion.title}`
+    );
     await this.discussionService.sendMessageToDiscussion(
       discussion,
       agentInfo.communicationID,
@@ -57,12 +58,12 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       messageData.discussionID
     );
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   discussion.authorization,
-    //   AuthorizationPrivilege.UPDATE,
-    //   `communication send message: ${discussion.title}`
-    // );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `communication send message: ${discussion.title}`
+    );
     await this.discussionService.removeMessageFromDiscussion(
       discussion,
       agentInfo.communicationID,
@@ -80,15 +81,15 @@ export class DiscussionResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteDiscussionInput
   ): Promise<IDiscussion> {
-    // const discussion = await this.discussionService.getDiscussionOrFail(
-    //   deleteData.ID
-    // );
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   discussion.authorization,
-    //   AuthorizationPrivilege.DELETE,
-    //   `delete reference: ${reference.id}`
-    // );
+    const discussion = await this.discussionService.getDiscussionOrFail(
+      deleteData.ID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete discussion: ${discussion.id}`
+    );
     return await this.discussionService.deleteDiscussion(deleteData.ID);
   }
 
@@ -103,12 +104,12 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       updateData.ID
     );
-    // await this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   discussion.authorization,
-    //   AuthorizationPrivilege.DELETE,
-    //   `delete reference: ${reference.id}`
-    // );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `Update discussion: ${discussion.id}`
+    );
     return await this.discussionService.updateDiscussion(
       discussion,
       updateData
