@@ -10,6 +10,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { CommunicationSendUpdateMessageInput } from './dto/communication.dto.send.update.message';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationRemoveUpdateMessageInput } from './dto/communication.dto.remove.update.message';
+import { IDiscussion } from '../discussion/discussion.interface';
+import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -23,7 +25,7 @@ export class CommunicationResolverMutations {
     description: 'Sends an update message on the specified communication',
   })
   @Profiling.api
-  async sendMessageToCommunicationUpdates(
+  async sendCommunicationUpdate(
     @Args('messageData') messageData: CommunicationSendUpdateMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
@@ -49,7 +51,7 @@ export class CommunicationResolverMutations {
     description: 'Removes an update message from the specified communication',
   })
   @Profiling.api
-  async removeMessageFromCommunicationUpdates(
+  async removeCommunicationUpdate(
     @Args('messageData') messageData: CommunicationRemoveUpdateMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
@@ -70,5 +72,25 @@ export class CommunicationResolverMutations {
     );
 
     return messageData.messageId;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IDiscussion, {
+    description: 'Creates a new Discussion as part of this Communication.',
+  })
+  async createDiscussion(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('createData') createData: CommunicationCreateDiscussionInput
+  ): Promise<IDiscussion> {
+    // const discussion = await this.discussionService.getDiscussionOrFail(
+    //   deleteData.ID
+    // );
+    // await this.authorizationService.grantAccessOrFail(
+    //   agentInfo,
+    //   discussion.authorization,
+    //   AuthorizationPrivilege.DELETE,
+    //   `delete reference: ${reference.id}`
+    // );
+    return await this.communicationService.createDiscussion(createData);
   }
 }

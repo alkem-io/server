@@ -7,12 +7,12 @@ import { Discussion } from './discussion.entity';
 import { IDiscussion } from './discussion.interface';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
-import { CreateDiscussionInput } from './dto/discussion.dto.create';
 import { CommunicationRoomResult } from '../room/communication.dto.room.result';
 import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
 import { RoomService } from '../room/room.service';
 import { DiscussionSendMessageInput } from './dto/discussion.dto.send.message';
 import { DiscussionRemoveMessageInput } from './dto/discussion.dto.remove.message';
+import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
 
 @Injectable()
 export class DiscussionService {
@@ -24,7 +24,7 @@ export class DiscussionService {
   ) {}
 
   async createDiscussion(
-    discussionData: CreateDiscussionInput
+    discussionData: CommunicationCreateDiscussionInput
   ): Promise<IDiscussion> {
     const discussion = Discussion.create(discussionData);
     return await this.discussionRepository.save(discussion);

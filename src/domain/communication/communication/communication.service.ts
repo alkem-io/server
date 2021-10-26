@@ -14,7 +14,6 @@ import {
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ConfigService } from '@nestjs/config';
 import { IDiscussion } from '../discussion/discussion.interface';
-import { CreateDiscussionInput } from '../discussion/dto/discussion.dto.create';
 import { DiscussionService } from '../discussion/discussion.service';
 import { CommunicationRemoveUpdateMessageInput } from './dto/communication.dto.remove.update.message';
 import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
@@ -22,6 +21,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationSendUpdateMessageInput } from './dto/communication.dto.send.update.message';
 import { CommunicationRoomResult } from '../room/communication.dto.room.result';
 import { RoomService } from '../room/room.service';
+import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 
 @Injectable()
 export class CommunicationService {
@@ -53,7 +53,7 @@ export class CommunicationService {
   }
 
   async createDiscussion(
-    discussionData: CreateDiscussionInput
+    discussionData: CommunicationCreateDiscussionInput
   ): Promise<IDiscussion> {
     const title = discussionData.title;
     const communicationID = discussionData.communicationID;

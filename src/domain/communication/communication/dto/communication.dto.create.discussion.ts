@@ -3,12 +3,12 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
-export class CreateDiscussionInput {
-  @Field(() => String, { nullable: false })
-  title!: string;
-
+export class CommunicationCreateDiscussionInput {
   @Field(() => String, { nullable: false })
   communicationID!: string;
+
+  @Field(() => String, { nullable: false })
+  title!: string;
 
   @Field(() => String, { nullable: false })
   @IsOptional()

@@ -1,1 +1,1 @@
-export * from './dto/discussion.dto.create';
+export * from '../communication/dto/communication.dto.create.discussion';
