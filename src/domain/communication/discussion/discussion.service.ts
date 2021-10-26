@@ -123,7 +123,7 @@ export class DiscussionService {
     // );
     return await this.communicationAdapterService.sendMessageToCommunityRoom({
       senderCommunicationsID: communicationID,
-      message: messageData.messageId,
+      message: messageData.messageID,
       roomID: discussion.discussionRoomID,
     });
   }

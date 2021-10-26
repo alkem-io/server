@@ -202,7 +202,7 @@ export class CommunicationService {
     );
     await this.communicationAdapterService.deleteMessageFromCommunityRoom({
       senderCommunicationsID: communicationID,
-      messageId: messageData.messageId,
+      messageId: messageData.messageID,
       roomID: communication.updatesRoomID,
     });
   }

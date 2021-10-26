@@ -71,7 +71,7 @@ export class CommunicationResolverMutations {
       messageData
     );
 
-    return messageData.messageId;
+    return messageData.messageID;
   }
 
   @UseGuards(GraphqlGuard)

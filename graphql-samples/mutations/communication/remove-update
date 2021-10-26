@@ -1,0 +1,11 @@
+mutation removeUpdate($messageData: CommunicationRemoveUpdateMessageInput!) {
+  removeUpdate(messageData: $messageData)
+}
+
+Variables:
+{
+  "messageData": {
+    "message": "example222",
+    "communicationID": "uuid"
+  }
+}

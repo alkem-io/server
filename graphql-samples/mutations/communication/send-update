@@ -1,0 +1,11 @@
+mutation sendUpdate($messageData: CommunicationSendUpdateMessageInput!) {
+  sendUpdate(messageData: $messageData)
+}
+
+Variables:
+{
+  "messageData": {
+    "message": "example222",
+    "communicationID": "uuid"
+  }
+}

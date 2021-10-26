@@ -13,5 +13,5 @@ export class DiscussionRemoveMessageInput {
     nullable: false,
     description: 'The message id that should be removed',
   })
-  messageId!: string;
+  messageID!: string;
 }
