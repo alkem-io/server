@@ -12,12 +12,16 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationRemoveUpdateMessageInput } from './dto/communication.dto.remove.update.message';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { DiscussionService } from '../discussion/discussion.service';
 
 @Resolver()
 export class CommunicationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private communicationService: CommunicationService
+    private communicationService: CommunicationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private discussionService: DiscussionService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -82,15 +86,25 @@ export class CommunicationResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('createData') createData: CommunicationCreateDiscussionInput
   ): Promise<IDiscussion> {
-    const discussion = await this.communicationService.getCommunicationOrFail(
-      createData.communicationID
-    );
+    const communication =
+      await this.communicationService.getCommunicationOrFail(
+        createData.communicationID
+      );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      discussion.authorization,
+      communication.authorization,
       AuthorizationPrivilege.CREATE,
-      `delete reference: ${discussion.id}`
+      `create discussion on communication: ${communication.id}`
     );
-    return await this.communicationService.createDiscussion(createData);
+
+    const discussion = await this.communicationService.createDiscussion(
+      createData
+    );
+    discussion.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        discussion.authorization,
+        communication.authorization
+      );
+    return await this.discussionService.save(discussion);
   }
 }

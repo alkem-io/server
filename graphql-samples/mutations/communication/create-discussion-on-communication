@@ -1,0 +1,16 @@
+mutation createDiscussion($createData: CommunicationCreateDiscussionInput!) {
+  createDiscussion(createData: $createData) {
+    title,
+    category
+  }
+}
+
+Variables:
+{
+  "createData": {
+      "title": "uuid",
+      "category": "GENERAL",
+      "message": "something",
+      "communicationID": "uuid"
+  }
+}

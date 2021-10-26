@@ -69,6 +69,10 @@ export class CommunicationService {
     const discussion = await this.discussionService.createDiscussion(
       discussionData
     );
+    await this.discussionService.initializeDiscussionRoom(
+      discussion,
+      communication.communicationGroupID
+    );
     communication.discussions?.push(discussion);
     await this.communicationRepository.save(communication);
 

@@ -9,6 +9,7 @@ export class Discussion extends AuthorizableEntity implements IDiscussion {
     super();
     this.title = title || '';
     this.category = category || '';
+    this.discussionRoomID = '';
   }
 
   @Column('text', { nullable: false })

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -13,6 +13,8 @@ import { RoomService } from '../room/room.service';
 import { DiscussionSendMessageInput } from './dto/discussion.dto.send.message';
 import { DiscussionRemoveMessageInput } from './dto/discussion.dto.remove.message';
 import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class DiscussionService {
@@ -20,14 +22,37 @@ export class DiscussionService {
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     private communicationAdapterService: CommunicationAdapterService,
-    private roomService: RoomService
+    private roomService: RoomService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput
   ): Promise<IDiscussion> {
     const discussion = Discussion.create(discussionData);
+    discussion.authorization = new AuthorizationPolicy();
     return await this.discussionRepository.save(discussion);
+  }
+
+  async initializeDiscussionRoom(
+    discussion: IDiscussion,
+    communicationGroupID: string
+  ): Promise<IDiscussion> {
+    try {
+      discussion.discussionRoomID =
+        await this.communicationAdapterService.createCommunityRoom(
+          communicationGroupID,
+          `discussion - ${discussion.title} `,
+          { communicationId: discussion.id }
+        );
+      return await this.save(discussion);
+    } catch (error) {
+      this.logger.error?.(
+        `Unable to initialize discussion room (${discussion.title}): ${error}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return discussion;
   }
 
   async removeDiscussion(
@@ -78,6 +103,10 @@ export class DiscussionService {
     if (updateDiscussionData.category)
       discussion.category = updateDiscussionData.category;
     return discussion;
+  }
+
+  async save(discussion: IDiscussion): Promise<IDiscussion> {
+    return await this.discussionRepository.save(discussion);
   }
 
   async getDiscussionRoom(

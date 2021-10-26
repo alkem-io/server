@@ -31,6 +31,17 @@ export class CommunicationAuthorizationService {
       communication.authorization
     );
 
+    const discussions = communication.discussions;
+    if (discussions) {
+      for (const discussion of discussions) {
+        discussion.authorization =
+          await this.authorizationPolicyService.inheritParentAuthorization(
+            discussion.authorization,
+            communication.authorization
+          );
+      }
+    }
+
     return await this.communicationRepository.save(communication);
   }
 
