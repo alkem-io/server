@@ -1,51 +1,37 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  Communication,
-  ICommunication,
-} from '@domain/communication/communication';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
+import { IDiscussion } from './discussion.interface';
+import { Discussion } from './discussion.entity';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { AuthorizationPrivilege } from '@common/enums';
 
 @Injectable()
-export class CommunicationAuthorizationService {
+export class DiscussionAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Communication)
-    private communicationRepository: Repository<Communication>,
-    private discussionAuthorizationService: DiscussionAuthorizationService
+    @InjectRepository(Discussion)
+    private discussionRepository: Repository<Discussion>
   ) {}
 
   async applyAuthorizationPolicy(
-    communication: ICommunication,
+    discussion: IDiscussion,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICommunication> {
-    communication.authorization =
+  ): Promise<IDiscussion> {
+    discussion.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        communication.authorization,
+        discussion.authorization,
         parentAuthorization
       );
 
-    communication.authorization = this.extendAuthorizationPolicy(
-      communication.authorization
+    discussion.authorization = this.extendAuthorizationPolicy(
+      discussion.authorization
     );
 
-    const discussions = communication.discussions;
-    if (discussions) {
-      for (const discussion of discussions) {
-        await this.discussionAuthorizationService.applyAuthorizationPolicy(
-          discussion,
-          communication.authorization
-        );
-      }
-    }
-
-    return await this.communicationRepository.save(communication);
+    return await this.discussionRepository.save(discussion);
   }
 
   private extendAuthorizationPolicy(
@@ -53,7 +39,7 @@ export class CommunicationAuthorizationService {
   ): IAuthorizationPolicy {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    // Allow any registered users to create discussions
+    // Allow any registered users to create new messages on discussions
     const globalRegistered = {
       type: AuthorizationCredential.GLOBAL_REGISTERED,
       resourceID: '',
@@ -61,7 +47,6 @@ export class CommunicationAuthorizationService {
     };
     newRules.push(globalRegistered);
 
-    //
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
         authorization,
