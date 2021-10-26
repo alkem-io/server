@@ -2,7 +2,7 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { createClient, IContent } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapterService } from '../adapter-group/matrix.group.adapter.service';
@@ -28,7 +28,7 @@ export class MatrixAgentService {
     private matrixMessageAdapterService: MatrixMessageAdapterService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(PUB_SUB)
+    @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine
   ) {}
 
