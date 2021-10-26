@@ -30,5 +30,7 @@ export class Communication
     super();
     this.ecoverseID = '';
     this.updatesRoomID = '';
+    this.communicationGroupID = '';
+    this.displayName = '';
   }
 }

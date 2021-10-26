@@ -141,11 +141,13 @@ export class MatrixRoomAdapterService {
     );
 
     // need to set an anchor on the last known event and load from there
-    await timelineWindow.load(lastKnownEvent.getId(), 1000);
-    // atempt to paginate while we have outstanding messages
-    while (timelineWindow.canPaginate(Direction.Backward)) {
-      // do the actual event loading in memory
-      await timelineWindow.paginate(Direction.Backward, 1000);
+    if (lastKnownEvent) {
+      await timelineWindow.load(lastKnownEvent.getId(), 1000);
+      // atempt to paginate while we have outstanding messages
+      while (timelineWindow.canPaginate(Direction.Backward)) {
+        // do the actual event loading in memory
+        await timelineWindow.paginate(Direction.Backward, 1000);
+      }
     }
 
     return timelineWindow.getEvents();
