@@ -67,12 +67,10 @@ export class CommunicationService {
     const communication = await this.getCommunicationOrFail(communicationID);
 
     const discussion = await this.discussionService.createDiscussion(
-      discussionData
-    );
-    await this.discussionService.initializeDiscussionRoom(
-      discussion,
+      discussionData,
       communication.communicationGroupID
     );
+
     communication.discussions?.push(discussion);
     await this.communicationRepository.save(communication);
 

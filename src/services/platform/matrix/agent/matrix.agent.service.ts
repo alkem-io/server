@@ -129,7 +129,7 @@ export class MatrixAgentService {
     );
     if (!matrixRoom) {
       throw new MatrixEntityNotFoundException(
-        `Room not found: ${roomId}, agent id: ${matrixAgent.matrixClient.getUserId()}`,
+        `[User: ${matrixAgent.matrixClient.getUserId()}] Unable to access Room (${roomId}). Room either does not exist or user does not have access.`,
         LogContext.COMMUNICATION
       );
     }

@@ -27,23 +27,25 @@ export class DiscussionService {
   ) {}
 
   async createDiscussion(
-    discussionData: CommunicationCreateDiscussionInput
+    discussionData: CommunicationCreateDiscussionInput,
+    communicationGroupID: string
   ): Promise<IDiscussion> {
     const discussion = Discussion.create(discussionData);
     discussion.authorization = new AuthorizationPolicy();
-    return await this.discussionRepository.save(discussion);
+    discussion.communicationGroupID = communicationGroupID;
+    await this.discussionRepository.save(discussion);
+    return await this.initializeDiscussionRoom(discussion);
   }
 
   async initializeDiscussionRoom(
-    discussion: IDiscussion,
-    communicationGroupID: string
+    discussion: IDiscussion
   ): Promise<IDiscussion> {
     try {
       discussion.discussionRoomID =
         await this.communicationAdapterService.createCommunityRoom(
-          communicationGroupID,
+          discussion.communicationGroupID,
           `discussion - ${discussion.title} `,
-          { communicationId: discussion.id }
+          { discussionID: discussion.id }
         );
       return await this.save(discussion);
     } catch (error) {
@@ -113,6 +115,11 @@ export class DiscussionService {
     discussion: IDiscussion,
     communicationID: string
   ): Promise<CommunicationRoomResult> {
+    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
+      discussion.communicationGroupID,
+      [discussion.discussionRoomID],
+      communicationID
+    );
     const room = await this.communicationAdapterService.getCommunityRoom(
       discussion.discussionRoomID,
       communicationID
@@ -128,11 +135,11 @@ export class DiscussionService {
     communicationID: string,
     messageData: DiscussionSendMessageInput
   ): Promise<string> {
-    // await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
-    //   communication.communicationGroupID,
-    //   [discussion.discussionRoomID],
-    //   communicationID
-    // );
+    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
+      discussion.communicationGroupID,
+      [discussion.discussionRoomID],
+      communicationID
+    );
     return await this.communicationAdapterService.sendMessageToCommunityRoom({
       senderCommunicationsID: communicationID,
       message: messageData.message,
@@ -144,16 +151,18 @@ export class DiscussionService {
     discussion: IDiscussion,
     communicationID: string,
     messageData: DiscussionRemoveMessageInput
-  ): Promise<string> {
-    // await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
-    //   communication.communicationGroupID,
-    //   [discussion.discussionRoomID],
-    //   communicationID
-    // );
-    return await this.communicationAdapterService.sendMessageToCommunityRoom({
-      senderCommunicationsID: communicationID,
-      message: messageData.messageID,
-      roomID: discussion.discussionRoomID,
-    });
+  ) {
+    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
+      discussion.communicationGroupID,
+      [discussion.discussionRoomID],
+      communicationID
+    );
+    return await this.communicationAdapterService.deleteMessageFromCommunityRoom(
+      {
+        senderCommunicationsID: communicationID,
+        messageId: messageData.messageID,
+        roomID: discussion.discussionRoomID,
+      }
+    );
   }
 }

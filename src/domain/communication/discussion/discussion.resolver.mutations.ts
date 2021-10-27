@@ -21,7 +21,7 @@ export class DiscussionResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
+  @Mutation(() => IDiscussion, {
     description: 'Sends a message to the specified Discussion',
   })
   @Profiling.api
@@ -47,7 +47,7 @@ export class DiscussionResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
+  @Mutation(() => IDiscussion, {
     description: 'Removes a message from the specified Discussion.',
   })
   @Profiling.api

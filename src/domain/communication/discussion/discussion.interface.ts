@@ -15,4 +15,5 @@ export abstract class IDiscussion extends IAuthorizable {
   category?: string;
 
   discussionRoomID!: string;
+  communicationGroupID!: string;
 }

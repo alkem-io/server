@@ -10,6 +10,7 @@ export class Discussion extends AuthorizableEntity implements IDiscussion {
     this.title = title || '';
     this.category = category || '';
     this.discussionRoomID = '';
+    this.communicationGroupID = '';
   }
 
   @Column('text', { nullable: false })
@@ -27,4 +28,7 @@ export class Discussion extends AuthorizableEntity implements IDiscussion {
 
   @Column()
   discussionRoomID!: string;
+
+  @Column()
+  communicationGroupID!: string;
 }
