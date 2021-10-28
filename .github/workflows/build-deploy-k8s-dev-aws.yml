@@ -1,12 +1,13 @@
-name: Build & Deploy to Test
+name: Build & Deploy to Dev
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [develop]
 
 env:
   ECR_REGISTRY: ${{ secrets.ECR_DEV_TEST_REGISTRY }}
   ECR_REPOSITORY: alkemio-server
-  KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA_TEST }}
+  KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA_DEV }}
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
@@ -40,6 +41,6 @@ jobs:
       - name: verify deployment
         uses: kodermax/kubectl-aws-eks@master
         env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA_TEST }}
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA_DEV }}
         with:
           args: rollout status deployment/$ECR_REPOSITORY-deployment
