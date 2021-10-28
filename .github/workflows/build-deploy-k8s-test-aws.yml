@@ -1,4 +1,4 @@
-name: Build & Deploy to Test
+name: Build & Deploy to Test on AWS
 
 on:
   workflow_dispatch:
@@ -39,7 +39,5 @@ jobs:
 
       - name: verify deployment
         uses: kodermax/kubectl-aws-eks@master
-        env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA_TEST }}
         with:
           args: rollout status deployment/$ECR_REPOSITORY-deployment
