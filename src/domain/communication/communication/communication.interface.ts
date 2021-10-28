@@ -8,8 +8,6 @@ export abstract class ICommunication extends IAuthorizable {
 
   ecoverseID!: string;
 
-  displayName!: string;
-
   // Communications related information
   updatesRoomID!: string;
   communicationGroupID!: string;

@@ -11,9 +11,6 @@ export class Communication
   @Column()
   ecoverseID: string;
 
-  @Column()
-  displayName!: string;
-
   @OneToMany(() => Discussion, discussion => discussion.communication, {
     eager: true,
     cascade: true,
@@ -31,6 +28,5 @@ export class Communication
     this.ecoverseID = '';
     this.updatesRoomID = '';
     this.communicationGroupID = '';
-    this.displayName = '';
   }
 }
