@@ -41,6 +41,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { UpdateEcoverseInput } from './dto/ecoverse.dto.update';
 import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
 import { CommunityService } from '@domain/community/community/community.service';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class EcoverseService {
@@ -70,7 +71,8 @@ export class EcoverseService {
     await this.baseChallengeService.initialise(
       ecoverse,
       ecoverseData,
-      ecoverse.id
+      ecoverse.id,
+      CommunityType.HUB
     );
     // set the credential type in use by the community
     await this.baseChallengeService.setMembershipCredential(

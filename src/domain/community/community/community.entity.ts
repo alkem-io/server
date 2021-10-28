@@ -13,6 +13,7 @@ import { IApplication } from '@domain/community/application/application.interfac
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Credential } from '@domain/agent/credential/credential.entity';
 import { Application } from '@domain/community/application/application.entity';
+import { CommunityType } from '@common/enums/community.type';
 
 @Entity()
 export class Community
@@ -63,12 +64,20 @@ export class Community
   @Column()
   communicationGroupID: string;
 
-  constructor(name: string) {
+  @Column()
+  type!: CommunityType;
+
+  @Column()
+  parentID: string;
+
+  constructor(name: string, type: CommunityType) {
     super();
     this.displayName = name;
+    this.type = type;
     this.ecoverseID = '';
     this.updatesRoomID = '';
     this.discussionRoomID = '';
     this.communicationGroupID = '';
+    this.parentID = '';
   }
 }
