@@ -6,7 +6,7 @@ import {
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
 } from '@services/platform/matrix/events/matrix.event.adapter.room';
-import { PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import {
   IMatrixEventHandler,
@@ -36,7 +36,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     matrixClient: MatrixClient,
     roomAdapterService: MatrixRoomAdapterService,
     messageAdapterService: MatrixMessageAdapterService,
-    @Inject(PUB_SUB)
+    @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
     private loggerService: LoggerService
   ) {
