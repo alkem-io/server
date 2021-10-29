@@ -30,10 +30,39 @@ export class discussion1635271457885 implements MigrationInterface {
       `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_7fbe50fa78a37776ad962cb7643\` FOREIGN KEY (\`communicationId\`) REFERENCES \`communication\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // (b) TODO:
     // For each Community entity create a new Communication entity and set the communicationID in the Community entity to be the id of the new Communication entity
     // For each Communication entity create an associated Authorization entity and set the ID of the authorization entity in the authorizatinId field. Note: all fields can have default values as the authorization policy can be reset after.
     // For each Community entity copy the following fields from the Community entity to the linked Communication entity: communicationGroupID, updatesRoomID, ecoverseID
+    await queryRunner.query(
+      `CREATE PROCEDURE sp_update_communications()
+      BEGIN
+      DECLARE done BOOLEAN DEFAULT FALSE;
+      DECLARE community_id varchar(36);
+      DECLARE community_communicationGroupID varchar(255);
+      DECLARE community_updatesRoomID varchar(255);
+      DECLARE community_ecoverseID varchar(255);
+      DECLARE community_cursor CURSOR FOR SELECT id, communicationGroupID, updatesRoomID, ecoverseID FROM community;
+      DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+      OPEN community_cursor;
+
+      read_loop: LOOP
+        FETCH community_cursor INTO community_id, community_communicationGroupID, community_updatesRoomID, community_ecoverseID;
+      IF done THEN
+        LEAVE read_loop;
+      END IF;
+
+        SELECT community_id, community_communicationGroupID, community_updatesRoomID, community_ecoverseID;
+        INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess) SELECT UUID(), 1, '', '', 0;
+        INSERT INTO communication(id, version, communicationGroupID, updatesRoomID, ecoverseID, authorizationID)
+        VALUES (UUID(), 1, community_communicationGroupID, community_updatesRoomID, community_ecoverseID, (SELECT id from authorization_policy order by createdDate  desc LIMIT 1));
+        UPDATE community SET communicationId = (SELECT id from communication order by createdDate  desc LIMIT 1) where id = community_id;
+      END LOOP;
+
+      CLOSE community_cursor;
+    END`
+    );
+    await queryRunner.query(`CALL sp_update_communications();`);
 
     // (c) remove old fields from the Community entity
     await queryRunner.query(
@@ -57,6 +86,9 @@ export class discussion1635271457885 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`discussion\` DROP FOREIGN KEY \`FK_4555dccdda9ba57d8e3a634cd0d\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`community\` DROP FOREIGN KEY \`FK_7fbe50fa78a37776ad962cb7643\``
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` DROP COLUMN \`communicationId\``
