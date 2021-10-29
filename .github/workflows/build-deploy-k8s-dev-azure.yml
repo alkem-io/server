@@ -1,8 +1,7 @@
 name: Build & Deploy to Dev
 
 on:
-  push:
-    branches: [develop]
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
