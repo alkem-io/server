@@ -581,10 +581,15 @@ export class UserService {
   }
 
   createUserNameID(firstName: string, lastName: string): string {
+    const nameIDExcludedCharacters = /[^a-zA-Z0-9_/-/=.]/g;
     const randomNumber = Math.floor(Math.random() * 10000).toString();
+    // replace spaces + trim to 25 characters
     const nameID = `${firstName}-${lastName}-${randomNumber}`
       .replace(/\s/g, '')
       .slice(0, 25);
-    return this.replaceSpecialCharacters(nameID);
+    // replace characters with umlouts etc to normal characters
+    const nameIDNoSpecialCharacters = this.replaceSpecialCharacters(nameID);
+    // Remove any characters that are not allowed
+    return nameIDNoSpecialCharacters.replace(nameIDExcludedCharacters, '');
   }
 }
