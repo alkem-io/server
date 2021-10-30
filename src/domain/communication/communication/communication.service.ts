@@ -59,7 +59,8 @@ export class CommunicationService {
   }
 
   async createDiscussion(
-    discussionData: CommunicationCreateDiscussionInput
+    discussionData: CommunicationCreateDiscussionInput,
+    communicationUserID: string
   ): Promise<IDiscussion> {
     const title = discussionData.title;
     const communicationID = discussionData.communicationID;
@@ -74,7 +75,8 @@ export class CommunicationService {
 
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
-      communication.communicationGroupID
+      communication.communicationGroupID,
+      communicationUserID
     );
 
     communication.discussions?.push(discussion);

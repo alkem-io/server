@@ -10,11 +10,11 @@ import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { CommunicationRoomResult } from '../room/communication.dto.room.result';
 import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
 import { RoomService } from '../room/room.service';
-import { DiscussionSendMessageInput } from './dto/discussion.dto.send.message';
-import { DiscussionRemoveMessageInput } from './dto/discussion.dto.remove.message';
 import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
+import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 
 @Injectable()
 export class DiscussionService {
@@ -28,33 +28,38 @@ export class DiscussionService {
 
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
-    communicationGroupID: string
+    communicationGroupID: string,
+    communicationUserID: string
   ): Promise<IDiscussion> {
     const discussion = Discussion.create(discussionData);
     discussion.authorization = new AuthorizationPolicy();
     discussion.communicationGroupID = communicationGroupID;
-    await this.discussionRepository.save(discussion);
-    return await this.initializeDiscussionRoom(discussion);
+    await this.save(discussion);
+    discussion.communicationRoomID = await this.initializeDiscussionRoom(
+      discussion
+    );
+    await this.sendMessageToDiscussion(discussion, communicationUserID, {
+      message: discussionData.message,
+    });
+    return await this.save(discussion);
   }
 
-  async initializeDiscussionRoom(
-    discussion: IDiscussion
-  ): Promise<IDiscussion> {
+  async initializeDiscussionRoom(discussion: IDiscussion): Promise<string> {
     try {
-      discussion.communicationRoomID =
+      const communicationRoomID =
         await this.communicationAdapterService.createCommunityRoom(
           discussion.communicationGroupID,
-          `discussion - ${discussion.title} `,
+          `${discussion.displayName}-discussion-${discussion.title} `,
           { discussionID: discussion.id }
         );
-      return await this.save(discussion);
+      return communicationRoomID;
     } catch (error) {
       this.logger.error?.(
         `Unable to initialize discussion room (${discussion.title}): ${error}`,
         LogContext.COMMUNICATION
       );
     }
-    return discussion;
+    return '';
   }
 
   async removeDiscussion(
@@ -124,7 +129,7 @@ export class DiscussionService {
   async sendMessageToDiscussion(
     discussion: IDiscussion,
     communicationUserID: string,
-    messageData: DiscussionSendMessageInput
+    messageData: RoomSendMessageInput
   ): Promise<string> {
     return await this.roomService.sendMessage(
       discussion,
@@ -136,7 +141,7 @@ export class DiscussionService {
   async removeMessageFromDiscussion(
     discussion: IDiscussion,
     communicationUserID: string,
-    messageData: DiscussionRemoveMessageInput
+    messageData: RoomRemoveMessageInput
   ) {
     return await this.roomService.removeMessage(
       discussion,
