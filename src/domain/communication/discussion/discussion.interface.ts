@@ -1,9 +1,9 @@
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IRoomable } from '../room/roomable.interface';
 
 @ObjectType('Discussion')
-export abstract class IDiscussion extends IAuthorizable {
+export abstract class IDiscussion extends IRoomable {
   @Field(() => String, {
     description: 'The title of the Discussion.',
   })
@@ -13,7 +13,4 @@ export abstract class IDiscussion extends IAuthorizable {
     description: 'The category assigned to this Discussion.',
   })
   category?: string;
-
-  discussionRoomID!: string;
-  communicationGroupID!: string;
 }

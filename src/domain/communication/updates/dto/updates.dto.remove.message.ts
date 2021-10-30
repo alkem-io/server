@@ -1,13 +1,14 @@
 import { UUID } from '@domain/common/scalars';
+import { RoomRemoveMessageInput } from '@domain/communication/room/dto/room.dto.remove.message';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class CommunicationRemoveUpdateMessageInput {
+export class UpdatesRemoveMessageInput extends RoomRemoveMessageInput {
   @Field(() => UUID, {
     nullable: false,
-    description: 'The communication the message is being removed from to',
+    description: 'The Updates the message is being removed from.',
   })
-  communicationID!: string;
+  updatesID!: string;
 
   @Field(() => String, {
     nullable: false,

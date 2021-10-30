@@ -15,13 +15,11 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ConfigService } from '@nestjs/config';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { DiscussionService } from '../discussion/discussion.service';
-import { CommunicationRemoveUpdateMessageInput } from './dto/communication.dto.remove.update.message';
 import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
 import { IUser } from '@domain/community/user/user.interface';
-import { CommunicationSendUpdateMessageInput } from './dto/communication.dto.send.update.message';
-import { CommunicationRoomResult } from '../room/communication.dto.room.result';
-import { RoomService } from '../room/room.service';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
+import { UpdatesService } from '../updates/updates.service';
+import { IUpdates } from '../updates/updates.interface';
 
 @Injectable()
 export class CommunicationService {
@@ -30,8 +28,8 @@ export class CommunicationService {
   constructor(
     private configService: ConfigService,
     private discussionService: DiscussionService,
+    private updatesService: UpdatesService,
     private communicationAdapterService: CommunicationAdapterService,
-    private roomService: RoomService,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -42,14 +40,22 @@ export class CommunicationService {
     )?.enabled;
   }
 
-  async createCommunication(): Promise<ICommunication> {
-    const communication = new Communication();
+  async createCommunication(displayName: string): Promise<ICommunication> {
+    const communication: ICommunication = new Communication(displayName);
     communication.authorization = new AuthorizationPolicy();
 
     communication.discussions = [];
-    // save to get an id assigned
-    await this.communicationRepository.save(communication);
-    return await this.initializeCommunicationsRoom(communication);
+    communication.updates = await this.updatesService.createUpdates(
+      communication.communicationGroupID,
+      `${displayName}-Updates`
+    );
+
+    await this.initializeCommunicationsGroup(communication);
+    return await this.communicationRepository.save(communication);
+  }
+
+  async save(communication: ICommunication): Promise<ICommunication> {
+    return await this.communicationRepository.save(communication);
   }
 
   async createDiscussion(
@@ -77,7 +83,6 @@ export class CommunicationService {
     return discussion;
   }
 
-  // Loads the discussions into the Communication entity if not already present
   getDiscussions(communication: ICommunication): IDiscussion[] {
     if (!communication.discussions) {
       throw new EntityNotInitializedException(
@@ -86,6 +91,16 @@ export class CommunicationService {
       );
     }
     return communication.discussions;
+  }
+
+  getUpdates(communication: ICommunication): IUpdates {
+    if (!communication.updates) {
+      throw new EntityNotInitializedException(
+        `Communication not initialized, no Updates: ${communication.id}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return communication.updates;
   }
 
   async getCommunicationOrFail(
@@ -111,115 +126,63 @@ export class CommunicationService {
     });
 
     // Remove all groups
-    if (communication.discussions) {
-      for (const discussion of communication.discussions) {
-        await this.discussionService.removeDiscussion({
-          ID: discussion.id,
-        });
-      }
+    for (const discussion of this.getDiscussions(communication)) {
+      await this.discussionService.removeDiscussion({
+        ID: discussion.id,
+      });
     }
+
+    await this.updatesService.deleteUpdates(this.getUpdates(communication));
 
     await this.communicationRepository.remove(communication as Communication);
     return true;
   }
 
-  async initializeCommunicationsRoom(
+  async initializeCommunicationsGroup(
     communication: ICommunication
   ): Promise<ICommunication> {
-    try {
-      communication.communicationGroupID =
-        await this.communicationAdapterService.createCommunityGroup(
-          communication.id,
-          communication.displayName
+    if (!this.communicationsEnabled) {
+      // not enabled, just return
+      return communication;
+    }
+    if (communication.communicationGroupID === '') {
+      try {
+        communication.communicationGroupID =
+          await this.communicationAdapterService.createCommunityGroup(
+            communication.id,
+            communication.displayName
+          );
+        if (communication.updates)
+          communication.updates.communicationGroupID =
+            communication.communicationGroupID;
+        return await this.communicationRepository.save(communication);
+      } catch (error) {
+        this.logger.error?.(
+          `Unable to initialize group for Communication (${communication.displayName}): ${error}`,
+          LogContext.COMMUNICATION
         );
-      communication.updatesRoomID =
-        await this.communicationAdapterService.createCommunityRoom(
-          communication.communicationGroupID,
-          `${communication.displayName} updates`,
-          { communicationId: communication.id }
-        );
-      return await this.communicationRepository.save(communication);
-    } catch (error) {
-      this.logger.error?.(
-        `Unable to initialize communications for communication (${communication.displayName}): ${error}`,
-        LogContext.COMMUNICATION
-      );
+      }
     }
     return communication;
-  }
-
-  async getUpdatesCommunicationsRoom(
-    communication: ICommunication,
-    communicationID: string
-  ): Promise<CommunicationRoomResult> {
-    if (
-      this.communicationsEnabled &&
-      communication.communicationGroupID === ''
-    ) {
-      await this.initializeCommunicationsRoom(communication);
-    }
-
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
-      communication.communicationGroupID,
-      [communication.updatesRoomID],
-      communicationID
-    );
-
-    const room = await this.communicationAdapterService.getCommunityRoom(
-      communication.updatesRoomID,
-      communicationID
-    );
-
-    await this.roomService.populateRoomMessageSenders([room]);
-
-    return room;
-  }
-
-  async sendMessageToCommunicationUpdates(
-    communication: ICommunication,
-    communicationID: string,
-    messageData: CommunicationSendUpdateMessageInput
-  ): Promise<string> {
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
-      communication.communicationGroupID,
-      [communication.updatesRoomID],
-      communicationID
-    );
-    return await this.communicationAdapterService.sendMessageToCommunityRoom({
-      senderCommunicationsID: communicationID,
-      message: messageData.message,
-      roomID: communication.updatesRoomID,
-    });
-  }
-
-  async removeMessageFromCommunicationUpdates(
-    communication: ICommunication,
-    communicationID: string,
-    messageData: CommunicationRemoveUpdateMessageInput
-  ) {
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
-      communication.communicationGroupID,
-      [communication.updatesRoomID],
-      communicationID
-    );
-    await this.communicationAdapterService.deleteMessageFromCommunityRoom({
-      senderCommunicationsID: communicationID,
-      messageId: messageData.messageID,
-      roomID: communication.updatesRoomID,
-    });
   }
 
   async addUserToCommunications(
     communication: ICommunication,
     user: IUser
   ): Promise<boolean> {
+    // get the list of rooms to add the user to
+    const communicationRoomIDs: string[] = [
+      this.getUpdates(communication).communicationRoomID,
+    ];
+    for (const discussion of this.getDiscussions(communication)) {
+      communicationRoomIDs.push(discussion.communicationRoomID);
+    }
     await this.communicationAdapterService.addUserToCommunityMessaging(
       communication.communicationGroupID,
-      [communication.updatesRoomID],
+      communicationRoomIDs,
       user.communicationID
     );
 
-    // todo: also add the user to all the discussion rooms
     return true;
   }
 }

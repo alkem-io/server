@@ -6,10 +6,13 @@ export class discussion1635271457885 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // (a) create new entity data model
     await queryRunner.query(
-      `CREATE TABLE \`discussion\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`title\` text NOT NULL, \`category\` text NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`discussionRoomID\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, \`communicationId\` char(36) NULL, UNIQUE INDEX \`REL_4555dccdda9ba57d8e3a634cd0\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`discussion\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`title\` text NOT NULL, \`category\` text NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`communicationRoomID\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, \`communicationId\` char(36) NULL, UNIQUE INDEX \`REL_4555dccdda9ba57d8e3a634cd0\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `CREATE TABLE \`communication\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`ecoverseID\` varchar(255) NOT NULL, \`updatesRoomID\` varchar(255) NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_a20c5901817dd09d5906537e08\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`updates\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`communicationRoomID\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, \`communicationId\` char(36) NULL, UNIQUE INDEX \`REL_7777dccdda9ba57d8e3a634cd0\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
+    await queryRunner.query(
+      `CREATE TABLE \`communication\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`ecoverseID\` varchar(255) NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`updatesId\` char(36) NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_a20c5901817dd09d5906537e08\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` ADD \`communicationId\` char(36) NULL`
@@ -27,7 +30,13 @@ export class discussion1635271457885 implements MigrationInterface {
       `ALTER TABLE \`communication\` ADD CONSTRAINT \`FK_a20c5901817dd09d5906537e087\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
+      `ALTER TABLE \`updates\` ADD CONSTRAINT \`FK_77775901817dd09d5906537e087\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
       `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_7fbe50fa78a37776ad962cb7643\` FOREIGN KEY (\`communicationId\`) REFERENCES \`communication\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`communication\` ADD CONSTRAINT \`FK_777750fa78a37776ad962cb7643\` FOREIGN KEY (\`updatesId\`) REFERENCES \`updates\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // For each Community entity create a new Communication entity and set the communicationID in the Community entity to be the id of the new Communication entity
@@ -54,8 +63,11 @@ export class discussion1635271457885 implements MigrationInterface {
 
         SELECT community_id, community_communicationGroupID, community_updatesRoomID, community_ecoverseID;
         INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess) SELECT UUID(), 1, '', '', 0;
-        INSERT INTO communication(id, version, communicationGroupID, updatesRoomID, ecoverseID, authorizationID)
-        VALUES (UUID(), 1, community_communicationGroupID, community_updatesRoomID, community_ecoverseID, (SELECT id from authorization_policy order by createdDate  desc LIMIT 1));
+        INSERT INTO updates(id, version, communicationGroupID, communicationRoomID, ecoverseID, authorizationID)
+          VALUES (UUID(), 1, community_communicationGroupID, community_updatesRoomID, (SELECT id from authorization_policy order by createdDate  desc LIMIT 1));
+        INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess) SELECT UUID(), 1, '', '', 0;
+        INSERT INTO communication(id, version, communicationGroupID, updatesID, ecoverseID, authorizationID)
+          VALUES (UUID(), 1, community_communicationGroupID, (SELECT id from updates order by createdDate  desc LIMIT 1), community_ecoverseID, (SELECT id from authorization_policy order by createdDate  desc LIMIT 1));
         UPDATE community SET communicationId = (SELECT id from communication order by createdDate  desc LIMIT 1) where id = community_id;
       END LOOP;
 
@@ -80,6 +92,12 @@ export class discussion1635271457885 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE \`communication\` DROP FOREIGN KEY \`FK_a20c5901817dd09d5906537e087\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`communication\` DROP FOREIGN KEY \`FK_777750fa78a37776ad962cb7643\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`updates\` DROP FOREIGN KEY \`FK_77775901817dd09d5906537e087\``
     );
     await queryRunner.query(
       `ALTER TABLE \`discussion\` DROP FOREIGN KEY \`FK_c6a084fe80d01c41d9f142d51aa\``

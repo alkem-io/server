@@ -1,7 +1,8 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Discussion } from '../discussion/discussion.entity';
+import { Updates } from '../updates/updates.entity';
 
 @Entity()
 export class Communication
@@ -17,16 +18,24 @@ export class Communication
   })
   discussions?: Discussion[];
 
-  @Column()
-  updatesRoomID!: string;
+  @OneToOne(() => Updates, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  updates?: Updates;
 
   @Column()
   communicationGroupID!: string;
 
-  constructor() {
+  @Column()
+  displayName!: string;
+
+  constructor(displayName: string) {
     super();
     this.ecoverseID = '';
-    this.updatesRoomID = '';
     this.communicationGroupID = '';
+    this.displayName = displayName || '';
   }
 }

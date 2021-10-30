@@ -9,7 +9,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CommunicationAuthorizationService } from './communication.service.authorization';
 import { DiscussionModule } from '../discussion/discussion.module';
 import { CommunicationAdapterModule } from '@services/platform/communication-adapter/communication-adapter.module';
-import { RoomModule } from '../room/room.module';
+import { UpdatesModule } from '../updates/updates.module';
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { RoomModule } from '../room/room.module';
     AuthorizationPolicyModule,
     DiscussionModule,
     CommunicationAdapterModule,
-    RoomModule,
+    UpdatesModule,
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [

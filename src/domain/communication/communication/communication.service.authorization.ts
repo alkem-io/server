@@ -1,23 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import {
-  Communication,
-  ICommunication,
-} from '@domain/communication/communication';
+import { ICommunication } from '@domain/communication/communication';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums';
+import { CommunicationService } from './communication.service';
 
 @Injectable()
 export class CommunicationAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Communication)
-    private communicationRepository: Repository<Communication>,
+    private communicationService: CommunicationService,
     private discussionAuthorizationService: DiscussionAuthorizationService
   ) {}
 
@@ -35,17 +30,23 @@ export class CommunicationAuthorizationService {
       communication.authorization
     );
 
-    const discussions = communication.discussions;
-    if (discussions) {
-      for (const discussion of discussions) {
-        await this.discussionAuthorizationService.applyAuthorizationPolicy(
-          discussion,
-          communication.authorization
-        );
-      }
+    for (const discussion of this.communicationService.getDiscussions(
+      communication
+    )) {
+      await this.discussionAuthorizationService.applyAuthorizationPolicy(
+        discussion,
+        communication.authorization
+      );
     }
 
-    return await this.communicationRepository.save(communication);
+    const updates = this.communicationService.getUpdates(communication);
+    updates.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        updates.authorization,
+        communication.authorization
+      );
+
+    return await this.communicationService.save(communication);
   }
 
   private extendAuthorizationPolicy(

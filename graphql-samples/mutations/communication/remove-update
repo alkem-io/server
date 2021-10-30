@@ -6,6 +6,6 @@ Variables:
 {
   "messageData": {
     "message": "example222",
-    "communicationID": "uuid"
+    "updatesID": "uuid"
   }
 }

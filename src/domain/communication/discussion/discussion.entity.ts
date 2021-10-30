@@ -1,16 +1,19 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IDiscussion } from './discussion.interface';
 import { Communication } from '../communication/communication.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
+import { RoomableEntity } from '../room/roomable.entity';
 
 @Entity()
-export class Discussion extends AuthorizableEntity implements IDiscussion {
-  constructor(title?: string, category?: string) {
-    super();
+export class Discussion extends RoomableEntity implements IDiscussion {
+  constructor(
+    communicationGroupID: string,
+    displayName: string,
+    title?: string,
+    category?: string
+  ) {
+    super(communicationGroupID, displayName);
     this.title = title || '';
     this.category = category || '';
-    this.discussionRoomID = '';
-    this.communicationGroupID = '';
   }
 
   @Column('text', { nullable: false })
@@ -25,10 +28,4 @@ export class Discussion extends AuthorizableEntity implements IDiscussion {
     onDelete: 'CASCADE',
   })
   communication?: Communication;
-
-  @Column()
-  discussionRoomID!: string;
-
-  @Column()
-  communicationGroupID!: string;
 }

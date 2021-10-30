@@ -1,17 +1,12 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { CommunicationService } from './communication.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication/agent-info';
 import { ICommunication } from './communication.interface';
 import { IDiscussion } from '../discussion/discussion.interface';
-import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { IUpdates } from '../updates/updates.interface';
 
 @Resolver(() => ICommunication)
 export class CommunicationResolverFields {
@@ -19,21 +14,13 @@ export class CommunicationResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('updates', () => [CommunicationMessageResult], {
+  @ResolveField('updates', () => IUpdates, {
     nullable: true,
     description: 'Update messages for this communication.',
   })
   @Profiling.api
-  async updates(
-    @Parent() communication: ICommunication,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CommunicationMessageResult[]> {
-    const updatesRoom =
-      await this.communicationService.getUpdatesCommunicationsRoom(
-        communication,
-        agentInfo.communicationID
-      );
-    return updatesRoom.messages;
+  async updates(@Parent() communication: ICommunication): Promise<IUpdates> {
+    return await this.communicationService.getUpdates(communication);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

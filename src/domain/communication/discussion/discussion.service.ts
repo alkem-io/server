@@ -41,7 +41,7 @@ export class DiscussionService {
     discussion: IDiscussion
   ): Promise<IDiscussion> {
     try {
-      discussion.discussionRoomID =
+      discussion.communicationRoomID =
         await this.communicationAdapterService.createCommunityRoom(
           discussion.communicationGroupID,
           `discussion - ${discussion.title} `,
@@ -113,56 +113,35 @@ export class DiscussionService {
 
   async getDiscussionRoom(
     discussion: IDiscussion,
-    communicationID: string
+    communicationUserID: string
   ): Promise<CommunicationRoomResult> {
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
-      discussion.communicationGroupID,
-      [discussion.discussionRoomID],
-      communicationID
+    return await this.roomService.getCommunicationRoom(
+      discussion,
+      communicationUserID
     );
-    const room = await this.communicationAdapterService.getCommunityRoom(
-      discussion.discussionRoomID,
-      communicationID
-    );
-
-    await this.roomService.populateRoomMessageSenders([room]);
-
-    return room;
   }
 
   async sendMessageToDiscussion(
     discussion: IDiscussion,
-    communicationID: string,
+    communicationUserID: string,
     messageData: DiscussionSendMessageInput
   ): Promise<string> {
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
-      discussion.communicationGroupID,
-      [discussion.discussionRoomID],
-      communicationID
+    return await this.roomService.sendMessage(
+      discussion,
+      communicationUserID,
+      messageData
     );
-    return await this.communicationAdapterService.sendMessageToCommunityRoom({
-      senderCommunicationsID: communicationID,
-      message: messageData.message,
-      roomID: discussion.discussionRoomID,
-    });
   }
 
   async removeMessageFromDiscussion(
     discussion: IDiscussion,
-    communicationID: string,
+    communicationUserID: string,
     messageData: DiscussionRemoveMessageInput
   ) {
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
-      discussion.communicationGroupID,
-      [discussion.discussionRoomID],
-      communicationID
-    );
-    return await this.communicationAdapterService.deleteMessageFromCommunityRoom(
-      {
-        senderCommunicationsID: communicationID,
-        messageId: messageData.messageID,
-        roomID: discussion.discussionRoomID,
-      }
+    return await this.roomService.removeMessage(
+      discussion,
+      communicationUserID,
+      messageData
     );
   }
 }

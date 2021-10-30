@@ -52,7 +52,9 @@ export class CommunityService {
 
     community.groups = [];
     community.communication =
-      await this.communicationService.createCommunication();
+      await this.communicationService.createCommunication(
+        community.displayName
+      );
     return await this.communityRepository.save(community);
   }
 
