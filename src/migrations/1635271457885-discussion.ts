@@ -63,7 +63,7 @@ export class discussion1635271457885 implements MigrationInterface {
 
         SELECT community_id, community_communicationGroupID, community_updatesRoomID, community_ecoverseID;
         INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess) SELECT UUID(), 1, '', '', 0;
-        INSERT INTO updates(id, version, communicationGroupID, communicationRoomID, ecoverseID, authorizationID)
+        INSERT INTO updates(id, version, communicationGroupID, communicationRoomID, authorizationID)
           VALUES (UUID(), 1, community_communicationGroupID, community_updatesRoomID, (SELECT id from authorization_policy order by createdDate  desc LIMIT 1));
         INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess) SELECT UUID(), 1, '', '', 0;
         INSERT INTO communication(id, version, communicationGroupID, updatesID, ecoverseID, authorizationID)
