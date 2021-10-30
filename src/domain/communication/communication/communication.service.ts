@@ -40,18 +40,52 @@ export class CommunicationService {
     )?.enabled;
   }
 
-  async createCommunication(displayName: string): Promise<ICommunication> {
+  async createCommunication(
+    displayName: string,
+    ecoverseID: string
+  ): Promise<ICommunication> {
     const communication: ICommunication = new Communication(displayName);
     communication.authorization = new AuthorizationPolicy();
+    communication.ecoverseID = ecoverseID;
 
     communication.discussions = [];
+
+    // save to get the id assigned
+    await this.save(communication);
+    communication.communicationGroupID =
+      await this.initializeCommunicationsGroup(communication);
+
     communication.updates = await this.updatesService.createUpdates(
       communication.communicationGroupID,
       `${displayName}-Updates`
     );
 
-    await this.initializeCommunicationsGroup(communication);
     return await this.communicationRepository.save(communication);
+  }
+
+  async initializeCommunicationsGroup(
+    communication: ICommunication
+  ): Promise<string> {
+    if (!this.communicationsEnabled) {
+      // not enabled, just return
+      return '';
+    }
+    if (communication.communicationGroupID === '') {
+      try {
+        const communicationGroupID =
+          await this.communicationAdapterService.createCommunityGroup(
+            communication.id,
+            communication.displayName
+          );
+        return communicationGroupID;
+      } catch (error) {
+        this.logger.error?.(
+          `Unable to initialize group for Communication (${communication.displayName}): ${error}`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+    return '';
   }
 
   async save(communication: ICommunication): Promise<ICommunication> {
@@ -138,34 +172,6 @@ export class CommunicationService {
 
     await this.communicationRepository.remove(communication as Communication);
     return true;
-  }
-
-  async initializeCommunicationsGroup(
-    communication: ICommunication
-  ): Promise<ICommunication> {
-    if (!this.communicationsEnabled) {
-      // not enabled, just return
-      return communication;
-    }
-    if (communication.communicationGroupID === '') {
-      try {
-        communication.communicationGroupID =
-          await this.communicationAdapterService.createCommunityGroup(
-            communication.id,
-            communication.displayName
-          );
-        if (communication.updates)
-          communication.updates.communicationGroupID =
-            communication.communicationGroupID;
-        return await this.communicationRepository.save(communication);
-      } catch (error) {
-        this.logger.error?.(
-          `Unable to initialize group for Communication (${communication.displayName}): ${error}`,
-          LogContext.COMMUNICATION
-        );
-      }
-    }
-    return communication;
   }
 
   async addUserToCommunications(

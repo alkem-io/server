@@ -49,9 +49,9 @@ export class BaseChallengeService {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, ecoverseID);
     baseChallenge.community = await this.communityService.createCommunity(
-      baseChallenge.displayName
+      baseChallenge.displayName,
+      ecoverseID
     );
-    baseChallenge.community.ecoverseID = ecoverseID;
 
     if (!baseChallengeData.context) {
       baseChallenge.context = await this.contextService.createContext({});

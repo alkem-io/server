@@ -16,7 +16,7 @@ export class CommunicationResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('updates', () => IUpdates, {
     nullable: true,
-    description: 'Update messages for this communication.',
+    description: 'Updates for this Communication.',
   })
   @Profiling.api
   async updates(@Parent() communication: ICommunication): Promise<IUpdates> {

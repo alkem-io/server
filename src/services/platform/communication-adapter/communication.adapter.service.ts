@@ -235,6 +235,13 @@ export class CommunicationAdapterService {
     if (!this.enabled) {
       return '';
     }
+    if (!communityId || !communityName) {
+      this.logger.error?.(
+        `Attempt to register community group with empty data ${communityId}`,
+        LogContext.COMMUNICATION
+      );
+      return '';
+    }
     const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
     const group = await this.matrixGroupAdapterService.createGroup(
       elevatedMatrixAgent.matrixClient,

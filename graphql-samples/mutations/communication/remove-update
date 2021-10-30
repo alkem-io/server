@@ -1,4 +1,4 @@
-mutation removeUpdate($messageData: CommunicationRemoveUpdateMessageInput!) {
+mutation removeUpdate($messageData: UpdatesRemoveMessageInput!) {
   removeUpdate(messageData: $messageData)
 }
 

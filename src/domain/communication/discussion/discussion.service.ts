@@ -38,9 +38,15 @@ export class DiscussionService {
     discussion.communicationRoomID = await this.initializeDiscussionRoom(
       discussion
     );
-    await this.sendMessageToDiscussion(discussion, communicationUserID, {
-      message: discussionData.message,
-    });
+    // add the current user as a member
+    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
+      discussion.communicationGroupID,
+      [discussion.communicationRoomID],
+      communicationUserID
+    );
+    // await this.sendMessageToDiscussion(discussion, communicationUserID, {
+    //   message: discussionData.message,
+    // });
     return await this.save(discussion);
   }
 
@@ -96,20 +102,15 @@ export class DiscussionService {
     return result;
   }
 
-  updateDiscussion(
-    discussion: IDiscussion | undefined,
+  async updateDiscussion(
+    discussion: IDiscussion,
     updateDiscussionData: UpdateDiscussionInput
-  ): IDiscussion {
-    if (!discussion)
-      throw new EntityNotFoundException(
-        'No Discussion loaded',
-        LogContext.CHALLENGES
-      );
+  ): Promise<IDiscussion> {
     if (updateDiscussionData.title)
       discussion.title = updateDiscussionData.title;
     if (updateDiscussionData.category)
       discussion.category = updateDiscussionData.category;
-    return discussion;
+    return await this.save(discussion);
   }
 
   async save(discussion: IDiscussion): Promise<IDiscussion> {

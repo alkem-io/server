@@ -1,4 +1,4 @@
-mutation sendUpdate($messageData: CommunicationSendUpdateMessageInput!) {
+mutation sendUpdate($messageData: UpdatesSendMessageInput!) {
   sendUpdate(messageData: $messageData)
 }
 
