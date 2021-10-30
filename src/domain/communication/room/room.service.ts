@@ -86,7 +86,7 @@ export class RoomService {
       [roomable.communicationRoomID],
       communicationUserID
     );
-    return await this.communicationAdapter.sendMessageToCommunityRoom({
+    return await this.communicationAdapter.sendMessage({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
       roomID: roomable.communicationRoomID,
@@ -97,13 +97,13 @@ export class RoomService {
     roomable: IRoomable,
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
-  ) {
+  ): Promise<void> {
     await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
       roomable.communicationGroupID,
       [roomable.communicationRoomID],
       communicationUserID
     );
-    return await this.communicationAdapter.deleteMessageFromCommunityRoom({
+    return await this.communicationAdapter.deleteMessage({
       senderCommunicationsID: communicationUserID,
       messageId: messageData.messageID,
       roomID: roomable.communicationRoomID,

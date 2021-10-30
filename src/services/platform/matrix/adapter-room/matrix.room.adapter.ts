@@ -1,18 +1,24 @@
 import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
+import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Direction, IContent, TimelineWindow } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixRoom } from './matrix.room';
 import { Preset, Visibility } from './matrix.room.dto.create.options';
 import { IRoomOpts } from './matrix.room.dto.options';
+import { MatrixRoomResponseMessage } from './matrix.room.dto.response.message';
 
 @Injectable()
 export class MatrixRoomAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private matrixMessageAdapter: MatrixMessageAdapter
   ) {}
 
   async storeDirectMessageRoom(
@@ -151,5 +157,80 @@ export class MatrixRoomAdapter {
     }
 
     return timelineWindow.getEvents();
+  }
+
+  async convertMatrixRoomToDirectRoom(
+    matrixClient: MatrixClient,
+    matrixRoom: MatrixRoom,
+    receiverMatrixID: string,
+    userId: string
+  ): Promise<DirectRoomResult> {
+    const roomResult = new DirectRoomResult();
+    roomResult.id = matrixRoom.roomId;
+    roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
+      matrixClient,
+      matrixRoom,
+      userId
+    );
+    roomResult.receiverID = receiverMatrixID;
+    return roomResult;
+  }
+
+  async convertMatrixRoomToCommunityRoom(
+    matrixClient: MatrixClient,
+    matrixRoom: MatrixRoom,
+    userId: string
+  ): Promise<CommunicationRoomResult> {
+    const roomResult = new CommunicationRoomResult();
+    roomResult.id = matrixRoom.roomId;
+    roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
+      matrixClient,
+      matrixRoom,
+      userId
+    );
+
+    return roomResult;
+  }
+
+  async getMatrixRoomTimelineAsMessages(
+    matrixClient: MatrixClient,
+    matrixRoom: MatrixRoom,
+    userId: string
+  ): Promise<CommunicationMessageResult[]> {
+    this.logger.verbose?.(
+      `[MatrixRoom] Obtaining messages on room: ${matrixRoom.name}`,
+      LogContext.COMMUNICATION
+    );
+
+    const timelineEvents = await this.getAllRoomEvents(
+      matrixClient,
+      matrixRoom
+    );
+    if (timelineEvents) {
+      return await this.convertMatrixTimelineToMessages(timelineEvents, userId);
+    }
+    return [];
+  }
+
+  async convertMatrixTimelineToMessages(
+    timeline: MatrixRoomResponseMessage[],
+    userId: string
+  ): Promise<CommunicationMessageResult[]> {
+    const messages: CommunicationMessageResult[] = [];
+
+    for (const timelineMessage of timeline) {
+      if (this.matrixMessageAdapter.isEventToIgnore(timelineMessage)) continue;
+      const message = this.matrixMessageAdapter.convertFromMatrixMessage(
+        timelineMessage,
+        userId
+      );
+
+      messages.push(message);
+    }
+    this.logger.verbose?.(
+      `[MatrixRoom] Timeline converted: ${timeline.length} events ==> ${messages.length} messages`,
+      LogContext.COMMUNICATION
+    );
+    return messages;
   }
 }

@@ -185,7 +185,7 @@ export class CommunicationService {
     for (const discussion of this.getDiscussions(communication)) {
       communicationRoomIDs.push(discussion.communicationRoomID);
     }
-    await this.communicationAdapter.addUserToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToRooms(
       communication.communicationGroupID,
       communicationRoomIDs,
       user.communicationID
