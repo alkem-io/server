@@ -5,7 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMatrixUser } from './matrix.user.interface';
 
 @Injectable()
-export class MatrixUserAdapterService {
+export class MatrixUserAdapter {
   private emailUsernameSpecialCharactersRegex = /[^a-zA-Z0-9_/-/=.]/g;
 
   constructor(

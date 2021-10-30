@@ -9,7 +9,7 @@ import { Preset, Visibility } from './matrix.room.dto.create.options';
 import { IRoomOpts } from './matrix.room.dto.options';
 
 @Injectable()
-export class MatrixRoomAdapterService {
+export class MatrixRoomAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService

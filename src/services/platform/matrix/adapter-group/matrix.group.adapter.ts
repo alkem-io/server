@@ -5,7 +5,7 @@ import { MatrixClient } from '../types/matrix.client.type';
 import { IOpts } from './matrix.group.dto.options';
 
 @Injectable()
-export class MatrixGroupAdapterService {
+export class MatrixGroupAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService

@@ -8,7 +8,7 @@ import { IDiscussion } from './discussion.interface';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { CommunicationRoomResult } from '../room/communication.dto.room.result';
-import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
+import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { RoomService } from '../room/room.service';
 import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -21,7 +21,7 @@ export class DiscussionService {
   constructor(
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
-    private communicationAdapterService: CommunicationAdapterService,
+    private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -39,7 +39,7 @@ export class DiscussionService {
       discussion
     );
     // add the current user as a member
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
       discussion.communicationGroupID,
       [discussion.communicationRoomID],
       communicationUserID
@@ -53,7 +53,7 @@ export class DiscussionService {
   async initializeDiscussionRoom(discussion: IDiscussion): Promise<string> {
     try {
       const communicationRoomID =
-        await this.communicationAdapterService.createCommunityRoom(
+        await this.communicationAdapter.createCommunityRoom(
           discussion.communicationGroupID,
           `${discussion.displayName}-discussion-${discussion.title} `,
           { discussionID: discussion.id }

@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { MatrixMessageAdapterService } from './matrix.message.adapter.service';
+import { MatrixMessageAdapter } from './matrix.message.adapter';
 
 @Module({
   imports: [],
-  providers: [MatrixMessageAdapterService],
-  exports: [MatrixMessageAdapterService],
+  providers: [MatrixMessageAdapter],
+  exports: [MatrixMessageAdapter],
 })
 export class MatrixMessageAdapterModule {}

@@ -15,7 +15,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ConfigService } from '@nestjs/config';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { DiscussionService } from '../discussion/discussion.service';
-import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
+import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { UpdatesService } from '../updates/updates.service';
@@ -29,7 +29,7 @@ export class CommunicationService {
     private configService: ConfigService,
     private discussionService: DiscussionService,
     private updatesService: UpdatesService,
-    private communicationAdapterService: CommunicationAdapterService,
+    private communicationAdapter: CommunicationAdapter,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -73,7 +73,7 @@ export class CommunicationService {
     if (communication.communicationGroupID === '') {
       try {
         const communicationGroupID =
-          await this.communicationAdapterService.createCommunityGroup(
+          await this.communicationAdapter.createCommunityGroup(
             communication.id,
             communication.displayName
           );
@@ -185,7 +185,7 @@ export class CommunicationService {
     for (const discussion of this.getDiscussions(communication)) {
       communicationRoomIDs.push(discussion.communicationRoomID);
     }
-    await this.communicationAdapterService.addUserToCommunityMessaging(
+    await this.communicationAdapter.addUserToCommunityMessaging(
       communication.communicationGroupID,
       communicationRoomIDs,
       user.communicationID

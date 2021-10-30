@@ -31,7 +31,7 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
+import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -45,7 +45,7 @@ export class UserService {
   constructor(
     private profileService: ProfileService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private communicationAdapterService: CommunicationAdapterService,
+    private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private agentService: AgentService,
     @InjectRepository(User)
@@ -104,7 +104,7 @@ export class UserService {
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
     // register the user asynchronously - we don't want to block the creation operation
-    this.communicationAdapterService.tryRegisterNewUser(user.email).then(
+    this.communicationAdapter.tryRegisterNewUser(user.email).then(
       async communicationID => {
         try {
           if (!communicationID) {
@@ -522,17 +522,17 @@ export class UserService {
   }
 
   async tryRegisterUserCommunication(user: IUser): Promise<string | undefined> {
-    const communicationID =
-      await this.communicationAdapterService.tryRegisterNewUser(user.email);
+    const communicationID = await this.communicationAdapter.tryRegisterNewUser(
+      user.email
+    );
 
     return communicationID;
   }
 
   async getCommunityRooms(user: IUser): Promise<CommunicationRoomResult[]> {
-    const communityRooms =
-      await this.communicationAdapterService.getCommunityRooms(
-        user.communicationID
-      );
+    const communityRooms = await this.communicationAdapter.getCommunityRooms(
+      user.communicationID
+    );
 
     await this.roomService.populateRoomMessageSenders(communityRooms);
 
@@ -540,7 +540,7 @@ export class UserService {
   }
 
   async getDirectRooms(user: IUser): Promise<DirectRoomResult[]> {
-    const directRooms = await this.communicationAdapterService.getDirectRooms(
+    const directRooms = await this.communicationAdapter.getDirectRooms(
       user.communicationID
     );
 

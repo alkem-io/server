@@ -5,7 +5,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixRoomResponseMessage } from '../adapter-room/matrix.room.dto.response.message';
 
 @Injectable()
-export class MatrixMessageAdapterService {
+export class MatrixMessageAdapter {
   readonly EVENT_TYPE_MESSAGE = 'm.room.message';
 
   constructor(

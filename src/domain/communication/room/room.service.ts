@@ -1,6 +1,6 @@
 import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
+import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IdentityResolverService } from '../identity-resolver/identity.resolver.service';
 import { CommunicationRoomResult } from './communication.dto.room.result';
@@ -12,7 +12,7 @@ import { IRoomable } from './roomable.interface';
 export class RoomService {
   constructor(
     private identityResolverService: IdentityResolverService,
-    private communicationAdapterService: CommunicationAdapterService,
+    private communicationAdapter: CommunicationAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -42,7 +42,7 @@ export class RoomService {
   async initializeCommunicationRoom(roomable: IRoomable): Promise<string> {
     try {
       const communicationRoomID =
-        await this.communicationAdapterService.createCommunityRoom(
+        await this.communicationAdapter.createCommunityRoom(
           roomable.communicationGroupID,
           roomable.displayName,
           { roomableID: roomable.id }
@@ -61,12 +61,12 @@ export class RoomService {
     roomable: IRoomable,
     communicationUserID: string
   ): Promise<CommunicationRoomResult> {
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
       roomable.communicationGroupID,
       [roomable.communicationRoomID],
       communicationUserID
     );
-    const room = await this.communicationAdapterService.getCommunityRoom(
+    const room = await this.communicationAdapter.getCommunityRoom(
       roomable.communicationRoomID,
       communicationUserID
     );
@@ -81,12 +81,12 @@ export class RoomService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<string> {
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
       roomable.communicationGroupID,
       [roomable.communicationRoomID],
       communicationUserID
     );
-    return await this.communicationAdapterService.sendMessageToCommunityRoom({
+    return await this.communicationAdapter.sendMessageToCommunityRoom({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
       roomID: roomable.communicationRoomID,
@@ -98,17 +98,15 @@ export class RoomService {
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
   ) {
-    await this.communicationAdapterService.ensureUserHasAccesToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
       roomable.communicationGroupID,
       [roomable.communicationRoomID],
       communicationUserID
     );
-    return await this.communicationAdapterService.deleteMessageFromCommunityRoom(
-      {
-        senderCommunicationsID: communicationUserID,
-        messageId: messageData.messageID,
-        roomID: roomable.communicationRoomID,
-      }
-    );
+    return await this.communicationAdapter.deleteMessageFromCommunityRoom({
+      senderCommunicationsID: communicationUserID,
+      messageId: messageData.messageID,
+      roomID: roomable.communicationRoomID,
+    });
   }
 }

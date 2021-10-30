@@ -15,12 +15,12 @@ import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
 import { UserSendMessageInput } from './dto/user.dto.communication.message.send';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
-import { CommunicationAdapterService } from '@services/platform/communication-adapter/communication.adapter.service';
+import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
-    private readonly communicationAdapterService: CommunicationAdapterService,
+    private readonly communicationAdapter: CommunicationAdapter,
     private authorizationService: AuthorizationService,
     private readonly userService: UserService,
     private readonly userAuthorizationService: UserAuthorizationService
@@ -121,7 +121,7 @@ export class UserResolverMutations {
       `user send message: ${receivingUser.nameID}`
     );
 
-    return await this.communicationAdapterService.sendMessageToUser({
+    return await this.communicationAdapter.sendMessageToUser({
       senderCommunicationsID: agentInfo.communicationID,
       message: messageData.message,
       receiverCommunicationsID: receivingUser.communicationID,

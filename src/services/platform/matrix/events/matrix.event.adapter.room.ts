@@ -6,9 +6,9 @@ import {
   IMatrixEventHandler,
   RoomTimelineEvent,
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { MatrixMessageAdapterService } from '../adapter-message/matrix.message.adapter.service';
+import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { MatrixRoom } from '../adapter-room/matrix.room';
-import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
+import { MatrixRoomAdapter } from '../adapter-room/matrix.room.adapter';
 import { MatrixClient } from '../types/matrix.client.type';
 
 const noop = function () {
@@ -18,7 +18,7 @@ const noop = function () {
 export class AutoAcceptRoomMembershipMonitorFactory {
   static create(
     client: MatrixClient,
-    roomAdapter: MatrixRoomAdapterService
+    roomAdapter: MatrixRoomAdapter
   ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
     return {
       complete: noop,
@@ -45,7 +45,7 @@ export class AutoAcceptRoomMembershipMonitorFactory {
 export class RoomTimelineMonitorFactory {
   static create(
     matrixClient: MatrixClient,
-    messageAdapterService: MatrixMessageAdapterService,
+    messageAdapter: MatrixMessageAdapter,
     logger: LoggerService,
     onMessageReceived: (event: CommunicationEventMessageReceived) => void
   ): IMatrixEventHandler['roomTimelineMonitor'] {
@@ -61,7 +61,7 @@ export class RoomTimelineMonitorFactory {
           }`,
           LogContext.COMMUNICATION
         );
-        const ignoreMessage = messageAdapterService.isEventToIgnore(event);
+        const ignoreMessage = messageAdapter.isEventToIgnore(event);
 
         // TODO Notifications - Allow the client to see the event and then mark it as read
         // With the current behavior the message will automatically be marked as read
@@ -69,7 +69,7 @@ export class RoomTimelineMonitorFactory {
         await matrixClient.sendReadReceipt(event, {});
 
         if (!ignoreMessage) {
-          const message = messageAdapterService.convertFromMatrixMessage(
+          const message = messageAdapter.convertFromMatrixMessage(
             event,
             matrixClient.getUserId()
           );

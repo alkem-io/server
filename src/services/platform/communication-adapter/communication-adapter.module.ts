@@ -5,7 +5,7 @@ import { MatrixGroupAdapterModule } from '../matrix/adapter-group/matrix.group.a
 import { MatrixRoomAdapterModule } from '../matrix/adapter-room/matrix.room.adapter.module';
 import { MatrixAgentModule } from '../matrix/agent/matrix.agent.module';
 import { MatrixUserAdapterModule } from '../matrix/adapter-user/matrix.user.adapter.module';
-import { CommunicationAdapterService } from './communication.adapter.service';
+import { CommunicationAdapter } from './communication.adapter';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { MatrixMessageAdapterModule } from '../matrix/adapter-message/matrix.message.adapter.module';
 
@@ -20,7 +20,7 @@ import { MatrixMessageAdapterModule } from '../matrix/adapter-message/matrix.mes
     MatrixAgentPoolModule,
     SubscriptionModule,
   ],
-  providers: [CommunicationAdapterService],
-  exports: [CommunicationAdapterService],
+  providers: [CommunicationAdapter],
+  exports: [CommunicationAdapter],
 })
 export class CommunicationAdapterModule {}

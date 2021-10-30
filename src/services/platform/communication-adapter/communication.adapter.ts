@@ -9,12 +9,12 @@ import { ConfigService } from '@nestjs/config';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
 import { MatrixClient } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MatrixGroupAdapterService } from '../matrix/adapter-group/matrix.group.adapter.service';
-import { MatrixMessageAdapterService } from '../matrix/adapter-message/matrix.message.adapter.service';
+import { MatrixGroupAdapter } from '../matrix/adapter-group/matrix.group.adapter';
+import { MatrixMessageAdapter } from '../matrix/adapter-message/matrix.message.adapter';
 import { MatrixRoom } from '../matrix/adapter-room/matrix.room';
-import { MatrixRoomAdapterService } from '../matrix/adapter-room/matrix.room.adapter.service';
+import { MatrixRoomAdapter } from '../matrix/adapter-room/matrix.room.adapter';
 import { MatrixRoomResponseMessage } from '../matrix/adapter-room/matrix.room.dto.response.message';
-import { MatrixUserAdapterService } from '../matrix/adapter-user/matrix.user.adapter.service';
+import { MatrixUserAdapter } from '../matrix/adapter-user/matrix.user.adapter';
 import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.interface';
 import { MatrixAgent } from '../matrix/agent/matrix.agent';
 import { MatrixAgentService } from '../matrix/agent/matrix.agent.service';
@@ -25,7 +25,7 @@ import { CommunicationSendMessageCommunityInput } from './dto/communication.dto.
 import { CommunicationSendMessageUserInput } from './dto/communication.dto.message.send.user';
 
 @Injectable()
-export class CommunicationAdapterService {
+export class CommunicationAdapter {
   private adminUser!: IOperationalMatrixUser;
   private matrixElevatedAgent!: MatrixAgent; // elevated as created with an admin account
   private adminEmail!: string;
@@ -40,10 +40,10 @@ export class CommunicationAdapterService {
     private matrixAgentPool: MatrixAgentPool,
     private configService: ConfigService,
     private matrixUserManagementService: MatrixUserManagementService,
-    private matrixUserAdapterService: MatrixUserAdapterService,
-    private matrixRoomAdapterService: MatrixRoomAdapterService,
-    private matrixGroupAdapterService: MatrixGroupAdapterService,
-    private matrixMessageAdapterService: MatrixMessageAdapterService
+    private matrixUserAdapter: MatrixUserAdapter,
+    private matrixRoomAdapter: MatrixRoomAdapter,
+    private matrixGroupAdapter: MatrixGroupAdapter,
+    private matrixMessageAdapter: MatrixMessageAdapter
   ) {
     this.adminEmail = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
@@ -52,8 +52,9 @@ export class CommunicationAdapterService {
       ConfigurationTypes.COMMUNICATIONS
     )?.matrix?.admin?.password;
 
-    this.adminCommunicationsID =
-      this.matrixUserAdapterService.convertEmailToMatrixID(this.adminEmail);
+    this.adminCommunicationsID = this.matrixUserAdapter.convertEmailToMatrixID(
+      this.adminEmail
+    );
 
     // need both to be true
     this.enabled = this.configService.get(
@@ -207,8 +208,7 @@ export class CommunicationAdapterService {
 
   async tryRegisterNewUser(email: string): Promise<string | undefined> {
     try {
-      const matrixUserID =
-        this.matrixUserAdapterService.convertEmailToMatrixID(email);
+      const matrixUserID = this.matrixUserAdapter.convertEmailToMatrixID(email);
 
       const isRegistered = await this.matrixUserManagementService.isRegistered(
         matrixUserID
@@ -243,7 +243,7 @@ export class CommunicationAdapterService {
       return '';
     }
     const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
-    const group = await this.matrixGroupAdapterService.createGroup(
+    const group = await this.matrixGroupAdapter.createGroup(
       elevatedMatrixAgent.matrixClient,
       {
         groupId: communityId,
@@ -269,7 +269,7 @@ export class CommunicationAdapterService {
       return '';
     }
     const elevatedMatrixAgent = await this.getMatrixManagementAgentElevated();
-    const room = await this.matrixRoomAdapterService.createRoom(
+    const room = await this.matrixRoomAdapter.createRoom(
       elevatedMatrixAgent.matrixClient,
       {
         groupId: groupID,
@@ -322,13 +322,13 @@ export class CommunicationAdapterService {
     // for multiple rooms in a group this will cause failure before inviting the user over
     // TODO: Need to add a check whether the user is already part of the room/group
     for (const roomID of roomIDs) {
-      await this.matrixRoomAdapterService.inviteUsersToRoom(
+      await this.matrixRoomAdapter.inviteUsersToRoom(
         elevatedAgent.matrixClient,
         roomID,
         [userAgent.matrixClient]
       );
     }
-    await this.matrixGroupAdapterService.inviteUsersToGroup(
+    await this.matrixGroupAdapter.inviteUsersToGroup(
       elevatedAgent.matrixClient,
       groupID,
       [userAgent.matrixClient]
@@ -486,7 +486,7 @@ export class CommunicationAdapterService {
       LogContext.COMMUNICATION
     );
 
-    const timelineEvents = await this.matrixRoomAdapterService.getAllRoomEvents(
+    const timelineEvents = await this.matrixRoomAdapter.getAllRoomEvents(
       matrixClient,
       matrixRoom
     );
@@ -503,9 +503,8 @@ export class CommunicationAdapterService {
     const messages: CommunicationMessageResult[] = [];
 
     for (const timelineMessage of timeline) {
-      if (this.matrixMessageAdapterService.isEventToIgnore(timelineMessage))
-        continue;
-      const message = this.matrixMessageAdapterService.convertFromMatrixMessage(
+      if (this.matrixMessageAdapter.isEventToIgnore(timelineMessage)) continue;
+      const message = this.matrixMessageAdapter.convertFromMatrixMessage(
         timelineMessage,
         userId
       );
