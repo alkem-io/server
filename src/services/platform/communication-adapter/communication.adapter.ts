@@ -137,6 +137,29 @@ export class CommunicationAdapter {
     return messageId;
   }
 
+  async getMessageSender(
+    roomID: string,
+    messageID: string,
+    communicationUserID: string
+  ): Promise<string> {
+    const matrixAgent = await this.acquireMatrixAgent(communicationUserID);
+    const matrixRoom = await this.matrixAgentService.getRoom(
+      matrixAgent,
+      roomID
+    );
+
+    const messages =
+      await this.matrixRoomAdapter.getMatrixRoomTimelineAsMessages(
+        matrixAgent.matrixClient,
+        matrixRoom,
+        matrixAgent.matrixClient.getUserId()
+      );
+    const matchingMessage = messages.find(message => message.id === messageID);
+    if (!matchingMessage) return '';
+
+    return matchingMessage.sender;
+  }
+
   private async acquireMatrixAgent(matrixUserId: string) {
     if (!this.enabled) {
       throw new NotEnabledException(

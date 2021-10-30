@@ -12,12 +12,14 @@ import { IDiscussion } from './discussion.interface';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { DiscussionAuthorizationService } from './discussion.service.authorization';
 
 @Resolver()
 export class DiscussionResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private discussionService: DiscussionService
+    private discussionService: DiscussionService,
+    private discussionAuthorizationService: DiscussionAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -58,11 +60,20 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       messageData.discussionID
     );
+    // The choice was made **not** to wrap every message in an AuthorizationPolicy.
+    // So we also allow users who sent the message in question to remove the message by
+    // extending the authorization policy in memory but do not persist it.
+    const extendedAuthorization =
+      await this.discussionAuthorizationService.extendAuthorizationPolicyForMessageSender(
+        discussion,
+        messageData.messageID,
+        agentInfo.communicationID
+      );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      discussion.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `communication send message: ${discussion.title}`
+      extendedAuthorization,
+      AuthorizationPrivilege.DELETE,
+      `communication delete message: ${discussion.title}`
     );
     await this.discussionService.removeMessageFromDiscussion(
       discussion,

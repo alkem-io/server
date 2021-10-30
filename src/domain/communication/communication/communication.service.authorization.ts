@@ -7,6 +7,7 @@ import { DiscussionAuthorizationService } from '../discussion/discussion.service
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationService } from './communication.service';
+import { ICredential } from '@domain/agent';
 
 @Injectable()
 export class CommunicationAuthorizationService {
@@ -18,7 +19,8 @@ export class CommunicationAuthorizationService {
 
   async applyAuthorizationPolicy(
     communication: ICommunication,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    communityCredential: ICredential
   ): Promise<ICommunication> {
     communication.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -35,7 +37,8 @@ export class CommunicationAuthorizationService {
     )) {
       await this.discussionAuthorizationService.applyAuthorizationPolicy(
         discussion,
-        communication.authorization
+        communication.authorization,
+        communityCredential
       );
     }
 

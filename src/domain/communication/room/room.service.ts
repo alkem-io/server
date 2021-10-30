@@ -61,7 +61,7 @@ export class RoomService {
     roomable: IRoomable,
     communicationUserID: string
   ): Promise<CommunicationRoomResult> {
-    await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToRooms(
       roomable.communicationGroupID,
       [roomable.communicationRoomID],
       communicationUserID
@@ -81,7 +81,7 @@ export class RoomService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<string> {
-    await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToRooms(
       roomable.communicationGroupID,
       [roomable.communicationRoomID],
       communicationUserID
@@ -98,7 +98,7 @@ export class RoomService {
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
   ): Promise<void> {
-    await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToRooms(
       roomable.communicationGroupID,
       [roomable.communicationRoomID],
       communicationUserID
@@ -108,5 +108,28 @@ export class RoomService {
       messageId: messageData.messageID,
       roomID: roomable.communicationRoomID,
     });
+  }
+
+  async getUserIdForMessage(
+    roomable: IRoomable,
+    messageID: string,
+    communicationUserID: string
+  ): Promise<string> {
+    const senderCommunicationID =
+      await this.communicationAdapter.getMessageSender(
+        roomable.communicationRoomID,
+        messageID,
+        communicationUserID
+      );
+    if (senderCommunicationID === '') {
+      this.logger.error(
+        `Unable to identify sender for ${roomable.displayName} - ${messageID}`,
+        LogContext.COMMUNICATION
+      );
+      return senderCommunicationID;
+    }
+    return await this.identityResolverService.getUserIDByCommunicationsID(
+      senderCommunicationID
+    );
   }
 }

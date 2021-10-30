@@ -39,7 +39,7 @@ export class DiscussionService {
       discussion
     );
     // add the current user as a member
-    await this.communicationAdapter.ensureUserHasAccesToCommunityMessaging(
+    await this.communicationAdapter.ensureUserHasAccesToRooms(
       discussion.communicationGroupID,
       [discussion.communicationRoomID],
       communicationUserID

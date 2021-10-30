@@ -46,7 +46,8 @@ export class CommunityAuthorizationService {
     if (community.communication) {
       await this.communicationAuthorizationService.applyAuthorizationPolicy(
         community.communication,
-        community.authorization
+        community.authorization,
+        this.communityService.getMembershipCredential(community)
       );
     }
 
