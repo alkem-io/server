@@ -57,7 +57,7 @@ export class discussion1635271457885 implements MigrationInterface {
       OPEN community_cursor;
 
       read_loop: LOOP
-        FETCH community_cursor INTO community_id, community_communicationGroupID, community_updatesRoomID, community_ecoverseID;
+        FETCH community_cursor INTO community_id, community_communicationGroupID, community_updatesRoomID, community_ecoverseID, community_displayName;
       IF done THEN
         LEAVE read_loop;
       END IF;
