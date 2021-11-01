@@ -9,17 +9,16 @@ export async function subscriptionPubSubFactory(
   logger: LoggerService,
   configService: ConfigService
 ): Promise<PubSubEngine | undefined> {
-  let pubsub;
   const rabbitMqOptions = configService.get(
     ConfigurationTypes.MICROSERVICES
   )?.rabbitmq;
   const connectionOptions = rabbitMqOptions.connection;
   const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
 
-  await amqp
+  return amqp
     .connect(connectionString)
     .then(conn => {
-      pubsub = new AMQPPubSub({
+      return new AMQPPubSub({
         connection: conn,
         exchange: {
           // RabbitMQ subscriptions exchange name
@@ -66,6 +65,4 @@ export async function subscriptionPubSubFactory(
       );
       return undefined;
     });
-
-  return pubsub;
 }
