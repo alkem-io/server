@@ -30,6 +30,7 @@ import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { ApplicationReceived } from '../application/application.dto.received';
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -44,7 +45,7 @@ export class CommunityResolverMutations {
     private applicationService: ApplicationService,
     @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
-    @Inject('NOTIFICATIONS_SERVICE') private client: ClientProxy
+    @Inject('NOTIFICATIONS_SERVICE') private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -189,28 +190,34 @@ export class CommunityResolverMutations {
     const communityType = community.parentCommunity ? 'challenge' : 'hub';
 
     // Trigger an event for subscriptions
-    this.client.emit<number>(SubscriptionType.COMMUNITY_APPLICATION_CREATED, {
-      applicantionCreatorID: agentInfo.userID,
-      applicantID: applicationData.userID,
-      community: {
-        name: community.displayName,
-        type: communityType,
-      },
-      hub: {
-        id: community.ecoverseID,
-        challenge: {
-          id: '7b86f954-d8c3-4fac-a652-b922c80e5c20', //to be resolved
-          opportunity: {
-            id: 'not supported',
-          },
-        },
-      },
-    });
-    this.subscriptionHandler.publish(
+    this.notificationsClient.emit<number>(
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
       {
-        application: application,
+        applicantionCreatorID: agentInfo.userID,
+        applicantID: applicationData.userID,
+        community: {
+          name: community.displayName,
+          type: communityType,
+        },
+        hub: {
+          id: community.ecoverseID,
+          challenge: {
+            id: '7b86f954-d8c3-4fac-a652-b922c80e5c20', //to be resolved
+            opportunity: {
+              id: 'not supported',
+            },
+          },
+        },
       }
+    );
+    const applicationReceivedEvent: ApplicationReceived = {
+      applicationID: application.id,
+      communityID: community.id,
+      userID: user.id,
+    };
+    this.subscriptionHandler.publish(
+      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
+      applicationReceivedEvent
     );
     return await this.applicationService.save(application);
   }

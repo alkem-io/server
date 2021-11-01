@@ -33,12 +33,13 @@ export class CommunityResolverSubscriptions {
       variables: any,
       context: any
     ) {
+      const toBeProcessed = payload.communityID === variables.communityID;
       this.logger.verbose?.(
-        `variable: communityID = ${variables.communityID}`,
+        `[Subscription] ApplicationReceived event on Community: ${variables.communityID}, process: ${toBeProcessed}`,
         LogContext.COMMUNITY
       );
       this.logger.verbose?.(`context: ${context}`, LogContext.COMMUNITY);
-      return payload.communityID === variables.communityID;
+      return toBeProcessed;
     },
   })
   async applicationReceived(
