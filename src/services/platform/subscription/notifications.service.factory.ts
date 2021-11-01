@@ -17,6 +17,7 @@ export async function notificationsServiceFactory(
       urls: [connectionString],
       queue: 'alkemio-notifications',
       queueOptions: {
+        // the queue will survive a broker restart
         durable: true,
       },
     };

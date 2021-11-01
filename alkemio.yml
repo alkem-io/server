@@ -331,11 +331,6 @@ microservices:
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:false
-  queue:
-    name: ${RABBITMQ_NOTIFICATIONS_QUEUE_NAME}:alkemio-notifications
-    options:
-      # the queue will survive a broker restart
-      durable: ${RABBITMQ_NOTIFICATIONS_QUEUE_DURABLE}:true
 
 ## Configuration of the legal / usability aspects of the platform
 platform:
