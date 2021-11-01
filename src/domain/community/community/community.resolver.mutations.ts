@@ -191,9 +191,34 @@ export class CommunityResolverMutations {
         ]
       );
 
-    const data: any = {
-      applicationCreatorID: agentInfo.userID,
-      applicantID: applicationData.userID,
+    const payload = this.buildNotificationPayload(
+      agentInfo.userID,
+      applicationData.userID,
+      community
+    );
+
+    // Trigger an event for subscriptions
+    this.client.emit<number>(
+      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
+      payload
+    );
+    this.subscriptionHandler.publish(
+      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
+      {
+        application: application,
+      }
+    );
+    return await this.applicationService.save(application);
+  }
+
+  private async buildNotificationPayload(
+    applicationCreatorID: string,
+    applicantID: string,
+    community: ICommunity
+  ) {
+    const payload: any = {
+      applicationCreatorID,
+      applicantID,
       community: {
         name: community.displayName,
         type: community.type,
@@ -204,7 +229,7 @@ export class CommunityResolverMutations {
     };
 
     if (community.type === CommunityType.CHALLENGE) {
-      data.challenge = { id: community.parentID };
+      payload.challenge = { id: community.parentID };
     } else if (community.type === CommunityType.OPPORTUNITY) {
       const communityWithParent =
         await this.communityService.getCommunityOrFail(community.id, {
@@ -220,7 +245,7 @@ export class CommunityResolverMutations {
         );
       }
 
-      data.challenge = {
+      payload.challenge = {
         id: parentCommunity.parentID,
         opportunity: {
           id: community.parentID,
@@ -228,18 +253,7 @@ export class CommunityResolverMutations {
       };
     }
 
-    // Trigger an event for subscriptions
-    this.client.emit<number>(
-      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
-      data
-    );
-    this.subscriptionHandler.publish(
-      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
-      {
-        application: application,
-      }
-    );
-    return await this.applicationService.save(application);
+    return payload;
   }
 
   @UseGuards(GraphqlGuard)

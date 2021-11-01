@@ -80,6 +80,11 @@ export class EcoverseService {
       AuthorizationCredential.ECOVERSE_MEMBER
     );
 
+    // set immediate community parent
+    if (ecoverse.community) {
+      ecoverse.community.parentID = ecoverse.id;
+    }
+
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;
     ecoverse.lifecycle = await this.lifecycleService.createLifecycle(

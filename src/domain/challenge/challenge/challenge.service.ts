@@ -85,6 +85,13 @@ export class ChallengeService {
       CommunityType.CHALLENGE
     );
 
+    await this.challengeRepository.save(challenge);
+
+    // set immediate community parent
+    if (challenge.community) {
+      challenge.community.parentID = challenge.id;
+    }
+
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = challengeLifecycleConfigDefault;
     if (
@@ -92,12 +99,6 @@ export class ChallengeService {
       challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
     ) {
       machineConfig = challengeLifecycleConfigExtended;
-    }
-
-    await this.challengeRepository.save(challenge);
-
-    if (challenge.community) {
-      challenge.community.parentID = challenge.id;
     }
 
     challenge.lifecycle = await this.lifecycleService.createLifecycle(

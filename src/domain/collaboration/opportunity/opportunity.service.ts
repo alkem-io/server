@@ -78,7 +78,7 @@ export class OpportunityService {
     }
 
     await this.opportunityRepository.save(opportunity);
-
+    // set immediate community parent
     if (opportunity.community) {
       opportunity.community.parentID = opportunity.id;
     }

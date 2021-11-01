@@ -27,17 +27,9 @@ export abstract class ICommunity extends IAuthorizable {
 
   ecoverseID!: string;
 
-  @Field(() => CommunityType, {
-    nullable: false,
-    description: 'The type of community',
-  })
   type!: CommunityType;
 
-  @Field(() => String, {
-    nullable: true,
-    description: 'UUID of the immediate parent',
-  })
-  parentID?: string;
+  parentID!: string;
 
   // Communications related information
   updatesRoomID!: string;
