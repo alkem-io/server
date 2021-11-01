@@ -34,6 +34,7 @@ import { CommunitySendMessageInput } from './dto/community.dto.send.message';
 import { ConfigService } from '@nestjs/config';
 import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
 import { CommunityRoomResult } from './dto/community.dto.room.result';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class CommunityService {
@@ -57,8 +58,11 @@ export class CommunityService {
     )?.enabled;
   }
 
-  async createCommunity(name: string): Promise<ICommunity> {
-    const community = new Community(name);
+  async createCommunity(
+    name: string,
+    type: CommunityType
+  ): Promise<ICommunity> {
+    const community = new Community(name, type);
     community.authorization = new AuthorizationPolicy();
 
     community.groups = [];
