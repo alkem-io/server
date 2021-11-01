@@ -6,7 +6,7 @@ import { MatrixRoomAdapterModule } from '../matrix/adapter-room/matrix.room.adap
 import { MatrixAgentModule } from '../matrix/agent/matrix.agent.module';
 import { MatrixUserAdapterModule } from '../matrix/adapter-user/matrix.user.adapter.module';
 import { CommunicationService } from './communication.service';
-import { SubscriptionModule } from '../subscription/subscription.module';
+import { MicroservicesModule } from '../../../core/microservices/microservices.module';
 import { MatrixMessageAdapterModule } from '../matrix/adapter-message/matrix.message.adapter.module';
 
 @Module({
@@ -18,7 +18,7 @@ import { MatrixMessageAdapterModule } from '../matrix/adapter-message/matrix.mes
     MatrixMessageAdapterModule,
     MatrixAgentModule,
     MatrixAgentPoolModule,
-    SubscriptionModule,
+    MicroservicesModule,
   ],
   providers: [CommunicationService],
   exports: [CommunicationService],

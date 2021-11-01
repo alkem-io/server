@@ -7,7 +7,7 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
 import { ClientProxy } from '@nestjs/microservices';
-import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { PubSubEngine } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ApplicationReceived } from '../application/application.dto.received';

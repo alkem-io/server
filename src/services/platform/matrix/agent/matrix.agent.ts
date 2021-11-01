@@ -6,7 +6,7 @@ import {
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
 } from '@services/platform/matrix/events/matrix.event.adapter.room';
-import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import {
   IMatrixEventHandler,

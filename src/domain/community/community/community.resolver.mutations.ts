@@ -23,7 +23,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSubEngine } from 'apollo-server-express';
-import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
 import { CommunitySendMessageInput } from './dto/community.dto.send.message';
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
