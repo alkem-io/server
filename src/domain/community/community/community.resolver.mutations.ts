@@ -1,22 +1,24 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql';
-import { IUserGroup } from '@domain/community/user-group';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
+  ApplicationEventInput,
   CreateApplicationInput,
   DeleteApplicationInput,
   IApplication,
-  ApplicationEventInput,
 } from '@domain/community/application';
-import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -30,7 +32,10 @@ import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { CommunityType } from '@common/enums/community.type';
+import { EntityNotFoundException } from '@src/common';
 import { ApplicationReceived } from '../application/application.dto.received';
+
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -187,39 +192,73 @@ export class CommunityResolverMutations {
         ]
       );
 
-    const communityType = community.parentCommunity ? 'challenge' : 'hub';
+    const payload = this.buildNotificationPayload(
+      agentInfo.userID,
+      applicationData.userID,
+      community
+    );
 
-    // Trigger an event for subscriptions
     this.notificationsClient.emit<number>(
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
-      {
-        applicantionCreatorID: agentInfo.userID,
-        applicantID: applicationData.userID,
-        community: {
-          name: community.displayName,
-          type: communityType,
-        },
-        hub: {
-          id: community.ecoverseID,
-          challenge: {
-            id: '7b86f954-d8c3-4fac-a652-b922c80e5c20', //to be resolved
-            opportunity: {
-              id: 'not supported',
-            },
-          },
-        },
-      }
+      payload
     );
+
     const applicationReceivedEvent: ApplicationReceived = {
       applicationID: application.id,
       communityID: community.id,
       userID: user.id,
     };
+
     this.subscriptionHandler.publish(
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
       applicationReceivedEvent
     );
     return await this.applicationService.save(application);
+  }
+
+  private async buildNotificationPayload(
+    applicationCreatorID: string,
+    applicantID: string,
+    community: ICommunity
+  ) {
+    const payload: any = {
+      applicationCreatorID,
+      applicantID,
+      community: {
+        name: community.displayName,
+        type: community.type,
+      },
+      hub: {
+        id: community.ecoverseID,
+      },
+    };
+
+    if (community.type === CommunityType.CHALLENGE) {
+      payload.challenge = { id: community.parentID };
+    } else if (community.type === CommunityType.OPPORTUNITY) {
+      const communityWithParent =
+        await this.communityService.getCommunityOrFail(community.id, {
+          relations: ['parentCommunity'],
+        });
+      const parentCommunity = communityWithParent.parentCommunity;
+
+      if (!parentCommunity) {
+        // this will block sending the event
+        throw new EntityNotFoundException(
+          `Unable to find parent community of opportunity ${community.id}`,
+          LogContext.CHALLENGES
+        );
+      }
+
+      payload.challenge = {
+        id: parentCommunity.parentID,
+        opportunity: {
+          id: community.parentID,
+        },
+      };
+    }
+
+    return payload;
   }
 
   @UseGuards(GraphqlGuard)
