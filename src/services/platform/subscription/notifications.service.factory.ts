@@ -8,7 +8,7 @@ export async function notificationsServiceFactory(
   configService: ConfigService
 ): Promise<any> {
   const rabbitMqOptions = configService.get(
-    ConfigurationTypes.NOTIFICATIONS
+    ConfigurationTypes.MICROSERVICES
   )?.rabbitmq;
   const connectionOptions = rabbitMqOptions.connection;
   const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;

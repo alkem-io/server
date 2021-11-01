@@ -274,6 +274,54 @@ communications:
       username: ${SYNAPSE_ADMIN_USERNAME}:matrixadmin@alkem.io
       password: ${SYNAPSE_ADMIN_PASSWORD}:change_me_now
 
+  # PUBSUB configuration. Alkemio uses AMQP for messaging queue protocol - https://www.rabbitmq.com/tutorials/amqp-concepts.html.
+  pub_sub:
+    # RabbitMQ exchange. The RabbitMQ messaging model uses producer-queue-consumer.
+    # The core idea in the messaging model in RabbitMQ is that the producer never sends any messages directly to a queue.
+    # Actually, quite often the producer doesn't even know if a message will be delivered to any queue at all.
+    # Instead, the producer can only send messages to an exchange. An exchange is a very simple thing.
+    # On one side it receives messages from producers and the other side it pushes them to queues.
+    # The exchange must know exactly what to do with a message it receives. Should it be appended to a particular queue?
+    # Should it be appended to many queues? Or should it get discarded. The rules for that are defined by the exchange type.
+    exchange:
+      # RabbitMQ exchange name
+      name: ${RABBITMQ_SUBSCRIPTIONS_EXCHANGE_NAME}:alkemio-graphql-subscriptions
+
+      # RabbitMQ exchange type. There are 4 exchange types:
+      # TOPIC - Topic exchanges route messages to one or many queues based on matching between a message routing key and the pattern that was used to bind a queue to an exchange.
+      # The topic exchange type is often used to implement various publish/subscribe pattern variations. Topic exchanges are commonly used for the multicast routing of messages.
+      # DIRECT - A direct exchange delivers messages to queues based on the message routing key.
+      # A direct exchange is ideal for the unicast routing of messages (although they can be used for multicast routing as well).
+      # HEADERS - A headers exchange is designed for routing on multiple attributes that are more easily expressed as message headers than a routing key. Headers exchanges ignore the routing key attribute.
+      # Instead, the attributes used for routing are taken from the headers attribute. A message is considered matching if the value of the header equals the value specified upon binding.
+      # FANOUT - A fanout exchange routes messages to all of the queues that are bound to it and the routing key is ignored.
+      # If N queues are bound to a fanout exchange, when a new message is published to that exchange a copy of the message is delivered to all N queues.
+      # Fanout exchanges are ideal for the broadcast routing of messages.
+      type: ${RABBITMQ_SUBSCRIPTIONS_EXCHANGE_TYPE}:topic
+      options:
+        # the exchange will survive a broker restart
+        durable: ${RABBITMQ_SUBSCRIPTIONS_EXCHANGE_DURABLE}:true
+
+        # exchange is deleted when last queue is unbound from it
+        auto_delete: ${RABBITMQ_SUBSCRIPTIONS_EXCHANGE_AUTO_DELETE}:false
+    queue:
+      name: ${RABBITMQ_SUBSCRIPTIONS_QUEUE_NAME}:alkemio-subscriptions
+      options:
+        # used by only one connection and the queue will be deleted when that connection closes
+        exclusive: ${RABBITMQ_SUBSCRIPTIONS_QUEUE_EXCLUSIVE}:false
+
+        # the queue will survive a broker restart
+        durable: ${RABBITMQ_SUBSCRIPTIONS_QUEUE_DURABLE}:true
+
+        # queue that has had at least one consumer is deleted when last consumer unsubscribes
+        auto_delete: ${RABBITMQ_SUBSCRIPTIONS_QUEUE_AUTO_DELETE}:false
+
+      # Unbind from the RabbitMQ queue when disposing the pubsub connection
+      unbind_on_dispose: ${RABBITMQ_SUBSCRIPTIONS_QUEUE_UNBIND_ON_DISPOSE}:false
+
+      # Delete the RabbitMQ queue when disposing the pubsub connection
+      delete_on_dispose: ${RABBITMQ_SUBSCRIPTIONS_QUEUE_DELETE_ON_DISPOSE}:false
+
 ## storage ##
 # Alkemio uses multiple types of persistent storage, including SQL database and IPFS.
 storage:
@@ -313,9 +361,7 @@ storage:
     # Max file size of files that will be uploaded to IPFS (in bytes).
     max_file_size: 1048576
 
-notifications:
-  enabled: ${NOTIFICATIONS_ENABLED}:false
-
+microservices:
   rabbitmq:
     # Connection in the form of 'amqp://[user]:[password]@[host]:[port]?heartbeat=30'
     connection:
@@ -331,53 +377,13 @@ notifications:
       # RabbitMQ password
       password: ${RABBITMQ_PASSWORD}:bitnami
 
-    # PUBSUB configuration. Alkemio uses AMQP for messaging queue protocol - https://www.rabbitmq.com/tutorials/amqp-concepts.html.
-    pub_sub:
-      # RabbitMQ exchange. The RabbitMQ messaging model uses producer-queue-consumer.
-      # The core idea in the messaging model in RabbitMQ is that the producer never sends any messages directly to a queue.
-      # Actually, quite often the producer doesn't even know if a message will be delivered to any queue at all.
-      # Instead, the producer can only send messages to an exchange. An exchange is a very simple thing.
-      # On one side it receives messages from producers and the other side it pushes them to queues.
-      # The exchange must know exactly what to do with a message it receives. Should it be appended to a particular queue?
-      # Should it be appended to many queues? Or should it get discarded. The rules for that are defined by the exchange type.
-      exchange:
-        # RabbitMQ exchange name
-        name: ${RABBITMQ_EXCHANGE_NAME}:alkemio-graphql-subscriptions
-
-        # RabbitMQ exchange type. There are 4 exchange types:
-        # TOPIC - Topic exchanges route messages to one or many queues based on matching between a message routing key and the pattern that was used to bind a queue to an exchange.
-        # The topic exchange type is often used to implement various publish/subscribe pattern variations. Topic exchanges are commonly used for the multicast routing of messages.
-        # DIRECT - A direct exchange delivers messages to queues based on the message routing key.
-        # A direct exchange is ideal for the unicast routing of messages (although they can be used for multicast routing as well).
-        # HEADERS - A headers exchange is designed for routing on multiple attributes that are more easily expressed as message headers than a routing key. Headers exchanges ignore the routing key attribute.
-        # Instead, the attributes used for routing are taken from the headers attribute. A message is considered matching if the value of the header equals the value specified upon binding.
-        # FANOUT - A fanout exchange routes messages to all of the queues that are bound to it and the routing key is ignored.
-        # If N queues are bound to a fanout exchange, when a new message is published to that exchange a copy of the message is delivered to all N queues.
-        # Fanout exchanges are ideal for the broadcast routing of messages.
-        type: ${RABBITMQ_EXCHANGE_TYPE}:topic
-        options:
-          # the exchange will survive a broker restart
-          durable: ${RABBITMQ_EXCHANGE_DURABLE}:true
-
-          # exchange is deleted when last queue is unbound from it
-          auto_delete: ${RABBITMQ_EXCHANGE_AUTO_DELETE}:false
-      queue:
-        name: ${RABBITMQ_QUEUE_NAME}:alkemio-notifications
-        options:
-          # used by only one connection and the queue will be deleted when that connection closes
-          exclusive: ${RABBITMQ_QUEUE_EXCLUSIVE}:false
-
-          # the queue will survive a broker restart
-          durable: ${RABBITMQ_QUEUE_DURABLE}:true
-
-          # queue that has had at least one consumer is deleted when last consumer unsubscribes
-          auto_delete: ${RABBITMQ_QUEUE_AUTO_DELETE}:false
-
-        # Unbind from the RabbitMQ queue when disposing the pubsub connection
-        unbind_on_dispose: ${RABBITMQ_QUEUE_UNBIND_ON_DISPOSE}:false
-
-        # Delete the RabbitMQ queue when disposing the pubsub connection
-        delete_on_dispose: ${RABBITMQ_QUEUE_DELETE_ON_DISPOSE}:false
+notifications:
+  enabled: ${NOTIFICATIONS_ENABLED}:false
+  queue:
+    name: ${RABBITMQ_NOTIFICATIONS_QUEUE_NAME}:alkemio-notifications
+    options:
+      # the queue will survive a broker restart
+      durable: ${RABBITMQ_NOTIFICATIONS_QUEUE_DURABLE}:true
 
 ## Configuration of the legal / usability aspects of the platform
 platform:
