@@ -9,6 +9,8 @@ serve:
       enabled: true
       allowed_origins:
         - 'http://localhost:3000'
+        - 'http://192.168.69.7:3000'
+        - 'http://loki:3000'
       allowed_methods:
         - POST
         - GET

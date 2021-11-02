@@ -94,16 +94,19 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
     );
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
       `assign user community: ${community.displayName}`
     );
+
     await this.communityService.assignMember(membershipData);
 
     // reset the user authorization policy so that their profile is visible to other community members
     const user = await this.userService.getUserOrFail(membershipData.userID);
+
     await this.userAuthorizationService.applyAuthorizationPolicy(user);
 
     return community;

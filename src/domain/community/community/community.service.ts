@@ -233,11 +233,18 @@ export class CommunityService {
     });
 
     // register the user for the community rooms
-    await this.communicationService.addUserToCommunityMessaging(
-      community.communicationGroupID,
-      [community.updatesRoomID, community.discussionRoomID],
-      user.communicationID
-    );
+    this.communicationService
+      .addUserToCommunityMessaging(
+        community.communicationGroupID,
+        [community.updatesRoomID, community.discussionRoomID],
+        user.communicationID
+      )
+      .catch(error =>
+        this.logger.error?.(
+          `Unable to add user to community messaging (${community.displayName}): ${error}`,
+          LogContext.COMMUNICATION
+        )
+      );
 
     return community;
   }
