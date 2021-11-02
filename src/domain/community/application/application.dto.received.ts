@@ -6,13 +6,13 @@ export class ApplicationReceived {
     nullable: false,
     description: 'The identifier of the application',
   })
-  applicationId!: string;
+  applicationID!: string;
 
   @Field(() => String, {
     nullable: false,
-    description: 'The nameID of the user that applied.',
+    description: 'The ID of the user that applied.',
   })
-  userNameID!: string;
+  userID!: string;
 
   @Field(() => String, {
     nullable: false,
