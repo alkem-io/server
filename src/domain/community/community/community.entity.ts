@@ -14,7 +14,10 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Credential } from '@domain/agent/credential/credential.entity';
 import { Application } from '@domain/community/application/application.entity';
 import { CommunityType } from '@common/enums/community.type';
-import { TINY_TEXT_LENGTH, UUID_LENGTH } from '@src/common';
+import {
+  TINY_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@src/common/constants/entity.field.length.constants';
 
 @Entity()
 export class Community
