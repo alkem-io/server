@@ -25,7 +25,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSubEngine } from 'apollo-server-express';
-import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
 import { CommunitySendMessageInput } from './dto/community.dto.send.message';
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
@@ -34,6 +34,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunityType } from '@common/enums/community.type';
 import { EntityNotFoundException } from '@src/common';
+import { ApplicationReceived } from '../application/application.dto.received';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -49,7 +50,7 @@ export class CommunityResolverMutations {
     private applicationService: ApplicationService,
     @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
-    @Inject('NOTIFICATIONS_SERVICE') private client: ClientProxy
+    @Inject('NOTIFICATIONS_SERVICE') private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -197,16 +198,20 @@ export class CommunityResolverMutations {
       community
     );
 
-    // Trigger an event for subscriptions
-    this.client.emit<number>(
+    this.notificationsClient.emit<number>(
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
       payload
     );
+
+    const applicationReceivedEvent: ApplicationReceived = {
+      applicationID: application.id,
+      communityID: community.id,
+      userID: user.id,
+    };
+
     this.subscriptionHandler.publish(
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
-      {
-        application: application,
-      }
+      applicationReceivedEvent
     );
     return await this.applicationService.save(application);
   }

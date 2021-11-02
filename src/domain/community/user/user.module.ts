@@ -13,7 +13,7 @@ import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserAuthorizationService } from './user.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { SubscriptionModule } from '@services/platform/subscription/subscription.module';
+import { MicroservicesModule } from '@core/microservices/microservices.module';
 
 @Module({
   imports: [
@@ -24,7 +24,7 @@ import { SubscriptionModule } from '@services/platform/subscription/subscription
     AuthorizationPolicyModule,
     AuthorizationModule,
     TypeOrmModule.forFeature([User]),
-    SubscriptionModule,
+    MicroservicesModule,
     CacheModule.register({ max: 250, ttl: 300 }),
   ],
   providers: [
