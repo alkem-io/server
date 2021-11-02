@@ -7,7 +7,7 @@ import { Kind, ValueNode } from 'graphql';
 export class NameID implements CustomScalar<string, string> {
   static MIN_LENGTH = 3;
   static MAX_LENGTH = 25;
-  static REGEX = /^[a-zA-Z0-9.\-_]+$/;
+  static REGEX = /^[a-zA-Z0-9\-]+$/;
   description =
     'A human readable identifier, 3 <= length <= 25. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
 
@@ -40,7 +40,7 @@ export class NameID implements CustomScalar<string, string> {
         LogContext.API
       );
 
-    return value;
+    return value.toLowerCase();
   };
 
   static isValidFormat = (value: any) => {
