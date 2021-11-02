@@ -50,6 +50,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class ChallengeService {
@@ -80,8 +81,16 @@ export class ChallengeService {
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
-      ecoverseID
+      ecoverseID,
+      CommunityType.CHALLENGE
     );
+
+    await this.challengeRepository.save(challenge);
+
+    // set immediate community parent
+    if (challenge.community) {
+      challenge.community.parentID = challenge.id;
+    }
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = challengeLifecycleConfigDefault;
@@ -91,8 +100,6 @@ export class ChallengeService {
     ) {
       machineConfig = challengeLifecycleConfigExtended;
     }
-
-    await this.challengeRepository.save(challenge);
 
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
       challenge.id,
