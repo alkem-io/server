@@ -99,9 +99,10 @@ export class CommunicationAdapter {
   }
 
   async deleteMessage(deleteMessageData: CommunicationDeleteMessageInput) {
-    const matrixAgent = await this.acquireMatrixAgent(
-      deleteMessageData.senderCommunicationsID
-    );
+    // when deleting a message use the global admin account
+    // the possibility to use native matrix power levels is there
+    // but we still don't have the infrastructure to support it
+    const matrixAgent = await this.getMatrixManagementAgentElevated();
 
     await this.matrixAgentService.deleteMessage(
       matrixAgent,
