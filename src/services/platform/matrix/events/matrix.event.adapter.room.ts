@@ -18,7 +18,8 @@ const noop = function () {
 export class AutoAcceptRoomMembershipMonitorFactory {
   static create(
     client: MatrixClient,
-    roomAdapter: MatrixRoomAdapter
+    roomAdapter: MatrixRoomAdapter,
+    logger: LoggerService
   ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
     return {
       complete: noop,
@@ -32,6 +33,10 @@ export class AutoAcceptRoomMembershipMonitorFactory {
           const roomId = event.getRoomId();
           const senderId = event.getSender();
 
+          logger.verbose?.(
+            `Room membership: accepting invitation for user (${member.userId}) to room: ${roomId}`,
+            LogContext.COMMUNICATION
+          );
           await client.joinRoom(roomId);
           if (content.is_direct) {
             await roomAdapter.storeDirectMessageRoom(client, roomId, senderId);

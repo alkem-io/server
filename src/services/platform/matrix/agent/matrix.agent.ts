@@ -38,7 +38,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     messageAdapter: MatrixMessageAdapter,
     @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
-    private loggerService: LoggerService
+    private logger: LoggerService
   ) {
     this.matrixClient = matrixClient;
     this.eventDispatcher = new MatrixEventDispatcher(this.matrixClient);
@@ -107,14 +107,15 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   resolveRoomMembershipMonitor() {
     return AutoAcceptRoomMembershipMonitorFactory.create(
       this.matrixClient,
-      this.roomAdapter
+      this.roomAdapter,
+      this.logger
     );
   }
 
   resolveGroupMembershipMonitor() {
     return AutoAcceptGroupMembershipMonitorFactory.create(
       this.matrixClient,
-      this.loggerService
+      this.logger
     );
   }
 
@@ -122,9 +123,9 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     return RoomTimelineMonitorFactory.create(
       this.matrixClient,
       this.messageAdapter,
-      this.loggerService,
+      this.logger,
       messageReceivedEvent => {
-        this.loggerService.verbose?.(
+        this.logger.verbose?.(
           `Publishing message: ${messageReceivedEvent.message.message}`,
           LogContext.COMMUNICATION
         );
