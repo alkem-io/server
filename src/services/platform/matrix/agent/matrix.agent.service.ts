@@ -5,10 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { createClient, IContent } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MatrixGroupAdapterService } from '../adapter-group/matrix.group.adapter.service';
+import { MatrixGroupAdapter } from '../adapter-group/matrix.group.adapter';
 import { MatrixRoom } from '../adapter-room/matrix.room';
-import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
-import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
+import { MatrixRoomAdapter } from '../adapter-room/matrix.room.adapter';
+import { MatrixUserAdapter } from '../adapter-user/matrix.user.adapter';
 import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
 import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixAgent } from './matrix.agent';
@@ -16,16 +16,16 @@ import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
 import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
 import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
-import { MatrixMessageAdapterService } from '../adapter-message/matrix.message.adapter.service';
+import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 
 @Injectable()
 export class MatrixAgentService {
   constructor(
     private configService: ConfigService,
-    private matrixUserAdapterService: MatrixUserAdapterService,
-    private matrixRoomAdapterService: MatrixRoomAdapterService,
-    private matrixGroupAdapterService: MatrixGroupAdapterService,
-    private matrixMessageAdapterService: MatrixMessageAdapterService,
+    private matrixUserAdapter: MatrixUserAdapter,
+    private matrixRoomAdapter: MatrixRoomAdapter,
+    private matrixGroupAdapter: MatrixGroupAdapter,
+    private matrixMessageAdapter: MatrixMessageAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(SUBSCRIPTION_PUB_SUB)
@@ -38,8 +38,8 @@ export class MatrixAgentService {
     const matrixClient = await this.createMatrixClient(operator);
     return new MatrixAgent(
       matrixClient,
-      this.matrixRoomAdapterService,
-      this.matrixMessageAdapterService,
+      this.matrixRoomAdapter,
+      this.matrixMessageAdapter,
       this.subscriptionHandler,
       this.logger
     );
@@ -70,7 +70,7 @@ export class MatrixAgentService {
     const rooms: MatrixRoom[] = [];
 
     // Community rooms
-    const communityMap = await this.matrixGroupAdapterService.communityRoomsMap(
+    const communityMap = await this.matrixGroupAdapter.communityRoomsMap(
       matrixClient
     );
     for (const groupID of Object.keys(communityMap)) {
@@ -101,19 +101,16 @@ export class MatrixAgentService {
     const rooms: MatrixRoom[] = [];
 
     // Direct rooms
-    const dmRoomMap =
-      await this.matrixRoomAdapterService.getDirectMessageRoomsMap(
-        matrixClient
-      );
+    const dmRoomMap = await this.matrixRoomAdapter.getDirectMessageRoomsMap(
+      matrixClient
+    );
     for (const matrixUsername of Object.keys(dmRoomMap)) {
       const room = await this.getRoom(
         matrixAgent,
         dmRoomMap[matrixUsername][0]
       );
       room.receiverCommunicationsID =
-        this.matrixUserAdapterService.convertMatrixUsernameToMatrixID(
-          matrixUsername
-        );
+        this.matrixUserAdapter.convertMatrixUsernameToMatrixID(matrixUsername);
       room.isDirect = true;
       rooms.push(room);
     }
@@ -129,7 +126,7 @@ export class MatrixAgentService {
     );
     if (!matrixRoom) {
       throw new MatrixEntityNotFoundException(
-        `Room not found: ${roomId}, agent id: ${matrixAgent.matrixClient.getUserId()}`,
+        `[User: ${matrixAgent.matrixClient.getUserId()}] Unable to access Room (${roomId}). Room either does not exist or user does not have access.`,
         LogContext.COMMUNICATION
       );
     }
@@ -148,14 +145,14 @@ export class MatrixAgentService {
     if (directRoom) return directRoom.roomId;
 
     // Room does not exist, create...
-    const targetRoomId = await this.matrixRoomAdapterService.createRoom(
+    const targetRoomId = await this.matrixRoomAdapter.createRoom(
       matrixAgent.matrixClient,
       {
         dmUserId: messageRequest.matrixID,
       }
     );
 
-    await this.matrixRoomAdapterService.storeDirectMessageRoom(
+    await this.matrixRoomAdapter.storeDirectMessageRoom(
       matrixAgent.matrixClient,
       targetRoomId,
       messageRequest.matrixID
@@ -176,7 +173,7 @@ export class MatrixAgentService {
   ): Promise<string | undefined> {
     // Need to implement caching for performance
     const dmRoomByUserMatrixIDMap =
-      await this.matrixRoomAdapterService.getDirectMessageRoomsMap(
+      await this.matrixRoomAdapter.getDirectMessageRoomsMap(
         matrixAgent.matrixClient
       );
     const dmUserMatrixIDs = Object.keys(dmRoomByUserMatrixIDMap);
@@ -191,9 +188,9 @@ export class MatrixAgentService {
     matrixUserId: string
   ): Promise<MatrixRoom | undefined> {
     const matrixUsername =
-      this.matrixUserAdapterService.convertMatrixIDToUsername(matrixUserId);
+      this.matrixUserAdapter.convertMatrixIDToUsername(matrixUserId);
     // Need to implement caching for performance
-    const dmRoomIds = this.matrixRoomAdapterService.getDirectMessageRoomsMap(
+    const dmRoomIds = this.matrixRoomAdapter.getDirectMessageRoomsMap(
       matrixAgent.matrixClient
     )[matrixUsername];
 
@@ -213,7 +210,7 @@ export class MatrixAgentService {
   ) {
     const response = await matrixAgent.matrixClient.sendEvent(
       roomId,
-      this.matrixMessageAdapterService.EVENT_TYPE_MESSAGE,
+      this.matrixMessageAdapter.EVENT_TYPE_MESSAGE,
       { body: messageRequest.text, msgtype: 'm.text' },
       ''
     );

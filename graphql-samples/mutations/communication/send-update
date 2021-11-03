@@ -1,0 +1,11 @@
+mutation sendUpdate($messageData: UpdatesSendMessageInput!) {
+  sendUpdate(messageData: $messageData)
+}
+
+Variables:
+{
+  "messageData": {
+    "message": "example222",
+    "updatesID": "uuid"
+  }
+}

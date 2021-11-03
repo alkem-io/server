@@ -13,6 +13,7 @@ import { IApplication } from '@domain/community/application/application.interfac
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Credential } from '@domain/agent/credential/credential.entity';
 import { Application } from '@domain/community/application/application.entity';
+import { Communication } from '@domain/communication/communication/communication.entity';
 import { CommunityType } from '@common/enums/community.type';
 import {
   TINY_TEXT_LENGTH,
@@ -29,6 +30,14 @@ export class Community
 
   @Column()
   ecoverseID: string;
+
+  @OneToOne(() => Communication, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  communication?: Communication;
 
   @OneToMany(() => UserGroup, userGroup => userGroup.community, {
     eager: true,
@@ -59,15 +68,6 @@ export class Community
   })
   parentCommunity?: Community;
 
-  @Column()
-  updatesRoomID!: string;
-
-  @Column()
-  discussionRoomID!: string;
-
-  @Column()
-  communicationGroupID: string;
-
   @Column({
     length: TINY_TEXT_LENGTH,
   })
@@ -83,9 +83,6 @@ export class Community
     this.displayName = name;
     this.type = type;
     this.ecoverseID = '';
-    this.updatesRoomID = '';
-    this.discussionRoomID = '';
-    this.communicationGroupID = '';
     this.parentID = '';
   }
 }

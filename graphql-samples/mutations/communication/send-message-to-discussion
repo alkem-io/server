@@ -1,0 +1,13 @@
+mutation sendMessageToDiscussion($messageData: DiscussionSendMessageInput!) {
+  sendMessageToDiscussion(messageData: $messageData) {
+    id
+  }
+}
+
+Variables:
+{
+  "messageData": {
+    "message": "example222",
+    "discussionID": "uuid"
+  }
+}
