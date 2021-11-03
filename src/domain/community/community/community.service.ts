@@ -31,6 +31,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class CommunityService {
@@ -46,8 +47,12 @@ export class CommunityService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createCommunity(name: string, ecoverseID: string): Promise<ICommunity> {
-    const community: ICommunity = new Community(name);
+  async createCommunity(
+    name: string,
+    ecoverseID: string,
+    type: CommunityType
+  ): Promise<ICommunity> {
+    const community: ICommunity = new Community(name, type);
     community.authorization = new AuthorizationPolicy();
     community.ecoverseID = ecoverseID;
 

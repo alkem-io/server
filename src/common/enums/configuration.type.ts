@@ -8,4 +8,5 @@ export enum ConfigurationTypes {
   STORAGE = 'storage',
   PLATFORM = 'platform',
   NOTIFICATIONS = 'notifications',
+  MICROSERVICES = 'microservices',
 }

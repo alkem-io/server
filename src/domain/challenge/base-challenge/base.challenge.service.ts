@@ -26,6 +26,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class BaseChallengeService {
@@ -44,13 +45,15 @@ export class BaseChallengeService {
   async initialise(
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
-    ecoverseID: string
+    ecoverseID: string,
+    communityType: CommunityType
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, ecoverseID);
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName,
-      ecoverseID
+      ecoverseID,
+      communityType
     );
 
     if (!baseChallengeData.context) {
