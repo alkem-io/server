@@ -190,7 +190,7 @@ export class CommunityResolverMutations {
         ]
       );
 
-    const payload = this.buildNotificationPayload(
+    const payload = await this.buildNotificationPayload(
       agentInfo.userID,
       applicationData.userID,
       community
