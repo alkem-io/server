@@ -52,9 +52,9 @@ export class BaseChallengeService {
     await this.isNameAvailableOrFail(baseChallengeData.nameID, ecoverseID);
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName,
+      ecoverseID,
       communityType
     );
-    baseChallenge.community.ecoverseID = ecoverseID;
 
     if (!baseChallengeData.context) {
       baseChallenge.context = await this.contextService.createContext({});

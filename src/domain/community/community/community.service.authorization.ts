@@ -8,6 +8,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -15,6 +16,7 @@ export class CommunityAuthorizationService {
     private communityService: CommunityService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
+    private communicationAuthorizationService: CommunicationAuthorizationService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>
   ) {}
@@ -36,6 +38,18 @@ export class CommunityAuthorizationService {
 
     // always false
     community.authorization.anonymousReadAccess = false;
+
+    // cascade to communication child entity
+    community.communication = await this.communityService.getCommunication(
+      community.id
+    );
+    if (community.communication) {
+      await this.communicationAuthorizationService.applyAuthorizationPolicy(
+        community.communication,
+        community.authorization,
+        this.communityService.getMembershipCredential(community)
+      );
+    }
 
     // cascade
     const groups = await this.communityService.getUserGroups(community);

@@ -12,7 +12,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CommunicationMessageReceived } from './dto/user.dto.communication.message.received';
 import { RoomInvitationReceived } from './dto/user.dto.communication.room.invitation.received';
-import { CommunicationEventMessageReceived } from '@domain/common/communication/communication.dto.event.message.received';
+import { CommunicationEventMessageReceived } from '@domain/communication/communication/dto/communication.dto.event.message.received';
 
 @Resolver()
 export class UserResolverSubscriptions {

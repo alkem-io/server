@@ -1,4 +1,4 @@
-import { CommunicationMessageResult } from '@domain/common/communication/communication.dto.message.result';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('CommunicationMessageReceived')

@@ -12,11 +12,11 @@ import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { MatrixRoomAdapterService } from '../adapter-room/matrix.room.adapter.service';
+import { MatrixRoomAdapter } from '../adapter-room/matrix.room.adapter';
 import { MatrixClient } from '../types/matrix.client.type';
 import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
-import { MatrixMessageAdapterService } from '../adapter-message/matrix.message.adapter.service';
+import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { LogContext } from '@common/enums';
 
 export type MatrixAgentStartOptions = {
@@ -29,21 +29,21 @@ export type MatrixAgentStartOptions = {
 export class MatrixAgent implements IMatrixAgent, Disposable {
   matrixClient: MatrixClient;
   eventDispatcher: MatrixEventDispatcher;
-  roomAdapterService: MatrixRoomAdapterService;
-  messageAdapterService: MatrixMessageAdapterService;
+  roomAdapter: MatrixRoomAdapter;
+  messageAdapter: MatrixMessageAdapter;
 
   constructor(
     matrixClient: MatrixClient,
-    roomAdapterService: MatrixRoomAdapterService,
-    messageAdapterService: MatrixMessageAdapterService,
+    roomAdapter: MatrixRoomAdapter,
+    messageAdapter: MatrixMessageAdapter,
     @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
     private loggerService: LoggerService
   ) {
     this.matrixClient = matrixClient;
     this.eventDispatcher = new MatrixEventDispatcher(this.matrixClient);
-    this.roomAdapterService = roomAdapterService;
-    this.messageAdapterService = messageAdapterService;
+    this.roomAdapter = roomAdapter;
+    this.messageAdapter = messageAdapter;
   }
 
   attach(handler: IMatrixEventHandler) {
@@ -107,7 +107,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   resolveRoomMembershipMonitor() {
     return AutoAcceptRoomMembershipMonitorFactory.create(
       this.matrixClient,
-      this.roomAdapterService
+      this.roomAdapter
     );
   }
 
@@ -121,7 +121,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   resolveRoomTimelineEventHandler() {
     return RoomTimelineMonitorFactory.create(
       this.matrixClient,
-      this.messageAdapterService,
+      this.messageAdapter,
       this.loggerService,
       messageReceivedEvent => {
         this.loggerService.verbose?.(

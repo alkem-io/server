@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
 import { MatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.service';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { MatrixUserAdapterService } from '../adapter-user/matrix.user.adapter.service';
+import { MatrixUserAdapter } from '../adapter-user/matrix.user.adapter';
 import { CommunicationsSynapseEndpoint } from '@common/enums/communications.synapse.endpoint';
 import { IOperationalMatrixUser } from '../adapter-user/matrix.user.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -22,7 +22,7 @@ export class MatrixUserManagementService {
     private readonly logger: LoggerService,
     private configService: ConfigService,
     private cryptographyServive: MatrixCryptographyService,
-    private matrixUserAdapterService: MatrixUserAdapterService,
+    private matrixUserAdapter: MatrixUserAdapter,
     private httpService: HttpService
   ) {
     this.idBaseUrl = this.configService.get(
@@ -53,7 +53,7 @@ export class MatrixUserManagementService {
       CommunicationsSynapseEndpoint.REGISTRATION,
       this.baseUrl
     );
-    const user = this.matrixUserAdapterService.convertMatrixIDToMatrixUser(
+    const user = this.matrixUserAdapter.convertMatrixIDToMatrixUser(
       matrixUserID,
       password
     );
@@ -114,7 +114,7 @@ export class MatrixUserManagementService {
     };
     let msg = 'User registration';
     if (isAdmin) msg = 'Admin registration';
-    this.matrixUserAdapterService.logMatrixUser(operationalUser, msg);
+    this.matrixUserAdapter.logMatrixUser(operationalUser, msg);
     return operationalUser;
   }
 
@@ -122,11 +122,10 @@ export class MatrixUserManagementService {
     matrixUserID: string,
     password?: string
   ): Promise<IOperationalMatrixUser> {
-    const matrixUser =
-      this.matrixUserAdapterService.convertMatrixIDToMatrixUser(
-        matrixUserID,
-        password
-      );
+    const matrixUser = this.matrixUserAdapter.convertMatrixIDToMatrixUser(
+      matrixUserID,
+      password
+    );
 
     try {
       const operationalUser = await this._matrixClient.loginWithPassword(
@@ -140,7 +139,7 @@ export class MatrixUserManagementService {
         accessToken: operationalUser.access_token,
       };
     } catch (error) {
-      this.matrixUserAdapterService.logMatrixUser(matrixUser, 'login failed');
+      this.matrixUserAdapter.logMatrixUser(matrixUser, 'login failed');
       throw new MatrixUserLoginException(
         `Error: ${error}`,
         LogContext.COMMUNICATION
@@ -152,7 +151,7 @@ export class MatrixUserManagementService {
   async isRegistered(matrixUserID: string): Promise<boolean> {
     try {
       const username =
-        this.matrixUserAdapterService.convertMatrixIDToUsername(matrixUserID);
+        this.matrixUserAdapter.convertMatrixIDToUsername(matrixUserID);
       await this._matrixClient.isUsernameAvailable(username);
       return false;
     } catch (error: any) {

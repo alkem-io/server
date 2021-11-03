@@ -7,17 +7,15 @@ import { IUser, User } from '@domain/community/user';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CommunicationService } from '@src/services/platform/communication/communication.service';
 import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
-import { CommunityRoomResult } from '../community/dto/community.dto.room.result';
+import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
-    private userService: UserService,
-    private communicationService: CommunicationService
+    private userService: UserService
   ) {}
 
   @ResolveField('agent', () => IAgent, {
@@ -29,12 +27,14 @@ export class UserResolverFields {
     return await this.userService.getAgent(user.id);
   }
 
-  @ResolveField('communityRooms', () => [CommunityRoomResult], {
+  @ResolveField('communityRooms', () => [CommunicationRoomResult], {
     nullable: true,
     description: 'The Community rooms this user is a member of',
   })
   @Profiling.api
-  async communityRooms(@Parent() user: User): Promise<CommunityRoomResult[]> {
+  async communityRooms(
+    @Parent() user: User
+  ): Promise<CommunicationRoomResult[]> {
     return await this.userService.getCommunityRooms(user);
   }
 

@@ -1,0 +1,13 @@
+mutation removeMessageFromDiscussion($messageData: DiscussionSendMessageInput!) {
+  removeMessageFromDiscussion(messageData: $messageData) {
+    id
+  }
+}
+
+Variables:
+{
+  "messageData": {
+    "messageID": "string",
+    "discussionID": "uuid"
+  }
+}
