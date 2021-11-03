@@ -257,6 +257,8 @@ monitoring:
 # Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Alkemio.
 communications:
   enabled: ${COMMUNICATIONS_ENABLED}:false
+  discussions:
+    enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:false
   # matrix configuration #
   matrix:
     # Synapse home server name, defined in homeserver.yaml on the Synapse instance.

@@ -39,6 +39,11 @@ export class KonfigService {
               ?.enabled,
           },
           {
+            name: 'communications-discussions',
+            enabled: this.configService.get(ConfigurationTypes.COMMUNICATIONS)
+              ?.discussions?.enabled,
+          },
+          {
             name: 'subscriptions',
             enabled: this.configService.get(ConfigurationTypes.HOSTING)
               ?.subscriptions?.enabled,
