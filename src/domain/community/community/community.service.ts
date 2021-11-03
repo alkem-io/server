@@ -234,10 +234,14 @@ export class CommunityService {
 
     // register the user for the community rooms
     const communication = await this.getCommunication(community.id);
-    await this.communicationService.addUserToCommunications(
-      communication,
-      user
-    );
+    this.communicationService
+      .addUserToCommunications(communication, user)
+      .catch(error =>
+        this.logger.error?.(
+          `Unable to add user to community messaging (${community.displayName}): ${error}`,
+          LogContext.COMMUNICATION
+        )
+      );
 
     return community;
   }

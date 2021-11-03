@@ -1,9 +1,9 @@
-- id: 'alkemio:graphql:protected'
+- id: "alkemio:graphql:protected"
   upstream:
     preserve_host: true
-    url: 'http://host.docker.internal:4000'
+    url: "http://host.docker.internal:4000"
   match:
-    url: 'http://localhost:3000/graphql'
+    url: "http://localhost:3000/graphql"
     methods:
       - POST
       - GET
