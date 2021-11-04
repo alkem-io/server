@@ -190,7 +190,7 @@ export class CommunityResolverMutations {
         ]
       );
 
-    const payload = this.buildNotificationPayload(
+    const payload = await this.buildNotificationPayload(
       agentInfo.userID,
       applicationData.userID,
       community
@@ -232,7 +232,7 @@ export class CommunityResolverMutations {
     };
 
     if (community.type === CommunityType.CHALLENGE) {
-      payload.challenge = { id: community.parentID };
+      payload.hub.challenge = { id: community.parentID };
     } else if (community.type === CommunityType.OPPORTUNITY) {
       const communityWithParent =
         await this.communityService.getCommunityOrFail(community.id, {
@@ -248,7 +248,7 @@ export class CommunityResolverMutations {
         );
       }
 
-      payload.challenge = {
+      payload.hub.challenge = {
         id: parentCommunity.parentID,
         opportunity: {
           id: community.parentID,
