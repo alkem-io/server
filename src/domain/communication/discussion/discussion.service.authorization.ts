@@ -4,7 +4,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { IDiscussion } from './discussion.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ICredential } from '@domain/agent';
 import { DiscussionService } from './discussion.service';
 import { AuthorizationCredential } from '@common/enums';
 import { RoomService } from '../room/room.service';
@@ -15,6 +14,7 @@ export class DiscussionAuthorizationService {
   Discussions have a fairly open authorization policy, for now.
   Any user that is a member of the community in which the Discussion takes place has the CREATE privilege.
   The CREATE privilege gives the user the right to create new discussions, as well as to post messages to the Discussion.
+  Note: the CREATE privilege is inherited from the Communication parent entity.
   */
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -24,8 +24,7 @@ export class DiscussionAuthorizationService {
 
   async applyAuthorizationPolicy(
     discussion: IDiscussion,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: ICredential
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IDiscussion> {
     discussion.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -34,29 +33,16 @@ export class DiscussionAuthorizationService {
       );
 
     discussion.authorization = this.extendAuthorizationPolicy(
-      discussion.authorization,
-      communityCredential
+      discussion.authorization
     );
 
     return await this.discussionService.save(discussion);
   }
 
   private extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    communityCredential: ICredential
+    authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
-
-    // Allow any member of this community to create messages on the discussion
-    const communityMember = {
-      type: communityCredential.type,
-      resourceID: communityCredential.resourceID,
-      grantedPrivileges: [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.CREATE,
-      ],
-    };
-    newRules.push(communityMember);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
