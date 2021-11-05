@@ -4,7 +4,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationService } from './communication.service';
 import { ICredential } from '@domain/agent';
@@ -29,7 +28,8 @@ export class CommunicationAuthorizationService {
       );
 
     communication.authorization = this.extendAuthorizationPolicy(
-      communication.authorization
+      communication.authorization,
+      communityCredential
     );
 
     for (const discussion of this.communicationService.getDiscussions(
@@ -37,8 +37,7 @@ export class CommunicationAuthorizationService {
     )) {
       await this.discussionAuthorizationService.applyAuthorizationPolicy(
         discussion,
-        communication.authorization,
-        communityCredential
+        communication.authorization
       );
     }
 
@@ -53,17 +52,21 @@ export class CommunicationAuthorizationService {
   }
 
   private extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined
+    authorization: IAuthorizationPolicy | undefined,
+    communityCredential: ICredential
   ): IAuthorizationPolicy {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    // Allow any registered users to create discussions
-    const globalRegistered = {
-      type: AuthorizationCredential.GLOBAL_REGISTERED,
-      resourceID: '',
-      grantedPrivileges: [AuthorizationPrivilege.CREATE],
+    // Allow any member of this community to create discussions, and to send messages to the discussion
+    const communityMember = {
+      type: communityCredential.type,
+      resourceID: communityCredential.resourceID,
+      grantedPrivileges: [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.CREATE,
+      ],
     };
-    newRules.push(globalRegistered);
+    newRules.push(communityMember);
 
     //
     const updatedAuthorization =
