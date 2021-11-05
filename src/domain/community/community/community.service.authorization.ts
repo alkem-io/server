@@ -43,13 +43,11 @@ export class CommunityAuthorizationService {
     community.communication = await this.communityService.getCommunication(
       community.id
     );
-    if (community.communication) {
-      await this.communicationAuthorizationService.applyAuthorizationPolicy(
-        community.communication,
-        community.authorization,
-        this.communityService.getMembershipCredential(community)
-      );
-    }
+    await this.communicationAuthorizationService.applyAuthorizationPolicy(
+      community.communication,
+      community.authorization,
+      this.communityService.getMembershipCredential(community)
+    );
 
     // cascade
     const groups = await this.communityService.getUserGroups(community);

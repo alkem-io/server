@@ -44,9 +44,9 @@ export class DiscussionService {
       [discussion.communicationRoomID],
       communicationUserID
     );
-    // await this.sendMessageToDiscussion(discussion, communicationUserID, {
-    //   message: discussionData.message,
-    // });
+    await this.sendMessageToDiscussion(discussion, communicationUserID, {
+      message: discussionData.message,
+    });
     return await this.save(discussion);
   }
 
