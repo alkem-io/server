@@ -11,8 +11,9 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {
-  private fullRequestLogging = false;
-  private headerRequestLogging = false;
+  private requestFullLogging = false;
+  private requestHeadersLogging = false;
+  private responseHeadersLogging = false;
   constructor(
     private readonly configService: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -20,31 +21,53 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     const reqLoggingConfig = this.configService.get(
       ConfigurationTypes.MONITORING
     )?.logging?.requests;
-    this.fullRequestLogging = reqLoggingConfig?.full_logging_enabled;
-    this.headerRequestLogging = reqLoggingConfig?.headers_logging_enabled;
+    this.requestFullLogging = reqLoggingConfig?.full_logging_enabled;
+    this.requestHeadersLogging = reqLoggingConfig?.headers_logging_enabled;
+
+    const resLoggingConfig = this.configService.get(
+      ConfigurationTypes.MONITORING
+    )?.logging?.responses;
+    this.responseHeadersLogging = resLoggingConfig?.headers_logging_enabled;
   }
 
-  use(req: Request, res: Response, next: NextFunction) {
-    this.logger.verbose?.(
-      `Request to server: ${req.path}`,
-      LogContext.REQUESTS
-    );
-    if (this.fullRequestLogging && this.logger.verbose)
-      this.logger.verbose(
-        JSON.stringify(req, undefined, ' '),
-        LogContext.REQUESTS
-      );
-
-    if (
-      !this.fullRequestLogging &&
-      this.headerRequestLogging &&
-      this.logger.verbose
-    )
+  use(req: Request, response: Response, next: NextFunction) {
+    if (this.logger.verbose) {
       this.logger.verbose?.(
-        JSON.stringify(req.headers, undefined, ' '),
+        `Request to server: ${req.path}`,
         LogContext.REQUESTS
       );
+      // Also log the response code
+      response.on('close', () => {
+        const { statusCode } = response;
 
+        this.logger.verbose?.(
+          `Response from server: ${statusCode}`,
+          LogContext.REQUESTS
+        );
+
+        if (this.responseHeadersLogging) {
+          const headers = JSON.stringify(response.getHeaders(), undefined, ' ');
+          this.logger.verbose?.(
+            `Response headers: ${headers}`,
+            LogContext.REQUESTS
+          );
+        }
+      });
+
+      if (this.requestFullLogging)
+        this.logger.verbose(
+          JSON.stringify(req, undefined, ' '),
+          LogContext.REQUESTS
+        );
+
+      if (this.requestHeadersLogging) {
+        const headers = JSON.stringify(req.headers, undefined, ' ');
+        this.logger.verbose?.(
+          `Request headers: ${headers}`,
+          LogContext.REQUESTS
+        );
+      }
+    }
     next();
   }
 }
