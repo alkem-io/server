@@ -70,6 +70,10 @@ export class CommunicationAdapter {
     const matrixAgent = await this.acquireMatrixAgent(
       sendMessageData.senderCommunicationsID
     );
+    this.logger.verbose?.(
+      `Sending message to room: ${sendMessageData.roomID}`,
+      LogContext.COMMUNICATION
+    );
     const messageId = await this.matrixAgentService.sendMessage(
       matrixAgent,
       sendMessageData.roomID,

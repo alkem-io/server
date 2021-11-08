@@ -12,6 +12,7 @@ import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DiscussionService } from '../discussion/discussion.service';
+import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -19,6 +20,7 @@ export class CommunicationResolverMutations {
     private authorizationService: AuthorizationService,
     private communicationService: CommunicationService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService
   ) {}
 
@@ -45,11 +47,11 @@ export class CommunicationResolverMutations {
       createData,
       agentInfo.communicationID
     );
-    discussion.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        discussion.authorization,
-        communication.authorization
-      );
+    await this.discussionAuthorizationService.applyAuthorizationPolicy(
+      discussion,
+      communication.authorization
+    );
+
     return await this.discussionService.save(discussion);
   }
 }
