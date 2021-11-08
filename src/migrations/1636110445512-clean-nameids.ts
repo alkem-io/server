@@ -9,12 +9,24 @@ const tableNames = [
   'opportunity',
 ];
 
-const buildQuery = (tableName: string) =>
+const symbolsToRemove = ['(', ')', '.'];
+
+const buildUnderscoreQuery = (tableName: string) =>
   `update ${tableName} set nameID = LOWER(REPLACE(nameID, '_', '-')) where nameID like '%_%'`;
+
+const buildSymbolRemoveQuery = (tableName: string, symbol: string) =>
+  `update ${tableName} set nameID = REPLACE(nameID, '${symbol}', '') where nameID like '%${symbol}%'`;
 
 export class cleanNameids1636110445512 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    tableNames.forEach(async x => await queryRunner.query(buildQuery(x)));
+    tableNames.forEach(async tableName => {
+      await queryRunner.query(buildUnderscoreQuery(tableName));
+      // remove symbols
+      symbolsToRemove.forEach(
+        async symbol =>
+          await queryRunner.query(buildSymbolRemoveQuery(tableName, symbol))
+      );
+    });
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
