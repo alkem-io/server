@@ -17,4 +17,5 @@ export enum LogContext {
   UNSPECIFIED = 'not_specified',
   NOTIFICATIONS = 'notifications',
   SSI = 'ssi',
+  REQUESTS = 'requests',
 }
