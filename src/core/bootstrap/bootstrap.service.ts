@@ -7,6 +7,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
 import fs from 'fs';
 import * as defaultRoles from '@templates/authorization-bootstrap.json';
+import * as preferenceDefinition from '@templates/user-preference-definition.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
@@ -107,6 +108,7 @@ export class BootstrapService {
 
     let bootstrapJson = {
       ...defaultRoles,
+      ...preferenceDefinition,
     };
 
     if (
@@ -141,6 +143,17 @@ export class BootstrapService {
       );
     } else {
       await this.createUserProfiles(users);
+    }
+
+    const preferenceDef = bootstrapJson.userPreferenceDefinition;
+    if (!preferenceDef) {
+      this.logger.verbose?.(
+        'No users section in the authorization bootstrap file!',
+        LogContext.BOOTSTRAP
+      );
+    } else {
+      // todo create preference definitions
+      // createDefinition
     }
   }
 
