@@ -24,12 +24,14 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
+import { UserPreferenceService } from '@domain/community/preferences';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private agentService: AgentService,
     private ecoverseService: EcoverseService,
+    private preferenceService: UserPreferenceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
@@ -153,7 +155,7 @@ export class BootstrapService {
       );
     } else {
       // todo create preference definitions
-      // createDefinition
+      await this.createUserPreferenceDefinitions(preferenceDef);
     }
   }
 
@@ -190,6 +192,27 @@ export class BootstrapService {
     } catch (error: any) {
       throw new BootstrapException(
         `Unable to create profiles ${error.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async createUserPreferenceDefinitions(definitionData: any[]) {
+    try {
+      definitionData.forEach(
+        async ({ group, displayName, description, valueType, type }) => {
+          await this.preferenceService.createDefinition({
+            group,
+            displayName,
+            description,
+            valueType,
+            type,
+          });
+        }
+      );
+    } catch (err: unknown) {
+      throw new BootstrapException(
+        `Unable to create profiles ${(err as Error).message}`
       );
     }
   }

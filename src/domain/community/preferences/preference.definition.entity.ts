@@ -25,13 +25,14 @@ export class UserPreferenceDefinition
   type!: UserPreferenceType;
 
   @OneToMany(() => UserPreference, pref => pref.userPreferenceDefinition)
-  userPreference!: UserPreference;
+  userPreference?: UserPreference;
 
   constructor(
     group: string,
     displayName: string,
     description: string,
-    valueType: UserPreferenceValueType
+    valueType: UserPreferenceValueType,
+    type: UserPreferenceType
   ) {
     super();
 
@@ -39,5 +40,6 @@ export class UserPreferenceDefinition
     this.displayName = displayName;
     this.description = description;
     this.valueType = valueType;
+    this.type = type;
   }
 }

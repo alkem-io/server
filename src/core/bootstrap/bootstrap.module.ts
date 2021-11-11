@@ -9,6 +9,7 @@ import { BootstrapService } from './bootstrap.service';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AdminAuthorizationModule } from '@services/admin/authorization/admin.authorization.module';
+import { UserPreferenceService } from '@domain/community/preferences';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { AdminAuthorizationModule } from '@services/admin/authorization/admin.au
     OrganizationModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],
-  providers: [BootstrapService],
+  providers: [BootstrapService, UserPreferenceService],
   exports: [BootstrapService],
 })
 export class BootstrapModule {}
