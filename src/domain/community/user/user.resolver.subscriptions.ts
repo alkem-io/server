@@ -5,14 +5,14 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Resolver, Subscription } from '@nestjs/graphql';
-import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
+import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from './user.service';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CommunicationMessageReceived } from './dto/user.dto.communication.message.received';
 import { RoomInvitationReceived } from './dto/user.dto.communication.room.invitation.received';
-import { CommunicationEventMessageReceived } from '@domain/common/communication/communication.dto.event.message.received';
+import { CommunicationEventMessageReceived } from '@domain/communication/communication/dto/communication.dto.event.message.received';
 
 @Resolver()
 export class UserResolverSubscriptions {

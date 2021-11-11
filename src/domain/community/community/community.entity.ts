@@ -13,6 +13,12 @@ import { IApplication } from '@domain/community/application/application.interfac
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Credential } from '@domain/agent/credential/credential.entity';
 import { Application } from '@domain/community/application/application.entity';
+import { Communication } from '@domain/communication/communication/communication.entity';
+import { CommunityType } from '@common/enums/community.type';
+import {
+  TINY_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@src/common/constants/entity.field.length.constants';
 
 @Entity()
 export class Community
@@ -24,6 +30,14 @@ export class Community
 
   @Column()
   ecoverseID: string;
+
+  @OneToOne(() => Communication, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  communication?: Communication;
 
   @OneToMany(() => UserGroup, userGroup => userGroup.community, {
     eager: true,
@@ -54,21 +68,21 @@ export class Community
   })
   parentCommunity?: Community;
 
-  @Column()
-  updatesRoomID!: string;
+  @Column({
+    length: TINY_TEXT_LENGTH,
+  })
+  type!: CommunityType;
 
-  @Column()
-  discussionRoomID!: string;
+  @Column({
+    length: UUID_LENGTH,
+  })
+  parentID!: string;
 
-  @Column()
-  communicationGroupID: string;
-
-  constructor(name: string) {
+  constructor(name: string, type: CommunityType) {
     super();
     this.displayName = name;
+    this.type = type;
     this.ecoverseID = '';
-    this.updatesRoomID = '';
-    this.discussionRoomID = '';
-    this.communicationGroupID = '';
+    this.parentID = '';
   }
 }

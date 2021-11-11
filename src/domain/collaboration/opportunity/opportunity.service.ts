@@ -35,6 +35,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { AssignOpportunityAdminInput } from './dto/opportunity.dto.assign.admin';
 import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class OpportunityService {
@@ -63,7 +64,8 @@ export class OpportunityService {
     await this.baseChallengeService.initialise(
       opportunity,
       opportunityData,
-      ecoverseID
+      ecoverseID,
+      CommunityType.OPPORTUNITY
     );
 
     // Lifecycle, that has both a default and extended version
@@ -76,6 +78,10 @@ export class OpportunityService {
     }
 
     await this.opportunityRepository.save(opportunity);
+    // set immediate community parent
+    if (opportunity.community) {
+      opportunity.community.parentID = opportunity.id;
+    }
 
     opportunity.lifecycle = await this.lifecycleService.createLifecycle(
       opportunity.id,

@@ -13,9 +13,8 @@ import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CommunicationModule } from '@services/platform/communication/communication.module';
-import { CommunityResolverQueries } from './community.resolver.queries';
 import { CommunityResolverSubscriptions } from './community.resolver.subscriptions';
+import { CommunicationModule } from '@domain/communication/communication/communication.module';
 
 @Module({
   imports: [
@@ -25,8 +24,8 @@ import { CommunityResolverSubscriptions } from './community.resolver.subscriptio
     UserGroupModule,
     UserModule,
     ApplicationModule,
-    LifecycleModule,
     CommunicationModule,
+    LifecycleModule,
     TypeOrmModule.forFeature([Community]),
   ],
   providers: [
@@ -36,7 +35,6 @@ import { CommunityResolverSubscriptions } from './community.resolver.subscriptio
     CommunityResolverFields,
     CommunityResolverSubscriptions,
     CommunityLifecycleOptionsProvider,
-    CommunityResolverQueries,
   ],
   exports: [CommunityService, CommunityAuthorizationService],
 })

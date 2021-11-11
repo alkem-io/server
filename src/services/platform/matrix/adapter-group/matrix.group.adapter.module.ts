@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { MatrixGroupAdapterService } from './matrix.group.adapter.service';
+import { MatrixGroupAdapter } from './matrix.group.adapter';
 
 @Module({
   imports: [],
-  providers: [MatrixGroupAdapterService],
-  exports: [MatrixGroupAdapterService],
+  providers: [MatrixGroupAdapter],
+  exports: [MatrixGroupAdapter],
 })
 export class MatrixGroupAdapterModule {}

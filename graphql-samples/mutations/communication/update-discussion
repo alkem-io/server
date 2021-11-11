@@ -1,0 +1,15 @@
+mutation updateDiscussion($updateData: UpdateDiscussionInput!) {
+  updateDiscussion(updateData: $updateData) {
+    title,
+    category
+  }
+}
+
+Variables:
+{
+  "updateData": {
+      "ID": "uuid",
+      "category": "IDEAS",
+      "title": "something new"
+  }
+}

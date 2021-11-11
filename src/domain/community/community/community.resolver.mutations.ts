@@ -1,35 +1,39 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql';
-import { IUserGroup } from '@domain/community/user-group';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
+  ApplicationEventInput,
   CreateApplicationInput,
   DeleteApplicationInput,
   IApplication,
-  ApplicationEventInput,
 } from '@domain/community/application';
-import { CreateUserGroupInput } from '@domain/community/user-group';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSubEngine } from 'apollo-server-express';
-import { SUBSCRIPTION_PUB_SUB } from '@services/platform/subscription/subscription.module';
-import { CommunityRemoveMessageInput } from './dto/community.dto.remove.message';
-import { CommunitySendMessageInput } from './dto/community.dto.send.message';
+import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { CommunityType } from '@common/enums/community.type';
+import { EntityNotFoundException } from '@src/common';
+import { ApplicationReceived } from '../application/application.dto.received';
+
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
@@ -44,7 +48,7 @@ export class CommunityResolverMutations {
     private applicationService: ApplicationService,
     @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
-    @Inject('NOTIFICATIONS_SERVICE') private client: ClientProxy
+    @Inject('NOTIFICATIONS_SERVICE') private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -186,33 +190,73 @@ export class CommunityResolverMutations {
         ]
       );
 
-    const communityType = community.parentCommunity ? 'challenge' : 'hub';
+    const payload = await this.buildNotificationPayload(
+      agentInfo.userID,
+      applicationData.userID,
+      community
+    );
 
-    // Trigger an event for subscriptions
-    this.client.emit<number>(SubscriptionType.COMMUNITY_APPLICATION_CREATED, {
-      applicantionCreatorID: agentInfo.userID,
-      applicantID: applicationData.userID,
+    this.notificationsClient.emit<number>(
+      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
+      payload
+    );
+
+    const applicationReceivedEvent: ApplicationReceived = {
+      applicationID: application.id,
+      communityID: community.id,
+      userID: user.id,
+    };
+
+    this.subscriptionHandler.publish(
+      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
+      applicationReceivedEvent
+    );
+    return await this.applicationService.save(application);
+  }
+
+  private async buildNotificationPayload(
+    applicationCreatorID: string,
+    applicantID: string,
+    community: ICommunity
+  ) {
+    const payload: any = {
+      applicationCreatorID,
+      applicantID,
       community: {
         name: community.displayName,
-        type: communityType,
+        type: community.type,
       },
       hub: {
         id: community.ecoverseID,
-        challenge: {
-          id: '7b86f954-d8c3-4fac-a652-b922c80e5c20', //to be resolved
-          opportunity: {
-            id: 'not supported',
-          },
-        },
       },
-    });
-    this.subscriptionHandler.publish(
-      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
-      {
-        application: application,
+    };
+
+    if (community.type === CommunityType.CHALLENGE) {
+      payload.hub.challenge = { id: community.parentID };
+    } else if (community.type === CommunityType.OPPORTUNITY) {
+      const communityWithParent =
+        await this.communityService.getCommunityOrFail(community.id, {
+          relations: ['parentCommunity'],
+        });
+      const parentCommunity = communityWithParent.parentCommunity;
+
+      if (!parentCommunity) {
+        // this will block sending the event
+        throw new EntityNotFoundException(
+          `Unable to find parent community of opportunity ${community.id}`,
+          LogContext.CHALLENGES
+        );
       }
-    );
-    return await this.applicationService.save(application);
+
+      payload.hub.challenge = {
+        id: parentCommunity.parentID,
+        opportunity: {
+          id: community.parentID,
+        },
+      };
+    }
+
+    return payload;
   }
 
   @UseGuards(GraphqlGuard)
@@ -257,109 +301,5 @@ export class CommunityResolverMutations {
       applicationEventData,
       agentInfo
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Sends an update message on the specified community',
-  })
-  @Profiling.api
-  async sendMessageToCommunityUpdates(
-    @Args('messageData') messageData: CommunitySendMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const community = await this.communityService.getCommunityOrFail(
-      messageData.communityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `community send message: ${community.displayName}`
-    );
-    return await this.communityService.sendMessageToCommunityUpdates(
-      community,
-      agentInfo.communicationID,
-      messageData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Removes an update message from the specified community',
-  })
-  @Profiling.api
-  async removeMessageFromCommunityUpdates(
-    @Args('messageData') messageData: CommunityRemoveMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const community = await this.communityService.getCommunityOrFail(
-      messageData.communityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `community send message: ${community.displayName}`
-    );
-    await this.communityService.removeMessageFromCommunityUpdates(
-      community,
-      agentInfo.communicationID,
-      messageData
-    );
-
-    return messageData.messageId;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Sends a message to the discussions room on the community',
-  })
-  @Profiling.api
-  async sendMessageToCommunityDiscussions(
-    @Args('messageData') messageData: CommunitySendMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const community = await this.communityService.getCommunityOrFail(
-      messageData.communityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.READ,
-      `community send discussion message: ${community.displayName}`
-    );
-    return await this.communityService.sendMessageToCommunityDiscussions(
-      community,
-      agentInfo.communicationID,
-      messageData
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Removes a discussion message from the specified community',
-  })
-  @Profiling.api
-  async removeMessageFromCommunityDiscussions(
-    @Args('messageData') messageData: CommunityRemoveMessageInput,
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
-    const community = await this.communityService.getCommunityOrFail(
-      messageData.communityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      community.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `community send message: ${community.displayName}`
-    );
-    await this.communityService.removeMessageFromCommunityDiscussions(
-      community,
-      agentInfo.communicationID,
-      messageData
-    );
-
-    return messageData.messageId;
   }
 }
