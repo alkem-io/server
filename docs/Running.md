@@ -24,7 +24,7 @@ To simplify setting up the Server development environment, a pre-configured dock
    if you'd like to debug alkemio server and only need the dependent services, run:
 
    ```bash
-    docker-compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate
+    docker-compose -f quickstart-services.yml  --env-file .env.docker up --build --force-recreate
    ```
 
 **Note**: If a container (e.g. Synapse) writes to a directory that is mapped locally, you will need to have enough permissions to write there.

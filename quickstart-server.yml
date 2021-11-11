@@ -2,6 +2,8 @@ version: '3.7'
 
 services:
   alkemio_server:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_server_dev
     image: alkemio_server
     build: .
@@ -27,12 +29,12 @@ services:
       - IPFS_ENDPOINT=http://ipfs:5001
       - IPFS_CLIENT_ENDPOINT=http://localhost:3000/ipfs
       - AUTH_ORY_KRATOS_JWKS_URI=http://oathkeeper:4456/.well-known/jwks.json
-      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/identity/ory/kratos/public
+      - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://kratos:4433/
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER=http://kratos:4433/
       - CORS_ENABLED=true
       - LOGGING_LEVEL_CONSOLE=verbose
       - LOGGING_CONSOLE_ENABLED=true
-      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_HOST
     restart: always
     ports:
       - 4000:4000

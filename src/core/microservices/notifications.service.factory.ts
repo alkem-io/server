@@ -20,6 +20,7 @@ export async function notificationsServiceFactory(
         // the queue will survive a broker restart
         durable: true,
       },
+      noAck: false,
     };
     return ClientProxyFactory.create({ transport: Transport.RMQ, options });
   } catch (err) {
