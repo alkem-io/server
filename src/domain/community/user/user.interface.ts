@@ -3,6 +3,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
+import { IUserPreference } from '../preferences/preference.interface';
 
 @ObjectType('User', {
   implements: () => [ISearchable],
@@ -35,6 +36,12 @@ export abstract class IUser extends INameable {
   profile?: IProfile;
 
   agent?: IAgent;
+
+  @Field(() => [IUserPreference], {
+    nullable: true,
+    description: 'List of user preferences',
+  })
+  preferences?: IUserPreference[];
 
   // the internal communicationID (Matrix) for the user
   communicationID!: string;
