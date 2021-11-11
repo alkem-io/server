@@ -13,7 +13,6 @@ import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CommunityResolverQueries } from './community.resolver.queries';
 import { CommunityResolverSubscriptions } from './community.resolver.subscriptions';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 
@@ -36,7 +35,6 @@ import { CommunicationModule } from '@domain/communication/communication/communi
     CommunityResolverFields,
     CommunityResolverSubscriptions,
     CommunityLifecycleOptionsProvider,
-    CommunityResolverQueries,
   ],
   exports: [CommunityService, CommunityAuthorizationService],
 })
