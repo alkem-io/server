@@ -1,9 +1,11 @@
-import { ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { UserPreferenceValueType } from '@src/common';
+import { IUserPreference } from '../preferences/preference.interface';
 
 @ObjectType('UserPreferenceDefinition')
 export abstract class IUserPreferenceDefinition extends IAuthorizable {
-  /*@Field(() => String, {
+  @Field(() => String, {
     description: 'The group',
   })
   group!: string;
@@ -21,5 +23,8 @@ export abstract class IUserPreferenceDefinition extends IAuthorizable {
   @Field(() => UserPreferenceValueType, {
     description: 'Preference value type',
   })
-  valueType!: UserPreferenceValueType*/
+  valueType!: UserPreferenceValueType;
+
+  @Field(() => IUserPreference)
+  userPreference!: IUserPreference;
 }

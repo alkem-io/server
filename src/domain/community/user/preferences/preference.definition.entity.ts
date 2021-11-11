@@ -1,12 +1,15 @@
-import { Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
+import { UserPreferenceValueType, UserPreferenceType } from '@common/enums';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { UserPreference } from './preference.entity';
 import { IUserPreferenceDefinition } from './preference.definition.interface';
 
 @Entity()
 export class UserPreferenceDefinition
   extends AuthorizableEntity
-  implements IUserPreferenceDefinition {
-  /* @Column()
+  implements IUserPreferenceDefinition
+{
+  @Column()
   group!: string;
 
   @Column()
@@ -36,5 +39,5 @@ export class UserPreferenceDefinition
     this.displayName = displayName;
     this.description = description;
     this.valueType = valueType;
-  }*/
+  }
 }
