@@ -9,7 +9,7 @@ import { BootstrapService } from './bootstrap.service';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AdminAuthorizationModule } from '@services/admin/authorization/admin.authorization.module';
-import { UserPreferenceService } from '@domain/community/preferences';
+import { UserPreferenceModule } from '@domain/community/user-preferences';
 
 @Module({
   imports: [
@@ -18,11 +18,12 @@ import { UserPreferenceService } from '@domain/community/preferences';
     ProfileModule,
     TagsetModule,
     UserModule,
+    UserPreferenceModule,
     AdminAuthorizationModule,
     OrganizationModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],
-  providers: [BootstrapService, UserPreferenceService],
+  providers: [BootstrapService],
   exports: [BootstrapService],
 })
 export class BootstrapModule {}

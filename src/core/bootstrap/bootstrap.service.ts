@@ -24,7 +24,7 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
-import { UserPreferenceService } from '@domain/community/preferences';
+import { UserPreferenceService } from '@domain/community/user-preferences';
 
 @Injectable()
 export class BootstrapService {

@@ -3,7 +3,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
-import { IUserPreference } from '../preferences/user.preference.interface';
+import { IUserPreference } from '../user-preferences/user.preference.interface';
 
 @ObjectType('User', {
   implements: () => [ISearchable],
