@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { IUserPreferenceDefinition } from './preference.definition.interface';
+import { IUserPreferenceDefinition } from './user.preference.definition.interface';
 
 @ObjectType('UserPreference')
 export abstract class IUserPreference extends IAuthorizable {

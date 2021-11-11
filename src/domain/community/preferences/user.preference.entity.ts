@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { IUserPreference } from './preference.interface';
-import { UserPreferenceDefinition } from './preference.definition.entity';
+import { IUserPreference } from './user.preference.interface';
+import { UserPreferenceDefinition } from './user.preference.definition.entity';
 import { User } from '../user/user.entity';
 
 @Entity()

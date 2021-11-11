@@ -1,3 +1,3 @@
-export * from './preference.definition.entity';
-export * from './preference.definition.interface';
-export * from './preference.service';
+export * from './user.preference.definition.entity';
+export * from './user.preference.definition.interface';
+export * from './user.preference.service';

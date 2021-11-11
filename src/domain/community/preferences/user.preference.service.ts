@@ -1,9 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserPreferenceDefinition } from './preference.definition.entity';
-import { IUserPreferenceDefinition } from '@domain/community/preferences/preference.definition.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { UserPreferenceType, UserPreferenceValueType } from '@src/common';
+import { UserPreferenceDefinition } from './user.preference.definition.entity';
+import { IUserPreferenceDefinition } from './user.preference.definition.interface';
 
 type CreateUserPreferenceDefinitionInput = {
   group: string;

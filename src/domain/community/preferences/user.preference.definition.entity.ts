@@ -1,8 +1,8 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { UserPreferenceValueType, UserPreferenceType } from '@common/enums';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { UserPreference } from './preference.entity';
-import { IUserPreferenceDefinition } from './preference.definition.interface';
+import { IUserPreferenceDefinition } from './user.preference.definition.interface';
+import { UserPreference } from './user.preference.entity';
 
 @Entity()
 export class UserPreferenceDefinition
