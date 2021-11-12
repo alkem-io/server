@@ -58,7 +58,7 @@ export class User extends NameableEntity implements IUser {
     cascade: false,
     onDelete: 'CASCADE',
   })
-  preferences?: UserPreference[];
+  preferences!: UserPreference[];
 
   constructor() {
     super();

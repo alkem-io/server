@@ -2,7 +2,8 @@ import { registerEnumType } from '@nestjs/graphql';
 
 export enum UserPreferenceValueType {
   BOOLEAN = 'boolean',
-  NUMBER = 'number',
+  INT = 'int',
+  FLOAT = 'float',
   STRING = 'string',
 }
 

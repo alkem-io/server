@@ -36,6 +36,7 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
+import { UserPreferenceService } from '@src/domain';
 
 @Injectable()
 export class UserService {
@@ -48,6 +49,7 @@ export class UserService {
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private agentService: AgentService,
+    private userPreferenceService: UserPreferenceService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -97,6 +99,9 @@ export class UserService {
         user.lastName
       );
     }
+
+    user.preferences =
+      await this.userPreferenceService.createInitialUserPreferences(user);
 
     const response = await this.userRepository.save(user);
 

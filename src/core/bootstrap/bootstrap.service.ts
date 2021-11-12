@@ -25,6 +25,7 @@ import { OrganizationAuthorizationService } from '@domain/community/organization
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
 import { UserPreferenceService } from '@domain/community/user-preferences';
+import { CreateUserPreferenceDefinitionInput } from '@domain/community/user-preferences/dto';
 
 @Injectable()
 export class BootstrapService {
@@ -147,7 +148,8 @@ export class BootstrapService {
       await this.createUserProfiles(users);
     }
 
-    const preferenceDef = bootstrapJson.userPreferenceDefinition;
+    const preferenceDef =
+      bootstrapJson.userPreferenceDefinition as CreateUserPreferenceDefinitionInput[];
     if (!preferenceDef) {
       this.logger.verbose?.(
         'No users section in the authorization bootstrap file!',
@@ -197,17 +199,26 @@ export class BootstrapService {
   }
 
   @Profiling.api
-  async createUserPreferenceDefinitions(definitionData: any[]) {
+  async createUserPreferenceDefinitions(
+    definitionData: CreateUserPreferenceDefinitionInput[]
+  ) {
     try {
       definitionData.forEach(
         async ({ group, displayName, description, valueType, type }) => {
-          await this.preferenceService.createDefinition({
+          const exists = await this.preferenceService.definitionExists(
             group,
-            displayName,
-            description,
             valueType,
-            type,
-          });
+            type
+          );
+          if (!exists) {
+            await this.preferenceService.createDefinition({
+              group,
+              displayName,
+              description,
+              valueType,
+              type,
+            });
+          }
         }
       );
     } catch (err: unknown) {

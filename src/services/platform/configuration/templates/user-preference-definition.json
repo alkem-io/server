@@ -4,15 +4,15 @@
       "group": "Notification",
       "displayName": "New application is received notification",
       "description": "Receive notification when a new application is received",
-      "valueType": "NotificationApplicationReceived",
-      "type": "boolean"
+      "valueType": "boolean",
+      "type": "NotificationApplicationReceived"
     },
     {
       "group": "Notification",
       "displayName": "User sign up notification",
       "description": "Receive notification when a new user signs up",
-      "valueType": "NotificationUserSignUp",
-      "type": "boolean"
+      "valueType": "boolean",
+      "type": "NotificationUserSignUp"
     }
   ]
 }

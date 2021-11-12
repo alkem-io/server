@@ -17,12 +17,12 @@ export class UserPreference
     cascade: false,
     onDelete: 'NO ACTION',
   })
-  userPreferenceDefinition!: UserPreferenceDefinition;
+  userPreferenceDefinition?: UserPreferenceDefinition;
 
   @ManyToOne(() => User, user => user.preferences, {
     eager: false,
     cascade: false,
     onDelete: 'NO ACTION',
   })
-  user!: User;
+  user?: User;
 }
