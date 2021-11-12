@@ -26,6 +26,7 @@ import {
 } from '@domain/community/user';
 import {
   CACHE_MANAGER,
+  forwardRef,
   Inject,
   Injectable,
   LoggerService,
@@ -36,7 +37,7 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
-import { UserPreferenceService } from '@src/domain';
+import { UserPreferenceService } from '../user-preferences';
 
 @Injectable()
 export class UserService {
@@ -49,6 +50,7 @@ export class UserService {
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private agentService: AgentService,
+    @Inject(forwardRef(() => UserPreferenceService))
     private userPreferenceService: UserPreferenceService,
     @InjectRepository(User)
     private userRepository: Repository<User>,

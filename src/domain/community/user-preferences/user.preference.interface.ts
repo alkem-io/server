@@ -7,7 +7,7 @@ export abstract class IUserPreference extends IAuthorizable {
   @Field(() => IUserPreferenceDefinition, {
     description: 'The preference definition',
   })
-  userPreferenceDefinition?: IUserPreferenceDefinition;
+  userPreferenceDefinition!: IUserPreferenceDefinition;
 
   @Field(() => String, {
     description: 'Value of the preference',

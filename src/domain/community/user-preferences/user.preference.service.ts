@@ -1,6 +1,6 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
@@ -14,8 +14,12 @@ import { UserPreferenceDefinition } from './user.preference.definition.entity';
 import { IUserPreferenceDefinition } from './user.preference.definition.interface';
 import { UserPreference } from './user.preference.entity';
 import { IUserPreference } from './user.preference.interface';
-import { CreateUserPreferenceDefinitionInput } from './dto';
-import { getDefaultPreferenceValue } from './utils';
+import {
+  CreateUserPreferenceDefinitionInput,
+  UpdateUserPreferenceInput,
+} from './dto';
+import { getDefaultPreferenceValue, validateValue } from './utils';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class UserPreferenceService {
@@ -24,7 +28,8 @@ export class UserPreferenceService {
     private definitionRepository: Repository<UserPreferenceDefinition>,
     @InjectRepository(UserPreference)
     private preferenceRepository: Repository<UserPreference>,
-    // private userService: UserService,
+    @Inject(forwardRef(() => UserService))
+    private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -51,13 +56,10 @@ export class UserPreferenceService {
     return Boolean(res);
   }
 
-  private getAllDefinitions() {
-    return this.definitionRepository.find();
-  }
-
   /**
    * Creates user preferences
    */
+  // todo get user with user service
   async createInitialUserPreferences(user: IUser) {
     // todo: probably define which definition types/groups to create
     return (
@@ -82,14 +84,20 @@ export class UserPreferenceService {
   }
 
   async getUserPreferenceOrFail(
-    id: string,
-    options?: FindOneOptions<UserPreference>
+    userId: string,
+    type: UserPreferenceType
   ): Promise<IUserPreference> {
-    const preference = await this.preferenceRepository.findOne({ id }, options);
+    const definition = await this.getDefinitionOrFail(type);
+    const user = await this.userService.getUserOrFail(userId);
+
+    const preference = await this.preferenceRepository.findOne(
+      { user, userPreferenceDefinition: definition },
+      { relations: ['user'] }
+    );
 
     if (!preference) {
       throw new EntityNotFoundException(
-        `Unable to find user preference with ID: ${id}`,
+        `Unable to find preference for user with ID: ${userId}`,
         LogContext.COMMUNITY
       );
     }
@@ -97,25 +105,45 @@ export class UserPreferenceService {
     return preference;
   }
 
-  // async updateUserPreferences(updateInputs: UpdateUserPreferenceInput[]) {
-  //   // todo: get all preferences in input
-  // }
+  async updateUserPreference(updateInput: UpdateUserPreferenceInput) {
+    const preference = await this.getUserPreferenceOrFail(
+      updateInput.userId,
+      updateInput.userPreferenceType
+    );
 
-  // private async updateUserPreference(updateInput: UpdateUserPreferenceInput) {
-  //   const preference = await this.getUserPreferenceOrFail(updateInput.ID);
-  //
-  //   const newValue = updateInput.value;
-  //
-  //   if (
-  //     !validateValue(newValue, preference.userPreferenceDefinition.valueType)
-  //   ) {
-  //     throw new TypeError(
-  //       `Expected type of value: ${preference.userPreferenceDefinition.valueType}`
-  //     );
-  //   }
-  //
-  //   if (newValue !== preference.value) {
-  //     preference.value = newValue;
-  //   }
-  // }
+    const newValue = updateInput.value;
+
+    if (
+      !validateValue(newValue, preference.userPreferenceDefinition.valueType)
+    ) {
+      throw new TypeError(
+        `Expected value of type: ${preference.userPreferenceDefinition.valueType}`
+      );
+    }
+
+    if (newValue !== preference.value) {
+      preference.value = newValue;
+    }
+
+    return this.preferenceRepository.save(preference);
+  }
+
+  private getDefinitionOrFail(type: UserPreferenceType) {
+    const definition = this.definitionRepository.findOne({
+      type,
+    });
+
+    if (!definition) {
+      throw new EntityNotFoundException(
+        `Unable to fine preference definition of type ${type}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return definition;
+  }
+
+  private getAllDefinitions() {
+    return this.definitionRepository.find();
+  }
 }
