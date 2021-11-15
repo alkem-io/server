@@ -67,4 +67,34 @@ export class OpportunityResolverFields {
   async activity(@Parent() opportunity: Opportunity) {
     return await this.opportunityService.getActivity(opportunity);
   }
+
+  @ResolveField('parentId', () => String, {
+    nullable: true,
+    description: 'The parent entity (challenge) ID.',
+  })
+  @Profiling.api
+  async parentID(@Parent() opportunity: Opportunity) {
+    const opp = await this.opportunityService.getOpportunityOrFail(
+      opportunity.id,
+      {
+        relations: ['challenge'],
+      }
+    );
+    return opp.challenge?.id;
+  }
+
+  @ResolveField('parentNameID', () => String, {
+    nullable: true,
+    description: 'The parent entity name (challenge) ID.',
+  })
+  @Profiling.api
+  async parentNameID(@Parent() opportunity: Opportunity) {
+    const opp = await this.opportunityService.getOpportunityOrFail(
+      opportunity.id,
+      {
+        relations: ['challenge'],
+      }
+    );
+    return opp.challenge?.nameID;
+  }
 }
