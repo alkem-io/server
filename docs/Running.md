@@ -6,26 +6,33 @@ To simplify setting up the Server development environment, a pre-configured dock
 
 ## Prerequisites:
 
-- Docker and docker-compose installed on x86 architecture (so not an ARM-based architecture like Raspberry pi)
-- ports 4000 (GRAPHQL_ENDPOINT_PORT), 3002 (Demo Auth Provider) and 3306 (MySQL database) free on localhost
+- Docker and docker-compose installed on x86 architecture (so not an ARM-based architecture like Raspberry pi or MacBook with M1 processor)
+- ports available on localhost:
+   - 4000 (alkemio server),
+   - 3306 (MySQL database)
+   - 8888 (traefik dashobard)
+   - 3000 (alkemio client)
+   - 8008 (synapse server)
+   - 5001 (ipfs server)
+   - 4436 (mailslurper UI)
+   - 4437 (mailslurper API)
+   - 5672 (rabbitMQ amqp)
+   - 15672 (rabbitMQ management UI)
+- Register an alkemio profile for notifications and configure it via SERVICE_ACCOUNT_USERNAME & SERVICE_ACCOUNT_PASSWORD env variables in .env.docker. The profile needs to be Global Community Admin.
 
 ## Steps:
 
-1. Trigger the docker composition, which will then build the server image, pull the mySQL image and start the containers
+1. Start the services alkemio server is dependent on:
 
-   ```bash
-   docker-compose \
-   -f quickstart-services.yml \
-   -f quickstart-server.yml \
-   --env-file .env.docker \
-   up --build --force-recreate
-   ```
+```bash
+npm run start:services
+```
 
-   if you'd like to debug alkemio server and only need the dependent services, run:
+2. Start alkemio-server
 
-   ```bash
-    docker-compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate
-   ```
+```bash
+npm start
+```
 
 **Note**: If a container (e.g. Synapse) writes to a directory that is mapped locally, you will need to have enough permissions to write there.
 E.g. on Linux you can grant permissions the following way:
@@ -33,7 +40,7 @@ E.g. on Linux you can grant permissions the following way:
 - Navigate to the directory, e.g. .build/synapse
 - Change the permissions with `chmod o+w .`
 
-2. Validate that the server is running by visiting the [graphql endpoint](http://localhost:3000/graphql).
+3. Validate that the server is running by visiting the [graphql endpoint](http://localhost:3000/graphql).
 
 ## Notes
 
