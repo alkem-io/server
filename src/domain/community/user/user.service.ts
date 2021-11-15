@@ -26,7 +26,6 @@ import {
 } from '@domain/community/user';
 import {
   CACHE_MANAGER,
-  forwardRef,
   Inject,
   Injectable,
   LoggerService,
@@ -50,7 +49,7 @@ export class UserService {
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private agentService: AgentService,
-    @Inject(forwardRef(() => UserPreferenceService))
+    @Inject(UserPreferenceService)
     private userPreferenceService: UserPreferenceService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -102,10 +101,10 @@ export class UserService {
       );
     }
 
-    user.preferences =
-      await this.userPreferenceService.createInitialUserPreferences(user);
-
     const response = await this.userRepository.save(user);
+
+    user.preferences =
+      await this.userPreferenceService.createInitialUserPreferences(response);
 
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
@@ -213,6 +212,23 @@ export class UserService {
 
   async saveUser(user: IUser): Promise<IUser> {
     return await this.userRepository.save(user);
+  }
+
+  async getPreferences(userID: string) {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['preferences'],
+    });
+
+    const preferences = user.preferences;
+
+    if (!preferences) {
+      throw new EntityNotInitializedException(
+        `User preferences not initialized: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preferences;
   }
 
   async getUserOrFail(

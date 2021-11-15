@@ -48,7 +48,7 @@ export const parseValue = (
 export const getDefaultPreferenceValue = (
   valueType: UserPreferenceValueType
 ) => {
-  if (UserPreferenceValueType.STRING) {
+  if (valueType === UserPreferenceValueType.STRING) {
     return '';
   } else if (valueType === UserPreferenceValueType.INT) {
     return '0';

@@ -55,7 +55,7 @@ export class User extends NameableEntity implements IUser {
 
   @OneToMany(() => UserPreference, preference => preference.user, {
     eager: false,
-    cascade: false,
+    cascade: true,
     onDelete: 'CASCADE',
   })
   preferences!: UserPreference[];

@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { UserPreferenceValueType } from '@src/common';
+import { UserPreferenceType, UserPreferenceValueType } from '@src/common';
 
 @ObjectType('UserPreferenceDefinition')
 export abstract class IUserPreferenceDefinition extends IAuthorizable {
@@ -18,6 +18,11 @@ export abstract class IUserPreferenceDefinition extends IAuthorizable {
     description: 'Preference description',
   })
   description!: string;
+
+  @Field(() => UserPreferenceType, {
+    description: 'Type of preference',
+  })
+  type!: UserPreferenceType;
 
   @Field(() => UserPreferenceValueType, {
     description: 'Preference value type',

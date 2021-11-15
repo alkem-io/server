@@ -1,0 +1,15 @@
+mutation updateUserPreference($userPreferenceData: UpdateUserPreferenceInput!) {
+  updateUserPreference(userPreferenceData: $userPreferenceData) {
+    id
+    value
+  }
+}
+
+
+query variables:
+{
+  "userPreferenceData": {
+    "id": "098b3866-4aa0-45b0-99d3-47148bd4f302",
+    "value": "23"
+  }
+}

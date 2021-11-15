@@ -1,4 +1,4 @@
-import { CacheModule, forwardRef, Module } from '@nestjs/common';
+import { CacheModule, Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/community/profile/profile.module';
@@ -30,7 +30,7 @@ import { UserPreferenceModule } from '../user-preferences';
     IdentityResolverModule,
     RoomModule,
     MicroservicesModule,
-    forwardRef(() => UserPreferenceModule),
+    UserPreferenceModule,
     CacheModule.register({ max: 250, ttl: 300 }),
   ],
   providers: [

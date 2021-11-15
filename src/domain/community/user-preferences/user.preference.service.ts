@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -19,7 +19,6 @@ import {
   UpdateUserPreferenceInput,
 } from './dto';
 import { getDefaultPreferenceValue, validateValue } from './utils';
-import { UserService } from '../user/user.service';
 
 @Injectable()
 export class UserPreferenceService {
@@ -28,8 +27,6 @@ export class UserPreferenceService {
     private definitionRepository: Repository<UserPreferenceDefinition>,
     @InjectRepository(UserPreference)
     private preferenceRepository: Repository<UserPreference>,
-    @Inject(forwardRef(() => UserService))
-    private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -56,48 +53,33 @@ export class UserPreferenceService {
     return Boolean(res);
   }
 
-  /**
-   * Creates user preferences
-   */
-  // todo get user with user service
   async createInitialUserPreferences(user: IUser) {
-    // todo: probably define which definition types/groups to create
-    return (
-      this.getAllDefinitions()
-        .then(defs =>
-          defs.map(def => ({
-            userPreferenceDefinition: def,
-            value: getDefaultPreferenceValue(def.valueType),
-            user,
-          }))
-        )
-        .then(prefInputs => this.preferenceRepository.create(prefInputs))
-        .then(prefs => {
-          prefs.forEach(
-            pref => (pref.authorization = new AuthorizationPolicy())
-          );
-          return prefs;
-        })
-        // todo apply user credentials
-        .then(prefs => this.preferenceRepository.save(prefs))
+    // todo: probably define which definition types/groups to fetch
+    const definitions = await this.getAllDefinitions();
+
+    const prefInputs = definitions.map(def => ({
+      userPreferenceDefinition: def,
+      value: getDefaultPreferenceValue(def.valueType),
+      user,
+    }));
+
+    const newPreferences = this.preferenceRepository.create(prefInputs);
+
+    newPreferences.forEach(
+      pref => (pref.authorization = new AuthorizationPolicy())
     );
+
+    return this.preferenceRepository.save(newPreferences);
   }
 
-  async getUserPreferenceOrFail(
-    userId: string,
-    type: UserPreferenceType
-  ): Promise<IUserPreference> {
-    const definition = await this.getDefinitionOrFail(type);
-    const user = await this.userService.getUserOrFail(userId);
-
-    const preference = await this.preferenceRepository.findOne(
-      { user, userPreferenceDefinition: definition },
-      { relations: ['user'] }
-    );
+  async getUserPreferenceOrFail(prefId: string): Promise<IUserPreference> {
+    const preference = await this.preferenceRepository.findOne({
+      id: prefId,
+    });
 
     if (!preference) {
       throw new EntityNotFoundException(
-        `Unable to find preference for user with ID: ${userId}`,
+        `Unable to find preference for user with ID: ${prefId}`,
         LogContext.COMMUNITY
       );
     }
@@ -106,10 +88,7 @@ export class UserPreferenceService {
   }
 
   async updateUserPreference(updateInput: UpdateUserPreferenceInput) {
-    const preference = await this.getUserPreferenceOrFail(
-      updateInput.userId,
-      updateInput.userPreferenceType
-    );
+    const preference = await this.getUserPreferenceOrFail(updateInput.id);
 
     const newValue = updateInput.value;
 
@@ -123,9 +102,10 @@ export class UserPreferenceService {
 
     if (newValue !== preference.value) {
       preference.value = newValue;
+      return this.preferenceRepository.save(preference);
     }
 
-    return this.preferenceRepository.save(preference);
+    return preference;
   }
 
   private getDefinitionOrFail(type: UserPreferenceType) {
