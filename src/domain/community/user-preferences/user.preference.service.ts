@@ -14,10 +14,7 @@ import { UserPreferenceDefinition } from './user.preference.definition.entity';
 import { IUserPreferenceDefinition } from './user.preference.definition.interface';
 import { UserPreference } from './user.preference.entity';
 import { IUserPreference } from './user.preference.interface';
-import {
-  CreateUserPreferenceDefinitionInput,
-  UpdateUserPreferenceInput,
-} from './dto';
+import { CreateUserPreferenceDefinitionInput } from './dto';
 import { getDefaultPreferenceValue, validateValue } from './utils';
 
 @Injectable()
@@ -72,14 +69,20 @@ export class UserPreferenceService {
     return this.preferenceRepository.save(newPreferences);
   }
 
-  async getUserPreferenceOrFail(prefId: string): Promise<IUserPreference> {
+  async getUserPreferenceOrFail(
+    user: IUser,
+    type: UserPreferenceType
+  ): Promise<IUserPreference> {
+    const userPreferenceDefinition = await this.getDefinitionOrFail(type);
+
     const preference = await this.preferenceRepository.findOne({
-      id: prefId,
+      user,
+      userPreferenceDefinition,
     });
 
     if (!preference) {
       throw new EntityNotFoundException(
-        `Unable to find preference for user with ID: ${prefId}`,
+        `Unable to find preference for user with ID: ${user.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -87,10 +90,26 @@ export class UserPreferenceService {
     return preference;
   }
 
-  async updateUserPreference(updateInput: UpdateUserPreferenceInput) {
-    const preference = await this.getUserPreferenceOrFail(updateInput.id);
+  async getUserPreferencesOrFail(user: IUser): Promise<IUserPreference[]> {
+    const preferences = await this.preferenceRepository.find({ user });
 
-    const newValue = updateInput.value;
+    if (!preferences) {
+      throw new EntityNotFoundException(
+        `Unable to find preferences for user with ID: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preferences;
+  }
+
+  async updateUserPreference(
+    user: IUser,
+    type: UserPreferenceType,
+    value: string
+  ) {
+    const preference = await this.getUserPreferenceOrFail(user, type);
+    const newValue = value;
 
     if (
       !validateValue(newValue, preference.userPreferenceDefinition.valueType)
@@ -108,8 +127,8 @@ export class UserPreferenceService {
     return preference;
   }
 
-  private getDefinitionOrFail(type: UserPreferenceType) {
-    const definition = this.definitionRepository.findOne({
+  private async getDefinitionOrFail(type: UserPreferenceType) {
+    const definition = await this.definitionRepository.findOne({
       type,
     });
 
