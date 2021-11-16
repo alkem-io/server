@@ -96,11 +96,10 @@ export class MatrixRoomAdapter {
     return roomID;
   }
 
-  async inviteUsersToRoom(
+  async getMatrixRoom(
     adminMatrixClient: MatrixClient,
-    roomID: string,
-    matrixClients: MatrixClient[]
-  ) {
+    roomID: string
+  ): Promise<MatrixRoom> {
     if (roomID === '')
       throw new MatrixEntityNotFoundException(
         'No room ID specified',
@@ -114,6 +113,15 @@ export class MatrixRoomAdapter {
         LogContext.COMMUNICATION
       );
     }
+    return room;
+  }
+
+  async inviteUsersToRoom(
+    adminMatrixClient: MatrixClient,
+    roomID: string,
+    matrixClients: MatrixClient[]
+  ) {
+    const room = await this.getMatrixRoom(adminMatrixClient, roomID);
 
     for (const matrixClient of matrixClients) {
       // not very well documented but we can validate whether the user has membership like this
@@ -232,5 +240,22 @@ export class MatrixRoomAdapter {
       LogContext.COMMUNICATION
     );
     return messages;
+  }
+
+  async getMatrixRoomMembers(
+    adminMatrixClient: MatrixClient,
+    matrixRoomID: string
+  ): Promise<string[]> {
+    this.logger.verbose?.(
+      `[MatrixRoom] Obtaining members on room: ${matrixRoomID}`,
+      LogContext.COMMUNICATION
+    );
+    const room = await this.getMatrixRoom(adminMatrixClient, matrixRoomID);
+    const roomMembers = room.getMembers();
+    const usersIDs: string[] = [];
+    for (const roomMember of roomMembers) {
+      usersIDs.push(roomMember.userId);
+    }
+    return usersIDs;
   }
 }

@@ -44,6 +44,7 @@ export class UpdatesService {
 
   async deleteUpdates(updates: IUpdates): Promise<IUpdates> {
     const result = await this.updatesRepository.remove(updates as Updates);
+    await this.roomService.removeRoom(updates);
     result.id = updates.id;
     return result;
   }

@@ -61,11 +61,6 @@ export class RoomService {
     roomable: IRoomable,
     communicationUserID: string
   ): Promise<CommunicationRoomResult> {
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
-      roomable.communicationGroupID,
-      [roomable.communicationRoomID],
-      communicationUserID
-    );
     const room = await this.communicationAdapter.getCommunityRoom(
       roomable.communicationRoomID,
       communicationUserID
@@ -81,11 +76,6 @@ export class RoomService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<string> {
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
-      roomable.communicationGroupID,
-      [roomable.communicationRoomID],
-      communicationUserID
-    );
     return await this.communicationAdapter.sendMessage({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
@@ -98,16 +88,17 @@ export class RoomService {
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
   ): Promise<void> {
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
-      roomable.communicationGroupID,
-      [roomable.communicationRoomID],
-      communicationUserID
-    );
     return await this.communicationAdapter.deleteMessage({
       senderCommunicationsID: communicationUserID,
       messageId: messageData.messageID,
       roomID: roomable.communicationRoomID,
     });
+  }
+
+  async removeRoom(roomable: IRoomable): Promise<boolean> {
+    return await this.communicationAdapter.removeRoom(
+      roomable.communicationRoomID
+    );
   }
 
   async getUserIdForMessage(

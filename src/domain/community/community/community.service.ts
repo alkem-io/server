@@ -287,6 +287,16 @@ export class CommunityService {
       resourceID: membershipCredential.resourceID,
     });
 
+    const communication = await this.getCommunication(community.id);
+    this.communicationService
+      .removeUserFromCommunications(communication, user)
+      .catch(error =>
+        this.logger.error?.(
+          `Unable to add remove user from community messaging (${community.displayName}): ${error}`,
+          LogContext.COMMUNICATION
+        )
+      );
+
     return await this.getCommunityOrFail(membershipData.communityID);
   }
 

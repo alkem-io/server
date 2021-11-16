@@ -306,53 +306,26 @@ export class CommunicationAdapter {
     return room;
   }
 
-  async ensureUserHasAccesToRooms(
+  async grantUserAccesToRooms(
     groupID: string,
     roomIDs: string[],
     matrixUserID: string
-  ) {
-    // If not enabled just return an empty string
+  ): Promise<boolean> {
+    // If not enabled just return
     if (!this.enabled) {
-      return '';
+      return false;
     }
     // todo: check that the user has access properly
     try {
       await this.addUserToRooms(groupID, roomIDs, matrixUserID);
     } catch (error) {
       this.logger.verbose?.(
-        `Unable to add user ${matrixUserID}: already added?: ${error}`,
+        `Unable to add user (${matrixUserID}) to rooms (${roomIDs}): already added?: ${error}`,
         LogContext.COMMUNICATION
       );
+      return false;
     }
-  }
-
-  private async addUserToRooms(
-    groupID: string,
-    roomIDs: string[],
-    matrixUserID: string
-  ) {
-    // If not enabled just return an empty string
-    if (!this.enabled) {
-      return '';
-    }
-
-    const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
-    // first send invites to the rooms - the group invite fails once accepted
-    // for multiple rooms in a group this will cause failure before inviting the user over
-    // TODO: Need to add a check whether the user is already part of the room/group
-    for (const roomID of roomIDs) {
-      await this.matrixRoomAdapter.inviteUsersToRoom(
-        elevatedAgent.matrixClient,
-        roomID,
-        [userAgent.matrixClient]
-      );
-    }
-    await this.matrixGroupAdapter.inviteUsersToGroup(
-      elevatedAgent.matrixClient,
-      groupID,
-      [userAgent.matrixClient]
-    );
+    return true;
   }
 
   async getCommunityRooms(
@@ -363,7 +336,11 @@ export class CommunicationAdapter {
     if (!this.enabled) {
       return rooms;
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    // use the global admin account when reading the contents of rooms
+    // as protected via the graphql api
+    // the possibility to use native matrix power levels is there
+    // but we still don't have the infrastructure to support it
+    const matrixAgent = await this.getMatrixManagementAgentElevated();
 
     const matrixCommunityRooms =
       await this.matrixAgentService.getCommunityRooms(matrixAgent);
@@ -372,7 +349,7 @@ export class CommunicationAdapter {
         await this.matrixRoomAdapter.convertMatrixRoomToCommunityRoom(
           matrixAgent.matrixClient,
           matrixRoom,
-          matrixAgent.matrixClient.getUserId()
+          matrixUserID
         );
       rooms.push(room);
     }
@@ -423,7 +400,136 @@ export class CommunicationAdapter {
     return await this.matrixRoomAdapter.convertMatrixRoomToCommunityRoom(
       matrixAgent.matrixClient,
       matrixRoom,
-      matrixAgent.matrixClient.getUserId()
+      matrixAgent.matrixClient.getUserId() // todo: what is this for?
     );
+  }
+
+  async removeUserAccessToRooms(
+    groupID: string,
+    roomIDs: string[],
+    matrixUserID: string
+  ): Promise<boolean> {
+    // If not enabled just return
+    if (!this.enabled) {
+      return false;
+    }
+    try {
+      //todo: add in the removal code for synapse
+      //await this.addUserToRooms(groupID, roomIDs, matrixUserID);
+      this.logger.verbose?.(
+        `Removing user (${matrixUserID}) from rooms (${roomIDs}) and group (${groupID})`,
+        LogContext.COMMUNICATION
+      );
+    } catch (error) {
+      this.logger.verbose?.(
+        `Unable to remove user (${matrixUserID}) from rooms (${roomIDs}): ${error}`,
+        LogContext.COMMUNICATION
+      );
+      return false;
+    }
+    return true;
+  }
+
+  async replicateRoomMembership(
+    targetRoomID: string,
+    sourceRoomID: string,
+    groupID: string
+  ): Promise<boolean> {
+    try {
+      const elevatedAgent = await this.getMatrixManagementAgentElevated();
+      //todo: get the members of the current group
+      const matrixUserIDs: string[] = [];
+      for (const matrixUserID of matrixUserIDs) {
+        const userAgent = await this.acquireMatrixAgent(matrixUserID);
+        await this.matrixRoomAdapter.inviteUsersToRoom(
+          elevatedAgent.matrixClient,
+          targetRoomID,
+          [userAgent.matrixClient]
+        );
+
+        await this.matrixGroupAdapter.inviteUsersToGroup(
+          elevatedAgent.matrixClient,
+          groupID,
+          [userAgent.matrixClient]
+        );
+      }
+    } catch (error) {
+      this.logger.verbose?.(
+        `Unable to duplicate room membership from (${sourceRoomID}) to (${targetRoomID}): ${error}`,
+        LogContext.COMMUNICATION
+      );
+      return false;
+    }
+    return true;
+  }
+
+  private async addUserToRooms(
+    groupID: string,
+    roomIDs: string[],
+    matrixUserID: string
+  ) {
+    // If not enabled just return an empty string
+    if (!this.enabled) {
+      return '';
+    }
+
+    const elevatedAgent = await this.getMatrixManagementAgentElevated();
+    const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    // first send invites to the rooms - the group invite fails once accepted
+    // for multiple rooms in a group this will cause failure before inviting the user over
+    // TODO: Need to add a check whether the user is already part of the room/group
+    for (const roomID of roomIDs) {
+      await this.matrixRoomAdapter.inviteUsersToRoom(
+        elevatedAgent.matrixClient,
+        roomID,
+        [userAgent.matrixClient]
+      );
+    }
+    await this.matrixGroupAdapter.inviteUsersToGroup(
+      elevatedAgent.matrixClient,
+      groupID,
+      [userAgent.matrixClient]
+    );
+  }
+
+  async removeRoom(matrixRoomID: string) {
+    try {
+      //const elevatedAgent = await this.getMatrixManagementAgentElevated();
+      //todo: remove the room
+      this.logger.verbose?.(
+        `Removing matrix room: ${matrixRoomID}`,
+        LogContext.COMMUNICATION
+      );
+    } catch (error) {
+      this.logger.verbose?.(
+        `Unable to remove room  (${matrixRoomID}): ${error}`,
+        LogContext.COMMUNICATION
+      );
+      return false;
+    }
+    return true;
+  }
+
+  async getRoomMembers(matrixRoomID: string): Promise<string[]> {
+    let userIDs: string[] = [];
+    try {
+      const elevatedAgent = await this.getMatrixManagementAgentElevated();
+      //todo: remove the room
+      this.logger.verbose?.(
+        `Removing matrix room: ${matrixRoomID}`,
+        LogContext.COMMUNICATION
+      );
+      userIDs = await this.matrixRoomAdapter.getMatrixRoomMembers(
+        elevatedAgent.matrixClient,
+        matrixRoomID
+      );
+    } catch (error) {
+      this.logger.verbose?.(
+        `Unable to get room members (${matrixRoomID}): ${error}`,
+        LogContext.COMMUNICATION
+      );
+      throw error;
+    }
+    return userIDs;
   }
 }

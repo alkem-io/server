@@ -113,6 +113,21 @@ export class CommunicationService {
       communicationUserID
     );
 
+    const updates = this.getUpdates(communication);
+
+    this.communicationAdapter
+      .replicateRoomMembership(
+        discussion.communicationRoomID,
+        updates.communicationRoomID,
+        communication.communicationGroupID
+      )
+      .catch((error: any) =>
+        this.logger.error?.(
+          `Unable to replicate room membership on community messaging (${communication.displayName}): ${error}`,
+          LogContext.COMMUNICATION
+        )
+      );
+
     communication.discussions?.push(discussion);
     await this.communicationRepository.save(communication);
 
@@ -185,7 +200,27 @@ export class CommunicationService {
     for (const discussion of this.getDiscussions(communication)) {
       communicationRoomIDs.push(discussion.communicationRoomID);
     }
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
+    await this.communicationAdapter.grantUserAccesToRooms(
+      communication.communicationGroupID,
+      communicationRoomIDs,
+      user.communicationID
+    );
+
+    return true;
+  }
+
+  async removeUserFromCommunications(
+    communication: ICommunication,
+    user: IUser
+  ): Promise<boolean> {
+    // get the list of rooms to add the user to
+    const communicationRoomIDs: string[] = [
+      this.getUpdates(communication).communicationRoomID,
+    ];
+    for (const discussion of this.getDiscussions(communication)) {
+      communicationRoomIDs.push(discussion.communicationRoomID);
+    }
+    await this.communicationAdapter.removeUserAccessToRooms(
       communication.communicationGroupID,
       communicationRoomIDs,
       user.communicationID

@@ -38,8 +38,9 @@ export class DiscussionService {
     discussion.communicationRoomID = await this.initializeDiscussionRoom(
       discussion
     );
+
     // add the current user as a member
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
+    await this.communicationAdapter.grantUserAccesToRooms(
       discussion.communicationGroupID,
       [discussion.communicationRoomID],
       communicationUserID
@@ -77,6 +78,7 @@ export class DiscussionService {
     const result = await this.discussionRepository.remove(
       discussion as Discussion
     );
+    await this.roomService.removeRoom(discussion);
     result.id = discussionID;
     return result;
   }

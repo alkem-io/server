@@ -1,0 +1,10 @@
+query communicationMembership($communicationData: CommunicationAdminMembershipInput!) {
+  adminCommunicationMembership(communicationData: $communicationData)
+}
+
+Variables:
+{
+  "communicationData": {
+    "communicationID": "uuid"
+  }
+}
