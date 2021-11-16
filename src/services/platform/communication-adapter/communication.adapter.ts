@@ -19,6 +19,8 @@ import { CommunicationEditMessageInput } from './dto/communication.dto.message.e
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 import { CommunicationSendMessageUserInput } from './dto/communication.dto.message.send.user';
 
+import { MatrixClient } from '../matrix/types/matrix.client.type';
+
 @Injectable()
 export class CommunicationAdapter {
   private adminUser!: IOperationalMatrixUser;
@@ -432,8 +434,7 @@ export class CommunicationAdapter {
 
   async replicateRoomMembership(
     targetRoomID: string,
-    sourceRoomID: string,
-    groupID: string
+    sourceRoomID: string
   ): Promise<boolean> {
     try {
       const elevatedAgent = await this.getMatrixManagementAgentElevated();
@@ -443,22 +444,20 @@ export class CommunicationAdapter {
           elevatedAgent.matrixClient,
           sourceRoomID
         );
+      const matrixClients: MatrixClient[] = [];
       for (const matrixUserID of sourceMatrixUserIDs) {
+        // skip the matrix elevated agent
+        if (matrixUserID === elevatedAgent.matrixClient.getUserId()) continue;
         const userAgent = await this.acquireMatrixAgent(matrixUserID);
-        await this.matrixRoomAdapter.inviteUsersToRoom(
-          elevatedAgent.matrixClient,
-          targetRoomID,
-          [userAgent.matrixClient]
-        );
-
-        await this.matrixGroupAdapter.inviteUsersToGroup(
-          elevatedAgent.matrixClient,
-          groupID,
-          [userAgent.matrixClient]
-        );
+        matrixClients.push(userAgent.matrixClient);
       }
+      await this.matrixRoomAdapter.inviteUsersToRoom(
+        elevatedAgent.matrixClient,
+        targetRoomID,
+        matrixClients
+      );
     } catch (error) {
-      this.logger.verbose?.(
+      this.logger.error?.(
         `Unable to duplicate room membership from (${sourceRoomID}) to (${targetRoomID}): ${error}`,
         LogContext.COMMUNICATION
       );

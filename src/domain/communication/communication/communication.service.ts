@@ -110,7 +110,8 @@ export class CommunicationService {
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
       communication.communicationGroupID,
-      communicationUserID
+      communicationUserID,
+      `${communication.displayName}-discussion-${discussionData.title}`
     );
 
     const updates = this.getUpdates(communication);
@@ -118,8 +119,7 @@ export class CommunicationService {
     this.communicationAdapter
       .replicateRoomMembership(
         discussion.communicationRoomID,
-        updates.communicationRoomID,
-        communication.communicationGroupID
+        updates.communicationRoomID
       )
       .catch((error: any) =>
         this.logger.error?.(

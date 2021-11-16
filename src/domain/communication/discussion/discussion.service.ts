@@ -29,17 +29,24 @@ export class DiscussionService {
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
     communicationGroupID: string,
-    communicationUserID: string
+    communicationUserID: string,
+    displayName: string
   ): Promise<IDiscussion> {
     const discussion = Discussion.create(discussionData);
     discussion.authorization = new AuthorizationPolicy();
     discussion.communicationGroupID = communicationGroupID;
+    discussion.displayName = displayName;
     await this.save(discussion);
     discussion.communicationRoomID = await this.initializeDiscussionRoom(
       discussion
     );
 
     // add the current user as a member
+    await this.communicationAdapter.grantUserAccesToRooms(
+      discussion.communicationGroupID,
+      [discussion.communicationRoomID],
+      communicationUserID
+    );
     await this.communicationAdapter.grantUserAccesToRooms(
       discussion.communicationGroupID,
       [discussion.communicationRoomID],
