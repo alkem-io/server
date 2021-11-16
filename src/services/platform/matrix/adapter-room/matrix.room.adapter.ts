@@ -254,6 +254,8 @@ export class MatrixRoomAdapter {
     const roomMembers = room.getMembers();
     const usersIDs: string[] = [];
     for (const roomMember of roomMembers) {
+      // skip the elevated admin
+      if (roomMember.userId === adminMatrixClient.getUserId()) continue;
       usersIDs.push(roomMember.userId);
     }
     return usersIDs;

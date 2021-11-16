@@ -116,18 +116,18 @@ export class CommunicationService {
 
     const updates = this.getUpdates(communication);
 
-    this.communicationAdapter
-      .replicateRoomMembership(
-        discussion.communicationRoomID,
-        updates.communicationRoomID
-      )
-      .catch((error: any) =>
-        this.logger.error?.(
-          `Unable to replicate room membership on community messaging (${communication.displayName}): ${error}`,
-          LogContext.COMMUNICATION
-        )
-      );
+    await this.communicationAdapter.replicateRoomMembership(
+      discussion.communicationRoomID,
+      updates.communicationRoomID
+    );
 
+    await this.discussionService.sendMessageToDiscussion(
+      discussion,
+      communicationUserID,
+      {
+        message: discussionData.message,
+      }
+    );
     communication.discussions?.push(discussion);
     await this.communicationRepository.save(communication);
 

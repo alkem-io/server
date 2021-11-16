@@ -41,20 +41,6 @@ export class DiscussionService {
       discussion
     );
 
-    // add the current user as a member
-    await this.communicationAdapter.grantUserAccesToRooms(
-      discussion.communicationGroupID,
-      [discussion.communicationRoomID],
-      communicationUserID
-    );
-    await this.communicationAdapter.grantUserAccesToRooms(
-      discussion.communicationGroupID,
-      [discussion.communicationRoomID],
-      communicationUserID
-    );
-    await this.sendMessageToDiscussion(discussion, communicationUserID, {
-      message: discussionData.message,
-    });
     return await this.save(discussion);
   }
 

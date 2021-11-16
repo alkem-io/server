@@ -8,6 +8,7 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { IRoomable } from '@domain/communication/room/roomable.interface';
 import { CommunicationAdminRoomMembershipResult } from './dto/admin.communication.dto.room.result';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -28,6 +29,7 @@ export class AdminCommunicationService {
     const community = await this.communityService.getCommunityOrFail(
       communicationData.communityID
     );
+    const communityMembers = await this.communityService.getMembers(community);
     const communication = await this.communityService.getCommunication(
       community.id
     );
@@ -38,14 +40,16 @@ export class AdminCommunicationService {
     );
     const updates = this.communicationService.getUpdates(communication);
     const updatesResult = await this.createCommunicationAdminRoomResult(
-      updates
+      updates,
+      communityMembers
     );
     result.rooms.push(updatesResult);
 
     const discussions = this.communicationService.getDiscussions(communication);
     for (const discussion of discussions) {
       const discussionResult = await this.createCommunicationAdminRoomResult(
-        discussion
+        discussion,
+        communityMembers
       );
       result.rooms.push(discussionResult);
     }
@@ -53,7 +57,8 @@ export class AdminCommunicationService {
   }
 
   private async createCommunicationAdminRoomResult(
-    roomable: IRoomable
+    roomable: IRoomable,
+    communityMembers: IUser[]
   ): Promise<CommunicationAdminRoomMembershipResult> {
     const result = new CommunicationAdminRoomMembershipResult(
       roomable.id,
@@ -62,6 +67,25 @@ export class AdminCommunicationService {
     result.members = await this.communicationAdapter.getRoomMembers(
       roomable.communicationRoomID
     );
+    // check which ones are missing
+    for (const communityMember of communityMembers) {
+      const inCommunicationRoom = result.members.find(
+        roomMember => roomMember === communityMember.communicationID
+      );
+      if (!inCommunicationRoom) {
+        result.missingMembers.push(communityMember.communicationID);
+      }
+    }
+
+    // check which ones are extra
+    for (const roomMember of result.members) {
+      const inCommunity = communityMembers.find(
+        communityMember => communityMember.communicationID === roomMember
+      );
+      if (!inCommunity) {
+        result.extraMembers.push(roomMember);
+      }
+    }
     return result;
   }
 }
