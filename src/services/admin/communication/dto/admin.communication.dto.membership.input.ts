@@ -4,5 +4,5 @@ import { Field, InputType } from '@nestjs/graphql';
 @InputType()
 export class CommunicationAdminMembershipInput {
   @Field(() => UUID, { nullable: false })
-  communicationID!: string;
+  communityID!: string;
 }

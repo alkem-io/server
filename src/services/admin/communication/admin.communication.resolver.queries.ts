@@ -9,6 +9,7 @@ import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
 
 @Resolver()
 export class AdminCommunicationResolverQueries {
@@ -26,7 +27,7 @@ export class AdminCommunicationResolverQueries {
       );
   }
 
-  @Query(() => [String], {
+  @Query(() => CommunicationAdminMembershipResult, {
     nullable: false,
     description: 'All Users that are members of a given room',
   })
@@ -36,7 +37,7 @@ export class AdminCommunicationResolverQueries {
     @Args('communicationData', { nullable: false })
     roomData: CommunicationAdminMembershipInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string[]> {
+  ): Promise<CommunicationAdminMembershipResult> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationQueriesPolicy,

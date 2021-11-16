@@ -437,9 +437,13 @@ export class CommunicationAdapter {
   ): Promise<boolean> {
     try {
       const elevatedAgent = await this.getMatrixManagementAgentElevated();
-      //todo: get the members of the current group
-      const matrixUserIDs: string[] = [];
-      for (const matrixUserID of matrixUserIDs) {
+
+      const sourceMatrixUserIDs =
+        await this.matrixRoomAdapter.getMatrixRoomMembers(
+          elevatedAgent.matrixClient,
+          sourceRoomID
+        );
+      for (const matrixUserID of sourceMatrixUserIDs) {
         const userAgent = await this.acquireMatrixAgent(matrixUserID);
         await this.matrixRoomAdapter.inviteUsersToRoom(
           elevatedAgent.matrixClient,
@@ -514,9 +518,8 @@ export class CommunicationAdapter {
     let userIDs: string[] = [];
     try {
       const elevatedAgent = await this.getMatrixManagementAgentElevated();
-      //todo: remove the room
       this.logger.verbose?.(
-        `Removing matrix room: ${matrixRoomID}`,
+        `Getting members of matrix room: ${matrixRoomID}`,
         LogContext.COMMUNICATION
       );
       userIDs = await this.matrixRoomAdapter.getMatrixRoomMembers(

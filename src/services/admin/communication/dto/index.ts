@@ -1,1 +1,1 @@
-export * from './admin.communication.dto.room.membership';
+export * from './admin.communication.dto.membership.input';

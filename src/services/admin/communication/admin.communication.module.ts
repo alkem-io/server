@@ -6,11 +6,13 @@ import { AdminCommunicationService } from './admin.communication.service';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationResolverQueries } from './admin.communication.resolver.queries';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
+import { CommunityModule } from '@domain/community/community/community.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    CommunityModule,
     CommunicationModule,
     CommunicationAdapterModule,
   ],
