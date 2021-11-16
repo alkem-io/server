@@ -9,7 +9,8 @@ mutation updateUserPreference($userPreferenceData: UpdateUserPreferenceInput!) {
 query variables:
 {
   "userPreferenceData": {
-    "id": "098b3866-4aa0-45b0-99d3-47148bd4f302",
-    "value": "23"
+    "userID": "userID",
+    "type": "NOTIFICATION_APPLICATION_RECEIVED"
+    "value": "true"
   }
 }
