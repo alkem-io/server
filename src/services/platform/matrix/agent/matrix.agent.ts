@@ -6,7 +6,6 @@ import {
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
 } from '@services/platform/matrix/events/matrix.event.adapter.room';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import {
   IMatrixEventHandler,
@@ -18,6 +17,7 @@ import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { LogContext } from '@common/enums';
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 
 export type MatrixAgentStartOptions = {
   registerTimelineMonitor?: boolean;

@@ -2,7 +2,6 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { createClient, IContent } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapter } from '../adapter-group/matrix.group.adapter';
@@ -17,6 +16,7 @@ import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.requ
 import { IMatrixAgent } from './matrix.agent.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 
 @Injectable()
 export class MatrixAgentService {

@@ -25,14 +25,15 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSubEngine } from 'apollo-server-express';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
+
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunityType } from '@common/enums/community.type';
-import { EntityNotFoundException } from '@src/common';
 import { ApplicationReceived } from '../application/application.dto.received';
+import { SUBSCRIPTION_PUB_SUB, NOTIFICATIONS_SERVICE } from '@common/constants';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -48,7 +49,7 @@ export class CommunityResolverMutations {
     private applicationService: ApplicationService,
     @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
-    @Inject('NOTIFICATIONS_SERVICE') private notificationsClient: ClientProxy
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)

@@ -3,14 +3,17 @@ import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from './agent-info';
-import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { ConfigService } from '@nestjs/config';
 import { NotSupportedException } from '@common/exceptions';
+import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
+import { ClientProxy } from '@nestjs/microservices';
+import { catchError, from, tap } from 'rxjs';
 @Injectable()
 export class AuthenticationService {
   constructor(
     private configService: ConfigService,
-    private ssiAgentService: SsiAgentService,
+    @Inject(WALLET_MANAGEMENT_SERVICE)
+    private walletManagementClient: ClientProxy,
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -66,11 +69,32 @@ export class AuthenticationService {
     const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
       .enabled;
     if (ssiEnabled) {
-      agentInfo.verifiedCredentials =
-        await this.ssiAgentService.getVerifiedCredentials(
-          agent.did,
-          agent.password
-        );
+      return new Promise((resolve, _reject) =>
+        from(
+          this.walletManagementClient
+            .send(
+              { cmd: 'getIdentityInfo' },
+              {
+                did: agent.did,
+                password: agent.password,
+              }
+            )
+            .pipe(
+              tap(identityInfo => {
+                agentInfo.verifiedCredentials =
+                  identityInfo.verifiedCredentials;
+                resolve(agentInfo);
+              }),
+              catchError(err => {
+                this.logger.error(
+                  `Failed to get identity info from wallet manager: ${err}`,
+                  LogContext.SSI
+                );
+                throw new Error(err.message);
+              })
+            )
+        ).subscribe()
+      );
     }
 
     return agentInfo;

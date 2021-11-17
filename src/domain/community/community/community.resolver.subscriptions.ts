@@ -1,3 +1,4 @@
+import { NOTIFICATIONS_SERVICE, SUBSCRIPTION_PUB_SUB } from '@common/constants';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { SubscriptionType } from '@common/enums/subscription.type';
@@ -7,7 +8,6 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
 import { ClientProxy } from '@nestjs/microservices';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { PubSubEngine } from 'apollo-server-express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ApplicationReceived } from '../application/application.dto.received';
@@ -21,7 +21,7 @@ export class CommunityResolverSubscriptions {
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject('NOTIFICATIONS_SERVICE') private client: ClientProxy
+    @Inject(NOTIFICATIONS_SERVICE) private client: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
