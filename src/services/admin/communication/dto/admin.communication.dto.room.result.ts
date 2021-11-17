@@ -23,6 +23,11 @@ export class CommunicationAdminRoomMembershipResult {
   displayName: string;
 
   @Field(() => String, {
+    description: 'The matrix room ID',
+  })
+  roomID: string;
+
+  @Field(() => String, {
     description: 'A unique identifier for this membership result.',
   })
   id: string;
@@ -33,5 +38,6 @@ export class CommunicationAdminRoomMembershipResult {
     this.members = [];
     this.missingMembers = [];
     this.extraMembers = [];
+    this.roomID = '';
   }
 }

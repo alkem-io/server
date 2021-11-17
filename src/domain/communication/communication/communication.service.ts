@@ -121,6 +121,10 @@ export class CommunicationService {
       updates.communicationRoomID
     );
 
+    // todo: remove
+    await this.addUserToCommunications(communication, communicationUserID);
+    await this.addUserToCommunications(communication, communicationUserID);
+
     await this.discussionService.sendMessageToDiscussion(
       discussion,
       communicationUserID,
@@ -191,7 +195,7 @@ export class CommunicationService {
 
   async addUserToCommunications(
     communication: ICommunication,
-    user: IUser
+    communicationUserID: string
   ): Promise<boolean> {
     // get the list of rooms to add the user to
     const communicationRoomIDs: string[] = [
@@ -203,7 +207,7 @@ export class CommunicationService {
     await this.communicationAdapter.grantUserAccesToRooms(
       communication.communicationGroupID,
       communicationRoomIDs,
-      user.communicationID
+      communicationUserID
     );
 
     return true;

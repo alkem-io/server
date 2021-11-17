@@ -64,6 +64,7 @@ export class AdminCommunicationService {
       roomable.id,
       roomable.displayName
     );
+    result.roomID = roomable.communicationRoomID;
     result.members = await this.communicationAdapter.getRoomMembers(
       roomable.communicationRoomID
     );

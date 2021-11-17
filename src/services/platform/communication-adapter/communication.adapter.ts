@@ -392,15 +392,15 @@ export class CommunicationAdapter {
         messages: [],
       };
     }
-    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
     const matrixRoom = await this.matrixAgentService.getRoom(
-      matrixAgent,
+      matrixAgentElevated,
       roomId
     );
     return await this.matrixRoomAdapter.convertMatrixRoomToCommunityRoom(
-      matrixAgent.matrixClient,
+      matrixAgentElevated.matrixClient,
       matrixRoom,
-      matrixAgent.matrixClient.getUserId() // todo: what is this for?
+      matrixUserID // todo: what is this for?
     );
   }
 
