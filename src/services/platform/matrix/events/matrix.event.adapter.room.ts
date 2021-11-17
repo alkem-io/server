@@ -19,11 +19,13 @@ export class AutoAcceptRoomMembershipMonitorFactory {
   static create(
     client: MatrixClient,
     roomAdapter: MatrixRoomAdapter,
-    logger: LoggerService
+    logger: LoggerService,
+    onComplete = noop,
+    error: (err: any) => void = noop
   ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
     return {
-      complete: noop,
-      error: noop,
+      complete: onComplete,
+      error: error,
       next: async ({ event, member }) => {
         const content = event.getContent();
         if (
@@ -41,6 +43,66 @@ export class AutoAcceptRoomMembershipMonitorFactory {
           if (content.is_direct) {
             await roomAdapter.storeDirectMessageRoom(client, roomId, senderId);
           }
+        }
+      },
+    };
+  }
+}
+
+export const autoAcceptRoomGuardFactory = (
+  targetUserID: string,
+  targetRoomID: string
+) => {
+  return ({ event, member }: any) => {
+    const content = event.getContent();
+    if (content.membership === 'invite' && member.userId === targetUserID) {
+      const roomId = event.getRoomId();
+
+      return roomId === targetRoomID;
+    }
+
+    return false;
+  };
+};
+export class AutoAcceptSpecificRoomMembershipMonitorFactory {
+  static create(
+    client: MatrixClient,
+    roomAdapter: MatrixRoomAdapter,
+    logger: LoggerService,
+    targetRoomId: string,
+    onRoomJoined: () => void,
+    onComplete = noop,
+    error: (err: any) => void = noop
+  ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
+    return {
+      complete: onComplete,
+      error: error,
+      next: async ({ event, member }) => {
+        const content = event.getContent();
+        if (
+          content.membership === 'invite' &&
+          member.userId === client.credentials.userId
+        ) {
+          const roomId = event.getRoomId();
+
+          if (roomId !== targetRoomId) {
+            logger.verbose?.(
+              `Room membership: skipping invitation for user (${member.userId}) to room: ${roomId}`,
+              LogContext.COMMUNICATION
+            );
+          }
+
+          const senderId = event.getSender();
+
+          logger.verbose?.(
+            `Room membership: accepting invitation for user (${member.userId}) to room: ${roomId}`,
+            LogContext.COMMUNICATION
+          );
+          await client.joinRoom(roomId);
+          if (content.is_direct) {
+            await roomAdapter.storeDirectMessageRoom(client, roomId, senderId);
+          }
+          onRoomJoined();
         }
       },
     };

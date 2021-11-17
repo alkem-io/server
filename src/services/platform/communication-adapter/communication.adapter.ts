@@ -19,8 +19,6 @@ import { CommunicationEditMessageInput } from './dto/communication.dto.message.e
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 import { CommunicationSendMessageUserInput } from './dto/communication.dto.message.send.user';
 
-import { MatrixClient } from '../matrix/types/matrix.client.type';
-
 @Injectable()
 export class CommunicationAdapter {
   private adminUser!: IOperationalMatrixUser;
@@ -440,19 +438,40 @@ export class CommunicationAdapter {
           elevatedAgent.matrixClient,
           sourceRoomID
         );
-      const matrixClients: MatrixClient[] = [];
+      const matrixAgents: MatrixAgent[] = [];
       for (const matrixUserID of sourceMatrixUserIDs) {
         // skip the matrix elevated agent
         if (matrixUserID === elevatedAgent.matrixClient.getUserId()) continue;
         const userAgent = await this.acquireMatrixAgent(matrixUserID);
-        matrixClients.push(userAgent.matrixClient);
+        matrixAgents.push(userAgent);
       }
+
+      const oneTimeMembershipPromises = matrixAgents.map(
+        a =>
+          new Promise<void>((resolve, reject) => {
+            a.attachOnceConditional({
+              id: targetRoomID,
+              roomMemberMembershipMonitor:
+                a.resolveSpecificRoomMembershipOneTimeMonitor(
+                  // subscribe for events for a specific room
+                  targetRoomID,
+                  a.matrixClient.getUserId(),
+                  // once we have joined the room detach the subscription
+                  () => a.detach(targetRoomID),
+                  resolve,
+                  reject
+                ),
+            });
+          })
+      );
+
       await this.matrixRoomAdapter.inviteUsersToRoom(
         elevatedAgent.matrixClient,
         targetRoomID,
-        matrixClients
+        matrixAgents.map(a => a.matrixClient)
       );
-      // todo: add event to ensure that the invitations to the rooms have been accepted before returning
+
+      await Promise.all(oneTimeMembershipPromises);
     } catch (error) {
       this.logger.error?.(
         `Unable to duplicate room membership from (${sourceRoomID}) to (${targetRoomID}): ${error}`,
