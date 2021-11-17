@@ -22,7 +22,7 @@ export class AdminCommunicationResolverQueries {
   ) {
     this.authorizationQueriesPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.REGISTERED],
+        [AuthorizationRoleGlobal.ADMIN],
         [AuthorizationPrivilege.READ]
       );
   }
