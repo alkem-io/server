@@ -143,6 +143,25 @@ export class MatrixRoomAdapter {
     }
   }
 
+  async removeUserFromRoom(roomID: string, matrixClient: MatrixClient) {
+    const matrixUserID = matrixClient.getUserId();
+    try {
+      await this.getMatrixRoom(matrixClient, roomID);
+      // todo: not yet working...
+      await matrixClient.leave(roomID);
+
+      this.logger.verbose?.(
+        `removed user from room: ${matrixUserID} - ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    } catch (error) {
+      this.logger.verbose?.(
+        `Unable to remove user (${matrixUserID}) from rooms (${roomID}): ${error}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
   async getAllRoomEvents(client: MatrixClient, matrixRoom: MatrixRoom) {
     // do NOT use the deprecated room.timeline property
     const timeline = matrixRoom.getLiveTimeline();

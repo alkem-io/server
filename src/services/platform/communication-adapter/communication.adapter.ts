@@ -406,8 +406,7 @@ export class CommunicationAdapter {
     );
   }
 
-  async removeUserAccessToRooms(
-    groupID: string,
+  async removeUserFromRooms(
     roomIDs: string[],
     matrixUserID: string
   ): Promise<boolean> {
@@ -415,19 +414,16 @@ export class CommunicationAdapter {
     if (!this.enabled) {
       return false;
     }
-    try {
-      //todo: add in the removal code for synapse
-      //await this.addUserToRooms(groupID, roomIDs, matrixUserID);
-      this.logger.verbose?.(
-        `Removing user (${matrixUserID}) from rooms (${roomIDs}) and group (${groupID})`,
-        LogContext.COMMUNICATION
+    this.logger.verbose?.(
+      `Removing user (${matrixUserID}) from rooms (${roomIDs})`,
+      LogContext.COMMUNICATION
+    );
+    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    for (const roomID of roomIDs) {
+      await this.matrixRoomAdapter.removeUserFromRoom(
+        roomID,
+        matrixAgent.matrixClient
       );
-    } catch (error) {
-      this.logger.verbose?.(
-        `Unable to remove user (${matrixUserID}) from rooms (${roomIDs}): ${error}`,
-        LogContext.COMMUNICATION
-      );
-      return false;
     }
     return true;
   }
@@ -456,6 +452,7 @@ export class CommunicationAdapter {
         targetRoomID,
         matrixClients
       );
+      // todo: add event to ensure that the invitations to the rooms have been accepted before returning
     } catch (error) {
       this.logger.error?.(
         `Unable to duplicate room membership from (${sourceRoomID}) to (${targetRoomID}): ${error}`,

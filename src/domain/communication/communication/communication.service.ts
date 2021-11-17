@@ -220,8 +220,7 @@ export class CommunicationService {
     for (const discussion of this.getDiscussions(communication)) {
       communicationRoomIDs.push(discussion.communicationRoomID);
     }
-    await this.communicationAdapter.removeUserAccessToRooms(
-      communication.communicationGroupID,
+    await this.communicationAdapter.removeUserFromRooms(
       communicationRoomIDs,
       user.communicationID
     );
