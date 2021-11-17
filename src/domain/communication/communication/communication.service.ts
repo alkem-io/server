@@ -121,10 +121,6 @@ export class CommunicationService {
       updates.communicationRoomID
     );
 
-    // todo: remove
-    await this.addUserToCommunications(communication, communicationUserID);
-    await this.addUserToCommunications(communication, communicationUserID);
-
     await this.discussionService.sendMessageToDiscussion(
       discussion,
       communicationUserID,
