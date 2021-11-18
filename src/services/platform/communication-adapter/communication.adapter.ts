@@ -429,7 +429,7 @@ export class CommunicationAdapter {
   async replicateRoomMembership(
     targetRoomID: string,
     sourceRoomID: string,
-    userToExplicitlyAdd: string
+    userIdToExplicitlyAdd: string
   ): Promise<boolean> {
     try {
       const elevatedAgent = await this.getMatrixManagementAgentElevated();
@@ -447,9 +447,9 @@ export class CommunicationAdapter {
       // Note: do before the room membership replication to ensure it completes
       // before the message sending.
       const userAlreadyPresent = sourceMatrixUserIDs.find(
-        userID => userID === userToExplicitlyAdd
+        userID => userID === userIdToExplicitlyAdd
       );
-      if (!userAlreadyPresent) sourceMatrixUserIDs.push(userToExplicitlyAdd);
+      if (!userAlreadyPresent) sourceMatrixUserIDs.push(userIdToExplicitlyAdd);
       const matrixAgents: MatrixAgent[] = [];
       for (const matrixUserID of sourceMatrixUserIDs) {
         // skip the matrix elevated agent
