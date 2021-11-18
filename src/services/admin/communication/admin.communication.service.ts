@@ -9,6 +9,7 @@ import { CommunicationService } from '@domain/communication/communication/commun
 import { IRoomable } from '@domain/communication/room/roomable.interface';
 import { CommunicationAdminRoomMembershipResult } from './dto/admin.communication.dto.room.result';
 import { IUser } from '@domain/community/user/user.interface';
+import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -88,5 +89,28 @@ export class AdminCommunicationService {
       }
     }
     return result;
+  }
+
+  async ensureCommunityAccessToCommunications(
+    communicationData: CommunicationAdminEnsureAccessInput
+  ): Promise<boolean> {
+    this.logger.verbose?.(
+      `communication admin ensure community access to communication: ${communicationData.communityID}`,
+      LogContext.COMMUNICATION
+    );
+    const community = await this.communityService.getCommunityOrFail(
+      communicationData.communityID
+    );
+    const communication = await this.communityService.getCommunication(
+      community.id
+    );
+    const communityMembers = await this.communityService.getMembers(community);
+    for (const communityMember of communityMembers) {
+      await this.communicationService.addUserToCommunications(
+        communication,
+        communityMember.communicationID
+      );
+    }
+    return true;
   }
 }
