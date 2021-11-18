@@ -507,15 +507,18 @@ export class CommunicationAdapter {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
 
-    const joinedRooms = await userAgent.matrixClient.getJoinedRooms();
-    roomIDs = roomIDs.filter(
+    const response = (await userAgent.matrixClient.getJoinedRooms()) as any as {
+      joined_rooms: string[];
+    };
+    const joinedRooms = response.joined_rooms;
+    const applicableRoomIDs = roomIDs.filter(
       rId => !joinedRooms.find(joinedRoomId => joinedRoomId === rId)
     );
 
     // first send invites to the rooms - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
     // TODO: Need to add a check whether the user is already part of the room/group
-    const oneTimeMembershipPromises = roomIDs.map(
+    const oneTimeMembershipPromises = applicableRoomIDs.map(
       roomId =>
         new Promise<void>((resolve, reject) => {
           userAgent.attachOnceConditional({
@@ -534,7 +537,7 @@ export class CommunicationAdapter {
         })
     );
 
-    for (const roomID of roomIDs) {
+    for (const roomID of applicableRoomIDs) {
       await this.matrixRoomAdapter.inviteUsersToRoom(
         elevatedAgent.matrixClient,
         roomID,
