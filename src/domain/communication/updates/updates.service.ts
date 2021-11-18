@@ -10,13 +10,15 @@ import { IUpdates } from './updates.interface';
 import { CommunicationRoomResult } from '../room/communication.dto.room.result';
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
+import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 
 @Injectable()
 export class UpdatesService {
   constructor(
     @InjectRepository(Updates)
     private updatesRepository: Repository<Updates>,
-    private roomService: RoomService
+    private roomService: RoomService,
+    private communicationAdapter: CommunicationAdapter
   ) {}
 
   async createUpdates(
@@ -44,6 +46,7 @@ export class UpdatesService {
 
   async deleteUpdates(updates: IUpdates): Promise<IUpdates> {
     const result = await this.updatesRepository.remove(updates as Updates);
+    await this.communicationAdapter.removeRoom(updates.communicationRoomID);
     await this.roomService.removeRoom(updates);
     result.id = updates.id;
     return result;
@@ -68,6 +71,11 @@ export class UpdatesService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<string> {
+    await this.communicationAdapter.grantUserAccesToRooms(
+      updates.communicationGroupID,
+      [updates.communicationRoomID],
+      communicationUserID
+    );
     return await this.roomService.sendMessage(
       updates,
       communicationUserID,
@@ -80,6 +88,11 @@ export class UpdatesService {
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
   ) {
+    await this.communicationAdapter.grantUserAccesToRooms(
+      updates.communicationGroupID,
+      [updates.communicationRoomID],
+      communicationUserID
+    );
     return await this.roomService.removeMessage(
       updates,
       communicationUserID,
