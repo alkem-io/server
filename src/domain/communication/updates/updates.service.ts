@@ -88,11 +88,6 @@ export class UpdatesService {
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
   ) {
-    await this.communicationAdapter.grantUserAccesToRooms(
-      updates.communicationGroupID,
-      [updates.communicationRoomID],
-      communicationUserID
-    );
     return await this.roomService.removeMessage(
       updates,
       communicationUserID,

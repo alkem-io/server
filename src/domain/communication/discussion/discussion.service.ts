@@ -144,11 +144,6 @@ export class DiscussionService {
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
   ) {
-    await this.communicationAdapter.grantUserAccesToRooms(
-      discussion.communicationGroupID,
-      [discussion.communicationRoomID],
-      communicationUserID
-    );
     return await this.roomService.removeMessage(
       discussion,
       communicationUserID,
