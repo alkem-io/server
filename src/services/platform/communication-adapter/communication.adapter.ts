@@ -428,7 +428,8 @@ export class CommunicationAdapter {
 
   async replicateRoomMembership(
     targetRoomID: string,
-    sourceRoomID: string
+    sourceRoomID: string,
+    userToExplicitlyAdd: string
   ): Promise<boolean> {
     try {
       const elevatedAgent = await this.getMatrixManagementAgentElevated();
@@ -438,6 +439,17 @@ export class CommunicationAdapter {
           elevatedAgent.matrixClient,
           sourceRoomID
         );
+      // Add in the explicit user if needed
+      // todo: only members of a room can send a message. This addition is
+      // needed for admins sending messages that are not members. So basically
+      // if an admin sends a message they will be subscribed to the matrix room.
+      // Not ideal but cannot identify a better solution than this for now.
+      // Note: do before the room membership replication to ensure it completes
+      // before the message sending.
+      const userAlreadyPresent = sourceMatrixUserIDs.find(
+        userID => userID === userToExplicitlyAdd
+      );
+      if (!userAlreadyPresent) sourceMatrixUserIDs.push(userToExplicitlyAdd);
       const matrixAgents: MatrixAgent[] = [];
       for (const matrixUserID of sourceMatrixUserIDs) {
         // skip the matrix elevated agent
