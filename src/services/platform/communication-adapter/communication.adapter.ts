@@ -497,6 +497,25 @@ export class CommunicationAdapter {
     // first send invites to the rooms - the group invite fails once accepted
     // for multiple rooms in a group this will cause failure before inviting the user over
     // TODO: Need to add a check whether the user is already part of the room/group
+    const oneTimeMembershipPromises = roomIDs.map(
+      roomId =>
+        new Promise<void>((resolve, reject) => {
+          userAgent.attachOnceConditional({
+            id: roomId,
+            roomMemberMembershipMonitor:
+              userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+                // subscribe for events for a specific room
+                roomId,
+                userAgent.matrixClient.getUserId(),
+                // once we have joined the room detach the subscription
+                () => userAgent.detach(roomId),
+                resolve,
+                reject
+              ),
+          });
+        })
+    );
+
     for (const roomID of roomIDs) {
       await this.matrixRoomAdapter.inviteUsersToRoom(
         elevatedAgent.matrixClient,
@@ -504,6 +523,8 @@ export class CommunicationAdapter {
         [userAgent.matrixClient]
       );
     }
+
+    await Promise.all(oneTimeMembershipPromises);
     await this.matrixGroupAdapter.inviteUsersToGroup(
       elevatedAgent.matrixClient,
       groupID,
