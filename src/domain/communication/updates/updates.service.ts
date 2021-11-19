@@ -87,11 +87,12 @@ export class UpdatesService {
     updates: IUpdates,
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
-  ) {
-    return await this.roomService.removeMessage(
+  ): Promise<string> {
+    await this.roomService.removeMessage(
       updates,
       communicationUserID,
       messageData
     );
+    return messageData.messageID;
   }
 }

@@ -1,4 +1,4 @@
-import { UUID } from '@domain/common/scalars';
+import { MessageID, UUID } from '@domain/common/scalars';
 import { RoomRemoveMessageInput } from '@domain/communication/room/dto/room.dto.remove.message';
 import { Field, InputType } from '@nestjs/graphql';
 
@@ -10,7 +10,7 @@ export class DiscussionRemoveMessageInput extends RoomRemoveMessageInput {
   })
   discussionID!: string;
 
-  @Field(() => String, {
+  @Field(() => MessageID, {
     nullable: false,
     description: 'The message id that should be removed',
   })

@@ -143,11 +143,12 @@ export class DiscussionService {
     discussion: IDiscussion,
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
-  ) {
-    return await this.roomService.removeMessage(
+  ): Promise<string> {
+    await this.roomService.removeMessage(
       discussion,
       communicationUserID,
       messageData
     );
+    return messageData.messageID;
   }
 }

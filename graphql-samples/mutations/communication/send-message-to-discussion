@@ -1,7 +1,5 @@
 mutation sendMessageToDiscussion($messageData: DiscussionSendMessageInput!) {
-  sendMessageToDiscussion(messageData: $messageData) {
-    id
-  }
+  sendMessageToDiscussion(messageData: $messageData)
 }
 
 Variables:
