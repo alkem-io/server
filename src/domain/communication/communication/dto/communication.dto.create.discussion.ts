@@ -23,7 +23,7 @@ export class CommunicationCreateDiscussionInput {
   title!: string;
 
   @Field(() => DiscussionCategory, {
-    nullable: true,
+    nullable: false,
     description: 'The category for the Discussion',
   })
   category!: string;
