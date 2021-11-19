@@ -20,30 +20,46 @@ export class userPreferences1636644627179 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`alkemio\`.\`user_preference\` ADD CONSTRAINT \`FK_5b141fbd1fef95a0540f7e7d1e2\` FOREIGN KEY (\`userId\`) REFERENCES \`alkemio\`.\`user\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`
     );
+    // populate existing users with a preference of each definition
+    const definitions: any[] = await queryRunner.query(
+      'SELECT * FROM user_preference_definition'
+    );
+    const usersWithoutPreference: any[] = await queryRunner.query(
+      `SELECT user.id FROM user
+      LEFT JOIN user_preference on user_preference.userId = user.id
+      WHERE user_preference.userId IS NULL`
+    );
+    usersWithoutPreference.forEach(user =>
+      definitions.forEach(
+        async def =>
+          await queryRunner.query(
+            `INSERT INTO user_preference (id, createdDate, updatedDate, userId, userPreferenceDefinitionId, value, version)
+		  VALUES (UUID(), NOW(), NOW(), '${user.id}', '${def.id}', 'false', '1')`
+          )
+      )
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`alkemio\`.\`user_preference\` DROP FOREIGN KEY \`FK_5b141fbd1fef95a0540f7e7d1e2\``
+      `ALTER TABLE \`user_preference\` DROP FOREIGN KEY \`FK_5b141fbd1fef95a0540f7e7d1e2\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`alkemio\`.\`user_preference\` DROP FOREIGN KEY \`FK_650fb4e564a8b4b4ac344270744\``
+      `ALTER TABLE \`user_preference\` DROP FOREIGN KEY \`FK_650fb4e564a8b4b4ac344270744\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`alkemio\`.\`user_preference\` DROP FOREIGN KEY \`FK_49030bc57aa0f319cee7996fca1\``
+      `ALTER TABLE \`user_preference\` DROP FOREIGN KEY \`FK_49030bc57aa0f319cee7996fca1\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`alkemio\`.\`user_preference_definition\` DROP FOREIGN KEY \`FK_4cc4f80e47686c868424a530eef\``
+      `ALTER TABLE \`user_preference_definition\` DROP FOREIGN KEY \`FK_4cc4f80e47686c868424a530eef\``
     );
     await queryRunner.query(
-      `DROP INDEX \`REL_49030bc57aa0f319cee7996fca\` ON \`alkemio\`.\`user_preference\``
+      `DROP INDEX \`REL_49030bc57aa0f319cee7996fca\` ON \`user_preference\``
     );
-    await queryRunner.query(`DROP TABLE \`alkemio\`.\`user_preference\``);
+    await queryRunner.query(`DROP TABLE \`user_preference\``);
     await queryRunner.query(
-      `DROP INDEX \`REL_4cc4f80e47686c868424a530ee\` ON \`alkemio\`.\`user_preference_definition\``
+      `DROP INDEX \`REL_4cc4f80e47686c868424a530ee\` ON \`user_preference_definition\``
     );
-    await queryRunner.query(
-      `DROP TABLE \`alkemio\`.\`user_preference_definition\``
-    );
+    await queryRunner.query(`DROP TABLE \`user_preference_definition\``);
   }
 }
