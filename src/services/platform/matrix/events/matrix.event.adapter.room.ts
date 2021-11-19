@@ -136,10 +136,7 @@ export class RoomTimelineMonitorFactory {
         await matrixClient.sendReadReceipt(event, {});
 
         if (!ignoreMessage) {
-          const message = messageAdapter.convertFromMatrixMessage(
-            event,
-            matrixClient.getUserId()
-          );
+          const message = messageAdapter.convertFromMatrixMessage(event);
           logger.verbose?.(
             `Triggering messageReceived event for msg body: ${
               event.getContent().body
@@ -150,7 +147,7 @@ export class RoomTimelineMonitorFactory {
           onMessageReceived({
             message,
             roomId: room.roomId,
-            communicationID: message.receiverID,
+            communicationID: matrixClient.getUserId(),
             communityId: undefined,
             roomName: room.name,
           });

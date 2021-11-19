@@ -10,6 +10,7 @@ import { UpdatesSendMessageInput } from './dto/updates.dto.send.message';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UpdatesRemoveMessageInput } from './dto/updates.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
+import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 
 @Resolver()
 export class UpdatesResolverMutations {
@@ -19,7 +20,7 @@ export class UpdatesResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => MessageID, {
+  @Mutation(() => CommunicationMessageResult, {
     description:
       'Sends an update message. Returns the id of the new Update message.',
   })
@@ -27,7 +28,7 @@ export class UpdatesResolverMutations {
   async sendUpdate(
     @Args('messageData') messageData: UpdatesSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
+  ): Promise<CommunicationMessageResult> {
     const updates = await this.updatesService.getUpdatesOrFail(
       messageData.updatesID
     );

@@ -189,31 +189,28 @@ export class MatrixRoomAdapter {
   async convertMatrixRoomToDirectRoom(
     matrixClient: MatrixClient,
     matrixRoom: MatrixRoom,
-    receiverMatrixID: string,
-    userId: string
+    receiverMatrixID: string
   ): Promise<DirectRoomResult> {
     const roomResult = new DirectRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
       matrixClient,
-      matrixRoom,
-      userId
+      matrixRoom
     );
     roomResult.receiverID = receiverMatrixID;
+
     return roomResult;
   }
 
   async convertMatrixRoomToCommunityRoom(
     matrixClient: MatrixClient,
-    matrixRoom: MatrixRoom,
-    userId: string
+    matrixRoom: MatrixRoom
   ): Promise<CommunicationRoomResult> {
     const roomResult = new CommunicationRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
       matrixClient,
-      matrixRoom,
-      userId
+      matrixRoom
     );
 
     return roomResult;
@@ -221,8 +218,7 @@ export class MatrixRoomAdapter {
 
   async getMatrixRoomTimelineAsMessages(
     matrixClient: MatrixClient,
-    matrixRoom: MatrixRoom,
-    userId: string
+    matrixRoom: MatrixRoom
   ): Promise<CommunicationMessageResult[]> {
     this.logger.verbose?.(
       `[MatrixRoom] Obtaining messages on room: ${matrixRoom.name}`,
@@ -234,23 +230,20 @@ export class MatrixRoomAdapter {
       matrixRoom
     );
     if (timelineEvents) {
-      return await this.convertMatrixTimelineToMessages(timelineEvents, userId);
+      return await this.convertMatrixTimelineToMessages(timelineEvents);
     }
     return [];
   }
 
   async convertMatrixTimelineToMessages(
-    timeline: MatrixRoomResponseMessage[],
-    userId: string
+    timeline: MatrixRoomResponseMessage[]
   ): Promise<CommunicationMessageResult[]> {
     const messages: CommunicationMessageResult[] = [];
 
     for (const timelineMessage of timeline) {
       if (this.matrixMessageAdapter.isEventToIgnore(timelineMessage)) continue;
-      const message = this.matrixMessageAdapter.convertFromMatrixMessage(
-        timelineMessage,
-        userId
-      );
+      const message =
+        this.matrixMessageAdapter.convertFromMatrixMessage(timelineMessage);
 
       messages.push(message);
     }

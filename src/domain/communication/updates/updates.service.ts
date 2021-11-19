@@ -11,6 +11,7 @@ import { CommunicationRoomResult } from '../room/communication.dto.room.result';
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 
 @Injectable()
 export class UpdatesService {
@@ -56,21 +57,15 @@ export class UpdatesService {
     return await this.updatesRepository.save(updates);
   }
 
-  async getUpdatesRoom(
-    updates: IUpdates,
-    communicationUserID: string
-  ): Promise<CommunicationRoomResult> {
-    return await this.roomService.getCommunicationRoom(
-      updates,
-      communicationUserID
-    );
+  async getUpdatesRoom(updates: IUpdates): Promise<CommunicationRoomResult> {
+    return await this.roomService.getCommunicationRoom(updates);
   }
 
   async sendUpdateMessage(
     updates: IUpdates,
     communicationUserID: string,
     messageData: RoomSendMessageInput
-  ): Promise<string> {
+  ): Promise<CommunicationMessageResult> {
     await this.communicationAdapter.grantUserAccesToRooms(
       updates.communicationGroupID,
       [updates.communicationRoomID],

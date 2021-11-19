@@ -30,6 +30,4 @@ export class CommunicationMessageResult {
     description: 'The server timestamp in UTC',
   })
   timestamp!: number;
-
-  receiverID!: string;
 }

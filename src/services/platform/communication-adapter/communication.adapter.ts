@@ -1,6 +1,7 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -58,7 +59,7 @@ export class CommunicationAdapter {
 
   async sendMessage(
     sendMessageData: CommunicationSendMessageInput
-  ): Promise<string> {
+  ): Promise<CommunicationMessageResult> {
     // Todo: replace with proper data validation
     const message = sendMessageData.message;
     if (message.length === 0) {
@@ -82,7 +83,14 @@ export class CommunicationAdapter {
       }
     );
 
-    return messageId;
+    // todo: ideally get the message directly using the user that sent the message
+    const timestamp = new Date().getTime();
+    return {
+      id: messageId,
+      message: message,
+      sender: sendMessageData.senderCommunicationsID,
+      timestamp: timestamp,
+    };
   }
 
   async editMessage(
@@ -102,7 +110,9 @@ export class CommunicationAdapter {
     );
   }
 
-  async deleteMessage(deleteMessageData: CommunicationDeleteMessageInput) {
+  async deleteMessage(
+    deleteMessageData: CommunicationDeleteMessageInput
+  ): Promise<string> {
     // when deleting a message use the global admin account
     // the possibility to use native matrix power levels is there
     // but we still don't have the infrastructure to support it
@@ -113,6 +123,7 @@ export class CommunicationAdapter {
       deleteMessageData.roomID,
       deleteMessageData.messageId
     );
+    return deleteMessageData.messageId;
   }
 
   async sendMessageToUser(
@@ -156,8 +167,7 @@ export class CommunicationAdapter {
     const messages =
       await this.matrixRoomAdapter.getMatrixRoomTimelineAsMessages(
         matrixAgent.matrixClient,
-        matrixRoom,
-        matrixAgent.matrixClient.getUserId()
+        matrixRoom
       );
     const matchingMessage = messages.find(message => message.id === messageID);
     if (!matchingMessage) return '';
@@ -340,16 +350,17 @@ export class CommunicationAdapter {
     // as protected via the graphql api
     // the possibility to use native matrix power levels is there
     // but we still don't have the infrastructure to support it
-    const matrixAgent = await this.getMatrixManagementAgentElevated();
+    const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
+
+    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
 
     const matrixCommunityRooms =
       await this.matrixAgentService.getCommunityRooms(matrixAgent);
     for (const matrixRoom of matrixCommunityRooms) {
       const room =
         await this.matrixRoomAdapter.convertMatrixRoomToCommunityRoom(
-          matrixAgent.matrixClient,
-          matrixRoom,
-          matrixUserID
+          matrixAgentElevated.matrixClient,
+          matrixRoom
         );
       rooms.push(room);
     }
@@ -372,8 +383,7 @@ export class CommunicationAdapter {
       const room = await this.matrixRoomAdapter.convertMatrixRoomToDirectRoom(
         matrixAgent.matrixClient,
         matrixRoom,
-        matrixRoom.receiverCommunicationsID || '',
-        matrixAgent.matrixClient.getUserId()
+        matrixRoom.receiverCommunicationsID || ''
       );
       rooms.push(room);
     }
@@ -381,10 +391,7 @@ export class CommunicationAdapter {
     return rooms;
   }
 
-  async getCommunityRoom(
-    roomId: string,
-    matrixUserID: string
-  ): Promise<CommunicationRoomResult> {
+  async getCommunityRoom(roomId: string): Promise<CommunicationRoomResult> {
     // If not enabled just return an empty room
     if (!this.enabled) {
       return {
@@ -399,8 +406,7 @@ export class CommunicationAdapter {
     );
     return await this.matrixRoomAdapter.convertMatrixRoomToCommunityRoom(
       matrixAgentElevated.matrixClient,
-      matrixRoom,
-      matrixUserID // todo: what is this for?
+      matrixRoom
     );
   }
 

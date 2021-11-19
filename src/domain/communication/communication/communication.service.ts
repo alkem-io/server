@@ -122,9 +122,7 @@ export class CommunicationService {
       communicationUserID
     );
 
-    communication.discussions?.push(discussion);
-    await this.communicationRepository.save(communication);
-
+    // Send before saving to give the event some bit of time to be received by reading admin account.
     try {
       await this.discussionService.sendMessageToDiscussion(
         discussion,
@@ -133,12 +131,17 @@ export class CommunicationService {
           message: discussionData.message,
         }
       );
+
+      await this.discussionService.getDiscussionRoom(discussion);
     } catch (error) {
       this.logger.warn(
         `Unable to send message to newly created discussion (${discussion.displayName}): ${error}`,
         LogContext.COMMUNICATION
       );
     }
+
+    communication.discussions?.push(discussion);
+    await this.communicationRepository.save(communication);
 
     return discussion;
   }

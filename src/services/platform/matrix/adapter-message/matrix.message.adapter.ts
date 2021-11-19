@@ -14,8 +14,7 @@ export class MatrixMessageAdapter {
   ) {}
 
   convertFromMatrixMessage(
-    message: MatrixRoomResponseMessage,
-    receiverMatrixID: string
+    message: MatrixRoomResponseMessage
   ): CommunicationMessageResult {
     const { event, sender } = message;
 
@@ -31,7 +30,6 @@ export class MatrixMessageAdapter {
       sender: sender.userId,
       timestamp: event.origin_server_ts || 0,
       id: event.event_id || '',
-      receiverID: receiverMatrixID,
     };
   }
 

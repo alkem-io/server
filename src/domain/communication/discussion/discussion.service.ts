@@ -15,6 +15,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
+import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 
 @Injectable()
 export class DiscussionService {
@@ -113,20 +114,16 @@ export class DiscussionService {
   }
 
   async getDiscussionRoom(
-    discussion: IDiscussion,
-    communicationUserID: string
+    discussion: IDiscussion
   ): Promise<CommunicationRoomResult> {
-    return await this.roomService.getCommunicationRoom(
-      discussion,
-      communicationUserID
-    );
+    return await this.roomService.getCommunicationRoom(discussion);
   }
 
   async sendMessageToDiscussion(
     discussion: IDiscussion,
     communicationUserID: string,
     messageData: RoomSendMessageInput
-  ): Promise<string> {
+  ): Promise<CommunicationMessageResult> {
     await this.communicationAdapter.grantUserAccesToRooms(
       discussion.communicationGroupID,
       [discussion.communicationRoomID],

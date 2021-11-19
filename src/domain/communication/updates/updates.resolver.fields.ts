@@ -1,13 +1,8 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication/agent-info';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { IUpdates } from './updates.interface';
 import { UpdatesService } from './updates.service';
@@ -24,13 +19,9 @@ export class UpdatesResolverFields {
   })
   @Profiling.api
   async messages(
-    @Parent() updates: IUpdates,
-    @CurrentUser() agentInfo: AgentInfo
+    @Parent() updates: IUpdates
   ): Promise<CommunicationMessageResult[]> {
-    const discussionRoom = await this.updatesService.getUpdatesRoom(
-      updates,
-      agentInfo.communicationID
-    );
+    const discussionRoom = await this.updatesService.getUpdatesRoom(updates);
     return discussionRoom.messages;
   }
 }
