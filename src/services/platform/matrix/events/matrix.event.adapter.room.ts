@@ -15,40 +15,6 @@ const noop = function () {
   // empty
 };
 
-// export class AutoAcceptRoomMembershipMonitorFactory {
-//   static create(
-//     client: MatrixClient,
-//     roomAdapter: MatrixRoomAdapter,
-//     logger: LoggerService,
-//     onComplete = noop,
-//     error: (err: any) => void = noop
-//   ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
-//     return {
-//       complete: onComplete,
-//       error: error,
-//       next: async ({ event, member }) => {
-//         const content = event.getContent();
-//         if (
-//           content.membership === 'invite' &&
-//           member.userId === client.credentials.userId
-//         ) {
-//           const roomId = event.getRoomId();
-//           const senderId = event.getSender();
-
-//           logger.verbose?.(
-//             `[Membership]: accepting invitation for user (${member.userId}) to room: ${roomId}`,
-//             LogContext.COMMUNICATION
-//           );
-//           await client.joinRoom(roomId);
-//           if (content.is_direct) {
-//             await roomAdapter.storeDirectMessageRoom(client, roomId, senderId);
-//           }
-//         }
-//       },
-//     };
-//   }
-// }
-
 export const autoAcceptRoomGuardFactory = (
   targetUserID: string,
   targetRoomID: string
@@ -102,6 +68,10 @@ export class AutoAcceptSpecificRoomMembershipMonitorFactory {
           if (content.is_direct) {
             await roomAdapter.storeDirectMessageRoom(client, roomId, senderId);
           }
+          logger.verbose?.(
+            `[Membership] accepted invitation for user (${member.userId}) to room: ${roomId}`,
+            LogContext.COMMUNICATION
+          );
           onRoomJoined();
         }
       },

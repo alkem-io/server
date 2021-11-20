@@ -70,13 +70,8 @@ export class CommunicationAdapter {
     }
     const senderCommunicationID = sendMessageData.senderCommunicationsID;
     const matrixAgent = await this.acquireMatrixAgent(senderCommunicationID);
-    await this.matrixRoomAdapter.logRoomMembership(
-      (
-        await this.getMatrixManagementAgentElevated()
-      ).matrixClient,
-      sendMessageData.roomID
-    );
-    await this.matrixUserAdapter.verifyRoomMembership(
+
+    await this.matrixUserAdapter.verifyRoomMembershipOrFail(
       matrixAgent.matrixClient,
       sendMessageData.roomID
     );
@@ -578,7 +573,7 @@ export class CommunicationAdapter {
             userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
               // subscribe for events for a specific room
               roomID,
-              matrixUserID,
+              userAgent.matrixClient.getUserId(),
               // once we have joined the room detach the subscription
               () => userAgent.detach(roomID),
               resolve,

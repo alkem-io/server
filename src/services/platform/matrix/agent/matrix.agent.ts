@@ -24,7 +24,6 @@ import { IMatrixAgent } from './matrix.agent.interface';
 export type MatrixAgentStartOptions = {
   registerTimelineMonitor?: boolean;
   registerRoomMonitor?: boolean;
-  //registerRoomMembershipMonitor?: boolean;
   registerGroupMembershipMonitor?: boolean;
 };
 
@@ -63,13 +62,10 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
   async start(
     {
-      // handle room membership externally
-      //registerRoomMembershipMonitor = false,
       registerGroupMembershipMonitor = true,
       registerRoomMonitor = true,
       registerTimelineMonitor = true,
     }: MatrixAgentStartOptions = {
-      //registerRoomMembershipMonitor: false,
       registerGroupMembershipMonitor: true,
       registerRoomMonitor: true,
       registerTimelineMonitor: true,
@@ -95,11 +91,6 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       id: 'root',
     };
 
-    // if (registerRoomMembershipMonitor) {
-    //   eventHandler['roomMemberMembershipMonitor'] =
-    //     this.resolveRoomMembershipMonitor();
-    // }
-
     if (registerGroupMembershipMonitor) {
       eventHandler['groupMyMembershipMonitor'] =
         this.resolveGroupMembershipMonitor();
@@ -116,19 +107,6 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
     this.attach(eventHandler);
   }
-
-  // resolveRoomMembershipMonitor(
-  //   onComplete?: () => void,
-  //   onError?: (message: string) => void
-  // ) {
-  //   return AutoAcceptRoomMembershipMonitorFactory.create(
-  //     this.matrixClient,
-  //     this.roomAdapter,
-  //     this.logger,
-  //     onComplete,
-  //     onError
-  //   );
-  // }
 
   resolveSpecificRoomMembershipMonitor(
     roomId: string,
