@@ -22,6 +22,35 @@ export class MatrixUserAdapter {
     return response.joined_rooms;
   }
 
+  async verifyRoomMembership(
+    matrixClient: MatrixClient,
+    roomID: string
+  ): Promise<boolean> {
+    const rooms = await this.getJoinedRooms(matrixClient);
+    const roomFound = rooms.find(r => r === roomID);
+    if (roomFound) {
+      this.logger.verbose?.(
+        `[Membership] user (${matrixClient.getUserId()}) is a member of: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+      return true;
+    } else {
+      this.logger.warn(
+        `[Membership] user (${matrixClient.getUserId()}) is NOT a member of: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+      return false;
+    }
+  }
+
+  async logJoinedRooms(matrixClient: MatrixClient) {
+    const rooms = await this.getJoinedRooms(matrixClient);
+    this.logger.verbose?.(
+      `[Membership] user (${matrixClient.getUserId()}) rooms: ${rooms}`,
+      LogContext.COMMUNICATION
+    );
+  }
+
   convertMatrixIDToMatrixUser(
     matrixUserID: string,
     password = 'generated_password'

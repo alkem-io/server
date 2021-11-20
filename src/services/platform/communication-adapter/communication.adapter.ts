@@ -76,6 +76,10 @@ export class CommunicationAdapter {
       ).matrixClient,
       sendMessageData.roomID
     );
+    await this.matrixUserAdapter.verifyRoomMembership(
+      matrixAgent.matrixClient,
+      sendMessageData.roomID
+    );
     this.logger.verbose?.(
       `[Message sending] Sending message to room: ${sendMessageData.roomID}`,
       LogContext.COMMUNICATION
