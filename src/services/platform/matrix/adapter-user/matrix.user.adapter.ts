@@ -3,6 +3,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMatrixUser } from './matrix.user.interface';
+import { MatrixClient } from '../types/matrix.client.type';
 
 @Injectable()
 export class MatrixUserAdapter {
@@ -13,6 +14,13 @@ export class MatrixUserAdapter {
     private readonly logger: LoggerService,
     private configService: ConfigService
   ) {}
+
+  async getJoinedRooms(matrixClient: MatrixClient): Promise<string[]> {
+    const response = (await matrixClient.getJoinedRooms()) as any as {
+      joined_rooms: string[];
+    };
+    return response.joined_rooms;
+  }
 
   convertMatrixIDToMatrixUser(
     matrixUserID: string,

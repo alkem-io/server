@@ -66,11 +66,6 @@ export class UpdatesService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<CommunicationMessageResult> {
-    await this.communicationAdapter.grantUserAccesToRooms(
-      updates.communicationGroupID,
-      [updates.communicationRoomID],
-      communicationUserID
-    );
     return await this.roomService.sendMessage(
       updates,
       communicationUserID,

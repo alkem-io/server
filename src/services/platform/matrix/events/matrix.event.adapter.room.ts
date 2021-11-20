@@ -36,7 +36,7 @@ export class AutoAcceptRoomMembershipMonitorFactory {
           const senderId = event.getSender();
 
           logger.verbose?.(
-            `Room membership: accepting invitation for user (${member.userId}) to room: ${roomId}`,
+            `[Membership]: accepting invitation for user (${member.userId}) to room: ${roomId}`,
             LogContext.COMMUNICATION
           );
           await client.joinRoom(roomId);
@@ -87,7 +87,7 @@ export class AutoAcceptSpecificRoomMembershipMonitorFactory {
 
           if (roomId !== targetRoomId) {
             logger.verbose?.(
-              `Room membership: skipping invitation for user (${member.userId}) to room: ${roomId}`,
+              `[Membership] skipping invitation for user (${member.userId}) to room: ${roomId}`,
               LogContext.COMMUNICATION
             );
           }
@@ -95,7 +95,7 @@ export class AutoAcceptSpecificRoomMembershipMonitorFactory {
           const senderId = event.getSender();
 
           logger.verbose?.(
-            `Room membership: accepting invitation for user (${member.userId}) to room: ${roomId}`,
+            `[Membership] accepting invitation for user (${member.userId}) to room: ${roomId}`,
             LogContext.COMMUNICATION
           );
           await client.joinRoom(roomId);

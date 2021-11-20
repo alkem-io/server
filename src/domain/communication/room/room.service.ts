@@ -75,6 +75,12 @@ export class RoomService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<CommunicationMessageResult> {
+    // Ensure the user is a member of room and group so can send
+    await this.communicationAdapter.grantUserAccesToRooms(
+      roomable.communicationGroupID,
+      [roomable.communicationRoomID],
+      communicationUserID
+    );
     const message = await this.communicationAdapter.sendMessage({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,

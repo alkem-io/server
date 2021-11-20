@@ -124,11 +124,6 @@ export class DiscussionService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<CommunicationMessageResult> {
-    await this.communicationAdapter.grantUserAccesToRooms(
-      discussion.communicationGroupID,
-      [discussion.communicationRoomID],
-      communicationUserID
-    );
     return await this.roomService.sendMessage(
       discussion,
       communicationUserID,

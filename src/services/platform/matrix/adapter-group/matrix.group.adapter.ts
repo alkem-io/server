@@ -55,10 +55,10 @@ export class MatrixGroupAdapter {
     return group.group_id;
   }
 
-  public async inviteUsersToGroup(
+  public async inviteUserToGroup(
     adminClient: MatrixClient,
     groupId: string,
-    matrixClients: MatrixClient[]
+    matrixClient: MatrixClient
   ) {
     // need to cache those
     // get both the users that have invites and the ones which are already accepted
@@ -69,28 +69,33 @@ export class MatrixGroupAdapter {
       .chunk as {
       user_id: string;
     }[];
-    for (const matrixClient of matrixClients) {
-      try {
-        const userId = matrixClient.getUserId();
-        // if the user is part of the group skip invitations
-        if (groupUsers.some(x => x.user_id === userId)) {
-          continue;
-        }
-        if (groupInvitedUsers.some(x => x.user_id === userId)) {
-          await matrixClient.acceptGroupInvite(groupId);
-          continue;
-        }
-
-        await adminClient.inviteUserToGroup(groupId, userId);
-
+    try {
+      const userId = matrixClient.getUserId();
+      // if the user is part of the group skip invitations
+      if (groupUsers.some(x => x.user_id === userId)) {
         this.logger.verbose?.(
-          `Invited users to group: ${userId} - ${groupId}`,
+          `[Membership] Ignoring group join request; User (${userId}) is already in the group: ${groupId}`,
           LogContext.COMMUNICATION
         );
-      } catch (err) {
-        // TODO: Find a way to handle `User already in group`
-        this.logger.error(err.message);
+        return;
       }
+      if (groupInvitedUsers.some(x => x.user_id === userId)) {
+        await matrixClient.acceptGroupInvite(groupId);
+        return;
+      }
+
+      await adminClient.inviteUserToGroup(groupId, userId);
+
+      this.logger.verbose?.(
+        `Invited users to group: ${userId} - ${groupId}`,
+        LogContext.COMMUNICATION
+      );
+    } catch (error: any) {
+      // TODO: Find a way to handle `User already in group`
+      this.logger.error(
+        `Unable to add user to Matrix Group: ${error.message}`,
+        LogContext.COMMUNICATION
+      );
     }
   }
 }

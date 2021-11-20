@@ -116,31 +116,37 @@ export class MatrixRoomAdapter {
     return room;
   }
 
-  async inviteUsersToRoom(
+  async logRoomMembership(adminMatrixClient: MatrixClient, roomID: string) {
+    const members = await this.getMatrixRoomMembers(adminMatrixClient, roomID);
+    this.logger.verbose?.(
+      `[Membership] Members for room (${roomID}): ${members}`,
+      LogContext.COMMUNICATION
+    );
+  }
+
+  async inviteUserToRoom(
     adminMatrixClient: MatrixClient,
     roomID: string,
-    matrixClients: MatrixClient[]
+    matrixClient: MatrixClient
   ) {
     const room = await this.getMatrixRoom(adminMatrixClient, roomID);
 
-    for (const matrixClient of matrixClients) {
-      // not very well documented but we can validate whether the user has membership like this
-      // seen in https://github.com/matrix-org/matrix-js-sdk/blob/3c36be9839091bf63a4850f4babed0c976d48c0e/src/models/room-member.ts#L29
-      const userId = matrixClient.getUserId();
-      if (room.hasMembershipState(userId, 'join')) {
-        continue;
-      }
-      if (room.hasMembershipState(userId, 'invite')) {
-        await matrixClient.joinRoom(room.roomId);
-        continue;
-      }
-
-      await adminMatrixClient.invite(roomID, userId);
-      this.logger.verbose?.(
-        `invited user to room: ${userId} - ${roomID}`,
-        LogContext.COMMUNICATION
-      );
+    // not very well documented but we can validate whether the user has membership like this
+    // seen in https://github.com/matrix-org/matrix-js-sdk/blob/3c36be9839091bf63a4850f4babed0c976d48c0e/src/models/room-member.ts#L29
+    const userId = matrixClient.getUserId();
+    if (room.hasMembershipState(userId, 'join')) {
+      return;
     }
+    if (room.hasMembershipState(userId, 'invite')) {
+      await matrixClient.joinRoom(room.roomId);
+      return;
+    }
+
+    await adminMatrixClient.invite(roomID, userId);
+    this.logger.verbose?.(
+      `invited user to room: ${userId} - ${roomID}`,
+      LogContext.COMMUNICATION
+    );
   }
 
   async removeUserFromRoom(roomID: string, matrixClient: MatrixClient) {

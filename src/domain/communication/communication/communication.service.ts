@@ -100,7 +100,7 @@ export class CommunicationService {
     const communicationID = discussionData.communicationID;
 
     this.logger.verbose?.(
-      `Adding discussion (${title}) to Communication (${communicationID})`,
+      `[Discussion] Adding discussion (${title}) to Communication (${communicationID})`,
       LogContext.COMMUNICATION
     );
 
@@ -122,6 +122,11 @@ export class CommunicationService {
       communicationUserID
     );
 
+    this.logger.verbose?.(
+      `[Discussion] Room created (${title}) and membership replicated from Updates (${communicationID})`,
+      LogContext.COMMUNICATION
+    );
+
     // Send before saving to give the event some bit of time to be received by reading admin account.
     try {
       await this.discussionService.sendMessageToDiscussion(
@@ -131,8 +136,10 @@ export class CommunicationService {
           message: discussionData.message,
         }
       );
-
-      await this.discussionService.getDiscussionRoom(discussion);
+      this.logger.verbose?.(
+        `[Discussion] Initial message sent: ${discussionData.message}`,
+        LogContext.COMMUNICATION
+      );
     } catch (error) {
       this.logger.warn(
         `Unable to send message to newly created discussion (${discussion.displayName}): ${error}`,

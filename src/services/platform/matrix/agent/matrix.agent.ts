@@ -189,6 +189,10 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
           SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
           messageReceivedEvent
         );
+        this.logger.verbose?.(
+          `Published message: ${messageReceivedEvent.message.message}`,
+          LogContext.COMMUNICATION
+        );
       }
     );
   }
