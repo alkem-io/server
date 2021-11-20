@@ -543,6 +543,11 @@ export class CommunicationAdapter {
       roomIDs
     );
 
+    if (roomsToAdd.length === 0) {
+      // Nothing to do; avoid wait below...
+      return;
+    }
+
     const oneTimeMembershipPromises: Promise<void>[] = [];
     for (const roomID of roomsToAdd) {
       this.logger.verbose?.(
