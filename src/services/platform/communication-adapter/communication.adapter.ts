@@ -7,6 +7,7 @@ import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communicat
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
+import { MatrixClient } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapter } from '../matrix/adapter-group/matrix.group.adapter';
 import { MatrixRoomAdapter } from '../matrix/adapter-room/matrix.room.adapter';
@@ -508,15 +509,9 @@ export class CommunicationAdapter {
 
       await Promise.all(oneTimeMembershipPromises);
 
-      // check membership
-      const sourceMatrixUserIDsV2 =
-        await this.matrixRoomAdapter.getMatrixRoomMembers(
-          elevatedAgent.matrixClient,
-          targetRoomID
-        );
-      this.logger.verbose?.(
-        `[Replication] Room membership (${targetRoomID}) after replication: ${sourceMatrixUserIDsV2}`,
-        LogContext.COMMUNICATION
+      await this.matrixRoomAdapter.logRoomMembership(
+        elevatedAgent.matrixClient,
+        targetRoomID
       );
     } catch (error) {
       this.logger.error?.(
@@ -543,25 +538,13 @@ export class CommunicationAdapter {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
 
-    // Filter down to exclude the rooms the user is already a member of
-    const joinedRooms = await this.matrixUserAdapter.getJoinedRooms(
-      userAgent.matrixClient
+    const roomsToAdd = await this.getRoomsUserIsNotMember(
+      userAgent.matrixClient,
+      roomIDs
     );
-    const applicableRoomIDs = roomIDs.filter(
-      rId => !joinedRooms.find(joinedRoomId => joinedRoomId === rId)
-    );
-    if (applicableRoomIDs.length == 0) {
-      this.logger.verbose?.(
-        `User (${matrixUserID}) is already in all rooms: ${roomIDs}`,
-        LogContext.COMMUNICATION
-      );
-      return;
-    }
 
-    // first send invites to the rooms - the group invite fails once accepted
-    // for multiple rooms in a group this will cause failure before inviting the user over
     const oneTimeMembershipPromises: Promise<void>[] = [];
-    for (const roomID of applicableRoomIDs) {
+    for (const roomID of roomsToAdd) {
       this.logger.verbose?.(
         `[Membership] Inviting user (${matrixUserID}) is join room: ${roomID}`,
         LogContext.COMMUNICATION
@@ -582,6 +565,7 @@ export class CommunicationAdapter {
         });
       });
       oneTimeMembershipPromises.push(oneTimePromise);
+
       await this.matrixRoomAdapter.inviteUserToRoom(
         elevatedAgent.matrixClient,
         roomID,
@@ -590,6 +574,29 @@ export class CommunicationAdapter {
     }
 
     await Promise.all(oneTimeMembershipPromises);
+    // todo: hack to ensure that room memberships have been accepted before we send any events through
+    await new Promise(resolve => setTimeout(resolve, 400));
+  }
+
+  async getRoomsUserIsNotMember(
+    matrixClient: MatrixClient,
+    roomIDs: string[]
+  ): Promise<string[]> {
+    // Filter down to exclude the rooms the user is already a member of
+    const joinedRooms = await this.matrixUserAdapter.getJoinedRooms(
+      matrixClient
+    );
+    const applicableRoomIDs = roomIDs.filter(
+      rId => !joinedRooms.find(joinedRoomId => joinedRoomId === rId)
+    );
+    if (applicableRoomIDs.length == 0) {
+      this.logger.verbose?.(
+        `User (${matrixClient.getUserId()}) is already in all rooms: ${roomIDs}`,
+        LogContext.COMMUNICATION
+      );
+      return [];
+    }
+    return applicableRoomIDs;
   }
 
   async removeRoom(matrixRoomID: string) {

@@ -81,15 +81,17 @@ export class RoomService {
       [roomable.communicationRoomID],
       communicationUserID
     );
+    // Todo: call this first to allow room access to complete
+    const alkemioUserID =
+      await this.identityResolverService.getUserIDByCommunicationsID(
+        communicationUserID
+      );
     const message = await this.communicationAdapter.sendMessage({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
       roomID: roomable.communicationRoomID,
     });
-    const alkemioUserID =
-      await this.identityResolverService.getUserIDByCommunicationsID(
-        message.sender
-      );
+
     message.sender = alkemioUserID;
     return message;
   }
