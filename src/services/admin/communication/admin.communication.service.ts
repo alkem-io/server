@@ -10,6 +10,8 @@ import { IRoomable } from '@domain/communication/room/roomable.interface';
 import { CommunicationAdminRoomMembershipResult } from './dto/admin.communication.dto.room.result';
 import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
+import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
+import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -88,6 +90,7 @@ export class AdminCommunicationService {
         result.extraMembers.push(roomMember);
       }
     }
+
     return result;
   }
 
@@ -112,5 +115,46 @@ export class AdminCommunicationService {
       );
     }
     return true;
+  }
+
+  async orphanedUsage(): Promise<CommunicationAdminOrphanedUsageResult> {
+    this.logger.verbose?.(
+      'communication admin checking for orphaned usage.',
+      LogContext.COMMUNICATION
+    );
+    const result = new CommunicationAdminOrphanedUsageResult();
+    const communicationIDs =
+      await this.communicationService.getCommunicationIDsUsed();
+    let roomsUsed: string[] = [];
+    for (const communicationID of communicationIDs) {
+      const communication =
+        await this.communicationService.getCommunicationOrFail(communicationID);
+      const communicationRoomsUsed =
+        await this.communicationService.getRoomsUsed(communication);
+      roomsUsed = roomsUsed.concat(communicationRoomsUsed);
+    }
+
+    // Get all the rooms used in Matrix + filter to only create results for those not used
+    const matrixRooms = await this.communicationAdapter.getAllRooms();
+    for (const matrixRoom of matrixRooms) {
+      const found = roomsUsed.find(roomID => roomID === matrixRoom.id);
+      if (!found) {
+        const roomNotUsed = await this.communicationAdapter.getCommunityRoom(
+          matrixRoom.id
+        );
+        const roomResult = new CommunicationAdminRoomResult(
+          roomNotUsed.id,
+          roomNotUsed.displayName
+        );
+        result.rooms.push(roomResult);
+      }
+    }
+
+    this.logger.verbose?.(
+      `communication admin: found ${roomsUsed.length} rooms used; found ${matrixRooms.length} rooms in Matrix; found ${result.rooms.length} rooms not used`,
+      LogContext.COMMUNICATION
+    );
+
+    return result;
   }
 }

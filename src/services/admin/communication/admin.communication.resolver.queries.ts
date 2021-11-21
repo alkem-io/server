@@ -10,6 +10,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
+import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
 
 @Resolver()
 export class AdminCommunicationResolverQueries {
@@ -35,7 +36,7 @@ export class AdminCommunicationResolverQueries {
   @Profiling.api
   async adminCommunicationMembership(
     @Args('communicationData', { nullable: false })
-    roomData: CommunicationAdminMembershipInput,
+    communicationData: CommunicationAdminMembershipInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<CommunicationAdminMembershipResult> {
     await this.authorizationService.grantAccessOrFail(
@@ -45,7 +46,26 @@ export class AdminCommunicationResolverQueries {
       `admin communication room members query: ${agentInfo.email}`
     );
     return await this.adminCommunicationService.communicationMembership(
-      roomData
+      communicationData
     );
+  }
+
+  @Query(() => CommunicationAdminOrphanedUsageResult, {
+    nullable: false,
+    description:
+      'Usage of the messaging platform that are not tied to the domain model.',
+  })
+  @UseGuards(GraphqlGuard)
+  @Profiling.api
+  async adminCommunicationOrphanedUsage(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CommunicationAdminOrphanedUsageResult> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationQueriesPolicy,
+      AuthorizationPrivilege.READ,
+      `admin communication room members query: ${agentInfo.email}`
+    );
+    return await this.adminCommunicationService.orphanedUsage();
   }
 }

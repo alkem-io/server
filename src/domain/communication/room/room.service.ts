@@ -4,7 +4,7 @@ import { CommunicationAdapter } from '@services/platform/communication-adapter/c
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IdentityResolverService } from '../identity-resolver/identity.resolver.service';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
-import { CommunicationRoomResult } from './communication.dto.room.result';
+import { CommunicationRoomResult } from './dto/communication.dto.room.result';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { IRoomable } from './roomable.interface';

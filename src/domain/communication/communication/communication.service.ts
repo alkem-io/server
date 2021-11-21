@@ -212,13 +212,7 @@ export class CommunicationService {
     communication: ICommunication,
     communicationUserID: string
   ): Promise<boolean> {
-    // get the list of rooms to add the user to
-    const communicationRoomIDs: string[] = [
-      this.getUpdates(communication).communicationRoomID,
-    ];
-    for (const discussion of this.getDiscussions(communication)) {
-      communicationRoomIDs.push(discussion.communicationRoomID);
-    }
+    const communicationRoomIDs = await this.getRoomsUsed(communication);
     await this.communicationAdapter.grantUserAccesToRooms(
       communication.communicationGroupID,
       communicationRoomIDs,
@@ -226,6 +220,27 @@ export class CommunicationService {
     );
 
     return true;
+  }
+
+  async getRoomsUsed(communication: ICommunication): Promise<string[]> {
+    const communicationRoomIDs: string[] = [
+      this.getUpdates(communication).communicationRoomID,
+    ];
+    for (const discussion of this.getDiscussions(communication)) {
+      communicationRoomIDs.push(discussion.communicationRoomID);
+    }
+    return communicationRoomIDs;
+  }
+
+  async getCommunicationIDsUsed(): Promise<string[]> {
+    const communicationMatches = await this.communicationRepository
+      .createQueryBuilder('communication')
+      .getMany();
+    const communicationIDs: string[] = [];
+    for (const communication of communicationMatches) {
+      communicationIDs.push(communication.id);
+    }
+    return communicationIDs;
   }
 
   async removeUserFromCommunications(

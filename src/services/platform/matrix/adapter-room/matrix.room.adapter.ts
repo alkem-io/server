@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
-import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
+import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Direction, IContent, TimelineWindow } from 'matrix-js-sdk';
@@ -218,6 +218,7 @@ export class MatrixRoomAdapter {
       matrixClient,
       matrixRoom
     );
+    roomResult.displayName = matrixRoom.name;
 
     return roomResult;
   }

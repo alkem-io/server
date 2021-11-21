@@ -2,7 +2,7 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
-import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
+import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -415,6 +415,7 @@ export class CommunicationAdapter {
       return {
         id: 'communications-not-enabled',
         messages: [],
+        displayName: '',
       };
     }
     const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
@@ -448,6 +449,24 @@ export class CommunicationAdapter {
       );
     }
     return true;
+  }
+
+  async getAllRooms(): Promise<CommunicationRoomResult[]> {
+    const elevatedAgent = await this.getMatrixManagementAgentElevated();
+    this.logger.verbose?.(
+      `[Admin] Obtaining all rooms on Matrix instance using ${elevatedAgent.matrixClient.getUserId()}`,
+      LogContext.COMMUNICATION
+    );
+    const rooms = await elevatedAgent.matrixClient.getRooms();
+    const roomResults: CommunicationRoomResult[] = [];
+    for (const room of rooms) {
+      const roomResult = new CommunicationRoomResult();
+      roomResult.id = room.roomId;
+      roomResult.displayName = room.name;
+      roomResults.push(roomResult);
+    }
+
+    return roomResults;
   }
 
   async replicateRoomMembership(

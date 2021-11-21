@@ -7,7 +7,7 @@ import { RoomService } from '../room/room.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Updates } from './updates.entity';
 import { IUpdates } from './updates.interface';
-import { CommunicationRoomResult } from '../room/communication.dto.room.result';
+import { CommunicationRoomResult } from '../room/dto/communication.dto.room.result';
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
