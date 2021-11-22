@@ -9,6 +9,8 @@ import { UpdatesService } from './updates.service';
 import { UpdatesSendMessageInput } from './dto/updates.dto.send.message';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UpdatesRemoveMessageInput } from './dto/updates.dto.remove.message';
+import { MessageID } from '@domain/common/scalars';
+import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 
 @Resolver()
 export class UpdatesResolverMutations {
@@ -18,14 +20,15 @@ export class UpdatesResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Sends an update message.',
+  @Mutation(() => CommunicationMessageResult, {
+    description:
+      'Sends an update message. Returns the id of the new Update message.',
   })
   @Profiling.api
   async sendUpdate(
     @Args('messageData') messageData: UpdatesSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
+  ): Promise<CommunicationMessageResult> {
     const updates = await this.updatesService.getUpdatesOrFail(
       messageData.updatesID
     );
@@ -43,7 +46,7 @@ export class UpdatesResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
+  @Mutation(() => MessageID, {
     description: 'Removes an update message.',
   })
   @Profiling.api
@@ -60,12 +63,10 @@ export class UpdatesResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `communication send message: ${updates.displayName}`
     );
-    await this.updatesService.removeUpdateMessage(
+    return await this.updatesService.removeUpdateMessage(
       updates,
       agentInfo.communicationID,
       messageData
     );
-
-    return messageData.messageID;
   }
 }

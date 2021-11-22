@@ -13,6 +13,8 @@ import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DiscussionAuthorizationService } from './discussion.service.authorization';
+import { MessageID } from '@domain/common/scalars/scalar.message';
+import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -23,14 +25,14 @@ export class DiscussionResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IDiscussion, {
-    description: 'Sends a message to the specified Discussion',
+  @Mutation(() => CommunicationMessageResult, {
+    description: 'Sends a message to the specified Discussion. ',
   })
   @Profiling.api
   async sendMessageToDiscussion(
     @Args('messageData') messageData: DiscussionSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IDiscussion> {
+  ): Promise<CommunicationMessageResult> {
     const discussion = await this.discussionService.getDiscussionOrFail(
       messageData.discussionID
     );
@@ -40,23 +42,22 @@ export class DiscussionResolverMutations {
       AuthorizationPrivilege.CREATE,
       `discussion send message: ${discussion.title}`
     );
-    await this.discussionService.sendMessageToDiscussion(
+    return await this.discussionService.sendMessageToDiscussion(
       discussion,
       agentInfo.communicationID,
       messageData
     );
-    return discussion;
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IDiscussion, {
+  @Mutation(() => MessageID, {
     description: 'Removes a message from the specified Discussion.',
   })
   @Profiling.api
   async removeMessageFromDiscussion(
     @Args('messageData') messageData: DiscussionRemoveMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IDiscussion> {
+  ): Promise<string> {
     const discussion = await this.discussionService.getDiscussionOrFail(
       messageData.discussionID
     );
@@ -75,13 +76,11 @@ export class DiscussionResolverMutations {
       AuthorizationPrivilege.DELETE,
       `communication delete message: ${discussion.title}`
     );
-    await this.discussionService.removeMessageFromDiscussion(
+    return await this.discussionService.removeMessageFromDiscussion(
       discussion,
       agentInfo.communicationID,
       messageData
     );
-
-    return discussion;
   }
 
   @UseGuards(GraphqlGuard)

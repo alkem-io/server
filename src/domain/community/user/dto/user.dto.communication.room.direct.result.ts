@@ -1,5 +1,5 @@
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
-import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
+import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('DirectRoom')

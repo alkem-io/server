@@ -1,7 +1,7 @@
 import { Disposable } from '@interfaces/disposable.interface';
 import { EventEmitter } from 'events';
 import { MatrixEvent } from 'matrix-js-sdk';
-import { fromEvent, Observable, Observer, Subscription } from 'rxjs';
+import { first, fromEvent, Observable, Observer, Subscription } from 'rxjs';
 import { MatrixRoom } from '../adapter-room/matrix.room';
 import { MatrixClient } from '../types/matrix.client.type';
 import { MatrixEventHandler } from '../types/matrix.event.handler.type';
@@ -20,6 +20,14 @@ export interface IMatrixEventHandler {
   roomTimelineMonitor?: Observer<RoomTimelineEvent>;
   roomMemberMembershipMonitor?: Observer<{ event: any; member: any }>;
   groupMyMembershipMonitor?: Observer<{ group: any }>;
+}
+
+export interface IConditionalMatrixEventHandler {
+  id: string;
+  roomMemberMembershipMonitor?: {
+    observer?: Observer<{ event: any; member: any }>;
+    condition: (value: { event: any; member: any }) => boolean;
+  };
 }
 
 export type RoomTimelineEvent = {
@@ -143,6 +151,20 @@ export class MatrixEventDispatcher
     }
 
     this._subscriptions[handler.id] = subscriptions;
+  }
+
+  attachOnceConditional(handler: IConditionalMatrixEventHandler) {
+    this.detach(handler.id);
+
+    const subscriptions = [];
+    if (handler.roomMemberMembershipMonitor) {
+      subscriptions.push(
+        this.roomMemberMembershipMonitor
+          // will only fire once when the condition is met
+          .pipe(first(handler.roomMemberMembershipMonitor.condition))
+          .subscribe(handler.roomMemberMembershipMonitor.observer)
+      );
+    }
   }
 
   detach(id: string) {
