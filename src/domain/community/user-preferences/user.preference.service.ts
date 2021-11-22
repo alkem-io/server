@@ -3,12 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { EntityNotFoundException } from '@src/common/exceptions';
 import {
-  EntityNotFoundException,
   LogContext,
   UserPreferenceType,
   UserPreferenceValueType,
-} from '@src/common';
+} from '@src/common/enums';
 import { IUser } from '../user';
 import { UserPreferenceDefinition } from './user.preference.definition.entity';
 import { IUserPreferenceDefinition } from './user.preference.definition.interface';
@@ -34,7 +34,7 @@ export class UserPreferenceService {
     const definition = UserPreferenceDefinition.create(definitionData);
     definition.authorization = new AuthorizationPolicy();
 
-    return this.definitionRepository.save(definition);
+    return await this.definitionRepository.save(definition);
   }
 
   async definitionExists(
@@ -66,7 +66,7 @@ export class UserPreferenceService {
       pref => (pref.authorization = new AuthorizationPolicy())
     );
 
-    return this.preferenceRepository.save(newPreferences);
+    return await this.preferenceRepository.save(newPreferences);
   }
 
   async getUserPreferenceOrFail(
@@ -82,7 +82,7 @@ export class UserPreferenceService {
 
     if (!preference) {
       throw new EntityNotFoundException(
-        `Unable to find preference for user with ID: ${user.id}`,
+        `Unable to find preference of type ${type} for user with ID: ${user.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -121,7 +121,7 @@ export class UserPreferenceService {
 
     if (newValue !== preference.value) {
       preference.value = newValue;
-      return this.preferenceRepository.save(preference);
+      return await this.preferenceRepository.save(preference);
     }
 
     return preference;
@@ -142,7 +142,7 @@ export class UserPreferenceService {
     return definition;
   }
 
-  private getAllDefinitions() {
-    return this.definitionRepository.find();
+  private async getAllDefinitions() {
+    return await this.definitionRepository.find();
   }
 }

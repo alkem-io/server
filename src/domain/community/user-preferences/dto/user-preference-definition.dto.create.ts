@@ -1,4 +1,5 @@
-import { UserPreferenceType, UserPreferenceValueType } from '@src/common';
+import { UserPreferenceType } from '@src/common/enums/user.preference.type';
+import { UserPreferenceValueType } from '@src/common/enums/user.preference.value.type';
 
 export class CreateUserPreferenceDefinitionInput {
   group!: string;

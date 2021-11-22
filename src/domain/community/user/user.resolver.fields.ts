@@ -33,8 +33,8 @@ export class UserResolverFields {
     description: 'The preferences for this user',
   })
   @Profiling.api
-  preferences(@Parent() user: User): Promise<IUserPreference[]> {
-    return this.userService.getPreferences(user.id);
+  async preferences(@Parent() user: User): Promise<IUserPreference[]> {
+    return await this.userService.getPreferences(user.id);
   }
 
   @ResolveField('communityRooms', () => [CommunicationRoomResult], {

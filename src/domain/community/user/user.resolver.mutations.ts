@@ -176,7 +176,7 @@ export class UserResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `user preference update: ${preference.id}`
     );
-    return this.preferenceService.updateUserPreference(
+    return await this.preferenceService.updateUserPreference(
       user,
       userPreferenceData.type,
       userPreferenceData.value

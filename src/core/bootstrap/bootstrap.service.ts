@@ -152,11 +152,10 @@ export class BootstrapService {
       bootstrapJson.userPreferenceDefinition as CreateUserPreferenceDefinitionInput[];
     if (!preferenceDef) {
       this.logger.verbose?.(
-        'No users section in the authorization bootstrap file!',
+        'No preference definitions in the authorization bootstrap file!',
         LogContext.BOOTSTRAP
       );
     } else {
-      // todo create preference definitions
       await this.createUserPreferenceDefinitions(preferenceDef);
     }
   }
@@ -228,7 +227,7 @@ export class BootstrapService {
       );
     } catch (err: unknown) {
       throw new BootstrapException(
-        `Unable to create profiles ${(err as Error).message}`
+        `Unable to create preference definitions ${(err as Error).message}`
       );
     }
   }

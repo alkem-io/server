@@ -37,10 +37,6 @@ export abstract class IUser extends INameable {
 
   agent?: IAgent;
 
-  @Field(() => [IUserPreference], {
-    nullable: true,
-    description: 'List of user preferences',
-  })
   preferences?: IUserPreference[];
 
   // the internal communicationID (Matrix) for the user

@@ -3,7 +3,7 @@
  * @param value
  * @param valueType
  */
-import { UserPreferenceValueType } from '@src/common';
+import { UserPreferenceValueType } from '@src/common/enums';
 
 export const validateValue = (
   value: string,
