@@ -2,7 +2,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class userPreferences1636644627179 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    /* await queryRunner.query(
+    await queryRunner.query(
       `CREATE TABLE \`user_preference_definition\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`group\` varchar(255) NOT NULL, \`displayName\` varchar(255) NOT NULL, \`description\` varchar(255) NOT NULL, \`valueType\` varchar(255) NOT NULL, \`type\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_4cc4f80e47686c868424a530ee\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
@@ -19,7 +19,16 @@ export class userPreferences1636644627179 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`user_preference\` ADD CONSTRAINT \`FK_5b141fbd1fef95a0540f7e7d1e2\` FOREIGN KEY (\`userId\`) REFERENCES \`user\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`
-    );*/
+    );
+    // populate some initial definitions
+    await queryRunner.query(
+      `INSERT INTO user_preference_definition (id, createdDate, updatedDate, version, group, displayName, description, valueType, type)
+      VALUES (UUID(), NOW(), NOW(), '1', 'Notification', 'User sign up notification', 'Receive notification when a new user signs up', 'boolean', 'NotificationUserSignUp')`
+    );
+    await queryRunner.query(
+      `INSERT INTO user_preference_definition (id, createdDate, updatedDate, version, group, displayName, description, valueType, type)
+      VALUES (UUID(), NOW(), NOW(), '1', 'Notification', 'New application is received notification', 'Receive notification when a new application is received', 'boolean', 'NotificationApplicationReceived')`
+    );
     // populate existing users with a preference of each definition
     const definitions: any[] = await queryRunner.query(
       'SELECT * FROM user_preference_definition'
