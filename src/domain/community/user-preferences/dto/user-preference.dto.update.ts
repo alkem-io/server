@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
-import { UserPreferenceType } from '@src/common';
+import { UserPreferenceType } from '@src/common/enums';
 
 @InputType()
 export class UpdateUserPreferenceInput {
