@@ -625,10 +625,18 @@ export class CommunicationAdapter {
 
   async removeRoom(matrixRoomID: string) {
     try {
-      //const elevatedAgent = await this.getMatrixManagementAgentElevated();
+      const elevatedAgent = await this.getMatrixManagementAgentElevated();
       //todo: remove the room
       this.logger.verbose?.(
         `Removing matrix room: ${matrixRoomID}`,
+        LogContext.COMMUNICATION
+      );
+      const room = await this.matrixRoomAdapter.getMatrixRoom(
+        elevatedAgent.matrixClient,
+        matrixRoomID
+      );
+      this.logger.verbose?.(
+        `Located matrix room to remove: ${room.name}`,
         LogContext.COMMUNICATION
       );
     } catch (error) {

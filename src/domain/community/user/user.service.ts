@@ -254,7 +254,7 @@ export class UserService {
 
       if (!communicationID) {
         this.logger.warn(
-          `User could not be registered for communication ${user.id}`,
+          `Unable to register user for communication: ${user.email}`,
           LogContext.COMMUNICATION
         );
         return user;
