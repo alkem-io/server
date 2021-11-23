@@ -100,7 +100,7 @@ export class CommunicationService {
     const communicationID = discussionData.communicationID;
 
     this.logger.verbose?.(
-      `Adding discussion (${title}) to Communication (${communicationID})`,
+      `[Discussion] Adding discussion (${title}) to Communication (${communicationID})`,
       LogContext.COMMUNICATION
     );
 
@@ -110,8 +110,42 @@ export class CommunicationService {
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
       communication.communicationGroupID,
+      communicationUserID,
+      `${communication.displayName}-discussion-${discussionData.title}`
+    );
+
+    const updates = this.getUpdates(communication);
+
+    await this.communicationAdapter.replicateRoomMembership(
+      discussion.communicationRoomID,
+      updates.communicationRoomID,
       communicationUserID
     );
+
+    this.logger.verbose?.(
+      `[Discussion] Room created (${title}) and membership replicated from Updates (${communicationID})`,
+      LogContext.COMMUNICATION
+    );
+
+    // Send before saving to give the event some bit of time to be received by reading admin account.
+    try {
+      await this.discussionService.sendMessageToDiscussion(
+        discussion,
+        communicationUserID,
+        {
+          message: discussionData.message,
+        }
+      );
+      this.logger.verbose?.(
+        `[Discussion] Initial message sent: ${discussionData.message}`,
+        LogContext.COMMUNICATION
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Unable to send message to newly created discussion (${discussion.displayName}): ${error}`,
+        LogContext.COMMUNICATION
+      );
+    }
 
     communication.discussions?.push(discussion);
     await this.communicationRepository.save(communication);
@@ -176,6 +210,41 @@ export class CommunicationService {
 
   async addUserToCommunications(
     communication: ICommunication,
+    communicationUserID: string
+  ): Promise<boolean> {
+    const communicationRoomIDs = await this.getRoomsUsed(communication);
+    await this.communicationAdapter.grantUserAccesToRooms(
+      communication.communicationGroupID,
+      communicationRoomIDs,
+      communicationUserID
+    );
+
+    return true;
+  }
+
+  async getRoomsUsed(communication: ICommunication): Promise<string[]> {
+    const communicationRoomIDs: string[] = [
+      this.getUpdates(communication).communicationRoomID,
+    ];
+    for (const discussion of this.getDiscussions(communication)) {
+      communicationRoomIDs.push(discussion.communicationRoomID);
+    }
+    return communicationRoomIDs;
+  }
+
+  async getCommunicationIDsUsed(): Promise<string[]> {
+    const communicationMatches = await this.communicationRepository
+      .createQueryBuilder('communication')
+      .getMany();
+    const communicationIDs: string[] = [];
+    for (const communication of communicationMatches) {
+      communicationIDs.push(communication.id);
+    }
+    return communicationIDs;
+  }
+
+  async removeUserFromCommunications(
+    communication: ICommunication,
     user: IUser
   ): Promise<boolean> {
     // get the list of rooms to add the user to
@@ -185,8 +254,7 @@ export class CommunicationService {
     for (const discussion of this.getDiscussions(communication)) {
       communicationRoomIDs.push(discussion.communicationRoomID);
     }
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
-      communication.communicationGroupID,
+    await this.communicationAdapter.removeUserFromRooms(
       communicationRoomIDs,
       user.communicationID
     );

@@ -207,7 +207,7 @@ export class MatrixAgentService {
     matrixAgent: IMatrixAgent,
     roomId: string,
     messageRequest: MatrixAgentMessageRequest
-  ) {
+  ): Promise<string> {
     const response = await matrixAgent.matrixClient.sendEvent(
       roomId,
       this.matrixMessageAdapter.EVENT_TYPE_MESSAGE,

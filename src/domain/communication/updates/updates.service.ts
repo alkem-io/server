@@ -7,16 +7,19 @@ import { RoomService } from '../room/room.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Updates } from './updates.entity';
 import { IUpdates } from './updates.interface';
-import { CommunicationRoomResult } from '../room/communication.dto.room.result';
+import { CommunicationRoomResult } from '../room/dto/communication.dto.room.result';
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
+import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 
 @Injectable()
 export class UpdatesService {
   constructor(
     @InjectRepository(Updates)
     private updatesRepository: Repository<Updates>,
-    private roomService: RoomService
+    private roomService: RoomService,
+    private communicationAdapter: CommunicationAdapter
   ) {}
 
   async createUpdates(
@@ -44,6 +47,8 @@ export class UpdatesService {
 
   async deleteUpdates(updates: IUpdates): Promise<IUpdates> {
     const result = await this.updatesRepository.remove(updates as Updates);
+    await this.communicationAdapter.removeRoom(updates.communicationRoomID);
+    await this.roomService.removeRoom(updates);
     result.id = updates.id;
     return result;
   }
@@ -52,21 +57,15 @@ export class UpdatesService {
     return await this.updatesRepository.save(updates);
   }
 
-  async getUpdatesRoom(
-    updates: IUpdates,
-    communicationUserID: string
-  ): Promise<CommunicationRoomResult> {
-    return await this.roomService.getCommunicationRoom(
-      updates,
-      communicationUserID
-    );
+  async getUpdatesRoom(updates: IUpdates): Promise<CommunicationRoomResult> {
+    return await this.roomService.getCommunicationRoom(updates);
   }
 
   async sendUpdateMessage(
     updates: IUpdates,
     communicationUserID: string,
     messageData: RoomSendMessageInput
-  ): Promise<string> {
+  ): Promise<CommunicationMessageResult> {
     return await this.roomService.sendMessage(
       updates,
       communicationUserID,
@@ -78,11 +77,12 @@ export class UpdatesService {
     updates: IUpdates,
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
-  ) {
-    return await this.roomService.removeMessage(
+  ): Promise<string> {
+    await this.roomService.removeMessage(
       updates,
       communicationUserID,
       messageData
     );
+    return messageData.messageID;
   }
 }

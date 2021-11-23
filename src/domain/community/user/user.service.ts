@@ -13,7 +13,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
+import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
@@ -548,14 +548,20 @@ export class UserService {
 
     return directRooms;
   }
-  createUserNameID(firstName: string, lastName: string): string {
+
+  createUserNameID(
+    firstName: string,
+    lastName: string,
+    useRandomSuffix = true
+  ): string {
     const nameIDExcludedCharacters = /[^a-zA-Z0-9/-]/g;
-    const randomNumber = Math.floor(Math.random() * 10000).toString();
+    let randomSuffix = '';
+    if (useRandomSuffix) {
+      const randomNumber = Math.floor(Math.random() * 10000).toString();
+      randomSuffix = `-${randomNumber}`;
+    }
     // replace spaces + trim to 25 characters
-    const nameID = `${firstName}-${lastName}-${randomNumber}`.replace(
-      /\s/g,
-      ''
-    );
+    const nameID = `${firstName}-${lastName}${randomSuffix}`.replace(/\s/g, '');
     // replace characters with umlouts etc to normal characters
     const nameIDNoSpecialCharacters = this.replaceSpecialCharacters(nameID);
     // Remove any characters that are not allowed

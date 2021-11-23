@@ -13,6 +13,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminCommunicationModule } from '@services/admin/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { WinstonConfigService } from '@src/config/winston.config';
@@ -99,6 +100,7 @@ import { join } from 'path';
     MembershipModule,
     KonfigModule,
     IpfsModule,
+    AdminCommunicationModule,
   ],
   controllers: [AppController],
   providers: [
