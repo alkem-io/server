@@ -1,6 +1,9 @@
 mutation sendMessageToDiscussion($messageData: DiscussionSendMessageInput!) {
   sendMessageToDiscussion(messageData: $messageData) {
     id
+    message
+    timestamp
+    sender
   }
 }
 

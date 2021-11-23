@@ -235,7 +235,7 @@ export class CommunityService {
     // register the user for the community rooms
     const communication = await this.getCommunication(community.id);
     this.communicationService
-      .addUserToCommunications(communication, user)
+      .addUserToCommunications(communication, user.communicationID)
       .catch(error =>
         this.logger.error?.(
           `Unable to add user to community messaging (${community.displayName}): ${error}`,
@@ -286,6 +286,16 @@ export class CommunityService {
       type: membershipCredential.type,
       resourceID: membershipCredential.resourceID,
     });
+
+    const communication = await this.getCommunication(community.id);
+    this.communicationService
+      .removeUserFromCommunications(communication, user)
+      .catch(error =>
+        this.logger.error?.(
+          `Unable to add remove user from community messaging (${community.displayName}): ${error}`,
+          LogContext.COMMUNICATION
+        )
+      );
 
     return await this.getCommunityOrFail(membershipData.communityID);
   }
