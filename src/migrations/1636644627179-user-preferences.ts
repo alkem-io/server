@@ -3,10 +3,10 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class userPreferences1636644627179 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TABLE \`user_preference_definition\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`group\` varchar(255) NOT NULL, \`displayName\` varchar(255) NOT NULL, \`description\` varchar(255) NOT NULL, \`valueType\` varchar(255) NOT NULL, \`type\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_4cc4f80e47686c868424a530ee\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`user_preference_definition\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`groupName\` varchar(128) NOT NULL, \`displayName\` varchar(128) NOT NULL, \`description\` varchar(255) NOT NULL, \`valueType\` varchar(16) NOT NULL, \`type\` varchar(128) NOT NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_4cc4f80e47686c868424a530ee\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `CREATE TABLE \`user_preference\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`value\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, \`userPreferenceDefinitionId\` char(36) NULL, \`userId\` char(36) NULL, UNIQUE INDEX \`REL_49030bc57aa0f319cee7996fca\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`user_preference\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`value\` varchar(16) NOT NULL, \`authorizationId\` char(36) NULL, \`userPreferenceDefinitionId\` char(36) NULL, \`userId\` char(36) NULL, UNIQUE INDEX \`REL_49030bc57aa0f319cee7996fca\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`user_preference_definition\` ADD CONSTRAINT \`FK_4cc4f80e47686c868424a530eef\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -22,12 +22,12 @@ export class userPreferences1636644627179 implements MigrationInterface {
     );
     // populate some initial definitions
     await queryRunner.query(
-      `INSERT INTO user_preference_definition (id, createdDate, updatedDate, version, group, displayName, description, valueType, type)
-      VALUES (UUID(), NOW(), NOW(), '1', 'Notification', 'User sign up notification', 'Receive notification when a new user signs up', 'boolean', 'NotificationUserSignUp')`
+      `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
+      VALUES (UUID(), 1, 'Notification', 'User sign up notification', 'Receive notification when a new user signs up', 'boolean', 'NotificationUserSignUp')`
     );
     await queryRunner.query(
-      `INSERT INTO user_preference_definition (id, createdDate, updatedDate, version, group, displayName, description, valueType, type)
-      VALUES (UUID(), NOW(), NOW(), '1', 'Notification', 'New application is received notification', 'Receive notification when a new application is received', 'boolean', 'NotificationApplicationReceived')`
+      `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
+      VALUES (UUID(), 1, 'Notification', 'New application is received notification', 'Receive notification when a new application is received', 'boolean', 'NotificationApplicationReceived')`
     );
     // populate existing users with a preference of each definition
     const definitions: any[] = await queryRunner.query(
