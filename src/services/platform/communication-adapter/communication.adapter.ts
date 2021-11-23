@@ -347,7 +347,7 @@ export class CommunicationAdapter {
       await this.addUserToGroup(groupID, matrixUserID);
       await this.addUserToRooms(roomIDs, matrixUserID);
     } catch (error) {
-      this.logger.verbose?.(
+      this.logger.warn?.(
         `Unable to add user (${matrixUserID}) to rooms (${roomIDs}): already added?: ${error}`,
         LogContext.COMMUNICATION
       );
@@ -517,7 +517,13 @@ export class CommunicationAdapter {
               ),
           });
         });
-        oneTimeMembershipPromises.push(oneTimePromise);
+
+        // Only await the room membership from the triggering user. Logic is
+        // that this is the user triggering the new discussion + so will be the one
+        // sending the first message.
+        if (matrixUserID === userIdToExplicitlyAdd) {
+          oneTimeMembershipPromises.push(oneTimePromise);
+        }
 
         await this.matrixRoomAdapter.inviteUserToRoom(
           elevatedAgent.matrixClient,
@@ -527,11 +533,6 @@ export class CommunicationAdapter {
       }
 
       await Promise.all(oneTimeMembershipPromises);
-
-      await this.matrixRoomAdapter.logRoomMembership(
-        elevatedAgent.matrixClient,
-        targetRoomID
-      );
     } catch (error) {
       this.logger.error?.(
         `Unable to duplicate room membership from (${sourceRoomID}) to (${targetRoomID}): ${error}`,
@@ -545,6 +546,10 @@ export class CommunicationAdapter {
   private async addUserToGroup(groupID: string, matrixUserID: string) {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    if (await this.isUserInGroup(userAgent.matrixClient, groupID)) {
+      // nothing to do...
+      return;
+    }
 
     await this.matrixGroupAdapter.inviteUserToGroup(
       elevatedAgent.matrixClient,
@@ -621,6 +626,25 @@ export class CommunicationAdapter {
       return [];
     }
     return applicableRoomIDs;
+  }
+
+  async isUserInGroup(
+    matrixClient: MatrixClient,
+    groupID: string
+  ): Promise<boolean> {
+    // Filter down to exclude the rooms the user is already a member of
+    const joinedGroups = await this.matrixUserAdapter.getJoinedGroups(
+      matrixClient
+    );
+    const groupFound = joinedGroups.find(gID => gID === groupID);
+    if (groupFound) {
+      this.logger.verbose?.(
+        `User (${matrixClient.getUserId()}) is already in group: ${groupID}`,
+        LogContext.COMMUNICATION
+      );
+      return true;
+    }
+    return false;
   }
 
   async removeRoom(matrixRoomID: string) {

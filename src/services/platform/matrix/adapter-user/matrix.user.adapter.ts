@@ -23,6 +23,14 @@ export class MatrixUserAdapter {
     return response.joined_rooms;
   }
 
+  async getJoinedGroups(matrixClient: MatrixClient): Promise<string[]> {
+    const groupsResponse = await matrixClient.getJoinedGroups();
+    const response = groupsResponse as any as {
+      groups: string[];
+    };
+    return response.groups;
+  }
+
   async verifyRoomMembershipOrFail(
     matrixClient: MatrixClient,
     roomID: string
