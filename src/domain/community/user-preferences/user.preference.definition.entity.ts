@@ -1,13 +1,13 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { UserPreferenceValueType, UserPreferenceType } from '@common/enums';
 import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@src/common/constants';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IUserPreferenceDefinition } from './user.preference.definition.interface';
 import { UserPreference } from './user.preference.entity';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
 
 @Entity()
 export class UserPreferenceDefinition
-  extends AuthorizableEntity
+  extends BaseAlkemioEntity
   implements IUserPreferenceDefinition
 {
   @Column({

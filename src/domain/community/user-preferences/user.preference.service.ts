@@ -32,7 +32,6 @@ export class UserPreferenceService {
     definitionData: CreateUserPreferenceDefinitionInput
   ): Promise<IUserPreferenceDefinition> {
     const definition = UserPreferenceDefinition.create(definitionData);
-    definition.authorization = new AuthorizationPolicy();
 
     return await this.definitionRepository.save(definition);
   }
