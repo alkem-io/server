@@ -141,6 +141,22 @@ export class CommunicationService {
     return communication.discussions;
   }
 
+  getDiscussionOrFail(
+    communication: ICommunication,
+    discussionID: string
+  ): IDiscussion {
+    const discussions = this.getDiscussions(communication);
+    const discussion = discussions.find(
+      discussion => discussion.id === discussionID
+    );
+    if (!discussion) {
+      throw new EntityNotFoundException(
+        `Unable to find Discussion with ID: ${discussionID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return discussion;
+  }
   getUpdates(communication: ICommunication): IUpdates {
     if (!communication.updates) {
       throw new EntityNotInitializedException(
