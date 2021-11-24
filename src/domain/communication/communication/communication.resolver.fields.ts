@@ -38,7 +38,7 @@ export class CommunicationResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('discussions', () => IDiscussion, {
+  @ResolveField('discussion', () => IDiscussion, {
     nullable: true,
     description: 'A particular Discussions active in this Communication.',
   })
