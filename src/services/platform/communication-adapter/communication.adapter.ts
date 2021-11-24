@@ -102,7 +102,8 @@ export class CommunicationAdapter {
       LogContext.COMMUNICATION
     );
 
-    // todo: ideally get the message directly using the user that sent the message
+    // Create the 'equivalent' message. Note that this can have a very minor timestamp offset
+    // from the actual message.
     const timestamp = new Date().getTime();
     return {
       id: messageId,
@@ -548,7 +549,11 @@ export class CommunicationAdapter {
     );
   }
 
-  private async addUserToRoomSync(roomID: string, matrixUserID: string) {
+  public async addUserToRoomSync(
+    groupID: string,
+    roomID: string,
+    matrixUserID: string
+  ) {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
 
@@ -566,6 +571,8 @@ export class CommunicationAdapter {
       `[Membership] Inviting user (${matrixUserID}) is join room: ${roomID}`,
       LogContext.COMMUNICATION
     );
+
+    await this.addUserToGroup(groupID, matrixUserID);
 
     const oneTimePromise = new Promise<void>((resolve, reject) => {
       userAgent.attachOnceConditional({
@@ -598,6 +605,10 @@ export class CommunicationAdapter {
         roomID
       );
       if (isMember) return;
+      this.logger.warn(
+        `[Membership] User membership of room (${roomID}) has not yet resolved; waiting...`,
+        LogContext.COMMUNICATION
+      );
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 

@@ -25,11 +25,6 @@ export abstract class IDiscussion extends IRoomable {
   })
   createdBy!: string;
 
-  @Field(() => Date, {
-    description: 'The date this discussion was created.',
-  })
-  createdDate!: Date;
-
   @Field(() => Number, {
     description: 'The number of comments.',
   })
