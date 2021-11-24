@@ -23,11 +23,27 @@ export class userPreferences1636644627179 implements MigrationInterface {
     // populate some initial definitions
     await queryRunner.query(
       `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
-      VALUES (UUID(), 1, 'Notification', 'User sign up notification', 'Receive notification when a new user signs up', 'boolean', 'NotificationUserSignUp')`
+      VALUES (UUID(), 1, 'Notification', 'Community Application', 'Receive notification when I apply to join a community', 'boolean', 'NotificationApplicationSubmitted')`
     );
     await queryRunner.query(
       `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
-      VALUES (UUID(), 1, 'Notification', 'New application is received notification', 'Receive notification when a new application is received', 'boolean', 'NotificationApplicationReceived')`
+      VALUES (UUID(), 1, 'Notification', 'Community Updates', 'Receive notification when a new update is shared with a community I am a member of', 'boolean', 'NotificationCommunityUpdates')`
+    );
+    await queryRunner.query(
+      `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
+      VALUES (UUID(), 1, 'Notification', 'Community Discussion created', 'Receive notification when a new discussion is created on a community I am a member of', 'boolean', 'NotificationCommunityDiscussionCreated')`
+    );
+    await queryRunner.query(
+      `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
+      VALUES (UUID(), 1, 'Notification', 'Community Discussion response', 'Receive notification when a response is sent to a discussion I contributed to', 'boolean', 'NotificationCommunityDiscussionResponse')`
+    );
+    await queryRunner.query(
+      `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
+      VALUES (UUID(), 1, 'Notification', '[Admin] Community Applications', 'Receive notification when a new application is received for a community for which I am an administrator', 'boolean', 'NotificationApplicationReceived')`
+    );
+    await queryRunner.query(
+      `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
+      VALUES (UUID(), 1, 'Notification', '[Admin] New user sign up', 'Receive notification when a new user signs up', 'boolean', 'NotificationUserSignUp')`
     );
     // populate existing users with a preference of each definition
     const definitions: any[] = await queryRunner.query(
