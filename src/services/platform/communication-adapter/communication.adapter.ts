@@ -535,6 +535,55 @@ export class CommunicationAdapter {
     );
   }
 
+  private async addUserToRoomSync(roomID: string, matrixUserID: string) {
+    const elevatedAgent = await this.getMatrixManagementAgentElevated();
+    const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
+
+    const roomsToAdd = await this.getRoomsUserIsNotMember(
+      userAgent.matrixClient,
+      [roomID]
+    );
+
+    if (roomsToAdd.length === 0) {
+      // Nothing to do; avoid wait below...
+      return;
+    }
+
+    this.logger.verbose?.(
+      `[Membership] Inviting user (${matrixUserID}) is join room: ${roomID}`,
+      LogContext.COMMUNICATION
+    );
+
+    const oneTimePromise = new Promise<void>((resolve, reject) => {
+      userAgent.attachOnceConditional({
+        id: roomID,
+        roomMemberMembershipMonitor:
+          userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+            // subscribe for events for a specific room
+            roomID,
+            userAgent.matrixClient.getUserId(),
+            // once we have joined the room detach the subscription
+            () => userAgent.detach(roomID),
+            resolve,
+            reject
+          ),
+      });
+    });
+
+    await this.matrixRoomAdapter.inviteUserToRoom(
+      elevatedAgent.matrixClient,
+      roomID,
+      userAgent.matrixClient
+    );
+    await oneTimePromise;
+
+    // Check the user is now a member + do not return until it succeeds
+    // 3 tries + then fail?
+
+    // todo: hack to ensure that room memberships have been accepted before we send any events through
+    await new Promise(resolve => setTimeout(resolve, 400));
+  }
+
   private async addUserToRooms(roomIDs: string[], matrixUserID: string) {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
@@ -549,39 +598,29 @@ export class CommunicationAdapter {
       return;
     }
 
-    const oneTimeMembershipPromises: Promise<void>[] = [];
     for (const roomID of roomsToAdd) {
       this.logger.verbose?.(
         `[Membership] Inviting user (${matrixUserID}) is join room: ${roomID}`,
         LogContext.COMMUNICATION
       );
-      const oneTimePromise = new Promise<void>((resolve, reject) => {
-        userAgent.attachOnceConditional({
-          id: roomID,
-          roomMemberMembershipMonitor:
-            userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
-              // subscribe for events for a specific room
-              roomID,
-              userAgent.matrixClient.getUserId(),
-              // once we have joined the room detach the subscription
-              () => userAgent.detach(roomID),
-              resolve,
-              reject
-            ),
-        });
-      });
-      oneTimeMembershipPromises.push(oneTimePromise);
 
+      userAgent.attachOnceConditional({
+        id: roomID,
+        roomMemberMembershipMonitor:
+          userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+            // subscribe for events for a specific room
+            roomID,
+            userAgent.matrixClient.getUserId(),
+            // once we have joined the room detach the subscription
+            () => userAgent.detach(roomID)
+          ),
+      });
       await this.matrixRoomAdapter.inviteUserToRoom(
         elevatedAgent.matrixClient,
         roomID,
         userAgent.matrixClient
       );
     }
-
-    await Promise.all(oneTimeMembershipPromises);
-    // todo: hack to ensure that room memberships have been accepted before we send any events through
-    await new Promise(resolve => setTimeout(resolve, 400));
   }
 
   async getRoomsUserIsNotMember(
