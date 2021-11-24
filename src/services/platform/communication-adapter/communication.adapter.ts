@@ -441,11 +441,24 @@ export class CommunicationAdapter {
       `Removing user (${matrixUserID}) from rooms (${roomIDs})`,
       LogContext.COMMUNICATION
     );
-    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
     for (const roomID of roomIDs) {
+      // added this for logging purposes
+      userAgent.attachOnceConditional({
+        id: roomID,
+        roomMemberMembershipMonitor:
+          userAgent.resolveAutoForgetRoomMembershipMonitor(
+            // once we have forgotten the room detach the subscription
+            () => userAgent.detach(roomID),
+            () => this.logger.verbose?.('completed'),
+            () => this.logger.verbose?.('rejected')
+          ) as any,
+      });
       await this.matrixRoomAdapter.removeUserFromRoom(
+        matrixAgentElevated.matrixClient,
         roomID,
-        matrixAgent.matrixClient
+        userAgent.matrixClient
       );
     }
     return true;
@@ -506,7 +519,7 @@ export class CommunicationAdapter {
           userAgent.attachOnceConditional({
             id: targetRoomID,
             roomMemberMembershipMonitor:
-              userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+              userAgent.resolveAutoAcceptRoomMembershipOneTimeMonitor(
                 // subscribe for events for a specific room
                 targetRoomID,
                 userAgent.matrixClient.getUserId(),
@@ -582,7 +595,7 @@ export class CommunicationAdapter {
         userAgent.attachOnceConditional({
           id: roomID,
           roomMemberMembershipMonitor:
-            userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+            userAgent.resolveAutoAcceptRoomMembershipOneTimeMonitor(
               // subscribe for events for a specific room
               roomID,
               userAgent.matrixClient.getUserId(),
