@@ -1,9 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { UserPreferenceType, UserPreferenceValueType } from '@src/common/enums';
+import { IBaseAlkemio } from '@src/domain/common';
 
 @ObjectType('UserPreferenceDefinition')
-export abstract class IUserPreferenceDefinition extends IAuthorizable {
+export abstract class IUserPreferenceDefinition extends IBaseAlkemio {
   @Field(() => String, {
     description: 'The group',
   })

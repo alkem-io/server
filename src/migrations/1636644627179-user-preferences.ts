@@ -1,15 +1,13 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { RandomGenerator } from 'typeorm/util/RandomGenerator';
 
 export class userPreferences1636644627179 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TABLE \`user_preference_definition\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`groupName\` varchar(128) NOT NULL, \`displayName\` varchar(128) NOT NULL, \`description\` varchar(255) NOT NULL, \`valueType\` varchar(16) NOT NULL, \`type\` varchar(128) NOT NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_4cc4f80e47686c868424a530ee\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`user_preference_definition\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`groupName\` varchar(128) NOT NULL, \`displayName\` varchar(128) NOT NULL, \`description\` varchar(255) NOT NULL, \`valueType\` varchar(16) NOT NULL, \`type\` varchar(128) NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `CREATE TABLE \`user_preference\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`value\` varchar(16) NOT NULL, \`authorizationId\` char(36) NULL, \`userPreferenceDefinitionId\` char(36) NULL, \`userId\` char(36) NULL, UNIQUE INDEX \`REL_49030bc57aa0f319cee7996fca\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`user_preference_definition\` ADD CONSTRAINT \`FK_4cc4f80e47686c868424a530eef\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`user_preference\` ADD CONSTRAINT \`FK_49030bc57aa0f319cee7996fca1\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -55,13 +53,15 @@ export class userPreferences1636644627179 implements MigrationInterface {
       WHERE user_preference.userId IS NULL`
     );
     usersWithoutPreference.forEach(user =>
-      definitions.forEach(
-        async def =>
-          await queryRunner.query(
-            `INSERT INTO user_preference (id, createdDate, updatedDate, userId, userPreferenceDefinitionId, value, version)
-		  VALUES (UUID(), NOW(), NOW(), '${user.id}', '${def.id}', 'false', '1')`
-          )
-      )
+      definitions.forEach(async def => {
+        const uuid = RandomGenerator.uuid4();
+        await queryRunner.query(
+          `INSERT INTO authorization_policy VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0)`
+        );
+        await queryRunner.query(
+          `INSERT INTO user_preference VALUES (UUID(), NOW(), NOW(), 1, 'false', '${uuid}', '${def.id}', '${user.id}')`
+        );
+      })
     );
   }
 
@@ -76,15 +76,9 @@ export class userPreferences1636644627179 implements MigrationInterface {
       `ALTER TABLE \`user_preference\` DROP FOREIGN KEY \`FK_49030bc57aa0f319cee7996fca1\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_preference_definition\` DROP FOREIGN KEY \`FK_4cc4f80e47686c868424a530eef\``
-    );
-    await queryRunner.query(
       `DROP INDEX \`REL_49030bc57aa0f319cee7996fca\` ON \`user_preference\``
     );
     await queryRunner.query(`DROP TABLE \`user_preference\``);
-    await queryRunner.query(
-      `DROP INDEX \`REL_4cc4f80e47686c868424a530ee\` ON \`user_preference_definition\``
-    );
     await queryRunner.query(`DROP TABLE \`user_preference_definition\``);
   }
 }
