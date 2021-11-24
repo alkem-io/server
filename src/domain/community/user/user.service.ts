@@ -36,6 +36,7 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
+import { UserPreferenceService } from '../user-preferences';
 
 @Injectable()
 export class UserService {
@@ -48,6 +49,8 @@ export class UserService {
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private agentService: AgentService,
+    @Inject(UserPreferenceService)
+    private userPreferenceService: UserPreferenceService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -99,6 +102,9 @@ export class UserService {
     }
 
     const response = await this.userRepository.save(user);
+
+    user.preferences =
+      await this.userPreferenceService.createInitialUserPreferences(response);
 
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
@@ -206,6 +212,23 @@ export class UserService {
 
   async saveUser(user: IUser): Promise<IUser> {
     return await this.userRepository.save(user);
+  }
+
+  async getPreferences(userID: string) {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['preferences'],
+    });
+
+    const preferences = user.preferences;
+
+    if (!preferences) {
+      throw new EntityNotInitializedException(
+        `User preferences not initialized: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preferences;
   }
 
   async getUserOrFail(
