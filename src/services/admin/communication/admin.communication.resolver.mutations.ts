@@ -49,11 +49,11 @@ export class AdminCommunicationResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
-    description: 'Remove an orphaned room from messaging platform.',
-  })
-  @Profiling.api
+  // @UseGuards(GraphqlGuard)
+  // @Mutation(() => Boolean, {
+  //   description: 'Remove an orphaned room from messaging platform.',
+  // })
+  // @Profiling.api
   async adminCommunicationRemoveOrphanedRoom(
     @Args('orphanedRoomData')
     orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput,
