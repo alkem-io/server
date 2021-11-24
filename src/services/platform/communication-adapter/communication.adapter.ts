@@ -1,5 +1,6 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
+import { MatrixUserMembershipException } from '@common/exceptions/matrix.membership.exception';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
@@ -441,11 +442,24 @@ export class CommunicationAdapter {
       `Removing user (${matrixUserID}) from rooms (${roomIDs})`,
       LogContext.COMMUNICATION
     );
-    const matrixAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
+    const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
     for (const roomID of roomIDs) {
+      // added this for logging purposes
+      userAgent.attachOnceConditional({
+        id: roomID,
+        roomMemberMembershipMonitor:
+          userAgent.resolveAutoForgetRoomMembershipMonitor(
+            // once we have forgotten the room detach the subscription
+            () => userAgent.detach(roomID),
+            () => this.logger.verbose?.('completed'),
+            () => this.logger.verbose?.('rejected')
+          ) as any,
+      });
       await this.matrixRoomAdapter.removeUserFromRoom(
+        matrixAgentElevated.matrixClient,
         roomID,
-        matrixAgent.matrixClient
+        userAgent.matrixClient
       );
     }
     return true;
@@ -491,11 +505,10 @@ export class CommunicationAdapter {
         if (matrixUserID === elevatedAgent.matrixClient.getUserId()) continue;
         const userAgent = await this.acquireMatrixAgent(matrixUserID);
 
-        // todo: this needs to go into the room adapter
         userAgent.attachOnceConditional({
           id: targetRoomID,
           roomMemberMembershipMonitor:
-            userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+            userAgent.resolveAutoAcceptRoomMembershipOneTimeMonitor(
               // subscribe for events for a specific room
               targetRoomID,
               userAgent.matrixClient.getUserId(),
@@ -539,13 +552,13 @@ export class CommunicationAdapter {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
 
-    const roomsToAdd = await this.getRoomsUserIsNotMember(
+    const isMember = await this.matrixUserAdapter.isUserMemberOfRoom(
       userAgent.matrixClient,
-      [roomID]
+      roomID
     );
 
-    if (roomsToAdd.length === 0) {
-      // Nothing to do; avoid wait below...
+    if (isMember) {
+      // Nothing to do...
       return;
     }
 
@@ -558,7 +571,7 @@ export class CommunicationAdapter {
       userAgent.attachOnceConditional({
         id: roomID,
         roomMemberMembershipMonitor:
-          userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+          userAgent.resolveAutoAcceptRoomMembershipOneTimeMonitor(
             // subscribe for events for a specific room
             roomID,
             userAgent.matrixClient.getUserId(),
@@ -579,9 +592,20 @@ export class CommunicationAdapter {
 
     // Check the user is now a member + do not return until it succeeds
     // 3 tries + then fail?
+    for (let i = 0; i < 3; i++) {
+      const isMember = await this.matrixUserAdapter.isUserMemberOfRoom(
+        userAgent.matrixClient,
+        roomID
+      );
+      if (isMember) return;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
 
-    // todo: hack to ensure that room memberships have been accepted before we send any events through
-    await new Promise(resolve => setTimeout(resolve, 400));
+    // something has gone wrong with membership request...
+    throw new MatrixUserMembershipException(
+      `[Membership] user (${userAgent.matrixClient.getUserId()}) membership of room (${roomID}) is not completing.`,
+      LogContext.COMMUNICATION
+    );
   }
 
   private async addUserToRooms(roomIDs: string[], matrixUserID: string) {
@@ -603,11 +627,10 @@ export class CommunicationAdapter {
         `[Membership] Inviting user (${matrixUserID}) is join room: ${roomID}`,
         LogContext.COMMUNICATION
       );
-
       userAgent.attachOnceConditional({
         id: roomID,
         roomMemberMembershipMonitor:
-          userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+          userAgent.resolveAutoAcceptRoomMembershipOneTimeMonitor(
             // subscribe for events for a specific room
             roomID,
             userAgent.matrixClient.getUserId(),
@@ -615,6 +638,7 @@ export class CommunicationAdapter {
             () => userAgent.detach(roomID)
           ),
       });
+
       await this.matrixRoomAdapter.inviteUserToRoom(
         elevatedAgent.matrixClient,
         roomID,

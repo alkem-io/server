@@ -35,6 +35,20 @@ export class MatrixUserAdapter {
     matrixClient: MatrixClient,
     roomID: string
   ): Promise<boolean> {
+    const result = await this.isUserMemberOfRoom(matrixClient, roomID);
+    if (!result) {
+      throw new MatrixUserMembershipException(
+        `[Membership] user (${matrixClient.getUserId()}) is NOT a member of: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return result;
+  }
+
+  async isUserMemberOfRoom(
+    matrixClient: MatrixClient,
+    roomID: string
+  ): Promise<boolean> {
     const rooms = await this.getJoinedRooms(matrixClient);
     const roomFound = rooms.find(r => r === roomID);
     if (roomFound) {
@@ -43,10 +57,8 @@ export class MatrixUserAdapter {
         LogContext.COMMUNICATION
       );
       return true;
-    } else {
-      const msg = `[Membership] user (${matrixClient.getUserId()}) is NOT a member of: ${roomID}`;
-      throw new MatrixUserMembershipException(msg, LogContext.COMMUNICATION);
     }
+    return false;
   }
 
   async logJoinedRooms(matrixClient: MatrixClient) {

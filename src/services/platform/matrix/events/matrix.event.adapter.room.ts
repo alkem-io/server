@@ -15,6 +15,46 @@ const noop = function () {
   // empty
 };
 
+export const roomMembershipLeaveGuardFactory = (
+  targetUserID: string,
+  targetRoomID: string
+) => {
+  return ({ event, member }: any) => {
+    const content = event.getContent();
+    if (content.membership === 'leave' && member.userId === targetUserID) {
+      const roomId = event.getRoomId();
+
+      return roomId === targetRoomID;
+    }
+
+    return false;
+  };
+};
+export class ForgetRoomMembershipMonitorFactory {
+  static create(
+    client: MatrixClient,
+    logger: LoggerService,
+    onRoomLeft: () => void,
+    onComplete = noop,
+    error: (err: any) => void = noop
+  ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
+    return {
+      complete: onComplete,
+      error: error,
+      next: async ({ event, member }) => {
+        const content = event.getContent();
+        const roomId = event.getRoomId();
+        client.forget(roomId);
+        logger.verbose?.(
+          `[Membership] Room [${roomId}] left - user (${member.userId}), membership status ${content.membership}`,
+          LogContext.COMMUNICATION
+        );
+        onRoomLeft();
+      },
+    };
+  }
+}
+
 export const autoAcceptRoomGuardFactory = (
   targetUserID: string,
   targetRoomID: string
