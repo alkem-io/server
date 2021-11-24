@@ -9,11 +9,14 @@ export class Discussion extends RoomableEntity implements IDiscussion {
     communicationGroupID: string,
     displayName: string,
     title?: string,
+    description?: string,
     category?: string
   ) {
     super(communicationGroupID, displayName);
     this.title = title || '';
     this.category = category || '';
+    this.description = description || '';
+    this.commentsCount = 0;
   }
 
   @Column('text', { nullable: false })
@@ -21,6 +24,15 @@ export class Discussion extends RoomableEntity implements IDiscussion {
 
   @Column('text', { nullable: false })
   category!: string;
+
+  @Column('text', { nullable: false })
+  description!: string;
+
+  @Column('int', { nullable: false })
+  commentsCount!: number;
+
+  @Column('varchar', { length: 36, nullable: false })
+  createdBy!: string;
 
   @ManyToOne(() => Communication, communication => communication.discussions, {
     eager: false,

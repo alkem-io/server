@@ -471,8 +471,7 @@ export class CommunicationAdapter {
 
   async replicateRoomMembership(
     targetRoomID: string,
-    sourceRoomID: string,
-    userIdToExplicitlyAdd: string
+    sourceRoomID: string
   ): Promise<boolean> {
     try {
       this.logger.verbose?.(
@@ -486,44 +485,24 @@ export class CommunicationAdapter {
           elevatedAgent.matrixClient,
           sourceRoomID
         );
-      // Add in the explicit user if needed
-      // todo: only members of a room can send a message. This addition is
-      // needed for admins sending messages that are not members. So basically
-      // if an admin sends a message they will be subscribed to the matrix room.
-      // Not ideal but cannot identify a better solution than this for now.
-      const userAlreadyPresent = sourceMatrixUserIDs.find(
-        userID => userID === userIdToExplicitlyAdd
-      );
-      if (!userAlreadyPresent) sourceMatrixUserIDs.push(userIdToExplicitlyAdd);
 
-      const oneTimeMembershipPromises: Promise<void>[] = [];
       for (const matrixUserID of sourceMatrixUserIDs) {
         // skip the matrix elevated agent
         if (matrixUserID === elevatedAgent.matrixClient.getUserId()) continue;
         const userAgent = await this.acquireMatrixAgent(matrixUserID);
 
-        const oneTimePromise = new Promise<void>((resolve, reject) => {
-          userAgent.attachOnceConditional({
-            id: targetRoomID,
-            roomMemberMembershipMonitor:
-              userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
-                // subscribe for events for a specific room
-                targetRoomID,
-                userAgent.matrixClient.getUserId(),
-                // once we have joined the room detach the subscription
-                () => userAgent.detach(targetRoomID),
-                resolve,
-                reject
-              ),
-          });
+        // todo: this needs to go into the room adapter
+        userAgent.attachOnceConditional({
+          id: targetRoomID,
+          roomMemberMembershipMonitor:
+            userAgent.resolveSpecificRoomMembershipOneTimeMonitor(
+              // subscribe for events for a specific room
+              targetRoomID,
+              userAgent.matrixClient.getUserId(),
+              // once we have joined the room detach the subscription
+              () => userAgent.detach(targetRoomID)
+            ),
         });
-
-        // Only await the room membership from the triggering user. Logic is
-        // that this is the user triggering the new discussion + so will be the one
-        // sending the first message.
-        if (matrixUserID === userIdToExplicitlyAdd) {
-          oneTimeMembershipPromises.push(oneTimePromise);
-        }
 
         await this.matrixRoomAdapter.inviteUserToRoom(
           elevatedAgent.matrixClient,
@@ -531,8 +510,6 @@ export class CommunicationAdapter {
           userAgent.matrixClient
         );
       }
-
-      await Promise.all(oneTimeMembershipPromises);
     } catch (error) {
       this.logger.error?.(
         `Unable to duplicate room membership from (${sourceRoomID}) to (${targetRoomID}): ${error}`,
