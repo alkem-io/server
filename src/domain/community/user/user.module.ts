@@ -16,6 +16,7 @@ import { CommunicationAdapterModule } from '@services/platform/communication-ada
 import { IdentityResolverModule } from '@domain/communication/identity-resolver/identity.resolver.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
+import { UserPreferenceModule } from '../user-preferences';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { MicroservicesModule } from '@core/microservices/microservices.module';
     IdentityResolverModule,
     RoomModule,
     MicroservicesModule,
+    UserPreferenceModule,
     CacheModule.register({ max: 250, ttl: 300 }),
   ],
   providers: [

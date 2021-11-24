@@ -3,3 +3,4 @@ export * from './organization';
 export * from './profile';
 export * from './user';
 export * from './user-group';
+export * from './user-preferences';

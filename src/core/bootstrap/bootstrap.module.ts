@@ -5,10 +5,11 @@ import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ProfileModule } from '@domain/community/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { BootstrapService } from './bootstrap.service';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AdminAuthorizationModule } from '@services/admin/authorization/admin.authorization.module';
+import { UserPreferenceModule } from '@domain/community/user-preferences';
+import { BootstrapService } from './bootstrap.service';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AdminAuthorizationModule } from '@services/admin/authorization/admin.au
     ProfileModule,
     TagsetModule,
     UserModule,
+    UserPreferenceModule,
     AdminAuthorizationModule,
     OrganizationModule,
     TypeOrmModule.forFeature([Ecoverse]),
