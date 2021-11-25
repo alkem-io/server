@@ -131,12 +131,6 @@ export class CommunityService {
       }
     }
 
-    if (community.communication) {
-      await this.communicationService.removeCommunication(
-        community.communication.id
-      );
-    }
-
     // Remove all issued membership credentials
     const members = await this.getMembers(community);
     for (const member of members) {
@@ -153,6 +147,12 @@ export class CommunityService {
           ID: application.id,
         });
       }
+    }
+
+    if (community.communication) {
+      await this.communicationService.removeCommunication(
+        community.communication.id
+      );
     }
 
     await this.communityRepository.remove(community as Community);
