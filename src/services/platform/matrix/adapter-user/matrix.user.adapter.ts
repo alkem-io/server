@@ -23,7 +23,29 @@ export class MatrixUserAdapter {
     return response.joined_rooms;
   }
 
+  async getJoinedGroups(matrixClient: MatrixClient): Promise<string[]> {
+    const groupsResponse = await matrixClient.getJoinedGroups();
+    const response = groupsResponse as any as {
+      groups: string[];
+    };
+    return response.groups;
+  }
+
   async verifyRoomMembershipOrFail(
+    matrixClient: MatrixClient,
+    roomID: string
+  ): Promise<boolean> {
+    const result = await this.isUserMemberOfRoom(matrixClient, roomID);
+    if (!result) {
+      throw new MatrixUserMembershipException(
+        `[Membership] user (${matrixClient.getUserId()}) is NOT a member of: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return result;
+  }
+
+  async isUserMemberOfRoom(
     matrixClient: MatrixClient,
     roomID: string
   ): Promise<boolean> {
@@ -35,10 +57,8 @@ export class MatrixUserAdapter {
         LogContext.COMMUNICATION
       );
       return true;
-    } else {
-      const msg = `[Membership] user (${matrixClient.getUserId()}) is NOT a member of: ${roomID}`;
-      throw new MatrixUserMembershipException(msg, LogContext.COMMUNICATION);
     }
+    return false;
   }
 
   async logJoinedRooms(matrixClient: MatrixClient) {

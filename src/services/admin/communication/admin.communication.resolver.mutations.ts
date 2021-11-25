@@ -9,6 +9,7 @@ import { AgentInfo } from '@core/authentication';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AdminCommunicationService } from './admin.communication.service';
+import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 
 @Resolver()
 export class AdminCommunicationResolverMutations {
@@ -34,7 +35,7 @@ export class AdminCommunicationResolverMutations {
   @Profiling.api
   async adminCommunicationEnsureAccessToCommunications(
     @Args('communicationData')
-    grantCredentialData: CommunicationAdminEnsureAccessInput,
+    ensureAccessData: CommunicationAdminEnsureAccessInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
@@ -44,7 +45,28 @@ export class AdminCommunicationResolverMutations {
       `grant community members access to communications: ${agentInfo.email}`
     );
     return await this.adminCommunicationService.ensureCommunityAccessToCommunications(
-      grantCredentialData
+      ensureAccessData
+    );
+  }
+
+  // @UseGuards(GraphqlGuard)
+  // @Mutation(() => Boolean, {
+  //   description: 'Remove an orphaned room from messaging platform.',
+  // })
+  // @Profiling.api
+  async adminCommunicationRemoveOrphanedRoom(
+    @Args('orphanedRoomData')
+    orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT,
+      `communications admin remove orphaned room: ${agentInfo.email}`
+    );
+    return await this.adminCommunicationService.removeOrphanedRoom(
+      orphanedRoomData
     );
   }
 }

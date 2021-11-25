@@ -45,7 +45,7 @@ export class CommunicationResolverMutations {
 
     const discussion = await this.communicationService.createDiscussion(
       createData,
-      agentInfo.communicationID
+      agentInfo.userID
     );
     await this.discussionAuthorizationService.applyAuthorizationPolicy(
       discussion,

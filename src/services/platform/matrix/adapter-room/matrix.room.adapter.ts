@@ -149,15 +149,28 @@ export class MatrixRoomAdapter {
     );
   }
 
-  async removeUserFromRoom(roomID: string, matrixClient: MatrixClient) {
+  async removeUserFromRoom(
+    adminMatrixClient: MatrixClient,
+    roomID: string,
+    matrixClient: MatrixClient
+  ) {
     const matrixUserID = matrixClient.getUserId();
     try {
-      await this.getMatrixRoom(matrixClient, roomID);
       // todo: not yet working...
-      await matrixClient.leave(roomID);
+      // await matrixClient.leave(roomID, (err, data) =>
+      //   this.logger.verbose?.(`${err?.toString()}, ${data?.toString()}`)
+      // );
+
+      // force the user to leave
+      await adminMatrixClient.kick(roomID, matrixUserID);
+
+      // https://github.com/matrix-org/matrix-js-sdk/blob/b2d83c1f80b53ae3ca396ac102edf27bfbbd7015/src/client.ts#L4354
+
+      const room = await this.getMatrixRoom(matrixClient, roomID);
+      const membership = room.getMyMembership();
 
       this.logger.verbose?.(
-        `removed user from room: ${matrixUserID} - ${roomID}`,
+        `Membership state updated to ${membership} for user and room: ${matrixUserID} - ${roomID}`,
         LogContext.COMMUNICATION
       );
     } catch (error) {

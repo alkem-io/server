@@ -10,6 +10,7 @@ Variables:
   "updateData": {
       "ID": "uuid",
       "category": "IDEAS",
-      "title": "something new"
+      "title": "something new",
+      "description": "something new"
   }
 }
