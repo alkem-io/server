@@ -123,7 +123,8 @@ export class CommunicationService {
 
     // Set the Matrix membership for notifications
     const updates = this.getUpdates(communication);
-    await this.communicationAdapter.replicateRoomMembership(
+    // Do not await as the memberhip will be updated in the background
+    this.communicationAdapter.replicateRoomMembership(
       discussion.communicationRoomID,
       updates.communicationRoomID
     );
