@@ -192,9 +192,7 @@ export class CommunicationAdapter {
         matrixAgent.matrixClient,
         matrixRoom
       );
-    const matchingMessage = messages.find(
-      message => message.id.toLowerCase() === messageID.toLowerCase()
-    );
+    const matchingMessage = messages.find(message => message.id === messageID);
     if (!matchingMessage) {
       throw new MatrixEntityNotFoundException(
         `Unable to locate message (id: ${messageID}) in room: ${matrixRoom.name} (${roomID})`,

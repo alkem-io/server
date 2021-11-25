@@ -11,7 +11,7 @@ export class MessageID implements CustomScalar<string, string> {
     'An identifier that originates from the underlying messaging platform.';
 
   parseValue(value: string): string {
-    return this.validate(value).toLowerCase();
+    return this.validate(value);
   }
 
   serialize(value: any): string {
@@ -20,7 +20,7 @@ export class MessageID implements CustomScalar<string, string> {
 
   parseLiteral(ast: ValueNode): string {
     if (ast.kind === Kind.STRING) {
-      return this.validate(ast.value).toLowerCase();
+      return this.validate(ast.value);
     }
     return '';
   }
