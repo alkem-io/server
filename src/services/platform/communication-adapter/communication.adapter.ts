@@ -1,5 +1,8 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { ValidationException } from '@common/exceptions';
+import {
+  MatrixEntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { MatrixUserMembershipException } from '@common/exceptions/matrix.membership.exception';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
@@ -190,7 +193,12 @@ export class CommunicationAdapter {
         matrixRoom
       );
     const matchingMessage = messages.find(message => message.id === messageID);
-    if (!matchingMessage) return '';
+    if (!matchingMessage) {
+      throw new MatrixEntityNotFoundException(
+        `Unable to locate message (id: ${messageID}) in room: ${matrixRoom.name} (${roomID})`,
+        LogContext.COMMUNICATION
+      );
+    }
 
     return matchingMessage.sender;
   }
