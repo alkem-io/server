@@ -44,7 +44,7 @@ export class ForgetRoomMembershipMonitorFactory {
       next: async ({ event, member }) => {
         const content = event.getContent();
         const roomId = event.getRoomId();
-        client.forget(roomId);
+        await client.forget(roomId);
         logger.verbose?.(
           `[Membership] Room [${roomId}] left - user (${member.userId}), membership status ${content.membership}`,
           LogContext.COMMUNICATION
