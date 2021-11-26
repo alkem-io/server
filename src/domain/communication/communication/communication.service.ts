@@ -94,7 +94,8 @@ export class CommunicationService {
 
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
-    userID: string
+    userID: string,
+    userCommunicationID: string
   ): Promise<IDiscussion> {
     const title = discussionData.title;
     const communicationID = discussionData.communicationID;
@@ -126,7 +127,8 @@ export class CommunicationService {
     // Do not await as the memberhip will be updated in the background
     this.communicationAdapter.replicateRoomMembership(
       discussion.communicationRoomID,
-      updates.communicationRoomID
+      updates.communicationRoomID,
+      userCommunicationID
     );
 
     return discussion;

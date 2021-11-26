@@ -496,7 +496,8 @@ export class CommunicationAdapter {
 
   async replicateRoomMembership(
     targetRoomID: string,
-    sourceRoomID: string
+    sourceRoomID: string,
+    userToPrioritize: string
   ): Promise<boolean> {
     try {
       this.logger.verbose?.(
@@ -510,6 +511,15 @@ export class CommunicationAdapter {
           elevatedAgent.matrixClient,
           sourceRoomID
         );
+
+      // Ensure the user to be prioritized is first
+      const userIndex = sourceMatrixUserIDs.findIndex(
+        userID => userID === userToPrioritize
+      );
+      if (userIndex !== -1) {
+        sourceMatrixUserIDs.splice(0, 0, userToPrioritize);
+        sourceMatrixUserIDs.splice(userIndex + 1, 1);
+      }
 
       for (const matrixUserID of sourceMatrixUserIDs) {
         // skip the matrix elevated agent

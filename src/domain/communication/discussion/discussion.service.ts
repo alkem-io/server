@@ -120,7 +120,19 @@ export class DiscussionService {
   async getDiscussionRoom(
     discussion: IDiscussion
   ): Promise<CommunicationRoomResult> {
-    return await this.roomService.getCommunicationRoom(discussion);
+    const communicationRoom = await this.roomService.getCommunicationRoom(
+      discussion
+    );
+    const messagesCount = communicationRoom.messages.length;
+    if (messagesCount != discussion.commentsCount) {
+      this.logger.warn(
+        `Discussion (${discussion.displayName}) had a comment count of ${discussion.commentsCount} that is not syncd with the messages count of ${messagesCount}`,
+        LogContext.COMMUNICATION
+      );
+      discussion.commentsCount = messagesCount;
+      await this.save(discussion);
+    }
+    return communicationRoom;
   }
 
   async sendMessageToDiscussion(
