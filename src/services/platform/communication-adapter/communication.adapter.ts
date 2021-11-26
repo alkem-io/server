@@ -458,7 +458,9 @@ export class CommunicationAdapter {
       userAgent.attachOnceConditional({
         id: roomID,
         roomMemberMembershipMonitor:
-          userAgent.resolveAutoForgetRoomMembershipMonitor(
+          userAgent.resolveForgetRoomMembershipOneTimeMonitor(
+            roomID,
+            matrixUserID,
             // once we have forgotten the room detach the subscription
             () => userAgent.detach(roomID),
             () => this.logger.verbose?.('completed'),

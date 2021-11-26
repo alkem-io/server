@@ -162,13 +162,13 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
   resolveForgetRoomMembershipOneTimeMonitor(
     roomId: string,
     userId: string,
-    onRoomJoined: () => void,
+    onRoomLeft: () => void,
     onComplete?: () => void,
     onError?: (message: string) => void
   ) {
     return {
       observer: this.resolveAutoForgetRoomMembershipMonitor(
-        onRoomJoined,
+        onRoomLeft,
         onComplete,
         onError
       ),
