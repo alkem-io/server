@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MatrixAgentPoolException } from '@common/exceptions';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -8,8 +8,7 @@ import { MatrixUserManagementService } from '@src/services/platform/matrix/manag
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixAgent } from '../agent/matrix.agent';
 import { MatrixAgentService } from '../agent/matrix.agent.service';
-
-const MAX_POOL_SIZE = 50;
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MatrixAgentPool
@@ -17,14 +16,19 @@ export class MatrixAgentPool
 {
   private _cache: Record<string, { agent: MatrixAgent; expiresOn: number }>;
   private _intervalService!: NodeJS.Timer;
+  private _agentPoolSize = 50;
 
   constructor(
     private matrixAgentService: MatrixAgentService,
+    private configService: ConfigService,
     private matrixUserManagementService: MatrixUserManagementService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
     this._cache = {};
+    this._agentPoolSize = this.configService.get(
+      ConfigurationTypes.COMMUNICATIONS
+    )?.agentpool_size;
   }
 
   onModuleInit() {
@@ -83,7 +87,7 @@ export class MatrixAgentPool
 
     if (!this._cache[matrixUserID]) {
       // if we exceed the pool size dispose of the oldest agent
-      if (Object.keys(this._cache).length >= MAX_POOL_SIZE) {
+      if (Object.keys(this._cache).length >= this._agentPoolSize) {
         const oldestAgentKey = this.getOldestAgentKey();
         this.release(oldestAgentKey);
       }
