@@ -426,6 +426,7 @@ export class CommunicationAdapter {
         id: 'communications-not-enabled',
         messages: [],
         displayName: '',
+        members: [],
       };
     }
     const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
@@ -485,9 +486,17 @@ export class CommunicationAdapter {
     const rooms = await elevatedAgent.matrixClient.getRooms();
     const roomResults: CommunicationRoomResult[] = [];
     for (const room of rooms) {
+      // Only count rooms with at least one member that is not the elevated agent
+      const members = room.getMembers();
+      if (members.length === 0) continue;
+      if (members.length === 1) {
+        const member = members[0];
+        if (member.userId === elevatedAgent.matrixClient.getUserId()) continue;
+      }
       const roomResult = new CommunicationRoomResult();
       roomResult.id = room.roomId;
       roomResult.displayName = room.name;
+      roomResult.members = await this.getRoomMembers(room.roomId);
       roomResults.push(roomResult);
     }
 
@@ -721,17 +730,25 @@ export class CommunicationAdapter {
   async removeRoom(matrixRoomID: string) {
     try {
       const elevatedAgent = await this.getMatrixManagementAgentElevated();
-      //todo: remove the room
       this.logger.verbose?.(
-        `Removing matrix room: ${matrixRoomID}`,
+        `[Membership] Removing members from matrix room: ${matrixRoomID}`,
         LogContext.COMMUNICATION
       );
       const room = await this.matrixRoomAdapter.getMatrixRoom(
         elevatedAgent.matrixClient,
         matrixRoomID
       );
+      const members = room.getMembers();
+      for (const member of members) {
+        const userAgent = await this.matrixAgentPool.acquire(member.userId);
+        await this.matrixRoomAdapter.removeUserFromRoom(
+          elevatedAgent.matrixClient,
+          matrixRoomID,
+          userAgent.matrixClient
+        );
+      }
       this.logger.verbose?.(
-        `Located matrix room to remove: ${room.name}`,
+        `[Membership] Removed members from room: ${room.name}`,
         LogContext.COMMUNICATION
       );
     } catch (error) {

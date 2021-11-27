@@ -154,6 +154,7 @@ export class AdminCommunicationService {
           roomNotUsed.id,
           roomNotUsed.displayName
         );
+        roomResult.members = matrixRoom.members;
         result.rooms.push(roomResult);
       }
     }

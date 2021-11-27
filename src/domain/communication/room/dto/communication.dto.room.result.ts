@@ -21,6 +21,9 @@ export class CommunicationRoomResult {
   })
   displayName!: string;
 
+  // The communication IDs of the room members
+  members!: string[];
+
   constructor() {
     this.displayName = '';
   }
