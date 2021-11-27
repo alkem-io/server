@@ -487,16 +487,18 @@ export class CommunicationAdapter {
     const roomResults: CommunicationRoomResult[] = [];
     for (const room of rooms) {
       // Only count rooms with at least one member that is not the elevated agent
-      const members = room.getMembers();
-      if (members.length === 0) continue;
-      if (members.length === 1) {
-        const member = members[0];
-        if (member.userId === elevatedAgent.matrixClient.getUserId()) continue;
+      const memberIDs = await this.matrixRoomAdapter.getMatrixRoomMembers(
+        elevatedAgent.matrixClient,
+        room.roomId
+      );
+      if (memberIDs.length === 0) continue;
+      if (memberIDs.length === 1) {
+        if (memberIDs[0] === elevatedAgent.matrixClient.getUserId()) continue;
       }
       const roomResult = new CommunicationRoomResult();
       roomResult.id = room.roomId;
       roomResult.displayName = room.name;
-      roomResult.members = await this.getRoomMembers(room.roomId);
+      roomResult.members = memberIDs;
       roomResults.push(roomResult);
     }
 
@@ -740,6 +742,8 @@ export class CommunicationAdapter {
       );
       const members = room.getMembers();
       for (const member of members) {
+        // ignore matrix admin
+        if (member.userId === elevatedAgent.matrixClient.getUserId()) continue;
         const userAgent = await this.matrixAgentPool.acquire(member.userId);
         await this.matrixRoomAdapter.removeUserFromRoom(
           elevatedAgent.matrixClient,
