@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { MatrixAgentPoolException } from '@common/exceptions';
+import {
+  MatrixAgentPoolException,
+  NotSupportedException,
+} from '@common/exceptions';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnModuleDestroy, OnModuleInit } from '@nestjs/common/interfaces';
@@ -16,7 +19,7 @@ export class MatrixAgentPool
 {
   private _cache: Record<string, { agent: MatrixAgent; expiresOn: number }>;
   private _intervalService!: NodeJS.Timer;
-  private _agentPoolSize = 50;
+  private _agentPoolSize: number;
 
   constructor(
     private matrixAgentService: MatrixAgentService,
@@ -29,6 +32,11 @@ export class MatrixAgentPool
     this._agentPoolSize = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
     )?.agentpool_size;
+    if (this._agentPoolSize < 2)
+      throw new NotSupportedException(
+        `Minimum agent pool size for communications is 2: ${this._agentPoolSize}`,
+        LogContext.COMMUNICATION
+      );
   }
 
   onModuleInit() {
