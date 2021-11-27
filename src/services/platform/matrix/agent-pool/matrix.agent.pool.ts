@@ -97,6 +97,11 @@ export class MatrixAgentPool
       // if we exceed the pool size dispose of the oldest agent
       if (Object.keys(this._cache).length >= this._agentPoolSize) {
         const oldestAgentKey = this.getOldestAgentKey();
+        this.logger.verbose?.(
+          `[AgentPool] Cache limit of ${this._agentPoolSize} exceeded, releasing agent for : ${oldestAgentKey}`,
+          LogContext.COMMUNICATION
+        );
+
         this.release(oldestAgentKey);
       }
 
@@ -145,7 +150,10 @@ export class MatrixAgentPool
       delete this._cache[matrixUserID];
       try {
         // might be already automatically disposed or disposed from a different thread
-        this._cache[matrixUserID].agent.dispose();
+        const cachedEntry = this._cache[matrixUserID];
+        if (cachedEntry) {
+          cachedEntry.agent.dispose();
+        }
       } catch (error) {
         this.logger.error?.(
           `[AgentPool] releasing session for matrixUserID: ${matrixUserID} failed, ${error}`,
