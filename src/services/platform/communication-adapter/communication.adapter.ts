@@ -426,6 +426,7 @@ export class CommunicationAdapter {
         id: 'communications-not-enabled',
         messages: [],
         displayName: '',
+        members: [],
       };
     }
     const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
@@ -485,9 +486,19 @@ export class CommunicationAdapter {
     const rooms = await elevatedAgent.matrixClient.getRooms();
     const roomResults: CommunicationRoomResult[] = [];
     for (const room of rooms) {
+      // Only count rooms with at least one member that is not the elevated agent
+      const memberIDs = await this.matrixRoomAdapter.getMatrixRoomMembers(
+        elevatedAgent.matrixClient,
+        room.roomId
+      );
+      if (memberIDs.length === 0) continue;
+      if (memberIDs.length === 1) {
+        if (memberIDs[0] === elevatedAgent.matrixClient.getUserId()) continue;
+      }
       const roomResult = new CommunicationRoomResult();
       roomResult.id = room.roomId;
       roomResult.displayName = room.name;
+      roomResult.members = memberIDs;
       roomResults.push(roomResult);
     }
 
@@ -721,17 +732,27 @@ export class CommunicationAdapter {
   async removeRoom(matrixRoomID: string) {
     try {
       const elevatedAgent = await this.getMatrixManagementAgentElevated();
-      //todo: remove the room
       this.logger.verbose?.(
-        `Removing matrix room: ${matrixRoomID}`,
+        `[Membership] Removing members from matrix room: ${matrixRoomID}`,
         LogContext.COMMUNICATION
       );
       const room = await this.matrixRoomAdapter.getMatrixRoom(
         elevatedAgent.matrixClient,
         matrixRoomID
       );
+      const members = room.getMembers();
+      for (const member of members) {
+        // ignore matrix admin
+        if (member.userId === elevatedAgent.matrixClient.getUserId()) continue;
+        const userAgent = await this.matrixAgentPool.acquire(member.userId);
+        await this.matrixRoomAdapter.removeUserFromRoom(
+          elevatedAgent.matrixClient,
+          matrixRoomID,
+          userAgent.matrixClient
+        );
+      }
       this.logger.verbose?.(
-        `Located matrix room to remove: ${room.name}`,
+        `[Membership] Removed members from room: ${room.name}`,
         LogContext.COMMUNICATION
       );
     } catch (error) {
