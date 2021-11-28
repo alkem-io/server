@@ -1,28 +1,32 @@
+import { LogContext } from '@common/enums';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import {
-  AutoAcceptRoomMembershipMonitorFactory,
+  autoAcceptRoomGuardFactory,
+  AutoAcceptSpecificRoomMembershipMonitorFactory,
+  ForgetRoomMembershipMonitorFactory,
+  roomMembershipLeaveGuardFactory,
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
 } from '@services/platform/matrix/events/matrix.event.adapter.room';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
 import {
+  IConditionalMatrixEventHandler,
   IMatrixEventHandler,
   MatrixEventDispatcher,
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { MatrixRoomAdapter } from '../adapter-room/matrix.room.adapter';
 import { MatrixClient } from '../types/matrix.client.type';
 import { IMatrixAgent } from './matrix.agent.interface';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
-import { LogContext } from '@common/enums';
 
 export type MatrixAgentStartOptions = {
   registerTimelineMonitor?: boolean;
   registerRoomMonitor?: boolean;
-  registerMembershipMonitor?: boolean;
+  registerGroupMembershipMonitor?: boolean;
 };
 
 // Wraps an instance of the client sdk
@@ -50,17 +54,21 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     this.eventDispatcher.attach(handler);
   }
 
+  attachOnceConditional(handler: IConditionalMatrixEventHandler) {
+    this.eventDispatcher.attachOnceConditional(handler);
+  }
+
   detach(id: string) {
     this.eventDispatcher.detach(id);
   }
 
   async start(
     {
-      registerMembershipMonitor = true,
+      registerGroupMembershipMonitor = true,
       registerRoomMonitor = true,
       registerTimelineMonitor = true,
     }: MatrixAgentStartOptions = {
-      registerMembershipMonitor: true,
+      registerGroupMembershipMonitor: true,
       registerRoomMonitor: true,
       registerTimelineMonitor: true,
     }
@@ -85,9 +93,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       id: 'root',
     };
 
-    if (registerMembershipMonitor) {
-      eventHandler['roomMemberMembershipMonitor'] =
-        this.resolveRoomMembershipMonitor();
+    if (registerGroupMembershipMonitor) {
       eventHandler['groupMyMembershipMonitor'] =
         this.resolveGroupMembershipMonitor();
     }
@@ -104,12 +110,70 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     this.attach(eventHandler);
   }
 
-  resolveRoomMembershipMonitor() {
-    return AutoAcceptRoomMembershipMonitorFactory.create(
+  resolveAutoAcceptRoomMembershipMonitor(
+    roomId: string,
+    onRoomJoined: () => void,
+    onComplete?: () => void,
+    onError?: (message: string) => void
+  ) {
+    return AutoAcceptSpecificRoomMembershipMonitorFactory.create(
       this.matrixClient,
       this.roomAdapter,
-      this.logger
+      this.logger,
+      roomId,
+      onRoomJoined,
+      onComplete,
+      onError
     );
+  }
+
+  resolveAutoForgetRoomMembershipMonitor(
+    onRoomJoined: () => void,
+    onComplete?: () => void,
+    onError?: (message: string) => void
+  ) {
+    return ForgetRoomMembershipMonitorFactory.create(
+      this.matrixClient,
+      this.logger,
+      onRoomJoined,
+      onComplete,
+      onError
+    );
+  }
+
+  resolveAutoAcceptRoomMembershipOneTimeMonitor(
+    roomId: string,
+    userId: string,
+    onRoomJoined: () => void,
+    onComplete?: () => void,
+    onError?: (message: string) => void
+  ) {
+    return {
+      observer: this.resolveAutoAcceptRoomMembershipMonitor(
+        roomId,
+        onRoomJoined,
+        onComplete,
+        onError
+      ),
+      condition: autoAcceptRoomGuardFactory(userId, roomId),
+    };
+  }
+
+  resolveForgetRoomMembershipOneTimeMonitor(
+    roomId: string,
+    userId: string,
+    onRoomLeft: () => void,
+    onComplete?: () => void,
+    onError?: (message: string) => void
+  ) {
+    return {
+      observer: this.resolveAutoForgetRoomMembershipMonitor(
+        onRoomLeft,
+        onComplete,
+        onError
+      ),
+      condition: roomMembershipLeaveGuardFactory(userId, roomId),
+    };
   }
 
   resolveGroupMembershipMonitor() {
@@ -134,6 +198,10 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
         this.subscriptionHandler.publish(
           SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
           messageReceivedEvent
+        );
+        this.logger.verbose?.(
+          `Published message: ${messageReceivedEvent.message.message}`,
+          LogContext.COMMUNICATION
         );
       }
     );

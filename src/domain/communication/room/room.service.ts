@@ -3,7 +3,8 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IdentityResolverService } from '../identity-resolver/identity.resolver.service';
-import { CommunicationRoomResult } from './communication.dto.room.result';
+import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { CommunicationRoomResult } from './dto/communication.dto.room.result';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { IRoomable } from './roomable.interface';
@@ -58,17 +59,10 @@ export class RoomService {
   }
 
   async getCommunicationRoom(
-    roomable: IRoomable,
-    communicationUserID: string
+    roomable: IRoomable
   ): Promise<CommunicationRoomResult> {
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
-      roomable.communicationGroupID,
-      [roomable.communicationRoomID],
-      communicationUserID
-    );
     const room = await this.communicationAdapter.getCommunityRoom(
-      roomable.communicationRoomID,
-      communicationUserID
+      roomable.communicationRoomID
     );
 
     await this.populateRoomMessageSenders([room]);
@@ -80,34 +74,44 @@ export class RoomService {
     roomable: IRoomable,
     communicationUserID: string,
     messageData: RoomSendMessageInput
-  ): Promise<string> {
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
+  ): Promise<CommunicationMessageResult> {
+    // Ensure the user is a member of room and group so can send
+    await this.communicationAdapter.addUserToRoomSync(
       roomable.communicationGroupID,
-      [roomable.communicationRoomID],
+      roomable.communicationRoomID,
       communicationUserID
     );
-    return await this.communicationAdapter.sendMessage({
+    // Todo: call this first to allow room access to complete
+    const alkemioUserID =
+      await this.identityResolverService.getUserIDByCommunicationsID(
+        communicationUserID
+      );
+    const message = await this.communicationAdapter.sendMessage({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
       roomID: roomable.communicationRoomID,
     });
+
+    message.sender = alkemioUserID;
+    return message;
   }
 
   async removeMessage(
     roomable: IRoomable,
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
-  ): Promise<void> {
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
-      roomable.communicationGroupID,
-      [roomable.communicationRoomID],
-      communicationUserID
-    );
+  ): Promise<string> {
     return await this.communicationAdapter.deleteMessage({
       senderCommunicationsID: communicationUserID,
       messageId: messageData.messageID,
       roomID: roomable.communicationRoomID,
     });
+  }
+
+  async removeRoom(roomable: IRoomable): Promise<boolean> {
+    return await this.communicationAdapter.removeRoom(
+      roomable.communicationRoomID
+    );
   }
 
   async getUserIdForMessage(

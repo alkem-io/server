@@ -1,6 +1,6 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { CommunicationService } from './communication.service';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -34,5 +34,22 @@ export class CommunicationResolverFields {
     @Parent() communication: ICommunication
   ): Promise<IDiscussion[]> {
     return await this.communicationService.getDiscussions(communication);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('discussion', () => IDiscussion, {
+    nullable: true,
+    description: 'A particular Discussions active in this Communication.',
+  })
+  @Profiling.api
+  async discussion(
+    @Parent() communication: ICommunication,
+    @Args('ID') discussionID: string
+  ): Promise<IDiscussion> {
+    return await this.communicationService.getDiscussionOrFail(
+      communication,
+      discussionID
+    );
   }
 }

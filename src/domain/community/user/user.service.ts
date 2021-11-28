@@ -13,7 +13,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
+import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
@@ -36,6 +36,7 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
+import { UserPreferenceService } from '../user-preferences';
 
 @Injectable()
 export class UserService {
@@ -48,6 +49,8 @@ export class UserService {
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private agentService: AgentService,
+    @Inject(UserPreferenceService)
+    private userPreferenceService: UserPreferenceService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -99,6 +102,9 @@ export class UserService {
     }
 
     const response = await this.userRepository.save(user);
+
+    user.preferences =
+      await this.userPreferenceService.createInitialUserPreferences(response);
 
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
@@ -208,6 +214,23 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
+  async getPreferences(userID: string) {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['preferences'],
+    });
+
+    const preferences = user.preferences;
+
+    if (!preferences) {
+      throw new EntityNotInitializedException(
+        `User preferences not initialized: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preferences;
+  }
+
   async getUserOrFail(
     userID: string,
     options?: FindOneOptions<User>
@@ -254,7 +277,7 @@ export class UserService {
 
       if (!communicationID) {
         this.logger.warn(
-          `User could not be registered for communication ${user.id}`,
+          `Unable to register user for communication: ${user.email}`,
           LogContext.COMMUNICATION
         );
         return user;
@@ -548,14 +571,20 @@ export class UserService {
 
     return directRooms;
   }
-  createUserNameID(firstName: string, lastName: string): string {
+
+  createUserNameID(
+    firstName: string,
+    lastName: string,
+    useRandomSuffix = true
+  ): string {
     const nameIDExcludedCharacters = /[^a-zA-Z0-9/-]/g;
-    const randomNumber = Math.floor(Math.random() * 10000).toString();
+    let randomSuffix = '';
+    if (useRandomSuffix) {
+      const randomNumber = Math.floor(Math.random() * 10000).toString();
+      randomSuffix = `-${randomNumber}`;
+    }
     // replace spaces + trim to 25 characters
-    const nameID = `${firstName}-${lastName}-${randomNumber}`.replace(
-      /\s/g,
-      ''
-    );
+    const nameID = `${firstName}-${lastName}${randomSuffix}`.replace(/\s/g, '');
     // replace characters with umlouts etc to normal characters
     const nameIDNoSpecialCharacters = this.replaceSpecialCharacters(nameID);
     // Remove any characters that are not allowed

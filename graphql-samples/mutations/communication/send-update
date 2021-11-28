@@ -1,5 +1,10 @@
 mutation sendUpdate($messageData: UpdatesSendMessageInput!) {
-  sendUpdate(messageData: $messageData)
+  sendUpdate(messageData: $messageData) {
+    id
+    message
+    timestamp
+    sender
+  }
 }
 
 Variables:

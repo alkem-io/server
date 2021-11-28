@@ -7,7 +7,7 @@ import { Discussion } from './discussion.entity';
 import { IDiscussion } from './discussion.interface';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
-import { CommunicationRoomResult } from '../room/communication.dto.room.result';
+import { CommunicationRoomResult } from '../room/dto/communication.dto.room.result';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { RoomService } from '../room/room.service';
 import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
@@ -15,6 +15,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
+import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 
 @Injectable()
 export class DiscussionService {
@@ -29,24 +30,20 @@ export class DiscussionService {
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
     communicationGroupID: string,
-    communicationUserID: string
+    userID: string,
+    displayName: string
   ): Promise<IDiscussion> {
     const discussion = Discussion.create(discussionData);
     discussion.authorization = new AuthorizationPolicy();
     discussion.communicationGroupID = communicationGroupID;
+    discussion.displayName = displayName;
+    discussion.createdBy = userID;
+    discussion.commentsCount = 0;
     await this.save(discussion);
     discussion.communicationRoomID = await this.initializeDiscussionRoom(
       discussion
     );
-    // add the current user as a member
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
-      discussion.communicationGroupID,
-      [discussion.communicationRoomID],
-      communicationUserID
-    );
-    await this.sendMessageToDiscussion(discussion, communicationUserID, {
-      message: discussionData.message,
-    });
+
     return await this.save(discussion);
   }
 
@@ -77,6 +74,7 @@ export class DiscussionService {
     const result = await this.discussionRepository.remove(
       discussion as Discussion
     );
+    await this.roomService.removeRoom(discussion);
     result.id = discussionID;
     return result;
   }
@@ -110,6 +108,8 @@ export class DiscussionService {
       discussion.title = updateDiscussionData.title;
     if (updateDiscussionData.category)
       discussion.category = updateDiscussionData.category;
+    if (updateDiscussionData.description)
+      discussion.description = updateDiscussionData.description;
     return await this.save(discussion);
   }
 
@@ -118,36 +118,51 @@ export class DiscussionService {
   }
 
   async getDiscussionRoom(
-    discussion: IDiscussion,
-    communicationUserID: string
+    discussion: IDiscussion
   ): Promise<CommunicationRoomResult> {
-    return await this.roomService.getCommunicationRoom(
-      discussion,
-      communicationUserID
+    const communicationRoom = await this.roomService.getCommunicationRoom(
+      discussion
     );
+    const messagesCount = communicationRoom.messages.length;
+    if (messagesCount != discussion.commentsCount) {
+      this.logger.warn(
+        `Discussion (${discussion.displayName}) had a comment count of ${discussion.commentsCount} that is not syncd with the messages count of ${messagesCount}`,
+        LogContext.COMMUNICATION
+      );
+      discussion.commentsCount = messagesCount;
+      await this.save(discussion);
+    }
+    return communicationRoom;
   }
 
   async sendMessageToDiscussion(
     discussion: IDiscussion,
     communicationUserID: string,
     messageData: RoomSendMessageInput
-  ): Promise<string> {
-    return await this.roomService.sendMessage(
+  ): Promise<CommunicationMessageResult> {
+    const message = await this.roomService.sendMessage(
       discussion,
       communicationUserID,
       messageData
     );
+    discussion.commentsCount = discussion.commentsCount + 1;
+    await this.save(discussion);
+    return message;
   }
 
   async removeMessageFromDiscussion(
     discussion: IDiscussion,
     communicationUserID: string,
     messageData: RoomRemoveMessageInput
-  ) {
-    return await this.roomService.removeMessage(
+  ): Promise<string> {
+    await this.roomService.removeMessage(
       discussion,
       communicationUserID,
       messageData
     );
+    discussion.commentsCount = discussion.commentsCount - 1;
+    await this.save(discussion);
+
+    return messageData.messageID;
   }
 }

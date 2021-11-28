@@ -14,4 +14,17 @@ export class CommunicationRoomResult {
     description: 'The messages that have been sent to the Room.',
   })
   messages!: CommunicationMessageResult[];
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The display name of the room',
+  })
+  displayName!: string;
+
+  // The communication IDs of the room members
+  members!: string[];
+
+  constructor() {
+    this.displayName = '';
+  }
 }

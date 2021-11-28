@@ -1,4 +1,5 @@
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
+import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IRoomable } from '../room/roomable.interface';
 
@@ -9,8 +10,23 @@ export abstract class IDiscussion extends IRoomable {
   })
   title!: string;
 
+  @Field(() => String, {
+    description: 'The description of this Discussion.',
+  })
+  description!: string;
+
   @Field(() => DiscussionCategory, {
     description: 'The category assigned to this Discussion.',
   })
-  category?: string;
+  category!: string;
+
+  @Field(() => UUID, {
+    description: 'The id of the user that created this discussion.',
+  })
+  createdBy!: string;
+
+  @Field(() => Number, {
+    description: 'The number of comments.',
+  })
+  commentsCount!: number;
 }

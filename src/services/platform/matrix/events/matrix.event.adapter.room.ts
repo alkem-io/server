@@ -15,15 +15,74 @@ const noop = function () {
   // empty
 };
 
-export class AutoAcceptRoomMembershipMonitorFactory {
+export const roomMembershipLeaveGuardFactory = (
+  targetUserID: string,
+  targetRoomID: string
+) => {
+  return ({ event, member }: any) => {
+    const content = event.getContent();
+    if (content.membership === 'leave' && member.userId === targetUserID) {
+      const roomId = event.getRoomId();
+
+      return roomId === targetRoomID;
+    }
+
+    return false;
+  };
+};
+export class ForgetRoomMembershipMonitorFactory {
+  static create(
+    client: MatrixClient,
+    logger: LoggerService,
+    onRoomLeft: () => void,
+    onComplete = noop,
+    error: (err: any) => void = noop
+  ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
+    return {
+      complete: onComplete,
+      error: error,
+      next: async ({ event, member }) => {
+        const content = event.getContent();
+        const roomId = event.getRoomId();
+        await client.forget(roomId);
+        logger.verbose?.(
+          `[Membership] Room [${roomId}] left - user (${member.userId}), membership status ${content.membership}`,
+          LogContext.COMMUNICATION
+        );
+        onRoomLeft();
+      },
+    };
+  }
+}
+
+export const autoAcceptRoomGuardFactory = (
+  targetUserID: string,
+  targetRoomID: string
+) => {
+  return ({ event, member }: any) => {
+    const content = event.getContent();
+    if (content.membership === 'invite' && member.userId === targetUserID) {
+      const roomId = event.getRoomId();
+
+      return roomId === targetRoomID;
+    }
+
+    return false;
+  };
+};
+export class AutoAcceptSpecificRoomMembershipMonitorFactory {
   static create(
     client: MatrixClient,
     roomAdapter: MatrixRoomAdapter,
-    logger: LoggerService
+    logger: LoggerService,
+    targetRoomId: string,
+    onRoomJoined: () => void,
+    onComplete = noop,
+    error: (err: any) => void = noop
   ): IMatrixEventHandler['roomMemberMembershipMonitor'] {
     return {
-      complete: noop,
-      error: noop,
+      complete: onComplete,
+      error: error,
       next: async ({ event, member }) => {
         const content = event.getContent();
         if (
@@ -31,16 +90,29 @@ export class AutoAcceptRoomMembershipMonitorFactory {
           member.userId === client.credentials.userId
         ) {
           const roomId = event.getRoomId();
+
+          if (roomId !== targetRoomId) {
+            logger.verbose?.(
+              `[Membership] skipping invitation for user (${member.userId}) to room: ${roomId}`,
+              LogContext.COMMUNICATION
+            );
+          }
+
           const senderId = event.getSender();
 
           logger.verbose?.(
-            `Room membership: accepting invitation for user (${member.userId}) to room: ${roomId}`,
+            `[Membership] accepting invitation for user (${member.userId}) to room: ${roomId}`,
             LogContext.COMMUNICATION
           );
           await client.joinRoom(roomId);
           if (content.is_direct) {
             await roomAdapter.storeDirectMessageRoom(client, roomId, senderId);
           }
+          logger.verbose?.(
+            `[Membership] accepted invitation for user (${member.userId}) to room: ${roomId}`,
+            LogContext.COMMUNICATION
+          );
+          onRoomJoined();
         }
       },
     };
@@ -74,10 +146,7 @@ export class RoomTimelineMonitorFactory {
         await matrixClient.sendReadReceipt(event, {});
 
         if (!ignoreMessage) {
-          const message = messageAdapter.convertFromMatrixMessage(
-            event,
-            matrixClient.getUserId()
-          );
+          const message = messageAdapter.convertFromMatrixMessage(event);
           logger.verbose?.(
             `Triggering messageReceived event for msg body: ${
               event.getContent().body
@@ -88,7 +157,7 @@ export class RoomTimelineMonitorFactory {
           onMessageReceived({
             message,
             roomId: room.roomId,
-            communicationID: message.receiverID,
+            communicationID: matrixClient.getUserId(),
             communityId: undefined,
             roomName: room.name,
           });

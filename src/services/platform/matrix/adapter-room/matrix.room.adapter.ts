@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
-import { CommunicationRoomResult } from '@domain/communication/room/communication.dto.room.result';
+import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Direction, IContent, TimelineWindow } from 'matrix-js-sdk';
@@ -96,11 +96,10 @@ export class MatrixRoomAdapter {
     return roomID;
   }
 
-  async inviteUsersToRoom(
+  async getMatrixRoom(
     adminMatrixClient: MatrixClient,
-    roomID: string,
-    matrixClients: MatrixClient[]
-  ) {
+    roomID: string
+  ): Promise<MatrixRoom> {
     if (roomID === '')
       throw new MatrixEntityNotFoundException(
         'No room ID specified',
@@ -114,22 +113,60 @@ export class MatrixRoomAdapter {
         LogContext.COMMUNICATION
       );
     }
+    return room;
+  }
 
-    for (const matrixClient of matrixClients) {
-      // not very well documented but we can validate whether the user has membership like this
-      // seen in https://github.com/matrix-org/matrix-js-sdk/blob/3c36be9839091bf63a4850f4babed0c976d48c0e/src/models/room-member.ts#L29
-      const userId = matrixClient.getUserId();
-      if (room.hasMembershipState(userId, 'join')) {
-        continue;
-      }
-      if (room.hasMembershipState(userId, 'invite')) {
-        await matrixClient.joinRoom(room.roomId);
-        continue;
-      }
+  async logRoomMembership(adminMatrixClient: MatrixClient, roomID: string) {
+    const members = await this.getMatrixRoomMembers(adminMatrixClient, roomID);
+    this.logger.verbose?.(
+      `[Membership] Members for room (${roomID}): ${members}`,
+      LogContext.COMMUNICATION
+    );
+  }
 
-      await adminMatrixClient.invite(roomID, userId);
+  async inviteUserToRoom(
+    adminMatrixClient: MatrixClient,
+    roomID: string,
+    matrixClient: MatrixClient
+  ) {
+    const room = await this.getMatrixRoom(adminMatrixClient, roomID);
+
+    // not very well documented but we can validate whether the user has membership like this
+    // seen in https://github.com/matrix-org/matrix-js-sdk/blob/3c36be9839091bf63a4850f4babed0c976d48c0e/src/models/room-member.ts#L29
+    const userId = matrixClient.getUserId();
+    if (room.hasMembershipState(userId, 'join')) {
+      return;
+    }
+    if (room.hasMembershipState(userId, 'invite')) {
+      await matrixClient.joinRoom(room.roomId);
+      return;
+    }
+
+    await adminMatrixClient.invite(roomID, userId);
+    this.logger.verbose?.(
+      `invited user to room: ${userId} - ${roomID}`,
+      LogContext.COMMUNICATION
+    );
+  }
+
+  async removeUserFromRoom(
+    adminMatrixClient: MatrixClient,
+    roomID: string,
+    matrixClient: MatrixClient
+  ) {
+    const matrixUserID = matrixClient.getUserId();
+    try {
       this.logger.verbose?.(
-        `invited user to room: ${userId} - ${roomID}`,
+        `[Membership] User (${matrixUserID}) being removed from room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+
+      // force the user to leave
+      // https://github.com/matrix-org/matrix-js-sdk/blob/b2d83c1f80b53ae3ca396ac102edf27bfbbd7015/src/client.ts#L4354
+      await adminMatrixClient.kick(roomID, matrixUserID);
+    } catch (error) {
+      this.logger.verbose?.(
+        `Unable to remove user (${matrixUserID}) from rooms (${roomID}): ${error}`,
         LogContext.COMMUNICATION
       );
     }
@@ -162,40 +199,37 @@ export class MatrixRoomAdapter {
   async convertMatrixRoomToDirectRoom(
     matrixClient: MatrixClient,
     matrixRoom: MatrixRoom,
-    receiverMatrixID: string,
-    userId: string
+    receiverMatrixID: string
   ): Promise<DirectRoomResult> {
     const roomResult = new DirectRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
       matrixClient,
-      matrixRoom,
-      userId
+      matrixRoom
     );
     roomResult.receiverID = receiverMatrixID;
+
     return roomResult;
   }
 
   async convertMatrixRoomToCommunityRoom(
     matrixClient: MatrixClient,
-    matrixRoom: MatrixRoom,
-    userId: string
+    matrixRoom: MatrixRoom
   ): Promise<CommunicationRoomResult> {
     const roomResult = new CommunicationRoomResult();
     roomResult.id = matrixRoom.roomId;
     roomResult.messages = await this.getMatrixRoomTimelineAsMessages(
       matrixClient,
-      matrixRoom,
-      userId
+      matrixRoom
     );
+    roomResult.displayName = matrixRoom.name;
 
     return roomResult;
   }
 
   async getMatrixRoomTimelineAsMessages(
     matrixClient: MatrixClient,
-    matrixRoom: MatrixRoom,
-    userId: string
+    matrixRoom: MatrixRoom
   ): Promise<CommunicationMessageResult[]> {
     this.logger.verbose?.(
       `[MatrixRoom] Obtaining messages on room: ${matrixRoom.name}`,
@@ -207,23 +241,20 @@ export class MatrixRoomAdapter {
       matrixRoom
     );
     if (timelineEvents) {
-      return await this.convertMatrixTimelineToMessages(timelineEvents, userId);
+      return await this.convertMatrixTimelineToMessages(timelineEvents);
     }
     return [];
   }
 
   async convertMatrixTimelineToMessages(
-    timeline: MatrixRoomResponseMessage[],
-    userId: string
+    timeline: MatrixRoomResponseMessage[]
   ): Promise<CommunicationMessageResult[]> {
     const messages: CommunicationMessageResult[] = [];
 
     for (const timelineMessage of timeline) {
       if (this.matrixMessageAdapter.isEventToIgnore(timelineMessage)) continue;
-      const message = this.matrixMessageAdapter.convertFromMatrixMessage(
-        timelineMessage,
-        userId
-      );
+      const message =
+        this.matrixMessageAdapter.convertFromMatrixMessage(timelineMessage);
 
       messages.push(message);
     }
@@ -232,5 +263,27 @@ export class MatrixRoomAdapter {
       LogContext.COMMUNICATION
     );
     return messages;
+  }
+
+  async getMatrixRoomMembers(
+    adminMatrixClient: MatrixClient,
+    matrixRoomID: string
+  ): Promise<string[]> {
+    this.logger.verbose?.(
+      `[MatrixRoom] Obtaining members on room: ${matrixRoomID}`,
+      LogContext.COMMUNICATION
+    );
+    const room = await this.getMatrixRoom(adminMatrixClient, matrixRoomID);
+    const roomMembers = room.getMembers();
+    const usersIDs: string[] = [];
+    for (const roomMember of roomMembers) {
+      // skip the elevated admin
+      if (roomMember.userId === adminMatrixClient.getUserId()) continue;
+
+      if (roomMember.membership === 'join') {
+        usersIDs.push(roomMember.userId);
+      }
+    }
+    return usersIDs;
   }
 }

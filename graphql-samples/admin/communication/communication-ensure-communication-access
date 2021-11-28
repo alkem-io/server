@@ -1,0 +1,10 @@
+mutation adminCommunicationEnsureAccessToCommunications($communicationData: CommunicationAdminEnsureAccessInput!) {
+  adminCommunicationEnsureAccessToCommunications(communicationData: $communicationData)
+}
+
+Variables:
+{
+  "communicationData": {
+    "communityID": "uuid"
+  }
+}

@@ -3,14 +3,12 @@ import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CommunicationService } from './communication.service';
 import { CurrentUser } from '@src/common/decorators';
-
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DiscussionService } from '../discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 
@@ -19,7 +17,6 @@ export class CommunicationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private communicationService: CommunicationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService
   ) {}
@@ -45,6 +42,7 @@ export class CommunicationResolverMutations {
 
     const discussion = await this.communicationService.createDiscussion(
       createData,
+      agentInfo.userID,
       agentInfo.communicationID
     );
     await this.discussionAuthorizationService.applyAuthorizationPolicy(

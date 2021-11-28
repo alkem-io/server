@@ -3,6 +3,8 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMatrixUser } from './matrix.user.interface';
+import { MatrixClient } from '../types/matrix.client.type';
+import { MatrixUserMembershipException } from '@common/exceptions/matrix.membership.exception';
 
 @Injectable()
 export class MatrixUserAdapter {
@@ -13,6 +15,59 @@ export class MatrixUserAdapter {
     private readonly logger: LoggerService,
     private configService: ConfigService
   ) {}
+
+  async getJoinedRooms(matrixClient: MatrixClient): Promise<string[]> {
+    const response = (await matrixClient.getJoinedRooms()) as any as {
+      joined_rooms: string[];
+    };
+    return response.joined_rooms;
+  }
+
+  async getJoinedGroups(matrixClient: MatrixClient): Promise<string[]> {
+    const groupsResponse = await matrixClient.getJoinedGroups();
+    const response = groupsResponse as any as {
+      groups: string[];
+    };
+    return response.groups;
+  }
+
+  async verifyRoomMembershipOrFail(
+    matrixClient: MatrixClient,
+    roomID: string
+  ): Promise<boolean> {
+    const result = await this.isUserMemberOfRoom(matrixClient, roomID);
+    if (!result) {
+      throw new MatrixUserMembershipException(
+        `[Membership] user (${matrixClient.getUserId()}) is NOT a member of: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return result;
+  }
+
+  async isUserMemberOfRoom(
+    matrixClient: MatrixClient,
+    roomID: string
+  ): Promise<boolean> {
+    const rooms = await this.getJoinedRooms(matrixClient);
+    const roomFound = rooms.find(r => r === roomID);
+    if (roomFound) {
+      this.logger.verbose?.(
+        `[Membership] user (${matrixClient.getUserId()}) is a member of: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+      return true;
+    }
+    return false;
+  }
+
+  async logJoinedRooms(matrixClient: MatrixClient) {
+    const rooms = await this.getJoinedRooms(matrixClient);
+    this.logger.verbose?.(
+      `[Membership] user (${matrixClient.getUserId()}) rooms: ${rooms}`,
+      LogContext.COMMUNICATION
+    );
+  }
 
   convertMatrixIDToMatrixUser(
     matrixUserID: string,

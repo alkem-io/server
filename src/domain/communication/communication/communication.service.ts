@@ -94,13 +94,14 @@ export class CommunicationService {
 
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
-    communicationUserID: string
+    userID: string,
+    userCommunicationID: string
   ): Promise<IDiscussion> {
     const title = discussionData.title;
     const communicationID = discussionData.communicationID;
 
     this.logger.verbose?.(
-      `Adding discussion (${title}) to Communication (${communicationID})`,
+      `[Discussion] Adding discussion (${title}) to Communication (${communicationID})`,
       LogContext.COMMUNICATION
     );
 
@@ -110,11 +111,25 @@ export class CommunicationService {
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
       communication.communicationGroupID,
-      communicationUserID
+      userID,
+      `${communication.displayName}-discussion-${discussionData.title}`
+    );
+    this.logger.verbose?.(
+      `[Discussion] Room created (${title}) and membership replicated from Updates (${communicationID})`,
+      LogContext.COMMUNICATION
     );
 
     communication.discussions?.push(discussion);
     await this.communicationRepository.save(communication);
+
+    // Set the Matrix membership for notifications
+    const updates = this.getUpdates(communication);
+    // Do not await as the memberhip will be updated in the background
+    this.communicationAdapter.replicateRoomMembership(
+      discussion.communicationRoomID,
+      updates.communicationRoomID,
+      userCommunicationID
+    );
 
     return discussion;
   }
@@ -129,6 +144,22 @@ export class CommunicationService {
     return communication.discussions;
   }
 
+  getDiscussionOrFail(
+    communication: ICommunication,
+    discussionID: string
+  ): IDiscussion {
+    const discussions = this.getDiscussions(communication);
+    const discussion = discussions.find(
+      discussion => discussion.id === discussionID
+    );
+    if (!discussion) {
+      throw new EntityNotFoundException(
+        `Unable to find Discussion with ID: ${discussionID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return discussion;
+  }
   getUpdates(communication: ICommunication): IUpdates {
     if (!communication.updates) {
       throw new EntityNotInitializedException(
@@ -176,6 +207,41 @@ export class CommunicationService {
 
   async addUserToCommunications(
     communication: ICommunication,
+    communicationUserID: string
+  ): Promise<boolean> {
+    const communicationRoomIDs = await this.getRoomsUsed(communication);
+    await this.communicationAdapter.grantUserAccesToRooms(
+      communication.communicationGroupID,
+      communicationRoomIDs,
+      communicationUserID
+    );
+
+    return true;
+  }
+
+  async getRoomsUsed(communication: ICommunication): Promise<string[]> {
+    const communicationRoomIDs: string[] = [
+      this.getUpdates(communication).communicationRoomID,
+    ];
+    for (const discussion of this.getDiscussions(communication)) {
+      communicationRoomIDs.push(discussion.communicationRoomID);
+    }
+    return communicationRoomIDs;
+  }
+
+  async getCommunicationIDsUsed(): Promise<string[]> {
+    const communicationMatches = await this.communicationRepository
+      .createQueryBuilder('communication')
+      .getMany();
+    const communicationIDs: string[] = [];
+    for (const communication of communicationMatches) {
+      communicationIDs.push(communication.id);
+    }
+    return communicationIDs;
+  }
+
+  async removeUserFromCommunications(
+    communication: ICommunication,
     user: IUser
   ): Promise<boolean> {
     // get the list of rooms to add the user to
@@ -185,8 +251,7 @@ export class CommunicationService {
     for (const discussion of this.getDiscussions(communication)) {
       communicationRoomIDs.push(discussion.communicationRoomID);
     }
-    await this.communicationAdapter.ensureUserHasAccesToRooms(
-      communication.communicationGroupID,
+    await this.communicationAdapter.removeUserFromRooms(
       communicationRoomIDs,
       user.communicationID
     );

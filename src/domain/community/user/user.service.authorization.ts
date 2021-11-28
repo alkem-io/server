@@ -67,6 +67,18 @@ export class UserAuthorizationService {
         user.authorization
       );
 
+    const preferences = await this.userService.getPreferences(user.id);
+
+    if (preferences) {
+      for (const preference of preferences) {
+        preference.authorization =
+          this.authorizationPolicyService.inheritParentAuthorization(
+            preference.authorization,
+            user.authorization
+          );
+      }
+    }
+
     return await this.userRepository.save(user);
   }
 

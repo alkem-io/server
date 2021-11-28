@@ -1,4 +1,4 @@
-import { UUID } from '@domain/common/scalars';
+import { MessageID, UUID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
 
@@ -7,7 +7,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
     'A message that was sent either as an Update or as part of a Discussion.',
 })
 export class CommunicationMessageResult {
-  @Field(() => String, {
+  @Field(() => MessageID, {
     nullable: false,
     description: 'The id for the message event.',
   })
@@ -30,6 +30,4 @@ export class CommunicationMessageResult {
     description: 'The server timestamp in UTC',
   })
   timestamp!: number;
-
-  receiverID!: string;
 }
