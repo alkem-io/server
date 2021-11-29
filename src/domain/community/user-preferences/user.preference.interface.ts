@@ -6,8 +6,9 @@ import { IUserPreferenceDefinition } from './user.preference.definition.interfac
 export abstract class IUserPreference extends IAuthorizable {
   @Field(() => IUserPreferenceDefinition, {
     description: 'The definition for the Preference',
+    name: 'definition',
   })
-  definition!: IUserPreferenceDefinition;
+  userPreferenceDefinition!: IUserPreferenceDefinition;
 
   @Field(() => String, {
     description: 'Value of the preference',
