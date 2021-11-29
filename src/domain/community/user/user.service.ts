@@ -157,13 +157,19 @@ export class UserService {
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
-      relations: ['profile', 'agent'],
+      relations: ['profile', 'agent', 'preferences'],
     });
     const { id } = user;
     await this.clearUserCache(user);
 
     if (user.profile) {
       await this.profileService.deleteProfile(user.profile.id);
+    }
+
+    if (user.preferences) {
+      for (const preference of user.preferences) {
+        await this.userPreferenceService.removeUserPreference(preference);
+      }
     }
 
     if (user.agent) {

@@ -102,6 +102,12 @@ export class UserPreferenceService {
     return preferences;
   }
 
+  async removeUserPreference(
+    preference: IUserPreference
+  ): Promise<IUserPreference> {
+    return await this.preferenceRepository.remove(preference as UserPreference);
+  }
+
   async updateUserPreference(
     user: IUser,
     type: UserPreferenceType,
