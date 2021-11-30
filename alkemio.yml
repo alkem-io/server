@@ -264,6 +264,10 @@ communications:
   enabled: ${COMMUNICATIONS_ENABLED}:false
   discussions:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:false
+
+  # the size of the agent pool to use for managing agent wrappers around Matrix client
+  agentpool_size: ${COMMUNICATIONS_AGENTPOOL_SIZE}:50
+
   # matrix configuration #
   matrix:
     # Synapse home server name, defined in homeserver.yaml on the Synapse instance.
