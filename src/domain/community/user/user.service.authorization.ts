@@ -37,17 +37,17 @@ export class UserAuthorizationService {
     );
 
     // cascade
-    const profile = this.userService.getProfile(user);
-    profile.authorization =
+    user.profile = await this.userService.getProfile(user);
+    user.profile.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        profile.authorization,
+        user.profile.authorization,
         user.authorization
       );
 
     // Allow users to also delete entities within the profile
-    profile.authorization =
+    user.profile.authorization =
       await this.authorizationPolicyService.appendCredentialAuthorizationRule(
-        profile.authorization,
+        user.profile.authorization,
         {
           type: AuthorizationCredential.USER_SELF_MANAGEMENT,
           resourceID: user.id,
@@ -55,7 +55,9 @@ export class UserAuthorizationService {
         [AuthorizationPrivilege.DELETE]
       );
     user.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(profile);
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        user.profile
+      );
     user.agent = await this.userService.getAgent(user.id);
     user.agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
