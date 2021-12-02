@@ -15,7 +15,7 @@ import { CanvasCheckoutLifecycleConfig } from './canvas.checkout.lifecycle.confi
 export class CanvasCheckoutService {
   constructor(
     @InjectRepository(CanvasCheckout)
-    private CanvasCheckoutRepository: Repository<CanvasCheckout>,
+    private canvasCheckoutRepository: Repository<CanvasCheckout>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private lifecycleService: LifecycleService
   ) {}
@@ -26,7 +26,7 @@ export class CanvasCheckoutService {
     canvasCheckout.authorization = new AuthorizationPolicy();
 
     // save the user to get the id assigned
-    await this.CanvasCheckoutRepository.save(canvasCheckout);
+    await this.canvasCheckoutRepository.save(canvasCheckout);
 
     // Create the lifecycle
     canvasCheckout.lifecycle = await this.lifecycleService.createLifecycle(
@@ -45,7 +45,7 @@ export class CanvasCheckoutService {
         CanvasCheckout.authorization
       );
 
-    const result = await this.CanvasCheckoutRepository.remove(
+    const result = await this.canvasCheckoutRepository.remove(
       CanvasCheckout as CanvasCheckout
     );
     result.id = CanvasCheckoutID;
@@ -53,13 +53,13 @@ export class CanvasCheckoutService {
   }
 
   async save(CanvasCheckout: ICanvasCheckout): Promise<ICanvasCheckout> {
-    return await this.CanvasCheckoutRepository.save(CanvasCheckout);
+    return await this.canvasCheckoutRepository.save(CanvasCheckout);
   }
   async getCanvasCheckoutOrFail(
     CanvasCheckoutID: string,
     options?: FindOneOptions<CanvasCheckout>
   ): Promise<ICanvasCheckout> {
-    const CanvasCheckout = await this.CanvasCheckoutRepository.findOne(
+    const CanvasCheckout = await this.canvasCheckoutRepository.findOne(
       { id: CanvasCheckoutID },
       options
     );

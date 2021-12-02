@@ -10,6 +10,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CanvasCheckoutEventInput } from './dto/canvas.checkout.dto.event';
 import { ICanvasCheckout } from './canvas.checkout.interface';
 import { CanvasCheckoutService } from './canvas.checkout.service';
+import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
 
 @Injectable()
 export class CanvasCheckoutLifecycleOptionsProvider {
@@ -40,6 +41,7 @@ export class CanvasCheckoutLifecycleOptionsProvider {
       `Event ${canvasCheckoutEventData.eventName} triggered on canvasCheckout: ${canvasCheckout.id} using lifecycle ${canvasCheckout.lifecycle.id}`,
       LogContext.COMMUNITY
     );
+
     await this.lifecycleService.event(
       {
         ID: canvasCheckout.lifecycle.id,
@@ -58,6 +60,46 @@ export class CanvasCheckoutLifecycleOptionsProvider {
   private CanvasCheckoutLifecycleMachineOptions: Partial<
     MachineOptions<any, any>
   > = {
+    actions: {
+      checkout: async (_, event: any) => {
+        const canvasCheckout =
+          await this.canvasCheckoutService.getCanvasCheckoutOrFail(
+            event.parentID,
+            {
+              relations: ['lifecycle'],
+            }
+          );
+        const lifecycle = canvasCheckout.lifecycle;
+        if (!lifecycle) {
+          throw new EntityNotInitializedException(
+            `Verification Lifecycle not initialized on Organization: ${canvasCheckout.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+        canvasCheckout.status = CanvasCheckoutStateEnum.CHECKED_OUT;
+        canvasCheckout.lockedBy = event.agentInfo.userID;
+        await this.canvasCheckoutService.save(canvasCheckout);
+      },
+      checkin: async (_, event: any) => {
+        const canvasCheckout =
+          await this.canvasCheckoutService.getCanvasCheckoutOrFail(
+            event.parentID,
+            {
+              relations: ['lifecycle'],
+            }
+          );
+        const lifecycle = canvasCheckout.lifecycle;
+        if (!lifecycle) {
+          throw new EntityNotInitializedException(
+            `Verification Lifecycle not initialized on Organization: ${canvasCheckout.id}`,
+            LogContext.COMMUNITY
+          );
+        }
+        canvasCheckout.status = CanvasCheckoutStateEnum.AVAILABLE;
+        canvasCheckout.lockedBy = '';
+        await this.canvasCheckoutService.save(canvasCheckout);
+      },
+    },
     guards: {
       // To actually assign the verified status the GRANT privilege is needed on the verification
       CanvasCheckoutAuthorized: (_, event) => {
@@ -66,7 +108,7 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         return this.authorizationService.isAccessGranted(
           agentInfo,
           authorizationPolicy,
-          AuthorizationPrivilege.GRANT
+          AuthorizationPrivilege.READ
         );
       },
       CanvasCheckinAuthorized: (_, event) => {

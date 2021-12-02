@@ -6,6 +6,7 @@ export const CanvasCheckoutLifecycleConfig = {
   initial: 'available',
   states: {
     available: {
+      entry: ['release'],
       on: {
         CHECKOUT: {
           target: 'checkedOut',
@@ -14,6 +15,7 @@ export const CanvasCheckoutLifecycleConfig = {
       },
     },
     checkedOut: {
+      entry: ['checkout'],
       on: {
         CHECKIN: {
           target: 'available',

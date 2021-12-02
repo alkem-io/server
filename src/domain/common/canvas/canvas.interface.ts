@@ -1,9 +1,9 @@
-import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import JSON from 'graphql-type-json';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
+import { IAuthorizable } from '../entity/authorizable-entity';
 @ObjectType('Canvas')
-export abstract class ICanvas extends IBaseAlkemio {
+export abstract class ICanvas extends IAuthorizable {
   @Field(() => String, {
     description: 'The name of the Canvas.',
   })

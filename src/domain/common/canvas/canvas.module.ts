@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CanvasCheckoutModule } from '../canvas-checkout/canvas.checkout.module';
 import { Canvas } from './canvas.entity';
 import { CanvasService } from './canvas.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Canvas])],
+  imports: [CanvasCheckoutModule, TypeOrmModule.forFeature([Canvas])],
   providers: [CanvasService],
   exports: [CanvasService],
 })

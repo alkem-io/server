@@ -3,7 +3,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
-export class CreateNVPInput {
+export class CreateCanvasInput {
   @Field(() => String, { nullable: false })
   name!: string;
 

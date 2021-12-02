@@ -9,8 +9,9 @@ export class CanvasCheckout
   extends AuthorizableEntity
   implements ICanvasCheckout
 {
-  @Column()
-  canvasCheckoutID!: string;
+  // ID of the user that has the checkout
+  @Column('varchar', { length: 36, nullable: false })
+  lockedBy!: string;
 
   @Column({ default: CanvasCheckoutStateEnum.AVAILABLE })
   status!: string;
