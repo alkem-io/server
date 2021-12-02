@@ -25,6 +25,7 @@ import { IVisual } from '@domain/context/visual/visual.interface';
 import { VisualService } from '../visual/visual.service';
 import { Visual } from '@domain/context/visual/visual.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ICanvas } from '@domain/common/canvas';
 
 @Injectable()
 export class ContextService {
@@ -199,6 +200,19 @@ export class ContextService {
     context.aspects.push(aspect);
     await this.contextRepository.save(context);
     return aspect;
+  }
+
+  async getCanvases(context: IContext): Promise<ICanvas[]> {
+    const contextLoaded = await this.getContextOrFail(context.id, {
+      relations: ['canveses'],
+    });
+    if (!contextLoaded.canvases)
+      throw new EntityNotFoundException(
+        `Context not initialised, no canveses: ${context.id}`,
+        LogContext.CONTEXT
+      );
+
+    return contextLoaded.canvases;
   }
 
   async getAspects(context: IContext): Promise<IAspect[]> {
