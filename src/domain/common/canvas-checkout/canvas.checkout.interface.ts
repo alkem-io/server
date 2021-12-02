@@ -6,6 +6,8 @@ import { UUID } from '../scalars/scalar.uuid';
 
 @ObjectType('CanvasCheckout')
 export abstract class ICanvasCheckout extends IAuthorizable {
+  canvasID!: string;
+
   @Field(() => UUID, {
     description: 'The id of the user that has checked the entity out.',
   })

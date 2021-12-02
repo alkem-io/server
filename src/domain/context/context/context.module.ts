@@ -11,12 +11,14 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ContextAuthorizationService } from './context.service.authorization';
 import { VisualModule } from '../visual/visual.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { CanvasModule } from '@domain/common/canvas/canvas.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     AspectModule,
+    CanvasModule,
     ReferenceModule,
     EcosystemModelModule,
     VisualModule,

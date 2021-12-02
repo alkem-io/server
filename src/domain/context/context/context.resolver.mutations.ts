@@ -8,10 +8,13 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { CreateReferenceOnContextInput } from '@domain/context/context';
+import { CreateReferenceOnContextInput } from '@domain/context/context/dto/context.dto.create.reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CreateCanvasInput } from './dto/context.dto.create.canvas';
+import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { ICanvas } from '@domain/common/canvas';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
@@ -19,7 +22,8 @@ export class ContextResolverMutations {
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private contextService: ContextService
+    private contextService: ContextService,
+    private canvasService: CanvasService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -51,7 +55,7 @@ export class ContextResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
-    description: 'Create a new Aspect on the Opportunity.',
+    description: 'Create a new Aspect on the Context.',
   })
   @Profiling.api
   async createAspect(
@@ -74,5 +78,32 @@ export class ContextResolverMutations {
         context.authorization
       );
     return await this.aspectService.saveAspect(aspect);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICanvas, {
+    description: 'Create a new Canvas on the Context.',
+  })
+  @Profiling.api
+  async createCanvas(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('canvasData') canvasData: CreateCanvasInput
+  ): Promise<ICanvas> {
+    const context = await this.contextService.getContextOrFail(
+      canvasData.contextID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      context.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create canvas on context: ${context.id}`
+    );
+    const canvas = await this.contextService.createCanvas(canvasData);
+    canvas.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        canvas.authorization,
+        context.authorization
+      );
+    return await this.canvasService.save(canvas);
   }
 }

@@ -1,6 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
-import { UpdateContextInput } from '@domain/context/context';
+import { UpdateContextInput } from '@domain/context/context/dto/context.dto.update';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
 
 @InputType()
