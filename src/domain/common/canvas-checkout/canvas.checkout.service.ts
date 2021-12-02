@@ -10,6 +10,7 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
 import { CanvasCheckoutLifecycleConfig } from './canvas.checkout.lifecycle.config';
+import { CreateCanvasCheckoutInput } from './dto/canvascheckout.dto.create';
 
 @Injectable()
 export class CanvasCheckoutService {
@@ -20,8 +21,10 @@ export class CanvasCheckoutService {
     private lifecycleService: LifecycleService
   ) {}
 
-  async createCanvasCheckout(): Promise<ICanvasCheckout> {
-    const canvasCheckout: ICanvasCheckout = new CanvasCheckout();
+  async createCanvasCheckout(
+    checkoutData: CreateCanvasCheckoutInput
+  ): Promise<ICanvasCheckout> {
+    const canvasCheckout: ICanvasCheckout = CanvasCheckout.create(checkoutData);
     canvasCheckout.status = CanvasCheckoutStateEnum.AVAILABLE;
     canvasCheckout.authorization = new AuthorizationPolicy();
 
@@ -34,7 +37,7 @@ export class CanvasCheckoutService {
       CanvasCheckoutLifecycleConfig
     );
 
-    return canvasCheckout;
+    return this.save(canvasCheckout);
   }
 
   async delete(CanvasCheckoutID: string): Promise<ICanvasCheckout> {

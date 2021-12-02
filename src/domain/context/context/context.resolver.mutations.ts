@@ -12,7 +12,7 @@ import { CreateReferenceOnContextInput } from '@domain/context/context/dto/conte
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CreateCanvasInput } from './dto/context.dto.create.canvas';
+import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { ICanvas } from '@domain/common/canvas';
 @Resolver()
@@ -85,9 +85,9 @@ export class ContextResolverMutations {
     description: 'Create a new Canvas on the Context.',
   })
   @Profiling.api
-  async createCanvas(
+  async createCanvasOnContext(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('canvasData') canvasData: CreateCanvasInput
+    @Args('canvasData') canvasData: CreateCanvasOnContextInput
   ): Promise<ICanvas> {
     const context = await this.contextService.getContextOrFail(
       canvasData.contextID

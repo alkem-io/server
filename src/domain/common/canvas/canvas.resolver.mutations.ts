@@ -9,10 +9,14 @@ import { CanvasCheckoutLifecycleOptionsProvider } from '../canvas-checkout/canva
 import { CanvasCheckoutAuthorizationService } from '../canvas-checkout/canvas.checkout.service.authorization';
 import { CanvasService } from './canvas.service';
 import { ICanvas } from './canvas.interface';
+import { UpdateCanvasDirectInput } from './dto/canvas.dto.update.direct';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
   constructor(
+    private authorizationService: AuthorizationService,
     private canvasService: CanvasService,
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
     private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider
@@ -39,5 +43,23 @@ export class CanvasResolverMutations {
       canvasCheckout,
       canvas.authorization
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICanvas, {
+    description: 'Updates the specified Canvas.',
+  })
+  async updateCanvas(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('canvasData') canvasData: UpdateCanvasDirectInput
+  ): Promise<ICanvas> {
+    const canvas = await this.canvasService.getCanvasOrFail(canvasData.ID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      canvas.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update Canvas: ${canvas.name}`
+    );
+    return await this.canvasService.updateCanvas(canvas, canvasData);
   }
 }

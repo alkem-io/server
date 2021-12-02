@@ -5,10 +5,10 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Canvas } from './canvas.entity';
 import { ICanvas } from './canvas.interface';
-import { UpdateCanvasInput } from './canvas.dto.update';
-import { CreateCanvasInput } from './canvas.dto.create';
+import { CreateCanvasInput } from './dto/canvas.dto.create';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
+import { UpdateCanvasInput } from './dto/canvas.dto.update';
 
 @Injectable()
 export class CanvasService {
@@ -21,8 +21,13 @@ export class CanvasService {
   async createCanvas(canvasData: CreateCanvasInput): Promise<ICanvas> {
     const canvas: ICanvas = Canvas.create(canvasData);
     canvas.authorization = new AuthorizationPolicy();
-    canvas.checkout = await this.canvasCheckoutService.createCanvasCheckout();
 
+    // get the id assigned
+    const savedCanvas = await this.save(canvas);
+
+    canvas.checkout = await this.canvasCheckoutService.createCanvasCheckout({
+      canvasID: savedCanvas.id,
+    });
     return await this.save(canvas);
   }
 
@@ -43,7 +48,15 @@ export class CanvasService {
     return await this.canvasRepository.remove(canvas as Canvas);
   }
 
-  updateCanvas(
+  async updateCanvas(
+    canvas: ICanvas | undefined,
+    updateCanvasData: UpdateCanvasInput
+  ): Promise<ICanvas> {
+    const updatedCanvas = this.updateCanvasEntity(canvas, updateCanvasData);
+    return await this.save(updatedCanvas);
+  }
+
+  updateCanvasEntity(
     canvas: ICanvas | undefined,
     updateCanvasData: UpdateCanvasInput
   ): ICanvas {
@@ -54,6 +67,8 @@ export class CanvasService {
       );
     if (updateCanvasData.name) canvas.name = updateCanvasData.name;
     if (updateCanvasData.value) canvas.value = updateCanvasData.value;
+    if (updateCanvasData.isTemplate !== undefined)
+      canvas.isTemplate = updateCanvasData.isTemplate;
     return canvas;
   }
 

@@ -20,10 +20,10 @@ import { VisualService } from '../visual/visual.service';
 import { Visual } from '@domain/context/visual/visual.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICanvas } from '@domain/common/canvas';
-import { CreateCanvasInput } from './dto/context.dto.create.canvas';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { CreateReferenceOnContextInput } from './dto/context.dto.create.reference';
 import { UpdateContextInput } from './dto/context.dto.update';
+import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 
 @Injectable()
 export class ContextService {
@@ -201,7 +201,7 @@ export class ContextService {
     return aspect;
   }
 
-  async createCanvas(canvasData: CreateCanvasInput): Promise<ICanvas> {
+  async createCanvas(canvasData: CreateCanvasOnContextInput): Promise<ICanvas> {
     const contextID = canvasData.contextID;
     const context = await this.getContextOrFail(contextID, {
       relations: ['canvases'],
@@ -212,7 +212,10 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
-    const canvas = await this.canvasService.createCanvas(canvasData);
+    const canvas = await this.canvasService.createCanvas({
+      name: canvasData.name,
+      value: canvasData.value,
+    });
     context.canvases.push(canvas);
     await this.contextRepository.save(context);
     return canvas;
@@ -220,11 +223,11 @@ export class ContextService {
 
   async getCanvases(context: IContext): Promise<ICanvas[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
-      relations: ['canveses'],
+      relations: ['canvases'],
     });
     if (!contextLoaded.canvases)
       throw new EntityNotFoundException(
-        `Context not initialised, no canveses: ${context.id}`,
+        `Context not initialised, no canvases: ${context.id}`,
         LogContext.CONTEXT
       );
 

@@ -26,4 +26,11 @@ export class CanvasCheckout
   })
   @JoinColumn()
   lifecycle!: Lifecycle;
+
+  constructor() {
+    super();
+    this.canvasID = '';
+    this.lockedBy = '';
+    this.status = CanvasCheckoutStateEnum.AVAILABLE;
+  }
 }

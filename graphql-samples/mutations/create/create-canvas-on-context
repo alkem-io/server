@@ -1,0 +1,13 @@
+mutation createCanvasOnContext($canvasData: CreateCanvasOnContextInput!) {
+  createCanvasOnContext(canvasData: $canvasData) {
+    id
+  }
+}
+
+Variables:
+{
+  "canvasData": {
+      "contextID": "uuid",
+      "name": "wow",
+  }
+}

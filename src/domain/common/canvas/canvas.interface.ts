@@ -14,6 +14,11 @@ export abstract class ICanvas extends IAuthorizable {
   })
   value?: string;
 
+  @Field(() => Boolean, {
+    description: 'Is the Canvas a template?',
+  })
+  isTemplate!: boolean;
+
   @Field(() => ICanvasCheckout, {
     description: 'The checked out status of the Canvas.',
   })
