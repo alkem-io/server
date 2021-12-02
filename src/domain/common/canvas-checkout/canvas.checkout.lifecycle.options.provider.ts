@@ -39,7 +39,7 @@ export class CanvasCheckoutLifecycleOptionsProvider {
     // Send the event, translated if needed
     this.logger.verbose?.(
       `Event ${canvasCheckoutEventData.eventName} triggered on canvasCheckout: ${canvasCheckout.id} using lifecycle ${canvasCheckout.lifecycle.id}`,
-      LogContext.COMMUNITY
+      LogContext.CONTEXT
     );
 
     await this.lifecycleService.event(
@@ -73,12 +73,16 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         if (!lifecycle) {
           throw new EntityNotInitializedException(
             `Verification Lifecycle not initialized on Organization: ${canvasCheckout.id}`,
-            LogContext.COMMUNITY
+            LogContext.CONTEXT
           );
         }
         canvasCheckout.status = CanvasCheckoutStateEnum.CHECKED_OUT;
         canvasCheckout.lockedBy = event.agentInfo.userID;
         await this.canvasCheckoutService.save(canvasCheckout);
+        this.logger.verbose?.(
+          `[Action ${event.type}] ...Canvas checked out: ${canvasCheckout.status}`,
+          LogContext.CONTEXT
+        );
       },
       checkin: async (_, event: any) => {
         const canvasCheckout =
@@ -91,13 +95,17 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         const lifecycle = canvasCheckout.lifecycle;
         if (!lifecycle) {
           throw new EntityNotInitializedException(
-            `Verification Lifecycle not initialized on Organization: ${canvasCheckout.id}`,
-            LogContext.COMMUNITY
+            `Verification Lifecycle not initialized on Organization: ${canvasCheckout.status}`,
+            LogContext.CONTEXT
           );
         }
         canvasCheckout.status = CanvasCheckoutStateEnum.AVAILABLE;
         canvasCheckout.lockedBy = '';
         await this.canvasCheckoutService.save(canvasCheckout);
+        this.logger.verbose?.(
+          `[Action ${event.type}] Canvas checked in: ${canvasCheckout.status}`,
+          LogContext.CONTEXT
+        );
       },
     },
     guards: {
@@ -105,20 +113,30 @@ export class CanvasCheckoutLifecycleOptionsProvider {
       CanvasCheckoutAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: IAuthorizationPolicy = event.authorization;
-        return this.authorizationService.isAccessGranted(
+        const result = this.authorizationService.isAccessGranted(
           agentInfo,
           authorizationPolicy,
           AuthorizationPrivilege.READ
         );
+        this.logger.verbose?.(
+          `[Guard ${event.type}] Canvas checkout authorized: ${result}`,
+          LogContext.CONTEXT
+        );
+        return result;
       },
       CanvasCheckinAuthorized: (_, event) => {
         const agentInfo: AgentInfo = event.agentInfo;
         const authorizationPolicy: IAuthorizationPolicy = event.authorization;
-        return this.authorizationService.isAccessGranted(
+        const result = this.authorizationService.isAccessGranted(
           agentInfo,
           authorizationPolicy,
           AuthorizationPrivilege.UPDATE
         );
+        this.logger.verbose?.(
+          `[Guard ${event.type}] Canvas checkin authorized: ${result}`,
+          LogContext.CONTEXT
+        );
+        return result;
       },
     },
   };
