@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import { FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityNotFoundException,
+  NotSupportedException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Canvas } from './canvas.entity';
 import { ICanvas } from './canvas.interface';
@@ -31,10 +34,16 @@ export class CanvasService {
     return await this.save(canvas);
   }
 
-  async getCanvasOrFail(canvasID: string): Promise<ICanvas> {
-    const canvas = await this.canvasRepository.findOne({
-      id: canvasID,
-    });
+  async getCanvasOrFail(
+    canvasID: string,
+    options?: FindOneOptions<Canvas>
+  ): Promise<ICanvas> {
+    const canvas = await this.canvasRepository.findOne(
+      {
+        id: canvasID,
+      },
+      options
+    );
     if (!canvas)
       throw new EntityNotFoundException(
         `Not able to locate Canvas with the specified ID: ${canvasID}`,
@@ -44,8 +53,22 @@ export class CanvasService {
   }
 
   async deleteCanvas(canvasID: string): Promise<ICanvas> {
-    const canvas = await this.getCanvasOrFail(canvasID);
-    return await this.canvasRepository.remove(canvas as Canvas);
+    const canvas = await this.getCanvasOrFail(canvasID, {
+      relations: ['context'],
+    });
+    // check it is a canvas direction on a Context
+    if (!(canvas as Canvas).context) {
+      throw new NotSupportedException(
+        `Not able to delete a Canvas that is not contained by Context: ${canvasID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    if (canvas.checkout) {
+      await this.canvasCheckoutService.delete(canvas.checkout.id);
+    }
+    const deletedCanvas = await this.canvasRepository.remove(canvas as Canvas);
+    deletedCanvas.id = canvasID;
+    return deletedCanvas;
   }
 
   async updateCanvas(

@@ -41,15 +41,18 @@ export class CanvasCheckoutService {
   }
 
   async delete(CanvasCheckoutID: string): Promise<ICanvasCheckout> {
-    const CanvasCheckout = await this.getCanvasCheckoutOrFail(CanvasCheckoutID);
+    const canvasCheckout = await this.getCanvasCheckoutOrFail(CanvasCheckoutID);
 
-    if (CanvasCheckout.authorization)
+    if (canvasCheckout.authorization)
       await this.authorizationPolicyService.delete(
-        CanvasCheckout.authorization
+        canvasCheckout.authorization
       );
 
+    if (canvasCheckout.lifecycle)
+      await this.lifecycleService.deleteLifecycle(canvasCheckout.lifecycle.id);
+
     const result = await this.canvasCheckoutRepository.remove(
-      CanvasCheckout as CanvasCheckout
+      canvasCheckout as CanvasCheckout
     );
     result.id = CanvasCheckoutID;
     return result;
