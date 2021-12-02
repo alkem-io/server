@@ -80,7 +80,7 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         canvasCheckout.lockedBy = event.agentInfo.userID;
         await this.canvasCheckoutService.save(canvasCheckout);
         this.logger.verbose?.(
-          `[Action ${event.type}] ...Canvas checked out: ${canvasCheckout.status}`,
+          `[Action ${event.type}] Canvas check out completed; new state: ${canvasCheckout.status}`,
           LogContext.CONTEXT
         );
       },
@@ -103,7 +103,7 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         canvasCheckout.lockedBy = '';
         await this.canvasCheckoutService.save(canvasCheckout);
         this.logger.verbose?.(
-          `[Action ${event.type}] Canvas checked in: ${canvasCheckout.status}`,
+          `[Action ${event.type}] Canvas checked in completed; new state: ${canvasCheckout.status}`,
           LogContext.CONTEXT
         );
       },
