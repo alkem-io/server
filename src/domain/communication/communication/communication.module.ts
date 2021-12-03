@@ -10,6 +10,7 @@ import { CommunicationAuthorizationService } from './communication.service.autho
 import { DiscussionModule } from '../discussion/discussion.module';
 import { CommunicationAdapterModule } from '@services/platform/communication-adapter/communication-adapter.module';
 import { UpdatesModule } from '../updates/updates.module';
+import { NotificationsModule } from '@domain/common/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { UpdatesModule } from '../updates/updates.module';
     DiscussionModule,
     CommunicationAdapterModule,
     UpdatesModule,
+    NotificationsModule,
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [

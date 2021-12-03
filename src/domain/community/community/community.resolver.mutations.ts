@@ -25,14 +25,16 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSubEngine } from 'apollo-server-express';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_PUB_SUB,
+} from '@core/microservices/microservices.module';
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { CommunityType } from '@common/enums/community.type';
-import { EntityNotFoundException } from '@src/common';
 import { ApplicationReceived } from '../application/application.dto.received';
+import { NotificationsPayloadBuilder } from '@domain/common/notifications';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -43,12 +45,13 @@ export class CommunityResolverMutations {
     private userAuthorizationService: UserAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
     @Inject(SUBSCRIPTION_PUB_SUB)
     private readonly subscriptionHandler: PubSubEngine,
-    @Inject('NOTIFICATIONS_SERVICE') private notificationsClient: ClientProxy
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -190,11 +193,13 @@ export class CommunityResolverMutations {
         ]
       );
 
-    const payload = await this.buildNotificationPayload(
-      agentInfo.userID,
-      applicationData.userID,
-      community
-    );
+    const payload =
+      await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
+        agentInfo.userID,
+        applicationData.userID,
+        community,
+        this.communityService
+      );
 
     this.notificationsClient.emit<number>(
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
@@ -212,51 +217,6 @@ export class CommunityResolverMutations {
       applicationReceivedEvent
     );
     return await this.applicationService.save(application);
-  }
-
-  private async buildNotificationPayload(
-    applicationCreatorID: string,
-    applicantID: string,
-    community: ICommunity
-  ) {
-    const payload: any = {
-      applicationCreatorID,
-      applicantID,
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: {
-        id: community.ecoverseID,
-      },
-    };
-
-    if (community.type === CommunityType.CHALLENGE) {
-      payload.hub.challenge = { id: community.parentID };
-    } else if (community.type === CommunityType.OPPORTUNITY) {
-      const communityWithParent =
-        await this.communityService.getCommunityOrFail(community.id, {
-          relations: ['parentCommunity'],
-        });
-      const parentCommunity = communityWithParent.parentCommunity;
-
-      if (!parentCommunity) {
-        // this will block sending the event
-        throw new EntityNotFoundException(
-          `Unable to find parent community of opportunity ${community.id}`,
-          LogContext.CHALLENGES
-        );
-      }
-
-      payload.hub.challenge = {
-        id: parentCommunity.parentID,
-        opportunity: {
-          id: community.parentID,
-        },
-      };
-    }
-
-    return payload;
   }
 
   @UseGuards(GraphqlGuard)
