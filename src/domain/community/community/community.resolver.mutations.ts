@@ -35,6 +35,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ApplicationReceived } from '../application/application.dto.received';
 import { NotificationsPayloadBuilder } from '@domain/common/notifications';
+import { EventType } from '@common/enums/event.type';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -197,12 +198,11 @@ export class CommunityResolverMutations {
       await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
         agentInfo.userID,
         applicationData.userID,
-        community,
-        this.communityService
+        community
       );
 
     this.notificationsClient.emit<number>(
-      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
+      EventType.COMMUNITY_APPLICATION_CREATED,
       payload
     );
 
