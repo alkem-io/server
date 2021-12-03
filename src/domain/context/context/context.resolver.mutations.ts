@@ -15,6 +15,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { ICanvas } from '@domain/common/canvas';
+import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
@@ -22,6 +23,7 @@ export class ContextResolverMutations {
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
+    private canvasAuthorizationService: CanvasAuthorizationService,
     private contextService: ContextService,
     private canvasService: CanvasService
   ) {}
@@ -99,11 +101,9 @@ export class ContextResolverMutations {
       `create canvas on context: ${context.id}`
     );
     const canvas = await this.contextService.createCanvas(canvasData);
-    canvas.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        canvas.authorization,
-        context.authorization
-      );
-    return await this.canvasService.save(canvas);
+    return await this.canvasAuthorizationService.applyAuthorizationPolicy(
+      canvas,
+      context.authorization
+    );
   }
 }
