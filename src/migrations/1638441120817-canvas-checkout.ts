@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { RandomGenerator } from 'typeorm/util/RandomGenerator';
 
-export class canvasCheckout1638441120817 implements MigrationInterface {
-  name = 'canvasCheckout1638441120817';
+export class canvasCheckout21638441120817 implements MigrationInterface {
+  name = 'canvasCheckout21638441120817';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -61,7 +61,7 @@ export class canvasCheckout1638441120817 implements MigrationInterface {
       );
       // insert into existing canvas entities
       await queryRunner.query(
-        `update canvas set authorizationId = '${authId}' WHERE ('id' = '${canvas.id}')`
+        `update canvas set authorizationId = '${authId}' WHERE (id = '${canvas.id}')`
       );
     });
   }
