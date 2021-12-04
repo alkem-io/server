@@ -13,7 +13,7 @@ export class Communication
   ecoverseID: string;
 
   @OneToMany(() => Discussion, discussion => discussion.communication, {
-    eager: true,
+    eager: false,
     cascade: true,
   })
   discussions?: Discussion[];

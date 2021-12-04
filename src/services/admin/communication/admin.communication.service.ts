@@ -50,7 +50,9 @@ export class AdminCommunicationService {
     );
     result.rooms.push(updatesResult);
 
-    const discussions = this.communicationService.getDiscussions(communication);
+    const discussions = await this.communicationService.getDiscussions(
+      communication
+    );
     for (const discussion of discussions) {
       const discussionResult = await this.createCommunicationAdminRoomResult(
         discussion,
