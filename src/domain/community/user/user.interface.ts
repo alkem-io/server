@@ -29,10 +29,6 @@ export abstract class IUser extends INameable {
   @Field(() => String)
   gender!: string;
 
-  @Field(() => IProfile, {
-    nullable: true,
-    description: 'The profile for this User',
-  })
   profile?: IProfile;
 
   agent?: IAgent;

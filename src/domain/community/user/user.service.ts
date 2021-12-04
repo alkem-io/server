@@ -4,6 +4,7 @@ import {
   AuthenticationException,
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
@@ -490,13 +491,17 @@ export class UserService {
     return agent;
   }
 
-  getProfile(user: IUser): IProfile {
-    const profile = user.profile;
+  async getProfile(user: IUser): Promise<IProfile> {
+    const userWithProfile = await this.getUserOrFail(user.id, {
+      relations: ['profile'],
+    });
+    const profile = userWithProfile.profile;
     if (!profile)
-      throw new EntityNotInitializedException(
-        `User Profile not initialized: ${user.id}`,
+      throw new RelationshipNotFoundException(
+        `Unable to load Profile for User: ${user.nameID} `,
         LogContext.COMMUNITY
       );
+
     return profile;
   }
 
