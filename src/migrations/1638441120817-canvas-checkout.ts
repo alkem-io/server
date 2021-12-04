@@ -51,8 +51,8 @@ export class canvasCheckout1638441120817 implements MigrationInterface {
     );
 
     // Todo: update existing Canvas with a canvas_checkout
-    const canvasIDs: any[] = await queryRunner.query(`SELECT id from canvas`);
-    canvasIDs.forEach(async canvasID => {
+    const canvases: any[] = await queryRunner.query(`SELECT id from canvas`);
+    canvases.forEach(async canvas => {
       // create auth policy
       const authId = RandomGenerator.uuid4();
       await queryRunner.query(
@@ -61,7 +61,7 @@ export class canvasCheckout1638441120817 implements MigrationInterface {
       );
       // insert into existing canvas entities
       await queryRunner.query(
-        `update canvas set authorizationId = '${authId}' WHERE ('id' = ${canvasID})`
+        `update canvas set authorizationId = '${authId}' WHERE ('id' = '${canvas.id}')`
       );
     });
   }
