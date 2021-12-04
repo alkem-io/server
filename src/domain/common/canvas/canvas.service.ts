@@ -12,13 +12,15 @@ import { CreateCanvasInput } from './dto/canvas.dto.create';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
 import { UpdateCanvasInput } from './dto/canvas.dto.update';
+import { CanvasCheckoutLifecycleOptionsProvider } from '../canvas-checkout/canvas.checkout.lifecycle.options.provider';
 
 @Injectable()
 export class CanvasService {
   constructor(
     @InjectRepository(Canvas)
     private canvasRepository: Repository<Canvas>,
-    private canvasCheckoutService: CanvasCheckoutService
+    private canvasCheckoutService: CanvasCheckoutService,
+    private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider
   ) {}
 
   async createCanvas(canvasData: CreateCanvasInput): Promise<ICanvas> {

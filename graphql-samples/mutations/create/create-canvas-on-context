@@ -8,6 +8,6 @@ Variables:
 {
   "canvasData": {
       "contextID": "uuid",
-      "name": "wow",
+      "name": "wow"
   }
 }

@@ -52,15 +52,49 @@ export class CanvasCheckoutLifecycleOptionsProvider {
       canvasCheckout.authorization
     );
 
+    // Todo: needed to address a race condition
+    // Events that are triggered by XState are fire and forget. So they above event will potentially return
+    // before all the actions that were triggered by the event have completed.
+    // As in this case the events should all be quite fast a short wait is sufficient, but we need to fix this properly
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     return await this.canvasCheckoutService.getCanvasCheckoutOrFail(
       canvasCheckout.id
     );
+  }
+
+  private logMessage(msg: string) {
+    const logActions = true;
+    if (logActions) {
+      this.logger.verbose?.(
+        `[Lifecycle] Context checkout provider - ${msg}`,
+        LogContext.LIFECYCLE
+      );
+    }
   }
 
   private CanvasCheckoutLifecycleMachineOptions: Partial<
     MachineOptions<any, any>
   > = {
     actions: {
+      availableEntry: (_, __) => {
+        this.logMessage('availableEntry...');
+      },
+      availableTransition: (_, __) => {
+        this.logMessage('availableTransition...');
+      },
+      availableExit: (_, __) => {
+        this.logMessage('availableExit!');
+      },
+      lockedEntry: (_, __) => {
+        this.logMessage('lockedEntry!');
+      },
+      lockedTransition: (_, __) => {
+        this.logMessage('lockedTransition...');
+      },
+      lockedExit: (_, __) => {
+        this.logMessage('lockedExit:');
+      },
       checkout: async (_, event: any) => {
         const canvasCheckout =
           await this.canvasCheckoutService.getCanvasCheckoutOrFail(

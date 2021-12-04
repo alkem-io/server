@@ -9,6 +9,6 @@ variables:
   "canvasCheckoutEventData":
   {
     "canvasCheckoutID": "uuid",
-  	"eventName": "REFINE"
+  	"eventName": "CHECKOUT"
   }
 }

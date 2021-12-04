@@ -13,7 +13,6 @@ import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { ICanvas } from '@domain/common/canvas';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 @Resolver()
@@ -24,8 +23,7 @@ export class ContextResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private canvasAuthorizationService: CanvasAuthorizationService,
-    private contextService: ContextService,
-    private canvasService: CanvasService
+    private contextService: ContextService
   ) {}
 
   @UseGuards(GraphqlGuard)

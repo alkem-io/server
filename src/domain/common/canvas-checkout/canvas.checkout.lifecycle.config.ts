@@ -6,22 +6,26 @@ export const CanvasCheckoutLifecycleConfig = {
   initial: 'available',
   states: {
     available: {
+      entry: ['availableEntry'],
       on: {
         CHECKOUT: {
           cond: 'CanvasCheckoutAuthorized',
           target: 'checkedOut',
-          actions: ['checkout'],
+          actions: ['lockedTransition', 'checkout'],
         },
       },
+      exit: ['availableExit'],
     },
     checkedOut: {
+      entry: ['lockedEntry'],
       on: {
         CHECKIN: {
           cond: 'CanvasCheckinAuthorized',
           target: 'available',
-          actions: ['checkin'],
+          actions: ['availableTransition', 'checkin'],
         },
       },
+      exit: ['lockedExit'],
     },
   },
 };
