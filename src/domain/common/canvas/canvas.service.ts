@@ -13,6 +13,7 @@ import { AuthorizationPolicy } from '../authorization-policy/authorization.polic
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
 import { UpdateCanvasInput } from './dto/canvas.dto.update';
 import { CanvasCheckoutLifecycleOptionsProvider } from '../canvas-checkout/canvas.checkout.lifecycle.options.provider';
+import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 
 @Injectable()
 export class CanvasService {
@@ -56,7 +57,7 @@ export class CanvasService {
 
   async deleteCanvas(canvasID: string): Promise<ICanvas> {
     const canvas = await this.getCanvasOrFail(canvasID, {
-      relations: ['context'],
+      relations: ['context', 'checkout'],
     });
     // check it is a canvas direction on a Context
     if (!(canvas as Canvas).context) {
@@ -99,5 +100,18 @@ export class CanvasService {
 
   async save(canvas: ICanvas): Promise<ICanvas> {
     return await this.canvasRepository.save(canvas);
+  }
+
+  async getCanvasCheckout(canvas: ICanvas): Promise<ICanvasCheckout> {
+    const canvasWithCheckout = await this.getCanvasOrFail(canvas.id, {
+      relations: ['checkout'],
+    });
+    if (!canvasWithCheckout.checkout)
+      throw new EntityNotFoundException(
+        `Canvas not initialised, no checkout: ${canvas.id}`,
+        LogContext.CONTEXT
+      );
+
+    return canvasWithCheckout.checkout;
   }
 }

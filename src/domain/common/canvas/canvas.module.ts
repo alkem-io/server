@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
 import { CanvasCheckoutModule } from '../canvas-checkout/canvas.checkout.module';
 import { Canvas } from './canvas.entity';
+import { CanvasResolverFields } from './canvas.resolver.fields';
 import { CanvasResolverMutations } from './canvas.resolver.mutations';
 import { CanvasService } from './canvas.service';
 import { CanvasAuthorizationService } from './canvas.service.authorization';
@@ -19,7 +20,13 @@ import { CanvasAuthorizationService } from './canvas.service.authorization';
     CanvasService,
     CanvasAuthorizationService,
     CanvasResolverMutations,
+    CanvasResolverFields,
   ],
-  exports: [CanvasService, CanvasAuthorizationService, CanvasResolverMutations],
+  exports: [
+    CanvasService,
+    CanvasAuthorizationService,
+    CanvasResolverMutations,
+    CanvasResolverFields,
+  ],
 })
 export class CanvasModule {}

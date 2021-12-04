@@ -30,7 +30,7 @@ export class Canvas extends AuthorizableEntity implements ICanvas {
   context?: Context;
 
   @OneToOne(() => CanvasCheckout, {
-    eager: true,
+    eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })

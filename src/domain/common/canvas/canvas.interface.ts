@@ -19,8 +19,5 @@ export abstract class ICanvas extends IAuthorizable {
   })
   isTemplate!: boolean;
 
-  @Field(() => ICanvasCheckout, {
-    description: 'The checked out status of the Canvas.',
-  })
   checkout?: ICanvasCheckout;
 }
