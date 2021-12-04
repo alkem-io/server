@@ -106,6 +106,20 @@ export class CanvasService {
     const canvasWithCheckout = await this.getCanvasOrFail(canvas.id, {
       relations: ['checkout'],
     });
+
+    // Note: this is done the same as with organizationVerification, i.e. that
+    // we create the entity wrapping a lifecycle if it is not present.
+    // This is due to lifecycles being difficult to deal with via migraitons.
+    // Needs further discussion.
+    if (!canvasWithCheckout.checkout) {
+      // create and add the checkout
+      canvas.checkout = await this.canvasCheckoutService.createCanvasCheckout({
+        canvasID: canvas.id,
+      });
+
+      await this.save(canvas);
+    }
+
     if (!canvasWithCheckout.checkout)
       throw new EntityNotFoundException(
         `Canvas not initialised, no checkout: ${canvas.id}`,
