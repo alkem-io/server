@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { RandomGenerator } from 'typeorm/util/RandomGenerator';
 
 export class canvasCheckout1638441120817 implements MigrationInterface {
   name = 'canvasCheckout1638441120817';
@@ -49,7 +50,20 @@ export class canvasCheckout1638441120817 implements MigrationInterface {
       `ALTER TABLE \`canvas\` ADD CONSTRAINT \`FK_08d1ccc94b008dbda894a3cfa20\` FOREIGN KEY (\`checkoutId\`) REFERENCES \`canvas_checkout\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // Todo: update existing Canvas entities: authorization policy, canvas_checkout
+    // Todo: update existing Canvas with a canvas_checkout
+    const canvasIDs: any[] = await queryRunner.query(`SELECT id from canvas`);
+    canvasIDs.forEach(async canvasID => {
+      // create auth policy
+      const authId = RandomGenerator.uuid4();
+      await queryRunner.query(
+        `insert into authorization_policy
+            values ('${authId}', NOW(), NOW(), 1, '', '', 0)`
+      );
+      // insert into existing canvas entities
+      await queryRunner.query(
+        `update canvas set authorizationId = '${authId}' WHERE ('id' = ${canvasID})`
+      );
+    });
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
