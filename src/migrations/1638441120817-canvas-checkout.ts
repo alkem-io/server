@@ -6,7 +6,7 @@ export class canvasCheckout21638441120817 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TABLE \`canvas_checkout\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`canvasID\` varchar(36) NOT NULL, \`lockedBy\` varchar(36) NOT NULL, \`status\` varchar(255) NOT NULL DEFAULT 'available', \`authorizationId\` char(36) NULL, \`lifecycleId\` char(36) NULL, UNIQUE INDEX \`REL_353b042af56f01ce222f08abf4\` (\`authorizationId\`), UNIQUE INDEX \`REL_bd3c7c6c2dbc2a8daf4b1500a6\` (\`lifecycleId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`canvas_checkout\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`canvasID\` varchar(36) NOT NULL, \`lockedBy\` varchar(36) NOT NULL, \`status\` text NOT NULL DEFAULT 'available', \`authorizationId\` char(36) NULL, \`lifecycleId\` char(36) NULL, UNIQUE INDEX \`REL_353b042af56f01ce222f08abf4\` (\`authorizationId\`), UNIQUE INDEX \`REL_bd3c7c6c2dbc2a8daf4b1500a6\` (\`lifecycleId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`canvas\` ADD \`authorizationId\` char(36) NULL`
