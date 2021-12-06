@@ -11,10 +11,10 @@ import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { DiscussionService } from '../discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
-import { NotificationsPayloadBuilder } from '@domain/common/notifications';
 import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module';
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
 
 @Resolver()
 export class CommunicationResolverMutations {

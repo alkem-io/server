@@ -13,8 +13,8 @@ import { MessageID } from '@domain/common/scalars';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { EventType } from '@common/enums/event.type';
 import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module';
-import { NotificationsPayloadBuilder } from '@domain/common/notifications';
 import { ClientProxy } from '@nestjs/microservices';
+import { NotificationsPayloadBuilder } from '@core/microservices';
 
 @Resolver()
 export class UpdatesResolverMutations {

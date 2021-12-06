@@ -34,8 +34,8 @@ import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ApplicationReceived } from '../application/application.dto.received';
-import { NotificationsPayloadBuilder } from '@domain/common/notifications';
 import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
 
 @Resolver()
 export class CommunityResolverMutations {

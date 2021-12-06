@@ -15,7 +15,6 @@ import { CommunityAuthorizationService } from './community.service.authorization
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunityResolverSubscriptions } from './community.resolver.subscriptions';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
-import { NotificationsModule } from '@domain/common/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -27,7 +26,6 @@ import { NotificationsModule } from '@domain/common/notifications/notifications.
     ApplicationModule,
     CommunicationModule,
     LifecycleModule,
-    NotificationsModule,
     TypeOrmModule.forFeature([Community]),
   ],
   providers: [

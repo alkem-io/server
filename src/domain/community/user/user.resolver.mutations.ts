@@ -19,9 +19,9 @@ import { CommunicationAdapter } from '@services/platform/communication-adapter/c
 import { IUserPreference, UserPreferenceService } from '../user-preferences';
 import { UpdateUserPreferenceInput } from '../user-preferences/dto';
 import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module';
-import { NotificationsPayloadBuilder } from '@domain/common/notifications';
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
