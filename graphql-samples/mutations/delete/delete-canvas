@@ -1,0 +1,12 @@
+mutation deleteCanvas($deleteData: DeleteCanvasInput!) {
+  deleteCanvas(deleteData: $deleteData) {
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+    "ID": "uuid"
+  }
+}

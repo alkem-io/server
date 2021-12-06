@@ -15,4 +15,7 @@ export class UpdateCanvasInput {
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   value?: string;
+
+  @Field({ nullable: true })
+  isTemplate?: boolean;
 }

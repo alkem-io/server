@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { CreateReferenceInput } from '@domain/common/reference/reference.dto.create';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
-import { CreateVisualInput } from '../visual';
+import { CreateVisualInput } from '@domain/context/visual';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()

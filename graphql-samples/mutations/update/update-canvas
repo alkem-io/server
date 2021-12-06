@@ -1,0 +1,14 @@
+mutation updateCanvas($canvasData: UpdateCanvasDirectInput!) {
+  updateCanvas(canvasData: $canvasData) {
+    name
+  }
+}
+
+Variables:
+{
+  "canvasData": {
+    "ID": "uuid",
+    "name": "some description",
+    "isTemplate": true
+  }
+}
