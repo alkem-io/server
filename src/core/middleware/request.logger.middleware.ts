@@ -32,20 +32,22 @@ export class RequestLoggerMiddleware implements NestMiddleware {
 
   use(req: Request, response: Response, next: NextFunction) {
     if (this.logger.verbose) {
-      this.logger.verbose?.(
-        `Request to server: ${req.path}`,
-        LogContext.REQUESTS
-      );
+      if (this.requestHeadersLogging) {
+        this.logger.verbose?.(
+          `Request to server: ${req.path}`,
+          LogContext.REQUESTS
+        );
+      }
       // Also log the response code
       response.on('close', () => {
         const { statusCode } = response;
 
-        this.logger.verbose?.(
-          `Response from server: ${statusCode}`,
-          LogContext.REQUESTS
-        );
-
         if (this.responseHeadersLogging) {
+          this.logger.verbose?.(
+            `Response from server: ${statusCode}`,
+            LogContext.REQUESTS
+          );
+
           const headers = JSON.stringify(response.getHeaders(), undefined, ' ');
           this.logger.verbose?.(
             `Response headers: ${headers}`,

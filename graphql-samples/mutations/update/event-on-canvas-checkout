@@ -1,0 +1,14 @@
+mutation eventOnCanvasCheckout($canvasCheckoutEventData: CanvasCheckoutEventInput!) {
+  eventOnCanvasCheckout(canvasCheckoutEventData: $canvasCheckoutEventData) {
+    status
+  }
+}
+
+variables:
+{
+  "canvasCheckoutEventData":
+  {
+    "canvasCheckoutID": "uuid",
+  	"eventName": "CHECKOUT"
+  }
+}

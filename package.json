@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.15.4",
+  "version": "0.15.5",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Cherrytwist Foundation",
   "private": false,
@@ -84,7 +84,7 @@
     "typeorm": "^0.2.37",
     "winston": "^3.3.3",
     "winston-elasticsearch": "^0.15.8",
-    "xstate": "^4.23.1",
+    "xstate": "^4.26.1",
     "yaml": "^2.0.0-7"
   },
   "devDependencies": {

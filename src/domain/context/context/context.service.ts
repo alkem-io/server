@@ -9,13 +9,7 @@ import {
 import { LogContext } from '@common/enums';
 import { IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import {
-  CreateContextInput,
-  UpdateContextInput,
-  IContext,
-  Context,
-  CreateReferenceOnContextInput,
-} from '@domain/context/context';
+import { IContext, Context, CreateContextInput } from '@domain/context/context';
 import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
@@ -25,6 +19,11 @@ import { IVisual } from '@domain/context/visual/visual.interface';
 import { VisualService } from '../visual/visual.service';
 import { Visual } from '@domain/context/visual/visual.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ICanvas } from '@domain/common/canvas';
+import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { CreateReferenceOnContextInput } from './dto/context.dto.create.reference';
+import { UpdateContextInput } from './dto/context.dto.update';
+import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 
 @Injectable()
 export class ContextService {
@@ -32,6 +31,7 @@ export class ContextService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private visualService: VisualService,
     private aspectService: AspectService,
+    private canvasService: CanvasService,
     private ecosystemModelService: EcosystemModelService,
     private referenceService: ReferenceService,
     @InjectRepository(Context)
@@ -199,6 +199,39 @@ export class ContextService {
     context.aspects.push(aspect);
     await this.contextRepository.save(context);
     return aspect;
+  }
+
+  async createCanvas(canvasData: CreateCanvasOnContextInput): Promise<ICanvas> {
+    const contextID = canvasData.contextID;
+    const context = await this.getContextOrFail(contextID, {
+      relations: ['canvases'],
+    });
+    if (!context.canvases)
+      throw new EntityNotInitializedException(
+        `Context (${contextID}) not initialised`,
+        LogContext.CONTEXT
+      );
+
+    const canvas = await this.canvasService.createCanvas({
+      name: canvasData.name,
+      value: canvasData.value,
+    });
+    context.canvases.push(canvas);
+    await this.contextRepository.save(context);
+    return canvas;
+  }
+
+  async getCanvases(context: IContext): Promise<ICanvas[]> {
+    const contextLoaded = await this.getContextOrFail(context.id, {
+      relations: ['canvases'],
+    });
+    if (!contextLoaded.canvases)
+      throw new EntityNotFoundException(
+        `Context not initialised, no canvases: ${context.id}`,
+        LogContext.CONTEXT
+      );
+
+    return contextLoaded.canvases;
   }
 
   async getAspects(context: IContext): Promise<IAspect[]> {

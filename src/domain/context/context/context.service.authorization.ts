@@ -7,6 +7,8 @@ import { Context, IContext } from '@domain/context/context';
 import { EcosystemModelAuthorizationService } from '@domain/context/ecosystem-model/ecosystem-model.service.authorization';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
+import { ICanvas } from '@domain/common/canvas/canvas.interface';
 
 @Injectable()
 export class ContextAuthorizationService {
@@ -15,6 +17,7 @@ export class ContextAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private ecosysteModelAuthorizationService: EcosystemModelAuthorizationService,
+    private canvasAuthorizationService: CanvasAuthorizationService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
   ) {}
@@ -40,6 +43,18 @@ export class ContextAuthorizationService {
           context.authorization
         );
     }
+
+    const canvases = await this.contextService.getCanvases(context);
+    const updatedCanvases: ICanvas[] = [];
+    for (const canvas of canvases) {
+      const updatedCanvas =
+        await this.canvasAuthorizationService.applyAuthorizationPolicy(
+          canvas,
+          context.authorization
+        );
+      updatedCanvases.push(updatedCanvas);
+    }
+    context.canvases = updatedCanvases;
 
     context.references = await this.contextService.getReferences(context);
     for (const reference of context.references) {
