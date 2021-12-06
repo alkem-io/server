@@ -5,6 +5,7 @@ import { NotificationEventException } from '@common/exceptions/notification.even
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Opportunity } from '@domain/collaboration';
+import { Communication } from '@domain/communication';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { IUpdates } from '@domain/communication/updates/updates.interface';
@@ -27,6 +28,8 @@ export class NotificationsPayloadBuilder {
     private communityRepository: Repository<Community>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
+    @InjectRepository(Communication)
+    private communicationRepository: Repository<Communication>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -217,10 +220,17 @@ export class NotificationsPayloadBuilder {
   private async getCommunityFromUpdates(
     updatesID: string
   ): Promise<ICommunity | undefined> {
+    const communication = await this.communicationRepository
+      .createQueryBuilder('communication')
+      .leftJoinAndSelect('communication.updates', 'updates')
+      .where('updates.id = :id')
+      .setParameters({ id: `${updatesID}` })
+      .getOne();
+
     const community = await this.communityRepository
       .createQueryBuilder('community')
-      .where('updatesId = :id')
-      .setParameters({ id: `${updatesID}` })
+      .where('communicationId = :id')
+      .setParameters({ id: `${communication?.id}` })
       .getOne();
 
     return community;
