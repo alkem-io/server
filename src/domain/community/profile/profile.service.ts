@@ -46,7 +46,12 @@ export class ProfileService {
   async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
     let data = profileData;
     if (!data) data = {};
-    const profile: IProfile = Profile.create(data);
+    const profile: IProfile = Profile.create({
+      avatar: profileData?.avatar,
+      description: profileData?.description,
+      tagsets: profileData?.tagsetsData,
+      references: profileData?.referencesData,
+    });
     profile.authorization = new AuthorizationPolicy();
     if (!profile.references) {
       profile.references = [];

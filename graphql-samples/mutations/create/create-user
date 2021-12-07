@@ -21,7 +21,13 @@ query variables:
           "name": "wow",
           "uri": "something",
           "description": "this works"
-        }
+        },
+        "tagsetsData": [
+          {
+            "name": "skills",
+            "tags": ["tag1"]
+          }
+        ]
       }
   }
 }
