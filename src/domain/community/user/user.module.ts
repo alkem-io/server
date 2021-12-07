@@ -26,11 +26,11 @@ import { UserPreferenceModule } from '../user-preferences';
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    TypeOrmModule.forFeature([User]),
     IdentityResolverModule,
     RoomModule,
     MicroservicesModule,
     UserPreferenceModule,
+    TypeOrmModule.forFeature([User]),
     CacheModule.register({ max: 250, ttl: 300 }),
   ],
   providers: [
