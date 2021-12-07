@@ -18,17 +18,18 @@
         {
           "name": "linkedin",
           "description": "User profile on LinkedIn",
-          "value": ""
+
+          "uri": ""
         },
         {
           "name": "github",
           "description": "User profile on GitHub",
-          "value": ""
+          "uri": ""
         },
         {
           "name": "twitter",
           "description": "User profile on Twitter",
-          "value": ""
+          "uri": ""
         }
       ]
     }

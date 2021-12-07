@@ -165,7 +165,7 @@ export class UserService {
         if (!existingRef) {
           const newRefData = {
             name: referenceTemplate.name,
-            value: referenceTemplate.value,
+            uri: referenceTemplate.uri,
             description: referenceTemplate.description,
           };
           result.referencesData?.push(newRefData);
