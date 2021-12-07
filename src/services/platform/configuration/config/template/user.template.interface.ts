@@ -6,7 +6,7 @@ export interface ITagsetTemplate {
 export interface IReferenceTemplate {
   name: string;
   description: string;
-  value: string;
+  uri: string;
 }
 export interface IUserTemplate {
   name: string;
