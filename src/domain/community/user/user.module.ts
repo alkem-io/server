@@ -17,6 +17,7 @@ import { IdentityResolverModule } from '@domain/communication/identity-resolver/
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { UserPreferenceModule } from '../user-preferences';
+import { KonfigModule } from '@services/platform/configuration/config/config.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { UserPreferenceModule } from '../user-preferences';
     RoomModule,
     MicroservicesModule,
     UserPreferenceModule,
+    KonfigModule,
     TypeOrmModule.forFeature([User]),
     CacheModule.register({ max: 250, ttl: 300 }),
   ],
