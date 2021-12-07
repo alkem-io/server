@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { User, IUser } from '@domain/community/user';
+import { IUser } from '@domain/community/user';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
@@ -24,9 +22,7 @@ export class UserAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private agentService: AgentService,
-    private userService: UserService,
-    @InjectRepository(User)
-    private userRepository: Repository<User>
+    private userService: UserService
   ) {}
 
   async applyAuthorizationPolicy(user: IUser): Promise<IUser> {
@@ -41,17 +37,17 @@ export class UserAuthorizationService {
     );
 
     // cascade
-    const profile = this.userService.getProfile(user);
-    profile.authorization =
+    user.profile = await this.userService.getProfile(user);
+    user.profile.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        profile.authorization,
+        user.profile.authorization,
         user.authorization
       );
 
     // Allow users to also delete entities within the profile
-    profile.authorization =
+    user.profile.authorization =
       await this.authorizationPolicyService.appendCredentialAuthorizationRule(
-        profile.authorization,
+        user.profile.authorization,
         {
           type: AuthorizationCredential.USER_SELF_MANAGEMENT,
           resourceID: user.id,
@@ -59,7 +55,9 @@ export class UserAuthorizationService {
         [AuthorizationPrivilege.DELETE]
       );
     user.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(profile);
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        user.profile
+      );
     user.agent = await this.userService.getAgent(user.id);
     user.agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -77,9 +75,10 @@ export class UserAuthorizationService {
             user.authorization
           );
       }
+      user.preferences = preferences;
     }
 
-    return await this.userRepository.save(user);
+    return await this.userService.saveUser(user);
   }
 
   async grantCredentials(user: IUser): Promise<IUser> {
@@ -94,7 +93,7 @@ export class UserAuthorizationService {
       agentID: agent.id,
       resourceID: user.id,
     });
-    return await this.userRepository.save(user);
+    return await this.userService.saveUser(user);
   }
 
   // Create an instance for usage in a mutation

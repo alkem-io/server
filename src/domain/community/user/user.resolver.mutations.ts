@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -18,6 +18,10 @@ import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization'
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { IUserPreference, UserPreferenceService } from '../user-preferences';
 import { UpdateUserPreferenceInput } from '../user-preferences/dto';
+import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module';
+import { ClientProxy } from '@nestjs/microservices';
+import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -26,7 +30,9 @@ export class UserResolverMutations {
     private authorizationService: AuthorizationService,
     private readonly userService: UserService,
     private readonly userAuthorizationService: UserAuthorizationService,
-    private readonly preferenceService: UserPreferenceService
+    private readonly preferenceService: UserPreferenceService,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -48,6 +54,14 @@ export class UserResolverMutations {
     );
     let user = await this.userService.createUser(userData);
     user = await this.userAuthorizationService.grantCredentials(user);
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildUserRegisteredNotificationPayload(
+        user.id
+      );
+
+    this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
+
     return await this.userAuthorizationService.applyAuthorizationPolicy(user);
   }
 
@@ -63,6 +77,13 @@ export class UserResolverMutations {
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
     let user = await this.userService.createUserFromAgentInfo(agentInfo);
     user = await this.userAuthorizationService.grantCredentials(user);
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildUserRegisteredNotificationPayload(
+        user.id
+      );
+
+    this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
     return await this.userAuthorizationService.applyAuthorizationPolicy(user);
   }
 

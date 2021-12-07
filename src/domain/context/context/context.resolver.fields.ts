@@ -9,6 +9,7 @@ import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { IReference } from '@domain/common/reference';
 import { IVisual } from '@domain/context/visual';
+import { ICanvas } from '@domain/common/canvas/canvas.interface';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -43,6 +44,17 @@ export class ContextResolverFields {
   @Profiling.api
   async aspects(@Parent() context: Context) {
     return await this.contextService.getAspects(context);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('canvases', () => [ICanvas], {
+    nullable: true,
+    description: 'The Canvas entities for this Context.',
+  })
+  @Profiling.api
+  async canvases(@Parent() context: Context): Promise<ICanvas[]> {
+    return await this.contextService.getCanvases(context);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

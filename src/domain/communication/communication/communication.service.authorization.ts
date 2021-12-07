@@ -32,9 +32,10 @@ export class CommunicationAuthorizationService {
       communityCredential
     );
 
-    for (const discussion of this.communicationService.getDiscussions(
+    communication.discussions = await this.communicationService.getDiscussions(
       communication
-    )) {
+    );
+    for (const discussion of communication.discussions) {
       await this.discussionAuthorizationService.applyAuthorizationPolicy(
         discussion,
         communication.authorization

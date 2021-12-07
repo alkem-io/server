@@ -183,14 +183,16 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.3.2
+    image: alkemio/notifications:v0.4.2
     environment:
       - RABBITMQ_HOST
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE
       - EMAIL_SMTP_HOST
+      - EMAIL_MULTI_PROVIDER_STRATEGY
       - ENVIRONMENT=dev
       - ALKEMIO_SERVER_ENDPOINT
+      - ALKEMIO_WEBCLIENT_ENDPOINT
       - KRATOS_API_PUBLIC_ENDPOINT
       - SERVICE_ACCOUNT_USERNAME
       - SERVICE_ACCOUNT_PASSWORD

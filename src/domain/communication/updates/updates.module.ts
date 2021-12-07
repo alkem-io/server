@@ -11,9 +11,9 @@ import { UpdatesService } from './updates.service';
 @Module({
   imports: [
     AuthorizationModule,
-    TypeOrmModule.forFeature([Updates]),
     RoomModule,
     CommunicationAdapterModule,
+    TypeOrmModule.forFeature([Updates]),
   ],
   providers: [UpdatesService, UpdatesResolverFields, UpdatesResolverMutations],
   exports: [UpdatesService],

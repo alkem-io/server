@@ -15,24 +15,24 @@ export class Reference extends AuthorizableEntity implements IReference {
   @Column('text', { nullable: true })
   description?: string;
 
-  @ManyToOne(
-    () => Context,
-    context => context.references,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Context, context => context.references, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   context?: Context;
 
-  @ManyToOne(
-    () => Profile,
-    profile => profile.references,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Profile, profile => profile.references, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   profile?: Profile;
 
   constructor(name: string, uri: string, description?: string) {
     super();
     this.name = name;
-    this.uri = uri;
+    this.uri = uri || '';
     this.description = '';
     if (description) {
       this.description = description;

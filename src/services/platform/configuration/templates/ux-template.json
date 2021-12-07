@@ -13,6 +13,24 @@
           "name": "keywords",
           "placeholder": "Innovation, AI, Technology"
         }
+      ],
+      "references": [
+        {
+          "name": "linkedin",
+          "description": "User profile on LinkedIn",
+
+          "uri": ""
+        },
+        {
+          "name": "github",
+          "description": "User profile on GitHub",
+          "uri": ""
+        },
+        {
+          "name": "twitter",
+          "description": "User profile on Twitter",
+          "uri": ""
+        }
       ]
     }
   ],

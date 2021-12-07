@@ -39,7 +39,7 @@ export class ReferenceService {
     referenceData: UpdateReferenceInput
   ) {
     // Copy over the received data if a uri is supplied
-    if (referenceData.uri) {
+    if (referenceData.uri || referenceData.uri === '') {
       reference.uri = referenceData.uri;
     }
 

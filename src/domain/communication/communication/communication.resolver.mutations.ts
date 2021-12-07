@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CommunicationService } from './communication.service';
@@ -11,6 +11,10 @@ import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { DiscussionService } from '../discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
+import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module';
+import { ClientProxy } from '@nestjs/microservices';
+import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -18,7 +22,9 @@ export class CommunicationResolverMutations {
     private authorizationService: AuthorizationService,
     private communicationService: CommunicationService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
-    private discussionService: DiscussionService
+    private discussionService: DiscussionService,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -45,6 +51,17 @@ export class CommunicationResolverMutations {
       agentInfo.userID,
       agentInfo.communicationID
     );
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
+        discussion
+      );
+
+    this.notificationsClient.emit<number>(
+      EventType.COMMUNICATION_DISCUSSION_CREATED,
+      payload
+    );
+
     await this.discussionAuthorizationService.applyAuthorizationPolicy(
       discussion,
       communication.authorization
