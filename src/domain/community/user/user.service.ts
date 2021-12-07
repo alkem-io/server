@@ -16,7 +16,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
-import { IProfile } from '@domain/community/profile';
+import { CreateProfileInput, IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import {
   CreateUserInput,
@@ -38,6 +38,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { UserPreferenceService } from '../user-preferences';
+import { KonfigService } from '@services/platform/configuration/config/config.service';
+import { IUserTemplate } from '@services/platform/configuration';
 
 @Injectable()
 export class UserService {
@@ -56,7 +58,8 @@ export class UserService {
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private konfigService: KonfigService
   ) {}
 
   private getUserCommunicationIdCacheKey(communicationId: string): string {
@@ -81,9 +84,10 @@ export class UserService {
     const user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy();
 
-    user.profile = await this.profileService.createProfile(
+    const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
+    user.profile = await this.profileService.createProfile(profileData);
 
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
@@ -106,7 +110,6 @@ export class UserService {
 
     user.preferences =
       await this.userPreferenceService.createInitialUserPreferences(response);
-
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -135,6 +138,52 @@ export class UserService {
     await this.setUserCache(response);
 
     return response;
+  }
+
+  private async extendProfileDataWithReferences(
+    profileData?: CreateProfileInput
+  ): Promise<CreateProfileInput> {
+    // ensure the result + references are there
+    let result = profileData;
+    if (!result) {
+      result = {
+        referencesData: [],
+      };
+    }
+    if (!result.referencesData) {
+      result.referencesData = [];
+    }
+    // Get the template to populate with
+    const referenceTemplates = (await this.getUserTemplate())?.references;
+    if (referenceTemplates) {
+      for (const referenceTemplate of referenceTemplates) {
+        const existingRef = result.referencesData?.find(
+          reference =>
+            reference.name.toLowerCase() ===
+            referenceTemplate.name.toLowerCase()
+        );
+        if (!existingRef) {
+          const newRefData = {
+            name: referenceTemplate.name,
+            value: referenceTemplate.value,
+            description: referenceTemplate.description,
+          };
+          result.referencesData?.push(newRefData);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  async getUserTemplate(): Promise<IUserTemplate | undefined> {
+    const template = await this.konfigService.getTemplate();
+    const userTemplates = template.users;
+    if (userTemplates && userTemplates.length > 0) {
+      // assume only one, which is the case currently + will be enforced later when we update template handling
+      return userTemplates[0];
+    }
+    return undefined;
   }
 
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
