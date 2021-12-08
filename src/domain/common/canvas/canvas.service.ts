@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import {
-  EntityNotFoundException,
-  NotSupportedException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Canvas } from './canvas.entity';
 import { ICanvas } from './canvas.interface';
@@ -12,8 +9,8 @@ import { CreateCanvasInput } from './dto/canvas.dto.create';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
 import { UpdateCanvasInput } from './dto/canvas.dto.update';
-import { CanvasCheckoutLifecycleOptionsProvider } from '../canvas-checkout/canvas.checkout.lifecycle.options.provider';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class CanvasService {
@@ -21,7 +18,7 @@ export class CanvasService {
     @InjectRepository(Canvas)
     private canvasRepository: Repository<Canvas>,
     private canvasCheckoutService: CanvasCheckoutService,
-    private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider
+    private authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   async createCanvas(canvasData: CreateCanvasInput): Promise<ICanvas> {
@@ -57,18 +54,17 @@ export class CanvasService {
 
   async deleteCanvas(canvasID: string): Promise<ICanvas> {
     const canvas = await this.getCanvasOrFail(canvasID, {
-      relations: ['context', 'checkout'],
+      relations: ['checkout'],
     });
-    // check it is a canvas direction on a Context
-    if (!(canvas as Canvas).context) {
-      throw new NotSupportedException(
-        `Not able to delete a Canvas that is not contained by Context: ${canvasID}`,
-        LogContext.CHALLENGES
-      );
-    }
+
     if (canvas.checkout) {
       await this.canvasCheckoutService.delete(canvas.checkout.id);
     }
+
+    if (canvas.authorization) {
+      await this.authorizationPolicyService.delete(canvas.authorization);
+    }
+
     const deletedCanvas = await this.canvasRepository.remove(canvas as Canvas);
     deletedCanvas.id = canvasID;
     return deletedCanvas;

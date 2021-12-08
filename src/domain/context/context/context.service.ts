@@ -4,6 +4,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -19,7 +20,7 @@ import { IVisual } from '@domain/context/visual/visual.interface';
 import { VisualService } from '../visual/visual.service';
 import { Visual } from '@domain/context/visual/visual.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ICanvas } from '@domain/common/canvas';
+import { Canvas, ICanvas } from '@domain/common/canvas';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { CreateReferenceOnContextInput } from './dto/context.dto.create.reference';
 import { UpdateContextInput } from './dto/context.dto.update';
@@ -106,7 +107,13 @@ export class ContextService {
   async removeContext(contextID: string): Promise<IContext> {
     // Note need to load it in with all contained entities so can remove fully
     const context = await this.getContextOrFail(contextID, {
-      relations: ['aspects', 'references', 'ecosystemModel', 'visual'],
+      relations: [
+        'aspects',
+        'references',
+        'ecosystemModel',
+        'visual',
+        'canvases',
+      ],
     });
 
     if (context.references) {
@@ -114,6 +121,12 @@ export class ContextService {
         await this.referenceService.deleteReference({
           ID: reference.id,
         });
+      }
+    }
+
+    if (context.canvases) {
+      for (const canvas of context.canvases) {
+        await this.canvasService.deleteCanvas(canvas.id);
       }
     }
 
@@ -232,6 +245,35 @@ export class ContextService {
       );
 
     return contextLoaded.canvases;
+  }
+
+  async getCanvasOnContextOrFail(
+    contextID: string,
+    canvasID: string
+  ): Promise<ICanvas> {
+    const canvas = await this.canvasService.getCanvasOrFail(canvasID, {
+      relations: ['context'],
+    });
+    const context = (canvas as Canvas).context;
+    // check it is a canvas direction on a Context
+    if (!context) {
+      throw new NotSupportedException(
+        `Not able to delete a Canvas that is not contained by Context: ${canvasID}`,
+        LogContext.CONTEXT
+      );
+    }
+    if (context.id !== contextID) {
+      throw new NotSupportedException(
+        `Canvas (${canvasID}) is not a child of supplied context: ${contextID}`,
+        LogContext.CONTEXT
+      );
+    }
+
+    return canvas;
+  }
+
+  async deleteCanvas(canvasID: string): Promise<ICanvas> {
+    return await this.canvasService.deleteCanvas(canvasID);
   }
 
   async getAspects(context: IContext): Promise<IAspect[]> {

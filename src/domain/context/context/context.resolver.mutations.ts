@@ -15,6 +15,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { ICanvas } from '@domain/common/canvas';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
+import { DeleteCanvasOnContextInput } from './dto/context.dto.delete.canvas';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
@@ -103,5 +104,26 @@ export class ContextResolverMutations {
       canvas,
       context.authorization
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICanvas, {
+    description: 'Deletes the specified Canvas.',
+  })
+  async deleteCanvasOnContext(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteCanvasOnContextInput
+  ): Promise<ICanvas> {
+    const canvas = await this.contextService.getCanvasOnContextOrFail(
+      deleteData.contextID,
+      deleteData.canvasID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      canvas.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete canvas: ${canvas.id}`
+    );
+    return await this.contextService.deleteCanvas(deleteData.canvasID);
   }
 }
