@@ -12,7 +12,6 @@ import { ICanvas } from './canvas.interface';
 import { UpdateCanvasDirectInput } from './dto/canvas.dto.update.direct';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { DeleteCanvasInput } from './dto/canvas.dto.delete';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -62,23 +61,5 @@ export class CanvasResolverMutations {
       `update Canvas: ${canvas.name}`
     );
     return await this.canvasService.updateCanvas(canvas, canvasData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ICanvas, {
-    description: 'Deletes the specified Canvas.',
-  })
-  async deleteCanvas(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteCanvasInput
-  ): Promise<ICanvas> {
-    const canvas = await this.canvasService.getCanvasOrFail(deleteData.ID);
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      canvas.authorization,
-      AuthorizationPrivilege.DELETE,
-      `delete canvas: ${canvas.id}`
-    );
-    return await this.canvasService.deleteCanvas(deleteData.ID);
   }
 }
