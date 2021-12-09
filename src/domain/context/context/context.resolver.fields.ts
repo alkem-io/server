@@ -1,5 +1,5 @@
 import { Context, IContext } from '@domain/context/context';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ContextService } from './context.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
@@ -10,6 +10,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { IReference } from '@domain/common/reference';
 import { IVisual } from '@domain/context/visual';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -53,8 +54,17 @@ export class ContextResolverFields {
     description: 'The Canvas entities for this Context.',
   })
   @Profiling.api
-  async canvases(@Parent() context: Context): Promise<ICanvas[]> {
-    return await this.contextService.getCanvases(context);
+  async canvases(
+    @Parent() context: Context,
+    @Args({
+      name: 'IDs',
+      type: () => [UUID],
+      description: 'The IDs of the canvases to return',
+      nullable: true,
+    })
+    ids: string[]
+  ): Promise<ICanvas[]> {
+    return await this.contextService.getCanvases(context, ids);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

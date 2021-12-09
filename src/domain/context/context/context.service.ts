@@ -234,7 +234,10 @@ export class ContextService {
     return canvas;
   }
 
-  async getCanvases(context: IContext): Promise<ICanvas[]> {
+  async getCanvases(
+    context: IContext,
+    canvasIDs?: string[]
+  ): Promise<ICanvas[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['canvases'],
     });
@@ -244,7 +247,22 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
-    return contextLoaded.canvases;
+    if (!canvasIDs) {
+      return contextLoaded.canvases;
+    }
+    const results: ICanvas[] = [];
+    for (const canvasID of canvasIDs) {
+      const canvas = contextLoaded.canvases.find(
+        canvas => canvas.id === canvasID
+      );
+      if (!canvas)
+        throw new EntityNotFoundException(
+          `Canvas with requested ID (${canvasID}) not located within current Context: : ${context.id}`,
+          LogContext.CONTEXT
+        );
+      results.push(canvas);
+    }
+    return results;
   }
 
   async getCanvasOnContextOrFail(
