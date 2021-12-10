@@ -190,7 +190,7 @@ export class NotificationsPayloadBuilder {
   ): Promise<ICommunity | undefined> {
     const community = await this.communityRepository
       .createQueryBuilder('community')
-      .leftJoinAndSelect('community.parentCommunity', 'community')
+      .leftJoinAndSelect('community.parentCommunity', 'parentCommunity')
       .where('community.id = :id')
       .setParameters({ id: `${communityID}` })
       .getOne();
