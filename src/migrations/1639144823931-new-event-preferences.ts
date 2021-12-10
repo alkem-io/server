@@ -5,7 +5,7 @@ export class newEventPreferences1639144823931 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
-        VALUES (UUID(), 1, 'Notification', '[Admin] Community Discussion Created', 'Receive notification when a new application is received for a community for which I am an administrator', 'boolean', 'NotificationCommunityDiscussionCreatedAdmin')`
+        VALUES (UUID(), 1, 'Notification', '[Admin] Community Discussion Created', 'Receive notification when a new discussion is created for a community for which I am an administrator', 'boolean', 'NotificationCommunityDiscussionCreatedAdmin')`
     );
     await queryRunner.query(
       `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
