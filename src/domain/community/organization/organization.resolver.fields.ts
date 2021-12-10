@@ -15,6 +15,7 @@ import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
@@ -93,5 +94,14 @@ export class OrganizationResolverFields {
   @Profiling.api
   async agent(@Parent() organization: Organization): Promise<IAgent> {
     return await this.organizationService.getAgent(organization);
+  }
+
+  @ResolveField('activity', () => [INVP], {
+    nullable: true,
+    description: 'The activity within this Organization.',
+  })
+  @Profiling.api
+  async activity(@Parent() organization: Organization) {
+    return await this.organizationService.getActivity(organization);
   }
 }

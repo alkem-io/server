@@ -36,6 +36,8 @@ import { RemoveOrganizationOwnerInput } from './dto/organization.dto.remove.owne
 import { AssignOrganizationOwnerInput } from './dto/organization.dto.assign.owner';
 import { OrganizationVerificationService } from '../organization-verification/organization.verification.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { NVP } from '@domain/common/nvp/nvp.entity';
+import { INVP } from '@domain/common/nvp/nvp.interface';
 
 @Injectable()
 export class OrganizationService {
@@ -295,6 +297,27 @@ export class OrganizationService {
   async getOrganizations(): Promise<IOrganization[]> {
     const organizations = await this.organizationRepository.find();
     return organizations || [];
+  }
+
+  async getActivity(organization: IOrganization): Promise<INVP[]> {
+    const activity: INVP[] = [];
+
+    const membersCount = await this.getMembersCount(organization);
+    const membersTopic = new NVP('members', membersCount.toString());
+    membersTopic.id = `members-${organization.id}`;
+    activity.push(membersTopic);
+
+    return activity;
+  }
+
+  async getMembersCount(organization: IOrganization): Promise<number> {
+    const credentialMatches =
+      await this.agentService.countAgentsWithMatchingCredentials({
+        type: AuthorizationCredential.ORGANIZATION_MEMBER,
+        resourceID: organization.id,
+      });
+
+    return credentialMatches;
   }
 
   async getMembers(organization: IOrganization): Promise<IUser[]> {
