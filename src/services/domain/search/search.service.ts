@@ -89,6 +89,11 @@ export class SearchService {
       searchOpportunities,
     ] = await this.searchBy(entityTypesFilter);
 
+    // Turn off some searches if the user is not registered
+    if (agentInfo.email || agentInfo.email.length === 0) {
+      searchUsers = false;
+    }
+
     // Only support certain features for now
     if (searchData.challengesFilter)
       throw new NotImplementedException(
