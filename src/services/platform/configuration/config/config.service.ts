@@ -53,6 +53,11 @@ export class KonfigService {
             enabled: this.configService.get(ConfigurationTypes.NOTIFICATIONS)
               ?.enabled,
           },
+          {
+            name: 'canvases',
+            enabled: this.configService.get(ConfigurationTypes.COLLABORATION)
+              ?.canvases?.enabled,
+          },
         ],
       },
       sentry: {
