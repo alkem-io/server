@@ -75,24 +75,14 @@ export class SearchService {
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
     // By default search all entity types
-    let searchUsers = true;
-    let searchGroups = true;
-    let searchOrganizations = true;
-    let searchChallenges = true;
-    let searchOpportunities = true;
     const entityTypesFilter = searchData.typesFilter;
-    [
+    const [
       searchUsers,
       searchGroups,
       searchOrganizations,
       searchChallenges,
       searchOpportunities,
-    ] = await this.searchBy(entityTypesFilter);
-
-    // Turn off some searches if the user is not registered
-    if (agentInfo.email || agentInfo.email.length === 0) {
-      searchUsers = false;
-    }
+    ] = await this.searchBy(agentInfo, entityTypesFilter);
 
     // Only support certain features for now
     if (searchData.challengesFilter)
@@ -102,6 +92,7 @@ export class SearchService {
       );
     if (searchData.tagsetNames)
       await this.searchTagsets(
+        agentInfo,
         searchData.tagsetNames,
         filteredTerms,
         userResults,
@@ -132,8 +123,10 @@ export class SearchService {
       LogContext.API
     );
 
-    let results: ISearchResultEntry[] = [];
-    results = await this.buildSearchResults(userResults);
+    const results: ISearchResultEntry[] = [];
+    if (searchUsers) {
+      results.push(...(await this.buildSearchResults(userResults)));
+    }
     results.push(...(await this.buildSearchResults(groupResults)));
     results.push(...(await this.buildSearchResults(organizationResults)));
     results.push(...(await this.buildSearchResults(challengeResults)));
@@ -165,6 +158,7 @@ export class SearchService {
   }
 
   async searchBy(
+    agentInfo: AgentInfo,
     entityTypesFilter?: string[]
   ): Promise<[boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
@@ -174,7 +168,10 @@ export class SearchService {
     let searchOpportunities = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
-      if (!entityTypesFilter.includes(SearchEntityTypes.USER))
+      if (
+        !entityTypesFilter.includes(SearchEntityTypes.USER) ||
+        !agentInfo.email
+      )
         searchUsers = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.GROUP))
         searchGroups = false;
@@ -342,6 +339,7 @@ export class SearchService {
   }
 
   async searchTagsets(
+    agentInfo: AgentInfo,
     tagsets: string[],
     terms: string[],
     userResults: Map<number, Match>,
@@ -349,12 +347,8 @@ export class SearchService {
     organizationResults: Map<number, Match>,
     entityTypesFilter?: string[]
   ) {
-    let searchUsers = true;
-    let searchGroups = true;
-    let searchOrganizations = true;
-    [searchUsers, searchGroups, searchOrganizations] = await this.searchBy(
-      entityTypesFilter
-    );
+    const [searchUsers, searchGroups, searchOrganizations] =
+      await this.searchBy(agentInfo, entityTypesFilter);
 
     if (searchUsers)
       await this.searchUsersByTagsets(terms, tagsets, userResults);
