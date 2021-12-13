@@ -1,7 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { RandomGenerator } from 'typeorm/util/RandomGenerator';
 
-export class newEventPreferences1639144823931 implements MigrationInterface {
+export class updatedPreferenceDefinitions1639406613479
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
