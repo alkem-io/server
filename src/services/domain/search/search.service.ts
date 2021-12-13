@@ -168,10 +168,7 @@ export class SearchService {
     let searchOpportunities = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
-      if (
-        !entityTypesFilter.includes(SearchEntityTypes.USER) ||
-        !agentInfo.email
-      )
+      if (!entityTypesFilter.includes(SearchEntityTypes.USER))
         searchUsers = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.GROUP))
         searchGroups = false;
@@ -181,6 +178,10 @@ export class SearchService {
         searchChallenges = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
         searchOpportunities = false;
+    }
+
+    if (!agentInfo.email) {
+      searchUsers = false;
     }
 
     return [
