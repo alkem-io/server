@@ -13,10 +13,7 @@ export class newEventPreferences1639144823931 implements MigrationInterface {
     );
 
     const users: any[] = await queryRunner.query(
-      `SELECT u.id, u.displayName FROM user as u
-      LEFT JOIN user_preference as up on up.userId = u.id
-      LEFT JOIN user_preference_definition as upd
-      ON upd.id = up.userPreferenceDefinitionId;`
+      `SELECT u.id, u.displayName FROM user as u;`
     );
 
     const definitions: any[] = await queryRunner.query(
@@ -26,8 +23,6 @@ export class newEventPreferences1639144823931 implements MigrationInterface {
     users.forEach(user =>
       definitions.forEach(async def => {
         const uuid = RandomGenerator.uuid4();
-        console.log(def.displayName);
-        console.log(user.displayName);
         await queryRunner.query(
           `INSERT INTO authorization_policy VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0)`
         );
