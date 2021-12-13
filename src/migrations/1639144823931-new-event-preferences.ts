@@ -11,31 +11,30 @@ export class newEventPreferences1639144823931 implements MigrationInterface {
       `INSERT INTO user_preference_definition (id, version, groupName, displayName, description, valueType, type)
         VALUES (UUID(), 1, 'Notification', '[Admin] Community Updates', 'Receive notification when a new update is shared with a community for which I am an administrator', 'boolean', 'NotificationCommunityUpdateSentAdmin')`
     );
-    // populate existing users with a preference of each definition
+
+    const users: any[] = await queryRunner.query(
+      `SELECT u.id, u.displayName FROM user as u
+      LEFT JOIN user_preference as up on up.userId = u.id
+      LEFT JOIN user_preference_definition as upd
+      ON upd.id = up.userPreferenceDefinitionId;`
+    );
+
     const definitions: any[] = await queryRunner.query(
-      'SELECT * FROM user_preference_definition'
+      `SELECT * FROM user_preference_definition as upd WHERE upd.type='NotificationCommunityUpdateSentAdmin' || upd.type='NotificationCommunityDiscussionCreatedAdmin';`
     );
-    const usersWithoutPreference: any[] = await queryRunner.query(
-      `SELECT user.id FROM user
-      LEFT JOIN user_preference on user_preference.userId = user.id
-      WHERE user_preference.userId IS NULL`
-    );
-    usersWithoutPreference.forEach(user =>
-      definitions
-        .filter(
-          x =>
-            x.type === 'NotificationCommunityUpdateSentAdmin' ||
-            x.type === 'NotificationCommunityDiscussionCreatedAdmin'
-        )
-        .forEach(async def => {
-          const uuid = RandomGenerator.uuid4();
-          await queryRunner.query(
-            `INSERT INTO authorization_policy VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0)`
-          );
-          await queryRunner.query(
-            `INSERT INTO user_preference VALUES (UUID(), NOW(), NOW(), 1, 'false', '${uuid}', '${def.id}', '${user.id}')`
-          );
-        })
+
+    users.forEach(user =>
+      definitions.forEach(async def => {
+        const uuid = RandomGenerator.uuid4();
+        console.log(def.displayName);
+        console.log(user.displayName);
+        await queryRunner.query(
+          `INSERT INTO authorization_policy VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0)`
+        );
+        await queryRunner.query(
+          `INSERT INTO user_preference VALUES (UUID(), NOW(), NOW(), 1, 'false', '${uuid}', '${def.id}', '${user.id}')`
+        );
+      })
     );
   }
 
