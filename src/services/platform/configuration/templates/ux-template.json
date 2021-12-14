@@ -96,7 +96,7 @@
               "sortOrder": 2
             },
             {
-              "question": "Are you already in contact with anyone in this community?",
+              "question": "Through which user,organization or medium have you become acquainted with this community?",
               "required": false,
               "sortOrder": 3
             },
@@ -133,7 +133,7 @@
               "sortOrder": 2
             },
             {
-              "question": "Are you already in contact with anyone in this community?",
+              "question": "Through which user,organization or medium have you become acquainted with this community?",
               "required": false,
               "sortOrder": 3
             },
