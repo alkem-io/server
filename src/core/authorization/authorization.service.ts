@@ -102,8 +102,9 @@ export class AuthorizationService {
     if (
       authorization.anonymousReadAccess &&
       privilegeRequired === AuthorizationPrivilege.READ
-    )
+    ) {
       return true;
+    }
 
     const credentialRules: AuthorizationPolicyRuleCredential[] =
       this.convertCredentialRulesStr(authorization.credentialRules);
