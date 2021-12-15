@@ -343,6 +343,10 @@ microservices:
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:false
 
+collaboration:
+  canvases:
+    enabled: ${CANVASES_ENABLED}:true
+
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
