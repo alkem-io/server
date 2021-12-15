@@ -22,9 +22,9 @@ export class CommunicationDiscussionMessageReceived {
   })
   userID!: string;
 
-  @Field(() => String, {
-    nullable: false,
-    description: 'The community to which this message corresponds',
-  })
+  // @Field(() => String, {
+  //   nullable: false,
+  //   description: 'The community to which this message corresponds',
+  // })
   communityId!: string;
 }
