@@ -14,11 +14,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';

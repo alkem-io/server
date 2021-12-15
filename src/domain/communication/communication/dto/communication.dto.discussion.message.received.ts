@@ -1,19 +1,14 @@
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('CommunicationMessageReceived')
-export class CommunicationMessageReceived {
+@ObjectType('CommunicationDiscussionMessageReceived')
+export class CommunicationDiscussionMessageReceived {
   @Field(() => String, {
     nullable: false,
-    description: 'The identifier of the room',
+    description:
+      'The identifier for the Discussion on which the message was sent.',
   })
-  roomId!: string;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'The public name of the room',
-  })
-  roomName!: string;
+  discussionID!: string;
 
   @Field(() => CommunicationMessageResult, {
     nullable: false,
@@ -28,8 +23,8 @@ export class CommunicationMessageReceived {
   userID!: string;
 
   @Field(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The community to which this message corresponds',
   })
-  communityId!: string | undefined;
+  communityId!: string;
 }
