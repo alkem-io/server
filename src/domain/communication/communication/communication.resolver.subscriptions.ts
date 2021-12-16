@@ -38,13 +38,10 @@ export class CommunicationResolverSubscriptions {
         await this.identityResolverService.getUserIDByCommunicationsID(
           value.message.sender
         );
-      const receiverID =
-        await this.identityResolverService.getUserIDByCommunicationsID(
-          value.communicationID
-        );
       value.message.sender = senderID;
 
-      // Check if it is a message for an Updates room
+      // todo: would like to not have to look this up again as it was
+      // already done in the filtering...
       const updatesID = await this.identityResolverService.getUpdatesIDByRoomID(
         value.roomId
       );
@@ -54,13 +51,9 @@ export class CommunicationResolverSubscriptions {
           LogContext.SUBSCRIPTIONS
         );
 
-      // todo: obtain / optimize the lookup for the community ID
-
       const result = {
         updatesID: updatesID,
         message: value.message,
-        userID: receiverID,
-        communityId: value.communityId || '',
       };
       return result;
     },
@@ -110,13 +103,11 @@ export class CommunicationResolverSubscriptions {
         await this.identityResolverService.getUserIDByCommunicationsID(
           value.message.sender
         );
-      const receiverID =
-        await this.identityResolverService.getUserIDByCommunicationsID(
-          value.communicationID
-        );
+
       value.message.sender = senderID;
 
-      // Check if it is a message for an Updates room
+      // todo: would like to not have to look this up again as it was
+      // already done in the filtering...
       const discussionID =
         await this.identityResolverService.getDiscussionIDByRoomID(
           value.roomId
@@ -127,13 +118,9 @@ export class CommunicationResolverSubscriptions {
           LogContext.SUBSCRIPTIONS
         );
 
-      // todo: obtain / optimize the lookup for the community ID
-
       const result = {
         discussionID: discussionID,
         message: value.message,
-        userID: receiverID,
-        communityId: value.communityId || '',
       };
       return result;
     },

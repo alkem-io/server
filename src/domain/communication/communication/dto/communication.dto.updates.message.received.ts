@@ -15,16 +15,4 @@ export class CommunicationUpdateMessageReceived {
     description: 'The message that has been sent.',
   })
   message!: CommunicationMessageResult;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'The User that should receive the message',
-  })
-  userID!: string;
-
-  // @Field(() => String, {
-  //   nullable: false,
-  //   description: 'The community to which this message corresponds',
-  // })
-  communityId!: string;
 }
