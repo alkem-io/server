@@ -31,6 +31,7 @@ hosting:
   subscriptions:
     enabled: ${SUBSCRIPTIONS_ENABLED}:false
 
+  max_json_payload_size: ${HOSTING_MAX_JSON_PAYLOAD_SIZE}:64mb
 ## bootstrap ##
 # Used to determine the the information that is used to to initialize a functional Alkemio instance.
 bootstrap:

@@ -10,6 +10,7 @@ import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
 import { graphqlUploadExpress } from 'graphql-upload';
 import { ConfigurationTypes } from '@common/enums';
+import { json } from 'body-parser';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -44,6 +45,13 @@ const bootstrap = async () => {
     graphqlUploadExpress({
       maxFileSize: configService.get(ConfigurationTypes.STORAGE)?.ipfs
         ?.max_file_size,
+    })
+  );
+
+  app.use(
+    json({
+      limit: configService.get(ConfigurationTypes.HOSTING)
+        ?.max_json_payload_size,
     })
   );
 
