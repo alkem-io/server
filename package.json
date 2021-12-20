@@ -80,7 +80,6 @@
     "replace-special-characters": "^1.2.5",
     "rimraf": "^3.0.2",
     "rxjs": "^7.3.0",
-    "sqlite3": "^4.2.0",
     "typeorm": "^0.2.37",
     "winston": "^3.3.3",
     "winston-elasticsearch": "^0.15.8",
