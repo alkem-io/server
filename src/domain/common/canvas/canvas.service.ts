@@ -11,6 +11,9 @@ import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.servic
 import { UpdateCanvasInput } from './dto/canvas.dto.update';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { AgentInfo } from '@core/authentication';
+import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
+import { EntityCheckoutStatusException } from '@common/exceptions/entity.not.checkedout.exception';
 
 @Injectable()
 export class CanvasService {
@@ -71,9 +74,28 @@ export class CanvasService {
   }
 
   async updateCanvas(
-    canvas: ICanvas | undefined,
-    updateCanvasData: UpdateCanvasInput
+    canvas: ICanvas,
+    updateCanvasData: UpdateCanvasInput,
+    agentInfo: AgentInfo
   ): Promise<ICanvas> {
+    const checkout = await this.getCanvasCheckout(canvas);
+
+    // Before updating the canvas contents check the user doing it has it checked out
+    if (updateCanvasData.value && updateCanvasData.value !== canvas.value) {
+      await this.canvasCheckoutService.isUpdateAllowedOrFail(
+        checkout,
+        agentInfo
+      );
+    }
+    // Only allow saving as a template if checked in
+    if (updateCanvasData.isTemplate && !canvas.isTemplate) {
+      if (checkout.status !== CanvasCheckoutStateEnum.AVAILABLE) {
+        throw new EntityCheckoutStatusException(
+          `Unable to convert Canvas to being a Template as it is not checkedin: ${checkout.status}`,
+          LogContext.CONTEXT
+        );
+      }
+    }
     const updatedCanvas = this.updateCanvasEntity(canvas, updateCanvasData);
     return await this.save(updatedCanvas);
   }
