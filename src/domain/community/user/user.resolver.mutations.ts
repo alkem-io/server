@@ -55,6 +55,9 @@ export class UserResolverMutations {
     let user = await this.userService.createUser(userData);
     user = await this.userAuthorizationService.grantCredentials(user);
 
+    const savedUser =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
     const payload =
       await this.notificationsPayloadBuilder.buildUserRegisteredNotificationPayload(
         user.id
@@ -62,7 +65,7 @@ export class UserResolverMutations {
 
     this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
 
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    return savedUser;
   }
 
   @UseGuards(GraphqlGuard)
@@ -78,13 +81,16 @@ export class UserResolverMutations {
     let user = await this.userService.createUserFromAgentInfo(agentInfo);
     user = await this.userAuthorizationService.grantCredentials(user);
 
+    const savedUser =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
     const payload =
       await this.notificationsPayloadBuilder.buildUserRegisteredNotificationPayload(
         user.id
       );
 
     this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    return savedUser;
   }
 
   @UseGuards(GraphqlGuard)

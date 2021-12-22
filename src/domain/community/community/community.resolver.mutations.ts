@@ -190,6 +190,8 @@ export class CommunityResolverMutations {
         ]
       );
 
+    const savedApplication = await this.applicationService.save(application);
+
     const payload =
       await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
         agentInfo.userID,
@@ -212,7 +214,7 @@ export class CommunityResolverMutations {
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
       applicationReceivedEvent
     );
-    return await this.applicationService.save(application);
+    return savedApplication;
   }
 
   @UseGuards(GraphqlGuard)
