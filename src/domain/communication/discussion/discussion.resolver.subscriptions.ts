@@ -10,10 +10,15 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.event.message.received';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { DiscussionService } from './discussion.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver()
 export class DiscussionResolverSubscriptions {
   constructor(
+    private authorizationService: AuthorizationService,
+    private discussionService: DiscussionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(SUBSCRIPTION_PUB_SUB) private pubSub: PubSubEngine
@@ -29,7 +34,7 @@ export class DiscussionResolverSubscriptions {
       value: CommunicationDiscussionMessageReceived
     ): Promise<CommunicationDiscussionMessageReceived> {
       this.logger.verbose?.(
-        `subscription event for discussion: ${value.discussionID} `,
+        `[DiscussionMsg Resolve] sending out event for Discussion message received:: ${value.discussionID} `,
         LogContext.SUBSCRIPTIONS
       );
       return value;
@@ -42,11 +47,15 @@ export class DiscussionResolverSubscriptions {
     ) {
       const discussionIDs: string[] = variables.discussionIDs;
       this.logger.verbose?.(
-        `[Subscription] Filtering event with list: ${discussionIDs}`,
+        `[DiscussionMsg Filter] Filtering event with list: ${discussionIDs}`,
         LogContext.SUBSCRIPTIONS
       );
       if (!discussionIDs) return true;
       const inList = discussionIDs.includes(payload.discussionID);
+      this.logger.verbose?.(
+        `[DiscussionMsg Filter] result is ${inList}`,
+        LogContext.SUBSCRIPTIONS
+      );
       return inList;
     },
   })
@@ -63,17 +72,30 @@ export class DiscussionResolverSubscriptions {
   ) {
     if (discussionIDs) {
       this.logger.verbose?.(
-        `[Subscription] User (${agentInfo.email}) subscribing to the following discussion: ${discussionIDs}`,
+        `[DiscussionMsg Request] User (${agentInfo.email}) subscribing to the following discussion: ${discussionIDs}`,
         LogContext.SUBSCRIPTIONS
       );
+      for (const discussionID of discussionIDs) {
+        // check the user has the READ privilege
+        const updates = await this.discussionService.getDiscussionOrFail(
+          discussionID
+        );
+        await this.authorizationService.grantAccessOrFail(
+          agentInfo,
+          updates.authorization,
+          AuthorizationPrivilege.READ,
+          `subscription to discussion on: ${updates.displayName}`
+        );
+      }
     } else {
       this.logger.verbose?.(
-        `[Subscription] User (${agentInfo.email}) subscribing to all discussions`,
+        `[DiscussionMsg Request] User (${agentInfo.email}) subscribing to all discussions`,
         LogContext.SUBSCRIPTIONS
       );
-    }
 
-    // Todo: check the user has access to all the requested Discussion
+      // Todo: either disable this option or find a way to do this once in this method and pass the resulting
+      // array of discussionIDs to the filter call
+    }
 
     return this.pubSub.asyncIterator(
       SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED
