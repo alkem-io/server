@@ -120,6 +120,8 @@ export class AutoAcceptSpecificRoomMembershipMonitorFactory {
 }
 
 export class RoomTimelineMonitorFactory {
+  static matrixEventsEnabled = false;
+
   static create(
     matrixClient: MatrixClient,
     messageAdapter: MatrixMessageAdapter,
@@ -145,7 +147,7 @@ export class RoomTimelineMonitorFactory {
         // to ensure that we are returning only the actual updates
         await matrixClient.sendReadReceipt(event, {});
 
-        if (!ignoreMessage) {
+        if (this.matrixEventsEnabled && !ignoreMessage) {
           const message = messageAdapter.convertFromMatrixMessage(event);
           logger.verbose?.(
             `Triggering messageReceived event for msg body: ${

@@ -580,10 +580,11 @@ export class CommunicationAdapter {
     );
   }
 
-  public async addUserToRoomSync(
+  public async addUserToRoom(
     groupID: string,
     roomID: string,
-    matrixUserID: string
+    matrixUserID: string,
+    awaitRoomMembership = true
   ) {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
@@ -626,28 +627,31 @@ export class CommunicationAdapter {
       roomID,
       userAgent.matrixClient
     );
-    await oneTimePromise;
 
-    // Check the user is now a member + do not return until it succeeds
-    // 3 tries + then fail?
-    for (let i = 0; i < 3; i++) {
-      const isMember = await this.matrixUserAdapter.isUserMemberOfRoom(
-        userAgent.matrixClient,
-        roomID
-      );
-      if (isMember) return;
-      this.logger.warn(
-        `[Membership] User membership of room (${roomID}) has not yet resolved; waiting...`,
+    if (awaitRoomMembership) {
+      await oneTimePromise;
+
+      // Check the user is now a member + do not return until it succeeds
+      // 3 tries + then fail?
+      for (let i = 0; i < 3; i++) {
+        const isMember = await this.matrixUserAdapter.isUserMemberOfRoom(
+          userAgent.matrixClient,
+          roomID
+        );
+        if (isMember) return;
+        this.logger.warn(
+          `[Membership] User membership of room (${roomID}) has not yet resolved; waiting...`,
+          LogContext.COMMUNICATION
+        );
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // something has gone wrong with membership request...
+      throw new MatrixUserMembershipException(
+        `[Membership] user (${userAgent.matrixClient.getUserId()}) membership of room (${roomID}) is not completing.`,
         LogContext.COMMUNICATION
       );
-      await new Promise(resolve => setTimeout(resolve, 100));
     }
-
-    // something has gone wrong with membership request...
-    throw new MatrixUserMembershipException(
-      `[Membership] user (${userAgent.matrixClient.getUserId()}) membership of room (${roomID}) is not completing.`,
-      LogContext.COMMUNICATION
-    );
   }
 
   private async addUserToRooms(roomIDs: string[], matrixUserID: string) {

@@ -195,10 +195,10 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
         );
         /* TODO - need to find a way to wire the admin user (with simplicity in mind)
           in order to be able to read community data */
-        this.subscriptionHandler.publish(
-          SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
-          messageReceivedEvent
-        );
+        // this.subscriptionHandler.publish(
+        //   SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
+        //   messageReceivedEvent
+        // );
         this.logger.verbose?.(
           `Published message: ${messageReceivedEvent.message.message}`,
           LogContext.COMMUNICATION
