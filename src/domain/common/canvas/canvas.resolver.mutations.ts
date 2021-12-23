@@ -60,6 +60,6 @@ export class CanvasResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update Canvas: ${canvas.name}`
     );
-    return await this.canvasService.updateCanvas(canvas, canvasData);
+    return await this.canvasService.updateCanvas(canvas, canvasData, agentInfo);
   }
 }
