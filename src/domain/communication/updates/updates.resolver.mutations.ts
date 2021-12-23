@@ -45,6 +45,12 @@ export class UpdatesResolverMutations {
       `updates send message: ${updates.displayName}`
     );
 
+    const updateSent = await this.updatesService.sendUpdateMessage(
+      updates,
+      agentInfo.communicationID,
+      messageData
+    );
+
     const payload =
       await this.notificationsPayloadBuilder.buildCommunicationUpdateSentNotificationPayload(
         agentInfo.userID,
@@ -56,11 +62,7 @@ export class UpdatesResolverMutations {
       payload
     );
 
-    return await this.updatesService.sendUpdateMessage(
-      updates,
-      agentInfo.communicationID,
-      messageData
-    );
+    return updateSent;
   }
 
   @UseGuards(GraphqlGuard)
