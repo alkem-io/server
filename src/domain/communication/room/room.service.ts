@@ -76,9 +76,9 @@ export class RoomService {
     messageData: RoomSendMessageInput
   ): Promise<CommunicationMessageResult> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.grantUserAccesToRooms(
+    await this.communicationAdapter.addUserToRoomSync(
       roomable.communicationGroupID,
-      [roomable.communicationRoomID],
+      roomable.communicationRoomID,
       communicationUserID
     );
     // Todo: call this first to allow room access to complete

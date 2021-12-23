@@ -14,26 +14,24 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { PubSubEngine } from 'apollo-server-express';
-
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 import { ClientProxy } from '@nestjs/microservices';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { CommunityType } from '@common/enums/community.type';
+import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_PUB_SUB,
+} from '@common/constants/providers';
 import { ApplicationReceived } from '../application/application.dto.received';
-import { SUBSCRIPTION_PUB_SUB, NOTIFICATIONS_SERVICE } from '@common/constants';
-import { EntityNotFoundException } from '@common/exceptions';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -44,6 +42,7 @@ export class CommunityResolverMutations {
     private userAuthorizationService: UserAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
@@ -191,14 +190,17 @@ export class CommunityResolverMutations {
         ]
       );
 
-    const payload = await this.buildNotificationPayload(
-      agentInfo.userID,
-      applicationData.userID,
-      community
-    );
+    const savedApplication = await this.applicationService.save(application);
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
+        agentInfo.userID,
+        applicationData.userID,
+        community
+      );
 
     this.notificationsClient.emit<number>(
-      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
+      EventType.COMMUNITY_APPLICATION_CREATED,
       payload
     );
 
@@ -212,52 +214,7 @@ export class CommunityResolverMutations {
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
       applicationReceivedEvent
     );
-    return await this.applicationService.save(application);
-  }
-
-  private async buildNotificationPayload(
-    applicationCreatorID: string,
-    applicantID: string,
-    community: ICommunity
-  ) {
-    const payload: any = {
-      applicationCreatorID,
-      applicantID,
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: {
-        id: community.ecoverseID,
-      },
-    };
-
-    if (community.type === CommunityType.CHALLENGE) {
-      payload.hub.challenge = { id: community.parentID };
-    } else if (community.type === CommunityType.OPPORTUNITY) {
-      const communityWithParent =
-        await this.communityService.getCommunityOrFail(community.id, {
-          relations: ['parentCommunity'],
-        });
-      const parentCommunity = communityWithParent.parentCommunity;
-
-      if (!parentCommunity) {
-        // this will block sending the event
-        throw new EntityNotFoundException(
-          `Unable to find parent community of opportunity ${community.id}`,
-          LogContext.CHALLENGES
-        );
-      }
-
-      payload.hub.challenge = {
-        id: parentCommunity.parentID,
-        opportunity: {
-          id: community.parentID,
-        },
-      };
-    }
-
-    return payload;
+    return savedApplication;
   }
 
   @UseGuards(GraphqlGuard)

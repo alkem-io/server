@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
-import { UpdateCanvasInput } from '@domain/common/canvas/canvas.dto.update';
+import { UpdateCanvasInput } from '@domain/common/canvas/dto/canvas.dto.update';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
 
 @InputType()

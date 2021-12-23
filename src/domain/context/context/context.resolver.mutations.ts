@@ -8,10 +8,14 @@ import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { CreateReferenceOnContextInput } from '@domain/context/context';
+import { CreateReferenceOnContextInput } from '@domain/context/context/dto/context.dto.create.reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
+import { ICanvas } from '@domain/common/canvas';
+import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
+import { DeleteCanvasOnContextInput } from './dto/context.dto.delete.canvas';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
@@ -19,6 +23,7 @@ export class ContextResolverMutations {
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
+    private canvasAuthorizationService: CanvasAuthorizationService,
     private contextService: ContextService
   ) {}
 
@@ -51,7 +56,7 @@ export class ContextResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
-    description: 'Create a new Aspect on the Opportunity.',
+    description: 'Create a new Aspect on the Context.',
   })
   @Profiling.api
   async createAspect(
@@ -74,5 +79,51 @@ export class ContextResolverMutations {
         context.authorization
       );
     return await this.aspectService.saveAspect(aspect);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICanvas, {
+    description: 'Create a new Canvas on the Context.',
+  })
+  @Profiling.api
+  async createCanvasOnContext(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('canvasData') canvasData: CreateCanvasOnContextInput
+  ): Promise<ICanvas> {
+    const context = await this.contextService.getContextOrFail(
+      canvasData.contextID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      context.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create canvas on context: ${context.id}`
+    );
+    const canvas = await this.contextService.createCanvas(canvasData);
+    return await this.canvasAuthorizationService.applyAuthorizationPolicy(
+      canvas,
+      context.authorization
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICanvas, {
+    description: 'Deletes the specified Canvas.',
+  })
+  async deleteCanvasOnContext(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteCanvasOnContextInput
+  ): Promise<ICanvas> {
+    const canvas = await this.contextService.getCanvasOnContextOrFail(
+      deleteData.contextID,
+      deleteData.canvasID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      canvas.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete canvas: ${canvas.id}`
+    );
+    return await this.contextService.deleteCanvas(deleteData.canvasID);
   }
 }

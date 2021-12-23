@@ -4,6 +4,7 @@ import {
   AuthenticationException,
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
@@ -15,7 +16,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
-import { IProfile } from '@domain/community/profile';
+import { CreateProfileInput, IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import {
   CreateUserInput,
@@ -36,6 +37,9 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
+import { UserPreferenceService } from '../user-preferences';
+import { KonfigService } from '@services/platform/configuration/config/config.service';
+import { IUserTemplate } from '@services/platform/configuration';
 
 @Injectable()
 export class UserService {
@@ -48,11 +52,14 @@ export class UserService {
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private agentService: AgentService,
+    @Inject(UserPreferenceService)
+    private userPreferenceService: UserPreferenceService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private konfigService: KonfigService
   ) {}
 
   private getUserCommunicationIdCacheKey(communicationId: string): string {
@@ -77,9 +84,10 @@ export class UserService {
     const user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy();
 
-    user.profile = await this.profileService.createProfile(
+    const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
+    user.profile = await this.profileService.createProfile(profileData);
 
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
@@ -100,6 +108,8 @@ export class UserService {
 
     const response = await this.userRepository.save(user);
 
+    user.preferences =
+      await this.userPreferenceService.createInitialUserPreferences(response);
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -130,6 +140,52 @@ export class UserService {
     return response;
   }
 
+  private async extendProfileDataWithReferences(
+    profileData?: CreateProfileInput
+  ): Promise<CreateProfileInput> {
+    // ensure the result + references are there
+    let result = profileData;
+    if (!result) {
+      result = {
+        referencesData: [],
+      };
+    }
+    if (!result.referencesData) {
+      result.referencesData = [];
+    }
+    // Get the template to populate with
+    const referenceTemplates = (await this.getUserTemplate())?.references;
+    if (referenceTemplates) {
+      for (const referenceTemplate of referenceTemplates) {
+        const existingRef = result.referencesData?.find(
+          reference =>
+            reference.name.toLowerCase() ===
+            referenceTemplate.name.toLowerCase()
+        );
+        if (!existingRef) {
+          const newRefData = {
+            name: referenceTemplate.name,
+            uri: referenceTemplate.uri,
+            description: referenceTemplate.description,
+          };
+          result.referencesData?.push(newRefData);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  async getUserTemplate(): Promise<IUserTemplate | undefined> {
+    const template = await this.konfigService.getTemplate();
+    const userTemplates = template.users;
+    if (userTemplates && userTemplates.length > 0) {
+      // assume only one, which is the case currently + will be enforced later when we update template handling
+      return userTemplates[0];
+    }
+    return undefined;
+  }
+
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
     // Extra check that there is valid data + no user with the email
     const email = agentInfo.email;
@@ -151,13 +207,19 @@ export class UserService {
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
-      relations: ['profile', 'agent'],
+      relations: ['profile', 'agent', 'preferences'],
     });
     const { id } = user;
     await this.clearUserCache(user);
 
     if (user.profile) {
       await this.profileService.deleteProfile(user.profile.id);
+    }
+
+    if (user.preferences) {
+      for (const preference of user.preferences) {
+        await this.userPreferenceService.removeUserPreference(preference);
+      }
     }
 
     if (user.agent) {
@@ -208,6 +270,23 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
+  async getPreferences(userID: string) {
+    const user = await this.getUserOrFail(userID, {
+      relations: ['preferences'],
+    });
+
+    const preferences = user.preferences;
+
+    if (!preferences) {
+      throw new EntityNotInitializedException(
+        `User preferences not initialized: ${userID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preferences;
+  }
+
   async getUserOrFail(
     userID: string,
     options?: FindOneOptions<User>
@@ -254,7 +333,7 @@ export class UserService {
 
       if (!communicationID) {
         this.logger.warn(
-          `User could not be registered for communication ${user.id}`,
+          `Unable to register user for communication: ${user.email}`,
           LogContext.COMMUNICATION
         );
         return user;
@@ -461,13 +540,17 @@ export class UserService {
     return agent;
   }
 
-  getProfile(user: IUser): IProfile {
-    const profile = user.profile;
+  async getProfile(user: IUser): Promise<IProfile> {
+    const userWithProfile = await this.getUserOrFail(user.id, {
+      relations: ['profile'],
+    });
+    const profile = userWithProfile.profile;
     if (!profile)
-      throw new EntityNotInitializedException(
-        `User Profile not initialized: ${user.id}`,
+      throw new RelationshipNotFoundException(
+        `Unable to load Profile for User: ${user.nameID} `,
         LogContext.COMMUNITY
       );
+
     return profile;
   }
 

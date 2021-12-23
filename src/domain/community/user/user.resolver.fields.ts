@@ -10,6 +10,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
+import { IUserPreference } from '../user-preferences/user.preference.interface';
+import { IProfile } from '../profile/profile.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -18,6 +20,15 @@ export class UserResolverFields {
     private userService: UserService
   ) {}
 
+  @ResolveField('profile', () => IProfile, {
+    nullable: true,
+    description: 'The Profile for this User.',
+  })
+  @Profiling.api
+  async profile(@Parent() user: User): Promise<IProfile> {
+    return await this.userService.getProfile(user);
+  }
+
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this User.',
@@ -25,6 +36,15 @@ export class UserResolverFields {
   @Profiling.api
   async agent(@Parent() user: User): Promise<IAgent> {
     return await this.userService.getAgent(user.id);
+  }
+
+  @ResolveField('preferences', () => [IUserPreference], {
+    nullable: false,
+    description: 'The preferences for this user',
+  })
+  @Profiling.api
+  async preferences(@Parent() user: User): Promise<IUserPreference[]> {
+    return await this.userService.getPreferences(user.id);
   }
 
   @ResolveField('communityRooms', () => [CommunicationRoomResult], {

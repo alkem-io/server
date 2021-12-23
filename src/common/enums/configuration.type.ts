@@ -9,4 +9,5 @@ export enum ConfigurationTypes {
   PLATFORM = 'platform',
   NOTIFICATIONS = 'notifications',
   MICROSERVICES = 'microservices',
+  COLLABORATION = 'collaboration',
 }

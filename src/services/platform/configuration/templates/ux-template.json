@@ -13,6 +13,24 @@
           "name": "keywords",
           "placeholder": "Innovation, AI, Technology"
         }
+      ],
+      "references": [
+        {
+          "name": "linkedin",
+          "description": "User profile on LinkedIn",
+
+          "uri": ""
+        },
+        {
+          "name": "github",
+          "description": "User profile on GitHub",
+          "uri": ""
+        },
+        {
+          "name": "twitter",
+          "description": "User profile on Twitter",
+          "uri": ""
+        }
       ]
     }
   ],
@@ -78,7 +96,7 @@
               "sortOrder": 2
             },
             {
-              "question": "Are you already in contact with anyone in this community?",
+              "question": "Through which user,organization or medium have you become acquainted with this community?",
               "required": false,
               "sortOrder": 3
             },
@@ -115,7 +133,7 @@
               "sortOrder": 2
             },
             {
-              "question": "Are you already in contact with anyone in this community?",
+              "question": "Through which user,organization or medium have you become acquainted with this community?",
               "required": false,
               "sortOrder": 3
             },

@@ -149,17 +149,21 @@ export class MatrixRoomAdapter {
     );
   }
 
-  async removeUserFromRoom(roomID: string, matrixClient: MatrixClient) {
+  async removeUserFromRoom(
+    adminMatrixClient: MatrixClient,
+    roomID: string,
+    matrixClient: MatrixClient
+  ) {
     const matrixUserID = matrixClient.getUserId();
     try {
-      await this.getMatrixRoom(matrixClient, roomID);
-      // todo: not yet working...
-      await matrixClient.leave(roomID);
-
       this.logger.verbose?.(
-        `removed user from room: ${matrixUserID} - ${roomID}`,
+        `[Membership] User (${matrixUserID}) being removed from room: ${roomID}`,
         LogContext.COMMUNICATION
       );
+
+      // force the user to leave
+      // https://github.com/matrix-org/matrix-js-sdk/blob/b2d83c1f80b53ae3ca396ac102edf27bfbbd7015/src/client.ts#L4354
+      await adminMatrixClient.kick(roomID, matrixUserID);
     } catch (error) {
       this.logger.verbose?.(
         `Unable to remove user (${matrixUserID}) from rooms (${roomID}): ${error}`,
@@ -275,7 +279,10 @@ export class MatrixRoomAdapter {
     for (const roomMember of roomMembers) {
       // skip the elevated admin
       if (roomMember.userId === adminMatrixClient.getUserId()) continue;
-      usersIDs.push(roomMember.userId);
+
+      if (roomMember.membership === 'join') {
+        usersIDs.push(roomMember.userId);
+      }
     }
     return usersIDs;
   }

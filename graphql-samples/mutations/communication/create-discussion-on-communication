@@ -9,8 +9,8 @@ Variables:
 {
   "createData": {
       "title": "uuid",
+      "description": "text",
       "category": "GENERAL",
-      "message": "something",
       "communicationID": "uuid"
   }
 }

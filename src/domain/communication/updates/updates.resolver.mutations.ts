@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -11,12 +11,18 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UpdatesRemoveMessageInput } from './dto/updates.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { EventType } from '@common/enums/event.type';
+import { ClientProxy } from '@nestjs/microservices';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 
 @Resolver()
 export class UpdatesResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private updatesService: UpdatesService
+    private updatesService: UpdatesService,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -38,11 +44,25 @@ export class UpdatesResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `updates send message: ${updates.displayName}`
     );
-    return await this.updatesService.sendUpdateMessage(
+
+    const updateSent = await this.updatesService.sendUpdateMessage(
       updates,
       agentInfo.communicationID,
       messageData
     );
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommunicationUpdateSentNotificationPayload(
+        agentInfo.userID,
+        updates
+      );
+
+    this.notificationsClient.emit<number>(
+      EventType.COMMUNICATION_UPDATE_SENT,
+      payload
+    );
+
+    return updateSent;
   }
 
   @UseGuards(GraphqlGuard)

@@ -1,27 +1,30 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CommunicationService } from './communication.service';
 import { CurrentUser } from '@src/common/decorators';
-
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DiscussionService } from '../discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
+import { ClientProxy } from '@nestjs/microservices';
+import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 
 @Resolver()
 export class CommunicationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private communicationService: CommunicationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
-    private discussionService: DiscussionService
+    private discussionService: DiscussionService,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -45,13 +48,27 @@ export class CommunicationResolverMutations {
 
     const discussion = await this.communicationService.createDiscussion(
       createData,
+      agentInfo.userID,
       agentInfo.communicationID
     );
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
+        discussion
+      );
+
+    const savedDiscussion = await this.discussionService.save(discussion);
+
+    this.notificationsClient.emit<number>(
+      EventType.COMMUNICATION_DISCUSSION_CREATED,
+      payload
+    );
+
     await this.discussionAuthorizationService.applyAuthorizationPolicy(
       discussion,
       communication.authorization
     );
 
-    return await this.discussionService.save(discussion);
+    return savedDiscussion;
   }
 }

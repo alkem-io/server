@@ -14,11 +14,29 @@ import { microserviceFactory } from './microservice.factory';
 export type MicroserviceOptions = {
   queueName: string;
 };
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Opportunity } from '@domain/collaboration';
+import { Communication } from '@domain/communication';
+import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { Community } from '@domain/community/community';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { NotificationsPayloadBuilder } from './notifications.payload.builder';
 
 @Global()
 @Module({
-  imports: [ConfigModule],
+  imports: [
+    ConfigModule,
+    TypeOrmModule.forFeature([Ecoverse]),
+    TypeOrmModule.forFeature([Challenge]),
+    TypeOrmModule.forFeature([Opportunity]),
+    TypeOrmModule.forFeature([Community]),
+    TypeOrmModule.forFeature([Discussion]),
+    TypeOrmModule.forFeature([Communication]),
+  ],
   providers: [
+    NotificationsPayloadBuilder,
+
     {
       provide: SUBSCRIPTION_PUB_SUB,
       useFactory: subscriptionPubSubFactory,
@@ -55,6 +73,8 @@ export type MicroserviceOptions = {
     SUBSCRIPTION_PUB_SUB,
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
+    NOTIFICATIONS_SERVICE,
+    NotificationsPayloadBuilder,
   ],
 })
 export class MicroservicesModule {}

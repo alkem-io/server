@@ -1,11 +1,13 @@
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 import { LogContext } from '@common/enums';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import {
   autoAcceptRoomGuardFactory,
   AutoAcceptSpecificRoomMembershipMonitorFactory,
+  ForgetRoomMembershipMonitorFactory,
+  roomMembershipLeaveGuardFactory,
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
 } from '@services/platform/matrix/events/matrix.event.adapter.room';
@@ -108,7 +110,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     this.attach(eventHandler);
   }
 
-  resolveSpecificRoomMembershipMonitor(
+  resolveAutoAcceptRoomMembershipMonitor(
     roomId: string,
     onRoomJoined: () => void,
     onComplete?: () => void,
@@ -125,7 +127,21 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     );
   }
 
-  resolveSpecificRoomMembershipOneTimeMonitor(
+  resolveAutoForgetRoomMembershipMonitor(
+    onRoomJoined: () => void,
+    onComplete?: () => void,
+    onError?: (message: string) => void
+  ) {
+    return ForgetRoomMembershipMonitorFactory.create(
+      this.matrixClient,
+      this.logger,
+      onRoomJoined,
+      onComplete,
+      onError
+    );
+  }
+
+  resolveAutoAcceptRoomMembershipOneTimeMonitor(
     roomId: string,
     userId: string,
     onRoomJoined: () => void,
@@ -133,13 +149,30 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     onError?: (message: string) => void
   ) {
     return {
-      observer: this.resolveSpecificRoomMembershipMonitor(
+      observer: this.resolveAutoAcceptRoomMembershipMonitor(
         roomId,
         onRoomJoined,
         onComplete,
         onError
       ),
       condition: autoAcceptRoomGuardFactory(userId, roomId),
+    };
+  }
+
+  resolveForgetRoomMembershipOneTimeMonitor(
+    roomId: string,
+    userId: string,
+    onRoomLeft: () => void,
+    onComplete?: () => void,
+    onError?: (message: string) => void
+  ) {
+    return {
+      observer: this.resolveAutoForgetRoomMembershipMonitor(
+        onRoomLeft,
+        onComplete,
+        onError
+      ),
+      condition: roomMembershipLeaveGuardFactory(userId, roomId),
     };
   }
 

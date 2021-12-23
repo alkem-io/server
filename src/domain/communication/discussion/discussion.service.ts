@@ -30,13 +30,15 @@ export class DiscussionService {
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
     communicationGroupID: string,
-    communicationUserID: string,
+    userID: string,
     displayName: string
   ): Promise<IDiscussion> {
     const discussion = Discussion.create(discussionData);
     discussion.authorization = new AuthorizationPolicy();
     discussion.communicationGroupID = communicationGroupID;
     discussion.displayName = displayName;
+    discussion.createdBy = userID;
+    discussion.commentsCount = 0;
     await this.save(discussion);
     discussion.communicationRoomID = await this.initializeDiscussionRoom(
       discussion
@@ -106,6 +108,8 @@ export class DiscussionService {
       discussion.title = updateDiscussionData.title;
     if (updateDiscussionData.category)
       discussion.category = updateDiscussionData.category;
+    if (updateDiscussionData.description)
+      discussion.description = updateDiscussionData.description;
     return await this.save(discussion);
   }
 
@@ -116,7 +120,19 @@ export class DiscussionService {
   async getDiscussionRoom(
     discussion: IDiscussion
   ): Promise<CommunicationRoomResult> {
-    return await this.roomService.getCommunicationRoom(discussion);
+    const communicationRoom = await this.roomService.getCommunicationRoom(
+      discussion
+    );
+    const messagesCount = communicationRoom.messages.length;
+    if (messagesCount != discussion.commentsCount) {
+      this.logger.warn(
+        `Discussion (${discussion.displayName}) had a comment count of ${discussion.commentsCount} that is not syncd with the messages count of ${messagesCount}`,
+        LogContext.COMMUNICATION
+      );
+      discussion.commentsCount = messagesCount;
+      await this.save(discussion);
+    }
+    return communicationRoom;
   }
 
   async sendMessageToDiscussion(
@@ -124,11 +140,14 @@ export class DiscussionService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<CommunicationMessageResult> {
-    return await this.roomService.sendMessage(
+    const message = await this.roomService.sendMessage(
       discussion,
       communicationUserID,
       messageData
     );
+    discussion.commentsCount = discussion.commentsCount + 1;
+    await this.save(discussion);
+    return message;
   }
 
   async removeMessageFromDiscussion(
@@ -141,6 +160,9 @@ export class DiscussionService {
       communicationUserID,
       messageData
     );
+    discussion.commentsCount = discussion.commentsCount - 1;
+    await this.save(discussion);
+
     return messageData.messageID;
   }
 }

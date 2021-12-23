@@ -49,10 +49,15 @@ export class LifecycleService {
     const eventName = lifecycleEventData.eventName;
     const machineDef = JSON.parse(lifecycle.machineDef);
 
+    this.logger.verbose?.(
+      `[Lifecycle] Processing event: ${lifecycleEventData.eventName}`,
+      LogContext.LIFECYCLE
+    );
     const machine = createMachine(machineDef, options);
     const machineWithLifecycle = machine.withContext({
       ...machine.context,
     });
+
     const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
     const restoredState = State.create(restoredStateDef);
 
@@ -69,10 +74,15 @@ export class LifecycleService {
       );
     }
 
-    const machineService = interpret(machineWithLifecycle).start(restoredState);
+    const interpretedLifecycle = interpret(machineWithLifecycle);
+    this.logger.verbose?.(
+      `[Lifecycle] machine interpreted, starting from state: ${restoredState.value.toString()}`,
+      LogContext.LIFECYCLE
+    );
+
+    const machineService = interpretedLifecycle.start(restoredState);
     const parentID = machineDef.context.parentID;
 
-    const startState = restoredState.value.toString();
     machineService.send({
       type: eventName,
       parentID: parentID,
@@ -82,14 +92,20 @@ export class LifecycleService {
     this.logger.verbose?.(
       `Lifecycle (id: ${
         lifecycle.id
-      }) event '${eventName}: from state '${startState}' to state '${machineService.state.value.toString()}', parentID: ${parentID}`,
+      }) event '${eventName}: from state '${restoredState.value.toString()}' to state '${machineService.state.value.toString()}', parentID: ${parentID}`,
       LogContext.LIFECYCLE
     );
 
-    const newStateStr = JSON.stringify(machineService.state);
+    const stateToHydrate = interpretedLifecycle.state;
+    // Note: https://github.com/statelyai/xstate/discussions/1757
+    // restoring state has the hydrated actions, which unless removed will be executed again
+    stateToHydrate.actions = [];
+    const newStateStr = JSON.stringify(stateToHydrate);
+
+    // Todo: do not stop as this triggers an exit action from the last state.
+    //machineService.stop();
     lifecycle.machineState = newStateStr;
 
-    machineService.stop();
     return await this.lifecycleRepository.save(lifecycle);
   }
 

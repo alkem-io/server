@@ -1,0 +1,10 @@
+mutation adminCommunicationRemoveOrphanedRoom($orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput!) {
+  adminCommunicationRemoveOrphanedRoom(orphanedRoomData: $orphanedRoomData)
+}
+
+Variables:
+{
+  "orphanedRoomData": {
+      "roomID": "!RqdYgEpGfmOLZpwgnY:alkemio.matrix.host"
+  }
+}

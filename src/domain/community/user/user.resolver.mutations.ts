@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -16,6 +16,12 @@ import { UserAuthorizationService } from './user.service.authorization';
 import { UserSendMessageInput } from './dto/user.dto.communication.message.send';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { IUserPreference, UserPreferenceService } from '../user-preferences';
+import { UpdateUserPreferenceInput } from '../user-preferences/dto';
+import { ClientProxy } from '@nestjs/microservices';
+import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -23,7 +29,10 @@ export class UserResolverMutations {
     private readonly communicationAdapter: CommunicationAdapter,
     private authorizationService: AuthorizationService,
     private readonly userService: UserService,
-    private readonly userAuthorizationService: UserAuthorizationService
+    private readonly userAuthorizationService: UserAuthorizationService,
+    private readonly preferenceService: UserPreferenceService,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -45,7 +54,18 @@ export class UserResolverMutations {
     );
     let user = await this.userService.createUser(userData);
     user = await this.userAuthorizationService.grantCredentials(user);
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+    const savedUser =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildUserRegisteredNotificationPayload(
+        user.id
+      );
+
+    this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
+
+    return savedUser;
   }
 
   @UseGuards(GraphqlGuard)
@@ -60,7 +80,17 @@ export class UserResolverMutations {
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
     let user = await this.userService.createUserFromAgentInfo(agentInfo);
     user = await this.userAuthorizationService.grantCredentials(user);
-    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+    const savedUser =
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildUserRegisteredNotificationPayload(
+        user.id
+      );
+
+    this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
+    return savedUser;
   }
 
   @UseGuards(GraphqlGuard)
@@ -148,5 +178,35 @@ export class UserResolverMutations {
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
     return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUserPreference, {
+    description: 'Updates an user preference',
+  })
+  @Profiling.api
+  async updateUserPreference(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('userPreferenceData') userPreferenceData: UpdateUserPreferenceInput
+  ) {
+    const user = await this.userService.getUserOrFail(
+      userPreferenceData.userID
+    );
+
+    const preference = await this.preferenceService.getUserPreferenceOrFail(
+      user,
+      userPreferenceData.type
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      preference.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `user preference update: ${preference.id}`
+    );
+    return await this.preferenceService.updateUserPreference(
+      user,
+      userPreferenceData.type,
+      userPreferenceData.value
+    );
   }
 }

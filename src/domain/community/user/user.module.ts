@@ -6,7 +6,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '@domain/community/user';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
-import { UserResolverSubscriptions } from './user.resolver.subscriptions';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -16,6 +15,8 @@ import { CommunicationAdapterModule } from '@services/platform/communication-ada
 import { IdentityResolverModule } from '@domain/communication/identity-resolver/identity.resolver.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
+import { UserPreferenceModule } from '../user-preferences';
+import { KonfigModule } from '@services/platform/configuration/config/config.module';
 
 @Module({
   imports: [
@@ -25,10 +26,12 @@ import { MicroservicesModule } from '@core/microservices/microservices.module';
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    TypeOrmModule.forFeature([User]),
     IdentityResolverModule,
     RoomModule,
     MicroservicesModule,
+    UserPreferenceModule,
+    KonfigModule,
+    TypeOrmModule.forFeature([User]),
     CacheModule.register({ max: 250, ttl: 300 }),
   ],
   providers: [
@@ -37,7 +40,6 @@ import { MicroservicesModule } from '@core/microservices/microservices.module';
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
-    UserResolverSubscriptions,
   ],
   exports: [UserService, UserAuthorizationService],
 })

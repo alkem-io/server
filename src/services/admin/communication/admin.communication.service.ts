@@ -12,6 +12,8 @@ import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
 import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
+import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
+import { ValidationException } from '@common/exceptions';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -48,7 +50,9 @@ export class AdminCommunicationService {
     );
     result.rooms.push(updatesResult);
 
-    const discussions = this.communicationService.getDiscussions(communication);
+    const discussions = await this.communicationService.getDiscussions(
+      communication
+    );
     for (const discussion of discussions) {
       const discussionResult = await this.createCommunicationAdminRoomResult(
         discussion,
@@ -117,22 +121,28 @@ export class AdminCommunicationService {
     return true;
   }
 
+  async removeOrphanedRoom(
+    orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput
+  ): Promise<boolean> {
+    const orphanedRoomID = orphanedRoomData.roomID;
+    const roomsUsed = await this.getRoomsUsed();
+    const roomInUse = roomsUsed.find(roomID => roomID === orphanedRoomID);
+    if (roomInUse) {
+      throw new ValidationException(
+        `Unable to remove orphaned room as it is used: ${orphanedRoomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return await this.communicationAdapter.removeRoom(orphanedRoomID);
+  }
+
   async orphanedUsage(): Promise<CommunicationAdminOrphanedUsageResult> {
     this.logger.verbose?.(
       'communication admin checking for orphaned usage.',
       LogContext.COMMUNICATION
     );
     const result = new CommunicationAdminOrphanedUsageResult();
-    const communicationIDs =
-      await this.communicationService.getCommunicationIDsUsed();
-    let roomsUsed: string[] = [];
-    for (const communicationID of communicationIDs) {
-      const communication =
-        await this.communicationService.getCommunicationOrFail(communicationID);
-      const communicationRoomsUsed =
-        await this.communicationService.getRoomsUsed(communication);
-      roomsUsed = roomsUsed.concat(communicationRoomsUsed);
-    }
+    const roomsUsed = await this.getRoomsUsed();
 
     // Get all the rooms used in Matrix + filter to only create results for those not used
     const matrixRooms = await this.communicationAdapter.getAllRooms();
@@ -146,6 +156,7 @@ export class AdminCommunicationService {
           roomNotUsed.id,
           roomNotUsed.displayName
         );
+        roomResult.members = matrixRoom.members;
         result.rooms.push(roomResult);
       }
     }
@@ -156,5 +167,19 @@ export class AdminCommunicationService {
     );
 
     return result;
+  }
+
+  private async getRoomsUsed(): Promise<string[]> {
+    const communicationIDs =
+      await this.communicationService.getCommunicationIDsUsed();
+    let roomsUsed: string[] = [];
+    for (const communicationID of communicationIDs) {
+      const communication =
+        await this.communicationService.getCommunicationOrFail(communicationID);
+      const communicationRoomsUsed =
+        await this.communicationService.getRoomsUsed(communication);
+      roomsUsed = roomsUsed.concat(communicationRoomsUsed);
+    }
+    return roomsUsed;
   }
 }

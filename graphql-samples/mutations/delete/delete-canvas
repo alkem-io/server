@@ -1,0 +1,13 @@
+mutation deleteCanvasOnContext($deleteData: DeleteCanvasOnContextInput!) {
+  deleteCanvasOnContext(deleteData: $deleteData) {
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+    "contextID": "uuid",
+    "canvasID": "uuid"
+  }
+}

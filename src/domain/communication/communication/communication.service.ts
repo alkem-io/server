@@ -94,7 +94,8 @@ export class CommunicationService {
 
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
-    communicationUserID: string
+    userID: string,
+    userCommunicationID: string
   ): Promise<IDiscussion> {
     const title = discussionData.title;
     const communicationID = discussionData.communicationID;
@@ -105,64 +106,69 @@ export class CommunicationService {
     );
 
     // Try to find the Communication
-    const communication = await this.getCommunicationOrFail(communicationID);
+    const communication = await this.getCommunicationOrFail(communicationID, {
+      relations: ['discussions'],
+    });
 
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
       communication.communicationGroupID,
-      communicationUserID,
+      userID,
       `${communication.displayName}-discussion-${discussionData.title}`
     );
-
-    const updates = this.getUpdates(communication);
-
-    await this.communicationAdapter.replicateRoomMembership(
-      discussion.communicationRoomID,
-      updates.communicationRoomID,
-      communicationUserID
-    );
-
     this.logger.verbose?.(
       `[Discussion] Room created (${title}) and membership replicated from Updates (${communicationID})`,
       LogContext.COMMUNICATION
     );
 
-    // Send before saving to give the event some bit of time to be received by reading admin account.
-    try {
-      await this.discussionService.sendMessageToDiscussion(
-        discussion,
-        communicationUserID,
-        {
-          message: discussionData.message,
-        }
-      );
-      this.logger.verbose?.(
-        `[Discussion] Initial message sent: ${discussionData.message}`,
-        LogContext.COMMUNICATION
-      );
-    } catch (error) {
-      this.logger.warn(
-        `Unable to send message to newly created discussion (${discussion.displayName}): ${error}`,
-        LogContext.COMMUNICATION
-      );
-    }
-
     communication.discussions?.push(discussion);
     await this.communicationRepository.save(communication);
+
+    // Set the Matrix membership for notifications
+    const updates = this.getUpdates(communication);
+    // Do not await as the memberhip will be updated in the background
+    this.communicationAdapter.replicateRoomMembership(
+      discussion.communicationRoomID,
+      updates.communicationRoomID,
+      userCommunicationID
+    );
 
     return discussion;
   }
 
-  getDiscussions(communication: ICommunication): IDiscussion[] {
-    if (!communication.discussions) {
+  async getDiscussions(communication: ICommunication): Promise<IDiscussion[]> {
+    const communicationWithDiscussions = await this.getCommunicationOrFail(
+      communication.id,
+      {
+        relations: ['discussions'],
+      }
+    );
+    const discussions = communicationWithDiscussions.discussions;
+    if (!discussions)
       throw new EntityNotInitializedException(
-        `Communication not initialized: ${communication.id}`,
+        `Unable to load Discussions for Communication: ${communication.displayName} `,
+        LogContext.COMMUNICATION
+      );
+
+    return discussions;
+  }
+
+  async getDiscussionOrFail(
+    communication: ICommunication,
+    discussionID: string
+  ): Promise<IDiscussion> {
+    const discussions = await this.getDiscussions(communication);
+    const discussion = discussions.find(
+      discussion => discussion.id === discussionID
+    );
+    if (!discussion) {
+      throw new EntityNotFoundException(
+        `Unable to find Discussion with ID: ${discussionID}`,
         LogContext.COMMUNICATION
       );
     }
-    return communication.discussions;
+    return discussion;
   }
-
   getUpdates(communication: ICommunication): IUpdates {
     if (!communication.updates) {
       throw new EntityNotInitializedException(
@@ -196,7 +202,7 @@ export class CommunicationService {
     });
 
     // Remove all groups
-    for (const discussion of this.getDiscussions(communication)) {
+    for (const discussion of await this.getDiscussions(communication)) {
       await this.discussionService.removeDiscussion({
         ID: discussion.id,
       });
@@ -226,7 +232,8 @@ export class CommunicationService {
     const communicationRoomIDs: string[] = [
       this.getUpdates(communication).communicationRoomID,
     ];
-    for (const discussion of this.getDiscussions(communication)) {
+    const discussions = await this.getDiscussions(communication);
+    for (const discussion of discussions) {
       communicationRoomIDs.push(discussion.communicationRoomID);
     }
     return communicationRoomIDs;
@@ -251,7 +258,7 @@ export class CommunicationService {
     const communicationRoomIDs: string[] = [
       this.getUpdates(communication).communicationRoomID,
     ];
-    for (const discussion of this.getDiscussions(communication)) {
+    for (const discussion of await this.getDiscussions(communication)) {
       communicationRoomIDs.push(discussion.communicationRoomID);
     }
     await this.communicationAdapter.removeUserFromRooms(

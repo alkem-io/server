@@ -29,10 +29,9 @@ export class CommunicationCreateDiscussionInput {
   category!: string;
 
   @Field(() => String, {
-    nullable: false,
-    description: 'The starting message in the discussion',
+    nullable: true,
+    description: 'The description for the Discussion',
   })
-  @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
-  message!: string;
+  description?: string;
 }
