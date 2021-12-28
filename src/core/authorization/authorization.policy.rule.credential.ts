@@ -15,10 +15,10 @@ export class AuthorizationPolicyRuleCredential {
     this.type = type;
     this.resourceID = resourceID || '';
     this.grantedPrivileges = grantedPrivileges;
-    this.inheritable = inheritable || true;
-  }
-
-  isInheritable(): boolean {
-    return this.inheritable;
+    if (inheritable === undefined) {
+      this.inheritable = true;
+    } else {
+      this.inheritable = inheritable;
+    }
   }
 }

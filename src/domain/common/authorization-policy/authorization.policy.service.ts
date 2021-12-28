@@ -123,7 +123,7 @@ export class AuthorizationPolicyService {
     );
     const newRules: AuthorizationPolicyRuleCredential[] = [];
     for (const inheritedRule of inheritedRules) {
-      if (inheritedRule.isInheritable()) {
+      if (inheritedRule.inheritable) {
         newRules.push(inheritedRule);
       }
     }
