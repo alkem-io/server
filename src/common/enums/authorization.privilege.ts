@@ -6,6 +6,7 @@ export enum AuthorizationPrivilege {
   UPDATE = 'update',
   DELETE = 'delete',
   GRANT = 'grant', // allow the issuing / revoking of credentials of the same type within a given scope
+  CREATE_CANVAS = 'createCanvas',
 }
 
 registerEnumType(AuthorizationPrivilege, {

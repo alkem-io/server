@@ -1,28 +1,48 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ContextService } from './context.service';
 import { Context, IContext } from '@domain/context/context';
 import { EcosystemModelAuthorizationService } from '@domain/context/ecosystem-model/ecosystem-model.service.authorization';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import {
+  AuthorizationPolicy,
+  IAuthorizationPolicy,
+} from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
 export class ContextAuthorizationService {
   constructor(
     private contextService: ContextService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationService: AuthorizationService,
     private ecosysteModelAuthorizationService: EcosystemModelAuthorizationService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
   ) {}
 
-  async applyAuthorizationPolicy(context: IContext): Promise<IContext> {
+  async applyAuthorizationPolicy(
+    context: IContext,
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    communityCredential: Credential
+  ): Promise<IContext> {
+    context.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        context.authorization,
+        parentAuthorization
+      );
+
+    context.authorization = this.appendCredentialRules(
+      context.authorization,
+      context.id,
+      communityCredential
+    );
     // cascade
     const ecosystemModel = await this.contextService.getEcosystemModel(context);
     ecosystemModel.authorization =
@@ -69,5 +89,35 @@ export class ContextAuthorizationService {
     }
 
     return await this.contextRepository.save(context);
+  }
+
+  private appendCredentialRules(
+    authorization: IAuthorizationPolicy | undefined,
+    contextID: string,
+    communityCredential: Credential
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for Context: ${contextID}`,
+        LogContext.COMMUNITY
+      );
+
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
+
+    const communityMember: AuthorizationPolicyRuleCredential = {
+      type: communityCredential.type,
+      resourceID: communityCredential.id,
+      grantedPrivileges: [AuthorizationPrivilege.CREATE_CANVAS],
+      inheritable: false,
+    };
+    newRules.push(communityMember);
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
   }
 }

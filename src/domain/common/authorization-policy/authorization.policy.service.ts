@@ -136,7 +136,9 @@ export class AuthorizationPolicyService {
       auth.credentialRules
     );
     for (const additionalRule of additionalRules) {
-      existingRules.push(additionalRule);
+      if (additionalRule.inheritable) {
+        existingRules.push(additionalRule);
+      }
     }
 
     auth.credentialRules = JSON.stringify(existingRules);
