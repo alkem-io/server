@@ -35,15 +35,15 @@ export class RelationAuthorizationService {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     // Allow users to update their own created relation
-    const selfCreatedRelation = {
-      type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-      resourceID: userID,
-      grantedPrivileges: [
+    const selfCreatedRelation = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.USER_SELF_MANAGEMENT,
+      userID
+    );
     newRules.push(selfCreatedRelation);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -64,11 +64,11 @@ export class RelationAuthorizationService {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     // Allow global registered users to create
-    const globalRegisteredCreateRelation = {
-      type: AuthorizationCredential.GLOBAL_REGISTERED,
-      resourceID: '',
-      grantedPrivileges: [AuthorizationPrivilege.CREATE],
-    };
+    const globalRegisteredCreateRelation =
+      new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.CREATE],
+        AuthorizationCredential.GLOBAL_REGISTERED
+      );
     newRules.push(globalRegisteredCreateRelation);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(

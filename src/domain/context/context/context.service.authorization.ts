@@ -15,6 +15,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 
 @Injectable()
 export class ContextAuthorizationService {
@@ -30,7 +31,7 @@ export class ContextAuthorizationService {
   async applyAuthorizationPolicy(
     context: IContext,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: Credential
+    communityCredential: ICredential
   ): Promise<IContext> {
     context.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -94,7 +95,7 @@ export class ContextAuthorizationService {
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     contextID: string,
-    communityCredential: Credential
+    communityCredential: ICredential
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -104,12 +105,12 @@ export class ContextAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const communityMember: AuthorizationPolicyRuleCredential = {
-      type: communityCredential.type,
-      resourceID: communityCredential.id,
-      grantedPrivileges: [AuthorizationPrivilege.CREATE_CANVAS],
-      inheritable: false,
-    };
+    const communityMember = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.CREATE_CANVAS],
+      communityCredential.type,
+      communityCredential.resourceID,
+      false
+    );
     newRules.push(communityMember);
 
     const updatedAuthorization =

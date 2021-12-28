@@ -78,25 +78,23 @@ export class CommunityAuthorizationService {
   ): IAuthorizationPolicy {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const globalCommunityAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-      grantedPrivileges: [
+    const globalCommunityAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
+    );
     newRules.push(globalCommunityAdmin);
 
     if (allowGlobalRegisteredReadAccess) {
-      const globalRegistered = {
-        type: AuthorizationCredential.GLOBAL_REGISTERED,
-        resourceID: '',
-        grantedPrivileges: [AuthorizationPrivilege.READ],
-      };
+      const globalRegistered = new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.READ],
+        AuthorizationCredential.GLOBAL_REGISTERED
+      );
       newRules.push(globalRegistered);
     }
 

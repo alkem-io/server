@@ -43,11 +43,12 @@ export class CanvasAuthorizationService {
 
     // Allow any member of this community to create messages on the discussion
     if (checkout.lockedBy && checkout.lockedBy.length > 0) {
-      const lockedBy = {
-        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-        resourceID: checkout.lockedBy,
-        grantedPrivileges: [AuthorizationPrivilege.UPDATE],
-      };
+      const lockedBy = new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.UPDATE],
+        AuthorizationCredential.USER_SELF_MANAGEMENT,
+        checkout.lockedBy
+      );
+
       newRules.push(lockedBy);
     }
 

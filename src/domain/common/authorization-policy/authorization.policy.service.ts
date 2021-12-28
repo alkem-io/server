@@ -87,11 +87,11 @@ export class AuthorizationPolicyService {
     const rules = this.authorizationService.convertCredentialRulesStr(
       auth.credentialRules
     );
-    const newRule: AuthorizationPolicyRuleCredential = {
-      type: credentialCriteria.type,
-      resourceID: credentialCriteria.resourceID || '',
-      grantedPrivileges: privileges,
-    };
+    const newRule = new AuthorizationPolicyRuleCredential(
+      privileges,
+      credentialCriteria.type,
+      credentialCriteria.resourceID
+    );
     rules.push(newRule);
     auth.credentialRules = JSON.stringify(rules);
     return auth;
@@ -117,13 +117,19 @@ export class AuthorizationPolicyService {
     }
     const parent = this.validateAuthorization(parentAuthorization);
     // Reset the child to a base state for authorization definition
-    this.reset(child);
-    const newRules = this.authorizationService.convertCredentialRulesStr(
+    const resetAuthPolicy = this.reset(child);
+    const inheritedRules = this.authorizationService.convertCredentialRulesStr(
       parent.credentialRules
     );
-    this.appendCredentialAuthorizationRules(child, newRules);
-    child.anonymousReadAccess = parent.anonymousReadAccess;
-    return child;
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    for (const inheritedRule of inheritedRules) {
+      if (inheritedRule.isInheritable()) {
+        newRules.push(inheritedRule);
+      }
+    }
+    resetAuthPolicy.anonymousReadAccess = parent.anonymousReadAccess;
+    resetAuthPolicy.credentialRules = JSON.stringify(newRules);
+    return resetAuthPolicy;
   }
 
   appendCredentialAuthorizationRules(
@@ -136,9 +142,7 @@ export class AuthorizationPolicyService {
       auth.credentialRules
     );
     for (const additionalRule of additionalRules) {
-      if (additionalRule.inheritable) {
-        existingRules.push(additionalRule);
-      }
+      existingRules.push(additionalRule);
     }
 
     auth.credentialRules = JSON.stringify(existingRules);
@@ -182,11 +186,11 @@ export class AuthorizationPolicyService {
           LogContext.AUTH
         );
       }
-      const roleCred = {
-        type: credType,
-        resourceID: '',
-        grantedPrivileges: privileges,
-      };
+      const roleCred = new AuthorizationPolicyRuleCredential(
+        privileges,
+        credType
+      );
+
       newRules.push(roleCred);
     }
     this.appendCredentialAuthorizationRules(authorization, newRules);

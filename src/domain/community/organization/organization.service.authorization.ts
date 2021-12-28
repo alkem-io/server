@@ -92,70 +92,69 @@ export class OrganizationAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-      grantedPrivileges: [
+    const globalAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
     newRules.push(globalAdmin);
 
-    const communityAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-      grantedPrivileges: [
+    const communityAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
+    );
     newRules.push(communityAdmin);
 
-    const organizationAdmin = {
-      type: AuthorizationCredential.ORGANIZATION_ADMIN,
-      resourceID: organizationID,
-      grantedPrivileges: [
+    const organizationAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.ORGANIZATION_ADMIN,
+      organizationID
+    );
+
     newRules.push(organizationAdmin);
 
-    const organizationOwner = {
-      type: AuthorizationCredential.ORGANIZATION_OWNER,
-      resourceID: organizationID,
-      grantedPrivileges: [
+    const organizationOwner = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.ORGANIZATION_OWNER,
+      organizationID
+    );
     newRules.push(organizationOwner);
 
-    const organizationMember = {
-      type: AuthorizationCredential.ORGANIZATION_MEMBER,
-      resourceID: organizationID,
-      grantedPrivileges: [AuthorizationPrivilege.READ],
-    };
+    const organizationMember = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ],
+      AuthorizationCredential.ORGANIZATION_MEMBER,
+      organizationID
+    );
     newRules.push(organizationMember);
 
-    const registeredUser = {
-      type: AuthorizationCredential.GLOBAL_REGISTERED,
-      resourceID: '',
-      grantedPrivileges: [AuthorizationPrivilege.READ],
-    };
+    const registeredUser = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ],
+      AuthorizationCredential.GLOBAL_REGISTERED
+    );
+
     newRules.push(registeredUser);
 
     const updatedAuthorization =
