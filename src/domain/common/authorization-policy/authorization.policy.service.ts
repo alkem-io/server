@@ -202,8 +202,6 @@ export class AuthorizationPolicyService {
         credType = AuthorizationCredential.GLOBAL_ADMIN;
       } else if (globalRole === AuthorizationRoleGlobal.COMMUNITY_ADMIN) {
         credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
-      } else if (globalRole === AuthorizationRoleGlobal.REGISTERED) {
-        credType = AuthorizationCredential.GLOBAL_REGISTERED;
       } else {
         throw new ForbiddenException(
           `Authorization: invalid global role encountered: ${globalRole}`,
