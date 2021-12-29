@@ -32,6 +32,10 @@ export class OrganizationAuthorizationService {
     organization.authorization = await this.authorizationPolicyService.reset(
       organization.authorization
     );
+    organization.authorization =
+      this.authorizationPolicyService.inheritPlatformAuthorization(
+        organization.authorization
+      );
     organization.authorization = this.appendCredentialRules(
       organization.authorization,
       organization.id
@@ -91,18 +95,6 @@ export class OrganizationAuthorizationService {
       );
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
-
-    const globalAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
-    newRules.push(globalAdmin);
 
     const communityAdmin = new AuthorizationPolicyRuleCredential(
       [

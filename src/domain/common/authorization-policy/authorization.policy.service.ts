@@ -23,13 +23,17 @@ import { AgentInfo } from '@core/authentication/agent-info';
 
 @Injectable()
 export class AuthorizationPolicyService {
+  private platformAuthorizationPolicy: IAuthorizationPolicy;
+
   constructor(
     @InjectRepository(AuthorizationPolicy)
     private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) {}
+  ) {
+    this.platformAuthorizationPolicy = this.createPlatformAuthorizationPolicy();
+  }
 
   reset(
     authorizationPolicy: IAuthorizationPolicy | undefined
@@ -106,6 +110,15 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
+  inheritPlatformAuthorization(
+    childAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    return this.inheritParentAuthorization(
+      childAuthorization,
+      this.platformAuthorizationPolicy
+    );
+  }
+
   inheritParentAuthorization(
     childAuthorization: IAuthorizationPolicy | undefined,
     parentAuthorization: IAuthorizationPolicy | undefined
@@ -164,6 +177,17 @@ export class AuthorizationPolicyService {
       authorization.verifiedCredentialRules
     );
   }
+  getAgentPrivileges(
+    agentInfo: AgentInfo,
+    authorizationPolicy: IAuthorizationPolicy
+  ): AuthorizationPrivilege[] {
+    if (!agentInfo || !agentInfo.credentials) return [];
+
+    return this.authorizationService.getGrantedPrivileges(
+      agentInfo.credentials,
+      authorizationPolicy
+    );
+  }
 
   createGlobalRolesAuthorizationPolicy(
     globalRoles: AuthorizationRoleGlobal[],
@@ -198,15 +222,68 @@ export class AuthorizationPolicyService {
     return authorization;
   }
 
-  getAgentPrivileges(
-    agentInfo: AgentInfo,
-    authorizationPolicy: IAuthorizationPolicy
-  ): AuthorizationPrivilege[] {
-    if (!agentInfo || !agentInfo.credentials) return [];
+  private createPlatformAuthorizationPolicy(): IAuthorizationPolicy {
+    const platformAuthorization = new AuthorizationPolicy();
 
-    return this.authorizationService.getGrantedPrivileges(
-      agentInfo.credentials,
-      authorizationPolicy
+    const rules: AuthorizationPolicyRuleCredential[] = [];
+
+    const globalAdmin = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+      AuthorizationCredential.GLOBAL_ADMIN
     );
+    rules.push(globalAdmin);
+
+    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.CREATE_HUB,
+        AuthorizationPrivilege.CREATE_ORGANIZATION,
+      ],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    globalAdminNotInherited.inheritable = false;
+    rules.push(globalAdminNotInherited);
+
+    const userNotInherited = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.READ_MEMBERSHIP,
+        AuthorizationPrivilege.READ_SEACRH,
+        AuthorizationPrivilege.READ_USERS,
+        AuthorizationPrivilege.READ_USERS_MATCHING_CREDENTIALS,
+      ],
+      AuthorizationCredential.GLOBAL_REGISTERED
+    );
+    userNotInherited.inheritable = false;
+    rules.push(userNotInherited);
+
+    // Allow hub admins to create new organizations
+    const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.CREATE_ORGANIZATION],
+      AuthorizationCredential.ECOVERSE_ADMIN
+    );
+    userNotInherited.inheritable = false;
+    rules.push(hubAdminsNotInherited);
+
+    // Allow challenge admins to create new organizations
+    const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.CREATE_ORGANIZATION],
+      AuthorizationCredential.CHALLENGE_ADMIN
+    );
+    userNotInherited.inheritable = false;
+    rules.push(challengeAdminsNotInherited);
+
+    return this.appendCredentialAuthorizationRules(
+      platformAuthorization,
+      rules
+    );
+  }
+
+  getPlatformAuthorizationPolicy(): IAuthorizationPolicy {
+    return this.platformAuthorizationPolicy;
   }
 }

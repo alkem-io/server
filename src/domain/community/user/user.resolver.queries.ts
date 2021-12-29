@@ -8,27 +8,17 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
-  private queryAuthorizationPolicy: IAuthorizationPolicy;
-
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService
-  ) {
-    this.queryAuthorizationPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.REGISTERED],
-        [AuthorizationPrivilege.READ]
-      );
-  }
+  ) {}
 
   @UseGuards(GraphqlGuard)
   @Query(() => [IUser], {
@@ -39,7 +29,7 @@ export class UserResolverQueries {
   async users(@CurrentUser() agentInfo: AgentInfo): Promise<IUser[]> {
     await this.authorizationService.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationPolicy,
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
       `users query: ${agentInfo.email}`
     );
     return await this.userService.getUsers();
@@ -57,7 +47,7 @@ export class UserResolverQueries {
   ): Promise<IUser> {
     await this.authorizationService.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationPolicy,
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
       `user query: ${agentInfo.email}`
     );
     return await this.userService.getUserOrFail(id);
@@ -75,7 +65,7 @@ export class UserResolverQueries {
   ): Promise<IUser[]> {
     await this.authorizationService.grantReadAccessOrFail(
       agentInfo,
-      this.queryAuthorizationPolicy,
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
       `users query: ${agentInfo.email}`
     );
     const users = await this.userService.getUsers();

@@ -108,9 +108,9 @@ export class ContextAuthorizationService {
     const communityMember = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.CREATE_CANVAS],
       communityCredential.type,
-      communityCredential.resourceID,
-      false
+      communityCredential.resourceID
     );
+    communityMember.inheritable = false;
     newRules.push(communityMember);
 
     const updatedAuthorization =

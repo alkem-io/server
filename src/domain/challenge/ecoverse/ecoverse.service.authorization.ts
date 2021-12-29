@@ -38,6 +38,10 @@ export class EcoverseAuthorizationService {
     ecoverse.authorization = await this.authorizationPolicyService.reset(
       ecoverse.authorization
     );
+    ecoverse.authorization =
+      this.authorizationPolicyService.inheritPlatformAuthorization(
+        ecoverse.authorization
+      );
     ecoverse.authorization = this.extendAuthorizationPolicy(
       ecoverse.authorization,
       ecoverse.id
@@ -87,18 +91,6 @@ export class EcoverseAuthorizationService {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible
     authorization.anonymousReadAccess = true;
-
-    const globalAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
-    newRules.push(globalAdmin);
 
     const communityAdmin = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.READ],

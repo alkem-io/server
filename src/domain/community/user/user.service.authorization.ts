@@ -27,9 +27,13 @@ export class UserAuthorizationService {
 
   async applyAuthorizationPolicy(user: IUser): Promise<IUser> {
     // Ensure always applying from a clean state
-    user.authorization = await this.authorizationPolicyService.reset(
+    user.authorization = this.authorizationPolicyService.reset(
       user.authorization
     );
+    user.authorization =
+      this.authorizationPolicyService.inheritPlatformAuthorization(
+        user.authorization
+      );
 
     user.authorization = await this.appendCredentialRules(
       user.authorization,
@@ -106,18 +110,6 @@ export class UserAuthorizationService {
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
-
-    const globalAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
-    newRules.push(globalAdmin);
 
     const communityAdmin = new AuthorizationPolicyRuleCredential(
       [

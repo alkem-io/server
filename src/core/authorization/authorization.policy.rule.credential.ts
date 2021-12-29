@@ -9,16 +9,11 @@ export class AuthorizationPolicyRuleCredential {
   constructor(
     grantedPrivileges: AuthorizationPrivilege[],
     type: string,
-    resourceID?: string,
-    inheritable?: boolean
+    resourceID?: string
   ) {
     this.type = type;
     this.resourceID = resourceID || '';
     this.grantedPrivileges = grantedPrivileges;
-    if (inheritable === undefined) {
-      this.inheritable = true;
-    } else {
-      this.inheritable = inheritable;
-    }
+    this.inheritable = true;
   }
 }
