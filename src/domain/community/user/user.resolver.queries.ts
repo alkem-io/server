@@ -11,6 +11,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPrivilege } from '@common/enums';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -27,9 +28,10 @@ export class UserResolverQueries {
   })
   @Profiling.api
   async users(@CurrentUser() agentInfo: AgentInfo): Promise<IUser[]> {
-    await this.authorizationService.grantReadAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
     return await this.userService.getUsers();
@@ -45,9 +47,10 @@ export class UserResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID_NAMEID_EMAIL }) id: string
   ): Promise<IUser> {
-    await this.authorizationService.grantReadAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
       `user query: ${agentInfo.email}`
     );
     return await this.userService.getUserOrFail(id);
@@ -63,9 +66,10 @@ export class UserResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ name: 'IDs', type: () => [UUID_NAMEID_EMAIL] }) ids: string[]
   ): Promise<IUser[]> {
-    await this.authorizationService.grantReadAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
     const users = await this.userService.getUsers();

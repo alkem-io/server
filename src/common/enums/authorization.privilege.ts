@@ -9,10 +9,7 @@ export enum AuthorizationPrivilege {
   CREATE_CANVAS = 'create-canvas',
   CREATE_HUB = 'ceate-hub',
   CREATE_ORGANIZATION = 'create-organization',
-  READ_MEMBERSHIP = 'read-membership',
-  READ_SEACRH = 'read-search',
   READ_USERS = 'read-search',
-  READ_USERS_MATCHING_CREDENTIALS = 'read-users-matching-credentials',
 }
 
 registerEnumType(AuthorizationPrivilege, {

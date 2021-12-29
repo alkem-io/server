@@ -9,6 +9,7 @@ import { AgentInfo } from '@core/authentication';
 import { OrganizationMembership } from './membership.dto.organization.result';
 import { MembershipOrganizationInput } from './membership.dto.organization.input';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver()
 export class MembershipResolverQueries {
@@ -28,9 +29,10 @@ export class MembershipResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: MembershipUserInput
   ): Promise<UserMembership> {
-    await this.authorizationService.grantReadAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
       `membership query: ${agentInfo.email}`
     );
     return await this.membershipService.getUserMemberships(membershipData);

@@ -249,13 +249,9 @@ export class AuthorizationPolicyService {
     globalAdminNotInherited.inheritable = false;
     rules.push(globalAdminNotInherited);
 
+    // Allow all registered users to query non-protected user information
     const userNotInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.READ_MEMBERSHIP,
-        AuthorizationPrivilege.READ_SEACRH,
-        AuthorizationPrivilege.READ_USERS,
-        AuthorizationPrivilege.READ_USERS_MATCHING_CREDENTIALS,
-      ],
+      [AuthorizationPrivilege.READ_USERS],
       AuthorizationCredential.GLOBAL_REGISTERED
     );
     userNotInherited.inheritable = false;
