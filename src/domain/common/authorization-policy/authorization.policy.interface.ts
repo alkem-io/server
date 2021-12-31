@@ -9,4 +9,5 @@ export abstract class IAuthorizationPolicy extends IBaseAlkemio {
   // exposed via field resolver
   credentialRules!: string;
   verifiedCredentialRules!: string;
+  privilegeRules!: string;
 }

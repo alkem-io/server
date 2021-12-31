@@ -20,6 +20,7 @@ import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -85,19 +86,51 @@ export class AuthorizationPolicyService {
   appendCredentialAuthorizationRule(
     authorization: IAuthorizationPolicy | undefined,
     credentialCriteria: CredentialsSearchInput,
-    privileges: AuthorizationPrivilege[]
+    grantedPrivileges: AuthorizationPrivilege[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
     const rules = this.authorizationService.convertCredentialRulesStr(
       auth.credentialRules
     );
     const newRule = new AuthorizationPolicyRuleCredential(
-      privileges,
+      grantedPrivileges,
       credentialCriteria.type,
       credentialCriteria.resourceID
     );
     rules.push(newRule);
     auth.credentialRules = JSON.stringify(rules);
+    return auth;
+  }
+
+  appendCredentialAuthorizationRules(
+    authorization: IAuthorizationPolicy | undefined,
+    additionalRules: AuthorizationPolicyRuleCredential[]
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const existingRules = this.authorizationService.convertCredentialRulesStr(
+      auth.credentialRules
+    );
+    for (const additionalRule of additionalRules) {
+      existingRules.push(additionalRule);
+    }
+
+    auth.credentialRules = JSON.stringify(existingRules);
+    return auth;
+  }
+
+  appendPrivilegeAuthorizationRules(
+    authorization: IAuthorizationPolicy | undefined,
+    privilegeRules: AuthorizationPolicyRulePrivilege[]
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+    const existingRules = this.authorizationService.convertPrivilegeRulesStr(
+      auth.privilegeRules
+    );
+    for (const additionalRule of privilegeRules) {
+      existingRules.push(additionalRule);
+    }
+    auth.privilegeRules = JSON.stringify(existingRules);
     return auth;
   }
 
@@ -144,24 +177,6 @@ export class AuthorizationPolicyService {
     resetAuthPolicy.credentialRules = JSON.stringify(newRules);
     return resetAuthPolicy;
   }
-
-  appendCredentialAuthorizationRules(
-    authorization: IAuthorizationPolicy | undefined,
-    additionalRules: AuthorizationPolicyRuleCredential[]
-  ): IAuthorizationPolicy {
-    const auth = this.validateAuthorization(authorization);
-
-    const existingRules = this.authorizationService.convertCredentialRulesStr(
-      auth.credentialRules
-    );
-    for (const additionalRule of additionalRules) {
-      existingRules.push(additionalRule);
-    }
-
-    auth.credentialRules = JSON.stringify(existingRules);
-    return auth;
-  }
-
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
@@ -223,7 +238,22 @@ export class AuthorizationPolicyService {
   private createPlatformAuthorizationPolicy(): IAuthorizationPolicy {
     const platformAuthorization = new AuthorizationPolicy();
 
-    const rules: AuthorizationPolicyRuleCredential[] = [];
+    const credentialRules = this.createCredentialRules();
+
+    const platformAuthCredRules = this.appendCredentialAuthorizationRules(
+      platformAuthorization,
+      credentialRules
+    );
+
+    const privilegeRules = this.createPrivilegeRules();
+    return this.appendPrivilegeAuthorizationRules(
+      platformAuthCredRules,
+      privilegeRules
+    );
+  }
+
+  private createCredentialRules(): AuthorizationPolicyRuleCredential[] {
+    const credentialRules: AuthorizationPolicyRuleCredential[] = [];
 
     const globalAdmin = new AuthorizationPolicyRuleCredential(
       [
@@ -235,17 +265,7 @@ export class AuthorizationPolicyService {
       ],
       AuthorizationCredential.GLOBAL_ADMIN
     );
-    rules.push(globalAdmin);
-
-    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE_HUB,
-        AuthorizationPrivilege.CREATE_ORGANIZATION,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
-    globalAdminNotInherited.inheritable = false;
-    rules.push(globalAdminNotInherited);
+    credentialRules.push(globalAdmin);
 
     // Allow all registered users to query non-protected user information
     const userNotInherited = new AuthorizationPolicyRuleCredential(
@@ -253,7 +273,7 @@ export class AuthorizationPolicyService {
       AuthorizationCredential.GLOBAL_REGISTERED
     );
     userNotInherited.inheritable = false;
-    rules.push(userNotInherited);
+    credentialRules.push(userNotInherited);
 
     // Allow hub admins to create new organizations
     const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
@@ -261,7 +281,7 @@ export class AuthorizationPolicyService {
       AuthorizationCredential.ECOVERSE_ADMIN
     );
     userNotInherited.inheritable = false;
-    rules.push(hubAdminsNotInherited);
+    credentialRules.push(hubAdminsNotInherited);
 
     // Allow challenge admins to create new organizations
     const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
@@ -269,12 +289,24 @@ export class AuthorizationPolicyService {
       AuthorizationCredential.CHALLENGE_ADMIN
     );
     userNotInherited.inheritable = false;
-    rules.push(challengeAdminsNotInherited);
+    credentialRules.push(challengeAdminsNotInherited);
 
-    return this.appendCredentialAuthorizationRules(
-      platformAuthorization,
-      rules
+    return credentialRules;
+  }
+
+  private createPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [
+        AuthorizationPrivilege.CREATE_HUB,
+        AuthorizationPrivilege.CREATE_ORGANIZATION,
+      ],
+      AuthorizationPrivilege.CREATE
     );
+    privilegeRules.push(createPrivilege);
+
+    return privilegeRules;
   }
 
   getPlatformAuthorizationPolicy(): IAuthorizationPolicy {

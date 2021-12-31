@@ -16,6 +16,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { ICredential } from '@domain/agent/credential/credential.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class ContextAuthorizationService {
@@ -44,6 +45,7 @@ export class ContextAuthorizationService {
       context.id,
       communityCredential
     );
+    context.authorization = this.appendPrivilegeRules(context.authorization);
     // cascade
     const ecosystemModel = await this.contextService.getEcosystemModel(context);
     ecosystemModel.authorization =
@@ -120,5 +122,22 @@ export class ContextAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_CANVAS],
+      AuthorizationPrivilege.CREATE
+    );
+    privilegeRules.push(createPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }
