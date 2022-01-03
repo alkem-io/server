@@ -73,7 +73,8 @@ export class ContextAuthorizationService {
       const updatedCanvas =
         await this.canvasAuthorizationService.applyAuthorizationPolicy(
           canvas,
-          context.authorization
+          context.authorization,
+          communityCredential
         );
       updatedCanvases.push(updatedCanvas);
     }
@@ -102,7 +103,7 @@ export class ContextAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for Context: ${contextID}`,
-        LogContext.COMMUNITY
+        LogContext.CONTEXT
       );
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
