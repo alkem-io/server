@@ -2,7 +2,7 @@
   "name": "alkemio-server",
   "version": "0.16.2",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
-  "author": "Cherrytwist Foundation",
+  "author": "Alkemio Foundation",
   "private": false,
   "license": "EUPL-1.2",
   "main": "src/main.ts",
