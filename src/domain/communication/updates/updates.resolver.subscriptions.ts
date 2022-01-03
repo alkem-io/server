@@ -44,7 +44,7 @@ export class UpdatesResolverSubscriptions {
       this: UpdatesResolverSubscriptions,
       payload: CommunicationUpdateMessageReceived,
       variables: any,
-      _: any
+      context: any
     ) {
       const updatesIDs: string[] = variables.updatesIDs;
       this.logger.verbose?.(
@@ -52,18 +52,33 @@ export class UpdatesResolverSubscriptions {
         LogContext.SUBSCRIPTIONS
       );
       if (!updatesIDs) {
+        const agentInfo = context.req?.user;
+        // If subscribed to all then need to check on every update the authorization to see it
         this.logger.verbose?.(
-          `[UpdateMsg Filter] true for ${updatesIDs}`,
+          `[UpdateMsg Filter] User (${agentInfo.email}) subscribed to all updates; filtering by Authorization to see ${payload.updatesID}`,
           LogContext.SUBSCRIPTIONS
         );
-        return true;
+        const updates = await this.updatesService.getUpdatesOrFail(
+          payload.updatesID
+        );
+        const filter = await this.authorizationService.isAccessGranted(
+          agentInfo,
+          updates.authorization,
+          AuthorizationPrivilege.READ
+        );
+        this.logger.verbose?.(
+          `[UpdateMsg Filter] User (${agentInfo.email}) filter: ${filter}`,
+          LogContext.SUBSCRIPTIONS
+        );
+        return filter;
+      } else {
+        const inList = updatesIDs.includes(payload.updatesID);
+        this.logger.verbose?.(
+          `[UpdateMsg Filter] result is ${inList}`,
+          LogContext.SUBSCRIPTIONS
+        );
+        return inList;
       }
-      const inList = updatesIDs.includes(payload.updatesID);
-      this.logger.verbose?.(
-        `[UpdateMsg Filter] result is ${inList}`,
-        LogContext.SUBSCRIPTIONS
-      );
-      return inList;
     },
   })
   async communicationUpdateMessageReceived(

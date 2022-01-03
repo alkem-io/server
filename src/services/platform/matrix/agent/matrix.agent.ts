@@ -66,11 +66,11 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     {
       registerGroupMembershipMonitor = true,
       registerRoomMonitor = true,
-      registerTimelineMonitor = true,
+      registerTimelineMonitor = false,
     }: MatrixAgentStartOptions = {
       registerGroupMembershipMonitor: true,
       registerRoomMonitor: true,
-      registerTimelineMonitor: true,
+      registerTimelineMonitor: false,
     }
   ) {
     const startComplete = new Promise<void>((resolve, reject) => {
@@ -190,17 +190,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       this.logger,
       messageReceivedEvent => {
         this.logger.verbose?.(
-          `Publishing message: ${messageReceivedEvent.message.message}`,
-          LogContext.COMMUNICATION
-        );
-        /* TODO - need to find a way to wire the admin user (with simplicity in mind)
-          in order to be able to read community data */
-        // this.subscriptionHandler.publish(
-        //   SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
-        //   messageReceivedEvent
-        // );
-        this.logger.verbose?.(
-          `Published message: ${messageReceivedEvent.message.message}`,
+          `Room timeline received message: ${messageReceivedEvent.message.message}`,
           LogContext.COMMUNICATION
         );
       }

@@ -43,20 +43,43 @@ export class DiscussionResolverSubscriptions {
       this: DiscussionResolverSubscriptions,
       payload: CommunicationDiscussionMessageReceived,
       variables: any,
-      _: any
+      context: any
     ) {
       const discussionIDs: string[] = variables.discussionIDs;
       this.logger.verbose?.(
         `[DiscussionMsg Filter] Filtering event with list: ${discussionIDs}`,
         LogContext.SUBSCRIPTIONS
       );
-      if (!discussionIDs) return true;
-      const inList = discussionIDs.includes(payload.discussionID);
-      this.logger.verbose?.(
-        `[DiscussionMsg Filter] result is ${inList}`,
-        LogContext.SUBSCRIPTIONS
-      );
-      return inList;
+      if (!discussionIDs) {
+        const agentInfo = context.req?.user;
+        // If subscribed to all then need to check on every update the authorization to see it as could not be done
+        // on the subscription approval
+        this.logger.verbose?.(
+          `[DiscussionMsg Filter] User (${agentInfo.email}) subscribed to all msgs; filtering by Authorization to see ${payload.discussionID}`,
+          LogContext.SUBSCRIPTIONS
+        );
+        const updates = await this.discussionService.getDiscussionOrFail(
+          payload.discussionID
+        );
+        const filter = await this.authorizationService.isAccessGranted(
+          agentInfo,
+          updates.authorization,
+          AuthorizationPrivilege.READ
+        );
+        this.logger.verbose?.(
+          `[DiscussionMsg Filter] User (${agentInfo.email}) filter: ${filter}`,
+          LogContext.SUBSCRIPTIONS
+        );
+        return filter;
+      } else {
+        // No need to do an authorization check as was done on the subscription approval
+        const inList = discussionIDs.includes(payload.discussionID);
+        this.logger.verbose?.(
+          `[DiscussionMsg Filter] result is ${inList}`,
+          LogContext.SUBSCRIPTIONS
+        );
+        return inList;
+      }
     },
   })
   async communicationDiscussionMessageReceived(

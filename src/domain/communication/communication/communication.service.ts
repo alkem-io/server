@@ -131,15 +131,15 @@ export class CommunicationService {
       userCommunicationID,
       false
     );
-    // Note: no longer replicate room membership
-    // // Set the Matrix membership for notifications
-    // const updates = this.getUpdates(communication);
-    // // Do not await as the memberhip will be updated in the background
-    // this.communicationAdapter.replicateRoomMembership(
-    //   discussion.communicationRoomID,
-    //   updates.communicationRoomID,
-    //   userCommunicationID
-    // );
+
+    // Set the Matrix membership so that users sending to rooms they are a member of responds quickly
+    const updates = this.getUpdates(communication);
+    // Do not await as the memberhip will be updated in the background
+    this.communicationAdapter.replicateRoomMembership(
+      discussion.communicationRoomID,
+      updates.communicationRoomID,
+      userCommunicationID
+    );
 
     return discussion;
   }

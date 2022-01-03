@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ContextService } from './context.service';
 import { Context, IContext } from '@domain/context/context';
 import { EcosystemModelAuthorizationService } from '@domain/context/ecosystem-model/ecosystem-model.service.authorization';
@@ -15,7 +14,6 @@ export class ContextAuthorizationService {
   constructor(
     private contextService: ContextService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private authorizationService: AuthorizationService,
     private ecosysteModelAuthorizationService: EcosystemModelAuthorizationService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     @InjectRepository(Context)
