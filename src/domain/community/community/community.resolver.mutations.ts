@@ -14,11 +14,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -194,6 +190,8 @@ export class CommunityResolverMutations {
         ]
       );
 
+    const savedApplication = await this.applicationService.save(application);
+
     const payload =
       await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
         agentInfo.userID,
@@ -216,7 +214,7 @@ export class CommunityResolverMutations {
       SubscriptionType.COMMUNITY_APPLICATION_CREATED,
       applicationReceivedEvent
     );
-    return await this.applicationService.save(application);
+    return savedApplication;
   }
 
   @UseGuards(GraphqlGuard)

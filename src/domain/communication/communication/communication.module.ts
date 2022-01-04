@@ -10,6 +10,8 @@ import { CommunicationAuthorizationService } from './communication.service.autho
 import { DiscussionModule } from '../discussion/discussion.module';
 import { CommunicationAdapterModule } from '@services/platform/communication-adapter/communication-adapter.module';
 import { UpdatesModule } from '../updates/updates.module';
+import { CommunicationResolverSubscriptions } from './communication.resolver.subscriptions';
+import { IdentityResolverModule } from '../identity-resolver/identity.resolver.module';
 
 @Module({
   imports: [
@@ -18,6 +20,7 @@ import { UpdatesModule } from '../updates/updates.module';
     DiscussionModule,
     CommunicationAdapterModule,
     UpdatesModule,
+    IdentityResolverModule,
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [
@@ -25,6 +28,7 @@ import { UpdatesModule } from '../updates/updates.module';
     CommunicationResolverMutations,
     CommunicationResolverFields,
     CommunicationAuthorizationService,
+    CommunicationResolverSubscriptions,
   ],
   exports: [CommunicationService, CommunicationAuthorizationService],
 })

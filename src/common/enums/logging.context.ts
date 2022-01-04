@@ -16,6 +16,7 @@ export enum LogContext {
   LIFECYCLE = 'lifecycle',
   UNSPECIFIED = 'not_specified',
   NOTIFICATIONS = 'notifications',
+  SUBSCRIPTIONS = 'subscriptions',
   SSI = 'ssi',
   REQUESTS = 'requests',
 }

@@ -16,7 +16,7 @@ export class Canvas extends AuthorizableEntity implements ICanvas {
   @Column('text', { nullable: false })
   name!: string;
 
-  @Column('text', { nullable: false })
+  @Column('longtext', { nullable: false })
   value!: string;
 
   @Column('boolean', { nullable: false })

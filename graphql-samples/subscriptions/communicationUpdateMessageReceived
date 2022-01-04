@@ -1,6 +1,6 @@
 subscription {
-  messageReceived {
-    roomId,
+  communicationUpdateMessageReceived {
+    updatesID,
     message {
       id,
       message,

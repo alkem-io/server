@@ -11,6 +11,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
 import { CanvasCheckoutLifecycleConfig } from './canvas.checkout.lifecycle.config';
 import { CreateCanvasCheckoutInput } from './dto/canvascheckout.dto.create';
+import { EntityCheckoutStatusException } from '@common/exceptions/entity.not.checkedout.exception';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Injectable()
 export class CanvasCheckoutService {
@@ -75,5 +77,23 @@ export class CanvasCheckoutService {
         LogContext.COMMUNITY
       );
     return CanvasCheckout;
+  }
+
+  async isUpdateAllowedOrFail(
+    checkout: ICanvasCheckout,
+    agentInfo: AgentInfo
+  ): Promise<void> {
+    if (checkout.status !== CanvasCheckoutStateEnum.CHECKED_OUT) {
+      throw new EntityCheckoutStatusException(
+        `Unable to update entity that is not checkedout: ${checkout.status}`,
+        LogContext.CONTEXT
+      );
+    }
+    if (checkout.lockedBy !== agentInfo.userID) {
+      throw new EntityCheckoutStatusException(
+        `Entity is checked out by ${checkout.lockedBy}, which does not match the current user: ${agentInfo.userID}`,
+        LogContext.CONTEXT
+      );
+    }
   }
 }

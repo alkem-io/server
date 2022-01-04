@@ -57,6 +57,8 @@ export class CommunicationResolverMutations {
         discussion
       );
 
+    const savedDiscussion = await this.discussionService.save(discussion);
+
     this.notificationsClient.emit<number>(
       EventType.COMMUNICATION_DISCUSSION_CREATED,
       payload
@@ -67,6 +69,6 @@ export class CommunicationResolverMutations {
       communication.authorization
     );
 
-    return await this.discussionService.save(discussion);
+    return savedDiscussion;
   }
 }
