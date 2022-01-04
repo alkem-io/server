@@ -94,7 +94,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oathkeeper
-    image: oryd/oathkeeper:v0.38.9-beta.1
+    image: oryd/oathkeeper:v0.38
     restart: always
     depends_on:
       - kratos
