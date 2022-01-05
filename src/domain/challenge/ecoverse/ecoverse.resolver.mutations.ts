@@ -9,14 +9,12 @@ import {
   UpdateEcoverseInput,
 } from '@domain/challenge/ecoverse';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationRoleGlobal } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { IEcoverse } from './ecoverse.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
 import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
@@ -25,21 +23,13 @@ import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.c
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Resolver()
 export class EcoverseResolverMutations {
-  private globalAdminAuthorization: IAuthorizationPolicy;
-
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private ecoverseService: EcoverseService,
     private ecoverseAuthorizationService: EcoverseAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService
-  ) {
-    this.globalAdminAuthorization =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.ADMIN],
-        [AuthorizationPrivilege.CREATE, AuthorizationPrivilege.UPDATE]
-      );
-  }
+  ) {}
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IEcoverse, {
@@ -50,10 +40,12 @@ export class EcoverseResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ecoverseData') ecoverseData: CreateEcoverseInput
   ): Promise<IEcoverse> {
+    const authorizatinoPolicy =
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.globalAdminAuthorization,
-      AuthorizationPrivilege.CREATE,
+      authorizatinoPolicy,
+      AuthorizationPrivilege.CREATE_HUB,
       `updateEcoverse: ${ecoverseData.nameID}`
     );
     const ecoverse = await this.ecoverseService.createEcoverse(ecoverseData);

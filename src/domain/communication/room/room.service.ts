@@ -76,7 +76,7 @@ export class RoomService {
     messageData: RoomSendMessageInput
   ): Promise<CommunicationMessageResult> {
     // Ensure the user is a member of room and group so can send
-    await this.communicationAdapter.addUserToRoomSync(
+    await this.communicationAdapter.addUserToRoom(
       roomable.communicationGroupID,
       roomable.communicationRoomID,
       communicationUserID

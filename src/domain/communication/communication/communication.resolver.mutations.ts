@@ -52,21 +52,20 @@ export class CommunicationResolverMutations {
       agentInfo.communicationID
     );
 
+    const savedDiscussion = await this.discussionService.save(discussion);
+    await this.discussionAuthorizationService.applyAuthorizationPolicy(
+      discussion,
+      communication.authorization
+    );
+
+    // Emit the events to notify others
     const payload =
       await this.notificationsPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
         discussion
       );
-
-    const savedDiscussion = await this.discussionService.save(discussion);
-
     this.notificationsClient.emit<number>(
       EventType.COMMUNICATION_DISCUSSION_CREATED,
       payload
-    );
-
-    await this.discussionAuthorizationService.applyAuthorizationPolicy(
-      discussion,
-      communication.authorization
     );
 
     return savedDiscussion;

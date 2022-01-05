@@ -7,6 +7,7 @@ import { RoomModule } from '../room/room.module';
 import { Discussion } from './discussion.entity';
 import { DiscussionResolverFields } from './discussion.resolver.fields';
 import { DiscussionResolverMutations } from './discussion.resolver.mutations';
+import { DiscussionResolverSubscriptions } from './discussion.resolver.subscriptions';
 import { DiscussionService } from './discussion.service';
 import { DiscussionAuthorizationService } from './discussion.service.authorization';
 
@@ -22,6 +23,7 @@ import { DiscussionAuthorizationService } from './discussion.service.authorizati
     DiscussionService,
     DiscussionAuthorizationService,
     DiscussionResolverMutations,
+    DiscussionResolverSubscriptions,
     DiscussionResolverFields,
   ],
   exports: [
