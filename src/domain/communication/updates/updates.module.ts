@@ -6,6 +6,7 @@ import { RoomModule } from '../room/room.module';
 import { Updates } from './updates.entity';
 import { UpdatesResolverFields } from './updates.resolver.fields';
 import { UpdatesResolverMutations } from './updates.resolver.mutations';
+import { UpdatesResolverSubscriptions } from './updates.resolver.subscriptions';
 import { UpdatesService } from './updates.service';
 
 @Module({
@@ -15,7 +16,12 @@ import { UpdatesService } from './updates.service';
     CommunicationAdapterModule,
     TypeOrmModule.forFeature([Updates]),
   ],
-  providers: [UpdatesService, UpdatesResolverFields, UpdatesResolverMutations],
+  providers: [
+    UpdatesService,
+    UpdatesResolverFields,
+    UpdatesResolverMutations,
+    UpdatesResolverSubscriptions,
+  ],
   exports: [UpdatesService],
 })
 export class UpdatesModule {}
