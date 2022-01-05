@@ -121,6 +121,10 @@ export class AdminCommunicationService {
     return true;
   }
 
+  async setMatrixRoomsPublicAccess(isPublic: boolean) {
+    return await this.communicationAdapter.setMatrixRoomsGuestAccess(isPublic);
+  }
+
   async removeOrphanedRoom(
     orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput
   ): Promise<boolean> {

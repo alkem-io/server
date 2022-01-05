@@ -10,6 +10,7 @@ import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.d
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AdminCommunicationService } from './admin.communication.service';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
+import { CommunicationAdminChangeRoomPublicAccessInput } from './dto/admin.communication.dto.change.room.public.state';
 
 @Resolver()
 export class AdminCommunicationResolverMutations {
@@ -67,6 +68,27 @@ export class AdminCommunicationResolverMutations {
     );
     return await this.adminCommunicationService.removeOrphanedRoom(
       orphanedRoomData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description: 'Make all server rooms public messaging platform.',
+  })
+  @Profiling.api
+  async adminCommunicationMakeAllRoomsPublic(
+    @Args('changeRoomAccessData')
+    changeRoomAccessData: CommunicationAdminChangeRoomPublicAccessInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT,
+      `communications admin make all rooms public: ${agentInfo.email}`
+    );
+    return await this.adminCommunicationService.setMatrixRoomsPublicAccess(
+      changeRoomAccessData.isPublic
     );
   }
 }

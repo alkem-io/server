@@ -126,20 +126,19 @@ export class CommunicationService {
 
     // Trigger a room membership request for the current user that is not awaited
     await this.communicationAdapter.addUserToRoom(
-      discussion.communicationGroupID,
       discussion.communicationRoomID,
-      userCommunicationID,
-      false
-    );
-
-    // Set the Matrix membership so that users sending to rooms they are a member of responds quickly
-    const updates = this.getUpdates(communication);
-    // Do not await as the memberhip will be updated in the background
-    this.communicationAdapter.replicateRoomMembership(
-      discussion.communicationRoomID,
-      updates.communicationRoomID,
       userCommunicationID
     );
+
+    // we're no longer replicating membership, because all the rooms are public and visible.
+    // Set the Matrix membership so that users sending to rooms they are a member of responds quickly
+    // const updates = this.getUpdates(communication);
+    // Do not await as the memberhip will be updated in the background
+    // this.communicationAdapter.replicateRoomMembership(
+    //   discussion.communicationRoomID,
+    //   updates.communicationRoomID,
+    //   userCommunicationID
+    // );
 
     return discussion;
   }

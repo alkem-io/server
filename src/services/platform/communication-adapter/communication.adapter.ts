@@ -3,7 +3,6 @@ import {
   MatrixEntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { MatrixUserMembershipException } from '@common/exceptions/matrix.membership.exception';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
@@ -581,74 +580,26 @@ export class CommunicationAdapter {
   }
 
   public async addUserToRoom(
-    groupID: string,
+    // groupID: string, according to matrix docs groups are getting deprecated
     roomID: string,
-    matrixUserID: string,
-    awaitRoomMembership = true
+    matrixUserID: string
   ) {
-    const elevatedAgent = await this.getMatrixManagementAgentElevated();
     const userAgent = await this.matrixAgentPool.acquire(matrixUserID);
 
-    const isMember = await this.matrixUserAdapter.isUserMemberOfRoom(
+    const isUserMember = await this.matrixUserAdapter.isUserMemberOfRoom(
       userAgent.matrixClient,
       roomID
     );
-
-    if (isMember) {
-      // Nothing to do...
-      return;
-    }
-
-    this.logger.verbose?.(
-      `[Membership] Inviting user (${matrixUserID}) is join room: ${roomID}`,
-      LogContext.COMMUNICATION
-    );
-
-    await this.addUserToGroup(groupID, matrixUserID);
-
-    const oneTimePromise = new Promise<void>((resolve, reject) => {
-      userAgent.attachOnceConditional({
-        id: roomID,
-        roomMemberMembershipMonitor:
-          userAgent.resolveAutoAcceptRoomMembershipOneTimeMonitor(
-            // subscribe for events for a specific room
-            roomID,
-            userAgent.matrixClient.getUserId(),
-            // once we have joined the room detach the subscription
-            () => userAgent.detach(roomID),
-            resolve,
-            reject
-          ),
-      });
-    });
-
-    await this.matrixRoomAdapter.inviteUserToRoom(
-      elevatedAgent.matrixClient,
-      roomID,
-      userAgent.matrixClient
-    );
-
-    if (awaitRoomMembership) {
-      await oneTimePromise;
-
-      // Check the user is now a member + do not return until it succeeds
-      // 3 tries + then fail?
-      for (let i = 0; i < 3; i++) {
-        const isMember = await this.matrixUserAdapter.isUserMemberOfRoom(
+    try {
+      if (isUserMember === false) {
+        await this.matrixRoomAdapter.joinRoomSafe(
           userAgent.matrixClient,
           roomID
         );
-        if (isMember) return;
-        this.logger.warn(
-          `[Membership] User membership of room (${roomID}) has not yet resolved; waiting...`,
-          LogContext.COMMUNICATION
-        );
-        await new Promise(resolve => setTimeout(resolve, 100));
       }
-
-      // something has gone wrong with membership request...
-      throw new MatrixUserMembershipException(
-        `[Membership] user (${userAgent.matrixClient.getUserId()}) membership of room (${roomID}) is not completing.`,
+    } catch (ex: any) {
+      this.logger.error?.(
+        `[Membership] Exception user joining a room (user: ${matrixUserID}) room: ${roomID}) - ${ex.toString()}`,
         LogContext.COMMUNICATION
       );
     }
@@ -789,5 +740,32 @@ export class CommunicationAdapter {
       throw error;
     }
     return userIDs;
+  }
+
+  async setMatrixRoomsGuestAccess(allowGuests = true) {
+    const elevatedAgent = await this.getMatrixManagementAgentElevated();
+    const roomIDs = await this.matrixUserAdapter.getJoinedRooms(
+      elevatedAgent.matrixClient
+    );
+
+    try {
+      const promises = roomIDs.map(rId =>
+        elevatedAgent.matrixClient.setGuestAccess(rId, {
+          allowJoin: allowGuests,
+          allowRead: allowGuests,
+        })
+      );
+
+      await Promise.all(promises);
+      return true;
+    } catch (error) {
+      this.logger.verbose?.(
+        `Unable to change guest access for rooms to (${
+          allowGuests ? 'Public' : 'Private'
+        }): ${error}`,
+        LogContext.COMMUNICATION
+      );
+      return false;
+    }
   }
 }

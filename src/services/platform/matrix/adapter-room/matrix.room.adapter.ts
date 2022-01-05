@@ -63,9 +63,12 @@ export class MatrixRoomAdapter {
     // adjust options
     const createOpts = options.createOpts || {};
 
-    const defaultPreset = Preset.PrivateChat;
+    // all rooms will by default be public
+    const defaultPreset = Preset.PublicChat;
     createOpts.preset = createOpts.preset || defaultPreset;
-    createOpts.visibility = createOpts.visibility || Visibility.Private;
+    // all rooms will by default be public and visible - need to revise this
+    // once the Synapse server is community accessible
+    createOpts.visibility = createOpts.visibility || Visibility.Public;
 
     if (dmUserId && createOpts.invite === undefined) {
       createOpts.invite = [dmUserId];
@@ -94,6 +97,26 @@ export class MatrixRoomAdapter {
     }
 
     return roomID;
+  }
+
+  async joinRoomSafe(
+    matrixClient: MatrixClient,
+    roomID: string
+  ): Promise<void> {
+    if (roomID === '')
+      throw new MatrixEntityNotFoundException(
+        'No room ID specified',
+        LogContext.COMMUNICATION
+      );
+
+    try {
+      await matrixClient.joinRoom(roomID);
+    } catch (ex: any) {
+      this.logger.error?.(
+        `[Membership] Exception user joining a room (user: ${matrixClient.getUserId()}) room: ${roomID}) - ${ex.toString()}`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   async getMatrixRoom(
