@@ -59,11 +59,12 @@ export class UserGroupAuthorizationService {
       );
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const userGroupMember = {
-      type: AuthorizationCredential.USER_GROUP_MEMBER,
-      resourceID: userGroupID,
-      grantedPrivileges: [AuthorizationPrivilege.READ],
-    };
+    const userGroupMember = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ],
+      AuthorizationCredential.USER_GROUP_MEMBER,
+      userGroupID
+    );
+
     newRules.push(userGroupMember);
 
     this.authorizationPolicy.appendCredentialAuthorizationRules(

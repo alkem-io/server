@@ -20,16 +20,21 @@ import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class AuthorizationPolicyService {
+  private platformAuthorizationPolicy: IAuthorizationPolicy;
+
   constructor(
     @InjectRepository(AuthorizationPolicy)
     private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) {}
+  ) {
+    this.platformAuthorizationPolicy = this.createPlatformAuthorizationPolicy();
+  }
 
   reset(
     authorizationPolicy: IAuthorizationPolicy | undefined
@@ -81,49 +86,20 @@ export class AuthorizationPolicyService {
   appendCredentialAuthorizationRule(
     authorization: IAuthorizationPolicy | undefined,
     credentialCriteria: CredentialsSearchInput,
-    privileges: AuthorizationPrivilege[]
+    grantedPrivileges: AuthorizationPrivilege[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
     const rules = this.authorizationService.convertCredentialRulesStr(
       auth.credentialRules
     );
-    const newRule: AuthorizationPolicyRuleCredential = {
-      type: credentialCriteria.type,
-      resourceID: credentialCriteria.resourceID || '',
-      grantedPrivileges: privileges,
-    };
+    const newRule = new AuthorizationPolicyRuleCredential(
+      grantedPrivileges,
+      credentialCriteria.type,
+      credentialCriteria.resourceID
+    );
     rules.push(newRule);
     auth.credentialRules = JSON.stringify(rules);
     return auth;
-  }
-
-  setAnonymousAccess(
-    authorization: IAuthorizationPolicy | undefined,
-    newValue: boolean
-  ): IAuthorizationPolicy {
-    const auth = this.validateAuthorization(authorization);
-    auth.anonymousReadAccess = newValue;
-    return auth;
-  }
-
-  inheritParentAuthorization(
-    childAuthorization: IAuthorizationPolicy | undefined,
-    parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
-    // create a new child definition if one is not provided, a temporary fix
-    let child = childAuthorization;
-    if (!child) {
-      child = new AuthorizationPolicy();
-    }
-    const parent = this.validateAuthorization(parentAuthorization);
-    // Reset the child to a base state for authorization definition
-    this.reset(child);
-    const newRules = this.authorizationService.convertCredentialRulesStr(
-      parent.credentialRules
-    );
-    this.appendCredentialAuthorizationRules(child, newRules);
-    child.anonymousReadAccess = parent.anonymousReadAccess;
-    return child;
   }
 
   appendCredentialAuthorizationRules(
@@ -143,6 +119,64 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
+  appendPrivilegeAuthorizationRules(
+    authorization: IAuthorizationPolicy | undefined,
+    privilegeRules: AuthorizationPolicyRulePrivilege[]
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+    const existingRules = this.authorizationService.convertPrivilegeRulesStr(
+      auth.privilegeRules
+    );
+    for (const additionalRule of privilegeRules) {
+      existingRules.push(additionalRule);
+    }
+    auth.privilegeRules = JSON.stringify(existingRules);
+    return auth;
+  }
+
+  setAnonymousAccess(
+    authorization: IAuthorizationPolicy | undefined,
+    newValue: boolean
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+    auth.anonymousReadAccess = newValue;
+    return auth;
+  }
+
+  inheritPlatformAuthorization(
+    childAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    return this.inheritParentAuthorization(
+      childAuthorization,
+      this.platformAuthorizationPolicy
+    );
+  }
+
+  inheritParentAuthorization(
+    childAuthorization: IAuthorizationPolicy | undefined,
+    parentAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    // create a new child definition if one is not provided, a temporary fix
+    let child = childAuthorization;
+    if (!child) {
+      child = new AuthorizationPolicy();
+    }
+    const parent = this.validateAuthorization(parentAuthorization);
+    // Reset the child to a base state for authorization definition
+    const resetAuthPolicy = this.reset(child);
+    const inheritedRules = this.authorizationService.convertCredentialRulesStr(
+      parent.credentialRules
+    );
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    for (const inheritedRule of inheritedRules) {
+      if (inheritedRule.inheritable) {
+        newRules.push(inheritedRule);
+      }
+    }
+    resetAuthPolicy.anonymousReadAccess = parent.anonymousReadAccess;
+    resetAuthPolicy.credentialRules = JSON.stringify(newRules);
+    return resetAuthPolicy;
+  }
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
@@ -156,6 +190,17 @@ export class AuthorizationPolicyService {
   ): IAuthorizationPolicyRuleCredential[] {
     return this.authorizationService.convertVerifiedCredentialRulesStr(
       authorization.verifiedCredentialRules
+    );
+  }
+  getAgentPrivileges(
+    agentInfo: AgentInfo,
+    authorizationPolicy: IAuthorizationPolicy
+  ): AuthorizationPrivilege[] {
+    if (!agentInfo || !agentInfo.credentials) return [];
+
+    return this.authorizationService.getGrantedPrivileges(
+      agentInfo.credentials,
+      authorizationPolicy
     );
   }
 
@@ -172,19 +217,17 @@ export class AuthorizationPolicyService {
         credType = AuthorizationCredential.GLOBAL_ADMIN;
       } else if (globalRole === AuthorizationRoleGlobal.COMMUNITY_ADMIN) {
         credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
-      } else if (globalRole === AuthorizationRoleGlobal.REGISTERED) {
-        credType = AuthorizationCredential.GLOBAL_REGISTERED;
       } else {
         throw new ForbiddenException(
           `Authorization: invalid global role encountered: ${globalRole}`,
           LogContext.AUTH
         );
       }
-      const roleCred = {
-        type: credType,
-        resourceID: '',
-        grantedPrivileges: privileges,
-      };
+      const roleCred = new AuthorizationPolicyRuleCredential(
+        privileges,
+        credType
+      );
+
       newRules.push(roleCred);
     }
     this.appendCredentialAuthorizationRules(authorization, newRules);
@@ -192,15 +235,81 @@ export class AuthorizationPolicyService {
     return authorization;
   }
 
-  getAgentPrivileges(
-    agentInfo: AgentInfo,
-    authorizationPolicy: IAuthorizationPolicy
-  ): AuthorizationPrivilege[] {
-    if (!agentInfo || !agentInfo.credentials) return [];
+  private createPlatformAuthorizationPolicy(): IAuthorizationPolicy {
+    const platformAuthorization = new AuthorizationPolicy();
 
-    return this.authorizationService.getGrantedPrivileges(
-      agentInfo.credentials,
-      authorizationPolicy
+    const credentialRules = this.createCredentialRules();
+
+    const platformAuthCredRules = this.appendCredentialAuthorizationRules(
+      platformAuthorization,
+      credentialRules
     );
+
+    const privilegeRules = this.createPrivilegeRules();
+    return this.appendPrivilegeAuthorizationRules(
+      platformAuthCredRules,
+      privilegeRules
+    );
+  }
+
+  private createCredentialRules(): AuthorizationPolicyRuleCredential[] {
+    const credentialRules: AuthorizationPolicyRuleCredential[] = [];
+
+    const globalAdmin = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    credentialRules.push(globalAdmin);
+
+    // Allow all registered users to query non-protected user information
+    const userNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ_USERS],
+      AuthorizationCredential.GLOBAL_REGISTERED
+    );
+    userNotInherited.inheritable = false;
+    credentialRules.push(userNotInherited);
+
+    // Allow hub admins to create new organizations
+    const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.CREATE_ORGANIZATION],
+      AuthorizationCredential.ECOVERSE_ADMIN
+    );
+    userNotInherited.inheritable = false;
+    credentialRules.push(hubAdminsNotInherited);
+
+    // Allow challenge admins to create new organizations
+    const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.CREATE_ORGANIZATION],
+      AuthorizationCredential.CHALLENGE_ADMIN
+    );
+    userNotInherited.inheritable = false;
+    credentialRules.push(challengeAdminsNotInherited);
+
+    return credentialRules;
+  }
+
+  private createPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [
+        AuthorizationPrivilege.CREATE_HUB,
+        AuthorizationPrivilege.CREATE_ORGANIZATION,
+      ],
+      AuthorizationPrivilege.CREATE
+    );
+    privilegeRules.push(createPrivilege);
+
+    return privilegeRules;
+  }
+
+  getPlatformAuthorizationPolicy(): IAuthorizationPolicy {
+    return this.platformAuthorizationPolicy;
   }
 }

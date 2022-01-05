@@ -111,24 +111,24 @@ export class ChallengeAuthorizationService {
   ): AuthorizationPolicyRuleCredential[] {
     const rules: AuthorizationPolicyRuleCredential[] = [];
 
-    const challengeAdmin = {
-      type: AuthorizationCredential.CHALLENGE_ADMIN,
-      resourceID: challengeID,
-      grantedPrivileges: [
+    const challengeAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.CHALLENGE_ADMIN,
+      challengeID
+    );
     rules.push(challengeAdmin);
 
-    const challengeMember = {
-      type: AuthorizationCredential.CHALLENGE_MEMBER,
-      resourceID: challengeID,
-      grantedPrivileges: [AuthorizationPrivilege.READ],
-    };
+    const challengeMember = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ],
+      AuthorizationCredential.CHALLENGE_MEMBER,
+      challengeID
+    );
     rules.push(challengeMember);
 
     return rules;
