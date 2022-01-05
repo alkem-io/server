@@ -27,9 +27,13 @@ export class UserAuthorizationService {
 
   async applyAuthorizationPolicy(user: IUser): Promise<IUser> {
     // Ensure always applying from a clean state
-    user.authorization = await this.authorizationPolicyService.reset(
+    user.authorization = this.authorizationPolicyService.reset(
       user.authorization
     );
+    user.authorization =
+      this.authorizationPolicyService.inheritPlatformAuthorization(
+        user.authorization
+      );
 
     user.authorization = await this.appendCredentialRules(
       user.authorization,
@@ -107,30 +111,17 @@ export class UserAuthorizationService {
   ): IAuthorizationPolicy {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-      grantedPrivileges: [
+    const communityAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
         AuthorizationPrivilege.GRANT,
       ],
-    };
-    newRules.push(globalAdmin);
+      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
+    );
 
-    const communityAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-      grantedPrivileges: [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-      ],
-    };
     newRules.push(communityAdmin);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -157,15 +148,15 @@ export class UserAuthorizationService {
     // add the rules dependent on the user
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const userSelfAdmin = {
-      type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-      resourceID: user.id,
-      grantedPrivileges: [
+    const userSelfAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
       ],
-    };
+      AuthorizationCredential.USER_SELF_MANAGEMENT,
+      user.id
+    );
     newRules.push(userSelfAdmin);
 
     // Get the agent + credentials + grant access for ecoverse / challenge admins read only
@@ -175,27 +166,29 @@ export class UserAuthorizationService {
     for (const credential of credentials) {
       // Grant read access to Ecoverse Admins for ecoverses the user is a member of
       if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
-        const ecoverseAdmin = {
-          type: AuthorizationCredential.ECOVERSE_ADMIN,
-          resourceID: credential.resourceID,
-          grantedPrivileges: [AuthorizationPrivilege.READ],
-        };
+        const ecoverseAdmin = new AuthorizationPolicyRuleCredential(
+          [AuthorizationPrivilege.READ],
+          AuthorizationCredential.ECOVERSE_ADMIN,
+          credential.resourceID
+        );
         newRules.push(ecoverseAdmin);
       } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
-        const challengeAdmin = {
-          type: AuthorizationCredential.CHALLENGE_ADMIN,
-          resourceID: credential.resourceID,
-          grantedPrivileges: [AuthorizationPrivilege.READ],
-        };
+        const challengeAdmin = new AuthorizationPolicyRuleCredential(
+          [AuthorizationPrivilege.READ],
+          AuthorizationCredential.CHALLENGE_ADMIN,
+          credential.resourceID
+        );
+
         newRules.push(challengeAdmin);
       } else if (
         credential.type === AuthorizationCredential.ORGANIZATION_MEMBER
       ) {
-        const challengeAdmin = {
-          type: AuthorizationCredential.ORGANIZATION_ADMIN,
-          resourceID: credential.resourceID,
-          grantedPrivileges: [AuthorizationPrivilege.READ],
-        };
+        const challengeAdmin = new AuthorizationPolicyRuleCredential(
+          [AuthorizationPrivilege.READ],
+          AuthorizationCredential.ORGANIZATION_ADMIN,
+          credential.resourceID
+        );
+
         newRules.push(challengeAdmin);
       }
     }

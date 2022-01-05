@@ -2,10 +2,9 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { UserAuthorizationPrivilegesInput } from './dto/authorization.dto.user.authorization.privileges';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AdminAuthorizationService } from './admin.authorization.service';
@@ -14,19 +13,11 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 
 @Resolver()
 export class AdminAuthorizationResolverQueries {
-  private authorizationQueriesPolicy: IAuthorizationPolicy;
-
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService
-  ) {
-    this.authorizationQueriesPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.REGISTERED],
-        [AuthorizationPrivilege.READ]
-      );
-  }
+  ) {}
 
   @Query(() => [IUser], {
     nullable: false,
@@ -42,8 +33,8 @@ export class AdminAuthorizationResolverQueries {
   ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.authorizationQueriesPolicy,
-      AuthorizationPrivilege.READ,
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
       `authorization query: ${agentInfo.email}`
     );
     return await this.adminAuthorizationService.usersWithCredentials(
@@ -65,8 +56,8 @@ export class AdminAuthorizationResolverQueries {
   ): Promise<AuthorizationPrivilege[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.authorizationQueriesPolicy,
-      AuthorizationPrivilege.READ,
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
       `authorization query: ${agentInfo.email}`
     );
     return await this.adminAuthorizationService.userAuthorizationPrivileges(

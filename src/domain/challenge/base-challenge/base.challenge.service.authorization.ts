@@ -1,3 +1,5 @@
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
@@ -25,6 +27,13 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
+    const communityCredential = community.credential;
+    if (!communityCredential) {
+      throw new EntityNotInitializedException(
+        `Unable to retrieve community credential: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
+    }
 
     if (community.authorization) {
       baseChallenge.community =
@@ -47,13 +56,12 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    context.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        context.authorization,
-        baseChallenge.authorization
-      );
     baseChallenge.context =
-      await this.contextAuthorizationService.applyAuthorizationPolicy(context);
+      await this.contextAuthorizationService.applyAuthorizationPolicy(
+        context,
+        baseChallenge.authorization,
+        communityCredential
+      );
 
     baseChallenge.agent = await this.baseChallengeService.getAgent(
       baseChallenge.id,
