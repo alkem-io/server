@@ -101,10 +101,7 @@ export class AuthorizationService {
       this.convertCredentialRulesStr(authorization.credentialRules);
     for (const rule of credentialRules) {
       for (const credential of agentInfo.credentials) {
-        if (
-          credential.type === rule.type &&
-          credential.resourceID === rule.resourceID
-        ) {
+        if (this.isCredentialMatch(credential, rule)) {
           for (const privilege of rule.grantedPrivileges) {
             if (privilege === privilegeRequired) return true;
             grantedPrivileges.push(privilege);
@@ -160,10 +157,7 @@ export class AuthorizationService {
       this.convertCredentialRulesStr(authorization.credentialRules);
     for (const rule of credentialRules) {
       for (const credential of credentials) {
-        if (
-          credential.type === rule.type &&
-          credential.resourceID === rule.resourceID
-        ) {
+        if (this.isCredentialMatch(credential, rule)) {
           for (const privilege of rule.grantedPrivileges) {
             grantedPrivileges.push(privilege);
           }
@@ -184,6 +178,21 @@ export class AuthorizationService {
     );
 
     return uniquePrivileges;
+  }
+
+  private isCredentialMatch(
+    credential: ICredential,
+    credentialRule: AuthorizationPolicyRuleCredential
+  ): boolean {
+    if (credential.type === credentialRule.type) {
+      if (
+        credentialRule.resourceID === '' ||
+        credential.resourceID === credentialRule.resourceID
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   convertCredentialRulesStr(
