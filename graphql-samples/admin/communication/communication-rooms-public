@@ -1,0 +1,10 @@
+mutation adminCommunicationMakeAllRoomsPublic($changeRoomAccessData: CommunicationAdminChangeRoomPublicAccessInput!) {
+  adminCommunicationMakeAllRoomsPublic(changeRoomAccessData: $changeRoomAccessData)
+}
+
+Variables:
+{
+  "changeRoomAccessData": {
+    "isPublic": true
+  }
+}

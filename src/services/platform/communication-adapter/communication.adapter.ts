@@ -742,24 +742,30 @@ export class CommunicationAdapter {
     return userIDs;
   }
 
-  async setMatrixRoomsGuestAccess(allowGuests = true) {
+  async setMatrixRoomsGuestAccess(roomIDs: string[], allowGuests = true) {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    const roomIDs = await this.matrixUserAdapter.getJoinedRooms(
-      elevatedAgent.matrixClient
-    );
 
     try {
-      const promises = roomIDs.map(rId =>
-        elevatedAgent.matrixClient.setGuestAccess(rId, {
-          allowJoin: allowGuests,
-          allowRead: allowGuests,
-        })
-      );
-
-      await Promise.all(promises);
+      for (const roomID of roomIDs) {
+        if (roomID.length > 0) {
+          await elevatedAgent.matrixClient.setGuestAccess(roomID, {
+            allowJoin: allowGuests,
+            allowRead: allowGuests,
+          });
+          const room = await this.matrixRoomAdapter.getMatrixRoom(
+            elevatedAgent.matrixClient,
+            roomID
+          );
+          const roomState = room.currentState;
+          this.logger.verbose?.(
+            `Room ${roomID} access level is now: ${roomState.getGuestAccess()}`,
+            LogContext.COMMUNICATION
+          );
+        }
+      }
       return true;
     } catch (error) {
-      this.logger.verbose?.(
+      this.logger.error?.(
         `Unable to change guest access for rooms to (${
           allowGuests ? 'Public' : 'Private'
         }): ${error}`,
