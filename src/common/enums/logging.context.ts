@@ -19,4 +19,5 @@ export enum LogContext {
   SUBSCRIPTIONS = 'subscriptions',
   SSI = 'ssi',
   REQUESTS = 'requests',
+  PLATFORM = 'platform',
 }

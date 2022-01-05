@@ -11,6 +11,9 @@ export class AuthorizationPolicy
   credentialRules: string;
 
   @Column('text')
+  privilegeRules: string;
+
+  @Column('text')
   verifiedCredentialRules: string;
 
   @Column()
@@ -21,5 +24,6 @@ export class AuthorizationPolicy
     this.anonymousReadAccess = false;
     this.credentialRules = '';
     this.verifiedCredentialRules = '';
+    this.privilegeRules = '';
   }
 }

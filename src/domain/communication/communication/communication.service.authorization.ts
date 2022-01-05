@@ -59,14 +59,11 @@ export class CommunicationAuthorizationService {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     // Allow any member of this community to create discussions, and to send messages to the discussion
-    const communityMember = {
-      type: communityCredential.type,
-      resourceID: communityCredential.resourceID,
-      grantedPrivileges: [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.CREATE,
-      ],
-    };
+    const communityMember = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ, AuthorizationPrivilege.CREATE],
+      communityCredential.type,
+      communityCredential.resourceID
+    );
     newRules.push(communityMember);
 
     //

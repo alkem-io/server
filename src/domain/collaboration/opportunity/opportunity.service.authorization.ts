@@ -87,24 +87,24 @@ export class OpportunityAuthorizationService {
   ): AuthorizationPolicyRuleCredential[] {
     const rules: AuthorizationPolicyRuleCredential[] = [];
 
-    const opportunityAdmin = {
-      type: AuthorizationCredential.OPPORTUNITY_ADMIN,
-      resourceID: opportunityID,
-      grantedPrivileges: [
+    const opportunityAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.OPPORTUNITY_ADMIN,
+      opportunityID
+    );
     rules.push(opportunityAdmin);
 
-    const opportunityMember = {
-      type: AuthorizationCredential.OPPORTUNITY_MEMBER,
-      resourceID: opportunityID,
-      grantedPrivileges: [AuthorizationPrivilege.READ],
-    };
+    const opportunityMember = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ],
+      AuthorizationCredential.OPPORTUNITY_MEMBER,
+      opportunityID
+    );
     rules.push(opportunityMember);
 
     return rules;

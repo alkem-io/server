@@ -1,19 +1,14 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
-export class AuthorizationPolicyRuleCredential {
-  type: string;
-  resourceID: string;
+export class AuthorizationPolicyRulePrivilege {
+  sourcePrivilege: AuthorizationPrivilege;
   grantedPrivileges: AuthorizationPrivilege[];
-  inheritable: boolean;
 
   constructor(
     grantedPrivileges: AuthorizationPrivilege[],
-    type: string,
-    resourceID?: string
+    sourcePrivilege: AuthorizationPrivilege
   ) {
-    this.type = type;
-    this.resourceID = resourceID || '';
+    this.sourcePrivilege = sourcePrivilege;
     this.grantedPrivileges = grantedPrivileges;
-    this.inheritable = true;
   }
 }

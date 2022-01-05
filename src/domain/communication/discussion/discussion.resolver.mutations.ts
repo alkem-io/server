@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -15,13 +15,19 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DiscussionAuthorizationService } from './discussion.service.authorization';
 import { MessageID } from '@domain/common/scalars/scalar.message';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.event.message.received';
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 
 @Resolver()
 export class DiscussionResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private discussionService: DiscussionService,
-    private discussionAuthorizationService: DiscussionAuthorizationService
+    private discussionAuthorizationService: DiscussionAuthorizationService,
+    @Inject(SUBSCRIPTION_PUB_SUB)
+    private readonly subscriptionHandler: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -42,11 +48,23 @@ export class DiscussionResolverMutations {
       AuthorizationPrivilege.CREATE,
       `discussion send message: ${discussion.title}`
     );
-    return await this.discussionService.sendMessageToDiscussion(
-      discussion,
-      agentInfo.communicationID,
-      messageData
+    const discussionMessage =
+      await this.discussionService.sendMessageToDiscussion(
+        discussion,
+        agentInfo.communicationID,
+        messageData
+      );
+
+    // Send the subscription event
+    const subscriptionPayload: CommunicationDiscussionMessageReceived = {
+      message: discussionMessage,
+      discussionID: discussion.id,
+    };
+    this.subscriptionHandler.publish(
+      SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED,
+      subscriptionPayload
     );
+    return discussionMessage;
   }
 
   @UseGuards(GraphqlGuard)

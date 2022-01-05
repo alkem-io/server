@@ -96,7 +96,7 @@ export class ContextResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_CANVAS,
       `create canvas on context: ${context.id}`
     );
     const canvas = await this.contextService.createCanvas(canvasData);

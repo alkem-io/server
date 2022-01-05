@@ -4,29 +4,20 @@ import { MembershipService } from './membership.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { MembershipUserInput, UserMembership } from './index';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AgentInfo } from '@core/authentication';
 import { OrganizationMembership } from './membership.dto.organization.result';
 import { MembershipOrganizationInput } from './membership.dto.organization.input';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver()
 export class MembershipResolverQueries {
-  private membershipAuthorizationPolicy: IAuthorizationPolicy;
-
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private membershipService: MembershipService
-  ) {
-    this.membershipAuthorizationPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.REGISTERED],
-        [AuthorizationPrivilege.READ]
-      );
-  }
+  ) {}
 
   @UseGuards(GraphqlGuard)
   @Query(() => UserMembership, {
@@ -38,9 +29,10 @@ export class MembershipResolverQueries {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: MembershipUserInput
   ): Promise<UserMembership> {
-    await this.authorizationService.grantReadAccessOrFail(
+    await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.membershipAuthorizationPolicy,
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
       `membership query: ${agentInfo.email}`
     );
     return await this.membershipService.getUserMemberships(membershipData);
